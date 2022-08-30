@@ -81,6 +81,89 @@ module Jekyll
         result
     end
 
+    def format_examples(name, attributes, converter)
+        result = Array.new()
+        exampleObject = nil
+
+        begin
+          if attributes.has_key?('x-doc-example')
+              exampleKeyToUse = 'x-doc-example'
+          elsif attributes.has_key?('example')
+              exampleKeyToUse = 'example'
+          elsif attributes.has_key?('x-examples')
+              exampleKeyToUse = 'x-examples'
+          end
+        rescue
+          puts attributes
+        end
+
+        exampleObject = attributes[exampleKeyToUse]
+
+        if exampleObject != nil
+            exampleObjectIsArrayOfExamples =  false
+            if exampleKeyToUse == 'x-examples' then
+                exampleObjectIsArrayOfExamples =  true
+            end
+            if exampleKeyToUse == 'x-doc-example' then
+                if attributes['type'] == 'array' and exampleObject.is_a?(Array) then
+                   exampleObjectIsArrayOfExamples =  true
+                end
+            end
+            if attributes['type'] == 'array' and !exampleObject.is_a?(Array) then
+               if exampleKeyToUse == 'example' then
+                   exampleObject = [exampleObject]
+                   exampleObjectIsArrayOfExamples =  true
+               end
+            end
+
+            if exampleObjectIsArrayOfExamples and exampleObject.length > 1 then
+                exampleTitle = get_i18n_term('examples').capitalize
+            else
+                exampleTitle = get_i18n_term('example').capitalize
+            end
+
+            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{exampleTitle}:</span>)
+            exampleContent = ""
+                        if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
+                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject['oneOf']} else exampleObject['oneOf'] end).to_yaml.delete_prefix("---\n")}```)
+                        elsif exampleObject.is_a?(Hash)
+                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject} else exampleObject end).to_yaml.delete_prefix("---\n")}```)
+                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
+                            if exampleObject[0].class.to_s == "String" and exampleObject[0] =~ /\`\`\`|\n/
+                                exampleContent = "#{exampleObject[0]}"
+                            else
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject[0]} else exampleObject[0] end).to_yaml.delete_prefix("---\n")}```)
+                            end
+                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
+                            exampleObject.each do | value |
+                                if value == nil then continue end
+                                if exampleContent.length > 0 then exampleContent = exampleContent + "\n" end
+                                exampleContent = %Q(#{exampleContent}\n```yaml\n#{(if name then {name => value} else value end).to_yaml.delete_prefix("---\n")}```)
+                            end
+                        elsif exampleObject.is_a?(Array)
+                            exampleContent = %Q(```yaml\n#{( if name then {name => exampleObject} else exampleObject end).to_yaml.delete_prefix("---\n")}```)
+                        else
+                            if exampleObject =~ /\`\`\`|\n/
+                                exampleContent = "#{exampleObject}"
+                            elsif attributes['type'] == 'boolean' then
+                                exampleContent = %Q(```yaml\n#{(if name then {name => (exampleObject and true)} else (exampleObject and true) end).to_yaml.delete_prefix("---\n")}```)
+                            elsif attributes['type'] == 'integer' or attributes['type'] == 'number' then
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_i} else exampleObject.to_i end).to_yaml.delete_prefix("---\n")}```)
+                            else
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_s} else exampleObject.to_s end).to_yaml.delete_prefix("---\n")}```)
+                            end
+
+                        end
+            exampleContent = converter.convert(exampleContent).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+            if exampleContent.match?(/^<div/)
+                result.push(%Q(#{example}</p>#{exampleContent}))
+            else
+                result.push(%Q(#{example} #{exampleContent}</p>))
+            end
+        end
+        result
+    end
+
     def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
         exampleObject = nil
@@ -189,76 +272,7 @@ module Jekyll
             end
         end
 
-        if attributes.has_key?('x-doc-example')
-            exampleKeyToUse = 'x-doc-example'
-        elsif attributes.has_key?('example')
-            exampleKeyToUse = 'example'
-        elsif attributes.has_key?('x-examples')
-            exampleKeyToUse = 'x-examples'
-        end
-        exampleObject = attributes[exampleKeyToUse]
-        if exampleObject != nil
-            exampleObjectIsArrayOfExamples =  false
-            if exampleKeyToUse == 'x-examples' then
-                exampleObjectIsArrayOfExamples =  true
-            end
-            if exampleKeyToUse == 'x-doc-example' then
-                if attributes['type'] == 'array' and exampleObject.is_a?(Array) then
-                   exampleObjectIsArrayOfExamples =  true
-                end
-            end
-            if attributes['type'] == 'array' and !exampleObject.is_a?(Array) then
-               if exampleKeyToUse == 'example' then
-                   exampleObject = [exampleObject]
-                   exampleObjectIsArrayOfExamples =  true
-               end
-            end
-
-            if exampleObjectIsArrayOfExamples and exampleObject.length > 1 then
-                exampleTitle = get_i18n_term('examples').capitalize
-            else
-                exampleTitle = get_i18n_term('example').capitalize
-            end
-
-            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{exampleTitle}:</span>)
-            exampleContent = ""
-                        if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
-                            exampleContent = %Q(```yaml\n#{{name => exampleObject['oneOf']}.to_yaml.delete_prefix("---\n")}```)
-                        elsif exampleObject.is_a?(Hash)
-                            exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
-                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
-                            if exampleObject[0].class.to_s == "String" and exampleObject[0] =~ /\`\`\`|\n/
-                                exampleContent = "#{exampleObject[0]}"
-                            else
-                                exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
-                            end
-                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
-                            exampleObject.each do | value |
-                                if value == nil then continue end
-                                if exampleContent.length > 0 then exampleContent = exampleContent + "\n" end
-                                exampleContent = %Q(#{exampleContent}\n```yaml\n#{{name => value}.to_yaml.delete_prefix("---\n")}```)
-                            end
-                        elsif exampleObject.is_a?(Array)
-                            exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
-                        else
-                            if exampleObject =~ /\`\`\`|\n/
-                                exampleContent = "#{exampleObject}"
-                            elsif attributes['type'] == 'boolean' then
-                                exampleContent = %Q(```yaml\n#{{name => (exampleObject and true)}.to_yaml.delete_prefix("---\n")}```)
-                            elsif attributes['type'] == 'integer' or attributes['type'] == 'number' then
-                                exampleContent = %Q(```yaml\n#{{name => exampleObject.to_i}.to_yaml.delete_prefix("---\n")}```)
-                            else
-                                exampleContent = %Q(```yaml\n#{{name => exampleObject.to_s}.to_yaml.delete_prefix("---\n")}```)
-                            end
-
-                        end
-            exampleContent = converter.convert(exampleContent).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
-            if exampleContent.match?(/^<div/)
-                result.push(%Q(#{example}</p>#{exampleContent}))
-            else
-                result.push(%Q(#{example} #{exampleContent}</p>))
-            end
-        end
+        result.push(format_examples(name, attributes, converter))
 
         result
     end
@@ -288,7 +302,7 @@ module Jekyll
               end
             end
 
-            if attributes['x-doc-deprecated']
+            if get_hash_value(attributes, 'x-doc-deprecated')
                 name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span data-tippy-content="%s">%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, pathString, name, get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
                 name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
@@ -506,34 +520,44 @@ module Jekyll
     #
     # Returns configuration module content from the openAPI spec
     def format_configuration(input)
+        converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         result = []
         result.push('<div markdown="0">')
-        if !( input.has_key?('i18n'))
+
+        if input.nil?
+           input = {}
+        end
+
+        if !( get_hash_value(input, 'i18n') )
            input['i18n'] = {}
         end
-        if !( input['i18n'].has_key?('en'))
+
+        if !( get_hash_value(input, 'i18n', 'en' ) )
            input['i18n']['en'] = { "properties" => input['properties'] }
         end
-        if ( input.has_key?("properties"))
-           then
-            converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
+        result.push(format_examples(nil, input, converter))
+
+        if ( get_hash_value(input, "properties") )
+           then
             result.push('<ul class="resources">')
             input['properties'].sort.to_h.each do |key, value|
                 _primaryLanguage = nil
                 _fallbackLanguage = nil
 
-                if ( input['i18n'].has_key?(@context.registers[:page]["lang"]) and input['i18n'][@context.registers[:page]["lang"]].has_key?("properties") )
-                    _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["properties"][key]
-                end
+                # if ( input['i18n'].has_key?(@context.registers[:page]["lang"]) and input['i18n'][@context.registers[:page]["lang"]].has_key?("properties") )
+                #     _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["properties"][key]
+                # end
+                _primaryLanguage = get_hash_value(input,  'i18n', @context.registers[:page]["lang"], 'properties', key)
                 if ( @context.registers[:page]["lang"] == 'en' )
                     fallbackLanguageName = 'ru'
                 else
                     fallbackLanguageName = 'en'
                 end
-                if ( input['i18n'].has_key?(fallbackLanguageName) and input['i18n'][fallbackLanguageName].has_key?("properties") )
-                    _fallbackLanguage = input['i18n'][fallbackLanguageName]["properties"][key]
-                end
+                # if ( input['i18n'].has_key?(fallbackLanguageName) and input['i18n'][fallbackLanguageName].has_key?("properties") )
+                #     _fallbackLanguage = input['i18n'][fallbackLanguageName]["properties"][key]
+                # end
+                _fallbackLanguage = get_hash_value(input,  'i18n', fallbackLanguageName, 'properties', key)
 
                 result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, ["parameters"] ))
             end

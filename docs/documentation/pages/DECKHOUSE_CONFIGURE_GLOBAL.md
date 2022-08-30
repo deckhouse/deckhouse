@@ -13,3 +13,5 @@ The global Deckhouse settings are stored in the `global` parameter of the [Deckh
 ## Parameters
 
 {{ site.data.schemas.global.config-values | format_configuration }}
+
+{{ site.data.schemas.global.cluster-configuration | format_cluster_configuration }}

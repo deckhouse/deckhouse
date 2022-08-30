@@ -14,3 +14,5 @@ lang: ru
 ## Параметры
 
 {{ site.data.schemas.global.config-values | format_configuration }}
+
+{{ site.data.schemas.global.cluster-configuration | format_cluster_configuration }}

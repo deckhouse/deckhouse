@@ -28,8 +28,12 @@ done
 
 if [ -d /src/global ]; then
   mkdir -p /srv/jekyll-data/documentation/_data/schemas/global
+  # OpenAPI spec for Deckhouse global config
   cp -f /src/global/config-values.yaml _data/schemas/global/
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/config-values.yaml
   cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/global/config-values.yaml
+  # ClusterConfiguration OpenAPI spec
+  cp -f /src/global/cluster_configuration.yaml _data/schemas/global/cluster-configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/cluster-configuration.yaml
+  cat /src/global/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/cluster-configuration.yaml
 fi
-

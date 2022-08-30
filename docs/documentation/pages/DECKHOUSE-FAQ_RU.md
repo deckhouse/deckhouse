@@ -225,7 +225,7 @@ chmod 700 d8-push.sh
 - домен кластера: `clusterDomain`;
 - используемый CRI: `defaultCRI`;
 - используемая версия control plane Kubernetes: `kubernetesVersion`;
-- тип кластера (Static, Cloud, Hybrid): `clusterType`;
+- тип кластера (Static, Cloud): `clusterType`;
 - сеть Pod’ов кластера: `podSubnetCIDR`;
 - сеть для service’ов кластера: `serviceSubnetCIDR` и др.
 

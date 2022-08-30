@@ -221,7 +221,7 @@ The general cluster parameters are stored in the `ClusterConfiguration` structur
 - cluster domain: `clusterDomain`;
 - CRI used in the cluster: `defaultCRI`;
 - Kubernetes control plane version: `kubernetesVersion`;
-- cluster type (Static, Cloud, Hybrid): `clusterType`;
+- cluster type (Static, Cloud): `clusterType`;
 - address space of the cluster's Pods: `podSubnetCIDR`;
 - address space of the cluster's services: `serviceSubnetCIDR` etc.
 

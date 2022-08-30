@@ -3,6 +3,7 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: General parameters of a cluster.
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
     x-examples:
@@ -12,32 +13,41 @@ apiVersions:
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
       kubernetesVersion: "1.21"
-      clusterDomain: test
+      clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
-        prefix: test
+        prefix: k8s-dev
         provider: Yandex
       packagesProxy:
         uri: https://example.com
-        username: user
-        password: passwd
+        username: "userName"
+        password: "P@ssw0rd"
     properties:
       apiVersion:
         type: string
+        description: Version of the Deckhouse API.
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
         enum: [ClusterConfiguration]
       clusterType:
         type: string
+        description: |
+          Type of the cluster infrastructure:
+          - `Static` — a bare metal cluster (physical servers);
+          - `Cloud` — a cluster, deployed on the resources of a cloud provider.
         enum: [Cloud, Static]
       cloud:
         type: object
+        description: |
+          Cloud provider-related settings (if the `Cloud` [clusterType](#parameters-clustertype) is used).
         required: [provider]
         additionalProperties: false
         properties:
           provider:
             type: string
+            description: |
+              Type of the cloud provider.
             enum:
             - "OpenStack"
             - "AWS"
@@ -47,19 +57,33 @@ apiVersions:
             - "Azure"
           prefix:
             type: string
+            description: |
+              A prefix of the cluster objects to be created in the cloud provider.
+
+              Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
       podSubnetCIDR:
         type: string
+        description: Address space of the cluster's Pods.
       podSubnetNodeCIDRPrefix:
         type: string
+        description: The prefix of Pod network on a node.
         default: "24"
       serviceSubnetCIDR:
         type: string
+        description: |
+          Address space of the cluster's services.
       clusterDomain:
         type: string
+        description: Cluster domain (used for local routing).
         default: "cluster.local"
       defaultCRI:
         type: string
+        description: |
+          The container runtime type that used on cluster nodes (NodeGroups) by default.
+
+          If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
+          In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
         enum:
         - "Docker"
         - "Containerd"
@@ -67,6 +91,13 @@ apiVersions:
         default: "Containerd"
       kubernetesVersion:
         type: string
+        description: |
+          Kubernetes control plane version to use in a cluster.
+
+          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
+
+          If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
+          The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
         - "1.20"
         - "1.21"
@@ -76,14 +107,19 @@ apiVersions:
         - "Automatic"
       packagesProxy:
         type: object
+        description: |
+          A proxy server parameters for downloading OS packages (e.g deb or rpm).
         additionalProperties: false
         properties:
           uri:
             type: string
+            description: The address of the proxy server.
           username:
             type: string
+            description: The username for authenticating with the proxy server.
           password:
             type: string
+            description: The password for authenticating with the proxy server.
         oneOf:
           - properties:
               uri:
