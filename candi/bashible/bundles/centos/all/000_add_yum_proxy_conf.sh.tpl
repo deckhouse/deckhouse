@@ -12,14 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if yum-config-manager --version >/dev/null 2>/dev/null; then
-  config_manager="yum-config-manager"
-elif dnf config-manager --version >/dev/null 2>/dev/null; then
-  config_manager="dnf config-manager"
-else
-  bb-log-warning "yum-config-manager or dnf config-manager must be installed to manage yum proxy configuration!!!"
-  exit 1
-fi
+bb-yum-install yum-utils
 
 proxy="--setopt=proxy="
 if bb-is-centos-version? 7; then
@@ -37,12 +30,12 @@ proxy="--setopt=proxy={{ .packagesProxy.uri }} main"
 ${config_manager} --save ${proxy}
 
 {{- if .packagesProxy.username }}
-${config_manager} --save --setopt=proxy_username={{ .packagesProxy.username }} main
+yum-config-manager --save --setopt=proxy_username={{ .packagesProxy.username }} main
 {{- else }}
-${config_manager} --save --setopt=proxy_username=
+yum-config-manager --save --setopt=proxy_username=
 {{- end }}
 {{- if .packagesProxy.password }}
-${config_manager} --save --setopt=proxy_password={{ .packagesProxy.password }} main
+yum-config-manager --save --setopt=proxy_password={{ .packagesProxy.password }} main
 {{- else }}
-${config_manager} --save --setopt=proxy_password=
+yum-config-manager --save --setopt=proxy_password=
 {{- end }}
