@@ -16,15 +16,15 @@ if [ -e /etc/os-release ]; then
   . /etc/os-release
   bundleName="${ID}-${VERSION_ID}"
   case $bundleName in
-    centos-7|rhel-7.*|centos-8|rhel-8.*)
+    \(centos|rocky|almalinux|rhel\)-\(7|7.*|8|8.*|9|9.*\))
       echo "centos"
       exit 0
     ;;
-    ubuntu-16.04|ubuntu-18.04|ubuntu-20.04|ubuntu-22.04)
+    ubuntu-\(16.04|18.04|20.04|22.04\))
       echo "ubuntu-lts"
       exit 0
     ;;
-    debian-9|debian-10|debian-11)
+    debian-\(9|10|11\))
       echo "debian"
       exit 0
     ;;

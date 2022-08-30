@@ -155,6 +155,20 @@ bashible: &bashible
         generic:
           desiredVersion: "4.18.0-305.3.1.el8.x86_64"
           allowedPattern: "4.18"
+    '9':
+      docker:
+        desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
+          allowedPattern: "containerd.io-1.6"
+      containerd:
+        desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
+        allowedPattern: "containerd.io-1.6"
+      kernel:
+        generic:
+          desiredVersion: "5.14.0-70.22.1.el9_0.x86_64"
+          allowedPattern: "5.14"
 k8s:
   '1.19':
     status: available
