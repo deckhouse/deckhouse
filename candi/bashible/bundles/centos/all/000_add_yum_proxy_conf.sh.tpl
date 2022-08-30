@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# if yum-utils is not installed, try to install it. In closed environments yum-utils should be preinstalled in distro image
-if ! bb-yum-package? yum-utils; then
-  bb-yum-install yum-utils
+# If yum-utils is not installed, we will try to install it. In closed environments yum-utils should be preinstalled in distro image
+# We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
+# which will be installed later in 001_install_mandatory_packages.sh step.
+if ! rpm -q --quiet yum-utils; then
+  yum install yum-utils
 fi
 
 proxy="--setopt=proxy="
