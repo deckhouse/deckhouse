@@ -23,6 +23,7 @@ properties:
         oneOf:
           - type: string
           - type: boolean
+        x-examples: [false, "test"]
       auth:
         type: object
         default: {}

@@ -9,6 +9,8 @@ data:
   openvpnEnabled: "true"
 ```
 
+**Внимание!** В панели администратора всегда используется tunnelNetwork, статические адреса необходимо выдавать из неё. Если включен UDP openvpn сервер, то tunnelNetwork и udpTunnelNetwork должны быть одного размера.
+
 ## Аутентификация
 
 По умолчанию используется модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).

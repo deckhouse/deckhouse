@@ -9,6 +9,8 @@ data:
   openvpnEnabled: "true"
 ```
 
+**Caution!** The admin panel always uses tunnelNetwork. Static addresses must be issued from it. If UDP openvpn server is enabled, tunnelNetwork and udpTunnelNetwork must be the same size.
+
 ## Authentication
 
 [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).

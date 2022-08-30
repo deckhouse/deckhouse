@@ -54,6 +54,8 @@ discovery:
   clusterDomain: cluster.local
 `
 const customCertificatePresent = `
+tunnelNetwork: 172.25.175.0/24
+udpTunnelNetwork: 172.25.176.0/24
 https:
   mode: CustomCertificate
 auth:
