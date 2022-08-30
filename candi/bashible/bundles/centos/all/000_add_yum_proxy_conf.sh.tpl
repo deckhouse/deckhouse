@@ -16,13 +16,10 @@
 # We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
 # which will be installed later in 001_install_mandatory_packages.sh step.
 if ! rpm -q --quiet yum-utils; then
-  yum install yum-utils
+  yum install -y yum-utils
 fi
 
 proxy="--setopt=proxy="
-if bb-is-centos-version? 7; then
-  proxy="--setopt=proxy=_none_"
-fi
 
 if yum --version | grep -q dnf; then
   proxy="--setopt=proxy="
@@ -32,7 +29,7 @@ fi
 proxy="--setopt=proxy={{ .packagesProxy.uri }} main"
 {{- end }}
 
-${config_manager} --save ${proxy}
+yum-config-manager --save ${proxy}
 
 {{- if .packagesProxy.username }}
 yum-config-manager --save --setopt=proxy_username={{ .packagesProxy.username }} main
