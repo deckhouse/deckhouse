@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-yum-install yum-utils
+# if yum-utils is not installed, try to install it. In closed environments yum-utils should be preinstalled in distro image
+if !bb-yum-package? yum-utils; then
+  bb-yum-install yum-utils
+fi
 
 proxy="--setopt=proxy="
 if bb-is-centos-version? 7; then
