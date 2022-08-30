@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # if yum-utils is not installed, try to install it. In closed environments yum-utils should be preinstalled in distro image
-if !bb-yum-package? yum-utils; then
+if ! bb-yum-package? yum-utils; then
   bb-yum-install yum-utils
 fi
 
