@@ -27,9 +27,9 @@ properties:
             Для подтверждения обновления, в соответствующем [custom resource `DeckhouseRelease`](https://deckhouse.io/ru/documentation/v1/modules/020-deckhouse/cr.html) необходимо установить поле `approved` в `true`.
       disruptionApprovalMode:
         description: |
-          Режим обновления версий Deckhouse, имеющих disruptions (потенциально опасные изменения)
-          - 'Auto' (автоматический) - обновления применяются автоматически.
-          - 'Manual' (ручной) - для обновления требуется ручное подтверждение (установка аннотации `release.deckhouse.io/disruption-approved=true`)
+          Режим обновления версий Deckhouse, имеющих disruptions (потенциально опасные изменения):
+          - `Auto` (автоматический) — обновления применяются автоматически.
+          - `Manual` (ручной) — для обновления требуется ручное подтверждение (установка аннотации `release.deckhouse.io/disruption-approved=true`).
       windows:
         description: |
           Список окон обновлений в течение суток.
