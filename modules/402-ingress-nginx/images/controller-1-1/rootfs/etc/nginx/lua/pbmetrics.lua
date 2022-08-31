@@ -32,7 +32,6 @@ local get_env = os.getenv
 
 local new_tab = require "table.new"
 local clear_tab = require "table.clear"
-local clone_tab = require "table.clone"
 local nkeys = require "table.nkeys"
 local remove = table.remove
 local insert_tab = table.insert
@@ -49,7 +48,7 @@ local GeoHash = require "geohash"
 GeoHash.precision(2)
 local geohash_encode = GeoHash.encode
 
-local buffer = new_tab(200000, 0)
+local buffer = new_tab(0, 100000)
 local debug_enabled = get_env("LUA_DEBUG")
 local use_geoip2 = get_env("LUA_USE_GEOIP2")
 
@@ -379,21 +378,14 @@ end
 
 -- send() sends buffer data to protobuf exporter via tcp socket
 local function send(premature)
-  if premature then
-    return
-  end
-
   if nkeys(buffer) == 0 then
     return
   end
 
   local start_time = now()
 
-  local current_buffer = clone_tab(buffer)
-  clear_tab(buffer)
-
   local pbbuff = pbuff.new()
-  for k, v in pairs(current_buffer) do
+  for k, v in pairs(buffer) do
     local metric_type = k:sub(1, 1)
     if metric_type == "g" then
       protogauge(pbbuff, v)
@@ -403,20 +395,32 @@ local function send(premature)
       protohist(pbbuff, v)
     end
   end
+  clear_tab(buffer)
+
 
   local sock = socket()
+  sock:settimeout(10000)
   local ok, err = sock:connect("127.0.0.1", "9090")
   if not ok then
     log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
     return
   end
-  sock:settimeout(60000) -- 1 min timeout
+  local ok, err = sock:setoption("keepalive", true)
+  if not ok then
+    log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
+  end
 
   ok, err = sock:send(pbbuff:result())
   if not ok then
     log(ERROR, format("error while sending data via tcp socket: %s", tostring(err)))
   end
-  sock:close()
+  sock:setkeepalive(0)
+
+  if premature then
+    -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown
+    sock:close()
+    return
+  end
 
   if debug_enabled then
     update_time()
