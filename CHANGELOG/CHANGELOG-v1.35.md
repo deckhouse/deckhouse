@@ -48,6 +48,7 @@
     Ingress Nginx controller will restart.
  - **[ingress-nginx]** Add publish-service for LB controllers to update Ingress status correctly. [#2276](https://github.com/deckhouse/deckhouse/pull/2276)
     LB Ingress controllers will restart.
+ - **[istio]** Fixed `D8IstioDataPlaneVersionMismatch` alert. [#2370](https://github.com/deckhouse/deckhouse/pull/2370)
  - **[istio]** Don't exclude d8-namespaces from istiod discovery. [#2315](https://github.com/deckhouse/deckhouse/pull/2315)
  - **[istio]** Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and federations. [#2055](https://github.com/deckhouse/deckhouse/pull/2055)
  - **[namespace-configurator]** React to module values changes. [#2277](https://github.com/deckhouse/deckhouse/pull/2277)
