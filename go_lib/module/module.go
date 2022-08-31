@@ -85,7 +85,7 @@ func GetIngressClass(moduleName string, input *go_hook.HookInput) string {
 		globalPath = "global.modules.ingressClass"
 	)
 
-	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
+	v, ok := GetValuesFirstDefined(input, modulePath, globalPath)
 
 	if ok {
 		return v.String()
@@ -99,7 +99,7 @@ func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInp
 		modulePath = moduleName + ".https.mode"
 		globalPath = "global.modules.https.mode"
 	)
-	httpsMode, _ := GetValuesFirstDefined(input, globalPath, modulePath)
+	httpsMode, _ := GetValuesFirstDefined(input, modulePath, globalPath)
 	switch httpsMode.String() {
 	case "CustomCertificate":
 		return fmt.Sprintf("%s-customcertificate", prefix)
@@ -119,7 +119,7 @@ func GetCertificateIssuerName(moduleName string, input *go_hook.HookInput) strin
 		globalPath = "global.modules.https.certManager.clusterIssuerName"
 	)
 
-	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
+	v, ok := GetValuesFirstDefined(input, modulePath, globalPath)
 
 	if ok {
 		return v.String()
