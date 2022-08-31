@@ -14,7 +14,7 @@ function ensure_pod_network_route() {
 while true; do
   node_object="$(curl --max-time 5 -s -S -f --resolve "kubernetes.default:443:$KUBERNETES_SERVICE_HOST" -s "https://kubernetes.default/api/v1/nodes/$NODE_NAME" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")"
 
-  first_internal_ip=$(jq -re '.status.addresses[] | select(.type == "InternalIP") | .address' <<< "$node_object")
+  first_internal_ip=$(jq -re '[.status.addresses[] | select(.type == "InternalIP")][0] | .address' <<< "$node_object")
   if [ -z "$first_internal_ip" ]; then
     >&2 echo "ERROR: Node $(hostname) doesn't have InternalIP in .status.addresses"
     exit 1
