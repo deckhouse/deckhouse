@@ -18,6 +18,9 @@ package hooks
 
 import (
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -315,7 +318,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Forced release", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(deckhousePodYaml + forcedReleaes)
+			f.KubeStateSet(deckhousePodYaml + forcedRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -408,7 +411,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
 			Expect(r130.Field("status.phase").String()).To(Equal("Pending"))
-			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for deckhouseRelease "1.30.0" not met: min k8s version failed`))
+			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for DeckhouseRelease "1.30.0" not met: min k8s version failed`))
 			Expect(f.MetricsCollector.CollectedMetrics()[2].Name).To(Equal("d8_release_blocked"))
 			Expect(*f.MetricsCollector.CollectedMetrics()[2].Value).To(Equal(float64(1)))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
@@ -468,6 +471,83 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
 				Expect(r136.Field("status.phase").String()).To(Equal("Deployed"))
 				Expect(r136.Field("status.message").String()).To(Equal(""))
+			})
+		})
+
+		Context("Release with notification", func() {
+			var httpBody string
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				data, _ := ioutil.ReadAll(r.Body)
+				httpBody = string(data)
+			}))
+			AfterEach(func() {
+				defer svr.Close()
+			})
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+				f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("1h"))
+				f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+				f.RunHook()
+			})
+
+			It("Should postpone the release", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC"))
+				Expect(httpBody).To(ContainSubstring(`"version":"1.26"`))
+				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+				Expect(cm.Field("data.notified").Bool()).To(BeTrue())
+				Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
+				Expect(r126.Field("spec.applyAfter").String()).To(Equal("2021-01-01T14:30:00Z"))
+			})
+		})
+
+		Context("after apply time", func() {
+			BeforeEach(func() {
+				changedState := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-26-0
+spec:
+  applyAfter: "2019-01-01T01:01:00Z"
+  version: v1.26.0
+status:
+  phase: Pending
+---
+apiVersion: v1
+data:
+  isUpdating: "false"
+  notified: "true"
+  version: 1.26.0
+kind: ConfigMap
+metadata:
+  name: d8-release-data
+  namespace: d8-system
+`
+				f.KubeStateSet(deckhousePodYaml + changedState)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+			It("ffo", func() {
+				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
+				Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 			})
 		})
 	})
@@ -775,7 +855,7 @@ spec:
 status:
   phase: Pending
 `
-	forcedReleaes = `
+	forcedRelease = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease

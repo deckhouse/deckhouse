@@ -84,6 +84,65 @@ func (uw Window) IsAllowed(now time.Time) bool {
 	return false
 }
 
+// NextAllowedTime calculates next update window with respect on minimalTime
+// if minimal time is out of window - this function checks next days to find the nearest one
+func (ws Windows) NextAllowedTime(min time.Time) time.Time {
+	min = min.UTC()
+
+	if len(ws) == 0 {
+		return min
+	}
+
+	var minTime time.Time
+
+	for _, window := range ws {
+		var windowMinTime time.Time
+
+		fromInput, _ := time.Parse(hh_mm, window.From)
+		toInput, _ := time.Parse(hh_mm, window.To)
+
+		fromTime := time.Date(min.Year(), min.Month(), min.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
+		toTime := time.Date(min.Year(), min.Month(), min.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+
+		if window.isTodayAllowed(min, window.Days) {
+			if min.After(fromTime) && min.Before(toTime) {
+				windowMinTime = min
+				if minTime.IsZero() || windowMinTime.Before(minTime) {
+					minTime = windowMinTime
+				}
+				continue
+			}
+		}
+
+		// if not today
+		nextDay := min.AddDate(0, 0, 1)
+		for {
+			if window.isTodayAllowed(nextDay, window.Days) {
+				fromTime = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
+				toTime = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+
+				if min.Before(toTime) {
+					if min.After(fromTime) {
+						windowMinTime = min
+						break
+					} else {
+						windowMinTime = fromTime
+						break
+					}
+
+				}
+			}
+			nextDay = nextDay.AddDate(0, 0, 1)
+		}
+
+		if minTime.IsZero() || windowMinTime.Before(minTime) {
+			minTime = windowMinTime
+		}
+	}
+
+	return minTime
+}
+
 func (uw Window) isDayEqual(today time.Time, dayString string) bool {
 	var day time.Weekday
 

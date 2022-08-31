@@ -19,11 +19,9 @@ package hooks
 import (
 	"archive/tar"
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"path"
 	"sort"
 	"strings"
@@ -44,7 +42,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -120,19 +119,19 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.Values.Set("deckhouse.internal.releaseVersionImageHash", newImageHash)
 
 	snap := input.Snapshots["releases"]
-	releases := make([]deckhouseRelease, 0, len(snap))
+	releases := make([]updater.DeckhouseRelease, 0, len(snap))
 	for _, rl := range snap {
-		releases = append(releases, rl.(deckhouseRelease))
+		releases = append(releases, rl.(updater.DeckhouseRelease))
 	}
 
-	sort.Sort(sort.Reverse(byVersion(releases)))
+	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
 
 releaseLoop:
 	for _, release := range releases {
 		switch {
 		// GT
 		case release.Version.GreaterThan(newSemver):
-			// cleanup versions which are older then current version in a specified channel and are in a Pending state
+			// cleanup versions which are older than current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.PhasePending {
 				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
 			}
@@ -220,47 +219,7 @@ releaseLoop:
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
 
-	if v, ok := input.Values.GetOk("deckhouse.update.notification.webhook"); ok {
-		webhookURL := v.String()
-		data := webhookData{
-			Version:       release.Spec.Version,
-			Requirements:  release.Spec.Requirements,
-			Changelog:     release.Spec.Changelog,
-			ChangelogLink: release.Spec.ChangelogLink,
-			Message:       "New Deckhouse release available",
-		}
-
-		go sendWebhookNotification(input.LogEntry, webhookURL, data)
-	}
-
 	return nil
-}
-
-type webhookData struct {
-	Version       string                 `json:"version"`
-	Requirements  map[string]string      `json:"requirements"`
-	Changelog     map[string]interface{} `json:"changelog"`
-	ChangelogLink string                 `json:"changelogLink"`
-
-	Message string `json:"message"`
-}
-
-func sendWebhookNotification(logger *logrus.Entry, webhookURL string, data webhookData) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   10 * time.Second,
-	}
-
-	buf := bytes.NewBuffer(nil)
-	_ = json.NewEncoder(buf).Encode(data)
-
-	_, err := client.Post(webhookURL, "application/json", buf)
-	if err != nil {
-		logger.Errorf("webhook request error: %s", err)
-	}
 }
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}

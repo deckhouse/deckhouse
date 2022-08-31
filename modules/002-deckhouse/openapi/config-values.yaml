@@ -100,7 +100,13 @@ properties:
           webhook:
             type: string
             pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+            x-doc-example: 'https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa'
             description: "URL for external webhook handler"
+          minimalNotificationTime:
+            type: string
+            pattern: '^[0-9]+[mh]{1}$'
+            x-doc-example: '6h'
+            description: z
   nodeSelector:
     type: object
     additionalProperties:

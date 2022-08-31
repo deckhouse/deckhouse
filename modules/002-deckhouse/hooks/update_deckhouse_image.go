@@ -18,12 +18,10 @@ package hooks
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	updater2 "github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/update"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -38,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -88,6 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   filterDeckhouseRelease,
 		},
 		{
+			// TODO: delete after 1.36
 			Name:       "updating_cm",
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
@@ -102,6 +102,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			FilterFunc:                   filterUpdatingCM,
+		},
+		{
+			Name:       "release_data",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-release-data"},
+			},
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			FilterFunc:                   filterReleaseDataCM,
 		},
 	},
 }, dependency.WithExternalDependencies(updateDeckhouse))
@@ -158,22 +174,29 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// production upgrade
 	input.MetricsCollector.Expire(metricReleasesGroup)
 
-	if deckhousePod.Ready {
-		input.MetricsCollector.Expire(metricUpdatingGroup)
-		if isUpdatingCMExists(input) {
-			deleteUpdatingCM(input)
-		}
-	} else if isUpdatingCMExists(input) {
-		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+	var releaseData updater.DeckhouseReleaseData
+	snap := input.Snapshots["release_data"]
+	if len(snap) > 0 {
+		releaseData = snap[0].(updater.DeckhouseReleaseData)
 	}
 
 	// initialize updater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	updater := updater2.NewDeckhouseUpdater(approvalMode, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	updater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+
+	if deckhousePod.Ready {
+		input.MetricsCollector.Expire(metricUpdatingGroup)
+		if isUpdatingCMExists(input) || releaseData.IsUpdating {
+			deleteUpdatingCM(input)
+			updater.ChangeUpdatingFlag(false)
+		}
+	} else if isUpdatingCMExists(input) || releaseData.IsUpdating {
+		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+	}
 
 	// fetch releases from snapshot and patch initial statuses
-	updater.FetchAndPrepareReleases(input)
-	if len(updater.releases) == 0 {
+	updater.FetchAndPrepareReleases(input.Snapshots["releases"])
+	if updater.ReleasesCount() == 0 {
 		return nil
 	}
 
@@ -187,34 +210,26 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// some release is forced, burn everything, apply this patch!
 	if updater.HasForceRelease() {
-		updater.ApplyForcedRelease(input)
+		updater.ApplyForcedRelease()
 		return nil
 	}
 
 	if updater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		updater.ApplyPredictedRelease(input)
+		updater.ApplyPredictedRelease(nil)
 		return nil
-	} else if !updater.inManualMode {
-		// update windows works only for Auto deployment mode
-		windows, err := getUpdateWindows(input)
+	}
+
+	var windows update.Windows
+	if !updater.InManualMode() {
+		var err error
+		windows, err = getUpdateWindows(input)
 		if err != nil {
 			return fmt.Errorf("update windows configuration is not valid: %s", err)
 		}
-
-		updatePermitted := isUpdatePermitted(windows)
-
-		if !updatePermitted {
-			input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-			release := updater.PredictedRelease()
-			if release != nil {
-				updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
-			}
-			return nil
-		}
 	}
 
-	updater.ApplyPredictedRelease(input)
+	updater.ApplyPredictedRelease(windows)
 	return nil
 }
 
@@ -274,12 +289,13 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		}
 	}
 
-	return updater2.DeckhouseRelease{
+	return updater.DeckhouseRelease{
 		Name:          release.Name,
 		Version:       semver.MustParse(release.Spec.Version),
 		ApplyAfter:    release.Spec.ApplyAfter,
 		CooldownUntil: cooldown,
 		Requirements:  release.Spec.Requirements,
+		ChangelogLink: release.Spec.ChangelogLink,
 		Disruptions:   release.Spec.Disruptions,
 		Status: v1alpha1.DeckhouseReleaseStatus{
 			Phase:    release.Status.Phase,
@@ -295,6 +311,34 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 
 func filterUpdatingCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return unstructured.GetName(), nil
+}
+
+func filterReleaseDataCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm corev1.ConfigMap
+
+	err := sdk.FromUnstructured(unstructured, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var isUpdating, notified bool
+
+	if v, ok := cm.Data["isUpdating"]; ok {
+		if v == "true" {
+			isUpdating = true
+		}
+	}
+
+	if v, ok := cm.Data["notified"]; ok {
+		if v == "true" {
+			notified = true
+		}
+	}
+
+	return updater.DeckhouseReleaseData{
+		IsUpdating: isUpdating,
+		Notified:   notified,
+	}, nil
 }
 
 func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -329,20 +373,6 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		Namespace: pod.Namespace,
 		Ready:     ready,
 	}, nil
-}
-
-func isUpdatePermitted(windows update.Windows) bool {
-	if len(windows) == 0 {
-		return true
-	}
-
-	now := time.Now()
-
-	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
-	}
-
-	return windows.IsAllowed(now)
 }
 
 // tagUpdate update by tag, in dev mode or specified image
@@ -399,34 +429,13 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *
 	return nil
 }
 
-// Updater
-
-func createUpdatingCM(input *go_hook.HookInput, version string) {
-	cm := &corev1.ConfigMap{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "d8-release-updating",
-			Namespace: "d8-system",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-		Data: map[string]string{
-			"version": version,
-		},
-	}
-
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
-}
-
+// TODO: delete after 1.36
 func isUpdatingCMExists(input *go_hook.HookInput) bool {
 	snap := input.Snapshots["updating_cm"]
 	return len(snap) > 0
 }
 
+// TODO: delete after 1.36
 func deleteUpdatingCM(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "d8-release-updating", object_patch.InBackground())
 }
