@@ -40,4 +40,3 @@ spec:
   selector: {}
   namespaceSelector:
     any: true
-
