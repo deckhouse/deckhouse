@@ -19,25 +19,26 @@ if ! rpm -q --quiet yum-utils; then
   yum install -y yum-utils
 fi
 
-proxy="--setopt=proxy="
+if bb-is-centos-version? 7; then
+  proxy="_none_"
+fi
 
 if yum --version | grep -q dnf; then
-  proxy="--setopt=proxy="
+  proxy=""
 fi
 
 {{- if .packagesProxy.uri }}
-proxy="--setopt=proxy={{ .packagesProxy.uri }} main"
+proxy="{{ .packagesProxy.uri }} main"
 {{- end }}
-
-yum-config-manager --save ${proxy}
 
 {{- if .packagesProxy.username }}
-yum-config-manager --save --setopt=proxy_username={{ .packagesProxy.username }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_username=
+proxy_username="{{ .packagesProxy.username }} main"
 {{- end }}
+
 {{- if .packagesProxy.password }}
-yum-config-manager --save --setopt=proxy_password={{ .packagesProxy.password }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_password=
+proxy_password="{{ .packagesProxy.password }} main"
 {{- end }}
+
+yum-config-manager --save --setopt=proxy=${proxy}
+yum-config-manager --save --setopt=proxy_username=${proxy_username}
+yum-config-manager --save --setopt=proxy_password=${proxy_password}
