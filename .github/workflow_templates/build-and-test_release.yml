@@ -53,12 +53,21 @@ jobs:
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.go_generate) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "workflow_render" "Render workflow") }!}
+  workflow_render:
+    name: {!{ $jobNames.workflow_render }!}
+    needs:
+      - git_info
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.workflow_render) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "build_fe" "Build FE") }!}
   build_fe:
     name: {!{ $jobNames.build_fe }!}
     needs:
       - git_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -70,6 +79,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
@@ -82,6 +92,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
@@ -213,6 +224,7 @@ jobs:
       - started_at
       - git_info
       - go_generate
+      - workflow_render
       - build_fe
       - build_ee
       - build_ce

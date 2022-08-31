@@ -409,12 +409,66 @@ jobs:
     # </template: go_generate_template>
 
 
+  workflow_render:
+    name: Render workflow
+    needs:
+      - git_info
+      - pull_request_info
+
+    # <template: workflow_render_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Render GitHub workflow
+        run: |
+          cd .github
+          ./render-workflows.sh
+
+      - name: Check rendered files
+        run: |
+          git diff --exit-code
+    # </template: workflow_render_template>
+
+
   build_deckhouse:
     name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>

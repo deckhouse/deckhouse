@@ -235,11 +235,94 @@ jobs:
       # </template: update_comment_on_finish>
 
 
+  workflow_render:
+    name: Render workflow
+    needs:
+      - git_info
+
+    # <template: workflow_render_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Render GitHub workflow
+        run: |
+          cd .github
+          ./render-workflows.sh
+
+      - name: Check rendered files
+        run: |
+          git diff --exit-code
+    # </template: workflow_render_template>
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,one-line';
+            const name = 'Render workflow';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+
   build_fe:
     name: Build FE
     needs:
       - git_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: "FE"
     # <template: build_template>
@@ -512,6 +595,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
@@ -785,6 +869,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
@@ -2410,6 +2495,7 @@ jobs:
       - started_at
       - git_info
       - go_generate
+      - workflow_render
       - build_fe
       - build_ee
       - build_ce
@@ -2428,7 +2514,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","deploy_latest_web":"Deploy latest doc and site","deploy_tagged_doc":"Deploy tagged documentation","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test"}
+        {"build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","deploy_latest_web":"Deploy latest doc and site","deploy_tagged_doc":"Deploy tagged documentation","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
     steps:
 
       # <template: checkout_step>
