@@ -30,7 +30,15 @@
                         {% for subitem in item.items %}
                           {%- assign item_url_parts = subitem.url | split: '/' -%}
                           <li data-proofer-ignore class="submenu-item">
-                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">{%- if subitem.title %}{{ subitem.title }}{% else %}{{ subitem.title }}{% endif -%}</a>
+                            {%- if subitem.external_url %}
+                              <a href="{{ subitem.external_url }}" class="submenu-item-link" target="_blank">
+                            {%- elsif subitem.url %}
+                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">
+                            {%- else %}
+                              <a href="#" class="submenu-item-link">
+                            {% endif %}
+                                {%- if subitem.title %}{{ subitem.title }}{% else %}{{ subitem.title }}{% endif -%}
+                              </a>
                           </li>
                         {% endfor %}
                       </ul>
