@@ -77,7 +77,7 @@
           label_replace(
             d8_istio_pod_revision, "pod", "$1", "dataplane_pod", "(.+)"
           )
-          + on (pod) group_left (tag) istio_build{component="proxy"}
+          + on (pod,namespace) group_left (tag) istio_build{component="proxy"}
         )
       )
       # enrich the metric above with control-plane istio version (will come in handy for the alert description)
@@ -88,7 +88,7 @@
           label_replace(
             istio_build{component="pilot"}, "istiod_tag", "$1", "tag", "(.+)"
           )
-          + on (pod) group_left(revision)
+          + on (pod,namespace) group_left(revision)
           (
             label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
           )
