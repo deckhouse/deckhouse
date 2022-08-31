@@ -37,7 +37,7 @@
                             {%- else %}
                               <a href="#" class="submenu-item-link">
                             {% endif %}
-                                {%- if subitem.title %}{{ subitem.title }}{% else %}{{ subitem.title }}{% endif -%}
+                                {{ subitem.title }}
                               </a>
                           </li>
                         {% endfor %}
