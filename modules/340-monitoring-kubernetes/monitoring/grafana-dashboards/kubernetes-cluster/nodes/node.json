@@ -1049,7 +1049,7 @@
       ],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
@@ -1653,7 +1653,7 @@
           "seriesOverrides": [],
           "spaceLength": 10,
           "stack": true,
-          "steppedLine": true,
+          "steppedLine": false,
           "targets": [
             {
               "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"system\",node=~\"$node\",job=\"node-exporter\"}[$__interval_sx4])) * 100",
@@ -13271,7 +13271,7 @@
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
