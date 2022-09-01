@@ -24,7 +24,7 @@ function getEditionName(edition) {
 }
 
 function getTitle() {
-  return getPageLocale() === 'ru' ? 'Дата, когда версия появилась на этом канале обновлений' : 'The date when the version appeared on the release channel';
+  return getPageLocale() === 'ru' ? 'Дата появления версии на канале обновлений' : 'Date the version appeared on the release channel';
 }
 
 function formatDate(date) {
