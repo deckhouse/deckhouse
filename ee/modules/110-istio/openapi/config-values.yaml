@@ -24,7 +24,7 @@ properties:
       - `MutualPermissive` — outgoing requests are encrypted; incoming unencrypted requests are accepted. This mode is useful when migrating to mTLS.
       - `Mutual` — outgoing requests are encrypted; incoming unencrypted requests are rejected (pods accept only encrypted requests).
       You can manage the mTLS mode separately for each application and for its client connections using the [AuthorizationPolicy](istio-cr.html#authorizationpolicy) and [DestinationRule](istio-cr.html#destinationrule) resources.
-    default: "Off"
+    default: "MutualPermissive"
   outboundTrafficPolicyMode:
     type: string
     enum: [AllowAny, RegistryOnly]
