@@ -15,4 +15,8 @@ lang: ru
 
 {{ site.data.schemas.global.config-values | format_configuration }}
 
-{{ site.data.schemas.global.cluster-configuration | format_cluster_configuration }}
+{{ site.data.schemas.global.cluster_configuration | format_cluster_configuration }}
+
+{{ site.data.schemas.global.init_configuration | format_cluster_configuration }}
+
+{{ site.data.schemas.global.static_cluster_configuration | format_cluster_configuration }}

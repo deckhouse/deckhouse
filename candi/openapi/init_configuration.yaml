@@ -8,42 +8,65 @@ apiVersions:
     properties:
       apiVersion:
         type: string
+        description: Version of the Deckhouse API.
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
         enum: [InitConfiguration]
       deckhouse:
         type: object
+        description: Initial parameters required to install Deckhouse.
         oneOf:
         - required: [devBranch]
         - required: [releaseChannel]
         properties:
           imagesRepo:
             type: string
+            description: |
+              Address of a container registry with Deckhouse images (matching the edition used (CE/EE)).
+
+              Specify it if you work with a third-party container registry (e.g., a proxy registry inside private environments).
             minLength: 1
             default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
+            description: |
+              A Base64-encoded string with a token to access a Docker registry.
             minLength: 1
             default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
           registryCA:
             type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
           registryScheme:
             type: string
+            description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
             default: HTTPS
           releaseChannel:
             type: string
+            description: |
+              The [release channel](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
           bundle:
             type: string
+            description: |
+              The [Deckhouse bundle](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
             enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string
+            description: |
+              The [logging Level](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel) to set in the cluster.
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:
             type: object
+            description: |
+              Initial [Deckhouse configuration](/en/documentation/v1/#deckhouse-configuration).
+
+              The structure specified in the parameter will be moved to ConfigMap `deckhouse' (in the namespace `d8-system') as is (without changes).
+
+              Specify any Deckhouse configuration parameters with which it should start after installation.

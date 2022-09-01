@@ -118,7 +118,7 @@ deckhouse: |
 Для настройки нестандартных конфигураций сторонних registry в ресурсе `InitConfiguration` предусмотрены еще два параметра:
 
 * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
-* `registryScheme` — протокол доступа к registry (`http` или `https`). По умолчанию - `https`.
+* `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию - `HTTPS`.
 
 ### Особенности настройки сторонних registry
 

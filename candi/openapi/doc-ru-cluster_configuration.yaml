@@ -2,7 +2,16 @@ kind: ClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
-    description: Общие параметры кластера.
+    description: |
+      Общие параметры кластера.
+
+      Определяют, например, сетевые параметры, параметры CRI, версию control plane и т.д.. Некоторые параметры можно изменять во время работы кластера.
+
+      Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+      ```
     properties:
       apiVersion:
         description: Используемая версия API Deckhouse.

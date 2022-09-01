@@ -3,7 +3,16 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
-    description: General parameters of a cluster.
+    description: |
+      General parameters of a cluster.
+
+      Defines, for example, network and CRI parameters, control plane version, etc. Some parameters can be changed during cluster operation.
+
+      To change the `ClusterConfiguration` resource in a running cluster, run the following command:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+      ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
     x-examples:

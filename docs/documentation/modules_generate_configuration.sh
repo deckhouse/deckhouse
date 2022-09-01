@@ -33,7 +33,15 @@ if [ -d /src/global ]; then
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/config-values.yaml
   cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/global/config-values.yaml
   # ClusterConfiguration OpenAPI spec
-  cp -f /src/global/cluster_configuration.yaml _data/schemas/global/cluster-configuration.yaml
-  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/cluster-configuration.yaml
-  cat /src/global/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/cluster-configuration.yaml
+  cp -f /src/global/cluster_configuration.yaml _data/schemas/global/cluster_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/cluster_configuration.yaml
+  cat /src/global/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/cluster_configuration.yaml
+  # InitConfiguration OpenAPI spec
+  cp -f /src/global/init_configuration.yaml _data/schemas/global/init_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/init_configuration.yaml
+  cat /src/global/doc-ru-init_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/init_configuration.yaml
+  # StaticClusterConfiguration OpenAPI spec
+  cp -f /src/global/static_cluster_configuration.yaml _data/schemas/global/static_cluster_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/static_cluster_configuration.yaml
+  cat /src/global/doc-ru-static_cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/static_cluster_configuration.yaml
 fi
