@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2022 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO - remove in future releases
-sed -i "/127.0.0.1 kubernetes/d" /etc/hosts
+bb-event-on 'bb-sync-file-changed' '_on_sysctl_config_changed'
+_on_sysctl_config_changed() {
+  systemctl restart systemd-sysctl
+}
 
-if [ -f "/etc/cloud/templates/hosts.debian.tmpl" ] ; then
-  sed -i "/127.0.0.1 kubernetes/d" /etc/cloud/templates/hosts.debian.tmpl
-fi
+bb-sync-file /etc/sysctl.d/99-override_rp_filter.conf - << "EOF"
+net.ipv4.conf.*.rp_filter = 0
+EOF
