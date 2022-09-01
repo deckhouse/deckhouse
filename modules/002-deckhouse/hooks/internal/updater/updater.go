@@ -90,8 +90,6 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 
 // for patch we check less conditions, then for minor release
 // - Canary settings
-// - Requirements
-// - Disruptions
 func (du *DeckhouseUpdater) checkPatchReleaseConditions(predictedRelease *DeckhouseRelease) bool {
 	// check: canary settings
 	if predictedRelease.ApplyAfter != nil {
@@ -100,23 +98,6 @@ func (du *DeckhouseUpdater) checkPatchReleaseConditions(predictedRelease *Deckho
 			du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
 			return false
 		}
-	}
-
-	// TODO: maybe we should remove this check for a patch release
-	// check: release requirements
-	passed := du.checkReleaseRequirements(predictedRelease)
-	if !passed {
-		du.input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "requirement"}, metrics.WithGroup(metricReleasesGroup))
-		du.input.LogEntry.Warnf("Release %s requirements are not met", predictedRelease.Name)
-		return false
-	}
-
-	// check: release disruptions
-	passed = du.checkReleaseDisruptions(predictedRelease)
-	if !passed {
-		du.input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "disruption"}, metrics.WithGroup(metricReleasesGroup))
-		du.input.LogEntry.Warnf("Release %s disruption approval required", predictedRelease.Name)
-		return false
 	}
 
 	return true
@@ -221,7 +202,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 	}
 
 	if du.inManualMode {
-		// check: release is approved
+		// check: release is approved in Manual mode
 		if !predictedRelease.Status.Approved {
 			du.input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
 			du.input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
@@ -229,13 +210,13 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 			return false
 		}
 	} else {
-		// check: update windows for Auto mode
+		// check: update windows in Auto mode
 		if len(updateWindows) > 0 {
-			applyTime := du.predictedReleaseApplyTime(predictedRelease)
-			updatePermitted := updateWindows.IsAllowed(applyTime)
+			updatePermitted := updateWindows.IsAllowed(du.now)
 			if !updatePermitted {
+				applyTime := updateWindows.NextAllowedTime(du.now)
 				du.input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-				du.updateStatus(predictedRelease, "Release is waiting for update window", v1alpha1.PhasePending)
+				du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
 				return false
 			}
 		}
