@@ -27,7 +27,7 @@ const (
 	metricReleasesGroup = "d8_releases"
 )
 
-type deckhouseUpdater struct {
+type DeckhouseUpdater struct {
 	now          time.Time
 	inManualMode bool
 
@@ -51,13 +51,13 @@ type deckhouseUpdater struct {
 	notificationConfig *NotificationConfig
 }
 
-func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseReleaseData, podIsReady, isBootstrapping bool) *deckhouseUpdater {
+func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseReleaseData, podIsReady, isBootstrapping bool) *DeckhouseUpdater {
 	nConfig := ParseNotificationConfigFromValues(input)
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
 	}
-	return &deckhouseUpdater{
+	return &DeckhouseUpdater{
 		now:                         now,
 		inManualMode:                mode == "Manual",
 		input:                       input,
@@ -76,7 +76,7 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 // - Canary settings
 // - Requirements
 // - Disruptions
-func (du *deckhouseUpdater) checkPatchReleaseConditions(predictedRelease *DeckhouseRelease) bool {
+func (du *DeckhouseUpdater) checkPatchReleaseConditions(predictedRelease *DeckhouseRelease) bool {
 	// check: canary settings
 	if predictedRelease.ApplyAfter != nil {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
@@ -106,7 +106,7 @@ func (du *deckhouseUpdater) checkPatchReleaseConditions(predictedRelease *Deckho
 	return true
 }
 
-func (du *deckhouseUpdater) checkReleaseNotification(predictedRelease *DeckhouseRelease, updateWindows update.Windows) bool {
+func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *DeckhouseRelease, updateWindows update.Windows) bool {
 	if du.inManualMode || du.releaseData.Notified {
 		return true
 	}
@@ -161,7 +161,7 @@ func (du *deckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 // - Canary settings
 // - Update windows or manual approval
 // - Deckhouse pod is ready
-func (du *deckhouseUpdater) checkMinorReleaseConditions(predictedRelease *DeckhouseRelease, updateWindows update.Windows) bool {
+func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *DeckhouseRelease, updateWindows update.Windows) bool {
 	// check: release requirements (hard lock)
 	passed := du.checkReleaseRequirements(predictedRelease)
 	if !passed {
@@ -240,7 +240,7 @@ func (du *deckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 //   - Canary settings
 //   - Manual approving
 //   - Release requirements
-func (du *deckhouseUpdater) ApplyPredictedRelease(updateWindows update.Windows) {
+func (du *DeckhouseUpdater) ApplyPredictedRelease(updateWindows update.Windows) {
 	if du.predictedReleaseIndex == -1 {
 		return // has no predicted release
 	}
@@ -276,7 +276,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(updateWindows update.Windows) 
 	du.runReleaseDeploy(predictedRelease, currentRelease)
 }
 
-func (du *deckhouseUpdater) predictedRelease() *DeckhouseRelease {
+func (du *DeckhouseUpdater) predictedRelease() *DeckhouseRelease {
 	if du.predictedReleaseIndex == -1 {
 		return nil // has no predicted release
 	}
@@ -286,7 +286,7 @@ func (du *deckhouseUpdater) predictedRelease() *DeckhouseRelease {
 	return predictedRelease
 }
 
-func (du *deckhouseUpdater) predictedReleaseApplyTime(predictedRelease *DeckhouseRelease) time.Time {
+func (du *DeckhouseUpdater) predictedReleaseApplyTime(predictedRelease *DeckhouseRelease) time.Time {
 	if predictedRelease.ApplyAfter != nil {
 		return *predictedRelease.ApplyAfter
 	}
@@ -294,7 +294,7 @@ func (du *deckhouseUpdater) predictedReleaseApplyTime(predictedRelease *Deckhous
 	return du.now
 }
 
-func (du *deckhouseUpdater) checkReleaseDisruptions(rl *DeckhouseRelease) bool {
+func (du *DeckhouseUpdater) checkReleaseDisruptions(rl *DeckhouseRelease) bool {
 	dMode, ok := du.input.Values.GetOk("deckhouse.update.disruptionApprovalMode")
 	if !ok || dMode.String() == "Auto" {
 		return true
@@ -314,15 +314,15 @@ func (du *deckhouseUpdater) checkReleaseDisruptions(rl *DeckhouseRelease) bool {
 	return true
 }
 
-func (du *deckhouseUpdater) ReleasesCount() int {
+func (du *DeckhouseUpdater) ReleasesCount() int {
 	return len(du.releases)
 }
 
-func (du *deckhouseUpdater) InManualMode() bool {
+func (du *DeckhouseUpdater) InManualMode() bool {
 	return du.inManualMode
 }
 
-func (du *deckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *DeckhouseRelease) {
+func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *DeckhouseRelease) {
 	du.input.LogEntry.Infof("Applying release %s", predictedRelease.Name)
 
 	repo := du.input.Values.Get("global.modulesImages.registry").String()
@@ -360,7 +360,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 
 // PredictNextRelease runs prediction of the next release to deploy.
 // it skips patch releases and save only the latest one
-func (du *deckhouseUpdater) PredictNextRelease() {
+func (du *DeckhouseUpdater) PredictNextRelease() {
 	for i, release := range du.releases {
 		switch release.Status.Phase {
 		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
@@ -380,17 +380,17 @@ func (du *deckhouseUpdater) PredictNextRelease() {
 }
 
 // LastReleaseDeployed returns the equality of the latest existed release with the latest deployed
-func (du *deckhouseUpdater) LastReleaseDeployed() bool {
+func (du *DeckhouseUpdater) LastReleaseDeployed() bool {
 	return du.currentDeployedReleaseIndex == len(du.releases)-1
 }
 
 // HasForceRelease check the existence of the forced release
-func (du *deckhouseUpdater) HasForceRelease() bool {
+func (du *DeckhouseUpdater) HasForceRelease() bool {
 	return du.forcedReleaseIndex != -1
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (du *deckhouseUpdater) ApplyForcedRelease() {
+func (du *DeckhouseUpdater) ApplyForcedRelease() {
 	if du.forcedReleaseIndex == -1 {
 		return
 	}
@@ -424,7 +424,7 @@ func (du *deckhouseUpdater) ApplyForcedRelease() {
 }
 
 // PredictedReleaseIsPatch shows if the predicted release is a patch with respect to the Deployed one
-func (du *deckhouseUpdater) PredictedReleaseIsPatch() bool {
+func (du *DeckhouseUpdater) PredictedReleaseIsPatch() bool {
 	if du.predictedReleaseIsPatch != nil {
 		return *du.predictedReleaseIsPatch
 	}
@@ -456,7 +456,7 @@ func (du *deckhouseUpdater) PredictedReleaseIsPatch() bool {
 	return true
 }
 
-func (du *deckhouseUpdater) processPendingRelease(index int, release DeckhouseRelease) {
+func (du *DeckhouseUpdater) processPendingRelease(index int, release DeckhouseRelease) {
 	// check: already has predicted release and current is a patch
 	if du.predictedReleaseIndex >= 0 {
 		previousPredictedRelease := du.releases[du.predictedReleaseIndex]
@@ -475,7 +475,7 @@ func (du *deckhouseUpdater) processPendingRelease(index int, release DeckhouseRe
 	du.predictedReleaseIndex = index
 }
 
-func (du *deckhouseUpdater) patchInitialStatus(release DeckhouseRelease) DeckhouseRelease {
+func (du *DeckhouseUpdater) patchInitialStatus(release DeckhouseRelease) DeckhouseRelease {
 	if release.Status.Phase != "" {
 		return release
 	}
@@ -485,7 +485,7 @@ func (du *deckhouseUpdater) patchInitialStatus(release DeckhouseRelease) Deckhou
 	return release
 }
 
-func (du *deckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) DeckhouseRelease {
+func (du *DeckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) DeckhouseRelease {
 	if !release.HasSuspendAnnotation {
 		return release
 	}
@@ -504,7 +504,7 @@ func (du *deckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) Deckh
 	return release
 }
 
-func (du *deckhouseUpdater) patchManualRelease(release DeckhouseRelease) DeckhouseRelease {
+func (du *DeckhouseUpdater) patchManualRelease(release DeckhouseRelease) DeckhouseRelease {
 	if release.Status.Phase != v1alpha1.PhasePending {
 		return release
 	}
@@ -544,7 +544,7 @@ func (du *deckhouseUpdater) patchManualRelease(release DeckhouseRelease) Deckhou
 //   - patch releases with empty status (just created)
 //   - handle suspended releases (patch status and remove annotation)
 //   - patch manual releases (change status)
-func (du *deckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult) {
+func (du *DeckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult) {
 	if len(snap) == 0 {
 		return
 	}
@@ -568,7 +568,7 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult)
 	du.releases = releases
 }
 
-func (du *deckhouseUpdater) checkReleaseRequirements(rl *DeckhouseRelease) bool {
+func (du *DeckhouseUpdater) checkReleaseRequirements(rl *DeckhouseRelease) bool {
 	for key, value := range rl.Requirements {
 		passed, err := requirements.CheckRequirement(key, value, du.input.Values)
 		if !passed {
@@ -585,7 +585,7 @@ func (du *deckhouseUpdater) checkReleaseRequirements(rl *DeckhouseRelease) bool 
 	return true
 }
 
-func (du *deckhouseUpdater) updateStatus(release *DeckhouseRelease, msg, phase string, approvedFlag ...bool) {
+func (du *DeckhouseUpdater) updateStatus(release *DeckhouseRelease, msg, phase string, approvedFlag ...bool) {
 	approved := release.Status.Approved
 	if len(approvedFlag) > 0 {
 		approved = approvedFlag[0]
@@ -608,7 +608,7 @@ func (du *deckhouseUpdater) updateStatus(release *DeckhouseRelease, msg, phase s
 	release.Status.Approved = approved
 }
 
-func (du *deckhouseUpdater) ChangeUpdatingFlag(fl bool) {
+func (du *DeckhouseUpdater) ChangeUpdatingFlag(fl bool) {
 	if du.releaseData.IsUpdating == fl {
 		return
 	}
@@ -617,7 +617,7 @@ func (du *deckhouseUpdater) ChangeUpdatingFlag(fl bool) {
 	du.createReleaseDataCM()
 }
 
-func (du *deckhouseUpdater) changeNotifiedFlag(fl bool) {
+func (du *DeckhouseUpdater) changeNotifiedFlag(fl bool) {
 	if du.releaseData.Notified == fl {
 		return
 	}
@@ -626,7 +626,7 @@ func (du *deckhouseUpdater) changeNotifiedFlag(fl bool) {
 	du.createReleaseDataCM()
 }
 
-func (du *deckhouseUpdater) createReleaseDataCM() {
+func (du *DeckhouseUpdater) createReleaseDataCM() {
 	predicted := du.predictedRelease()
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
