@@ -106,7 +106,7 @@ properties:
             type: string
             pattern: '^[0-9]+[mh]{1}$'
             x-doc-example: '6h'
-            description: z
+            description: "The minimum amount of time we have to warn about a release"
   nodeSelector:
     type: object
     additionalProperties:
