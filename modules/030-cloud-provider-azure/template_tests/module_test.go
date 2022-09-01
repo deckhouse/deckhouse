@@ -50,7 +50,7 @@ const globalValues = `
     clusterType: "Cloud"
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -64,22 +64,22 @@ const globalValues = `
       common:
         csiExternalProvisioner116: imagehash
         csiExternalAttacher116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
+        csiExternalProvisioner121: imagehash
+        csiExternalAttacher121: imagehash
         csiExternalResizer116: imagehash
-        csiExternalResizer119: imagehash
+        csiExternalResizer121: imagehash
         csiNodeDriverRegistrar116: imagehash
-        csiNodeDriverRegistrar119: imagehash
+        csiNodeDriverRegistrar121: imagehash
       cloudProviderAzure:
         cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
+        cloudControllerManager121: imagehash
         azurediskCsi: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.19.4
+    kubernetesVersion: 1.21.4
 `
 
 const moduleValues = `

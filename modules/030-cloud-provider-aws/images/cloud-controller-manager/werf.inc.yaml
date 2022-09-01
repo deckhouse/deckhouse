@@ -42,16 +42,8 @@ shell:
   install:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    {{- if semverCompare "=1.19" $version }}
-  - mkdir /src/legacy-cloud-providers
-  - wget https://github.com/kubernetes/legacy-cloud-providers/archive/v0.19.3.tar.gz -O - | tar -xz --strip-components=1 -C /src/legacy-cloud-providers/
-    {{- end }}
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
-    {{- if semverCompare "=1.19" $version }}
-# pay attention when changing upstream version, k8s.io/legacy-cloud-providers may change, which will lead to unexpected results
-  - go mod edit -replace=k8s.io/legacy-cloud-providers=/src/legacy-cloud-providers
-    {{- end }}
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
   {{- end }}

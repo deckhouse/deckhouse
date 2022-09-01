@@ -5,9 +5,6 @@
 {{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = "EndpointSliceTerminatingCondition=true,TTLAfterFinished=true" }}
 {{- end }}
-{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "TTLAfterFinished=true" }}
-{{- end }}
 
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -162,11 +159,7 @@ scheduler:
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
 {{- end }}
     profiling: "false"
-{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "DefaultPodTopologySpread=true"
-{{- else }}
     feature-gates: {{ $featureGates | quote }}
-{{- end }}
     bind-address: "127.0.0.1"
 {{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"

@@ -459,11 +459,11 @@ enabled::run $@
 
 This webhook disables the module in all clusters in which the `global.modules.publicDomainTemplate` option is not set.
 
-Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.19.0:
+Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.21.0:
 
 ```bash
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.19.0
+  enabled::disable_module_in_kubernetes_versions_less_than 1.21.0
   echo "true" > $MODULE_ENABLED_RESULT
 }
 ```

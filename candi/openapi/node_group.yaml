@@ -172,9 +172,8 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  example: '1.19'
+                  example: '1.21'
                   enum:
-                    - "1.19"
                     - "1.20"
                     - "1.21"
                     - "1.22"

@@ -9,12 +9,12 @@ defaults:
 positive:
   configValues:
     - {}
-    - allowedKubernetesVersions: ["1.19"]
+    - allowedKubernetesVersions: ["1.21"]
     - allowedBundles: ["ubuntu-lts"]
     - allowedBundles: []
-      allowedKubernetesVersions: ["1.19"]
+      allowedKubernetesVersions: ["1.21"]
     - allowedBundles: ["ubuntu-lts"]
-      allowedKubernetesVersions: ["1.19"]
+      allowedKubernetesVersions: ["1.21"]
   values:
     - { internal: {} }
     - internal:

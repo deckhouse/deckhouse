@@ -49,7 +49,6 @@ shell:
   - mkdir /src
   - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  {{- if semverCompare ">=1.19" $version }}
   - |
     cat <<EOF > .kube-version
     KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}'
@@ -59,7 +58,6 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  {{- end }}
   - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make all WHAT=cmd/kube-apiserver
 {{- end }}

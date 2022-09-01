@@ -23,7 +23,6 @@ const labels = {
   'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'Containerd' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.19': { type: 'e2e-use', ver: '1.19' },
   'e2e/use/k8s/1.20': { type: 'e2e-use', ver: '1.20' },
   'e2e/use/k8s/1.21': { type: 'e2e-use', ver: '1.21' },
   'e2e/use/k8s/1.22': { type: 'e2e-use', ver: '1.22' },
