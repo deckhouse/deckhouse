@@ -17,10 +17,13 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -69,6 +72,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: updateApprovalFilterNode,
 		},
+		{
+			Name:       "deckhouse_pod_node",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "deckhouse",
+				},
+			},
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   filterDeckhousePodNode,
+		},
 	},
 }, handleUpdateApproval)
 
@@ -101,6 +122,12 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
 	}
 
+	snap = input.Snapshots["deckhouse_pod_node"]
+	if len(snap) == 0 {
+		return fmt.Errorf("deckhouse pod not found")
+	}
+	approver.deckhouseNodeName = snap[0].(string)
+
 	err := approver.processUpdatedNodes(input)
 	if err != nil {
 		return err
@@ -128,9 +155,10 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 type updateApprover struct {
 	finished bool
 
-	ngChecksums shared.ConfigurationChecksum
-	nodes       map[string]updateApprovalNode
-	nodeGroups  map[string]updateNodeGroup
+	ngChecksums       shared.ConfigurationChecksum
+	nodes             map[string]updateApprovalNode
+	nodeGroups        map[string]updateNodeGroup
+	deckhouseNodeName string
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
@@ -258,6 +286,24 @@ var (
 	}
 )
 
+func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
+	// we can not drain single control-plane node because deckhouse webhook will evict
+	// and deckhouse will malfunction and drain single node does not matter we always reboot
+	// single control plane node without problem
+	if nodeNg.Name == "master" && nodeNg.Status.Nodes == 1 {
+		input.LogEntry.Warn("Skip drain single control-plane node")
+		return false
+	}
+
+	// we can not drain single node with deckhouse
+	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Nodes == 1 {
+		input.LogEntry.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
+		return false
+	}
+
+	return *nodeNg.Disruptions.Automatic.DrainBeforeApproval
+}
+
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
 // We don't limit number of Nodes here, because it's already limited
 func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
@@ -291,8 +337,10 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		var patch map[string]interface{}
 		var metricStatus string
 
+		drainBeforeApproval := ar.needDrainNode(input, &node, &ng)
+
 		switch {
-		case !*ng.Disruptions.Automatic.DrainBeforeApproval:
+		case !drainBeforeApproval:
 			// Skip draining if it's disabled in the NodeGroup
 			patch = map[string]interface{}{
 				"metadata": map[string]interface{}{
@@ -452,6 +500,17 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	}
 
 	return ung, nil
+}
+
+func filterDeckhousePodNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var pod corev1.Pod
+
+	err := sdk.FromUnstructured(obj, &pod)
+	if err != nil {
+		return nil, err
+	}
+
+	return pod.Spec.NodeName, nil
 }
 
 func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
