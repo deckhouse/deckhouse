@@ -296,7 +296,7 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 	}
 
 	// we can not drain single node with deckhouse
-	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Nodes == 1 {
+	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Ready < 2 {
 		input.LogEntry.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
 		return false
 	}

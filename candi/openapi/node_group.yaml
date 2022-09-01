@@ -444,6 +444,9 @@ spec:
                           x-doc-default: true
                           description: |
                             Drain pods from the nodes before approving disruption.
+                            **Warning!** This setting are ignoring for `master` node group with single node
+                            and single `ready` node in node group for [Deckhouse controller](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node).
+                            These nodes will be approved without draining.
                         windows:
                           type: array
                           description: |
