@@ -105,8 +105,14 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		toTime := time.Date(min.Year(), min.Month(), min.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
 		if window.isTodayAllowed(min, window.Days) {
-			if min.After(fromTime) && min.Before(toTime) {
+			if (min.After(fromTime) || min.Equal(fromTime)) && min.Before(toTime) {
 				windowMinTime = min
+				if minTime.IsZero() || windowMinTime.Before(minTime) {
+					minTime = windowMinTime
+				}
+				continue
+			} else if min.Before(fromTime) {
+				windowMinTime = fromTime
 				if minTime.IsZero() || windowMinTime.Before(minTime) {
 					minTime = windowMinTime
 				}
@@ -122,7 +128,7 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 				toTime = time.Date(nextDay.Year(), nextDay.Month(), nextDay.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
 				if min.Before(toTime) {
-					if min.After(fromTime) {
+					if min.After(fromTime) || min.Equal(fromTime) {
 						windowMinTime = min
 						break
 					} else {
@@ -139,7 +145,7 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		}
 	}
 
-	return minTime
+	return minTime.Round(time.Minute)
 }
 
 func (uw Window) isDayEqual(today time.Time, dayString string) bool {

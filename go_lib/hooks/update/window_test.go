@@ -117,4 +117,68 @@ func TestNextAllowedWindow(t *testing.T) {
 		assert.Equal(t, time.Date(2021, 10, 20, 16, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Wednesday, res.Weekday())
 	})
+
+	t.Run("without days: before the current day window", func(t *testing.T) {
+		ws := Windows{
+			{
+				From: "20:00",
+				To:   "22:00",
+			},
+		}
+		// sunday 19:35
+		min := time.Date(2021, 10, 17, 19, 35, 00, 0, time.UTC)
+
+		res := ws.NextAllowedTime(min)
+		// beginning of the window: sunday 20:00
+		assert.Equal(t, time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC), res)
+		assert.Equal(t, time.Sunday, res.Weekday())
+	})
+
+	t.Run("without days: after current day", func(t *testing.T) {
+		ws := Windows{
+			{
+				From: "20:00",
+				To:   "22:00",
+			},
+		}
+		// sunday 19:35
+		min := time.Date(2021, 10, 17, 22, 35, 00, 0, time.UTC)
+
+		res := ws.NextAllowedTime(min)
+		// beginning of the window: monday 20:00
+		assert.Equal(t, time.Date(2021, 10, 18, 20, 00, 00, 0, time.UTC), res)
+		assert.Equal(t, time.Monday, res.Weekday())
+	})
+
+	t.Run("without days: inside the day", func(t *testing.T) {
+		ws := Windows{
+			{
+				From: "20:00",
+				To:   "22:00",
+			},
+		}
+		// sunday 19:35
+		min := time.Date(2021, 10, 17, 21, 35, 00, 0, time.UTC)
+
+		res := ws.NextAllowedTime(min)
+		// beginning of the window: sunday 21:35
+		assert.Equal(t, time.Date(2021, 10, 17, 21, 35, 00, 0, time.UTC), res)
+		assert.Equal(t, time.Sunday, res.Weekday())
+	})
+
+	t.Run("without days: equal to start", func(t *testing.T) {
+		ws := Windows{
+			{
+				From: "20:00",
+				To:   "22:00",
+			},
+		}
+		// sunday 20:00
+		min := time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC)
+
+		res := ws.NextAllowedTime(min)
+		// beginning of the window: sunday 20:00
+		assert.Equal(t, time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC), res)
+		assert.Equal(t, time.Sunday, res.Weekday())
+	})
 }
