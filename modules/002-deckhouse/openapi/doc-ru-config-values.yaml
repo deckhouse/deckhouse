@@ -49,10 +49,14 @@ properties:
               description: Дни недели, в которые применяется окно обновлений.
       notification:
         type: object
-        description: "Настройки оповещений о релизах"
+        description: |
+          Настройки оповещений о времении обновления на новый релиз Deckhouse.
+          Работает только для автоматического режима обновлений.
         properties:
           webhook:
             description: 'URL внешнего webhook.'
+          minimalNotificationTime:
+            description: 'Минимальное время, за которое нужно оповестить о релизе.'
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.

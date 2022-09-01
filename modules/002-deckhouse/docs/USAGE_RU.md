@@ -94,6 +94,54 @@ deckhouse: |
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```
 
+### Оповещение об обновлении Deckhouse
+
+В режиме обновлений `Auto` можно настроить оповещение о предстоящих релизах deckhouse, например:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+```
+
+При таких настройках, на адрес `https://release-webhook.mydomain.com` придет POST запрос с `Content-Type: application/json` и следующим содержианием:
+
+```json
+{
+  "version": "1.36",
+  "requirements":  {"k8s": "1.20.0"}, 
+  "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+  "applyTime": "2023-01-01T14:30:00Z00:00",
+  "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
+}
+```
+
+- `version` - строка, версия нового релиза
+- `requirements` - объект, требования к новому релизу
+- `changelogLink` - строка, ссылка на документацию Changelog нового релиза
+- `applyTime` - строка, дата и время обновления (расчитывается по готовности релиза и вашим окнам обновлений). Формат: RFC3339
+- `message` - строка, текстовое сообщение о доступности и времени обновления
+
+#### Минимальное время оповещения об обновлении
+
+Данная настройка выглядит следующим образом:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+      minimalNotificationTime: 8h
+```
+
+и задает минимальное время до обновления, за которое должно придти оповещение. Механизм обновления Deckhouse гарантирует, 
+что Deckhouse не обновится раньше указанного время. Если вы используете окна обновлений, то обновление Deckhouse произойдет в следующее возможное окно обновлений.
+
 ## Сбор информации для отладки
 
 О сборе отладочной информации читайте [в FAQ](faq.html#как-собрать-информацию-для-отладки).

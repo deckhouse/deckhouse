@@ -94,6 +94,54 @@ In this mode, it will be necessary to confirm each minor disruptive update with 
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```
 
+### Deckhouse update notification
+
+In `Auto` update mode you can set up a notification of upcoming deckhouse releases, e.g:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+```
+
+With these settings, a POST request with `Content-Type: application/json` and the following content will come to the address `https://release-webhook.mydomain.com`:
+
+```json
+{
+  "version": "1.36", 
+  "requirements":  { "k8s": "1.20.0" },
+  "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+  "applyTime": "2023-01-01T14:30:00Z00:00",
+  "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
+}
+```
+
+- `version` - A string, the version of the new release
+- `requirements` - object, the requirements for the new release
+- `changelogLink` - string, a link to the Changelog documentation of the new release
+- `applyTime` - string, date and time of the update (calculated by the readiness of the release and your update windows). Format: RFC3339
+- `message` - a string, a text message about the availability and time of the update
+
+#### Minimum update notification time
+
+This setting is as follows:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+      minimalNotificationTime: 8h
+```
+
+and configures the minimum time before the update, in which the notification should come. The Deckhouse update mechanism ensures 
+that Deckhouse will not update before this time. If you use update windows, the Deckhouse update will happen at the next possible update window.
+
 ## Collect debug info
 
 Read [the FAQ](faq.html#how-to-collect-debug-info) to learn more about collecting debug information.

@@ -474,7 +474,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			})
 		})
 
-		Context("Release with notification", func() {
+		Context("Notification: release with notification settings", func() {
 			var httpBody string
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				data, _ := ioutil.ReadAll(r.Body)
@@ -505,7 +505,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			})
 		})
 
-		Context("after apply time", func() {
+		Context("Notification: after met conditions", func() {
 			BeforeEach(func() {
 				changedState := `
 ---
