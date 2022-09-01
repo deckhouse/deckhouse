@@ -188,12 +188,12 @@ func (d *PrettyLogger) LogFail(l string) {
 }
 
 func (d *PrettyLogger) LogWarnLn(a ...interface{}) {
-	a = append([]interface{}{"‼️  "}, a...)
-	d.LogInfoLn(color.New(color.Bold, color.FgHiWhite).Sprint(a...))
+	a = append([]interface{}{"❗ ~ "}, a...)
+	d.LogInfoLn(color.New(color.Bold).Sprint(a...))
 }
 
 func (d *PrettyLogger) LogWarnF(format string, a ...interface{}) {
-	line := color.New(color.Bold, color.FgHiWhite).Sprintf("‼️  "+format, a...)
+	line := color.New(color.Bold).Sprintf("❗ ~ "+format, a...)
 	d.LogInfoF(line)
 }
 

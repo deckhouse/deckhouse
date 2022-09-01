@@ -39,6 +39,9 @@ func (c *Check) WithDelaySeconds(seconds int) *Check {
 }
 
 func (c *Check) AwaitAvailability() error {
+	if c.Session.Host() == "" {
+		return fmt.Errorf("Empty host for connection received")
+	}
 	time.Sleep(c.delay)
 	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).Run(func() error {
 		log.InfoF("Try to connect to %v host\n", c.Session.Host())
