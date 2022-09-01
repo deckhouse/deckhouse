@@ -216,7 +216,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 			if !updatePermitted {
 				applyTime := updateWindows.NextAllowedTime(du.now)
 				du.input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-				du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
+				du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
 				return false
 			}
 		}
