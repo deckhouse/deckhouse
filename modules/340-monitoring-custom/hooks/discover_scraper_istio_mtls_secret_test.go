@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: monitoring-custom :: hooks :: switch_istio_mtls ::", func() {
+var _ = Describe("Modules :: monitoring-custom :: hooks :: discover_scraper_istio_mtls_secret ::", func() {
 
 	f := HookExecutionConfigInit(
 		`{"monitoringCustom":{"internal":{}},"global":{"enabledModules":[]}}`,
@@ -39,7 +39,7 @@ var _ = Describe("Modules :: monitoring-custom :: hooks :: switch_istio_mtls ::"
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(mTLSSwitchPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(mTLSSwitchPath).Value()).To(BeFalse())
+			Expect(f.ValuesGet(mTLSSwitchPath).Bool()).To(BeFalse())
 		})
 	})
 
@@ -65,7 +65,7 @@ type: kubernetes.io/tls
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(mTLSSwitchPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(mTLSSwitchPath).Value()).To(BeTrue())
+			Expect(f.ValuesGet(mTLSSwitchPath).Bool()).To(BeTrue())
 		})
 	})
 

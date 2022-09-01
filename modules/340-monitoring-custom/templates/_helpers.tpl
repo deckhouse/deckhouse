@@ -100,9 +100,9 @@ tlsConfig:
   regex: "^true;;;(.*)|;;;http-metrics$"
   action: keep
 
-  {{ else if eq $schema "https-istio-mtls" }}
+  {{ else if eq $schema "istio-mtls" }}
 - sourceLabels: [{{ $label }}]
-  regex: "http-metrics"
+  regex: "https-metrics"
   action: drop
 
 - sourceLabels:

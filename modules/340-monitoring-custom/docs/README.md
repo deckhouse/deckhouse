@@ -32,8 +32,7 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
       prometheus.deckhouse.io/tls: "true"  # you don't need to specify this annotation if metrics are sent over http
     ```
 
-- When using service-mesh [Istio](../../ee/modules/110-istio) in mTLS mode (STRICT) to collect metrics, the following annotation must be added: `prometheus.deckhouse.io/istio-mtls: "true"`. Note that the application metrics must be accessible via http (without TLS).
-
+- When using service mesh [Istio](../../ee/modules/110-istio) in mTLS STRICT mode, add the following Service annotation to force collecting metrics with proper mTLS certificate: `prometheus.deckhouse.io/istio-mtls: "true"`. Note that the application metrics must be exported via pure http without TLS.
 - *(Optional)* Attach the following annotations to fine-tune the monitoring:
 
   * `prometheus.deckhouse.io/path` — the path to collect metrics (default: `/metrics`);

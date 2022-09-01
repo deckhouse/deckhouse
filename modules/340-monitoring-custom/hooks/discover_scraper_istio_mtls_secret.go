@@ -31,7 +31,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/monitoring-custom/switch_istio_mtls",
+	Queue: "/modules/monitoring-custom/discover_scraper_istio_mtls_secret",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "prometheus_secret_mtls",
@@ -61,8 +61,7 @@ func applySecertMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func istioMTLSswitchHook(input *go_hook.HookInput) error {
-	mTLSCertSnap := input.Snapshots["prometheus_secret_mtls"]
-	if len(mTLSCertSnap) == 1 {
+	if len(input.Snapshots["prometheus_secret_mtls"]) == 1 {
 		input.Values.Set(mTLSSwitchPath, true)
 	} else {
 		input.Values.Set(mTLSSwitchPath, false)

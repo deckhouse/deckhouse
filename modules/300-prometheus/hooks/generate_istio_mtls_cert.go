@@ -54,10 +54,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 		{
-			Name:       "prometheus_secret_mtls",
+			Name:       "secret_istio_mtls",
 			ApiVersion: "v1",
 			Kind:       "Secret",
-			FilterFunc: applySecertMTLSFilter,
+			FilterFunc: applySecertIstioMTLSFilter,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-monitoring"},
@@ -73,7 +73,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateMTLSCertHook)
 
-func applySecertMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applySecertIstioMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 
@@ -175,7 +175,7 @@ func generateMTLSCertHook(input *go_hook.HookInput) error {
 	mTLSCertSAN := fmt.Sprintf("spiffe://%s/ns/d8-monitoring/sa/prometheus", clusterDomain)
 
 	// Get prometheus scraper mTLS keypair.
-	mTLSCertSnap := input.Snapshots["prometheus_secret_mtls"]
+	mTLSCertSnap := input.Snapshots["secret_istio_mtls"]
 	if len(mTLSCertSnap) == 1 {
 		mTLSCert, ok = mTLSCertSnap[0].(certificate.Certificate)
 		if !ok {

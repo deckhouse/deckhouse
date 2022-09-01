@@ -45,17 +45,6 @@ var _ = Describe("Modules :: prometheus :: hooks :: generate_istio_mtls_cert ::"
   }
 }`, "")
 
-	Context("Empty cluster and minimal settings", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-	})
-
 	var istioCASecret = `
 ---
 apiVersion: v1
@@ -84,6 +73,19 @@ metadata:
   namespace: d8-istio
 `
 
+	var MTLSCertSecretValidFor100Years = `
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN6RENDQWJTZ0F3SUJBZ0lVS1dUbDhXOWNMWjhsOTN6SjI1WlgyY0Q4R1Vrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0pqRVJNQThHQTFVRUNoTUlaRGd0YVhOMGFXOHhFVEFQQmdOVkJBTVRDR1E0TFdsemRHbHZNQ0FYRFRJeQpNRGt3TVRFd01EVXdNRm9ZRHpJeE1qSXdPVEF5TVRBd05UQXdXakFvTVNZd0pBWURWUVFERXgxd2NtOXRaWFJvClpYVnpMWE5qY21Gd1pYSXRhWE4wYVc4dGJYUnNjekJaTUJNR0J5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEEwSUEKQk95R0NBZnBOaWgrdEJ1ejVaeUFMWDFEOUt5SitneEtHUUpNbnBPK05xQ21rVFcyWURRendPcStTZnJXNTV3KwptdEVIbjFyTlZaM2d0YmxsKzlrTkNjK2pnYmd3Z2JVd0RnWURWUjBQQVFIL0JBUURBZ1dnTUJNR0ExVWRKUVFNCk1Bb0dDQ3NHQVFVRkJ3TUNNQXdHQTFVZEV3RUIvd1FDTUFBd0hRWURWUjBPQkJZRUZDMVh2OXVBWjQxTHVvMzQKQXpGc0NWcDU1SkpQTUI4R0ExVWRJd1FZTUJhQUZMUERMQlZOQU1ycEE3SDdyeXA3RzNvOXI4MFBNRUFHQTFVZApFUVE1TURlR05YTndhV1ptWlRvdkwyTnNkWE4wWlhJdWJHOWpZV3d2Ym5NdlpEZ3RiVzl1YVhSdmNtbHVaeTl6CllTOXdjbTl0WlhSb1pYVnpNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUFONmgrcTFvT2VTOGxTeGFXTGk3UzgKWUpRNm9CTnJLT0llZld2Tmo1bjdlTFcwRjlySmx6ci83a2FaSDREazZpbUgvcnovUlExOVB3U0FqdTBTZFRINwo4UjU5WjgwdStlTllDTnh2Rk5oViszYjY2aG1SUkJ2NW5mU1dabThWMGxRZUhUbGpMSUcrWVUyenlUQURBU2FICnF0V0JwNnNWTGhCa2FPZjBnMkxyL2tlbzhxSW41THN3TU5MenRiSmdXa2JocWpvVVQrUjA0NFBJK3p3NkE3RXgKN0RTWldCQys5TkdvckRhTjhReGNlMlp2MGNSaWJuZVdCemZLN015TkVMcVNjd01BNllVbGdDMEkwRWdjZm55cgozM0pLNS9SZkU4WUp2LzcrM2ZkWm5Ic2psSnFlWlh2Z1hvdUlMOG91ZElWdU9JK1pLMVZWQUtnTVZyYzZ3YnpyCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSURZem9VL2d1SVNJNjZLZFAwMWR2N1RxbTBJZ0gzVFVldDBSVmpSYUdHZFFvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFN0lZSUIrazJLSDYwRzdQbG5JQXRmVVAwckluNkRFb1pBa3llazc0Mm9LYVJOYlpnTkRQQQo2cjVKK3Ribm5ENmEwUWVmV3MxVm5lQzF1V1g3MlEwSnp3PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  name: prometheus-scraper-istio-mtls
+  namespace: d8-monitoring
+type: kubernetes.io/tls
+`
+
 	var expiredMTLSCertSecret = `
 ---
 apiVersion: v1
@@ -110,7 +112,53 @@ metadata:
 type: kubernetes.io/tls
 	`
 
-	DescribeTable("Istio CA secret exists", func(objectsYAMLs string) {
+	Context("Empty cluster and minimal settings", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(mTLSCrtPath).Exists()).To(BeFalse())
+			Expect(f.ValuesGet(mTLSKeyPath).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Istio CA secret absent, but mTLS secret exits", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(expiredMTLSCertSecret))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(mTLSCrtPath).Exists()).To(BeFalse())
+			Expect(f.ValuesGet(mTLSKeyPath).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Istio CA secret exists and mTLS secret exits and valid", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(istioCASecret + MTLSCertSecretValidFor100Years))
+			f.RunHook()
+
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(mTLSCrtPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(mTLSKeyPath).Exists()).To(BeTrue())
+			cert, err := base64.StdEncoding.DecodeString(f.KubernetesResource("Secret", "d8-monitoring", "prometheus-scraper-istio-mtls").Field(`data.tls\.crt`).String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(f.ValuesGet(mTLSCrtPath).String()).To(BeEquivalentTo(cert))
+			key, err := base64.StdEncoding.DecodeString(f.KubernetesResource("Secret", "d8-monitoring", "prometheus-scraper-istio-mtls").Field(`data.tls\.key`).String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(f.ValuesGet(mTLSKeyPath).String()).To(BeEquivalentTo(key))
+
+		})
+	})
+
+	DescribeTable("Istio CA secret exists, but some issues with mTLS secert", func(objectsYAMLs string) {
 		f.BindingContexts.Set(f.KubeStateSet(objectsYAMLs))
 		f.RunHook()
 
@@ -137,17 +185,26 @@ type: kubernetes.io/tls
 		ok := certPool.AppendCertsFromPEM(istioCA)
 		Expect(ok).To(BeTrue())
 
-		opts := x509.VerifyOptions{
+		clientOpts := x509.VerifyOptions{
 			Roots:       certPool,
 			KeyUsages:   []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			CurrentTime: time.Now().Add(time.Hour * 8030), // ~ 11 month
 		}
-		_, err = cert.Verify(opts)
+		_, err = cert.Verify(clientOpts)
 		Expect(err).ShouldNot(HaveOccurred())
+
+		serverOpts := x509.VerifyOptions{
+			Roots:       certPool,
+			KeyUsages:   []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, // wrong key usage
+			CurrentTime: time.Now().Add(time.Hour * 8030),               // ~ 11 month
+		}
+		_, err = cert.Verify(serverOpts)
+		Expect(err).Should(HaveOccurred())
+
 	},
 		Entry("There is no mTLS secret", istioCASecret),
 		Entry("mTLS secret is expired", istioCASecret+expiredMTLSCertSecret),
-		Entry("mTLS secret signed with old CA", istioCASecretNew+expiredMTLSCertSecret),
+		Entry("mTLS secret signed with old CA", istioCASecretNew+MTLSCertSecretValidFor100Years),
 		Entry("mTLS secret broken", istioCASecret+brokenMTLSCertSecret),
 	)
 
