@@ -94,7 +94,7 @@ defaults:
     values:
       d8Revision: ee
   - scope:
-      path: "*/031-linstor"
+      path: "*/041-linstor"
       type: "pages"
     values:
       featureStatus: experimental

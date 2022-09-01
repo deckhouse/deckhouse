@@ -905,11 +905,11 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/031-linstor/
+              url: /modules/041-linstor/
             - title:
                 en: Usage
                 ru: Примеры
-              url: /modules/031-linstor/usage.html
+              url: /modules/041-linstor/usage.html
             - title:
                 en: Reference
                 ru: Справка
@@ -917,13 +917,13 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/031-linstor/configuration.html
+                  url: /modules/041-linstor/configuration.html
                 - title:
                     en: Advanced Usage
                     ru: Расширенная конфигурация
-                  url: /modules/031-linstor/advanced_usage.html
+                  url: /modules/041-linstor/advanced_usage.html
             - title: FAQ
-              url: /modules/031-linstor/faq.html
+              url: /modules/041-linstor/faq.html
         - title: local-path-provisioner
           folders:
             - title:

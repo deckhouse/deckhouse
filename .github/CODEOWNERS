@@ -3,7 +3,7 @@
 021-cni-cilium/             @zuzzas @yalosev @RomanenkoDenys @konstantin-axenov
 030-cloud-provider-openstack/ @konstantin-axenov
 030-cloud-provider-vsphere/ @RomanenkoDenys
-031-linstor/                @kvaps
+041-linstor/                @kvaps
 031-local-path-provisioner/ @RomanenkoDenys
 040-control-plane-manager/  @yalosev
 040-node-manager/           @yalosev
