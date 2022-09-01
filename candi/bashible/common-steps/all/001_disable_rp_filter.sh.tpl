@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# https://docs.cilium.io/en/v1.12/operations/system_requirements/#linux-distribution-compatibility-matrix
+# Systemd 245 and above (systemctl --version) overrides rp_filter setting of Cilium network interfaces.
+# This introduces connectivity issues (see GitHub issue 10645 for details).
+# To avoid that, configure rp_filter in systemd using the following commands:
+#  echo 'net.ipv4.conf.lxc*.rp_filter = 0' > /etc/sysctl.d/99-override_cilium_rp_filter.conf
+#  systemctl restart systemd-sysctl
+
 bb-event-on 'bb-sync-file-changed' '_on_sysctl_config_changed'
 _on_sysctl_config_changed() {
   systemctl restart systemd-sysctl
