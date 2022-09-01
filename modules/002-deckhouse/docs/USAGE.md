@@ -139,7 +139,7 @@ deckhouse: |
       minimalNotificationTime: 8h
 ```
 
-and configures the minimum time before the update, in which the notification should come. The Deckhouse update mechanism ensures 
+and configures the minimum time before the update, in which the notification should come. The Deckhouse update mechanism ensures
 that Deckhouse will not update before this time. If you use update windows, the Deckhouse update will happen at the next possible update window.
 
 ## Collect debug info
