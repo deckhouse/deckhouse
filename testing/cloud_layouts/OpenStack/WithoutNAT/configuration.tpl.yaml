@@ -44,6 +44,6 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     flavorName: m1.large
-    imageName: debian-11
+    imageName: debian-11-cloud-amd64
   volumeTypeMap:
     nova: ceph-ssd
