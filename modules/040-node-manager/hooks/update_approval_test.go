@@ -47,7 +47,7 @@ spec:
 `, nodeName)
 }
 
-var _ = FDescribe("Modules :: nodeManager :: hooks :: update_approval ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: update_approval ::", func() {
 	var (
 		initialState = `
 ---
@@ -252,6 +252,249 @@ data:
 				}
 			}
 		}
+	})
+
+	Context("Skipping drain before approve in automatic mode with enabled draining before approve", func() {
+		assertNodeApproved := func(f *HookExecutionConfig, nodeName string) {
+			n := f.KubernetesGlobalResource("Node", nodeName)
+			approveAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`)
+			Expect(approveAnnotate.Exists()).To(BeTrue())
+
+			disruptionReqAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`)
+			Expect(disruptionReqAnnotate.Exists()).To(BeFalse())
+		}
+
+		assertNodeWillDrain := func(f *HookExecutionConfig, nodeName string) {
+			n := f.KubernetesGlobalResource("Node", nodeName)
+
+			drainAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`)
+			Expect(drainAnnotate.Exists()).To(BeTrue())
+
+			disruptionReqAnnotate := n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`)
+			Expect(disruptionReqAnnotate.Exists()).To(BeTrue())
+		}
+
+		Context("when have single-master control-plane", func() {
+			const masterNodeName = "kube-master-0"
+			Context("need disruptive master", func() {
+				Context("deckhouse locates on this node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeName},
+							deckhousePodNode: masterNodeName,
+							distruptionNode:  masterNodeName,
+							workers:          []string{"worker-0", "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should approve node", func() {
+						assertNodeApproved(f, masterNodeName)
+					})
+				})
+
+				Context("deckhouse locates on worker node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeName},
+							deckhousePodNode: "worker-0",
+							distruptionNode:  masterNodeName,
+							workers:          []string{"worker-0", "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should approve node", func() {
+						assertNodeApproved(f, masterNodeName)
+					})
+				})
+			})
+
+			Context("need disruptive worker with deckhouse", func() {
+				const workerWithDeckhouseName = "worker-0"
+				Context("one ready worker node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeName},
+							deckhousePodNode: workerWithDeckhouseName,
+							distruptionNode:  workerWithDeckhouseName,
+							workers:          []string{workerWithDeckhouseName, "worker-1"},
+							workersReady:     1,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should approve node", func() {
+						assertNodeApproved(f, workerWithDeckhouseName)
+					})
+				})
+
+				Context("two ready worker nodes", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeName},
+							deckhousePodNode: workerWithDeckhouseName,
+							distruptionNode:  workerWithDeckhouseName,
+							workers:          []string{workerWithDeckhouseName, "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, workerWithDeckhouseName)
+					})
+				})
+			})
+
+			Context("need disruptive worker node without deckhouse", func() {
+				Context("two ready worker nodes", func() {
+					const workerForDistruptive = "worker-1"
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeName},
+							deckhousePodNode: "worker-0",
+							distruptionNode:  workerForDistruptive,
+							workers:          []string{"worker-0", workerForDistruptive},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, workerForDistruptive)
+					})
+				})
+			})
+
+		})
+
+		Context("when have multi-master", func() {
+			Context("need disruptive one of them", func() {
+				const masterNodeForDisruptive = "kube-master-0"
+				Context("deckhouse locates on this node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeForDisruptive, "kube-master-1", "kube-master-2"},
+							deckhousePodNode: masterNodeForDisruptive,
+							distruptionNode:  masterNodeForDisruptive,
+							workers:          []string{"worker-0", "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, masterNodeForDisruptive)
+					})
+				})
+
+				Context("deckhouse locates on another master node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeForDisruptive, "kube-master-1", "kube-master-2"},
+							deckhousePodNode: "kube-master-1",
+							distruptionNode:  masterNodeForDisruptive,
+							workers:          []string{"worker-0", "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, masterNodeForDisruptive)
+					})
+				})
+
+				Context("deckhouse locates on worker node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{masterNodeForDisruptive, "kube-master-1", "kube-master-2"},
+							deckhousePodNode: "worker-1",
+							distruptionNode:  masterNodeForDisruptive,
+							workers:          []string{"worker-0", "worker-1"},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, masterNodeForDisruptive)
+					})
+				})
+			})
+
+			Context("need disruptive worker node with deckhouse", func() {
+				const workerWithDeckhouse = "worker-1"
+				Context("one ready worker node", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{"kube-master-0", "kube-master-1", "kube-master-2"},
+							deckhousePodNode: workerWithDeckhouse,
+							distruptionNode:  workerWithDeckhouse,
+							workers:          []string{"worker-0", workerWithDeckhouse},
+							workersReady:     1,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should approve node", func() {
+						assertNodeApproved(f, workerWithDeckhouse)
+					})
+				})
+
+				Context("two ready worker nodes", func() {
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{"kube-master-0", "kube-master-1", "kube-master-2"},
+							deckhousePodNode: workerWithDeckhouse,
+							distruptionNode:  workerWithDeckhouse,
+							workers:          []string{"worker-0", workerWithDeckhouse},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, workerWithDeckhouse)
+					})
+				})
+			})
+
+			Context("need disruptive worker node without deckhouse", func() {
+				Context("two ready worker nodes", func() {
+					const workerForDistruptive = "worker-1"
+					BeforeEach(func() {
+						s := skipDrainingState{
+							masters:          []string{"kube-master-0", "kube-master-1", "kube-master-2"},
+							deckhousePodNode: "worker-0",
+							distruptionNode:  workerForDistruptive,
+							workers:          []string{"worker-0", workerForDistruptive},
+							workersReady:     2,
+						}
+						f.BindingContexts.Set(f.KubeStateSet(s.generate()))
+						f.RunHook()
+					})
+
+					It("should drain node", func() {
+						assertNodeWillDrain(f, workerForDistruptive)
+					})
+				})
+			})
+		})
+
 	})
 
 	Context("process_updated_nodes :: ", func() {
@@ -825,6 +1068,97 @@ spec:
 		})
 	})
 })
+
+type skipDrainingState struct {
+	deckhousePodNode string
+	distruptionNode  string
+
+	masters      []string
+	workers      []string
+	workersReady int
+}
+
+func (s *skipDrainingState) generate() string {
+	var t = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  worker: dXBkYXRlZA== # updated
+  undisruptable-worker: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      drainBeforeApproval: true
+status:
+  nodes: {{ len .MasterNodes }}
+  ready: {{ len .MasterNodes }}
+{{- range $nodeName := .MasterNodes }}
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: {{ $nodeName }}
+  labels:
+    node.deckhouse.io/group: master
+{{- if eq $nodeName $.DisruptionNode }}
+  annotations:
+    update.node.deckhouse.io/disruption-required: ""
+{{- end }}
+{{- end }}
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      drainBeforeApproval: true
+status:
+  nodes: {{ len .WorkerNodes }}
+  ready: {{ $.WorkerNodesReadyCount }}
+{{- range $nodeName := .WorkerNodes }}
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: {{ $nodeName }}
+  labels:
+    node.deckhouse.io/group: worker
+{{ if eq $nodeName $.DisruptionNode }}
+  annotations:
+    update.node.deckhouse.io/disruption-required: ""
+{{- end }}
+{{- end }}
+---
+` + deckhousePod(s.deckhousePodNode)
+
+	tmpl, _ := template.New("state").Parse(t)
+	var state bytes.Buffer
+	err := tmpl.Execute(&state, struct {
+		MasterNodes           []string
+		WorkerNodes           []string
+		DisruptionNode        string
+		WorkerNodesReadyCount int
+	}{s.masters, s.workers, s.distruptionNode, s.workersReady})
+	if err != nil {
+		panic(err)
+	}
+	return state.String()
+}
 
 func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {
 	const tpl = `
