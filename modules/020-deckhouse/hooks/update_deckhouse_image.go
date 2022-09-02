@@ -148,19 +148,19 @@ const (
 )
 
 func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
-	if !input.Values.Exists("deckhouse.releaseChannel") {
-		// dev upgrade - by tag
-		return tagUpdate(input, dc)
-	}
-
-	// production upgrade
-	input.MetricsCollector.Expire(metricReleasesGroup)
-
 	deckhousePod := getDeckhousePod(input.Snapshots["deckhouse_pod"])
 	if deckhousePod == nil {
 		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping update")
 		return nil
 	}
+
+	if !input.Values.Exists("deckhouse.releaseChannel") {
+		// dev upgrade - by tag
+		return tagUpdate(input, dc, deckhousePod)
+	}
+
+	// production upgrade
+	input.MetricsCollector.Expire(metricReleasesGroup)
 
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
@@ -350,13 +350,7 @@ func isUpdatePermitted(windows update.Windows) bool {
 }
 
 // tagUpdate update by tag, in dev mode or specified image
-func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
-	snap := input.Snapshots["deckhouse_pod"]
-	if len(snap) == 0 {
-		return nil
-	}
-
-	deckhousePod := snap[0].(deckhousePodInfo)
+func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *deckhousePodInfo) error {
 	if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
 		// pod is restarting or something like that, try more in a 15 seconds
 		return nil
