@@ -108,6 +108,91 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 		})
 	})
 
+	Context("There is one deprecated revision", func() {
+		var someDepricatedRevisions = `
+internal:
+  globalRevision: 1x2x2
+  deprecatedRevisions:
+  - revision: 1x1x1
+    severity: 9
+`
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio", []byte(someDepricatedRevisions))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_deprecated_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"revision": "1x1x1",
+					"severity": "9",
+				},
+			}))
+		})
+	})
+
+	Context("There are some deprecated revision", func() {
+		var someDepricatedRevisions = `
+internal:
+  globalRevision: 1x2x2
+  deprecatedRevisions:
+  - revision: 1x1x1
+    severity: 9
+  - revision: 0x0x1
+    severity: 1
+`
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio", []byte(someDepricatedRevisions))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(3))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_deprecated_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"revision": "1x1x1",
+					"severity": "9",
+				},
+			}))
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_deprecated_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"revision": "0x0x1",
+					"severity": "1",
+				},
+			}))
+		})
+	})
+
 	DescribeTable("There are different desired and actual revisions", func(objectsYAMLs []string, want *wantedMetric) {
 		f.ValuesSet("istio.internal.globalRevision", "v1x42")
 		yamlState := strings.Join(objectsYAMLs, "\n---\n")

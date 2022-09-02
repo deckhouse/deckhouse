@@ -7,7 +7,6 @@ package hooks
 
 import (
 	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -188,6 +187,45 @@ globalVersion: "1.3.1" # default version "from openapi/values.yaml"
 			Expect(f).ToNot(ExecuteSuccessfully())
 
 			Expect(f.GoHookError).To(MatchError("unsupported versions: [1.0,1.7.4,1.8.0-alpha.2,1.9.0]"))
+		})
+	})
+
+	Context("There are some deprecated versions exists", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
+
+			values := `
+internal:
+  deprecatedVersions:
+  - version: 1.1.0
+    severity: 4
+  - version: 0.0.2
+    severity: 9
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.RunHook()
+		})
+		It("deprecatedRevisions param should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(len(f.ValuesGet("istio.internal.deprecatedRevisions").Array())).Should(Equal(2))
+			Expect(f.ValuesGet("istio.internal.deprecatedRevisions").String()).Should(Equal(`[{"revision":"v1x1x0","severity":4},{"revision":"v0x0x2","severity":9}]`))
+		})
+	})
+
+	Context("There are no deprecated versions", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
+
+			values := `
+internal:
+  deprecatedVersions: []
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.RunHook()
+		})
+		It("deprecatedRevisions param should be empty", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(len(f.ValuesGet("istio.internal.deprecatedRevisions").Array())).Should(Equal(0))
 		})
 	})
 })

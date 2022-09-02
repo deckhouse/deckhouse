@@ -93,6 +93,25 @@ properties:
         - "1.13"
         x-examples:
         - ["1.12", "1.13"]
+      deprecatedVersions:
+        type: array
+        items:
+          type: object
+          required:
+          - version
+          - severity
+          properties:
+            version:
+              type: string
+            severity:
+              type: integer
+              minimum: 1
+              maximum: 9
+        default:
+          - version: "1.10.1"
+            severity: 4
+        x-examples:
+          - [{version: "1.12", severity: 7}, {version: "1.13", severity: 9}]
       globalRevision:
         type: string
         x-examples: [v1x10x1] # must be real
@@ -110,6 +129,25 @@ properties:
         default: []
         x-examples:
         - [v1x10x1] # must be real
+      deprecatedRevisions:
+        type: array
+        items:
+          type: object
+          required:
+            - revision
+            - severity
+          properties:
+            revision:
+              type: string
+            severity:
+              type: integer
+              minimum: 1
+              maximum: 9
+        default:
+          - revision: "1x10x1"
+            severity: 4
+        x-examples:
+          - [{revision: "1x12", severity: 7}, {revision: "1x13", severity: 9}]
       applicationNamespaces:
         type: array
         items:

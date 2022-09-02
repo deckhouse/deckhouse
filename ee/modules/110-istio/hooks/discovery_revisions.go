@@ -19,6 +19,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+type DeprecatedRevision struct {
+	Revision string `json:"revision,omitempty"`
+	Severity int64  `json:"severity,omitempty"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// The Order below matters for ensure_crds_istio.go, it needs globalVersion to deploy proper CRDs
 	OnStartup:    &go_hook.OrderedConfig{Order: 5},
@@ -90,8 +95,18 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 	sort.Strings(revisionsToInstall)
 
+	deprecatedRevisions := make([]DeprecatedRevision, 0)
+	var deprecatedVersionsResult = input.Values.Get("istio.internal.deprecatedVersions").Array()
+	for _, deprecatedVersionMap := range deprecatedVersionsResult {
+		var deprecatedRevision DeprecatedRevision
+		deprecatedRevision.Revision = internal.VersionToRevision(deprecatedVersionMap.Get("version").String())
+		deprecatedRevision.Severity = deprecatedVersionMap.Get("severity").Int()
+		deprecatedRevisions = append(deprecatedRevisions, deprecatedRevision)
+	}
+
 	input.Values.Set("istio.internal.globalRevision", globalRevision)
 	input.Values.Set("istio.internal.revisionsToInstall", revisionsToInstall)
+	input.Values.Set("istio.internal.deprecatedRevisions", deprecatedRevisions)
 	input.ConfigValues.Set("istio.globalVersion", globalVersion)
 
 	return nil

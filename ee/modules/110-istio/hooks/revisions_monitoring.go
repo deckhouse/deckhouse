@@ -157,6 +157,15 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(revisionsMonitoringMetricsGroup)
 
+	var deprecatedRevisions = input.Values.Get("istio.internal.deprecatedRevisions").Array()
+	for _, deprecatedRevision := range deprecatedRevisions {
+		labels := map[string]string{
+			"revision": deprecatedRevision.Get("revision").String(),
+			"severity": deprecatedRevision.Get("severity").String(),
+		}
+		input.MetricsCollector.Set("d8_istio_deprecated_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
+	}
+
 	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()
 
 	var namespaceRevisionMap = map[string]string{}
@@ -198,5 +207,6 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		}
 		input.MetricsCollector.Set("d8_istio_pod_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
 	}
+
 	return nil
 }
