@@ -276,7 +276,7 @@ data:
 
 		Context("when have single-master control-plane", func() {
 			const masterNodeName = "kube-master-0"
-			Context("need disruptive master", func() {
+			Context("need disruptive operation on master", func() {
 				Context("deckhouse locates on this node", func() {
 					BeforeEach(func() {
 						s := skipDrainingState{
@@ -290,7 +290,7 @@ data:
 						f.RunHook()
 					})
 
-					It("should approve node", func() {
+					It("should approve node master", func() {
 						assertNodeApproved(f, masterNodeName)
 					})
 				})
@@ -314,7 +314,7 @@ data:
 				})
 			})
 
-			Context("need disruptive worker with deckhouse", func() {
+			Context("need disruptive operation on worker with deckhouse", func() {
 				const workerWithDeckhouseName = "worker-0"
 				Context("one ready worker node", func() {
 					BeforeEach(func() {
@@ -353,7 +353,7 @@ data:
 				})
 			})
 
-			Context("need disruptive worker node without deckhouse", func() {
+			Context("need disruptive operation on worker node without deckhouse", func() {
 				Context("two ready worker nodes", func() {
 					const workerForDistruptive = "worker-1"
 					BeforeEach(func() {
@@ -377,7 +377,7 @@ data:
 		})
 
 		Context("when have multi-master", func() {
-			Context("need disruptive one of them", func() {
+			Context("need disruptive operation on one of them", func() {
 				const masterNodeForDisruptive = "kube-master-0"
 				Context("deckhouse locates on this node", func() {
 					BeforeEach(func() {
@@ -434,7 +434,7 @@ data:
 				})
 			})
 
-			Context("need disruptive worker node with deckhouse", func() {
+			Context("need disruptive operation on worker node with deckhouse", func() {
 				const workerWithDeckhouse = "worker-1"
 				Context("one ready worker node", func() {
 					BeforeEach(func() {
@@ -473,7 +473,7 @@ data:
 				})
 			})
 
-			Context("need disruptive worker node without deckhouse", func() {
+			Context("need disruptive operation on worker node without deckhouse", func() {
 				Context("two ready worker nodes", func() {
 					const workerForDistruptive = "worker-1"
 					BeforeEach(func() {
