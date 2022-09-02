@@ -106,7 +106,9 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
 
 	// run only if it's a canary release
-	var applyAfter, cooldownUntil *time.Time
+	var (
+		applyAfter, cooldownUntil, notificationShiftTime *time.Time
+	)
 	if releaseChecker.releaseMetadata.Cooldown != nil {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
 	}
@@ -125,7 +127,6 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
-	var notificationShiftTime *time.Time
 
 releaseLoop:
 	for _, release := range releases {
