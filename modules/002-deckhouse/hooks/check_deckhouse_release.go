@@ -159,7 +159,7 @@ releaseLoop:
 
 		// LT
 		default:
-			// inherit cooldown from previous minor release
+			// inherit cooldown from previous patch release
 			// we need this to automatically set cooldown for next patch releases
 			if cooldownUntil == nil && release.CooldownUntil != nil {
 				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
@@ -167,14 +167,16 @@ releaseLoop:
 				}
 			}
 			if release.AnnotationFlags.NotificationShift {
-				notificationShiftTime = release.ApplyAfter
+				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
+					notificationShiftTime = release.ApplyAfter
+				}
 			}
 			break releaseLoop
 		}
 	}
 
+	ts := time.Now()
 	if releaseChecker.IsCanaryRelease() {
-		ts := time.Now()
 		// if cooldown is set, calculate canary delay from cooldown time, not current
 		if cooldownUntil != nil && cooldownUntil.After(ts) {
 			ts = *cooldownUntil
@@ -184,7 +186,7 @@ releaseLoop:
 	}
 
 	// inherit applyAfter from notified release
-	if notificationShiftTime != nil {
+	if notificationShiftTime != nil && notificationShiftTime.After(ts) {
 		applyAfter = notificationShiftTime
 	}
 
