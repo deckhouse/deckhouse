@@ -70,6 +70,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "deckhouse",
 				},
 			},
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{
+					{
+						Field:    "status.phase",
+						Operator: "Equals",
+						Value:    "Running",
+					},
+				},
+			},
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterDeckhousePod,
