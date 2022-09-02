@@ -225,6 +225,9 @@ releaseLoop:
 	if cooldownUntil != nil {
 		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
+	if notificationShiftTime != nil {
+		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
+	}
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
 
