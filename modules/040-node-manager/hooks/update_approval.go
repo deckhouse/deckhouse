@@ -335,6 +335,8 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	return nil
 }
 
+// comment for test update
+
 // Process updated nodes: remove approved and disruption-approved annotations, if:
 //   * Node is ready
 //   * Node checksum is equal to NodeGroup checksum
