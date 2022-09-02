@@ -142,6 +142,11 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 			"spec": map[string]interface{}{
 				"applyAfter": releaseApplyTime,
 			},
+			"metadata": map[string]interface{}{
+				"annotations": map[string]string{
+					"release.deckhouse.io/notification-time-shift": "true",
+				},
+			},
 		}
 		du.input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name)
 		return false
@@ -300,7 +305,7 @@ func (du *DeckhouseUpdater) checkReleaseDisruptions(rl *DeckhouseRelease) bool {
 	for _, key := range rl.Disruptions {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
 		if hasDisruptionUpdate {
-			if !rl.HasDisruptionApprovedAnnotation {
+			if !rl.AnnotationFlags.DisruptionApproved {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.Name, reason)
 				du.updateStatus(rl, msg, v1alpha1.PhasePending)
 				return false
@@ -370,7 +375,7 @@ func (du *DeckhouseUpdater) PredictNextRelease() {
 			du.currentDeployedReleaseIndex = i
 		}
 
-		if release.HasForceAnnotation {
+		if release.AnnotationFlags.Force {
 			du.forcedReleaseIndex = i
 		}
 	}
@@ -483,7 +488,7 @@ func (du *DeckhouseUpdater) patchInitialStatus(release DeckhouseRelease) Deckhou
 }
 
 func (du *DeckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) DeckhouseRelease {
-	if !release.HasSuspendAnnotation {
+	if !release.AnnotationFlags.Suspend {
 		return release
 	}
 

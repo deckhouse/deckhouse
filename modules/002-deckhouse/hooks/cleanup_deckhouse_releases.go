@@ -40,11 +40,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse/cleanup_deckhouse_release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "releases",
-			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "DeckhouseRelease",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterDeckhouseRelease,
+			Name:                         "releases",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "DeckhouseRelease",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
+			FilterFunc:                   filterDeckhouseRelease,
 		},
 	},
 }, cleanupReleases)

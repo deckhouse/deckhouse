@@ -29,10 +29,8 @@ type DeckhouseRelease struct {
 	Name    string
 	Version *semver.Version
 
-	ManuallyApproved                bool
-	HasSuspendAnnotation            bool
-	HasForceAnnotation              bool
-	HasDisruptionApprovedAnnotation bool
+	ManuallyApproved bool
+	AnnotationFlags  DeckhouseReleaseAnnotationsFlags
 
 	Requirements  map[string]string
 	ChangelogLink string
@@ -41,6 +39,13 @@ type DeckhouseRelease struct {
 	CooldownUntil *time.Time
 
 	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
+}
+
+type DeckhouseReleaseAnnotationsFlags struct {
+	Suspend            bool
+	Force              bool
+	DisruptionApproved bool
+	NotificationShift  bool // time shift by the notification process
 }
 
 type ByVersion []DeckhouseRelease

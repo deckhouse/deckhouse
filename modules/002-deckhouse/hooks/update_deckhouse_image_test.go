@@ -502,6 +502,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 				Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
 				Expect(r126.Field("spec.applyAfter").String()).To(Equal("2021-01-01T14:30:00Z"))
+				Expect(r126.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeTrue())
 			})
 		})
 

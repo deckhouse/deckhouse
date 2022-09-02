@@ -125,6 +125,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
+	var notificationShiftTime *time.Time
 
 releaseLoop:
 	for _, release := range releases {
@@ -164,6 +165,9 @@ releaseLoop:
 					cooldownUntil = release.CooldownUntil
 				}
 			}
+			if release.AnnotationFlags.NotificationShift {
+				notificationShiftTime = release.ApplyAfter
+			}
 			break releaseLoop
 		}
 	}
@@ -176,6 +180,11 @@ releaseLoop:
 		}
 		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
+	}
+
+	// inherit applyAfter from notified release
+	if notificationShiftTime != nil {
+		applyAfter = notificationShiftTime
 	}
 
 	var disruptions []string

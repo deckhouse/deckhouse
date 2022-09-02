@@ -252,23 +252,29 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		return nil, err
 	}
 
-	var hasSuspendAnnotation, hasForceAnnotation, hasDisruptionApprovedAnnotation bool
+	var annotationFlags updater.DeckhouseReleaseAnnotationsFlags
 
 	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
 		if v == "true" {
-			hasSuspendAnnotation = true
+			annotationFlags.Suspend = true
 		}
 	}
 
 	if v, ok := release.Annotations["release.deckhouse.io/force"]; ok {
 		if v == "true" {
-			hasForceAnnotation = true
+			annotationFlags.Force = true
 		}
 	}
 
 	if v, ok := release.Annotations["release.deckhouse.io/disruption-approved"]; ok {
 		if v == "true" {
-			hasDisruptionApprovedAnnotation = true
+			annotationFlags.DisruptionApproved = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/notification-time-shift"]; ok {
+		if v == "true" {
+			annotationFlags.NotificationShift = true
 		}
 	}
 
@@ -302,10 +308,8 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 			Approved: release.Status.Approved,
 			Message:  release.Status.Message,
 		},
-		ManuallyApproved:                releaseApproved,
-		HasSuspendAnnotation:            hasSuspendAnnotation,
-		HasForceAnnotation:              hasForceAnnotation,
-		HasDisruptionApprovedAnnotation: hasDisruptionApprovedAnnotation,
+		ManuallyApproved: releaseApproved,
+		AnnotationFlags:  annotationFlags,
 	}, nil
 }
 
