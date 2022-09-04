@@ -27,19 +27,19 @@ data:
 
   bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
 
-  {{- if eq .Values.cniCilium.mode "VXLAN" }}
+  {{- if eq .Values.internal.cniCilium.mode "VXLAN" }}
   tunnel: "vxlan"
   {{- else }}
   tunnel: "disabled"
   {{- end }}
   enable-ipv4-masquerade: "true"
-  {{- if eq .Values.cniCilium.mode "VXLAN" }}
+  {{- if eq .Values.internal.cniCilium.mode "VXLAN" }}
   enable-bpf-masquerade: "true"
   {{- end }}
 
   enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
-  {{- if eq .Values.cniCilium.mode "DirectWithNodeRoutes" }}
+  {{- if eq .Values.internal.cniCilium.mode "DirectWithNodeRoutes" }}
   auto-direct-node-routes: "true"
   {{- end }}
   enable-bandwidth-manager: "true"
@@ -75,7 +75,7 @@ data:
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
 
-  {{- if eq .Values.cniCilium.mode "VXLAN" }}
+  {{- if eq .Values.internal.cniCilium.mode "VXLAN" }}
   enable-ipv4-egress-gateway: "true"
   {{- end }}
 

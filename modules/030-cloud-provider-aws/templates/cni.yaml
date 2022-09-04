@@ -6,4 +6,4 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-  cni: c2ltcGxlLWJyaWRnZQ==
+  cni: {{ b64enc "simple-bridge" | quote }}
