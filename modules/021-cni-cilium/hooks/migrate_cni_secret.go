@@ -29,8 +29,8 @@ import (
 )
 
 type cniConfigStruct struct {
-	cni    string
-	cilium []byte
+	Cni    string
+	Cilium []byte
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -60,8 +60,8 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, err
 	}
 	ret := cniConfigStruct{}
-	ret.cni = string(s.Data["cni"])
-	ret.cilium = s.Data["cilium"]
+	ret.Cni = string(s.Data["cni"])
+	ret.Cilium = s.Data["cilium"]
 	return ret, nil
 }
 
@@ -74,12 +74,12 @@ func migrateCniConfig(input *go_hook.HookInput) error {
 	}
 
 	cniConfig := cniConfigSnap[0].(cniConfigStruct)
-	if cniConfig.cni != "cilium" {
-		input.LogEntry.Warnf("ckube-system/d8-cni-configuration secret cni type = %s, skip migration", cniConfig.cni)
+	if cniConfig.Cni != "cilium" {
+		input.LogEntry.Warnf("ckube-system/d8-cni-configuration secret cni type = %s, skip migration", cniConfig.Cni)
 		return nil
 	}
 
-	if cniConfig.cilium != nil {
+	if cniConfig.Cilium != nil {
 		input.LogEntry.Warnln("ckube-system/d8-cni-configuration secret cilium config is present, skip migration")
 		return nil
 	}
