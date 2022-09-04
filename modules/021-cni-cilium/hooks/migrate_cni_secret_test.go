@@ -19,14 +19,16 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func generateCniConfigurationSecret(cni string, mode string) string {
 	var (
-		secretTemplate string = `
+		secretTemplate = `
 ---
 apiVersion: v1
 kind: Secret
