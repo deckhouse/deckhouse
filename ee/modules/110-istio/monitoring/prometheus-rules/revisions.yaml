@@ -182,23 +182,19 @@
     labels:
       severity_level: "8"
       tier: cluster
-  - alert: D8IstioDataPlaneWithDeprecatedIstioRevision
+  - alert: D8IstioDeprecatedIstioVersionInstalled
     annotations:
       description: |
-        There are Pods in `{{$labels.namespace}}` Namespace with deprecated revision `{{$labels.revision}}` of istio sidecars.
+        There is deprecated istio version `{{$labels.version}}` installed.
         Impact — Deprecated istio revision will be removed in future updates of deckhouse.
-        Getting affected Pods:
-        ```
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" | fromjson | .revision == $revision) | .metadata.name'
-        ```
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: There are Pods with istio sidecars, but without istio-injection configured
+      summary: There is deprecated istio version installed
     expr: |
-      d8_istio_pod_revision * on (revision) group_left (severity) d8_istio_deprecated_revision{}
+      d8_istio_deprecated_version_installed{}
     for: 5m
     labels:
-      severity_level: "{{$labels.severity}}"
+      severity_level: "{{$labels.alert_severity}}"
       tier: cluster

@@ -157,13 +157,22 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(revisionsMonitoringMetricsGroup)
 
+	var istioRevisionsMap = map[string]struct{}{}
+	var installedRevisions = input.Values.Get("istio.internal.revisionsToInstall").Array()
+	for _, installedRevision := range installedRevisions {
+		istioRevisionsMap[installedRevision.String()] = struct{}{}
+	}
+
 	var deprecatedRevisions = input.Values.Get("istio.internal.deprecatedRevisions").Array()
+
 	for _, deprecatedRevision := range deprecatedRevisions {
-		labels := map[string]string{
-			"revision": deprecatedRevision.Get("revision").String(),
-			"severity": deprecatedRevision.Get("severity").String(),
+		if _, ok := istioRevisionsMap[deprecatedRevision.Get("revision").String()]; ok {
+			labels := map[string]string{
+				"revision":       deprecatedRevision.Get("revision").String(),
+				"alert_severity": deprecatedRevision.Get("alertSeverity").String(),
+			}
+			input.MetricsCollector.Set("d8_istio_deprecated_revision_installed", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
 		}
-		input.MetricsCollector.Set("d8_istio_deprecated_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
 	}
 
 	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()

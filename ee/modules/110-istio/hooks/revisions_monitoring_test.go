@@ -112,9 +112,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 		var someDepricatedRevisions = `
 internal:
   globalRevision: 1x2x2
+  revisionsToInstall:
+  - 1x2x2
+  - 1x1x1
   deprecatedRevisions:
   - revision: 1x1x1
-    severity: 9
+    alertSeverity: 9
 `
 
 		BeforeEach(func() {
@@ -133,13 +136,13 @@ internal:
 				Action: "expire",
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_deprecated_revision",
+				Name:   "d8_istio_deprecated_revision_installed",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
-					"revision": "1x1x1",
-					"severity": "9",
+					"revision":       "1x1x1",
+					"alert_severity": "9",
 				},
 			}))
 		})
@@ -149,11 +152,15 @@ internal:
 		var someDepricatedRevisions = `
 internal:
   globalRevision: 1x2x2
+  revisionsToInstall:
+  - 1x2x2
+  - 1x1x1
+  - 0x0x1
   deprecatedRevisions:
   - revision: 1x1x1
-    severity: 9
+    alertSeverity: 9
   - revision: 0x0x1
-    severity: 1
+    alertSeverity: 1
 `
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("istio", []byte(someDepricatedRevisions))
@@ -171,23 +178,23 @@ internal:
 				Action: "expire",
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_deprecated_revision",
+				Name:   "d8_istio_deprecated_revision_installed",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
-					"revision": "1x1x1",
-					"severity": "9",
+					"revision":       "1x1x1",
+					"alert_severity": "9",
 				},
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_deprecated_revision",
+				Name:   "d8_istio_deprecated_revision_installed",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
-					"revision": "0x0x1",
-					"severity": "1",
+					"revision":       "0x0x1",
+					"alert_severity": "1",
 				},
 			}))
 		})

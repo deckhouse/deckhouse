@@ -20,8 +20,8 @@ import (
 )
 
 type DeprecatedRevision struct {
-	Revision string `json:"revision,omitempty"`
-	Severity int64  `json:"severity,omitempty"`
+	Revision      string `json:"revision,omitempty"`
+	AlertSeverity int64  `json:"alertSeverity,omitempty"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -100,7 +100,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	for _, deprecatedVersionMap := range deprecatedVersionsResult {
 		var deprecatedRevision DeprecatedRevision
 		deprecatedRevision.Revision = internal.VersionToRevision(deprecatedVersionMap.Get("version").String())
-		deprecatedRevision.Severity = deprecatedVersionMap.Get("severity").Int()
+		deprecatedRevision.AlertSeverity = deprecatedVersionMap.Get("alertSeverity").Int()
 		deprecatedRevisions = append(deprecatedRevisions, deprecatedRevision)
 	}
 
