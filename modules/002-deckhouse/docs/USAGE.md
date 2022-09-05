@@ -111,18 +111,6 @@ deckhouse: |
 
 After a new Deckhouse minor version appears on the update channel, a [POST request](configuration.html#parameters-update-notification-webhook) will be executed to the webhook's URL before it is applied in the cluster.
 
-Example of the request payload:
-
-```json
-{
-  "version": "1.36", 
-  "requirements":  { "k8s": "1.20.0" },
-  "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
-  "applyTime": "2023-01-01T14:30:00Z00:00",
-  "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
-}
-```
-
 Set the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter to have enough time to react to a Deckhouse update notification. In this case, the update will happen after the specified time, considering the update windows.
 
 Example:

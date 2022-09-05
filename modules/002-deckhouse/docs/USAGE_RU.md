@@ -111,18 +111,6 @@ deckhouse: |
 
 После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере, на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
 
-Пример содержания запроса:
-
-```json
-{
-  "version": "1.36",
-  "requirements":  {"k8s": "1.20.0"}, 
-  "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
-  "applyTime": "2023-01-01T14:30:00Z00:00",
-  "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
-}
-```
-
 Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени, с учетом окон обновлений.
 
 Пример:
