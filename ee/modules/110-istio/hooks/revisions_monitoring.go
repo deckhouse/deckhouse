@@ -198,6 +198,5 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		}
 		input.MetricsCollector.Set("d8_istio_pod_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
 	}
-
 	return nil
 }

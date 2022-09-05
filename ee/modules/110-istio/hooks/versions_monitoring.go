@@ -32,6 +32,7 @@ func versionMonitoringHook(input *go_hook.HookInput) error {
 	additionalVersions := input.Values.Get("istio.additionalVersions").Array()
 	deprecatedVersions := input.Values.Get("istio.internal.deprecatedVersions").Array()
 	istioVersionsMap := make(map[string]struct{}, 0)
+
 	istioVersionsMap[globalVersion] = struct{}{}
 	for _, additionalVersion := range additionalVersions {
 		istioVersionsMap[additionalVersion.String()] = struct{}{}
@@ -46,5 +47,6 @@ func versionMonitoringHook(input *go_hook.HookInput) error {
 			input.MetricsCollector.Set("d8_istio_deprecated_version_installed", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
 		}
 	}
+
 	return nil
 }

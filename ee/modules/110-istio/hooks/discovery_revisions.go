@@ -19,11 +19,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-type DeprecatedRevision struct {
-	Revision      string `json:"revision,omitempty"`
-	AlertSeverity int64  `json:"alertSeverity,omitempty"`
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// The Order below matters for ensure_crds_istio.go, it needs globalVersion to deploy proper CRDs
 	OnStartup:    &go_hook.OrderedConfig{Order: 5},

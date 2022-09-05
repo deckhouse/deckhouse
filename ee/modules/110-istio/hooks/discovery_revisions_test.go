@@ -190,5 +190,4 @@ globalVersion: "1.3.1" # default version "from openapi/values.yaml"
 			Expect(f.GoHookError).To(MatchError("unsupported versions: [1.0,1.7.4,1.8.0-alpha.2,1.9.0]"))
 		})
 	})
-
 })
