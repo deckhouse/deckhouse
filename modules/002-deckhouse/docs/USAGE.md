@@ -96,7 +96,7 @@ kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approv
 
 ### Deckhouse update notification
 
-In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update. 
+In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update.
 
 Example:
 
