@@ -96,19 +96,54 @@ properties:
       notification:
         type: object
         description: |
-          Notification settings about the time when updating to the new Deckhouse release.
-          Notification works only for update.mode == "Auto"
+          Settings for sending notifications of scheduled Deckhouse updates.
+
+          Notifications are sent **only** when the [automatic update mode](#parameters-update-mode) is set.
+
+          Alerts are sent **only** for Deckhouse minor version changes — no alerts are sent for patch version changes.
+        x-examples:
+        - webhook: https://release-webhook.mydomain.com
+          minimalNotificationTime: 8h
         properties:
           webhook:
             type: string
             pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
             x-doc-example: 'https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa'
-            description: "URL for an external webhook handler"
+            description: |
+              URL for an external webhook handler.
+
+              The POST request will be sent on the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
+
+              > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must elapse before updating from the moment of notification.
+
+              Example of the POST request payload (`Content-Type: application/json`):
+
+              ```json
+              {
+                "version": "1.36",
+                "requirements":  {"k8s": "1.20.0"},
+                "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+                "applyTime": "2023-01-01T14:30:00Z00:00",
+                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
+              }
+              ```
+
+              Description of POST request fields:
+              - `version` - string, minor version number;
+              - `requirements` - object, version requirements;
+              - `changelogLink` - string, a URL to the minor version changelog;
+              - `applyTime` - string, date and time of the scheduled update (taking into account the configured update windows) in RFC3339 format;
+              - `message` - string, a text message about the availability of the new minor version and the scheduled update time.
           minimalNotificationTime:
             type: string
             pattern: '^[0-9]+[mh]{1}$'
             x-doc-example: '6h'
-            description: "The minimum amount of time we have to warn about a release"
+            description: |
+              The minimum time that must pass from the notification before the update.
+
+              The update mechanism ensures that Deckhouse will not be updated before the specified time.
+
+              When using update windows, the Deckhouse update after the notification will happen at the nearest possible update window, but not before the time specified in `minimalNotificationTime` expires.
   nodeSelector:
     type: object
     additionalProperties:

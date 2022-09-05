@@ -96,7 +96,9 @@ kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approv
 
 ### Оповещение об обновлении Deckhouse
 
-В режиме обновлений `Auto` можно настроить оповещение о предстоящих релизах deckhouse, например:
+В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а, для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
+
+Пример настройки оповещения:
 
 ```yaml
 deckhouse: |
@@ -107,7 +109,9 @@ deckhouse: |
       webhook: https://release-webhook.mydomain.com
 ```
 
-При таких настройках, на адрес `https://release-webhook.mydomain.com` придет POST запрос с `Content-Type: application/json` и следующим содержианием:
+После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере, на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
+
+Пример содержания запроса:
 
 ```json
 {
@@ -119,11 +123,7 @@ deckhouse: |
 }
 ```
 
-- `version` - строка, версия нового релиза
-- `requirements` - объект, требования к новому релизу
-- `changelogLink` - строка, ссылка на документацию Changelog нового релиза
-- `applyTime` - строка, дата и время обновления (расчитывается по готовности релиза и вашим окнам обновлений). Формат: RFC3339
-- `message` - строка, текстовое сообщение о доступности и времени обновления
+Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени, с учетом окон обновлений.
 
 #### Минимальное время оповещения об обновлении
 

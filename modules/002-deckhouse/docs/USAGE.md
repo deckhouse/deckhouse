@@ -96,7 +96,9 @@ kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approv
 
 ### Deckhouse update notification
 
-In `Auto` update mode you can set up a notification of upcoming deckhouse releases, e.g:
+In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update. 
+
+Example:
 
 ```yaml
 deckhouse: |
@@ -107,7 +109,9 @@ deckhouse: |
       webhook: https://release-webhook.mydomain.com
 ```
 
-With these settings, a POST request with `Content-Type: application/json` and the following content will come to the address `https://release-webhook.mydomain.com`:
+After a new Deckhouse minor version appears on the update channel, a [POST request](configuration.html#parameters-update-notification-webhook) will be executed to the webhook's URL before it is applied in the cluster.
+
+Example of the request payload:
 
 ```json
 {
@@ -119,15 +123,9 @@ With these settings, a POST request with `Content-Type: application/json` and th
 }
 ```
 
-- `version` - A string, the version of the new release
-- `requirements` - object, the requirements for the new release
-- `changelogLink` - string, a link to the Changelog documentation of the new release
-- `applyTime` - string, date and time of the update (calculated by the readiness of the release and your update windows). Format: RFC3339
-- `message` - a string, a text message about the availability and time of the update
+Set the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter to have enough time to react to a Deckhouse update notification. In this case, the update will happen after the specified time, considering the update windows.
 
-#### Minimum update notification time
-
-This setting is as follows:
+Example:
 
 ```yaml
 deckhouse: |
@@ -138,9 +136,6 @@ deckhouse: |
       webhook: https://release-webhook.mydomain.com
       minimalNotificationTime: 8h
 ```
-
-and configures the minimum time before the update, in which the notification should come. The Deckhouse update mechanism ensures
-that Deckhouse will not update before this time. If you use update windows, the Deckhouse update will happen at the next possible update window.
 
 ## Collect debug info
 
