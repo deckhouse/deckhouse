@@ -95,18 +95,8 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 	sort.Strings(revisionsToInstall)
 
-	deprecatedRevisions := make([]DeprecatedRevision, 0)
-	var deprecatedVersionsResult = input.Values.Get("istio.internal.deprecatedVersions").Array()
-	for _, deprecatedVersionMap := range deprecatedVersionsResult {
-		var deprecatedRevision DeprecatedRevision
-		deprecatedRevision.Revision = internal.VersionToRevision(deprecatedVersionMap.Get("version").String())
-		deprecatedRevision.AlertSeverity = deprecatedVersionMap.Get("alertSeverity").Int()
-		deprecatedRevisions = append(deprecatedRevisions, deprecatedRevision)
-	}
-
 	input.Values.Set("istio.internal.globalRevision", globalRevision)
 	input.Values.Set("istio.internal.revisionsToInstall", revisionsToInstall)
-	input.Values.Set("istio.internal.deprecatedRevisions", deprecatedRevisions)
 	input.ConfigValues.Set("istio.globalVersion", globalVersion)
 
 	return nil

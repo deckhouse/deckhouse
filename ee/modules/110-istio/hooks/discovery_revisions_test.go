@@ -191,42 +191,4 @@ globalVersion: "1.3.1" # default version "from openapi/values.yaml"
 		})
 	})
 
-	Context("There are some deprecated versions exists", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
-
-			values := `
-internal:
-  deprecatedVersions:
-  - version: 1.1.0
-    alertSeverity: 4
-  - version: 0.0.2
-    alertSeverity: 9
-`
-			f.ValuesSetFromYaml("istio", []byte(values))
-			f.RunHook()
-		})
-		It("deprecatedRevisions param should be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(len(f.ValuesGet("istio.internal.deprecatedRevisions").Array())).Should(Equal(2))
-			Expect(f.ValuesGet("istio.internal.deprecatedRevisions").String()).Should(Equal(`[{"revision":"v1x1x0","alertSeverity":4},{"revision":"v0x0x2","alertSeverity":9}]`))
-		})
-	})
-
-	Context("There are no deprecated versions", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
-
-			values := `
-internal:
-  deprecatedVersions: []
-`
-			f.ValuesSetFromYaml("istio", []byte(values))
-			f.RunHook()
-		})
-		It("deprecatedRevisions param should be empty", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(len(f.ValuesGet("istio.internal.deprecatedRevisions").Array())).Should(Equal(0))
-		})
-	})
 })
