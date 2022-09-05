@@ -46,10 +46,7 @@ type: Opaque`
 }
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() {
-	f := HookExecutionConfigInit(
-		`{}`,
-		`{"cniCilium":{}}`,
-	)
+	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, `{"cniCilium":{}}`)
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
