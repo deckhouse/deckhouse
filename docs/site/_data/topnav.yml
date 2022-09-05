@@ -33,7 +33,7 @@ topnav:
           - title: Deckhouse vs KaaS
             url: /deckhouse_vs_kaas.html
           - title: Technical support regulations
-            url: /regulation.html
+            url: /regulations.html
   ru:
     - title: Topnav
       items:
@@ -69,6 +69,6 @@ topnav:
           - title: Сравнение с KaaS
             url: /deckhouse_vs_kaas.html
           - title: Регламент технической поддержки
-            url: /regulation.html
+            url: /regulations.html
           - title: Лицензионное соглашение
             url: /license.html

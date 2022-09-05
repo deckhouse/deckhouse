@@ -34,7 +34,7 @@ columns:
       - title: Terms of Service
         url: '/terms-of-service.html'
       - title: Technical support regulations
-        url: '/regulation.html'
+        url: '/regulations.html'
   ru:
   - items:
       - title: Быстрый старт
@@ -68,6 +68,6 @@ columns:
       - title: Политика конфиденциальности
         url: '/security-policy.html'
       - title: Регламент технической поддержки
-        url: '/regulation.html'
+        url: '/regulations.html'
       - title: Лицензионное соглашение
         url: '/license.html'
