@@ -6,20 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
-)
 
-//{
-//"istio": {
-//"globalVersion": "1.1.1",
-//"additionalVersions": [],
-//"deprecatedVersions": [],
-//}
-//}
+	. "github.com/deckhouse/deckhouse/testing/hooks"
+)
 
 var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 	f := HookExecutionConfigInit(``, ``)
