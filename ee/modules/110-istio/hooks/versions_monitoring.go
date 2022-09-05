@@ -18,7 +18,7 @@ var (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("versions-monitoring"),
+	Queue:        internal.Queue(versionsMonitoringMetricsGroup),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, versionMonitoringHook)
 
@@ -44,7 +44,7 @@ func versionMonitoringHook(input *go_hook.HookInput) error {
 				"version":        deprecatedVersion.Get("version").String(),
 				"alert_severity": deprecatedVersion.Get("alertSeverity").String(),
 			}
-			input.MetricsCollector.Set("d8_istio_deprecated_version_installed", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
+			input.MetricsCollector.Set("d8_istio_deprecated_version_installed", 1, labels, metrics.WithGroup(versionsMonitoringMetricsGroup))
 		}
 	}
 
