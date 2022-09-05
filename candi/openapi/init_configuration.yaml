@@ -3,8 +3,32 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Deckhouse configuration to start after installation.
     additionalProperties: false
     required: [apiVersion, kind, deckhouse]
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: InitConfiguration
+      releaseChannel: Stable
+      imagesRepo: nexus.company.my/deckhouse/ee
+      registryDockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+      registryScheme: HTTPS
+      registryCA: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      configOverrides:
+        global:
+          modules:
+            publicDomainTemplate: "%s.kube.company.my"
+            proxy:
+              httpProxy: http://proxy.company.my
+              httpsProxy: https://proxy.company.my
+              noProxy: ["192.168.0.0/24", "company.my", ".company.my"]
+        cniFlannelEnabled: true
+        cniFlannel:
+          podNetworkMode: VXLAN
     properties:
       apiVersion:
         type: string
@@ -23,9 +47,11 @@ apiVersions:
           imagesRepo:
             type: string
             description: |
-              Address of a container registry with Deckhouse images (matching the edition used (CE/EE)).
+              Address of a container registry with Deckhouse images.
 
-              Specify it if you work with a third-party container registry (e.g., a proxy registry inside private environments).
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
             minLength: 1
             default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
@@ -59,7 +85,7 @@ apiVersions:
           logLevel:
             type: string
             description: |
-              The [logging Level](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel) to set in the cluster.
+              Deckhouse [logging Level](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel).
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:

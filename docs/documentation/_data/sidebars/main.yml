@@ -8,13 +8,29 @@ entries:
     - title: Deckhouse
       folders:
         - title:
+            en: How to install?
+            ru: Как установить?
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /installing/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /installing/configuration.html
+        - title:
             en: How to configure?
             ru: Как настроить?
-          url: /
-        - title:
-            en: Global configuration
-            ru: Глобальные настройки
-          url: /deckhouse-configure-global.html
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /
+            - title:
+                en: Global configuration
+                ru: Глобальные настройки
+              url: /deckhouse-configure-global.html
         - title:
             en: Release channels
             ru: Каналы обновлений

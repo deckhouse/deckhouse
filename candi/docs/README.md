@@ -4,14 +4,14 @@ permalink: /candi/
 ---
 
 CandI subsystem consists of the following components:
-* [**bashible**](/candi/bashible/) - framework for dynamic configuration and updates.
+* [**bashible**](/candi/bashible/) — framework for dynamic configuration and updates.
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
-  * [**control-plane-manager**](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) - `control-plane` maintaining.
-  * [**node-manager**](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/) - swiss knife to create and update cloud and bare metal nodes.
-  * **cloud-provider-** - modules to integrate different cloud with Deckhouse.
-* Installer or **dhctl** - tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
+  * [**control-plane-manager**](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) — `control-plane` maintaining.
+  * [**node-manager**](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/) — swiss knife to create and update cloud and bare metal nodes.
+  * **cloud-provider-** — modules to integrate different cloud with Deckhouse.
+* Installer or **dhctl** — tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 
 ## Installer
 
@@ -57,30 +57,30 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 
 ### Bootstrap
 
-Bootstrap process with `dhctl` consists of several stages:
+Bootstrap process with [dhctl](../../dhctl/docs/README.md) consists of several stages:
 
 #### Terraform
 
 There are three variants of terraforming:
-* `base-infrastructure` - creates basic cluster components: networks, routers, SSH key pairs, etc.
+* `base-infrastructure` — creates basic cluster components: networks, routers, SSH key pairs, etc.
   * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
-    * `cloud_discovery_data` - the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
+    * `cloud_discovery_data` — the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 
-* `master-node` - creates a master node.
+* `master-node` — creates a master node.
   * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
-    * `master_ip_address_for_ssh` - external master ip address to connect to the node.
-    * `node_internal_ip_address` - internal address to bind control plane components.
-    * `kubernetes_data_device_path` - device name for storing Kubernetes data (etcd and manifests).
+    * `master_ip_address_for_ssh` — external master ip address to connect to the node.
+    * `node_internal_ip_address` — internal address to bind control plane components.
+    * `kubernetes_data_device_path` — device name for storing Kubernetes data (etcd and manifests).
 
-* `static-node` - creates a static node.
+* `static-node` — creates a static node.
 
-> State terraform will be saved in the secret in d8-system namespace after each terraform pipeline execution
+> Terraform state will be saved in the secret in d8-system namespace after each terraform pipeline execution.
 
-**Attention!!** dhctl do not user terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
+**Attention!!** dhctl do not use terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
 
 #### Static-cluster
 
-There is a special option for bare metal clusters, which is located in the separate configuration - StaticCusterConfiguration.
+There is a special option for bare metal clusters, which is located in the separate configuration — StaticClusterConfiguration.
 
 Example:
 
@@ -91,15 +91,15 @@ internalNetworkCIDRs:
 - 192.168.0.0/24
 ```
 
-`internalNetworkCIDRs` - addresses from these networks will be considered as "internal"
+`internalNetworkCIDRs` — addresses from these networks will be considered as "internal"
 
 #### Preparations
 
-* **SSH connection check**: dhctl will quite the bootstrap process if does not manage connect to the host
+* **SSH connection check**: dhctl will quite the bootstrap process if does not manage connect to the host.
 * **Detect bashible bundle**: execute `/candi/bashible/detect_bundle.sh` to get a bashible bundle name from the host.
-* **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network
+* **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network.
 
-**Attention!!** dhctl will check the ssh connection first
+**Attention!!** dhctl will check the ssh connection first.
 
 #### Bashible Bundle
 
@@ -135,7 +135,7 @@ After successfully connection to the Kubernetes API, `dhctl` creates or updates:
 After installation ends, `dhctl` will wait for the `deckhouse` pod to become `Ready`.
 Readiness probe is working the way that deckhouse become ready only if there is no task to install or update a module.
 
-The `Ready` state - a signal for `dhctl` to create the `NodeGroup` object for master nodes.
+The `Ready` state is a signal for `dhctl` to create the `NodeGroup` object for master nodes.
 
 #### Create additional master or static nodes
 
@@ -151,4 +151,4 @@ On additional cluster nodes boostrap, dhctl make calls to the Kubernetes API.
 
 User can provide a YAML file with additional resources by specifying a `--resource` flag for bootstrap process.
 `dhctl` will sort them by their `apiGroup/kind`, wait for their registration in Kubernetes API, and deploy them.
-> This process is described in detail in the dhctl documentation.
+> This process is described in detail in the [dhctl](../../dhctl/docs/README.md) documentation.

@@ -1,6 +1,8 @@
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
+    description: |
+      Конфигурация Deckhouse, с которой он запустится после установки.
     properties:
       apiVersion:
         type: string
@@ -10,9 +12,11 @@ apiVersions:
         properties:
           imagesRepo:
             description: |
-              Адрес container registry с образами Deckhouse, с учетом используемой редакции (CE/EE).
+              Адрес container registry с образами Deckhouse.
 
-              Укажите, если используется сторонний container registry (например прокси-сервер в закрытом окружении).
+              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например прокси-сервер в закрытом окружении).
+
+              Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
           registryDockerCfg:
             description: |
               Строка с правами доступа к стороннему registry, зашифрованная в Base64.
@@ -29,7 +33,7 @@ apiVersions:
               Устанавливаемый в кластере [вариант поставки](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) Deckhouse.
           logLevel:
             description: |
-              Устанавливаемый в кластере [уровень логирования](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel).
+              [Уровень логирования](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
           configOverrides:
             description: |
               Начальная [конфигурация Deckhouse](/ru/documentation/v1/#конфигурация-deckhouse).

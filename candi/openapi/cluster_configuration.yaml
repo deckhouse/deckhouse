@@ -6,7 +6,7 @@ apiVersions:
     description: |
       General parameters of a cluster.
 
-      Defines, for example, network and CRI parameters, control plane version, etc. Some parameters can be changed during cluster operation.
+      Defines, for example, network and CRI parameters, control plane version, etc. Some parameters can be changed after the cluster is bootstrapped, during its operation.
 
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
@@ -28,9 +28,9 @@ apiVersions:
         prefix: k8s-dev
         provider: Yandex
       packagesProxy:
-        uri: https://example.com
-        username: "userName"
-        password: "P@ssw0rd"
+        uri: https://packages-proxy.company.my
+        username: "proxy-username"
+        password: "proxy-p@ssw0rd"
     properties:
       apiVersion:
         type: string
@@ -56,7 +56,7 @@ apiVersions:
           provider:
             type: string
             description: |
-              Type of the cloud provider.
+              Cloud provider.
             enum:
             - "OpenStack"
             - "AWS"
@@ -67,7 +67,7 @@ apiVersions:
           prefix:
             type: string
             description: |
-              A prefix of the cluster objects to be created in the cloud provider.
+              A prefix of the objects to be created in the cloud.
 
               Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
