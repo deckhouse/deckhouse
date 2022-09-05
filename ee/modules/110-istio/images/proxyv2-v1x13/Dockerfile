@@ -1,14 +1,14 @@
-# Based on https://github.com/istio/istio/blob/1.13.3/pilot/docker/Dockerfile.proxyv2
+# Based on https://github.com/istio/istio/blob/1.13.7/pilot/docker/Dockerfile.proxyv2
 ARG BASE_DEBIAN
-FROM docker.io/istio/proxyv2:1.13.3@sha256:e8986efce46a7e1fcaf837134f453ea2b5e0750a464d0f2405502f8ddf0e2cd2 as artifact
+FROM docker.io/istio/proxyv2:1.13.7@sha256:fdf6fc9eb3336dbc8f77f45ff02530c032eb9260123d7117e2f608c0a1078b2e as artifact
 
 FROM $BASE_DEBIAN
 WORKDIR /
 
-# https://hub.docker.com/layers/proxyv2/istio/proxyv2/1.13.3/images/sha256-e8986efce46a7e1fcaf837134f453ea2b5e0750a464d0f2405502f8ddf0e2cd2?context=explore
+# https://hub.docker.com/layers/proxyv2/istio/proxyv2/1.13.7/images/sha256-fdf6fc9eb3336dbc8f77f45ff02530c032eb9260123d7117e2f608c0a1078b2e?context=explore
 # line 14
-ARG proxy_version=istio-proxy:8df7c693c8d6d0679dd72e0130f34a0ee91c210b
-ARG istio_version=1.13.3
+ARG proxy_version=istio-proxy:e0c6f64173cd0db9370e7ad8b1fbcee370a9f0f3
+ARG istio_version=1.13.7
 ARG SIDECAR=envoy
 
 RUN apt-get update && \
