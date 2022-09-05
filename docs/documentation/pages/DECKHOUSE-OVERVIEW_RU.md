@@ -28,7 +28,7 @@ lang: ru
   {% endofftopic %}
 </li>
 </ul>
-Не нашли то, что нужно? Попросите помощи в нашем [Telegram-канале](https://t.me/deckhouse_ru). Вас там точно не оставят один на один с проблемой.
+Не нашли то, что нужно? Попросите помощи в нашем [Telegram-канале]({{ site.social_links[page.lang]['telegram'] }}). Вас там точно не оставят один на один с проблемой.
 
 Если вы используете Enterprise Edition, [напишите нам](mailto:support@deckhouse.io) — мы обязательно поможем.
 

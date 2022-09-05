@@ -27,7 +27,7 @@ Here are some tips on how to find what you need:
   {% endofftopic %}
 </li>
 </ul>
-Can't find what you were looking for? Don't give up. Visit our [Telegram channel](https://t.me/deckhouse) for help! There you will definitely find an answer to your problem.
+Can't find what you were looking for? Don't give up. Visit our [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}) for help! There you will definitely find an answer to your problem.
 
 Users of the Enterprise Edition of the platform can [email us](mailto:support@deckhouse.io) — we'll be sure to help.
 
