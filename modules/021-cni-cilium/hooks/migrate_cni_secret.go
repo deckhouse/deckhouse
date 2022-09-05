@@ -75,12 +75,12 @@ func migrateCniConfig(input *go_hook.HookInput) error {
 
 	cniConfig := cniConfigSnap[0].(cniConfigStruct)
 	if cniConfig.Cni != "cilium" {
-		input.LogEntry.Warnf("ckube-system/d8-cni-configuration secret cni type = %s, skip migration", cniConfig.Cni)
+		input.LogEntry.Warnf("kube-system/d8-cni-configuration secret cni type = %s, skip migration", cniConfig.Cni)
 		return nil
 	}
 
 	if cniConfig.Cilium != nil {
-		input.LogEntry.Warnln("ckube-system/d8-cni-configuration secret cilium config is present, skip migration")
+		input.LogEntry.Warnln("kube-system/d8-cni-configuration secret cilium config is present, skip migration")
 		return nil
 	}
 
