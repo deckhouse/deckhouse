@@ -109,7 +109,7 @@ internal:
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
-				Group:  revisionsMonitoringMetricsGroup,
+				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
@@ -150,7 +150,7 @@ internal:
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
-				Group:  revisionsMonitoringMetricsGroup,
+				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
@@ -160,7 +160,7 @@ internal:
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
-				Group:  revisionsMonitoringMetricsGroup,
+				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
