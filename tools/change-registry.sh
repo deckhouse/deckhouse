@@ -102,34 +102,6 @@ function create_dockerconfigjson() {
 EOF
 }
 
-function create_secret_manifest() {
-  cat - <<EOF
-apiVersion: v1
-type: kubernetes.io/dockerconfigjson
-kind: Secret
-metadata:
-  annotations:
-    helm.sh/resource-policy: keep
-    meta.helm.sh/release-name: deckhouse
-    meta.helm.sh/release-namespace: d8-system
-  labels:
-    app: registry
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: deckhouse
-  name: deckhouse-registry
-  namespace: d8-system
-data:
-  .dockerconfigjson: $1
-  address: $2
-  path: $3
-  scheme: $4
-EOF
-  if [[ $5 != "" ]]; then
-    echo "  ca: $5"
-  fi
-}
-
 parse_args "$@"
 
 DOCKERCONFIGJSON="$(create_dockerconfigjson | base64 -w0)"
@@ -140,4 +112,8 @@ if  [[ "$REGISTRY_CAFILE" != "" ]]; then
   REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
 fi
 
-create_secret_manifest "$DOCKERCONFIGJSON" "$REGISTRY_ADDRESS" "$REGISTRY_PATH" "$REGISTRY_SCHEME" "$REGISTRY_CAFILE" | kubectl apply -f -
+kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
+if  [[ "$REGISTRY_CAFILE" != "" ]]; then
+  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
+  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
+fi
