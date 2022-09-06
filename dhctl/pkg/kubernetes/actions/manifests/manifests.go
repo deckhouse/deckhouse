@@ -279,6 +279,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		{
+			Name: "DECKHOUSE_NODE_NAME",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.nodeName"},
+			},
+		},
+		{
 			Name:  "HELM_HOST",
 			Value: "127.0.0.1:44434",
 		},

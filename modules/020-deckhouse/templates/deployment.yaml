@@ -116,6 +116,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: DECKHOUSE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS

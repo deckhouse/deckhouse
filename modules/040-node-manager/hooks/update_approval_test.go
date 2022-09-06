@@ -19,6 +19,7 @@ package hooks
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"text/template"
 
 	. "github.com/onsi/ginkgo"
@@ -291,6 +292,8 @@ data:
 					})
 
 					It("should approve node master", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeApproved(f, masterNodeName)
 					})
 				})
@@ -309,6 +312,8 @@ data:
 					})
 
 					It("should approve node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeApproved(f, masterNodeName)
 					})
 				})
@@ -330,6 +335,8 @@ data:
 					})
 
 					It("should approve node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeApproved(f, workerWithDeckhouseName)
 					})
 				})
@@ -348,6 +355,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, workerWithDeckhouseName)
 					})
 				})
@@ -369,6 +378,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, workerForDistruptive)
 					})
 				})
@@ -393,6 +404,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, masterNodeForDisruptive)
 					})
 				})
@@ -411,6 +424,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, masterNodeForDisruptive)
 					})
 				})
@@ -429,6 +444,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, masterNodeForDisruptive)
 					})
 				})
@@ -450,6 +467,8 @@ data:
 					})
 
 					It("should approve node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeApproved(f, workerWithDeckhouse)
 					})
 				})
@@ -468,6 +487,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, workerWithDeckhouse)
 					})
 				})
@@ -489,6 +510,8 @@ data:
 					})
 
 					It("should drain node", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
 						assertNodeWillDrain(f, workerForDistruptive)
 					})
 				})
@@ -1145,6 +1168,8 @@ metadata:
 {{- end }}
 ---
 ` + deckhousePod(s.deckhousePodNode)
+
+	os.Setenv("DECKHOUSE_NODE_NAME", s.deckhousePodNode)
 
 	tmpl, _ := template.New("state").Parse(t)
 	var state bytes.Buffer

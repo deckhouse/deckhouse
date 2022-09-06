@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -71,33 +69,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: updateApprovalFilterNode,
 		},
-		{
-			Name:       "deckhouse_pod_node",
-			ApiVersion: "v1",
-			Kind:       "Pod",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "deckhouse",
-				},
-			},
-			FieldSelector: &types.FieldSelector{
-				MatchExpressions: []types.FieldSelectorRequirement{
-					{
-						Field:    "status.phase",
-						Operator: "Equals",
-						Value:    "Running",
-					},
-				},
-			},
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			FilterFunc:                   filterDeckhousePodNode,
-		},
 	},
 }, handleUpdateApproval)
 
@@ -130,11 +101,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
 	}
 
-	snap = input.Snapshots["deckhouse_pod_node"]
-	if len(snap) == 0 {
-		return fmt.Errorf("deckhouse pod not found")
-	}
-	approver.deckhouseNodeName = snap[0].(string)
+	approver.deckhouseNodeName = os.Getenv("DECKHOUSE_NODE_NAME")
 
 	err := approver.processUpdatedNodes(input)
 	if err != nil {
@@ -508,17 +475,6 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	}
 
 	return ung, nil
-}
-
-func filterDeckhousePodNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var pod corev1.Pod
-
-	err := sdk.FromUnstructured(obj, &pod)
-	if err != nil {
-		return nil, err
-	}
-
-	return pod.Spec.NodeName, nil
 }
 
 func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
