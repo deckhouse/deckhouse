@@ -199,7 +199,7 @@ For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Download script [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) to the master node and start them with third-party-registry parameters.
+* Download script [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) to the master node and run it with parameters for a new registry.
   * Example:
 
     ```shell
