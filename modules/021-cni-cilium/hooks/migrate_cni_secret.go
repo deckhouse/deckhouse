@@ -23,13 +23,12 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 type cniConfigStruct struct {
@@ -52,7 +51,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"kube-system"},
 				},
 			},
-			FilterFunc: applyCniConfigFilter,
+			FilterFunc:                   applyCniConfigFilter,
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 		},
 	},
 }, migrateCniConfig)
@@ -103,16 +104,7 @@ func migrateCniConfig(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
-	if ok {
-		switch strings.ToLower(providerRaw.String()) {
-		case "openstack", "vsphere":
-			patchCniConfigSecret(input, "DirectWithNodeRoutes")
-			return nil
-		}
-	}
-
-	patchCniConfigSecret(input, "Direct")
+	patchCniConfigSecret(input, "DirectWithNodeRoutes")
 	return nil
 }
 

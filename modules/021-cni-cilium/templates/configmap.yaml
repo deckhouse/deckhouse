@@ -29,19 +29,20 @@ data:
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel: "vxlan"
-  {{- else }}
+  enable-bpf-masquerade: "true"
+  enable-ipv4-egress-gateway: "true"
+  {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   tunnel: "disabled"
+  auto-direct-node-routes: "true"
+  {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
+  tunnel: "disabled"
+  {{- else }}
+    {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
   enable-ipv4-masquerade: "true"
-  {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
-  enable-bpf-masquerade: "true"
-  {{- end }}
 
   enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
-  {{- if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
-  auto-direct-node-routes: "true"
-  {{- end }}
   enable-bandwidth-manager: "true"
 
   enable-local-redirect-policy: "true"
@@ -74,10 +75,6 @@ data:
 
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
-
-  {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
-  enable-ipv4-egress-gateway: "true"
-  {{- end }}
 
   enable-k8s-endpoint-slice: "true"
 

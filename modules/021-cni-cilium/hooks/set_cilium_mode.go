@@ -19,8 +19,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -95,20 +93,8 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	var withNodeRoutes bool
-	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
-	if ok {
-		switch strings.ToLower(providerRaw.String()) {
-		case "openstack", "vsphere":
-			withNodeRoutes = true
-		}
-	}
-
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
-		withNodeRoutes = true
-	}
-	if withNodeRoutes {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 	}
 

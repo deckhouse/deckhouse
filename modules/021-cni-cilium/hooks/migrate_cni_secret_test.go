@@ -129,83 +129,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 		})
 	})
 
-	f = HookExecutionConfigInit(`{}`, `{}`)
-
-	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes is absent, cloud-provider = openstack", func() {
+	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes not set", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: OpenStack
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
 			f.RunHook()
 		})
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes")))
-		})
-	})
-
-	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes is absent, cloud-provider = vsphere", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: vSphere
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
-			f.RunHook()
-		})
-		It("hook should run successfully, secret should be changed", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes")))
-		})
-	})
-
-	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes is absent, cloud-provider nor vsphere nor openstack", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: Yandex
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
-			f.RunHook()
-		})
-		It("hook should run successfully, secret should be changed", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "Direct")))
 		})
 	})
 

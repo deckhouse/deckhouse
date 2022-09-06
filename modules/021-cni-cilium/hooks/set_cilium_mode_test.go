@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, "")
-	Context("fresh cluster", func() {
+	FContext("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -121,82 +121,4 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
 		})
 	})
-
-	f = HookExecutionConfigInit(`{}`, `{}`)
-
-	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes is absent, cloud-provider = openstack", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: OpenStack
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.RunHook()
-		})
-		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
-		})
-	})
-
-	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes is absent, cloud-provider = vsphere", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: vSphere
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.RunHook()
-		})
-		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
-		})
-	})
-
-	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes is absent, cloud-provider nor vsphere nor openstack", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-cloud:
-  prefix: dev
-  provider: Yandex
-clusterDomain: cluster.local
-clusterType: Cloud
-defaultCRI: Containerd
-kind: ClusterConfiguration
-kubernetesVersion: "1.20"
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-`))
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.RunHook()
-		})
-		It("hook should run successfully, cilium mode should be `Direct`", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
-		})
-	})
-
 })
