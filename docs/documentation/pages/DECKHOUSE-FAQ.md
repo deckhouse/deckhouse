@@ -199,22 +199,24 @@ For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Download script [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) to the master node and run it with parameters for a new registry.
+* Download script to the master node and run it with parameters for a new registry.
   * Example:
 
-    ```shell
-    ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
-    ```
-
+  ```shell
+  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
+  chmod 700 change-registry.sh
+  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
+  ```
+  
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` near the script and add the `--ca-file ca.crt` option to the script.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `d8-system/deckhouse` ConfigMap.
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
-  ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
-  ```
+```shell
+kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
+```
 
 ## How do I change the configuration of a cluster?
 

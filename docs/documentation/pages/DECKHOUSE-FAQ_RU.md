@@ -203,12 +203,14 @@ chmod 700 d8-push.sh
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
 * Измените поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
-* Скачайте скрипт [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) на мастер-узел и запустите его с параметрами нового registry.
+* Скачайте скрипт на мастер-узел и запустите его с параметрами нового registry.
   * Пример запуска:
 
-    ```shell
-    ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
-    ```
+  ```shell
+  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
+  chmod 700 change-registry.sh
+  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
+  ```
 
   * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию `--ca-file ca.crt`.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
