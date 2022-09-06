@@ -17,27 +17,22 @@ limitations under the License.
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"regexp"
-	"strconv"
 	"syscall"
 	"time"
-)
 
-var fullAvg10Regex = regexp.MustCompile(`^full avg10=(\d{1,}\.\d{2}).*$`)
+	"github.com/prometheus/procfs"
+)
 
 const (
 	pollInterval     = 5 * time.Second
 	recoveryInterval = 15 * time.Second
 	memoryThreshold  = 5.00
 
-	sysrqTriggerFile = "/proc/sysrq-trigger"
-	psiMemoryFile    = "/proc/pressure/memory"
+	sysrqTriggerFile  = "/proc/sysrq-trigger"
+	sysrqOOMCharacter = "f"
 )
 
 func main() {
@@ -61,18 +56,18 @@ func main() {
 }
 
 func iteration() bool {
-	psiContents, err := os.ReadFile(psiMemoryFile)
+	fs, err := procfs.NewDefaultFS()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	avg10Values, err := parsePsiMemoryFile(psiContents)
+	stats, err := fs.PSIStatsForResource("memory")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if avg10Values > memoryThreshold {
-		log.Printf("full avg10 value %f, threshold %f, triggering system OOM killer...", avg10Values, memoryThreshold)
+	if stats.Full.Avg10 > memoryThreshold {
+		log.Printf("full avg10 value %f, threshold %f, triggering system OOM killer...", stats.Full.Avg10, memoryThreshold)
 		err := triggerSystemOOM(sysrqTriggerFile)
 		if err != nil {
 			log.Fatal(err)
@@ -86,35 +81,6 @@ func iteration() bool {
 	return false
 }
 
-func parsePsiMemoryFile(fileContents []byte) (float64, error) {
-	var (
-		fullAvg10Raw []byte
-		fullAvg10    float64
-	)
-
-	scanner := bufio.NewScanner(bytes.NewReader(fileContents))
-	for scanner.Scan() {
-		matches := fullAvg10Regex.FindSubmatch(scanner.Bytes())
-		if len(matches) == 2 {
-			fullAvg10Raw = matches[1]
-		}
-	}
-	err := scanner.Err()
-	if err != nil {
-		return 0, err
-	}
-	if len(fullAvg10Raw) == 0 {
-		return 0, fmt.Errorf("can't parse %s", psiMemoryFile)
-	}
-
-	fullAvg10, err = strconv.ParseFloat(string(fullAvg10Raw), 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return fullAvg10, nil
-}
-
 func triggerSystemOOM(sysrqTriggerFile string) error {
-	return os.WriteFile(sysrqTriggerFile, []byte("f"), 0666)
+	return os.WriteFile(sysrqTriggerFile, []byte(sysrqOOMCharacter), 0666)
 }
