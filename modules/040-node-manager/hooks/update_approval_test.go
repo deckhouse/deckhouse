@@ -28,26 +28,6 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func deckhousePod(nodeName string) string {
-	return fmt.Sprintf(`
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: deckhouse
-    deckhouseImageId: sha256_fbf1fc3afc8897fdb3488b42dc01a5ca8a4dc0838a58c059a017ce85
-    pod-template-hash: 5899c89df9
-  name: deckhouse-5899c89df9-hq5ts
-  namespace: d8-system
-spec:
-  containers:
-  - command:
-    - /deckhouse/deckhouse
-    image: registry.deckhouse.io/deckhouse/ce:stable
-  nodeName: %s
-`, nodeName)
-}
-
 var _ = Describe("Modules :: nodeManager :: hooks :: update_approval ::", func() {
 	var (
 		initialState = `
@@ -82,8 +62,8 @@ metadata:
 data:
   worker: dXBkYXRlZA== # updated
   undisruptable-worker: dXBkYXRlZA== # updated
----
-` + deckhousePod("kube-master-0")
+
+`
 	)
 	nodeNames := []string{"worker-1", "worker-2", "worker-3"}
 
@@ -663,8 +643,7 @@ status:
   conditions:
   - type: Ready
     status: 'True'
----
-` + deckhousePod("kube-master-0")
+`
 
 		It("Works as expected", func() {
 			approvedNodeIndex := -1
@@ -876,8 +855,7 @@ metadata:
     update.node.deckhouse.io/disruption-required: ""
 spec:
   unschedulable: true
----
-` + deckhousePod("kube-master-0")))
+`))
 				f.RunHook()
 			})
 
@@ -927,8 +905,8 @@ metadata:
     update.node.deckhouse.io/disruption-required: ""
 spec:
   unschedulable: true
----
-` + deckhousePod("kube-maser-0")))
+
+`))
 				f.RunHook()
 			})
 
@@ -998,8 +976,8 @@ metadata:
     update.node.deckhouse.io/waiting-for-approval: ""
 spec:
   unschedulable: true
----
-` + deckhousePod("kube-master-0")))
+
+`))
 				f.RunHook()
 			})
 
@@ -1064,8 +1042,8 @@ metadata:
     update.node.deckhouse.io/waiting-for-approval: ""
 spec:
   unschedulable: true
----
-` + deckhousePod("kube-master-0")))
+
+`))
 				f.RunHook()
 			})
 
@@ -1166,8 +1144,8 @@ metadata:
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- end }}
----
-` + deckhousePod(s.deckhousePodNode)
+
+`
 
 	os.Setenv("DECKHOUSE_NODE_NAME", s.deckhousePodNode)
 
