@@ -208,7 +208,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="ubuntu"
+    ssh_user="cloud-user"
     ;;
 
   "GCP")
@@ -228,7 +228,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="ubuntu"
+    ssh_user="centos"
     ;;
 
   "Azure")
@@ -248,7 +248,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-    ssh_user="ubuntu"
+    ssh_user="debian"
     ;;
 
   "vSphere")
@@ -274,7 +274,7 @@ function prepare_environment() {
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
-    ssh_user="ubuntu"
+    ssh_user="astra"
     ;;
   esac
 
@@ -326,6 +326,7 @@ function bootstrap_static() {
   >&2 echo 'Fetch registration script ...'
   for ((i=0; i<10; i++)); do
     bootstrap_system="$(ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash << "ENDSSH"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
 ENDSSH
@@ -342,6 +343,7 @@ ENDSSH
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
   ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo -i /bin/bash <<ENDSSH || true
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
 ENDSSH
@@ -350,6 +352,7 @@ ENDSSH
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=10; i++)); do
     if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl get nodes
 kubectl get nodes -o json | jq -re '.items | length > 0' >/dev/null
@@ -393,6 +396,7 @@ function bootstrap() {
   >&2 echo 'Waiting until Machine provisioning finishes ...'
   for ((i=1; i<=20; i++)); do
     if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
 kubectl -n d8-cloud-instance-manager get machine -o json | jq -re '.items | length > 0' >/dev/null
@@ -422,6 +426,7 @@ function wait_cluster_ready() {
   test_failed=
 
   testScript=$(cat <<"END_SCRIPT"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 
 function pause-the-test() {

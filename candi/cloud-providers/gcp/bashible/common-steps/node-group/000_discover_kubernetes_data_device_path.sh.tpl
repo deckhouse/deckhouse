@@ -36,7 +36,7 @@ function get_data_device_secret() {
 
 function discover_device_path() {
   cloud_disk_name="$1"
-  device_name="$(lsblk -Jo name,serial | jq -r --arg device_id "$cloud_disk_name" '.blockdevices[] | select(.serial==$device_id) | .name')"
+  device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
   if [ "$device_name" == "" ]; then
     >&2 echo "failed to discover kubernetes-data device"
     return 1

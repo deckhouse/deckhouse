@@ -16,8 +16,8 @@ provider "openstack" {
   region = "HetznerFinland"
 }
 
-data "openstack_networking_network_v2" "shared" {
-  name = "shared"
+data "openstack_networking_network_v2" "external" {
+  name = "public"
 }
 
 resource "openstack_networking_network_v2" "internal" {
@@ -59,7 +59,7 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
 resource "openstack_networking_router_v2" "router" {
   name = "candi-${PREFIX}"
   admin_state_up = "true"
-  external_network_id = data.openstack_networking_network_v2.shared.id
+  external_network_id = data.openstack_networking_network_v2.external.id
 }
 
 resource "openstack_networking_router_interface_v2" "router" {
@@ -74,7 +74,7 @@ resource "openstack_compute_keypair_v2" "ssh" {
 
 resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
-  image_name = "ubuntu-18-04-cloud-amd64"
+  image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
   availability_zone = "nova"
@@ -87,7 +87,7 @@ resource "openstack_compute_instance_v2" "master" {
 
 resource "openstack_compute_instance_v2" "system" {
   name = "candi-${PREFIX}-system-0"
-  image_name = "ubuntu-18-04-cloud-amd64"
+  image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
   availability_zone = "nova"
@@ -98,12 +98,13 @@ resource "openstack_compute_instance_v2" "system" {
 
 }
 
+# use public ip-addresses to simplify access to the cluster for debugging purposes
 resource "openstack_compute_floatingip_v2" "master" {
-  pool = data.openstack_networking_network_v2.shared.name
+  pool = data.openstack_networking_network_v2.external.name
 }
 
 resource "openstack_compute_floatingip_v2" "system" {
-  pool = data.openstack_networking_network_v2.shared.name
+  pool = data.openstack_networking_network_v2.external.name
 }
 
 resource "openstack_compute_floatingip_associate_v2" "master" {

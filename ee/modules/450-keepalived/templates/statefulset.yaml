@@ -23,7 +23,7 @@ spec:
     containerPolicies:
     - containerName: keepalived
       minAllowed:
-        {{- include "keepalived_resources" . | nindent 8 }}
+        {{- include "keepalived_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
@@ -51,7 +51,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- include "helm_lib_priority_class" (tuple $ "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -69,7 +69,7 @@ spec:
       - name: deckhouse-registry
       initContainers:
       - name: init
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 8 }}
         command: ['/prepare-config.py']
         image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
         env:
@@ -89,17 +89,17 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       containers:
       - name: keepalived
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list $ (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
         command: ['/usr/sbin/keepalived', '-n', '-l']
-        image: {{ include "helm_lib_module_image" (list . "keepalived") }}
+        image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
         volumeMounts:
         - name: config
           mountPath: /etc/keepalived
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "keepalived_resources" . | nindent 12 }}
+{{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "keepalived_resources" $ | nindent 12 }}
 {{- end }}
 
       volumes:
