@@ -36,6 +36,7 @@ type Monitor struct {
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
+	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
