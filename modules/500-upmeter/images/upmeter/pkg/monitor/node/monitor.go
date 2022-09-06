@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
@@ -34,9 +34,10 @@ type Monitor struct {
 	logger  *log.Entry
 }
 
-func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
+func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
+	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
@@ -113,7 +114,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 
 func (m *Monitor) List() ([]*v1.Node, error) {
 	list := make([]*v1.Node, 0)
-	for _, obj := range m.monitor.GetExistedObjects() {
+	for _, obj := range m.monitor.Snapshot() {
 		node, err := convert(obj.Object)
 		if err != nil {
 			return nil, err

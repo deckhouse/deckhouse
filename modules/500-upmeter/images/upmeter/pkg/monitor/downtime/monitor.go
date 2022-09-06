@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,9 +34,10 @@ type Monitor struct {
 	logger  *log.Entry
 }
 
-func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
+func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
+	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
@@ -83,7 +84,7 @@ func (m *Monitor) Stop() {
 
 func (m *Monitor) List() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
-	for _, obj := range m.monitor.GetExistedObjects() {
+	for _, obj := range m.monitor.Snapshot() {
 		incs, err := convert(obj.Object)
 		if err != nil {
 			return nil, err

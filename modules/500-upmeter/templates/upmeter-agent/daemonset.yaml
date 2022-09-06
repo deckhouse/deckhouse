@@ -58,6 +58,9 @@ spec:
         hostPath:
           type: DirectoryOrCreate
           path: /var/lib/upmeter/agent
+      - name: tmp
+        emptyDir:
+          medium: Memory
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
       - name: migrator
@@ -97,6 +100,9 @@ spec:
           volumeMounts:
           - mountPath: /db
             name: data
+            readOnly: false
+          - mountPath: /tmp
+            name: tmp
             readOnly: false
           env:
           - name: NODE_NAME

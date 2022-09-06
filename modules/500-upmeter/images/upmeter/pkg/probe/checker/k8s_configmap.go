@@ -62,9 +62,9 @@ type configmapCreator struct {
 	cm        *v1.ConfigMap
 }
 
-func (c *configmapCreator) Do(_ context.Context) error {
+func (c *configmapCreator) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.cm)
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(ctx, c.cm, metav1.CreateOptions{})
 	return err
 }
 
@@ -74,9 +74,9 @@ type configmapGetter struct {
 	name      string
 }
 
-func (c *configmapGetter) Do(_ context.Context) error {
+func (c *configmapGetter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Get(c.name, metav1.GetOptions{})
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -86,9 +86,9 @@ type configmapDeleter struct {
 	name      string
 }
 
-func (c *configmapDeleter) Do(_ context.Context) error {
+func (c *configmapDeleter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	err := client.CoreV1().ConfigMaps(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	err := client.CoreV1().ConfigMaps(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
 	return err
 }
 

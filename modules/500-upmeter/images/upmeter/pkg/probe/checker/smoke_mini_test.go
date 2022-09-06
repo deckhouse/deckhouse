@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
@@ -37,7 +37,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 
 	var (
 		logger  = newDummyLogger()
-		timeout = 25 * time.Millisecond
+		timeout = 100 * time.Millisecond
 		slow    = timeout / 11 * 10 // ~91%
 		tooLate = 2 * timeout
 	)
@@ -112,7 +112,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t,
 				// klog
-				goleak.IgnoreTopFunction("k8s.io/klog.(*loggingT).flushDaemon"),
+				goleak.IgnoreTopFunction("k8s.io/klog/v2.(*loggingT).flushDaemon"),
 				// httputil.Server
 				goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
 			)
@@ -126,7 +126,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 			checker := &smokeMiniChecker{
 				path:        "/",
 				httpTimeout: timeout,
-				access:      NewFake(kube.NewFakeKubernetesClient()),
+				access:      NewFake(kube.NewFake(nil)),
 				lookuper: &dummyLookuper{
 					servers:  tt.servers,
 					addBogus: tt.cancel,
@@ -187,15 +187,15 @@ func respondSlowlyWith(timeout time.Duration, status int) *httptest.Server {
 	}))
 }
 
-func NewFake(client kube.KubernetesClient) *FakeAccess {
+func NewFake(client kube.Client) *FakeAccess {
 	return &FakeAccess{client: client}
 }
 
 type FakeAccess struct {
-	client kube.KubernetesClient
+	client kube.Client
 }
 
-func (a *FakeAccess) Kubernetes() kube.KubernetesClient {
+func (a *FakeAccess) Kubernetes() kube.Client {
 	return a.client
 }
 
