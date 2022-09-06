@@ -69,7 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "0 0 * * *"}, // every day at 00:00 am
+		{Name: "cron", Crontab: "42 4 * * *"}, // every day at 04:42 am
 	},
 }, generateMTLSCertHook)
 
