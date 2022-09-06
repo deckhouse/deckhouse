@@ -180,48 +180,48 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		releaseData = snap[0].(updater.DeckhouseReleaseData)
 	}
 
-	// initialize updater
+	// initialize deckhouseUpdater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	updater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	deckhouseUpdater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
 
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if isUpdatingCMExists(input) || releaseData.IsUpdating {
 			deleteUpdatingCM(input)
-			updater.ChangeUpdatingFlag(false)
+			deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if isUpdatingCMExists(input) || releaseData.IsUpdating {
 		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
 	}
 
 	// fetch releases from snapshot and patch initial statuses
-	updater.FetchAndPrepareReleases(input.Snapshots["releases"])
-	if updater.ReleasesCount() == 0 {
+	deckhouseUpdater.FetchAndPrepareReleases(input.Snapshots["releases"])
+	if deckhouseUpdater.ReleasesCount() == 0 {
 		return nil
 	}
 
 	// predict next patch for Deploy
-	updater.PredictNextRelease()
+	deckhouseUpdater.PredictNextRelease()
 
 	// has already Deployed the latest release
-	if updater.LastReleaseDeployed() {
+	if deckhouseUpdater.LastReleaseDeployed() {
 		return nil
 	}
 
 	// some release is forced, burn everything, apply this patch!
-	if updater.HasForceRelease() {
-		updater.ApplyForcedRelease()
+	if deckhouseUpdater.HasForceRelease() {
+		deckhouseUpdater.ApplyForcedRelease()
 		return nil
 	}
 
-	if updater.PredictedReleaseIsPatch() {
+	if deckhouseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		updater.ApplyPredictedRelease(nil)
+		deckhouseUpdater.ApplyPredictedRelease(nil)
 		return nil
 	}
 
 	var windows update.Windows
-	if !updater.InManualMode() {
+	if !deckhouseUpdater.InManualMode() {
 		var err error
 		windows, err = getUpdateWindows(input)
 		if err != nil {
@@ -229,7 +229,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 	}
 
-	updater.ApplyPredictedRelease(windows)
+	deckhouseUpdater.ApplyPredictedRelease(windows)
 	return nil
 }
 
