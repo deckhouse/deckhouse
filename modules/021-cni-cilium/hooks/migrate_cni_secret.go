@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/* This hook migrates kube-system/d8-cni-configuration secret for cilium configs.
+/*
+This hook migrates kube-system/d8-cni-configuration secret for cilium configs.
 Date of migration: 06.09.2022
 TODO: remove this migration on release 1.37
 */
@@ -23,6 +24,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"

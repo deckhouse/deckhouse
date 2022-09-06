@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, "")
-	FContext("fresh cluster", func() {
+	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
