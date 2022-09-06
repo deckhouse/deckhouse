@@ -98,6 +98,7 @@ resource "openstack_compute_instance_v2" "system" {
 
 }
 
+# use public ip-addresses to simplify access to the cluster for debugging purposes
 resource "openstack_compute_floatingip_v2" "master" {
   pool = data.openstack_networking_network_v2.external.name
 }
