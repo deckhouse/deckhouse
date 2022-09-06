@@ -22,7 +22,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 1},
+	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(flantIntegrationKubeallTeamRemovalMigration))
 
 // THIS IS AN EXAMPLE MIGRATION, NOT USEFUL BY ITSELF
