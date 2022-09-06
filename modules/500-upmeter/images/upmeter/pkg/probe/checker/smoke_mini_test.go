@@ -37,7 +37,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 
 	var (
 		logger  = newDummyLogger()
-		timeout = 25 * time.Millisecond
+		timeout = 100 * time.Millisecond
 		slow    = timeout / 11 * 10 // ~91%
 		tooLate = 2 * timeout
 	)
@@ -112,7 +112,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t,
 				// klog
-				goleak.IgnoreTopFunction("k8s.io/klog.(*loggingT).flushDaemon"),
+				goleak.IgnoreTopFunction("k8s.io/klog/v2.(*loggingT).flushDaemon"),
 				// httputil.Server
 				goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
 			)
