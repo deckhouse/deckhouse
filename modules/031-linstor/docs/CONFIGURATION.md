@@ -19,7 +19,7 @@ data:
 > For Ubuntu/Debian:
 >
 > ```shell
-> apt install linux-headers-$uname -r()"
+> apt install linux-headers-$(uname -r)"
 > ```
 >
 > For CentOS:
