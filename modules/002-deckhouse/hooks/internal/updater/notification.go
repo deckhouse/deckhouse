@@ -30,6 +30,7 @@ import (
 
 type NotificationConfig struct {
 	WebhookURL              string
+	SkipTLSVerify           bool
 	MinimalNotificationTime v1alpha1.Duration
 }
 
@@ -48,15 +49,18 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationCo
 		}
 	}
 
+	skipTLSVertify := input.Values.Get("deckhouse.update.notification.tlsSkipVerify").Bool()
+
 	return &NotificationConfig{
 		WebhookURL:              webhook.String(),
+		SkipTLSVerify:           skipTLSVertify,
 		MinimalNotificationTime: minimalTime,
 	}
 }
 
-func sendWebhookNotification(webhookURL string, data webhookData) error {
+func sendWebhookNotification(config *NotificationConfig, data webhookData) error {
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 	}
 	client := &http.Client{
 		Transport: tr,
@@ -66,7 +70,14 @@ func sendWebhookNotification(webhookURL string, data webhookData) error {
 	buf := bytes.NewBuffer(nil)
 	_ = json.NewEncoder(buf).Encode(data)
 
-	_, err := client.Post(webhookURL, "application/json", buf)
+	var err error
+	for i := 0; i < 3; i++ {
+		_, err = client.Post(config.WebhookURL, "application/json", buf)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(3 * time.Second)
+	}
 
 	return err
 }

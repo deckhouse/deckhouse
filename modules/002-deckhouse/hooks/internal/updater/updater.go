@@ -130,7 +130,8 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 		ApplyTime:     releaseApplyTime.Format(time.RFC3339),
 		Message:       msg,
 	}
-	err := sendWebhookNotification(du.notificationConfig.WebhookURL, data)
+
+	err := sendWebhookNotification(du.notificationConfig, data)
 	if err != nil {
 		du.input.LogEntry.Errorf("Send deckhouse release notification failed: %s", err)
 		return false

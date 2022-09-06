@@ -134,6 +134,10 @@ properties:
               - `changelogLink` - string, a URL to the minor version changelog;
               - `applyTime` - string, date and time of the scheduled update (taking into account the configured update windows) in RFC3339 format;
               - `message` - string, a text message about the availability of the new minor version and the scheduled update time.
+          tlsSkipVerify:
+            type: boolean
+            default: false
+            description: Skip TLS certificate verification while webhook request.
           minimalNotificationTime:
             type: string
             pattern: '^[0-9]+[mh]{1}$'
