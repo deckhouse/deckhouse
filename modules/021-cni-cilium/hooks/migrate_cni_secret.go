@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/* This hook migrates kube-system/d8-cni-configuration secret for cilium configs.
+Date of migration: 06.09.2022
+TODO: remove this migration on release 1.37
+*/
 package hooks
 
 import (
