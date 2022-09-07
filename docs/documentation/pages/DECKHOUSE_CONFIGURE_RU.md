@@ -95,7 +95,7 @@ data:
 
 ## Наборы модулей
 
-В зависимости от используемого [набора модулей](./modules/020-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
+В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
 {%- assign bundles = site.data.bundles | sort %}
 <table>

@@ -38,11 +38,11 @@ entries:
                 - title:
                     en: Description
                     ru: Описание
-                  url: /modules/020-deckhouse/
+                  url: /modules/002-deckhouse/
                 - title:
                     en: Usage
                     ru: Примеры
-                  url: /modules/020-deckhouse/usage.html
+                  url: /modules/002-deckhouse/usage.html
                 - title:
                     en: Reference
                     ru: Справка
@@ -50,11 +50,11 @@ entries:
                     - title:
                         en: Configuration
                         ru: Настройки
-                      url: /modules/020-deckhouse/configuration.html
+                      url: /modules/002-deckhouse/configuration.html
                     - title: Custom Resources
-                      url: /modules/020-deckhouse/cr.html
+                      url: /modules/002-deckhouse/cr.html
                 - title: FAQ
-                  url: /modules/020-deckhouse/faq.html
+                  url: /modules/002-deckhouse/faq.html
             - title: deckhouse-web
               folders:
                 - title:

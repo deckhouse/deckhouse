@@ -15,13 +15,13 @@ kubectl -n d8-system get cm deckhouse -o yaml
 
 ## How do I find the documentation for the version installed?
 
-> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/020-deckhouse/configuration.html#parameters-bundle)).
+> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
 
 The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
 
 ## How do I set the desired release channel?
 
-Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel.
+Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel.
 
 It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
@@ -34,7 +34,7 @@ deckhouse: |
 
 ## How do I disable automatic updates?
 
-To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel).
+To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
 
 In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
@@ -46,7 +46,7 @@ Every minute Deckhouse checks a new release appeared in the release channel spec
 
 When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource `DeckhouseRelease`.
 
-After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/020-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
+After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
 To get list and status of all releases use the following command:
 
@@ -63,11 +63,11 @@ kubectl get deckhousereleases
   * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).
 * When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
   * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
-  * Then Deckhouse performs the update according to the [update parameters](modules/020-deckhouse/configuration.html#parameters-update).
+  * Then Deckhouse performs the update according to the [update parameters](modules/002-deckhouse/configuration.html#parameters-update).
 
 ## How do I run Deckhouse on a particular node?
 
-Set the `nodeSelector` [parameter](modules/020-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
+Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
 
 You should also avoid using **CloudEphemeral** nodes. Otherwise, a situation may occur when the target node is not in the cluster and node ordering for some reason is impossible.
 

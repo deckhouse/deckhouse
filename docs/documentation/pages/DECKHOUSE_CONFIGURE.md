@@ -93,7 +93,7 @@ data:
 
 ## Module bundles
 
-Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
+Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 {%- assign bundles = site.data.bundles | sort %}
 <table>

@@ -151,7 +151,7 @@ func parseProjectList(b []byte) ([]ossProject, error) {
 var skipOssChecks = map[string]struct{}{
 	// module name
 	"010-priority-class":                      {},
-	"013-helm":                                {}, // helm in 020-deckhouse
+	"013-helm":                                {}, // helm in 002-deckhouse
 	"021-kube-proxy":                          {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},

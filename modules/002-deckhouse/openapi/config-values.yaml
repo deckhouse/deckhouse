@@ -39,7 +39,7 @@ properties:
             Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
           - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
 
-            To confirm the update, edit [custom resource 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
+            To confirm the update, edit [custom resource 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/002-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
         enum:
           - 'Auto'
           - 'Manual'
