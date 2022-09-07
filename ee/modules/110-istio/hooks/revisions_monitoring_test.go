@@ -6,15 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"bytes"
-	"strings"
-	"text/template"
-
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+	"strings"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -73,22 +71,15 @@ type wantedMetric struct {
 	DesiredRevision string
 }
 
-func templateToYAML(tmpl string, params interface{}) string {
-	var output bytes.Buffer
-	t := template.Must(template.New("").Parse(tmpl))
-	_ = t.Execute(&output, params)
-	return output.String()
-}
-
 func istioNsYAML(ns nsParams) string {
 	ns.Name = nsName
-	return templateToYAML(nsTemplate, ns)
+	return internal.TemplateToYAML(nsTemplate, ns)
 }
 
 func istioPodYAML(pod podParams) string {
 	pod.Name = podName
 	pod.Namespace = nsName
-	return templateToYAML(podTemplate, pod)
+	return internal.TemplateToYAML(podTemplate, pod)
 }
 
 var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
