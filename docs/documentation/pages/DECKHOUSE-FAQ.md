@@ -214,9 +214,9 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `d8-system/deckhouse` ConfigMap.
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
-```shell
-kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
-```
+  ```shell
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
+  ```
 
 ## How do I change the configuration of a cluster?
 
