@@ -513,6 +513,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -853,6 +879,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1193,6 +1245,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1533,6 +1611,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1873,6 +1977,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2213,6 +2343,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2553,6 +2709,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2893,6 +3075,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3233,6 +3441,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3573,6 +3807,32 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            let done = false;
+            const jobStat = process.env.JOB_STATUS;
+            if (jobStat === 'failure' || jobStat === 'cancelled') {
+              done = await e2eStatus.setFail({github, context, core});
+            } else if (jobStat === 'success') {
+              done = await e2eStatus.setSuccess({github, context, core});
+            }
+
+            if (!done) {
+              core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+            }
+      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
 

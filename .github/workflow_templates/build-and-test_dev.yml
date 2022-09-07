@@ -155,3 +155,31 @@ jobs:
       - pull_request_info
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
+
+  set_e2e_requirement_status:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Set 'waiting for e2e' commit status
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+      - validators
+      - web_links_test
+      - openapi_test_cases
+      - golangci_lint
+      - dhctl_tests
+      - matrix_tests
+      - tests
+    runs-on: [ self-hosted, regular ]
+    steps:
+    - name: Set commit status after e2e run
+      id: set_e2e_requirement_status
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        script: |
+          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+          const done = await e2eStatus.setWait({github, context, core});
+          if (!done) {
+            core.setFailed('e2e requirement status was not set.')
+          }

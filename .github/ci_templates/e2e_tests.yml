@@ -14,6 +14,36 @@
 {!{ $layout }!}
 {!{ end -}!}
 
+# job for set e2e requirement status
+# $1 - name of function to set status. see ../scripts/e2e-commit-status.js
+{!{ define "set_e2e_requirement_status" }!}
+
+# <template: set_e2e_requirement_status>
+- name: Set commit status after e2e run
+  id: set_e2e_requirement_status
+  if: ${{ always() }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  env:
+    JOB_STATUS: ${{ job.status }}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    script: |
+      const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+      let done = false;
+      const jobStat = process.env.JOB_STATUS;
+      if (jobStat === 'failure' || jobStat === 'cancelled') {
+        done = await e2eStatus.setFail({github, context, core});
+      } else if (jobStat === 'success') {
+        done = await e2eStatus.setSuccess({github, context, core});
+      }
+
+      if (!done) {
+        core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
+      }
+# </template: set_e2e_requirement_status>
+{!{- end -}!}
+
 {!{ define "e2e_send_alert_template" }!}
 {!{- $ctx := index . 0 -}!}
 
@@ -313,6 +343,7 @@ check_e2e_labels:
 
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
+{!{    tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 4 }!}
 {!{- end }!}
 
 {!{- if not (coll.Has $ctx "manualRun") }!}
