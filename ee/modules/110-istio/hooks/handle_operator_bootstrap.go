@@ -6,12 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 const globalRevisionIstiodIsReadyPath = "istio.internal.globalRevisionIstiodIsReady"

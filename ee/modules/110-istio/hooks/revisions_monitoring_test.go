@@ -6,14 +6,17 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"strings"
+
+	"strings"
+
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
-	"strings"
 
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
