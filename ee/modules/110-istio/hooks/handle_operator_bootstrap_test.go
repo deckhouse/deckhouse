@@ -37,7 +37,7 @@ func PodIstiodYaml(podParams PodIstiodTemplateParams) string {
 	return internal.TemplateToYAML(podIstiodTemplate, podParams)
 }
 
-var _ = FDescribe("Istio hooks :: handle_operator_bootstrap ::", func() {
+var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
 
 	Context("Empty cluster and minimal settings", func() {

@@ -8,8 +8,6 @@ package hooks
 import (
 	"strings"
 
-	"strings"
-
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

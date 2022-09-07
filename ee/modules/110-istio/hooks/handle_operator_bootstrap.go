@@ -24,7 +24,9 @@ type istiodPod struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("operator-bootstrap"),
+	Queue:        internal.Queue("operator-bootstrap"),
+	OnStartup:    &go_hook.OrderedConfig{Order: 6}, // after discovery revisions hook
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "istiod_pods",
