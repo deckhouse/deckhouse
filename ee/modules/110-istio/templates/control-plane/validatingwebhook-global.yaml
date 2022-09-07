@@ -39,5 +39,5 @@ webhooks:
           - '*'
         scope: '*'
     sideEffects: None
-    timeoutSeconds: 10
+    timeoutSeconds: 30
 {{- end }}
