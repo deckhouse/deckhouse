@@ -37,6 +37,43 @@ spec:
         x-kubernetes-preserve-unknown-fields: true
 `
 
+const istio1x10x1ValidationWebhook = `
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istiod-d8-istio
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    caBundle: xxx=
+    service:
+      name: istiod
+      namespace: d8-istio
+      path: /validate
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.istio.io
+  namespaceSelector: {}
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - security.istio.io
+    - networking.istio.io
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - '*'
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+`
+
 var _ = Describe("Modules :: istio :: hooks :: migration_remove_kiali_crd ", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	Context("Empty cluster", func() {
@@ -57,6 +94,16 @@ var _ = Describe("Modules :: istio :: hooks :: migration_remove_kiali_crd ", fun
 		It("must be executed successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "monitoringdashboards.monitoring.kiali.io").Exists()).To(BeFalse())
+		})
+	})
+	Context("Istio 1.10.1 validation webhook istiod-d8-istio exists", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(istio1x10x1ValidationWebhook))
+			f.RunHook()
+		})
+		It("must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "istiod-d8-istio").Exists()).To(BeFalse())
 		})
 	})
 })
