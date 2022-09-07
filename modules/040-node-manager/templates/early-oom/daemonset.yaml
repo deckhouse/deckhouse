@@ -4,30 +4,6 @@ memory: 25Mi
 {{- end }}
 
 {{- if .Values.nodeManager.earlyOomEnabled }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: early-oom
-  namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "early-oom" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: DaemonSet
-    name: early-oom
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "early-oom"
-      minAllowed:
-        {{- include "early_oom_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 50m
-        memory: 50Mi
-  {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -53,30 +29,8 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
-      - name: oom-killer
-        image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-        # based on https://gist.github.com/stewartpark/14a5690afbf717be04857d2cda1d8620
-        args:
-          - 'sh'
-          - '-c'
-          - |
-            MIN_MEMORY_BY_PERCENT_KiB="$(grep 'MemTotal' /proc/meminfo | awk -v percent=$MIN_MEMORY_PERCENT '{ printf("%d", $2*percent/100) }')"
-            if [ "$MIN_MEMORY_BY_PERCENT_KiB" -lt "$MIN_MEMORY_KiB" ]; then
-              MIN_MEMORY_KiB="$MIN_MEMORY_BY_PERCENT_KiB"
-            fi
-            while true; do
-              if [ "$(grep 'MemAvailable' /proc/meminfo | awk '{ print $2 }')" -lt "$MIN_MEMORY_KiB" ]; then
-                echo f > /host_proc/sysrq-trigger
-                echo "Kernel OOM killer invoked."
-              fi
-
-              sleep 10
-            done
-        env:
-          - name: 'MIN_MEMORY_KiB'
-            value: '524288'
-          - name: 'MIN_MEMORY_PERCENT'
-            value: '5'
+      - name: psi-monitor
+        image: {{ include "helm_lib_module_image" (list . "earlyOom") }}
         securityContext:
           privileged: true
         volumeMounts:
@@ -85,9 +39,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "early_oom_resources" . | nindent 12 }}
-  {{- end }}
+          limits:
+            # Guaranteed QoS
+            {{- include "early_oom_resources" . | nindent 12 }}
       volumes:
         - name: proc
           hostPath:
