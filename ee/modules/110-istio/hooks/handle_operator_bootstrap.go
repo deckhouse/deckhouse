@@ -7,52 +7,39 @@ package hooks
 
 import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"time"
 )
 
-type IstioOperatorCrdSnapshot struct {
-	Revision  string
-	NeedPunch bool
-}
+const globalRevisionIstiodIsReadyPath = "istio.internal.globalRevisionIstiodIsReady"
 
-type IstioOperatorPodSnapshot struct {
-	Name           string
-	Revision       string
-	AllowedToPunch bool
+type istiodPod struct {
+	Name     string
+	Revision string
+	Phase    v1.PodPhase
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("operator-bootstrap"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "istio_operators",
-			ApiVersion:        "install.istio.io/v1alpha1",
-			Kind:              "IstioOperator",
-			NamespaceSelector: internal.NsSelector(),
-			FilterFunc:        applyIopFilter,
-		},
-		{
-			Name:              "istio_operator_pods",
+			Name:              "istiod_pods",
 			ApiVersion:        "v1",
 			Kind:              "Pod",
 			NamespaceSelector: internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "revision",
+						Key:      "istio.io/rev",
 						Operator: "Exists",
 					},
 					{
 						Key:      "app",
 						Operator: "In",
-						Values:   []string{"operator"},
+						Values:   []string{"istiod"},
 					},
 				},
 			},
@@ -61,54 +48,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, operatorBootstrapHook)
 
-func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var iop crd.IstioOperator
-	var result IstioOperatorCrdSnapshot
-	err := sdk.FromUnstructured(obj, &iop)
-	if err != nil {
-		return nil, err
-	}
-	result.Revision = iop.Spec.Revision
-	if iop.Status.Status == "ERROR" {
-		result.NeedPunch = true
-	}
-	return result, nil
-}
-
 func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod v1.Pod
-	var result IstioOperatorPodSnapshot
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
 		return nil, err
 	}
-
-	if pod.CreationTimestamp.After(time.Now().Add(time.Minute * 5)) {
-		result.AllowedToPunch = true
-	}
-	result.Name = pod.Name
-	result.Revision = pod.Labels["revision"]
-	return result, nil
+	return istiodPod{
+		Name:     pod.Name,
+		Revision: pod.Labels["istio.io/rev"],
+		Phase:    pod.Status.Phase,
+	}, nil
 }
 
 func operatorBootstrapHook(input *go_hook.HookInput) error {
-	operatorPodMap := make(map[string]string)
-
-	for _, operatorPodRaw := range input.Snapshots["istio_operator_pods"] {
-		operatorPod := operatorPodRaw.(IstioOperatorPodSnapshot)
-		if operatorPod.AllowedToPunch {
-			operatorPodMap[operatorPod.Revision] = operatorPod.Name
+	var istiodGlobalRevisionIsReady bool
+	if !input.Values.Get("istio.internal.globalRevision").Exists() {
+		return nil
+	}
+	globalRevision := input.Values.Get("istio.internal.globalRevision").String()
+	for _, podRaw := range input.Snapshots["istiod_pods"] {
+		pod := podRaw.(istiodPod)
+		if pod.Revision == globalRevision && pod.Phase == v1.PodRunning {
+			istiodGlobalRevisionIsReady = true
 		}
 	}
-
-	for _, iopRaw := range input.Snapshots["istio_operators"] {
-		iop := iopRaw.(IstioOperatorCrdSnapshot)
-		if iop.NeedPunch {
-			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
-			}
-		}
-	}
-
+	input.Values.Set(globalRevisionIstiodIsReadyPath, istiodGlobalRevisionIsReady)
 	return nil
 }

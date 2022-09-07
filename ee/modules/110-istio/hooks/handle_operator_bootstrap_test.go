@@ -10,73 +10,34 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
-const istioOperatorTemplate = `
----
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
-metadata:
-  labels:
-    app: istiod
-    istio.io/rev: {{ .Revision }}
-  name: {{ .Revision }}
-  namespace: d8-istio
-spec:
-  revision: {{ .Revision }}
-status:
-  status: {{ .Status }}
-`
-
-const podOperatorTemplate = `
+const podIstiodTemplate = `
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "{{ .TimestampRFC3339 }}"
   labels:
-    app: operator
-    revision: {{ .Revision }}
-  name: {{ .Name }}
+    app: istiod
+    istio.io/rev: {{ .Revision }}
+  name: istiod-{{ .Revision }}-some-pod-hash
   namespace: d8-istio
 spec: {}
 status:
-  phase: Running
-  startTime: "{{ .TimestampRFC3339 }}"
+  phase: {{ .Phase }}
 `
 
-type istioOperatorParams struct {
+type PodIstiodTemplateParams struct {
 	Revision string
-	Status   string
+	Phase    string
 }
 
-type IstioOperatorPodParams struct {
-	Name             string
-	Revision         string
-	Timestamp        time.Time
-	TimestampRFC3339 string
+func PodIstiodYaml(podParams PodIstiodTemplateParams) string {
+	return internal.TemplateToYAML(podIstiodTemplate, podParams)
 }
-
-func IstioOperatorYaml(iop istioOperatorParams) string {
-	return internal.TemplateToYAML(istioOperatorTemplate, iop)
-}
-
-func IstioOperatorPodYaml(pod IstioOperatorPodParams) string {
-	if len(pod.TimestampRFC3339) == 0 {
-		pod.TimestampRFC3339 = pod.Timestamp.Format(time.RFC3339)
-	}
-	return internal.TemplateToYAML(podOperatorTemplate, pod)
-}
-
-const (
-	healthyOperatorPodName = "healthy-operator"
-	erroredOperatorPodName = "errored-operator"
-)
 
 var _ = FDescribe("Istio hooks :: handle_operator_bootstrap ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{}}`, "")
-	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
+	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -87,85 +48,70 @@ var _ = FDescribe("Istio hooks :: handle_operator_bootstrap ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
-	Context("Istio operator without error status", func() {
+
+	Context("Without istiod pods", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
+			f.ValuesSet("istio.internal.globalRevision", "1x88")
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Istiod pods with `Failed` phase", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
-				Status:   "HEALTHY",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
-				Name:      "healthy-operator",
-				Revision:  "v1x88",
-				Timestamp: time.Now(),
+				Phase:    "Failed",
 			})))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "healthy-operator").Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
 		})
 	})
-	Context("Istio operator with error status, operator's pod created 6 min ago", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
-				Name:      "errored-operator",
-				Revision:  "v1x33",
-				Timestamp: time.Now().Add(time.Minute * 6),
-			})))
-			f.RunHook()
-		})
 
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
-		})
-	})
-	Context("Istio operator with error status, operator's pod created less than 5 min ago", func() {
+	Context("Istiod pods with `Running` phase", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
-				Name:      "errored-operator",
-				Revision:  "v1x33",
-				Timestamp: time.Now(),
-			})))
-			f.RunHook()
-		})
-
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
-		})
-	})
-	Context("Istio operators with mixed statuses", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
+			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
-				Status:   "HEALTHY",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
-				Name:      "healthy-operator",
-				Revision:  "v1x88",
-				Timestamp: time.Now(),
-			}) + IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
-				Name:      "errored-operator",
-				Revision:  "v1x33",
-				Timestamp: time.Now().Add(time.Minute * 6),
-			}),
-			))
+				Phase:    "Running",
+			})))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "healthy-operator").Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeTrue())
 		})
 	})
+
+	Context("Istiod pods with `Running` phase but with different revision", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.internal.globalRevision", "v1x33")
+			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
+				Revision: "v1x88",
+				Phase:    "Running",
+			})))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
+		})
+	})
+
 })

@@ -1,3 +1,4 @@
+{{- if .Values.istio.internal.globalRevisionIstiodIsReady }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -39,3 +40,4 @@ webhooks:
         scope: '*'
     sideEffects: None
     timeoutSeconds: 10
+{{- end }}
