@@ -45,4 +45,3 @@ spec:
   trafficPolicy:
     tls:
       mode: DISABLE
-
