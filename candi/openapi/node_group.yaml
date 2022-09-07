@@ -443,7 +443,11 @@ spec:
                           type: boolean
                           x-doc-default: true
                           description: |
-                            Drain pods from the nodes before approving disruption.
+                            Drain Pods from the nodes before approving disruption.
+                            
+                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            - for the nodeGroup `master` with a single node;
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
