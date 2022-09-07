@@ -19,7 +19,7 @@ async function sendCreateCommitStatus({github, context, core, state, description
     });
 
     core.debug(`rest.repos.createCommitStatus response: ${JSON.stringify(response)}`);
-    if (response.status === 200) {
+    if (response.status === 201) {
       return true;
     }
 
