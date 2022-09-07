@@ -164,7 +164,6 @@ jobs:
       - pull_request_info
       - build_deckhouse
       - validators
-      - web_links_test
       - openapi_test_cases
       - golangci_lint
       - dhctl_tests
