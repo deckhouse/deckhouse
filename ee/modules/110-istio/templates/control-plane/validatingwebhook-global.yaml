@@ -1,0 +1,41 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-istio-validator-global
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1beta1
+      - v1
+    clientConfig:
+      caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
+      service:
+        name: istiod-{{ .Values.istio.internal.globalRevision }}
+        namespace: d8-istio
+        path: /validate
+        port: 443
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: rev.validation.istio.io
+    namespaceSelector: {}
+    objectSelector:
+      matchExpressions:
+      - key: istio.io/rev
+        operator: DoesNotExist
+    rules:
+      - apiGroups:
+          - security.istio.io
+          - networking.istio.io
+          - telemetry.istio.io
+          - extensions.istio.io
+        apiVersions:
+          - '*'
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - '*'
+        scope: '*'
+    sideEffects: None
+    timeoutSeconds: 10
