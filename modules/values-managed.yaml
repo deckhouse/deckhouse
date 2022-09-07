@@ -10,6 +10,7 @@ ingressNginxEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
 monitoringCustomEnabled: true
+monitoringDeckhouseEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 namespaceConfiguratorEnabled: true
