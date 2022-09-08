@@ -7,6 +7,8 @@ toc: false
 anchors_disabled: true
 ---
 
+{::options parse_block_html="false" /}
+
 <section class="intro">
   <div class="intro__content container">
     <h1 class="intro__title text_lead text_alt">
@@ -215,6 +217,7 @@ anchors_disabled: true
       An example of Dockerfile for the kube-dns module*
     </h2>
 <div markdown="1" class="docs">
+
 ```docker
 # Based on https://github.com/coredns/coredns/blob/master/Dockerfile
 ARG BASE_ALPINE
@@ -224,10 +227,11 @@ FROM $BASE_ALPINE
 COPY --from=artifact /coredns /coredns
 ENTRYPOINT [ "/coredns" ]
 ```
+
+</div>
 <p class="text">
   * The module installs CoreDNS components for managing DNS in the Kubernetes cluster.
 </p>
-</div>
   </div>
 </section>
 
