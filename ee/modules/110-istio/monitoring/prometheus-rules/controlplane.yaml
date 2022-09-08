@@ -2,16 +2,27 @@
   rules:
     - alert: D8IstioGlobalControlplaneDoesntWork
       expr: |
+        # all_revision_pods - revision_non_running_pods == 0 -> controlplane is dead
+        # count all istiod pods for revision
         count by (label_istio_io_rev)
-        (
-          (
-            (
-              kube_pod_status_ready{namespace="d8-istio", pod=~"istiod.+"}
-              * on (pod) group_left (label_istio_io_rev) kube_pod_labels{}
-            )
-            * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
-          )==1
-        )==0
+                (
+                  (
+                    kube_pod_labels{namespace="d8-istio", pod=~"istiod.+"}
+                  )
+                  * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        -
+        # count all istiod pods in non running phase for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_status_phase{namespace="d8-istio", pod=~"istiod.+", phase="Running"}
+                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{} == 0
+                  )
+                * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        # there are no running control plane pods
+        == 0
       for: 5m
       labels:
         severity_level: "3"
@@ -30,17 +41,30 @@
         summary: Global controlplane doesn't work.
     - alert: D8IstioAdditionalControlplaneDoesntWork
       expr: |
+        # all_revision_pods - revision_non_running_pods == 0 -> controlplane is dead
+        # count all istiod pods for revision
         count by (label_istio_io_rev)
-        (
-          (
-            (
-              kube_pod_status_ready{namespace="d8-istio", pod=~"istiod.+"}
-              * on (pod) group_left (label_istio_io_rev) kube_pod_labels{}
-            )
-            * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod.+"}
-            unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
-          ) == 1
-        )
+                (
+                  (
+                    kube_pod_labels{namespace="d8-istio", pod=~"istiod.+"}
+                  )
+                  * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod.+"}
+                  # exclude global revision
+                  unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        -
+        # count all istiod pods in non running phase for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_status_phase{namespace="d8-istio", pod=~"istiod.+", phase="Running"}
+                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{} == 0
+                  )
+                * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod.+"}
+                # exclude global revision
+                unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        == 0
       for: 5m
       labels:
         severity_level: "3"
