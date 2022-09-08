@@ -66,9 +66,6 @@ func generateKubeHookConfig() []go_hook.KubernetesConfig {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{
-		Order: 20,
-	},
 	Queue:      "/modules/prometheus_metrics_adapter/custom_metrics",
 	Kubernetes: generateKubeHookConfig(),
 }, setCustomMetricsQueriesToValues)
