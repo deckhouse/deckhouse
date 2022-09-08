@@ -51,7 +51,7 @@ module.exports.setFail = async ({github, context, core}) => {
     core,
     state: 'failure',
     description: 'E2e test was failed.',
-    url: workflowUrl(github),
+    url: workflowUrl(context),
   })
 };
 
@@ -62,6 +62,6 @@ module.exports.setSuccess = async ({github, context, core}) => {
     core,
     state: 'success',
     description: 'E2e test was passed.',
-    url: workflowUrl(github),
+    url: workflowUrl(context),
   })
 };
