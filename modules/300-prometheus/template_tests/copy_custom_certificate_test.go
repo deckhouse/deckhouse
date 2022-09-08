@@ -64,6 +64,9 @@ internal:
   prometheusAPIClientTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY
+  prometheusScraperIstioMTLS:
+    certificate: CRTCRTCRT
+    key: KEYKEYKEY
   prometheusScraperTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY

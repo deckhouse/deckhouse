@@ -391,3 +391,14 @@ properties:
             type: string
           certificate_updated:
             type: boolean
+      prometheusScraperIstioMTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
