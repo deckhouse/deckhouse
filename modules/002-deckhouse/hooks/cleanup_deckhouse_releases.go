@@ -25,7 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/v1alpha1"
 )
 
 /*

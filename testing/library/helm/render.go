@@ -67,6 +67,11 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 		IsUpgrade: true,
 	}
 
+	caps := chartutil.DefaultCapabilities
+	vers := []string(caps.APIVersions)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	caps.APIVersions = vers
+
 	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart prepare render values: %v", err)

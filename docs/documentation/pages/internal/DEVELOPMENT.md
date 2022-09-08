@@ -189,7 +189,7 @@ spec:
   {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | nindent 2 }}
 ```
 
-The helper gets the global context and the desired priorityClassName value as an input. If the `010-priority-class` module is enabled in Deckhouse, the template will look like this:
+The helper gets the global context and the desired priorityClassName value as an input. If the `001-priority-class` module is enabled in Deckhouse, the template will look like this:
 
 ```yaml
 spec:
@@ -204,7 +204,7 @@ spec:
 
 {% endraw %}
 
-For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/010-priority-class/).
+For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/001-priority-class/).
 
 #### Node Selector
 

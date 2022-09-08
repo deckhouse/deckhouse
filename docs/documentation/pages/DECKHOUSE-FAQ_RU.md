@@ -16,13 +16,13 @@ kubectl -n d8-system get cm deckhouse -o yaml
 
 ## Как найти документацию по установленной у меня версии?
 
-> Документация доступна внутри кластера при включенном модуле [deckhouse-web](modules/810-deckhouse-web/) (включен по умолчанию, кроме [варианта поставки](modules/020-deckhouse/configuration.html#parameters-bundle) `Minimal`).
+> Документация доступна внутри кластера при включенном модуле [deckhouse-web](modules/810-deckhouse-web/) (включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`).
 
 Документация запущенной в кластере версии Deckhouse доступна по адресу `deckhouse.<cluster_domain>`, где `<cluster_domain>` — DNS имя в соответствии с шаблоном из параметра `global.modules.publicDomainTemplate` конфигурации.
 
 ## Как установить желаемый канал обновлений?
 
-Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/020-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить
+Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить
 (установить) параметр `releaseChannel`.
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
@@ -36,7 +36,7 @@ deckhouse: |
 
 ## Как отключить автоматическое обновление?
 
-Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/020-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` параметр `releaseChannel`.
+Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` параметр `releaseChannel`.
 
 В этом случае Deckhouse не проверяет обновления, и даже обновление на patch-релизы не выполняется.
 
@@ -48,7 +48,7 @@ deckhouse: |
 
 При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource `DeckhouseRelease`.
 
-После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/020-deckhouse/configuration.html#parameters-update) (по-умолчанию — автоматически, в любое время).
+После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по-умолчанию — автоматически, в любое время).
 
 Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
 
@@ -65,11 +65,11 @@ kubectl get deckhousereleases
   * Если более *поздние* релизы уже применены (в статусе `Deployed`), то смены релиза не происходит. В этом случае Deckhouse останется на таком релизе до тех пор, пока на канале обновлений `EarlyAccess` не появится более поздний релиз.
 * При смене канала обновлений на **менее стабильный** (например с `EarlyAcess` на `Alpha`):
   * Deckhouse скачивает данные о релизе (в примере — из канала `Alpha`) и сравнивает их с данными из существующих в кластере custom resource'ов `DeckhouseRelease`.
-  * Затем Deckhouse выполняет обновление согласно установленным [параметрам обновления](modules/020-deckhouse/configuration.html#parameters-update).
+  * Затем Deckhouse выполняет обновление согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update).
 
 ## Как запускать Deckhouse на произвольном узле?
 
-Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/020-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
 
 Также стоит избегать использования узлов **CloudEphemeral**. В противном случае может произойти ситуация, когда целевого узла нет в кластере, и его заказ по какой-то причине невозможен.
 
