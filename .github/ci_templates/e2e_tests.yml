@@ -21,8 +21,6 @@
 # <template: set_e2e_requirement_status>
 - name: Set commit status after e2e run
   id: set_e2e_requirement_status
-  needs:
-  - git_info
   if: ${{ always() }}
   uses: {!{ index (ds "actions") "actions/github-script" }!}
   env:
