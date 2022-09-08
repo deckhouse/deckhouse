@@ -47,8 +47,9 @@ case "$ID" in
     exit 1
   ;;
 esac
-
+{{- /*
 # try to determine os by ID_LIKE
+*/}}
 for ID in $ID_LIKE; do
   case "$ID" in
     centos|rhel)
@@ -61,8 +62,9 @@ for ID in $ID_LIKE; do
     ;;
   esac
 done
-
+{{- /*
 # try to determine os by packet manager
+*/}}
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
