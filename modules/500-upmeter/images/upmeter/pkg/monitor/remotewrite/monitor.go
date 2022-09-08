@@ -75,6 +75,7 @@ func (m *Monitor) Start(ctx context.Context) error {
 		return fmt.Errorf("creating informer: %v", err)
 	}
 
+	m.monitor.EnableKubeEventCb()
 	m.monitor.Start(ctx)
 	return nil
 }
@@ -108,7 +109,6 @@ func (m *Monitor) Subscribe(handler Handler) {
 			handler.OnDelete(obj)
 		}
 	})
-	m.monitor.EnableKubeEventCb()
 }
 
 func (m *Monitor) List() ([]*RemoteWrite, error) {

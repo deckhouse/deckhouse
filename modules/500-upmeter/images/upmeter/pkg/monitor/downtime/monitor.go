@@ -72,8 +72,8 @@ func (m *Monitor) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("creating informer: %v", err)
 	}
-	m.monitor.EnableKubeEventCb()
 
+	m.monitor.EnableKubeEventCb()
 	m.monitor.Start(ctx)
 	return nil
 }
