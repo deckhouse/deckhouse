@@ -52,7 +52,7 @@ var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 
 	Context("Without istiod pods", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "1x88")
+			f.ValuesSet("istio.internal.globalRevision", "v1x88")
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
