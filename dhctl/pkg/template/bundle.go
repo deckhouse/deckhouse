@@ -237,7 +237,7 @@ func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 		return "", err
 	}
 
-	if err = outFile.Chmod(0777); err != nil {
+	if err = outFile.Chmod(0775); err != nil {
 		return "", err
 	}
 
