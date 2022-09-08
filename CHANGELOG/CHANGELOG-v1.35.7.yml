@@ -1,0 +1,9 @@
+kube-dns:
+  fixes:
+    - summary: Set `prefer_udp` option in `forward` plugin.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2413
+linstor:
+  fixes:
+    - summary: Fix `linstor-node` label and `podAntiAffinity` in HA mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2408
+

@@ -51,6 +51,8 @@
  - **[istio]** Fixed `D8IstioDataPlaneVersionMismatch` alert. [#2370](https://github.com/deckhouse/deckhouse/pull/2370)
  - **[istio]** Don't exclude d8-namespaces from istiod discovery. [#2315](https://github.com/deckhouse/deckhouse/pull/2315)
  - **[istio]** Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and federations. [#2055](https://github.com/deckhouse/deckhouse/pull/2055)
+ - **[kube-dns]** Set `prefer_udp` option in `forward` plugin. [#2413](https://github.com/deckhouse/deckhouse/pull/2413)
+ - **[linstor]** Fix `linstor-node` label and `podAntiAffinity` in HA mode. [#2408](https://github.com/deckhouse/deckhouse/pull/2408)
  - **[namespace-configurator]** React to module values changes. [#2277](https://github.com/deckhouse/deckhouse/pull/2277)
  - **[prometheus]** Fix Grafana dashboard provisioned — avoid missing all dashboards on update. [#2384](https://github.com/deckhouse/deckhouse/pull/2384)
  - **[prometheus]** Changes Grafana version in `patches/build_go.patch.tpl` automatically from docker arguments. [#2214](https://github.com/deckhouse/deckhouse/pull/2214)
