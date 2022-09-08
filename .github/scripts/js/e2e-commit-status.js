@@ -6,7 +6,8 @@ function workflowUrl({core, context}) {
   core.debug(`workflowUrl context: ${JSON.stringify(context)}`);
   const {serverUrl, repo, runId} = context;
   const repository = repo.repo;
-  const url = `${serverUrl}/${repository}/actions/runs/${runId}}`;
+  const owner = repo.owner;
+  const url = `${serverUrl}/${owner}/${repository}/actions/runs/${runId}`;
   core.debug(`workflowUrl url: ${url}`);
   return url
 }
