@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
@@ -306,6 +307,8 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
+
+	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {

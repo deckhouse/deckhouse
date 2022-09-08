@@ -44,6 +44,10 @@ else ifeq ($(PLATFORM_NAME), arm)
 	CRANE_ARCH = arm64
 endif
 
+# Set host arch & OS for golang-based programs, e.g. Prometheus
+GOHOSTARCH := $(shell go env GOHOSTARCH)
+GOHOSTOS := $(shell go env GOHOSTOS)
+
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
 	"" \
@@ -67,19 +71,29 @@ help:
 
 GOLANGCI_VERSION = 1.46.2
 TRIVY_VERSION= 0.28.1
+PROMTOOL_VERSION = 2.37.0
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool ## Install dev dependencies.
 
 ##@ Tests
 
-.PHONY: tests-modules tests-matrix tests-openapi
+bin/promtool-${PROMTOOL_VERSION}/promtool:
+	mkdir -p bin/promtool-${PROMTOOL_VERSION}
+	curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
+
+.PHONY: bin/promtool
+bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
+	rm -f bin/promtool
+	ln -s /deckhouse/bin/promtool-${PROMTOOL_VERSION}/promtool bin/promtool
+
+.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
-tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
+tests-matrix: bin/promtool ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
 	go test ./testing/matrix/ -v
 
