@@ -2,8 +2,9 @@ const {
   sleep
 } = require('./time');
 
-function workflowUrl({server_url, repository, run_id}) {
-  return `${server_url}/${repository}/actions/runs/${run_id}}`
+function workflowUrl({serverUrl, repo, runId}) {
+  const { repository } = repo;
+  return `${serverUrl}/${repository}/actions/runs/${runId}}`
 }
 
 async function sendCreateCommitStatus({github, context, core, state, description, url}) {
