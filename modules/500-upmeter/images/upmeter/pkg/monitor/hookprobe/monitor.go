@@ -36,7 +36,6 @@ type Monitor struct {
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
-	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
@@ -76,6 +75,7 @@ func (m *Monitor) Start(ctx context.Context) error {
 		return fmt.Errorf("creating informer: %v", err)
 	}
 
+	m.monitor.EnableKubeEventCb()
 	m.monitor.Start(ctx)
 	return nil
 }
@@ -90,6 +90,7 @@ func (m *Monitor) getLogger() *log.Entry {
 
 func (m *Monitor) Subscribe(handler Handler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
+		m.logger.Debugf("event received: %v", ev)
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
