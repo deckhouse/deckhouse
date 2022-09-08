@@ -28,6 +28,15 @@ status:
   phase: {{ .Phase }}
 `
 
+const validationWebHook = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-istio-validator-global
+webhooks: []
+`
+
 type PodIstiodTemplateParams struct {
 	Revision string
 	Phase    string
@@ -62,6 +71,20 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 	})
 
+	Context("Without istiod pods but webhook exists", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.BindingContexts.Set(f.KubeStateSet(validationWebHook))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-global").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("Istiod pods with `Failed` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalRevision", "v1x88")
@@ -91,6 +114,23 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Istiod pods with `Running` phase and validation webhook exists", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.BindingContexts.Set(f.KubeStateSet(validationWebHook + PodIstiodYaml(PodIstiodTemplateParams{
+				Revision: "v1x88",
+				Phase:    "Running",
+			})))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-global").Exists()).To(BeTrue())
 		})
 	})
 
