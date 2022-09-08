@@ -22,7 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 )
 
 type DeckhouseRelease struct {

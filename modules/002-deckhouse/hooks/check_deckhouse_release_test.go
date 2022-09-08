@@ -37,7 +37,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/updater"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 

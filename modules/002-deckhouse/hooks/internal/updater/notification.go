@@ -25,7 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
-	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
 )
 
 type NotificationConfig struct {
