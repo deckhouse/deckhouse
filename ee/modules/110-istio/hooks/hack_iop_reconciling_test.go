@@ -6,11 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
+
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const istioOperatorTemplate = `
@@ -68,11 +70,6 @@ func IstioOperatorPodYaml(pod IstioOperatorPodParams) string {
 	}
 	return internal.TemplateToYAML(podOperatorTemplate, pod)
 }
-
-const (
-	healthyOperatorPodName = "healthy-operator"
-	erroredOperatorPodName = "errored-operator"
-)
 
 var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")

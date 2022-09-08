@@ -96,7 +96,7 @@ var _ = Describe("Modules :: istio :: hooks :: migration_remove_kiali_crd ", fun
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "monitoringdashboards.monitoring.kiali.io").Exists()).To(BeFalse())
 		})
 	})
-	
+
 	Context("Istio 1.10.1 validation webhook istiod-d8-istio exists", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(istio1x10x1ValidationWebhook))
