@@ -518,8 +518,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -887,8 +885,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -1256,8 +1252,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -1625,8 +1619,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -1994,8 +1986,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -2363,8 +2353,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -2732,8 +2720,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -3101,8 +3087,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -3470,8 +3454,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
@@ -3839,8 +3821,6 @@ jobs:
       # <template: set_e2e_requirement_status>
       - name: Set commit status after e2e run
         id: set_e2e_requirement_status
-        needs:
-        - git_info
         if: ${{ always() }}
         uses: actions/github-script@v5.0.0
         env:
