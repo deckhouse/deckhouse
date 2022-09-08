@@ -90,7 +90,7 @@ func (m *Monitor) getLogger() *log.Entry {
 
 func (m *Monitor) Subscribe(handler Handler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
-		m.logger.Infof("event received: %v", ev)
+		m.logger.Debugf("event received: %v", ev)
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
