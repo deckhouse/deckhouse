@@ -44,7 +44,6 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		BeforeEach(func() {
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
@@ -56,7 +55,6 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
@@ -73,7 +71,6 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
@@ -90,7 +87,6 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
@@ -107,7 +103,6 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())

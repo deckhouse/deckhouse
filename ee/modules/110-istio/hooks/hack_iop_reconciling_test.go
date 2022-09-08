@@ -84,6 +84,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
+
 	Context("Istio operator without error status", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
@@ -102,6 +103,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 			Expect(f.KubernetesResource("Pod", "d8-istio", "healthy-operator").Exists()).To(BeTrue())
 		})
 	})
+
 	Context("Istio operator with error status, operator's pod created 6 min ago", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
@@ -120,6 +122,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
 		})
 	})
+
 	Context("Istio operator with error status, operator's pod created less than 5 min ago", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
@@ -138,6 +141,7 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
 		})
 	})
+	
 	Context("Istio operators with mixed statuses", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{

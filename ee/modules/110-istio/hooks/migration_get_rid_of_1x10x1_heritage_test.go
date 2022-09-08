@@ -76,16 +76,17 @@ webhooks:
 
 var _ = Describe("Modules :: istio :: hooks :: migration_remove_kiali_crd ", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
-
 		It("must be executed successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
+
 	Context("CRD monitoringdashboards.monitoring.kiali.io exists", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(kialiCRD))
