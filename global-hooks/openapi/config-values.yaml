@@ -31,10 +31,10 @@ properties:
         x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
-        # only check that is containing %s
-        pattern: '.*%s.*'
+        pattern: '^%s([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The template with the `%s` key as the dynamic string parameter.
+          (e.g. '%s.kube.company.my' or '%s-kube.company.my', regex used for validation is '%s([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*').
 
           Deckhouse modules use this template for creating Ingress resources.
 

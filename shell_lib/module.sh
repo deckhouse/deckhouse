@@ -32,7 +32,8 @@ function module::path() {
 # $1 — target service name
 function module::public_domain() {
   TEMPLATE=$(values::get --config --required global.modules.publicDomainTemplate)
-  if echo "$TEMPLATE" | grep -q '%s'; then
+  regexp_pattern="^%s([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+  if [[ "$TEMPLATE" =~ ${regexp_pattern} ]]; then
     printf "$TEMPLATE" "$1"
   else
     >&2 echo "ERROR: global.modules.publicDomainTemplate must contain '%s'."
