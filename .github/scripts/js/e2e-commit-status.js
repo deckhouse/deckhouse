@@ -2,9 +2,13 @@ const {
   sleep
 } = require('./time');
 
-function workflowUrl({serverUrl, repo, runId}) {
-  const { repository } = repo;
-  return `${serverUrl}/${repository}/actions/runs/${runId}}`
+function workflowUrl({core, context}) {
+  core.debug(`workflowUrl context: ${JSON.stringify(context)}`);
+  const {serverUrl, repo, runId} = context;
+  const repository = repo.repo;
+  const url = `${serverUrl}/${repository}/actions/runs/${runId}}`;
+  core.debug(`workflowUrl url: ${url}`);
+  return url
 }
 
 async function sendCreateCommitStatus({github, context, core, state, description, url}) {
@@ -52,7 +56,7 @@ module.exports.setFail = async ({github, context, core}) => {
     core,
     state: 'failure',
     description: 'E2e test was failed.',
-    url: workflowUrl(context),
+    url: workflowUrl({core, context}),
   })
 };
 
@@ -63,6 +67,6 @@ module.exports.setSuccess = async ({github, context, core}) => {
     core,
     state: 'success',
     description: 'E2e test was passed.',
-    url: workflowUrl(context),
+    url: workflowUrl({core, context}),
   })
 };
