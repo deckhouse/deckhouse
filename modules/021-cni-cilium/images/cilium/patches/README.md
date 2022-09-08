@@ -17,3 +17,9 @@ Fixes host connection reset when host policies are enabled and created.
 Fixes errors in metrics from Bandwidth controller. Also adds proper logging for a couple of controllers.
 
 <https://github.com/cilium/cilium/pull/20611>
+
+## 004-health-check-terminating.patch
+
+Previously cilium-agent did not switch off the health check server if only Terminating Endpoints are present on a Node with `externalTrafficPolicy: Local` Service.
+
+<https://github.com/cilium/cilium/pull/21062>
