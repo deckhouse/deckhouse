@@ -47,7 +47,7 @@ func moduleLabel(n string) string {
 
 func shouldSkipModule(name string) bool {
 	switch name {
-	case "helm_lib", "400-nginx-ingress", "340-monitoring-deckhouse", "500-dashboard":
+	case "helm_lib", "400-nginx-ingress", "500-dashboard":
 		return true
 	}
 	return false
