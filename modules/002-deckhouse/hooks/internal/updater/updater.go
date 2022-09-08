@@ -114,10 +114,10 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 		minApplyTime := du.now.Add(du.notificationConfig.MinimalNotificationTime.Duration)
 		if minApplyTime.Before(predictedReleaseApplyTime) {
 			minApplyTime = predictedReleaseApplyTime
+		} else {
+			predictedReleaseApplyTime = minApplyTime
+			applyTimeChanged = true
 		}
-
-		predictedReleaseApplyTime = minApplyTime
-		applyTimeChanged = true
 	}
 	releaseApplyTime := updateWindows.NextAllowedTime(predictedReleaseApplyTime)
 

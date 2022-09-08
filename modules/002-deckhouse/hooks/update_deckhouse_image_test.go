@@ -473,42 +473,43 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(r136.Field("status.message").String()).To(Equal(""))
 			})
 		})
+	})
 
-		Context("Notification: release with notification settings", func() {
-			var httpBody string
-			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				data, _ := ioutil.ReadAll(r.Body)
-				httpBody = string(data)
-			}))
-			AfterEach(func() {
-				defer svr.Close()
-			})
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
-				f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("1h"))
-				f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
-				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-
-				f.RunHook()
-			})
-
-			It("Should postpone the release", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC"))
-				Expect(httpBody).To(ContainSubstring(`"version":"1.26"`))
-				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
-				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
-				Expect(cm.Field("data.notified").Bool()).To(BeTrue())
-				Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
-				Expect(r126.Field("spec.applyAfter").String()).To(Equal("2021-01-01T14:30:00Z"))
-				Expect(r126.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeTrue())
-			})
+	Context("Notification: release with notification settings", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			data, _ := ioutil.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		AfterEach(func() {
+			defer svr.Close()
 		})
 
-		Context("Notification: after met conditions", func() {
-			BeforeEach(func() {
-				changedState := `
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("1h"))
+			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should postpone the release", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC"))
+			Expect(httpBody).To(ContainSubstring(`"version":"1.26"`))
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+			Expect(cm.Field("data.notified").Bool()).To(BeTrue())
+			Expect(r126.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r126.Field("spec.applyAfter").String()).To(Equal("2021-01-01T14:30:00Z"))
+			Expect(r126.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Notification: after met conditions", func() {
+		BeforeEach(func() {
+			changedState := `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -539,20 +540,51 @@ metadata:
   name: d8-release-data
   namespace: d8-system
 `
-				f.KubeStateSet(deckhousePodYaml + changedState)
-				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-				f.RunHook()
-			})
-			It("ffo", func() {
-				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
-				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
-				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
-				Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
-				Expect(cm.Field("data.notified").Bool()).To(BeFalse())
-			})
+			f.KubeStateSet(deckhousePodYaml + changedState)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("ffo", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
+			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 		})
 	})
 
+	Context("Notification: release applyAfter time is after notification period", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			data, _ := ioutil.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesDelete("deckhouse.update.windows")
+			f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("4h"))
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should not change postpone time", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(httpBody).To(ContainSubstring("New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC"))
+			Expect(httpBody).To(ContainSubstring(`"version":"1.36"`))
+			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+			Expect(cm.Field("data.notified").Bool()).To(BeTrue())
+			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r136.Field("spec.applyAfter").String()).To(Equal("2222-11-11T23:23:23Z"))
+			Expect(r136.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeFalse())
+		})
+	})
 })
 
 var (
@@ -782,6 +814,28 @@ metadata:
   name: v1-25-1
 spec:
   version: "v1.25.1"
+  applyAfter: "2222-11-11T23:23:23Z"
+status:
+  phase: Pending
+`
+
+	postponedMinorRelease = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-35-0
+spec:
+  version: "v1.35.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-36-0
+spec:
+  version: "v1.36.0"
   applyAfter: "2222-11-11T23:23:23Z"
 status:
   phase: Pending
