@@ -134,6 +134,18 @@ negative:
   - modules:
       https:
         publicDomainTemplate: "sub.example.com"
+  # public domain template starts with dot
+  - modules:
+      https:
+        publicDomainTemplate: ".%s.example.com"
+  # public domain template ends with dot
+  - modules:
+      https:
+        publicDomainTemplate: "%s.example.com."
+  # public domain template contain %s in the middle of the domain template
+  - modules:
+      https:
+        publicDomainTemplate: "example.%s.com"
   # incorrect resource request: cpu for every node
   - modules:
       resourcesRequests:
