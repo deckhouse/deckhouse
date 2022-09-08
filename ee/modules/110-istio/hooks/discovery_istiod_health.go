@@ -8,6 +8,7 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -64,7 +65,7 @@ func applyIstiodPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
-	var istiodGlobalRevisionIsReady bool
+	var isGlobalRevisionIstiodReady bool
 	if !input.Values.Get("istio.internal.globalRevision").Exists() {
 		return nil
 	}
@@ -72,9 +73,12 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 	for _, podRaw := range input.Snapshots["istiod_pods"] {
 		pod := podRaw.(istiodPod)
 		if pod.Revision == globalRevision && pod.Phase == v1.PodRunning {
-			istiodGlobalRevisionIsReady = true
+			isGlobalRevisionIstiodReady = true
 		}
 	}
-	input.Values.Set(isGlobalRevisionIstiodReadyPath, istiodGlobalRevisionIsReady)
+	input.Values.Set(isGlobalRevisionIstiodReadyPath, isGlobalRevisionIstiodReady)
+	if !isGlobalRevisionIstiodReady {
+		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global", object_patch.InForeground())
+	}
 	return nil
 }
