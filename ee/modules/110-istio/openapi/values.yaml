@@ -93,6 +93,25 @@ properties:
         - "1.13"
         x-examples:
         - ["1.12", "1.13"]
+      deprecatedVersions:
+        type: array
+        items:
+          type: object
+          required:
+          - version
+          - alertSeverity
+          properties:
+            version:
+              type: string
+            alertSeverity:
+              type: integer
+              minimum: 1
+              maximum: 9
+        default:
+          - version: "1.10.1"
+            alertSeverity: 4
+        x-examples:
+          - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
       globalRevision:
         type: string
         x-examples: [v1x10x1] # must be real
