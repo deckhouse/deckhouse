@@ -15,7 +15,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
-const globalRevisionIstiodIsReadyPath = "istio.internal.globalRevisionIstiodIsReady"
+const isGlobalRevisionIstiodReadyPath = "istio.internal.isGlobalRevisionIstiodReady"
 
 type istiodPod struct {
 	Name     string
@@ -24,7 +24,7 @@ type istiodPod struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("operator-bootstrap"),
+	Queue:        internal.Queue("discovery-istiod"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -45,12 +45,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			FilterFunc: applyPodFilter,
+			FilterFunc: applyIstiodPodFilter,
 		},
 	},
-}, operatorBootstrapHook)
+}, discoveryIstiodHealthHook)
 
-func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyIstiodPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod v1.Pod
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
@@ -63,7 +63,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func operatorBootstrapHook(input *go_hook.HookInput) error {
+func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 	var istiodGlobalRevisionIsReady bool
 	if !input.Values.Get("istio.internal.globalRevision").Exists() {
 		return nil
@@ -75,6 +75,6 @@ func operatorBootstrapHook(input *go_hook.HookInput) error {
 			istiodGlobalRevisionIsReady = true
 		}
 	}
-	input.Values.Set(globalRevisionIstiodIsReadyPath, istiodGlobalRevisionIsReady)
+	input.Values.Set(isGlobalRevisionIstiodReadyPath, istiodGlobalRevisionIsReady)
 	return nil
 }

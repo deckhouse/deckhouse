@@ -37,7 +37,7 @@ func PodIstiodYaml(podParams PodIstiodTemplateParams) string {
 	return internal.TemplateToYAML(podIstiodTemplate, podParams)
 }
 
-var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
+var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
 
 	Context("Empty cluster and minimal settings", func() {
@@ -59,8 +59,8 @@ var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 
@@ -76,8 +76,8 @@ var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 
@@ -93,8 +93,8 @@ var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeTrue())
 		})
 	})
 
@@ -110,8 +110,8 @@ var _ = Describe("Istio hooks :: handle_operator_bootstrap ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(globalRevisionIstiodIsReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 

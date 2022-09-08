@@ -115,7 +115,7 @@ properties:
       globalRevision:
         type: string
         x-examples: [v1x10x1] # must be real
-      globalRevisionIstiodIsReady:
+      isGlobalRevisionIstiodReady:
         type: boolean
         default: false
         x-examples: [true]
