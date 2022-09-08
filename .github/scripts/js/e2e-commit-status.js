@@ -7,7 +7,7 @@ function workflowUrl({server_url, repository, run_id}) {
 }
 
 async function sendCreateCommitStatus({github, context, core, state, description, url}) {
-  const commit_sha = process.env.INPUT_STATUS_TARGET_COMMIT;
+  const commit_sha = process.env.STATUS_TARGET_COMMIT;
   core.debug(`sendCreateCommitStatus target commit: ${commit_sha}`);
 
   for(let i = 0; i < 3; i++) {

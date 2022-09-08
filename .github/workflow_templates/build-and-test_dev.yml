@@ -175,8 +175,9 @@ jobs:
     - name: Set commit status after e2e run
       id: set_e2e_requirement_status
       uses: {!{ index (ds "actions") "actions/github-script" }!}
+      env:
+        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
       with:
-        status_target_commit: ${{needs.git_info.outputs.github_sha}}
         github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         script: |
           const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
