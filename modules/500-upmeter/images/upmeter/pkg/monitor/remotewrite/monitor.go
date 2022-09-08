@@ -36,7 +36,6 @@ type Monitor struct {
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
-	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
@@ -109,6 +108,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 			handler.OnDelete(obj)
 		}
 	})
+	m.monitor.EnableKubeEventCb()
 }
 
 func (m *Monitor) List() ([]*RemoteWrite, error) {

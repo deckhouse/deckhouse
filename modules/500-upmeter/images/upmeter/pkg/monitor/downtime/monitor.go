@@ -37,7 +37,6 @@ type Monitor struct {
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
-	monitor.EnableKubeEventCb()
 
 	return &Monitor{
 		monitor: monitor,
@@ -73,6 +72,7 @@ func (m *Monitor) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("creating informer: %v", err)
 	}
+	m.monitor.EnableKubeEventCb()
 
 	m.monitor.Start(ctx)
 	return nil
