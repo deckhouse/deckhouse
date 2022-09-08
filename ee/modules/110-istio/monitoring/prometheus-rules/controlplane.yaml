@@ -1,0 +1,59 @@
+- name: d8.istio.controlplane
+  rules:
+    - alert: D8IstioGlobalControlplaneDoesntWork
+      expr: |
+        count by (label_istio_io_rev)
+        (
+          (
+            (
+              kube_pod_status_ready{namespace="d8-istio", pod=~"istiod.+"}
+              * on (pod) group_left (label_istio_io_rev) kube_pod_labels{}
+            )
+            * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
+          )==1
+        )==0
+      for: 5m
+      labels:
+        severity_level: "3"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          Global istio controlplane `{{$labels.label_istio_io_rev}}` doesn' work.
+          Impact — injecting istio sidecars to pods needed `{{$labels.label_istio_io_rev}}` revision doesn't work, validating webhook for istio resources absent.
+          ```
+          k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          ```
+        summary: Global controlplane doesn't work.
+    - alert: D8IstioAdditionalControlplaneDoesntWork
+      expr: |
+        count by (label_istio_io_rev)
+        (
+          (
+            (
+              kube_pod_status_ready{namespace="d8-istio", pod=~"istiod.+"}
+              * on (pod) group_left (label_istio_io_rev) kube_pod_labels{}
+            )
+            * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod.+"}
+            unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
+          ) == 1
+        )
+      for: 5m
+      labels:
+        severity_level: "3"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          Additional istio controlplane `{{$labels.label_istio_io_rev}}` doesn' work.
+          Impact — injecting istio sidecars to pods needed `{{$labels.label_istio_io_rev}}` revision doesn't work.
+          ```
+          k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          ```
+        summary: Additional controlplane doesn't work.
