@@ -15,8 +15,12 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"text/template"
 
 	"gopkg.in/yaml.v2"
 
@@ -30,6 +34,7 @@ const (
 	bashibleDir      = "/var/lib/bashible"
 	candiBashibleDir = candiDir + "/bashible"
 	stepsDir         = bashibleDir + "/bundle_steps"
+	detectBundlePath = "/deckhouse/candi/bashible/detect_bundle.sh"
 )
 
 type saveFromTo struct {
@@ -183,4 +188,58 @@ func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
 		}
 	}
 	return filteredData
+}
+
+func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
+	log.DebugLn("Start render detect bundle script")
+
+	fileContent, err := ioutil.ReadFile(detectBundlePath)
+	if err != nil {
+		return "", fmt.Errorf("loading %s: %v", detectBundlePath, err)
+	}
+
+	content := string(fileContent)
+
+	if data != nil {
+		t := template.New("detect_bundle_render").Funcs(FuncMap())
+		t, err := t.Parse(content)
+		if err != nil {
+			return "", err
+		}
+
+		var tpl bytes.Buffer
+
+		err = t.Execute(&tpl, data)
+		if err != nil {
+			return "", err
+		}
+
+		content = tpl.String()
+		log.DebugF("Bundle script content:\n%s", content)
+	}
+
+	outFile, err := ioutil.TempFile(os.TempDir(), "*-detect-bundle.sh")
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		if err := outFile.Close(); err != nil {
+			log.ErrorF("Cannot close rendered detect_bundle.sh %s:%v", outFile.Name())
+		}
+	}()
+
+	if _, err = outFile.WriteString(content); err != nil {
+		return "", err
+	}
+
+	if err = outFile.Sync(); err != nil {
+		return "", err
+	}
+
+	if err = outFile.Chmod(0777); err != nil {
+		return "", err
+	}
+
+	return outFile.Name(), nil
 }
