@@ -34,7 +34,7 @@ const (
 	bashibleDir      = "/var/lib/bashible"
 	candiBashibleDir = candiDir + "/bashible"
 	stepsDir         = bashibleDir + "/bundle_steps"
-	detectBundlePath = "/deckhouse/candi/bashible/detect_bundle.sh"
+	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 )
 
 type saveFromTo struct {
