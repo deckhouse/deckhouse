@@ -7,11 +7,14 @@ function workflowUrl({server_url, repository, run_id}) {
 }
 
 async function sendCreateCommitStatus({github, context, core, state, description, url}) {
+  const commit_sha = process.env.INPUT_STATUS_TARGET_COMMIT;
+  core.debug(`sendCreateCommitStatus target commit: ${commit_sha}`);
+
   for(let i = 0; i < 3; i++) {
     const response = await github.rest.repos.createCommitStatus({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      sha: context.sha,
+      sha: commit_sha,
       state: state,
       description: description,
       target_url: url,
@@ -19,7 +22,6 @@ async function sendCreateCommitStatus({github, context, core, state, description
     });
 
     core.debug(`rest.repos.createCommitStatus response: ${JSON.stringify(response)}`);
-    core.debug(`rest.repos.createCommitStatus response.status: ${response.status}`);
     if (response.status === 201) {
       core.debug(`rest.repos.createCommitStatus response status is 201. Returns true`);
       return true;
@@ -53,7 +55,7 @@ module.exports.setFail = async ({github, context, core}) => {
   })
 };
 
-module.exports.setSuccess = async ({github, context, corel}) => {
+module.exports.setSuccess = async ({github, context, core}) => {
   return sendCreateCommitStatus({
     github,
     context,

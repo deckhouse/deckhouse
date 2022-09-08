@@ -1510,7 +1510,8 @@ jobs:
     # </template: tests_template>
 
   set_e2e_requirement_status:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    # if previous jobs were failed we do not need set status, because checks will be failed
+    if: ${{ success() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Set 'waiting for e2e' commit status
     needs:
       - git_info
@@ -1528,6 +1529,7 @@ jobs:
       id: set_e2e_requirement_status
       uses: actions/github-script@v5.0.0
       with:
+        status_target_commit: ${{needs.git_info.outputs.github_sha}}
         github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         script: |
           const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
