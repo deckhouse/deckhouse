@@ -141,7 +141,10 @@ async function setSkip({github, context, core}){
 /**
  * Set commit status when commit was pushed.
  * Check label for skipping e2e test and e2e tests should skip set success status
+ * If status was not set then fail job
+ *
  * Used in build-and-test_dev workflow
+ *
  * Use STATUS_TARGET_COMMIT env var as target commit sha
  * Use PR_LABELS env var as list of PR labels
  * @param {object} inputs
