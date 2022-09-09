@@ -25,7 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 /*
@@ -39,11 +40,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse/cleanup_deckhouse_release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "releases",
-			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "DeckhouseRelease",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterDeckhouseRelease,
+			Name:                         "releases",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "DeckhouseRelease",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
+			FilterFunc:                   filterDeckhouseRelease,
 		},
 	},
 }, cleanupReleases)
@@ -56,12 +58,12 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 	now := time.Now().UTC()
 
-	releases := make([]deckhouseRelease, 0, len(snap))
+	releases := make([]updater.DeckhouseRelease, 0, len(snap))
 	for _, sn := range snap {
-		releases = append(releases, sn.(deckhouseRelease))
+		releases = append(releases, sn.(updater.DeckhouseRelease))
 	}
 
-	sort.Sort(sort.Reverse(byVersion(releases)))
+	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
 
 	var (
 		pendingReleasesIndexes  []int
@@ -84,7 +86,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
-		sp := statusPatch{
+		sp := updater.StatusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
 			TransitionTime: now,
 		}
@@ -107,7 +109,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	// mark them as Outdated
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
-		sp := statusPatch{
+		sp := updater.StatusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
 			Message:        "Outdated by cleanup hook",
 			TransitionTime: now,

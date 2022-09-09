@@ -94,6 +94,37 @@ In this mode, it will be necessary to confirm each minor disruptive update with 
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```
 
+### Deckhouse update notification
+
+In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update.
+
+Example:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+```
+
+After a new Deckhouse minor version appears on the update channel, a [POST request](configuration.html#parameters-update-notification-webhook) will be executed to the webhook's URL before it is applied in the cluster.
+
+Set the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter to have enough time to react to a Deckhouse update notification. In this case, the update will happen after the specified time, considering the update windows.
+
+Example:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+      minimalNotificationTime: 8h
+```
+
 ## Collect debug info
 
 Read [the FAQ](faq.html#how-to-collect-debug-info) to learn more about collecting debug information.

@@ -42,7 +42,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -105,7 +106,9 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
 
 	// run only if it's a canary release
-	var applyAfter, cooldownUntil *time.Time
+	var (
+		applyAfter, cooldownUntil, notificationShiftTime *time.Time
+	)
 	if releaseChecker.releaseMetadata.Cooldown != nil {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
 	}
@@ -118,19 +121,19 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.Values.Set("deckhouse.internal.releaseVersionImageHash", newImageHash)
 
 	snap := input.Snapshots["releases"]
-	releases := make([]deckhouseRelease, 0, len(snap))
+	releases := make([]updater.DeckhouseRelease, 0, len(snap))
 	for _, rl := range snap {
-		releases = append(releases, rl.(deckhouseRelease))
+		releases = append(releases, rl.(updater.DeckhouseRelease))
 	}
 
-	sort.Sort(sort.Reverse(byVersion(releases)))
+	sort.Sort(sort.Reverse(updater.ByVersion(releases)))
 
 releaseLoop:
 	for _, release := range releases {
 		switch {
 		// GT
 		case release.Version.GreaterThan(newSemver):
-			// cleanup versions which are older then current version in a specified channel and are in a Pending state
+			// cleanup versions which are older than current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.PhasePending {
 				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
 			}
@@ -156,25 +159,35 @@ releaseLoop:
 
 		// LT
 		default:
-			// inherit cooldown from previous minor release
+			// inherit cooldown from previous patch release
 			// we need this to automatically set cooldown for next patch releases
 			if cooldownUntil == nil && release.CooldownUntil != nil {
 				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
 					cooldownUntil = release.CooldownUntil
 				}
 			}
+			if release.AnnotationFlags.NotificationShift {
+				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
+					notificationShiftTime = release.ApplyAfter
+				}
+			}
 			break releaseLoop
 		}
 	}
 
+	ts := time.Now()
 	if releaseChecker.IsCanaryRelease() {
-		ts := time.Now()
 		// if cooldown is set, calculate canary delay from cooldown time, not current
 		if cooldownUntil != nil && cooldownUntil.After(ts) {
 			ts = *cooldownUntil
 		}
 		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
+	}
+
+	// inherit applyAfter from notified release
+	if notificationShiftTime != nil && notificationShiftTime.After(ts) {
+		applyAfter = notificationShiftTime
 	}
 
 	var disruptions []string
@@ -214,6 +227,9 @@ releaseLoop:
 	}
 	if cooldownUntil != nil {
 		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
+	}
+	if notificationShiftTime != nil {
+		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
 	}
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())

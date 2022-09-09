@@ -94,6 +94,37 @@ deckhouse: |
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```
 
+### Оповещение об обновлении Deckhouse
+
+В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а, для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
+
+Пример настройки оповещения:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+```
+
+После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере, на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
+
+Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени, с учетом окон обновлений.
+
+Пример:
+
+```yaml
+deckhouse: |
+  ...
+  update:
+    mode: Auto
+    notification:
+      webhook: https://release-webhook.mydomain.com
+      minimalNotificationTime: 8h
+```
+
 ## Сбор информации для отладки
 
 О сборе отладочной информации читайте [в FAQ](faq.html#как-собрать-информацию-для-отладки).
