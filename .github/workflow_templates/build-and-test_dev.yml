@@ -183,4 +183,4 @@ jobs:
         script: |
           const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
-          await e2eStatus.setInitial({github, context, core});
+          await e2eStatus.setInitialStatus({github, context, core});
