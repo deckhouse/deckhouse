@@ -177,11 +177,10 @@ jobs:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       env:
         STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
       with:
         github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         script: |
           const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-          const done = await e2eStatus.setWait({github, context, core});
-          if (!done) {
-            core.setFailed('e2e requirement status was not set.')
-          }
+
+          await e2eStatus.setInitial({github, context, core});

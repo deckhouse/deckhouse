@@ -8,6 +8,7 @@ const labels = {
   'skip/copyright-validation': { type: 'skip-validation', validation_name: 'copyright' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
+  'skip/e2e': { type: 'skip-validation', validation_name: 'e2e_skip' },
 
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },
