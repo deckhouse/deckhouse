@@ -31,7 +31,7 @@ type IstioOperatorPodSnapshot struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("iop-reconciling"),
+	Queue: internal.Queue("reconciling"),
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},
 	},

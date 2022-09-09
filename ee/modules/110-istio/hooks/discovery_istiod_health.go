@@ -25,7 +25,7 @@ type istiodPod struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("discovery-istiod"),
+	Queue:        internal.Queue("discovery"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
