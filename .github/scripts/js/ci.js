@@ -913,7 +913,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       context,
       core,
       labeled: command.setE2eShouldSkipped,
-      commitSha: context.sha,
+      commitSha: context.payload.pull_request.head.sha,
     });
   }
 
