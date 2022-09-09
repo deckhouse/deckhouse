@@ -31,17 +31,7 @@
     script: |
       const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
-      let done = false;
-      const jobStat = process.env.JOB_STATUS;
-      if (jobStat === 'failure' || jobStat === 'cancelled') {
-        done = await e2eStatus.setFail({github, context, core});
-      } else if (jobStat === 'success') {
-        done = await e2eStatus.setSuccess({github, context, core});
-      }
-
-      if (!done) {
-        core.setFailed(`e2e requirement status was not set. Job status ${jobStat}`)
-      }
+      await e2eStatus.setStatusAfterE2eRun({github, context, core});
 # </template: set_e2e_requirement_status>
 {!{- end -}!}
 

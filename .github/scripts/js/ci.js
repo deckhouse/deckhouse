@@ -9,8 +9,11 @@ const {
   knownCRINames,
   knownKubernetesVersions,
   knownEditions,
-  e2eDefaults
+  e2eDefaults,
+  skipE2eLabel
 } = require('./constants');
+
+const e2eStatus = require('./e2e-commit-status');
 
 const {
   parseGitRef,
@@ -845,6 +848,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   // Note: no more auto rerun for validation.yml.
 
   let command = {
+    // null - do nothing
+    // true - pr labeled
+    // false- pr unlabeled
+    setE2eShouldSkipped: null,
     rerunWorkflow: false,
     triggerWorkflowDispatch: false,
     workflows: []
@@ -853,6 +860,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   try {
     const labelInfo = knownLabels[label];
     const labelType = labelInfo ? labelInfo.type : '';
+    if (label === skipE2eLabel) {
+      // set commit status
+      command.setE2eShouldSkipped = event.action === 'labeled';
+    }
     if (labelType === 'e2e-run' && event.action === 'labeled') {
       // Workflow will remove label from PR, ignore 'unlabeled' action.
       command.workflows = [`e2e-${labelInfo.provider}.yml`];
@@ -894,6 +905,16 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     }
   } finally {
     core.endGroup();
+  }
+
+  if (command.setE2eShouldSkipped !== null) {
+    return e2eStatus.onLabeledForSkip({
+      github,
+      context,
+      core,
+      labeled: command.setE2eShouldSkipped,
+      commitSha: context.sha,
+    });
   }
 
   if (command.workflows.length === 0) {
