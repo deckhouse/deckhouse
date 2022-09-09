@@ -24,7 +24,7 @@ async function sendCreateCommitStatus({github, context, core, state, description
       state: state,
       description: description,
       target_url: url,
-      context: 'deckhouse/e2e-requirement'
+      context: 'E2e test'
     });
 
     core.debug(`rest.repos.createCommitStatus response: ${JSON.stringify(response)}`);
