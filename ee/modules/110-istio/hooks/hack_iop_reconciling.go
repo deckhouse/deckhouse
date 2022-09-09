@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -19,6 +20,8 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 )
 
+const validatingErrorStr = `failed calling webhook "validation.istio.io"`
+
 type IstioOperatorCrdSnapshot struct {
 	Revision  string
 	NeedPunch bool
@@ -31,7 +34,7 @@ type IstioOperatorPodSnapshot struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("reconciling"),
+	Queue: internal.Queue("iop-reconciling"),
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},
 	},
@@ -70,11 +73,15 @@ func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	var iop crd.IstioOperator
 	var result IstioOperatorCrdSnapshot
 	err := sdk.FromUnstructured(obj, &iop)
+
 	if err != nil {
 		return nil, err
 	}
+
 	result.Revision = iop.Spec.Revision
-	if iop.Status.Status == "ERROR" {
+	if iop.Status.Status == "ERROR" &&
+		iop.Status.ComponentStatus.Pilot.Status == "ERROR" &&
+		strings.Contains(iop.Status.ComponentStatus.Pilot.Error, validatingErrorStr) {
 		result.NeedPunch = true
 	}
 	return result, nil
@@ -88,7 +95,7 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	if pod.CreationTimestamp.After(time.Now().Add(time.Minute * 5)) {
+	if pod.CreationTimestamp.After(time.Now().Add(time.Minute*5)) && pod.Status.Phase == v1.PodRunning {
 		result.AllowedToPunch = true
 	}
 	result.Name = pod.Name

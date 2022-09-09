@@ -28,6 +28,21 @@ metadata:
 spec:
   revision: {{ .Revision }}
 status:
+  componentStatus:
+    Pilot:
+{{- if eq .PilotStatus "ERROR" }}
+  {{- if .ValidationError }}
+      error: 'failed to update resource with server-side apply for obj EnvoyFilter/d8-istio/stats-filter-{{ .Revision }}:
+        Internal error occurred: failed calling webhook "validation.istio.io": Post
+        "https://istiod.d8-istio.svc:443/validate?timeout=10s": dial tcp 10.222.166.108:443:
+        i/o timeout, failed to update resource with server-side apply for obj EnvoyFilter/d8-istio/stats-filter-{{ .Revision }}:
+        Internal error occurred: failed calling webhook "validation.istio.io": Post
+        "https://istiod.d8-istio.svc:443/validate?timeout=10s": context deadline exceeded'
+  {{ else }}
+      error: 'other error'
+  {{- end }}
+{{- end }}
+      status: {{ .PilotStatus }}
   status: {{ .Status }}
 `
 
@@ -44,27 +59,30 @@ metadata:
   namespace: d8-istio
 spec: {}
 status:
-  phase: Running
+  phase: {{ .Phase }}
   startTime: "{{ .TimestampRFC3339 }}"
 `
 
 type istioOperatorParams struct {
-	Revision string
-	Status   string
+	Revision        string
+	Status          string
+	PilotStatus     string
+	ValidationError bool
 }
 
 type IstioOperatorPodParams struct {
 	Name             string
 	Revision         string
+	Phase            string
 	Timestamp        time.Time
 	TimestampRFC3339 string
 }
 
-func IstioOperatorYaml(iop istioOperatorParams) string {
+func istioOperatorYaml(iop istioOperatorParams) string {
 	return internal.TemplateToYAML(istioOperatorTemplate, iop)
 }
 
-func IstioOperatorPodYaml(pod IstioOperatorPodParams) string {
+func istioOperatorPodYaml(pod IstioOperatorPodParams) string {
 	if len(pod.TimestampRFC3339) == 0 {
 		pod.TimestampRFC3339 = pod.Timestamp.Format(time.RFC3339)
 	}
@@ -75,98 +93,168 @@ var _ = Describe("Istio hooks :: hack iop reconciling ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
 
-	Context("Empty cluster and minimal settings", func() {
+	Context("Empty cluster and minimal settings.", func() {
 		BeforeEach(func() {
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
-	Context("Istio operator without error status", func() {
+	Context("Iop: healty. Pod: running.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x88",
-				Status:   "HEALTHY",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:    "v1x88",
+				PilotStatus: "HEALTHY",
+				Status:      "HEALTHY",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
 				Name:      "healthy-operator",
+				Phase:     "Running",
 				Revision:  "v1x88",
 				Timestamp: time.Now(),
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Pod", "d8-istio", "healthy-operator").Exists()).To(BeTrue())
 		})
 	})
 
-	Context("Istio operator with error status, operator's pod created 6 min ago", func() {
+	Context("Iop: error, pilot: healthy. Pod: running", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:    "v1x88",
+				PilotStatus: "HEALTHY",
+				Status:      "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
 				Name:      "errored-operator",
+				Phase:     "Running",
+				Revision:  "v1x88",
+				Timestamp: time.Now(),
+			})))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Iop: error, pilot: error (other). Pod: running.", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:        "v1x88",
+				PilotStatus:     "ERROR",
+				ValidationError: false,
+				Status:          "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
+				Name:      "errored-operator",
+				Phase:     "Running",
+				Revision:  "v1x88",
+				Timestamp: time.Now(),
+			})))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Iop: error, pilot: error (validating webhook). Pod: running, created 6 min ago.", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:        "v1x33",
+				PilotStatus:     "ERROR",
+				ValidationError: true,
+				Status:          "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
+				Name:      "errored-operator",
+				Phase:     "Running",
 				Revision:  "v1x33",
 				Timestamp: time.Now().Add(time.Minute * 6),
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Istio operator with error status, operator's pod created less than 5 min ago", func() {
+	Context("Iop: error, pilot: error (validating webhook). Pod: pending, created 6 min ago.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:        "v1x33",
+				PilotStatus:     "ERROR",
+				ValidationError: true,
+				Status:          "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
 				Name:      "errored-operator",
+				Phase:     "Pending",
 				Revision:  "v1x33",
-				Timestamp: time.Now(),
+				Timestamp: time.Now().Add(time.Minute * 6),
 			})))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
 		})
 	})
-	
-	Context("Istio operators with mixed statuses", func() {
+
+	Context("Iop: error, pilot: error (validating webhook). Pod: running, created less than 5 min ago.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x88",
-				Status:   "HEALTHY",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:        "v1x33",
+				PilotStatus:     "ERROR",
+				ValidationError: true,
+				Status:          "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
+				Name:      "errored-operator",
+				Revision:  "v1x33",
+				Phase:     "Running",
+				Timestamp: time.Now(),
+			})))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Iops with mixed statuses", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(istioOperatorYaml(istioOperatorParams{
+				Revision:    "v1x88",
+				PilotStatus: "HEALTHY",
+				Status:      "HEALTHY",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
 				Name:      "healthy-operator",
 				Revision:  "v1x88",
+				Phase:     "Running",
 				Timestamp: time.Now(),
-			}) + IstioOperatorYaml(istioOperatorParams{
-				Revision: "v1x33",
-				Status:   "ERROR",
-			}) + IstioOperatorPodYaml(IstioOperatorPodParams{
+			}) + istioOperatorYaml(istioOperatorParams{
+				Revision:        "v1x33",
+				PilotStatus:     "ERROR",
+				ValidationError: true,
+				Status:          "ERROR",
+			}) + istioOperatorPodYaml(IstioOperatorPodParams{
 				Name:      "errored-operator",
+				Phase:     "Running",
 				Revision:  "v1x33",
 				Timestamp: time.Now().Add(time.Minute * 6),
 			}),
 			))
 			f.RunHook()
 		})
-
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Pod", "d8-istio", "healthy-operator").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Pod", "d8-istio", "errored-operator").Exists()).To(BeFalse())
 		})
 	})
 })

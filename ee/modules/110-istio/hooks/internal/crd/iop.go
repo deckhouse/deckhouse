@@ -25,5 +25,15 @@ type IstioOperatorSpec struct {
 }
 
 type IstioOperatorStatus struct {
+	Status          string                       `json:"status"`
+	ComponentStatus IstioOperatorComponentStatus `json:"componentStatus"`
+}
+
+type IstioOperatorComponentStatus struct {
+	Pilot IstioOperatorComponentStatusDetails `json:"Pilot"`
+}
+
+type IstioOperatorComponentStatusDetails struct {
+	Error  string `json:"error"`
 	Status string `json:"status"`
 }

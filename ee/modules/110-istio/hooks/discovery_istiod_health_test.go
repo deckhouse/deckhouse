@@ -42,7 +42,7 @@ type PodIstiodTemplateParams struct {
 	Phase    string
 }
 
-func PodIstiodYaml(podParams PodIstiodTemplateParams) string {
+func podIstiodYaml(podParams PodIstiodTemplateParams) string {
 	return internal.TemplateToYAML(podIstiodTemplate, podParams)
 }
 
@@ -88,7 +88,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 	Context("Istiod pods with `Failed` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalRevision", "v1x88")
-			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
+			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Failed",
 			})))
@@ -104,7 +104,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 	Context("Istiod pods with `Running` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalRevision", "v1x88")
-			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
+			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
 			})))
@@ -120,7 +120,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 	Context("Istiod pods with `Running` phase and validation webhook exists", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalRevision", "v1x88")
-			f.BindingContexts.Set(f.KubeStateSet(validationWebHook + PodIstiodYaml(PodIstiodTemplateParams{
+			f.BindingContexts.Set(f.KubeStateSet(validationWebHook + podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
 			})))
@@ -137,7 +137,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 	Context("Istiod pods with `Running` phase but with different revision", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalRevision", "v1x33")
-			f.BindingContexts.Set(f.KubeStateSet(PodIstiodYaml(PodIstiodTemplateParams{
+			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
 			})))

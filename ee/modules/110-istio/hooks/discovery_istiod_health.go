@@ -25,7 +25,6 @@ type istiodPod struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("discovery"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -78,6 +77,7 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 	}
 	input.Values.Set(isGlobalRevisionIstiodReadyPath, isGlobalRevisionIstiodReady)
 	if !isGlobalRevisionIstiodReady {
+		// There is a problem deleting the webhook configuration from helm. It must be deleted in the first place.
 		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global", object_patch.InForeground())
 	}
 	return nil
