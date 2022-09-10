@@ -79,7 +79,7 @@ async function setWait ({github, context, core, commitSha}) {
     status: {
       commitSha,
       state: 'pending',
-      description: 'Waiting for run e2e test.'
+      description: 'Waiting for run e2e test'
     }
   })
 }
@@ -102,7 +102,7 @@ async function setFail({github, context, core, commitSha}){
     status: {
       commitSha,
       state: 'failure',
-      description: 'E2e test was failed.',
+      description: 'E2e test was failed',
       url: workflowUrl({core, context}),
     }
   })
@@ -126,7 +126,7 @@ function setSuccess ({github, context, core, commitSha}) {
     status: {
       commitSha,
       state: 'success',
-      description: 'E2e test was passed.',
+      description: 'E2e test was passed',
       url: workflowUrl({core, context}),
     }
   })
