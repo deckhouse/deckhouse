@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # policycoreutils-python libseccomp - containerd.io dependencies
-SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils nfs-utils tar xz device-mapper-persistent-data net-tools libseccomp checkpolicy"
+# libcgroup - docker dependency
+SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils nfs-utils tar xz device-mapper-persistent-data net-tools libseccomp checkpolicy libcgroup"
 KUBERNETES_DEPENDENCIES="conntrack ebtables ethtool iproute iptables socat util-linux"
 if bb-is-centos-version? 7; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python"
 fi
-if bb-is-centos-version? 8; then
-  SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils libcgroup"
-fi
-if bb-is-centos-version? 9; then
+if bb-is-centos-version? 8 || bb-is-centos-version? 9; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils"
 fi
 # yum-plugin-versionlock is needed for bb-yum-install

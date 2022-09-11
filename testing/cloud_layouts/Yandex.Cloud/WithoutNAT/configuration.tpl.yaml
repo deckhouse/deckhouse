@@ -33,7 +33,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: fd8kdq6d0p8sij7h5qe3 # Ubuntu 20.04 # was 'fd8prmc2vlvg94qcclkn' - RedOS 7.3, restore after fixing bootstrap
+    imageID: fd8prmc2vlvg94qcclkn # RedOS 7.3
     diskSizeGB: 50
     externalIPAddresses:
     - Auto
