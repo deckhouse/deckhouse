@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 // The operator creates validating webhooks and istio resources, which are validated by this webhook.
 // Sometimes it happens that a validating webhook resource is created, but the validating webhook service
 // (istiod) itself, for some reason, has not started yet and can't handle requests.
-// In this case, the operator cannot deploy the resources because of a timeout from the validating webhook and stops its work.
-// This hook checks the operator status and if it is error due to a resource validation timeout, it removes the operator pod.
+// In this case, the operator cannot deploy the resources because of a timeout from the validating webhook and doesn't retry.
+// This hook checks the operator status and if it is error due to a resource validation timeout, it deletes the operator pod.
 // After deleting the operator pod it will be recreated and will try to create all the necessary resources again.
 
 package hooks
@@ -86,8 +86,7 @@ func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}
 
 	result.Revision = iop.Spec.Revision
-	if iop.Status.Status == "ERROR" &&
-		iop.Status.ComponentStatus.Pilot.Status == "ERROR" &&
+	if iop.Status.ComponentStatus.Pilot.Status == "ERROR" &&
 		strings.Contains(iop.Status.ComponentStatus.Pilot.Error, validatingErrorStr) {
 		result.NeedPunch = true
 	}

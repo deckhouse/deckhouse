@@ -1,4 +1,4 @@
-# Helm cannot deploy the manifests because it stumbles on this webhook, so if isGlobalRevisionIstiodReady is false,
+# Helm cannot deploy the DestinationRule and PeerAuthentication manifests for tlsMode parameter because it stumbles on this webhook, so if isGlobalRevisionIstiodReady is false,
 # the webhook will be removed by the discovery_istiod_health.go hook.
 
 {{- if .Values.istio.internal.isGlobalRevisionIstiodReady }}
