@@ -16,7 +16,7 @@ fromCacheVersion: "20210607"
 git:
 - url: https://github.com/deckhouse/mcm.git
   to: /src
-  tag: v0.36.0-flant.10
+  commit: 58b6d33c8e222990c6da9a5aeb032ec0e12697f8
   stageDependencies:
     install:
     - '**/*'
