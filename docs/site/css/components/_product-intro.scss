@@ -102,7 +102,7 @@
     &__certificate--block {
         position: absolute;
         left: 0;
-        bottom: 220px;
+        bottom: 120px;
         width: fit-content;
         box-sizing: border-box;
         z-index: 10;
@@ -114,9 +114,17 @@
         border: 2px solid $color-alt;
         border-left: none;
 
+        &--wrap {
+          margin-bottom: 30px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+
         &--link {
           text-decoration: none;
-        
+
           &:hover {
             & .product-intro__certificate {
               background: #02003E;
@@ -126,6 +134,10 @@
 
             & .product-intro__certificate--text {
               color: #FFF;
+            }
+
+            & .certificate__icon--ru {
+              fill: #fff;
             }
           }
         }
@@ -143,6 +155,10 @@
                 width: 46px;
                 height: 62px;
             }
+
+            & .certificate__icon--ru {
+                fill: #00003C;
+            }
         }
 
         &--text {
@@ -153,6 +169,11 @@
             & span {
                 display: block;
                 //color: $color-alt;
+            }
+
+            & small {
+              display: block;
+              padding-top: 4px;
             }
         }
     }
