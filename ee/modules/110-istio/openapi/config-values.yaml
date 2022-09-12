@@ -138,6 +138,14 @@ properties:
         description: Turn on or off tracing collection and displaying in kiali.
         default: false
         x-examples: [true]
+      sampling:
+        type: number
+        minimum: 0.01
+        maximum: 100.0
+        multipleOf: 0.01
+        description: Value of sampling rate. The sampling rate should be in the range of 0.0 to 100.0 with a precision of 0.01.
+        default: 1.0
+        x-examples: [1, 1.0, 1.01, 50.0, 100.0, 100]
       collector:
         type: object
         description: Tracing collection settings.
