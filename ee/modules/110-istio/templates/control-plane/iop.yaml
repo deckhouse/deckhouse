@@ -142,25 +142,37 @@ spec:
             cpu: 10m
             memory: 10Mi
 
-      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+  {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  {{- if (include "helm_lib_ha_enabled" $) }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: istiod
+                istio.io/rev: {{ $revision }}
+            topologyKey: kubernetes.io/hostname
+  {{- else }}
+      affinity: {}
+  {{- end }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" ($revision | title))) }}
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
-{{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 8 }}
+  {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 8 }}
   {{- if $.Values.istio.controlPlane.nodeSelector }}
       nodeSelector:
-{{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+    {{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
   {{- else }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
   {{- end }}
   {{- if $.Values.istio.controlPlane.tolerations }}
       tolerations:
-{{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
+    {{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
   {{- else }}
       {{- include "helm_lib_tolerations" (tuple $ "master") | nindent 6 }}
   {{- end }}
