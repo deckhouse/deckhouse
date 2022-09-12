@@ -67,6 +67,9 @@ on:
       ver:
         description: 'A comma-separated list of versions to test. Available: from 1.20 to 1.24.'
         required: false
+      initial_ref_slug:
+        description: 'An image tag to install first and then switch to workflow context ref'
+        required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 

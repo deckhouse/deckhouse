@@ -41,9 +41,12 @@ $PREFIX               A unique prefix to run several tests simultaneously.
 $KUBERNETES_VERSION   A version of Kubernetes to install.
 $CRI                  Docker or Containerd.
 $DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
-$DEV_BRANCH           An image tag for deckhouse Deployment. A Git tag to
+$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug
                       to test changes in pull requests.
+$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
+                      install first and then switching to DECKHOUSE_IMAGE_TAG.
+                      Also, run test suite for these 2 versions.
 
 Provider specific environment variables:
 
@@ -87,6 +90,20 @@ EOF
 set -Eeo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
+
+# Image tag to install.
+DEV_BRANCH=
+# Image tag to switch to if initial_image_tag is set.
+SWITCH_TO_IMAGE_TAG=
+# ssh command with common args.
+ssh_command="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet"
+
+# Path to private SSH key to connect to cluster after bootstrap
+ssh_private_key_path=
+# User for SSH connect.
+ssh_user=
+# IP of master node.
+master_ip=
 
 function abort_bootstrap_from_cache() {
   >&2 echo "Run abort_bootstrap_from_cache"
@@ -187,16 +204,26 @@ function prepare_environment() {
     return 1
   fi
 
-  if [[ -z "$DEV_BRANCH" ]]; then
+  if [[ -z "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # shellcheck disable=SC2016
-    >&2 echo 'DEV_BRANCH environment variable is required.'
+    >&2 echo 'DECKHOUSE_IMAGE_TAG environment variable is required.'
     return 1
   fi
+  DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
     return 1
+  fi
+
+
+  if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
+    # Use initial image tag as devBranch setting in InitConfiguration.
+    # Then switch deploment to DECKHOUSE_IMAGE_TAG.
+    DEV_BRANCH="${INITIAL_IMAGE_TAG}"
+    SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
+    echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
   fi
 
   case "$PROVIDER" in
@@ -264,7 +291,7 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '$DECKHOUSE_DOCKERCFG $PREFIX $DEV_BRANCH $KUBERNETES_VERSION $CRI $OS_PASSWORD' \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     # shellcheck disable=SC2016
@@ -289,7 +316,12 @@ function run-test() {
     bootstrap || return $?
   fi
 
-  wait_cluster_ready "$ssh_private_key_path" "$ssh_user" "${master_ip}"
+  wait_cluster_ready || return $?
+
+  if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    wait_cluster_ready || return $?
+  fi
 }
 
 function bootstrap_static() {
@@ -325,7 +357,7 @@ function bootstrap_static() {
 
   >&2 echo 'Fetch registration script ...'
   for ((i=0; i<10; i++)); do
-    bootstrap_system="$(ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash << "ENDSSH"
+    bootstrap_system="$($ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
@@ -342,7 +374,7 @@ ENDSSH
 
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
-  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo -i /bin/bash <<ENDSSH || true
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
@@ -351,7 +383,7 @@ ENDSSH
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=10; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl get nodes
@@ -395,7 +427,7 @@ function bootstrap() {
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
   for ((i=1; i<=20; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
@@ -412,6 +444,50 @@ ENDSSH
   done
 
   if [[ $provisioning_failed == "true" ]] ; then
+    return 1
+  fi
+}
+
+# change_deckhouse_image changes deckhouse container image.
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+#  - branch
+function change_deckhouse_image() {
+  new_image_tag="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  if ! $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+set -Eeuo pipefail
+kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+ENDSSH
+    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    return 1
+  fi
+
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+set -Eeuo pipefail
+kubectl -n d8-system get pods -l app=deckhouse
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')" ==  "True" ]]
+END_SCRIPT
+)
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check Deckhouse pod readiness."
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Check Deckhouse pod readiness via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+  if [[ $test_failed == "true" ]] ; then
     return 1
   fi
 }
@@ -517,7 +593,7 @@ END_SCRIPT
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       test_failed=""
       break
     else
@@ -528,7 +604,7 @@ END_SCRIPT
   done
 
   >&2 echo "Fetch Deckhouse logs after test ..."
-  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
 kubectl -n d8-system logs deploy/deckhouse
 ENDSSH
 
@@ -551,7 +627,6 @@ function main() {
   if ! prepare_environment ; then
     exit 2
   fi
-
 
   exitCode=0
   case "${1}" in
