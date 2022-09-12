@@ -198,6 +198,37 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Простой пример Logstash
+
+Чтобы отправлять логи в Logstash, на стороне Logstash должен быть настроен входящий поток `tcp`, и его кодек должен быть  `json`.
+
+Пример минимальной конфигурации Logstash:
+
+```hcl
+input {
+  tcp {
+    port => 12345
+    codec => json
+  }
+}
+output {
+  stdout { codec => json }
+}
+```
+
+Пример манифеста `ClusterLogDestination`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: logstash
+spec:
+  type: Logstash
+  logstash:
+    endpoint: logstash.default:12345
+```
+
 ## Фильтрация логов
 
 Только логи контейнера Nginx:
