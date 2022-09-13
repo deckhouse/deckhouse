@@ -711,11 +711,11 @@ spec:
                         enum: [Automatic]
                       automatic: {}
                   - properties:
-                      approvalMode: RollingUpdate
+                      approvalMode:
                         enum: [RollingUpdate]
                       rollingUpdate: {}
                   - properties:
-                      approvalMode: Manual
+                      approvalMode:
                         enum: [Manual]
                 kubelet: *kubelet
                 update:
