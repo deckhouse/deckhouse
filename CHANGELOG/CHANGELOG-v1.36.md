@@ -36,6 +36,7 @@
  - **[cni-cilium]** Fix cilium mode for static clusters. [#2452](https://github.com/deckhouse/deckhouse/pull/2452)
     `cilium-agents` will be restarted.
  - **[cni-cilium]** Fix Cilium Terminating Endpoints with `externalTrafficPolicy: Local`. Backported https://github.com/cilium/cilium/pull/21062 [#2324](https://github.com/deckhouse/deckhouse/pull/2324)
+ - **[deckhouse]** Fix panic in a release tracking during the deckhouse update process. [#2465](https://github.com/deckhouse/deckhouse/pull/2465)
  - **[dhctl]** Fail if there is an empty host for SSH connection. [#2346](https://github.com/deckhouse/deckhouse/pull/2346)
  - **[ingress-nginx]** Improve metrics collection script. [#2350](https://github.com/deckhouse/deckhouse/pull/2350)
     Ingress Nginx controllers will restart.
