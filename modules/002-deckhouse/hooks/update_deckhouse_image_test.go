@@ -544,7 +544,7 @@ metadata:
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
-		It("ffo", func() {
+		It("Release should be deployed", func() {
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
 			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
 			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
