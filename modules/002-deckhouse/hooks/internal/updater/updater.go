@@ -289,6 +289,16 @@ func (du *DeckhouseUpdater) predictedRelease() *DeckhouseRelease {
 	return predictedRelease
 }
 
+func (du *DeckhouseUpdater) deployedRelease() *DeckhouseRelease {
+	if du.currentDeployedReleaseIndex == -1 {
+		return nil // has no deployed
+	}
+
+	deployedRelease := &(du.releases[du.currentDeployedReleaseIndex])
+
+	return deployedRelease
+}
+
 func (du *DeckhouseUpdater) predictedReleaseApplyTime(predictedRelease *DeckhouseRelease) time.Time {
 	if predictedRelease.ApplyAfter != nil {
 		return *predictedRelease.ApplyAfter
@@ -632,7 +642,14 @@ func (du *DeckhouseUpdater) changeNotifiedFlag(fl bool) {
 }
 
 func (du *DeckhouseUpdater) createReleaseDataCM() {
-	predicted := du.predictedRelease()
+	release := du.predictedRelease()
+	if release == nil {
+		release = du.deployedRelease()
+		if release == nil {
+			return
+		}
+	}
+
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -646,7 +663,7 @@ func (du *DeckhouseUpdater) createReleaseDataCM() {
 			},
 		},
 		Data: map[string]string{
-			"version":    predicted.Version.String(),
+			"version":    release.Version.String(),
 			"isUpdating": strconv.FormatBool(du.releaseData.IsUpdating),
 			"notified":   strconv.FormatBool(du.releaseData.Notified),
 		},
