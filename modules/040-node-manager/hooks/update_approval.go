@@ -299,7 +299,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		ng := ar.nodeGroups[ngName]
 
 		// Skip nodes in NodeGroup not allowing disruptive updates
-		if !(ng.Disruptions.ApprovalMode == "Automatic") {
+		if ng.Disruptions.ApprovalMode == "Manual" {
 			continue
 		}
 
@@ -308,13 +308,14 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			continue
 		}
 
+		ar.finished = true
+
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
 			input.LogEntry.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
 			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name, object_patch.InBackground())
+			continue
 		}
-
-		ar.finished = true
 
 		var patch map[string]interface{}
 		var metricStatus string
