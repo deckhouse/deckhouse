@@ -83,18 +83,24 @@ func (c *Composer) Do() ([]byte, error) {
 			Transforms: transforms,
 		}
 
-		destinations := make([]PipelineDestination, 0, len(s.Spec.DestinationRefs))
+		var destinations []PipelineDestination
 
 		for _, ref := range s.Spec.DestinationRefs {
-			destinations = append(destinations, destinationRefs[destination.ComposeName(ref)])
+			dst := destinationRefs[destination.ComposeName(ref)]
+
+			if dst.Destination != nil {
+				destinations = append(destinations, dst)
+			}
 		}
 
-		err = file.AppendLogPipeline(&Pipeline{
-			Source:       src,
-			Destinations: destinations,
-		})
-		if err != nil {
-			return nil, err
+		if len(destinations) > 0 {
+			err = file.AppendLogPipeline(&Pipeline{
+				Source:       src,
+				Destinations: destinations,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

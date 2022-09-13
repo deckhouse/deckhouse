@@ -30,9 +30,14 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
-func assertConfig(secret object_store.KubeObject, testdataName string) {
+func parseSecret(secret object_store.KubeObject) []byte {
 	config := secret.Field(`data`).Get("vector\\.json").String()
 	d, _ := base64.StdEncoding.DecodeString(config)
+	return d
+}
+
+func assertConfig(secret object_store.KubeObject, testdataName string) {
+	d := parseSecret(secret)
 
 	filename := filepath.Join("testdata", testdataName)
 	goldenFileData, err := ioutil.ReadFile(filename)
@@ -827,6 +832,33 @@ spec:
 		})
 	})
 
+	Context("File to Non-existed destination", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - non-existed
+`))
+			f.RunHook()
+		})
+
+		It("Should ignore the pipline for the secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeFalse())
+
+			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
+			Expect(secret).To(BeEmpty())
+		})
+	})
+
 	Context("File to Vector", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -840,6 +872,7 @@ spec:
     include: ["/var/log/kube-audit/audit.log"]
   destinationRefs:
     - test-vector-dest
+    - non-existed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
