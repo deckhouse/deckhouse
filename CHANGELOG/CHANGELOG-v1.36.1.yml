@@ -1,0 +1,18 @@
+cni-cilium:
+  fixes:
+    - summary: Fix cilium mode for static clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2452
+      impact: '`cilium-agents` will be restarted.'
+deckhouse:
+  fixes:
+    - summary: Fix messages for outdated/deployed releases.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2460
+snapshot-controller:
+  fixes:
+    - summary: Fix `maxSurge` for `snapshot-validation-webhook`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2450
+user-authn:
+  fixes:
+    - summary: Fixed `crowd-basic-auth-proxy` deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2447
+
