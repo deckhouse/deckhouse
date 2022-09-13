@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Fix stucked `DeckhouseUpdating` alert during the deckhouse update process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2472
+
