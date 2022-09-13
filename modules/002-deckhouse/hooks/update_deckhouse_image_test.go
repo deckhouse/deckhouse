@@ -558,7 +558,7 @@ metadata:
 				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
 			})
-			It("IsUpdating flag should be resetted", func() {
+			It("IsUpdating flag should be reset", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
 				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
