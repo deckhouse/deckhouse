@@ -657,7 +657,7 @@ func (du *DeckhouseUpdater) createReleaseDataCM() {
 		Data: map[string]string{
 			// current release is updating
 			"isUpdating": strconv.FormatBool(du.releaseData.IsUpdating),
-			// notification about next release is sent, flat will be reset when new release is deployed
+			// notification about next release is sent, flag will be reset when new release is deployed
 			"notified": strconv.FormatBool(du.releaseData.Notified),
 		},
 	}
