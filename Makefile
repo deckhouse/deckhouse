@@ -93,9 +93,8 @@ deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promto
 
 clean: ## Clean up working directory and remove dev image
 	rm -rf ./bin
-	docker ps -aqf label=deckhouse-dev | xargs docker rm -rf
+	docker ps -aqf label=deckhouse-dev | xargs docker rm -f
 	docker images -qf label=deckhouse-dev | xargs docker rmi -rf
-	docker volume rm -f deckhouse-dev-gopath deckhouse-dev-bin
 
 ##@ Tests
 

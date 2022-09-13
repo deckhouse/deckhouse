@@ -15,30 +15,48 @@
 # limitations under the License.
 
 set -e
+
 script=$(
   for i in "$@"; do
-    echo "$i" >&2
     echo "$i"
   done
 )
 
 if [ "$DOCKERIZED" != 1 ]; then
+  echo "$script" >&2
   eval "$script"
   exit $?
 fi
 
 DOCKER_DEFAULT_PLATFORM=linux/amd64
 
-docker build --quiet -t deckhouse-dev $(dirname "$0")/toolbox >/dev/null
-docker run --rm \
-  -e TESTS_TIMEOUT \
-  -e FOCUS \
-  -e "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/deckhouse/bin" \
-  -v "${PWD}:/deckhouse" \
-  -v "${PWD}:${PWD}" \
-  -v deckhouse-dev-gopath:/root/go \
-  -v "deckhouse-dev-bin:/deckhouse/bin" \
-  -v "deckhouse-dev-bin:${PWD}/bin" \
-  -l deckhouse-dev \
-  -w "${PWD}" \
-  deckhouse-dev sh -c "$script"
+running=$(docker inspect deckhouse-dev -f "{{.State.Running}}" 2>/dev/null || true)
+
+if [ "$running" = false ]; then
+  docker start deckhouse-dev >/dev/null
+elif [ -z "$running" ]; then
+  docker build -t deckhouse-dev $(dirname "$0")/toolbox
+  docker run -d -l deckhouse-dev --name deckhouse-dev deckhouse-dev /bin/sleep infinity >/dev/null
+fi
+
+# Sync source code. We don't use docker volumes because they are too slow
+docker exec -ti deckhouse-dev rm -rf "${PWD}" "/deckhouse"
+docker exec -ti deckhouse-dev mkdir -p "$(dirname $PWD)"
+docker cp . "deckhouse-dev:${PWD}"
+
+# Setup /deckhouse symlink
+docker exec deckhouse-dev mkdir -p "$(dirname "${PWD}")"
+docker exec deckhouse-dev ln -sf "${PWD}" "/deckhouse"
+
+# Run script
+echo "$script" >&2
+docker exec -i deckhouse-dev sh -s <<EOT
+cd "${PWD}"
+export FOCUS=$FOCUS
+export TESTS_TIMEOUT=$TESTS_TIMEOUT
+export PATH=\$PATH:$PWD/bin
+$script
+EOT
+
+# Sync changes
+docker cp -L deckhouse-dev:"${PWD}" $(dirname "${PWD}")
