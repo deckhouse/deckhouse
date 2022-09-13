@@ -225,6 +225,8 @@ type Disruptions struct {
 
 	// Extra settings for Automatic mode.
 	Automatic AutomaticDisruptions `json:"automatic,omitempty"`
+	// Extra settings for RolloutRestart mode.
+	RollingUpdate RollingUpdateDisruptions `json:"rollingUpdate,omitempty"`
 }
 
 func (d Disruptions) IsEmpty() bool {
@@ -242,8 +244,17 @@ type AutomaticDisruptions struct {
 	Windows update.Windows `json:"windows,omitempty"`
 }
 
+type RollingUpdateDisruptions struct {
+	// Node update windows
+	Windows update.Windows `json:"windows,omitempty"`
+}
+
 func (a AutomaticDisruptions) IsEmpty() bool {
 	return a.DrainBeforeApproval == nil && len(a.Windows) == 0
+}
+
+func (r RollingUpdateDisruptions) IsEmpty() bool {
+	return len(r.Windows) == 0
 }
 
 type Kubelet struct {

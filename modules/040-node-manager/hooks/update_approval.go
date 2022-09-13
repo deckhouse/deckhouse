@@ -304,7 +304,10 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		}
 
 		// Skip node if update is not permitted in the current time window
-		if !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
+		if ng.Disruptions.ApprovalMode == "Automatic" && !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
+			continue
+		}
+		if ng.Disruptions.ApprovalMode == "RollingUpdate" && !ng.Disruptions.RollingUpdate.Windows.IsAllowed(now) {
 			continue
 		}
 
@@ -464,6 +467,10 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 
 	if len(ng.Spec.Disruptions.Automatic.Windows) > 0 {
 		ung.Disruptions.Automatic.Windows = ng.Spec.Disruptions.Automatic.Windows
+	}
+
+	if len(ng.Spec.Disruptions.RollingUpdate.Windows) > 0 {
+		ung.Disruptions.RollingUpdate.Windows = ng.Spec.Disruptions.RollingUpdate.Windows
 	}
 
 	if ng.Spec.Disruptions.ApprovalMode != "" {

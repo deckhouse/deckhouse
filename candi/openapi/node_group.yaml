@@ -434,7 +434,7 @@ spec:
                       enum:
                         - Manual
                         - Automatic
-                    automatic:
+                    automatic: &automatic
                       type: object
                       description: |
                         Additional parameters for the `Automatic` mode.
@@ -448,7 +448,7 @@ spec:
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows:
+                        windows: &windows
                           type: array
                           description: |
                             Time windows for node disruptive updates.
@@ -698,63 +698,13 @@ spec:
                         - Manual
                         - Automatic
                         - RollingUpdate
-                    automatic:
-                      type: object
-                      description: |
-                        Additional parameters for the `Automatic` mode.
-                      properties:
-                        drainBeforeApproval:
-                          type: boolean
-                          x-doc-default: true
-                          description: |
-                            Drain Pods from the nodes before approving disruption.
-
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
-                            - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows: &windows
-                          type: array
-                          description: |
-                            Time windows for node disruptive updates.
-                          items:
-                            type: object
-                            required:
-                              - from
-                              - to
-                            properties:
-                              from:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
-                                description: |
-                                  Start time of disruptive update window (UTC timezone).
-                              to:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
-                                description: |
-                                  End time of disruptive update window (UTC timezone).
-                              days:
-                                type: array
-                                description: |
-                                  Days of the week when node could be updated.
-                                items:
-                                  type: string
-                                  enum:
-                                    - Mon
-                                    - Tue
-                                    - Wed
-                                    - Thu
-                                    - Fri
-                                    - Sat
-                                    - Sun
+                    automatic: *automatic
                     rollingUpdate:
                       type: object
                       description: |
                         Additional parameters for the `RollingUpdate` mode.
                       properties:
-                        windows: &windows
-
+                        windows: *windows
                   oneOf:
                   - properties:
                       approvalMode:
