@@ -350,13 +350,15 @@ func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 	du.updateStatus(predictedRelease, "", v1alpha1.PhaseDeployed, true)
 
 	if currentRelease != nil {
-		du.updateStatus(currentRelease, "Last Deployed release outdated", v1alpha1.PhaseOutdated)
+		// skip last deployed release
+		du.updateStatus(currentRelease, "", v1alpha1.PhaseOutdated)
 	}
 
 	if len(du.skippedPatchesIndexes) > 0 {
 		for _, index := range du.skippedPatchesIndexes {
 			release := du.releases[index]
-			du.updateStatus(&release, "Skipped because of new patches", v1alpha1.PhaseOutdated, true)
+			// skip not-deployed patches
+			du.updateStatus(&release, "", v1alpha1.PhaseOutdated, true)
 		}
 	}
 }
@@ -502,7 +504,7 @@ func (du *DeckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) Deckh
 	}
 
 	du.input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
-	du.updateStatus(&release, "Release is suspended", v1alpha1.PhaseSuspended, false)
+	du.updateStatus(&release, "", v1alpha1.PhaseSuspended, false)
 
 	return release
 }
