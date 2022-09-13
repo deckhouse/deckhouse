@@ -91,18 +91,21 @@ func setCiliumMode(input *go_hook.HookInput) error {
 	if input.ConfigValues.Exists("cniCilium.tunnelMode") {
 		if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
 			input.Values.Set("cniCilium.internal.mode", "VXLAN")
+			return nil
 		}
 	}
 
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		return nil
 	}
 
 	// for static clusters we should use DirectWithNodeRoutes mode
 	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
 	if ok && value.String() == "Static" {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		return nil
 	}
 	// default = Direct
 	return nil
