@@ -1091,6 +1091,10 @@ spec:
   nodeType: CloudEphemeral
   disruptions:
     approvalMode: RollingUpdate
+    automatic:
+      windows:
+        - from: "18:00"
+          to: "21:00" 
 ---
 apiVersion: v1
 kind: Node
