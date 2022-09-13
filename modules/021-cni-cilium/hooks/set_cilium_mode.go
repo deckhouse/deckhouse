@@ -99,6 +99,11 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 	}
 
+	// for static clusters we should use DirectWithNodeRoutes mode
+	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
+	if ok && value.String() == "Static" {
+		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+	}
 	// default = Direct
 	return nil
 }
