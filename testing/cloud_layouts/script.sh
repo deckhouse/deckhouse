@@ -322,6 +322,8 @@ function run-test() {
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_cluster_ready || return $?
   fi
+
+  run_helm_tests "$ssh_private_key_path" "$ssh_user" "${master_ip}"
 }
 
 function bootstrap_static() {
@@ -619,6 +621,41 @@ ENDSSH
     return 1
   fi
 }
+
+# run_helm_tests executes helm tests for all deckhouse modules
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+function run_helm_tests() {
+  test_failed=
+
+  testScript=$(cat <<"END_SCRIPT"
+set -Eeuo pipefail
+>&2 echo "Running Deckhouse helm suit tests ..."
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "helm ls -n d8-system | awk 'NR>2 {print \"helm test -n d8-system \" \$1}' | sh -ex"
+END_SCRIPT
+)
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+}
+
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."
