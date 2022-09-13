@@ -343,7 +343,7 @@ func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 	du.ChangeUpdatingFlag(true)
 	du.changeNotifiedFlag(false)
 
-	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
+	// patch deckhouse deployment is faster than set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	du.input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var depl appsv1.Deployment
@@ -642,14 +642,6 @@ func (du *DeckhouseUpdater) changeNotifiedFlag(fl bool) {
 }
 
 func (du *DeckhouseUpdater) createReleaseDataCM() {
-	release := du.predictedRelease()
-	if release == nil {
-		release = du.deployedRelease()
-		if release == nil {
-			return
-		}
-	}
-
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -663,9 +655,10 @@ func (du *DeckhouseUpdater) createReleaseDataCM() {
 			},
 		},
 		Data: map[string]string{
-			"version":    release.Version.String(),
+			// current release is updating
 			"isUpdating": strconv.FormatBool(du.releaseData.IsUpdating),
-			"notified":   strconv.FormatBool(du.releaseData.Notified),
+			// notification about next release is sent, flag will be reset when new release is deployed
+			"notified": strconv.FormatBool(du.releaseData.Notified),
 		},
 	}
 
