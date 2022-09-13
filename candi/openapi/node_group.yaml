@@ -422,8 +422,6 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  required:
-                    - approvalMode
                   properties:
                     approvalMode:
                       type: string
@@ -431,10 +429,12 @@ spec:
                         The approval mode for disruptive updates:
                         - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
                         - `Automatic` —  automatically approve disruption-involving updates (the default value).
+                        - `RollingUpdate` - recreate cloud node with new settings. Available only for cloud nodes.
                       enum:
                         - Manual
                         - Automatic
-                    automatic: &automatic
+                        - RollingUpdate
+                    automatic:
                       type: object
                       description: |
                         Additional parameters for the `Automatic` mode.
@@ -484,6 +484,27 @@ spec:
                                     - Fri
                                     - Sat
                                     - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows: *windows
+                    oneOf:
+                      - required: [approvalMode]
+                        properties:
+                          approvalMode:
+                            enum: [ Automatic ]
+                          automatic: { }
+                      - required: [approvalMode]
+                        properties:
+                          approvalMode:
+                            enum: [ RollingUpdate ]
+                          rollingUpdate: { }
+                      - required: [approvalMode]
+                        properties:
+                          approvalMode:
+                            enum: [ Manual ]
                 docker:
                   description: |
                     Docker settings for nodes.
@@ -680,43 +701,7 @@ spec:
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos
                 operatingSystem: *operatingSystem
-                disruptions: &disruptions
-                  type: object
-                  description: |
-                    Disruptions settings for nodes.
-                  required:
-                    - approvalMode
-                  properties:
-                    approvalMode:
-                      type: string
-                      description: |
-                        The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
-                        - `Automatic` —  automatically approve disruption-involving updates (the default value).
-                        - `RollingUpdate` - recreate cloud node with new settings. Available only for cloud nodes.
-                      enum:
-                        - Manual
-                        - Automatic
-                        - RollingUpdate
-                    automatic: *automatic
-                    rollingUpdate:
-                      type: object
-                      description: |
-                        Additional parameters for the `RollingUpdate` mode.
-                      properties:
-                        windows: *windows
-                  oneOf:
-                  - properties:
-                      approvalMode:
-                        enum: [Automatic]
-                      automatic: {}
-                  - properties:
-                      approvalMode:
-                        enum: [RollingUpdate]
-                      rollingUpdate: {}
-                  - properties:
-                      approvalMode:
-                        enum: [Manual]
+                disruptions: *disruptions
                 kubelet: *kubelet
                 update:
                   type: object
