@@ -33,6 +33,8 @@
 ## Fixes
 
 
+ - **[cni-cilium]** Fix cilium mode for static clusters. [#2452](https://github.com/deckhouse/deckhouse/pull/2452)
+    `cilium-agents` will be restarted.
  - **[cni-cilium]** Fix Cilium Terminating Endpoints with `externalTrafficPolicy: Local`. Backported https://github.com/cilium/cilium/pull/21062 [#2324](https://github.com/deckhouse/deckhouse/pull/2324)
  - **[dhctl]** Fail if there is an empty host for SSH connection. [#2346](https://github.com/deckhouse/deckhouse/pull/2346)
  - **[ingress-nginx]** Improve metrics collection script. [#2350](https://github.com/deckhouse/deckhouse/pull/2350)
@@ -52,6 +54,7 @@
     A node in the `master` nodeGroup with a single node and `Automatic` disruption approval mode will not be drained before approval.
     If Deckhouse works not on a master node and this node is single (or one node in Ready status) in the nodeGroup, and for this nodeGroup the `Automatic` disruption approval mode is set, then disruption operations will be approved for this node without draining.
  - **[node-manager]** Changed cluster autoscaler timeouts to avoid node flapping. [#2279](https://github.com/deckhouse/deckhouse/pull/2279)
+ - **[snapshot-controller]** Fix `maxSurge` for `snapshot-validation-webhook`. [#2450](https://github.com/deckhouse/deckhouse/pull/2450)
  - **[upmeter]** Fix deckhouse probe by placing EnableKubeEventCb call properly. [#2422](https://github.com/deckhouse/deckhouse/pull/2422)
  - **[upmeter]** Bundled CSS into the status page for the desired look in restricted environments. [#2349](https://github.com/deckhouse/deckhouse/pull/2349)
 
