@@ -490,27 +490,29 @@ spec:
                         Additional parameters for the `RollingUpdate` mode.
                       properties:
                         windows: *windows
-                    oneOf:
-                      - required: [approvalMode]
-                        properties:
-                          approvalMode:
-                            enum: [Automatic]
-                          automatic: {}
-                          not:
-                            - required: [rollingUpdate]
-                      - required: [approvalMode]
-                        properties:
-                          approvalMode:
-                            enum: [RollingUpdate]
-                          rollingUpdate: {}
-                          not:
-                            - required: [automatic]
-                      - required: [approvalMode]
-                        properties:
-                          approvalMode:
-                            enum: [Manual]
-                          not:
-                            - required: [rollingUpdate,automatic]
+                  oneOf:
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Automatic]
+                      automatic: {}
+                    not:
+                      required: [rollingUpdate]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [RollingUpdate]
+                      rollingUpdate: {}
+                    not:
+                      required: [automatic]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Manual]
+                    not:
+                      anyOf:
+                      - required: [rollingUpdate]
+                      - required: [automatic]
                 docker:
                   description: |
                     Docker settings for nodes.
