@@ -308,7 +308,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		}
 
 		// If approvalMode == RollingUpdate simply delete machine
-		if !(ng.Disruptions.ApprovalMode == "RollingUpdate") {
+		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
 			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
 		}
 
