@@ -198,6 +198,37 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Simple Logstash example
+
+To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side, and its codec should be set to `json`.
+
+An example of the minimal Logstash configuration:
+
+```hcl
+input {
+  tcp {
+    port => 12345
+    codec => json
+  }
+}
+output {
+  stdout { codec => json }
+}
+```
+
+An example of the `ClusterLogDestination` manifest:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: logstash
+spec:
+  type: Logstash
+  logstash:
+    endpoint: logstash.default:12345
+```
+
 ## Logs filters
 
 Only Nginx container logs:
