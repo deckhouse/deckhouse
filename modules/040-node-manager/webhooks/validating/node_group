@@ -153,6 +153,15 @@ EOF
     fi
   fi
 
+  # check approvalMode
+  if context::jq -e -r '.review.request.object.spec.disruptions.approvalMode == "RollingUpdate"' >/dev/null 2>&1; then
+    if context::jq -e -r '.review.request.object.spec.nodeType != "CloudEphemeral"' >/dev/null 2>&1; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to change NodeGroup approval mode to \"RollingUpdate\" when spec.nodeType is not \"CloudEphemeral\""}
+EOF
+      return 0
+    fi
+
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
