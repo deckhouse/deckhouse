@@ -200,7 +200,7 @@ spec:
 
 ## Simple Logstash example
 
-To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side and its coded should be set to `json`.
+To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side, and its codec should be set to `json`.
 
 An example of the minimal Logstash configuration:
 
