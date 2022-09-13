@@ -121,4 +121,51 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
 		})
 	})
+
+	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider = Static", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "1.21"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider != Static", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Cloud
+cloud:
+  prefix: test
+  provider: Yandex
+clusterDomain: cluster.local
+kind: ClusterConfiguration
+kubernetesVersion: "1.21"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `Direct`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+		})
+	})
+
 })
