@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"os"
 	"strconv"
 	"strings"
@@ -309,7 +310,8 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
+			input.LogEntry.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
+			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name, object_patch.InBackground())
 		}
 
 		ar.finished = true
