@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"os"
 	"strconv"
 	"strings"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

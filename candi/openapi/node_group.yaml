@@ -494,17 +494,23 @@ spec:
                       - required: [approvalMode]
                         properties:
                           approvalMode:
-                            enum: [ Automatic ]
-                          automatic: { }
+                            enum: [Automatic]
+                          automatic: {}
+                          not:
+                            - required: [rollingUpdate]
                       - required: [approvalMode]
                         properties:
                           approvalMode:
-                            enum: [ RollingUpdate ]
-                          rollingUpdate: { }
+                            enum: [RollingUpdate]
+                          rollingUpdate: {}
+                          not:
+                            - required: [automatic]
                       - required: [approvalMode]
                         properties:
                           approvalMode:
-                            enum: [ Manual ]
+                            enum: [Manual]
+                          not:
+                            - required: [rollingUpdate,automatic]
                 docker:
                   description: |
                     Docker settings for nodes.
