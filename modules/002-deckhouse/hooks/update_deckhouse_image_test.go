@@ -545,11 +545,30 @@ metadata:
 			f.RunHook()
 		})
 		It("Release should be deployed", func() {
+			Expect(f).To(ExecuteSuccessfully())
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
 			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
 			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
 			Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
 			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
+		})
+
+		Context("After next run loop", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+			It("IsUpdating flag should be resetted", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
+				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+				Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
+				Expect(cm.Field("data.notified").Bool()).To(BeFalse())
+				Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
+				Expect(f.MetricsCollector.CollectedMetrics()[1].Group).To(Equal("d8_updating"))
+				Expect(f.MetricsCollector.CollectedMetrics()[1].Action).To(Equal("expire"))
+			})
 		})
 	})
 
