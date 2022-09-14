@@ -87,7 +87,7 @@ jobs:
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
-{!{- $lastCommentNeeds := slice "started_at" -}!}
+{!{- $lastCommentNeeds := slice "started_at" "git_info" -}!}
 {!{- $jobNames := dict -}!}
 {!{- range $criName := $ctx.criNames -}!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}

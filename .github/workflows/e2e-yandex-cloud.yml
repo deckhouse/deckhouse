@@ -3538,7 +3538,7 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
+    needs: ["started_at","git_info","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
