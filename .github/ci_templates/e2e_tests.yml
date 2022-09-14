@@ -334,7 +334,6 @@ check_e2e_labels:
 
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
-{!{    tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 4 }!}
 {!{- end }!}
 
 {!{- if not (coll.Has $ctx "manualRun") }!}

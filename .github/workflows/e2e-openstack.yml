@@ -501,23 +501,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -846,23 +829,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1191,23 +1157,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1536,23 +1485,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1881,23 +1813,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2226,23 +2141,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2571,23 +2469,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2916,23 +2797,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3261,23 +3125,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3606,23 +3453,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-
-      # <template: set_e2e_requirement_status>
-      - name: Set commit status after e2e run
-        id: set_e2e_requirement_status
-        if: ${{ always() }}
-        uses: actions/github-script@v5.0.0
-        env:
-          JOB_STATUS: ${{ job.status }}
-          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
-
-            await e2eStatus.setStatusAfterE2eRun({github, context, core});
-      # </template: set_e2e_requirement_status>
   # </template: e2e_run_job_template>
 
 
@@ -3671,4 +3501,21 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+    # <template: set_e2e_requirement_status>
+    - name: Set commit status after e2e run
+      id: set_e2e_requirement_status
+      if: ${{ always() }}
+      uses: actions/github-script@v5.0.0
+      env:
+        JOB_STATUS: ${{ job.status }}
+        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+      with:
+        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        script: |
+          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+          await e2eStatus.setStatusAfterE2eRun({github, context, core});
+    # </template: set_e2e_requirement_status>
 # </template: e2e_workflow_template>
