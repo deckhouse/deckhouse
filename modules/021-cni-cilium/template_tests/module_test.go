@@ -72,6 +72,7 @@ modules:
 bpfLBMode: "DSR"
 internal:
   mode: "Direct"
+  masqueradeMode: "BPF"
   hubble:
     certs:
       ca:
