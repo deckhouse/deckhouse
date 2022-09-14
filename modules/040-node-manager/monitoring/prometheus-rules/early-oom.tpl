@@ -2,7 +2,7 @@
 - name: d8.early-oom.availability
   rules:
   - alert: D8EarlyOOMPodIsNotReady
-    expr: group by (pod) (early_oom_psi_unavailable{namespace="d8-cloud-instance-manager", pod=~"early-oom-.*"}) == 1
+    expr: min by (pod) (early_oom_psi_unavailable{namespace="d8-cloud-instance-manager", pod=~"early-oom-.*"}) == 1
     for: 3m
     labels:
       severity_level: "8"
