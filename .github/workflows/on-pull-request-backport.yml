@@ -32,7 +32,7 @@ jobs:
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
+          releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v?([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
           echo "::set-output name=release_branch::${releaseBranch}"
           echo "::set-output name=commit::${GITHUB_SHA}"
 
