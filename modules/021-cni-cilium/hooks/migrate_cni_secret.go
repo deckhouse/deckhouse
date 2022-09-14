@@ -24,6 +24,7 @@ package hooks
 import (
 	"encoding/base64"
 	"encoding/json"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -119,7 +120,7 @@ func patchCniConfigSecret(input *go_hook.HookInput, mode string, masqueradeMode 
 	var (
 		patch = map[string]interface{}{
 			"data": map[string]string{
-				"cilium": base64.StdEncoding.EncodeToString([]byte(jsonByte)),
+				"cilium": base64.StdEncoding.EncodeToString(jsonByte),
 			},
 		}
 	)
