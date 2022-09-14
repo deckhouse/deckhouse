@@ -29,8 +29,6 @@ data:
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel: "vxlan"
-  enable-bpf-masquerade: "true"
-  enable-ipv4-egress-gateway: "true"
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   tunnel: "disabled"
   auto-direct-node-routes: "true"
@@ -39,6 +37,13 @@ data:
   {{- else }}
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
+
+  {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
+  enable-bpf-masquerade: "true"
+  enable-ipv4-egress-gateway: "true"
+  install-no-conntrack-iptables-rules: "true"
+  {{- end }}
+
   enable-ipv4-masquerade: "true"
 
   enable-xt-socket-fallback: "true"

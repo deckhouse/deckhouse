@@ -23,8 +23,7 @@ package hooks
 
 import (
 	"encoding/base64"
-	"fmt"
-
+	"encoding/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -91,34 +90,51 @@ func migrateCniConfig(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	var masqueradeMode string
 	if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
-		patchCniConfigSecret(input, "VXLAN")
-		return nil
+		return patchCniConfigSecret(input, "VXLAN", masqueradeMode)
+	}
+
+	// if cloud provider == Openstack we should set masqueradeMode to Netfilter
+	if value, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider"); ok && value.String() == "OpenStack" {
+		masqueradeMode = "Netfilter"
 	}
 
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok {
 		if value.Bool() {
-			patchCniConfigSecret(input, "DirectWithNodeRoutes")
-			return nil
+			return patchCniConfigSecret(input, "DirectWithNodeRoutes", masqueradeMode)
 		}
-		patchCniConfigSecret(input, "Direct")
-		return nil
+		return patchCniConfigSecret(input, "Direct", masqueradeMode)
 	}
 
-	patchCniConfigSecret(input, "DirectWithNodeRoutes")
-	return nil
+	return patchCniConfigSecret(input, "DirectWithNodeRoutes", masqueradeMode)
 }
 
-func patchCniConfigSecret(input *go_hook.HookInput, mode string) {
-	modeJSON := fmt.Sprintf("{\"mode\": \"%s\"}", mode)
+func patchCniConfigSecret(input *go_hook.HookInput, mode string, masqueradeMode string) error {
+	jsonByte, err := generateJSONCiliumConf(mode, masqueradeMode)
+	if err != nil {
+		return err
+	}
 	var (
 		patch = map[string]interface{}{
 			"data": map[string]string{
-				"cilium": base64.StdEncoding.EncodeToString([]byte(modeJSON)),
+				"cilium": base64.StdEncoding.EncodeToString([]byte(jsonByte)),
 			},
 		}
 	)
-
 	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cni-configuration")
+	return nil
+}
+
+func generateJSONCiliumConf(mode string, masqueradeMode string) ([]byte, error) {
+	var confMAP CiliumConfigStruct
+	if mode != "" {
+		confMAP.Mode = mode
+	}
+	if masqueradeMode != "" {
+		confMAP.MasqueradeMode = masqueradeMode
+	}
+
+	return json.Marshal(confMAP)
 }

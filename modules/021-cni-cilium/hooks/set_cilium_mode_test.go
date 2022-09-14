@@ -30,53 +30,77 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, but cni != `cilium`", func() {
-		cniSecret := generateCniConfigurationSecret("flannel", "")
+		cniSecret := generateCniConfigurationSecret("flannel", "", "")
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni == `cilium`, but cilium field is not set", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "")
+		cniSecret := generateCniConfigurationSecret("cilium", "", "")
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = VXLAN", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN")
+		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "")
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be set to `VXLAN`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = DirectWithNodeRoutes, masqueradeMode = Netfilter", func() {
+		cniSecret := generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes", "Netfilter")
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be set to `VXLAN`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
 
@@ -86,11 +110,13 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
@@ -100,11 +126,13 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
@@ -114,11 +142,13 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
@@ -135,11 +165,13 @@ podSubnetCIDR: 10.231.0.0/16
 serviceSubnetCIDR: 10.232.0.0/16
 `))
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
@@ -160,11 +192,13 @@ podSubnetCIDR: 10.231.0.0/16
 serviceSubnetCIDR: 10.232.0.0/16
 `))
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
 		})
 	})
 
