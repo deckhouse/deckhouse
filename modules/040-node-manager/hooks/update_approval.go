@@ -298,17 +298,21 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		ng := ar.nodeGroups[ngName]
 
+		switch ng.Disruptions.ApprovalMode {
 		// Skip nodes in NodeGroup not allowing disruptive updates
-		if ng.Disruptions.ApprovalMode == "Manual" {
+		case "Manual":
 			continue
-		}
 
 		// Skip node if update is not permitted in the current time window
-		if ng.Disruptions.ApprovalMode == "Automatic" && !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
-			continue
-		}
-		if ng.Disruptions.ApprovalMode == "RollingUpdate" && !ng.Disruptions.RollingUpdate.Windows.IsAllowed(now) {
-			continue
+		case "Automatic":
+			if !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
+				continue
+			}
+
+		case "RollingUpdate":
+			if !ng.Disruptions.RollingUpdate.Windows.IsAllowed(now) {
+				continue
+			}
 		}
 
 		ar.finished = true
