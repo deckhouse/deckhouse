@@ -71,6 +71,7 @@ sysctl -w vm.overcommit_memory=1
 sysctl -w kernel.panic=10
 sysctl -w kernel.panic_on_oops=1
 
+# we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
 echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null
