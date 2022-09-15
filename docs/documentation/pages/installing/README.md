@@ -35,13 +35,13 @@ To install Deckhouse, you have to create a YAML file containing the installation
 The YAML installation config contains multiple resource configurations (manifests):
 - [InitConfiguration](configuration.html#initconfiguration) — the initial [Deckhouse configuration](../#конфигурация-deckhouse). Deckhouse will use it to start after the installation.
 
-  This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-raleted parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#parameters-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
+  This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#parameters-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
   
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
   > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters of a Kubernetes cluster deployed to bare metal servers or virtual machines in an unsupported cloud infrastructure.
+- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters of a Kubernetes cluster deployed to bare metal servers or virtual machines in an unsupported clouds.
 
   > As with the `ClusterConfiguration` resource, the `StaticClusterConfiguration` resource is not required if Deckhouse is installed into an existing Kubernetes cluster.  
 
@@ -189,7 +189,7 @@ echo_err() { echo "$@" 1>&2; }
 # declare the variable
 lb_ip=""
 
-# get the load balancer ip
+# get the load balancer IP
 for i in {0..100}
 do
   if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
@@ -204,9 +204,9 @@ do
 done
 
 if [ -n "$lb_ip" ]; then
-  echo_err "The load balancer external ip: $lb_ip"
+  echo_err "The load balancer external IP: $lb_ip"
 else
-  echo_err "Could not get the external ip of the load balancer"
+  echo_err "Could not get the external IP of the load balancer"
   exit 1
 fi
 
@@ -239,8 +239,8 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_
 - `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
 - `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
   - SSH authentication keys;
-  - pre-made installation and resource configuration files;
-  - kubectl configuration file (to install to an existing cluster), etc.
+  - config file;
+  - resource file, etc.
 
 Here is an example of a command to run the installer container:
 
@@ -248,14 +248,17 @@ Here is an example of a command to run the installer container:
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yml:/resources.yml" \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/ce/install:stable bash
 ```
 
-The installation of Deckhouse in the installer container can be started using the `dhctl bootstrap` command with the necessary parameters. The set of parameters depends on the installation type.
+The installation of Deckhouse in the installer container can be started using the `dhctl` command:
+- Use the `dhctl bootstrap` command, to start a Deckhouse installation including cluster deployment (these are all cases, except for installation Deckhouse in an existing cluster);
+- Use the `dhctl bootstrap-phase install-deckhouse` command, to start a Deckhouse installation in an existing cluster;
 
-Run `dhctl bootstrap -h` to learn more about the parameters available.
+> Run `dhctl bootstrap -h` to learn more about the parameters available.
 
-This command will start the installation:
+This command will start the Deckhouse installation in a cloud:
 
 ```shell
 dhctl bootstrap \

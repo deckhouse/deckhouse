@@ -38,11 +38,11 @@ YAML-файл конфигурации установки содержит па�
 
   В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится, или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#parameters-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.  
   
-- [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, например: сетевые параметры, параметры CRI, версию control plane и т.д.
+- [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
   
   > Использовать ресурс `ClusterConfiguration` в конфигурации необходимо только если при установке Deckhouse нужно предварительно развернуть кластер Kubernetes. Т.е. `ClusterConfiguration` не нужен, если Deckhouse устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, развертываемого на серверах bare metal или на виртуальных машинах в неподдерживаемой облачной инфраструктуре.
+- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, развертываемого на серверах bare metal или на виртуальных машинах в неподдерживаемых облаках.
 
   > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если Deckhouse устанавливается в существующем кластере Kubernetes.  
 
@@ -166,7 +166,7 @@ spec:
 
 {% endofftopic %}
 
-### Post bootstrap-скрипт
+### Post-bootstrap-скрипт
 
 После успешной установки Deckhouse, инсталлятор может запустить скрипт на одном из master-узлов. С помощью скрипта можно выполнять дополнительную настройку, собирать информацию о настройке и т.п.
 
@@ -187,10 +187,10 @@ INGRESS_NAME="nginx"
 
 echo_err() { echo "$@" 1>&2; }
 
-# get load balancer IP
+# declare the variable
 lb_ip=""
 
-# get load balancer ip
+# get the load balancer IP
 for i in {0..100}
 do
   if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
@@ -205,16 +205,16 @@ do
 done
 
 if [ -n "$lb_ip" ]; then
-  echo_err "Load balancer external ip: $lb_ip"
+  echo_err "The load balancer external IP: $lb_ip"
 else
-  echo_err "Load balancer external ip did not get"
+  echo_err "Could not get the external IP of the load balancer"
   exit 1
 fi
 
 outContent="{\"frontend_ips\":[\"$lb_ip\"]}"
 
 if [ -z "$OUTPUT" ]; then
-  echo_err "OUTPUT env is empty. Result has not been written to output file."
+  echo_err "The OUTPUT env is empty. The result was not saved to the output file."
 else
   echo "$outContent" > "$OUTPUT"
 fi
@@ -238,10 +238,10 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_
 
 , где:
 - `<DECKHOUSE_REVISION>` — редакция Deckhouse: `ee` для Enterprise Edition и `ce` — для Community Edition.
-- `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, такие как:
+- `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как:
   - SSH-ключи доступа
-  - подготовленные файлы конфигурации установки и ресурсов
-  - файл конфигурации kubectl (для установки в существующем кластере), и т.д.
+  - файл конфигурации
+  - файл ресурсов и т.д.
 
 Пример запуска контейнера инсталлятора:
 
@@ -249,16 +249,17 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yml:/resources.yml" \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/ce/install:stable bash
 ```
 
-> Используйте справку по параметрамкомандам Для получения справки по параметрам выполните `dhctl bootstrap -h`.
-
-Установка запускается в контейнере инсталлятора с помощью команды `dhctl`: 
+Установка Deckhouse запускается в контейнере инсталлятора с помощью команды `dhctl`:
 - Для запуска установки Deckhouse с развертыванием кластера (это все случаи, кроме установки в существующий кластер), используйте команду `dhctl bootstrap`.
 - Для запуска установки Deckhouse в существующем кластере, используйте команду `dhctl bootstrap-phase install-deckhouse`.
 
-Пример запуска установки Deckhouse с развертыванием кластера с облаке:
+> Для получения справки по параметрам выполните `dhctl bootstrap -h`.
+
+Пример запуска установки Deckhouse с развертыванием кластера в облаке:
 
 ```shell
 dhctl bootstrap \
