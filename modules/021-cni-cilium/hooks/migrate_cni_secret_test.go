@@ -26,7 +26,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func generateCniConfigurationSecret(cni string, mode string) string {
+func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {
 	var (
 		secretTemplate = `
 ---
@@ -38,9 +38,10 @@ metadata:
 type: Opaque`
 	)
 
+	jsonByte, _ := generateJSONCiliumConf(mode, masqueradeMode)
 	secretTemplate = fmt.Sprintf("%s\ndata:\n  cni: %s", secretTemplate, base64.StdEncoding.EncodeToString([]byte(cni)))
 	if mode != "" {
-		secretTemplate = fmt.Sprintf("%s\n  cilium: %s", secretTemplate, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("{\"mode\": \"%s\"}", mode))))
+		secretTemplate = fmt.Sprintf("%s\n  cilium: %s", secretTemplate, base64.StdEncoding.EncodeToString(jsonByte))
 	}
 	return secretTemplate
 }
@@ -60,7 +61,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 	})
 
 	Context("kube-system/d8-cni-configuration is present, but cni != `cilium`, skip migration", func() {
-		cniSecret := generateCniConfigurationSecret("flannel", "")
+		cniSecret := generateCniConfigurationSecret("flannel", "", "")
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -74,7 +75,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, but cilium field is present, skip migration", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "Direct")
+		cniSecret := generateCniConfigurationSecret("cilium", "Direct", "")
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -89,7 +90,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, tunnelMode = VXLAN", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
+			f.KubeStateSet(generateCniConfigurationSecret("cilium", "", ""))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.RunHook()
@@ -97,13 +98,13 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "VXLAN")))
+			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "VXLAN", "")))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes = true", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
+			f.KubeStateSet(generateCniConfigurationSecret("cilium", "", ""))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			f.RunHook()
@@ -111,13 +112,13 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes")))
+			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes", "")))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes = false", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
+			f.KubeStateSet(generateCniConfigurationSecret("cilium", "", ""))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			f.RunHook()
@@ -125,20 +126,45 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: migrate_cni_secret", func() 
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "Direct")))
+			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "Direct", "")))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, createNodeRoutes not set", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(generateCniConfigurationSecret("cilium", ""))
+			f.KubeStateSet(generateCniConfigurationSecret("cilium", "", ""))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, secret should be changed", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes")))
+			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes", "")))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium field is absent, cloud provider == OpenStack", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(generateCniConfigurationSecret("cilium", "", ""))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Cloud
+cloud:
+  prefix: test
+  provider: OpenStack
+clusterDomain: cluster.local
+kind: ClusterConfiguration
+kubernetesVersion: "1.21"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.RunHook()
+		})
+		It("hook should run successfully, secret should be changed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			s := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(s.ToYaml()).To(MatchYAML(generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes", "Netfilter")))
 		})
 	})
 
