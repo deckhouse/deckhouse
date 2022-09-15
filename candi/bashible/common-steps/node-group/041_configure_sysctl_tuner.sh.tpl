@@ -77,7 +77,7 @@ echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null
 echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
-for i in /proc/sys/net/ipv4/conf/*/rp_filter ; do echo 0 > $i; done # disable reverse-path filtering on all interfaces
+echo 0 | tee /proc/sys/net/ipv4/conf/*/rp_filter >/dev/null # disable reverse-path filtering on all interfaces
 EOF
 chmod +x /usr/local/bin/sysctl-tuner
 
