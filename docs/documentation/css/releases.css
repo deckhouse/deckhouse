@@ -354,3 +354,48 @@ opacity: 0.7;
 font-size: 12px;
 }
 
+.releases-page__loadblock {
+  display: none;
+  opacity: 0.7;
+  font-size: 18px;
+  font-weight: normal;
+  font-style: normal;
+  font-stretch: normal;
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+  color: #00122c;
+  padding: 25px;
+}
+
+.releases-page__loadblock.active {
+  display: block;
+}
+
+.releases-page__loadblock img {
+  width: 1em;
+}
+
+.releases-page__table--content {
+  display: none;
+}
+
+.releases-page__table--content.active {
+  display: block;
+}
+
+.releases-page__table--content p.link {
+  margin: 0px;
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+.releases-page__table--content p.date {
+  margin: 0px;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.releases-page__table--content td.channel-name {
+  font-size: 1.5em;
+  font-weight: 600;
+}
