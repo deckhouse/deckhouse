@@ -38,7 +38,6 @@ The module supports platforms for which there is a corresponding cloud provider 
 
 The following Managed Kubernetes services are also supported (not all service functionality may be available):
 - Google Kubernetes Engine(GKE).
-- Amazon Elastic Kubernetes Service (EKS).
 
 ## Node grouping and group management
 

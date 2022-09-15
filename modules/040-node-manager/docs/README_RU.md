@@ -40,7 +40,6 @@ title: "Управление узлами"
 
 Поддерживаются также следующие сервисы Managed Kubernetes (может быть доступен не весь функционал сервиса):
 - Google Kubernetes Engine (GKE).
-- Amazon Elastic Kubernetes Service (EKS).
 
 ## Группировка узлов и управление группами
 
