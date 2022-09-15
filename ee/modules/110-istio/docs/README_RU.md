@@ -2,6 +2,8 @@
 title: "Модуль istio"
 ---
 
+{::options parse_block_html="false" /}
+
 ## Задачи, которые решает Istio
 
 [Istio](https://istio.io/) — фреймворк централизованного управления сетевым трафиком, реализующий подход Service Mesh.
@@ -160,7 +162,16 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Приложение с выключенным Istio
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSN2yCNumnHC-Q9sgQ7LstaLuG8lWjYkvKrN27zNM4P8JxejasMeCazGIX5zYNSLuv6DieoXgI1Mx7u/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<div class="canvas__wrap">
+  <canvas id="the-canvas" class="the-canvas" data-presentation="Deckhouse_Istio_Request_Lifecycle_Istio_Disabled_RU"></canvas>
+
+<div class="slider__nav">
+<button id="prev" class="slider__nav--button slider__nav--button-prev"><i class="fa fa-chevron-left" aria-hidden="true"></i></button>
+<span id="page_num" class="slider__nav--page-num"></span>
+<button id="next" class="slider__nav--button slider__nav--button-next"><i class="fa fa-chevron-right" aria-hidden="true"></i></button>
+</div>
+</div>
+
 <!--- Исходник: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">

@@ -112,7 +112,17 @@ The presentation below is an overview of the actions that will be required to in
 
 Note that it's only a brief, abstract overview. The specific actions and commands to execute will be given on the next steps.
 
-<iframe src="{{ include.presentation }}" frameborder="0" width="{{ include.width }}" height="{{ include.height }}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<div class="canvas__wrap">
+  <canvas id="the-canvas" class="the-canvas" data-presentation="Deckhouse_Getting_started_Cloud_EN"></canvas>
+
+  <div class="slider__nav">
+    <button id="prev" class="slider__nav--button slider__nav--button-prev"><i class="fa fa-chevron-left" aria-hidden="true"></i></button>
+    <span id="page_num" class="slider__nav--page-num"></span>
+    <button id="next" class="slider__nav--button slider__nav--button-next"><i class="fa fa-chevron-right" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+{% comment %}<iframe src="{{ include.presentation }}" frameborder="0" width="{{ include.width }}" height="{{ include.height }}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>{% endcomment %}
 
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
