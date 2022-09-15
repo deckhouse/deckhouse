@@ -9,7 +9,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
+      for: "10m"
       summary: Prometheus disk is over 95% used.
       description: |
         For more information, use the command:
@@ -31,8 +31,10 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
+      for: "10m"
       summary: Prometheus-main data is retained for less than 10 days
+      description: |
+        You need to increase the disk size or reduce the number of metrics
   - alert: PrometheusLongtermRetainLessThan30Days
     expr: |
       group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus-longterm"}[24h]) > 0)
@@ -46,7 +48,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
+      for: "10m"
       summary: Prometheus-longterm data is retained for less than 30 days
-
-# 
+      description: |
+        You need to increase the disk size or reduce the number of metrics
