@@ -39,7 +39,7 @@ internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | qu
   {{- end }}
 if [[ -z "$internal_network_cidrs" ]]; then
   # if internal network cidrs is not set, and the node has one interface, use its network as internal_network_cidr
-  physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | awk '{print $9}')"
+  physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | grep "devices" | awk '{print $9}')"
   if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
     internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
   else
