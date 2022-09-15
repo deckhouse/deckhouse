@@ -71,6 +71,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+{{- if .Values.okmeter.disableAutoDiscovery }}
+        - name: DISABLE_AUTO_DISCOVER
+          value: "1"
+{{- end }}
         volumeMounts:
         - name: dockersocket
           mountPath: /var/run/docker.sock
