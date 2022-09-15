@@ -118,7 +118,7 @@ deckhouse: |
 Для настройки нестандартных конфигураций сторонних registry в ресурсе `InitConfiguration` предусмотрены еще два параметра:
 
 * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
-* `registryScheme` — протокол доступа к registry (`http` или `https`). По умолчанию - `https`.
+* `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию - `HTTPS`.
 
 ### Особенности настройки сторонних registry
 
@@ -229,7 +229,7 @@ chmod 700 d8-push.sh
 - домен кластера: `clusterDomain`;
 - используемый CRI: `defaultCRI`;
 - используемая версия control plane Kubernetes: `kubernetesVersion`;
-- тип кластера (Static, Cloud, Hybrid): `clusterType`;
+- тип кластера (Static, Cloud): `clusterType`;
 - сеть Pod’ов кластера: `podSubnetCIDR`;
 - сеть для service’ов кластера: `serviceSubnetCIDR` и др.
 
