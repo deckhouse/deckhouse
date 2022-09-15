@@ -40,13 +40,13 @@ const (
 	sysrqOOMCharacter = "f"
 )
 
-var psiAvailable = prometheus.NewGauge(prometheus.GaugeOpts{
+var psiUnavailable = prometheus.NewGauge(prometheus.GaugeOpts{
 	Name: "early_oom_psi_unavailable",
 	Help: "Whether PSI subsystem is unavailable on a given system",
 })
 
 func init() {
-	prometheus.MustRegister(psiAvailable)
+	prometheus.MustRegister(psiUnavailable)
 }
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 	psiSupportErr := probePSISupport()
 	if psiSupportErr != nil {
 		log.Println(psiSupportErr)
-		psiAvailable.Set(1)
+		psiUnavailable.Set(1)
 
 		sig := <-c
 		shutdown(sig, server)
@@ -89,7 +89,7 @@ func main() {
 func probePSISupport() error {
 	fs, err := procfs.NewDefaultFS()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	_, err = fs.PSIStatsForResource("memory")
