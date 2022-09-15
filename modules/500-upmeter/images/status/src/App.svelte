@@ -5,7 +5,7 @@
 	import { getGroupData } from "./en";
 
 	async function fetchStatusJSON() {
-		const r = await fetch("http://localhost:8091/public/api/status", {
+		const r = await fetch("/public/api/status", {
 			headers: { accept: "application/json" },
 		});
 		return await r.json();
