@@ -114,7 +114,7 @@ Use the following `registryDockerCfg` if authentication is required to access De
 The `InitConfiguration` resource provides two more parameters for non-standard third-party registry configurations:
 
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
-* `registryScheme` - registry scheme (`http` or `https`). The default value is `https`.
+* `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
 ### Tips for configuring the third-party registry
 
@@ -225,7 +225,7 @@ The general cluster parameters are stored in the `ClusterConfiguration` structur
 - cluster domain: `clusterDomain`;
 - CRI used in the cluster: `defaultCRI`;
 - Kubernetes control plane version: `kubernetesVersion`;
-- cluster type (Static, Cloud, Hybrid): `clusterType`;
+- cluster type (Static, Cloud): `clusterType`;
 - address space of the cluster's Pods: `podSubnetCIDR`;
 - address space of the cluster's services: `serviceSubnetCIDR` etc.
 
