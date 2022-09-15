@@ -1,42 +1,42 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
 args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
-docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
 # <template: unit_run_args>
 {!{- end -}!}
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
 args: 'make tests-matrix'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin'
 # </template: matrix_run_args>
 {!{- end -}!}
 
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
-docker_options: '-w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
 args: 'sh -c "go generate tools/register.go && golangci-lint run"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: golangci_lint_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
 # <template: openapi_test_cases_run_args>
 args: 'ginkgo -vet=off ./testing/openapi_cases/'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg'
 # </template: openapi_test_cases_run_args>
 {!{- end -}!}
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
 args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
-docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
 # </template: validators_run_args>
 {!{- end -}!}
 
