@@ -4,52 +4,52 @@ permalink: en/installing/
 ---
 
 <div class="docs__information warning active">
-Страница находится в активной разработке и может содержать неполную информацию. Ниже приведена обзорная информация об этапах инсталляции Deckhouse. Рекомендуем воспользоваться разделом [Быстрый старт](/ru/gs/), где вы сможете найти пошаговые инструкции.
+This page is under active development and may contain incomplete information. It provides an overview of the steps required to install Deckhouse. Please refer to the [Getting Started guide](/en/gs/) section for detailed step-by-step instructions.
 </div>
 
-Инсталлятор Deckhouse доступен в виде образа контейнера. В основе инсталлятора лежит утилита [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
-* Создание и настройка объектов в облачной инфраструктуре с помощью Terraform.
-* Установка необходимых пакетов ОС на узлах (в том числе, установка пакетов Kubernetes).
-* Установка Deckhouse.
-* Создание, настройка узлов кластера Kubernetes.
-* Поддержание (приведение) кластера в состояние, описанное в конфигурации.
+The Deckhouse installer is available as a container image. It is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) tool which is responsible for:
+* Creating and configuring objects in the cloud infrastructure using Terraform;
+* Installing the required OS packages on the nodes (including Kubernetes packages);
+* Installing Deckhouse;
+* Creating and configuring Kubernetes cluster nodes;
+* Keeping the cluster in (or bringing it to) the state described in the configuration.
 
-Варианты установки Deckhouse:
-- **В поддерживаемом облаке.** В этом случае dhctl создает и настраивает все необходимые ресурсы (включая виртуальные машины), разворачивает кластер Kubernetes и  устанавливает Deckhouse. Информацию по поддерживаемым облачным провайдерам можно найти в разделе [Кластер Kubernetes](../kubernetes.html) документации.
-- В кластерах на **bare metal** и **в неподдерживаемых облаках.** В этом случае dhctl настраивает сервер (виртуальную машину), разворачивает кластер Kubernetes с одним master-узлом и устанавливает Deckhouse. Далее, с помощью готовых скриптов настройки, можно вручную добавить дополнительные узлы в кластер.
-- **В существующем кластере Kubernetes.** В этом случае dhctl устанавливает Deckhouse в существующем кластере.
+Deckhouse installation options:
+- **Supported cloud:** In this case, dhctl creates and configures all the required resources (including virtual machines), deploys the Kubernetes cluster and installs Deckhouse. For information on supported cloud providers, see the [Kubernetes Cluster](../kubernetes.html) section.
+- **Bare metal cluster or unsupported cloud:** In this case, dhctl configures the server (virtual machine), deploys a Kubernetes cluster with a single master node and installs Deckhouse. You can then manually add more nodes to the cluster using the pre-made configuration scripts.
+- **Existing Kubernetes cluster:** In this case, dhctl installs Deckhouse to the existing cluster.
 
-## Подготовка инфраструктуры
+## Preparing the infrastructure
 
-Перед установкой проверьте следующее:
-- *(для кластеров на bare metal и в неподдерживаемых облаках)* ОС сервера находится в [списке поддерживаемых ОС](../supported_versions.html) (или совместима с ними) и до сервера есть SSH-доступ по ключу;
-- *(в поддерживаемых облаках)* наличие квот необходимых для создания ресурсов и параметров доступа к облаку (набор зависит от конкретной облачной инфраструктуры или облачного провайдера);
-- доступ до container registry с образами Deckhouse (по умолчанию — `registry.deckhouse.io`).
+Before installing, ensure that:
+- *(for bare metal clusters and clusters in unsupported clouds)* the server's OS is in the [list of supported OS](../supported_versions.html) (or compatible with them) and SSH access to the server with key-based authentication is configured;
+- *(for supported clouds)* you have the quotas needed to create resources as well as cloud access credentials (the exact set depends on the specific cloud infrastructure or cloud provider);
+- you have access to the container registry with Deckhouse images (default is `registry.deckhouse.io`).
 
-## Подготовка конфигурации
+## Preparing the configuration
 
-Для установки Deckhouse нужно подготовить YAML-файл конфигурации установки и, при необходимости, YAML-файл ресурсов, которые нужно создать после успешной установки Deckhouse.
+To install Deckhouse, you have to create a YAML file containing the installation configuration and, if necessary, a YAML config for the resources that must be created after a successful Deckhouse installation.
 
-### Файл конфигурации установки
+### Installation config
 
-YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
-- [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse). С этой конфигурацией Deckhouse запустится после установки.
+The YAML installation config contains multiple resource configurations (manifests):
+- [InitConfiguration](configuration.html#initconfiguration) — the initial [Deckhouse configuration](../#конфигурация-deckhouse). Deckhouse will use it to start after the installation.
 
-  В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится, или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#parameters-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.  
+  This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-raleted parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#parameters-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
   
-- [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, например: сетевые параметры, параметры CRI, версию control plane и т.д.
+- [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
-  > Использовать ресурс `ClusterConfiguration` в конфигурации необходимо только если при установке Deckhouse нужно предварительно развернуть кластер Kubernetes. Т.е. `ClusterConfiguration` не нужен, если Deckhouse устанавливается в существующем кластере Kubernetes.
+  > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, развертываемого на серверах bare metal или на виртуальных машинах в неподдерживаемой облачной инфраструктуре.
+- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters of a Kubernetes cluster deployed to bare metal servers or virtual machines in an unsupported cloud infrastructure.
 
-  > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если Deckhouse устанавливается в существующем кластере Kubernetes.  
+  > As with the `ClusterConfiguration` resource, the `StaticClusterConfiguration` resource is not required if Deckhouse is installed into an existing Kubernetes cluster.  
 
-- `<CLOUD_PROVIDER>ClusterConfiguration` — набор ресурсов, содержащих параметры конфигурации поддерживаемых облачных провайдеров.
+- `<CLOUD_PROVIDER>ClusterConfiguration` — a set of resources with the configuration parameters for the supported cloud providers.
   
-  Ресурсы конфигурации облачных провайдеров содержат такие параметры, как: параметры доступа к облачной инфраструктуре (параметры аутентификации), тип и параметры схемы размещения ресурсов, параметры сети, параметры создаваемых групп узлов.
+  These resources contain parameters required to access the cloud infrastructure (authentication credentials), resource layout type and configuration, network settings, parameters of node groups to be created, etc.
 
-  Список ресурсов конфигурации поддерживаемых облачных провайдеров:
+  Below is the list of configuration resources for supported cloud providers:
   - [AWSClusterConfiguration](../modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services
   - [AzureClusterConfiguration](../modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure
   - [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform
@@ -57,7 +57,7 @@ YAML-файл конфигурации установки содержит па�
   - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere
   - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex.Cloud
 
-{% offtopic title="Пример файла конфигурации установки..." %}
+{% offtopic title="An example of the installation config..." %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -102,13 +102,13 @@ provider:
 
 {% endofftopic %}
 
-### Файл ресурсов установки
+### Installation resource config
 
-Необязательный YAML-файл ресурсов установки содержит манифесты ресурсов Kubernetes, которые инсталлятор применит после успешной установки Deckhouse.
+The optional YAML installation resource config contains the Kubernetes resource manifests that will be applied after a successful Deckhouse installation.
 
-Файл ресурсов может быть полезен для дополнительной настройки кластера после установки Deckhouse: развертывание Ingress-контроллера, создание дополнительных групп узлов, ресурсов конфигурации, настройки прав и пользователей и т.д.
+This file can help you with the additional cluster configuration once Deckhouse is installed: deploying the Ingress controller, creating additional node groups and configuration resources, assigning permissions and managing users, etc.
 
-{% offtopic title="Пример файла ресурсов..." %}
+{% offtopic title="An example of the resource config... " %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -165,14 +165,14 @@ spec:
 
 {% endofftopic %}
 
-### Post bootstrap-скрипт
+### Post-bootstrap script
 
-После успешной установки Deckhouse, инсталлятор может запустить скрипт на одном из master-узлов. С помощью скрипта можно выполнять дополнительную настройку, собирать информацию о настройке и т.п.
+After successfully installing Deckhouse, the installer provides an option to run the script on one of the master nodes. This script can be used for additional customization, collecting configuration information, etc.
 
-При необходимости, подготовьте нужный вам скрипт. Вы сможете указать его с помощью параметра `--post-bootstrap-script-path` при запуске инсталляции (см. далее).
+To take advantage of this feature, create the script and specify the path to it using the `--post-bootstrap-script-path` flag when when you start the installation (see below).
 
-{% offtopic title="Пример скрипта, выводящего IP адрес балансировщика..." %}
-Пример скрипта, который выводит IP-адрес балансировщика, после развертывания кластера в облаке и установки Deckhouse:
+{% offtopic title="Example: a script that retrieves the IP address of the load balancer..." %}
+This sample script retrieves the IP address of the load balancer after the cluster is deployed in the cloud and Deckhouse is installed:
 
 ```shell
 #!/usr/bin/env bash
@@ -186,10 +186,10 @@ INGRESS_NAME="nginx"
 
 echo_err() { echo "$@" 1>&2; }
 
-# get load balancer IP
+# declare the variable
 lb_ip=""
 
-# get load balancer ip
+# get the load balancer ip
 for i in {0..100}
 do
   if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
@@ -204,16 +204,16 @@ do
 done
 
 if [ -n "$lb_ip" ]; then
-  echo_err "Load balancer external ip: $lb_ip"
+  echo_err "The load balancer external ip: $lb_ip"
 else
-  echo_err "Load balancer external ip did not get"
+  echo_err "Could not get the external ip of the load balancer"
   exit 1
 fi
 
 outContent="{\"frontend_ips\":[\"$lb_ip\"]}"
 
 if [ -z "$OUTPUT" ]; then
-  echo_err "OUTPUT env is empty. Result has not been written to output file."
+  echo_err "The OUTPUT env is empty. The result was not saved to the output file."
 else
   echo "$outContent" > "$OUTPUT"
 fi
@@ -221,28 +221,28 @@ fi
 
 {% endofftopic %}
 
-## Установка Deckhouse
+## Installing Deckhouse
 
-> При установке Deckhouse редакции Enterprise Edition из официального container registry `registry.deckhouse.io`, необходимо предварительно авторизоваться с помощью лицензионного ключа:
+> When you install Deckhouse Enterprise Edition from the official `registry.deckhouse.io` container registry, you must first log in with your license key:
 >
 > ```shell
 > docker login -u license-token registry.deckhouse.io
 > ```
 
-Запуск контейнера инсталлятора из публичного container registry Deckhouse в общем случае выглядит так:
+The command to pull the installer container from the Deckhouse public registry and run it looks as follows:
 
 ```shell
 docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
 ```
 
-, где:
-- `<DECKHOUSE_REVISION>` — редакция Deckhouse: `ee` для Enterprise Edition и `ce` — для Community Edition.
-- `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, такие как:
-  - SSH-ключи доступа
-  - подготовленные файлы конфигурации установки и ресурсов
-  - файл конфигурации kubectl (для установки в существующем кластере), и т.д.
+, where:
+- `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
+- `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
+  - SSH authentication keys;
+  - pre-made installation and resource configuration files;
+  - kubectl configuration file (to install to an existing cluster), etc.
 
-Пример запуска контейнера инсталлятора:
+Here is an example of a command to run the installer container:
 
 ```shell
 docker run -it --pull=always \
@@ -251,11 +251,11 @@ docker run -it --pull=always \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/ce/install:stable bash
 ```
 
-Установка Deckhouse в контейнере инсталлятора запускается с помощью команды `dhctl bootstrap` с указанием соответствующих параметров. Набор параметров зависит от типа установки.
+The installation of Deckhouse in the installer container can be started using the `dhctl bootstrap` command with the necessary parameters. The set of parameters depends on the installation type.
 
-Для получения справки по параметрам выполните `dhctl bootstrap -h`.
+Run `dhctl bootstrap -h` to learn more about the parameters available.
 
-Пример запуска установки:
+This command will start the installation:
 
 ```shell
 dhctl bootstrap \
@@ -263,8 +263,14 @@ dhctl bootstrap \
   --config=/config.yml --resources=/resources.yml
 ```
 
-, где:
-- `/config.yml` — файл конфигурации установки;
-- `/resources.yml` — файл манифестов ресурсов;
-- `<SSH_USER>` — пользователь на сервере для подключения по SSH;
-- `--ssh-agent-private-keys` — файл приватного SSH-ключа, для подключения по SSH.
+, where:
+- `/config.yml` — installation config;
+- `/resources.yml` — file with the resource manifests;
+- `<SSH_USER>` — SSH user on the server;
+- `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
+
+### Aborting the installation and uninstalling Deckhouse
+
+When installing in a supported cloud, the resources created may remain in the cloud if the installation is interrupted or there are problems during the installation. Use the `dhctl bootstrap-phase abort` command to delete those resources. Note that the configuration file passed via the `--config` flag must be the same as the one used for the installation.
+
+To delete a cluster running in a supported cloud and deployed after the Deckhouse installation, use the `dhctl destroy` command. In this case, `dhctl` will connect to the master node, retrieve the terraform state, and delete the resources created in the cloud in the correct fashion.
