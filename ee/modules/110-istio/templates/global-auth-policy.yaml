@@ -16,6 +16,7 @@ spec:
 ---
 # Corresponding destination rule to configure client side to use mutual TLS when talking to
 # any service (host) in the mesh.
+{{- if has .Values.istio.tlsMode (list "Mutual" "Off") }}
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
@@ -26,10 +27,11 @@ spec:
   host: "*.{{ .Values.global.discovery.clusterDomain }}"
   trafficPolicy:
     tls:
-{{- if has .Values.istio.tlsMode (list "Mutual" "MutualPermissive") }}
+  {{- if eq .Values.istio.tlsMode "Mutual" }}
       mode: ISTIO_MUTUAL
-{{ else }}
+  {{ else }}
       mode: DISABLE
+  {{- end }}
 {{- end }}
 ---
 # Destination rule to disable (m)TLS when talking to API server, as API server doesn't have sidecar.
