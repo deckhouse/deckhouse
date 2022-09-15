@@ -561,7 +561,7 @@ metadata:
 			})
 			It("IsUpdating flag should be reset", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				time.Sleep(100 * time.Millisecond) // wait for object-patcher actions
+				time.Sleep(300 * time.Millisecond) // wait for object-patcher actions
 				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
 				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
 				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
