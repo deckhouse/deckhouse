@@ -83,6 +83,8 @@ data:
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
 
+  tofqdns-dns-reject-response-code: nameError
+
   # Local hubble sever section
 {{- if has "cilium-hubble" .Values.global.enabledModules }}
   enable-hubble: "true"

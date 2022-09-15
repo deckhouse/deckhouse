@@ -106,7 +106,7 @@ govc role.create kubernetes Datastore.AllocateSpace Datastore.Browse Datastore.F
   VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM \
   VirtualMachine.Provisioning.ModifyCustSpecs VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles \
   VirtualMachine.Provisioning.ReadCustSpecs VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot \
-  VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
+  VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot Cns.Searchable Host.Config.Storage
 
 govc permissions.set  -principal username -role kubernetes /datacenter
 ```
