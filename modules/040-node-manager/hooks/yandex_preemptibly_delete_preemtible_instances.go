@@ -168,6 +168,10 @@ func deleteMachines(input *go_hook.HookInput) error {
 		preemptibleMachineClassesSet.Add(ic.Name)
 	}
 
+	if preemptibleMachineClassesSet.Size() == 0 {
+		return nil
+	}
+
 	for _, nodeRaw := range input.Snapshots["nodes"] {
 		if nodeRaw == nil {
 			continue
@@ -179,10 +183,6 @@ func deleteMachines(input *go_hook.HookInput) error {
 		}
 
 		nodeCreationTimestampSet[node.Name] = node.CreationTimestamp
-	}
-
-	if preemptibleMachineClassesSet.Size() == 0 {
-		return nil
 	}
 
 	for _, machineRaw := range input.Snapshots["machines"] {
