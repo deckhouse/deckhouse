@@ -554,7 +554,7 @@ metadata:
 			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 		})
 
-		FContext("After next run loop", func() {
+		Context("After next run loop", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
