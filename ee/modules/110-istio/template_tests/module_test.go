@@ -217,9 +217,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(paDefault.Exists()).To(BeTrue())
 			Expect(paDefault.Field("spec.mtls.mode").String()).To(Equal(`PERMISSIVE`))
 
-			Expect(drDefault.Exists()).To(BeTrue())
-			Expect(drDefault.Field("spec.host").String()).To(Equal(`*.my.domain`))
-			Expect(drDefault.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`ISTIO_MUTUAL`))
+			Expect(drDefault.Exists()).To(BeFalse())
 
 			Expect(drApiserver.Exists()).To(BeTrue())
 			Expect(drApiserver.Field("spec.host").String()).To(Equal(`kubernetes.default.svc.my.domain`))
