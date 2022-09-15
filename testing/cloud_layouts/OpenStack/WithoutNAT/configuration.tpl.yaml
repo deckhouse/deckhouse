@@ -31,19 +31,19 @@ standard:
   internalNetworkDNSServers:
     - 8.8.8.8
   internalNetworkCIDR: 192.168.195.0/24
-  internalNetworkSecurity: true
+  internalNetworkSecurity: false
   externalNetworkName: public
 provider:
-  authURL: 'https://cloud.flant.com/v3/'
-  domainName: 'Default'
-  tenantName: 'd8-tests'
-  username: 'e2e-tests'
+  authURL: 'https://api.selvpc.ru/identity/v3'
+  domainName: '48348'
+  tenantID: '80625ad45e604fbe86679e63b704f3b8'
+  username: 'deckhouse-e2e'
   password: '${OS_PASSWORD}'
-  region: 'HetznerFinland'
+  region: 'ru-3'
 masterNodeGroup:
   replicas: 1
   instanceClass:
     flavorName: m1.large
-    imageName: debian-11-cloud-amd64
+    imageName: "Debian 11 (Bullseye) 64-bit"
   volumeTypeMap:
-    nova: ceph-ssd
+    nova: "basicssd.ru-3b"
