@@ -3,47 +3,96 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Deckhouse configuration to start after installation.
     additionalProperties: false
     required: [apiVersion, kind, deckhouse]
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: InitConfiguration
+      releaseChannel: Stable
+      imagesRepo: nexus.company.my/deckhouse/ee
+      registryDockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+      registryScheme: HTTPS
+      registryCA: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      configOverrides:
+        global:
+          modules:
+            publicDomainTemplate: "%s.kube.company.my"
+            proxy:
+              httpProxy: http://proxy.company.my
+              httpsProxy: https://proxy.company.my
+              noProxy: ["192.168.0.0/24", "company.my", ".company.my"]
+        cniFlannelEnabled: true
+        cniFlannel:
+          podNetworkMode: VXLAN
     properties:
       apiVersion:
         type: string
+        description: Version of the Deckhouse API.
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
         enum: [InitConfiguration]
       deckhouse:
         type: object
+        description: Initial parameters required to install Deckhouse.
         oneOf:
         - required: [devBranch]
         - required: [releaseChannel]
         properties:
           imagesRepo:
             type: string
+            description: |
+              Address of a container registry with Deckhouse images.
+
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
             minLength: 1
             default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
+            description: |
+              A Base64-encoded string with a token to access a Docker registry.
             minLength: 1
             default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
           registryCA:
             type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
           registryScheme:
             type: string
+            description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
             default: HTTPS
           releaseChannel:
             type: string
+            description: |
+              The [release channel](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
           bundle:
             type: string
+            description: |
+              The [Deckhouse bundle](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
             enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string
+            description: |
+              Deckhouse [logging Level](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel).
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:
             type: object
+            description: |
+              Initial [Deckhouse configuration](/en/documentation/v1/#deckhouse-configuration).
+
+              The structure specified in the parameter will be moved to ConfigMap `deckhouse' (in the namespace `d8-system') as is (without changes).
+
+              Specify any Deckhouse configuration parameters with which it should start after installation.

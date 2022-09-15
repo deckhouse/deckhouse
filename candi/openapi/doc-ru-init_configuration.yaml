@@ -1,0 +1,43 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Конфигурация Deckhouse, с которой он запустится после установки.
+    properties:
+      apiVersion:
+        type: string
+        description: Используемая версия API Deckhouse.
+      deckhouse:
+        description: Параметры, необходимые для установки Deckhouse.
+        properties:
+          imagesRepo:
+            description: |
+              Адрес container registry с образами Deckhouse.
+
+              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например прокси-сервер в закрытом окружении).
+
+              Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+          registryDockerCfg:
+            description: |
+              Строка с правами доступа к стороннему registry, зашифрованная в Base64.
+          registryCA:
+            description: |
+              Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+          registryScheme:
+            description: Протокол доступа к container registry (HTTP или HTTPS).
+          releaseChannel:
+            description: |
+              Устанавливаемый в кластере [канал обновлений](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
+          bundle:
+            description: |
+              Устанавливаемый в кластере [вариант поставки](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) Deckhouse.
+          logLevel:
+            description: |
+              [Уровень логирования](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
+          configOverrides:
+            description: |
+              Начальная [конфигурация Deckhouse](/ru/documentation/v1/#конфигурация-deckhouse).
+
+              Структура, указанная в параметре, будет перенесена в ConfigMap `deckhouse` (в пространстве имен `d8-system`) без изменений.
+
+              Укажите здесь любые параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
