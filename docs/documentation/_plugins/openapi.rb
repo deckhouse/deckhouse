@@ -545,18 +545,12 @@ module Jekyll
                 _primaryLanguage = nil
                 _fallbackLanguage = nil
 
-                # if ( input['i18n'].has_key?(@context.registers[:page]["lang"]) and input['i18n'][@context.registers[:page]["lang"]].has_key?("properties") )
-                #     _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["properties"][key]
-                # end
                 _primaryLanguage = get_hash_value(input,  'i18n', @context.registers[:page]["lang"], 'properties', key)
                 if ( @context.registers[:page]["lang"] == 'en' )
                     fallbackLanguageName = 'ru'
                 else
                     fallbackLanguageName = 'en'
                 end
-                # if ( input['i18n'].has_key?(fallbackLanguageName) and input['i18n'][fallbackLanguageName].has_key?("properties") )
-                #     _fallbackLanguage = input['i18n'][fallbackLanguageName]["properties"][key]
-                # end
                 _fallbackLanguage = get_hash_value(input,  'i18n', fallbackLanguageName, 'properties', key)
 
                 result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, ["parameters"] ))
