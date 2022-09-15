@@ -102,9 +102,9 @@ spec:
           imagePullPolicy: "IfNotPresent"
           args:
             - --leader-election=true
-            - --leader-election-lease-name=$(NAME)
-            - --leader-election-namespace=$(NAMESPACE)
-            - --leader-election-resource-name=linstor-ha-controller
+            - --leader-election-id=$(NAME)
+            - --lease-lock-namespace=$(NAMESPACE)
+            - --lease-lock-name=linstor-affinity-controller
             - --v=5
           env:
             - name: LEASE_LOCK_NAME
