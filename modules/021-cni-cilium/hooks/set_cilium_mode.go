@@ -27,8 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type CiliumConfig struct {
-	Mode string `json:"mode"`
+type CiliumConfigStruct struct {
+	Mode           string `json:"mode,omitempty"`
+	MasqueradeMode string `json:"masqueradeMode,omitempty"`
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -42,7 +43,7 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 		return nil, nil
 	}
 
-	var ciliumConfig CiliumConfig
+	var ciliumConfig CiliumConfigStruct
 	ciliumConfigJSON, ok := secret.Data["cilium"]
 	if !ok {
 		return nil, nil
@@ -82,8 +83,13 @@ func setCiliumMode(input *go_hook.HookInput) error {
 
 	if ok && len(cniConfigurationSecrets) > 0 {
 		if cniConfigurationSecrets[0] != nil {
-			ciliumConfig := cniConfigurationSecrets[0].(CiliumConfig)
-			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
+			ciliumConfig := cniConfigurationSecrets[0].(CiliumConfigStruct)
+			if ciliumConfig.Mode != "" {
+				input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
+			}
+			if ciliumConfig.MasqueradeMode != "" {
+				input.Values.Set("cniCilium.internal.masqueradeMode", ciliumConfig.MasqueradeMode)
+			}
 			return nil
 		}
 	}
@@ -91,18 +97,21 @@ func setCiliumMode(input *go_hook.HookInput) error {
 	if input.ConfigValues.Exists("cniCilium.tunnelMode") {
 		if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
 			input.Values.Set("cniCilium.internal.mode", "VXLAN")
+			return nil
 		}
 	}
 
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		return nil
 	}
 
 	// for static clusters we should use DirectWithNodeRoutes mode
 	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
 	if ok && value.String() == "Static" {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		return nil
 	}
 	// default = Direct
 	return nil
