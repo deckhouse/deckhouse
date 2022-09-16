@@ -27,6 +27,30 @@ body {
     padding: 50px 0;
   }
 
+  &__contact-info {
+    margin-top: 20px;
+    margin-left: 40px;
+    margin-bottom: 20px;
+
+    &:first-child {
+      margin-top: 30px;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    & a {
+      font-size: 14px;
+      color: #fff;
+      text-decoration: none;
+
+      &.button_alt:hover {
+        border: 2px solid $color-alt;
+      }
+    }
+  }
+
   &__navigation {
     margin-left: 50px;
     display: flex;
