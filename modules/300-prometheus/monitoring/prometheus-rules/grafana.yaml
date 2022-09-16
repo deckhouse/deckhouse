@@ -12,7 +12,7 @@
       tier: cluster
       d8_module: prometheus
       d8_component: grafana
-    annot123ations:
+    annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
