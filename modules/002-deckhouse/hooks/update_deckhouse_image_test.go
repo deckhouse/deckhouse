@@ -534,7 +534,6 @@ apiVersion: v1
 data:
   isUpdating: "false"
   notified: "true"
-  version: 1.26.0
 kind: ConfigMap
 metadata:
   name: d8-release-data
@@ -552,23 +551,43 @@ metadata:
 			Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
 			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 		})
+	})
 
-		Context("After next run loop", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-				f.RunHook()
-			})
-			It("IsUpdating flag should be reset", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
-				Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
-				cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
-				Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
-				Expect(cm.Field("data.notified").Bool()).To(BeFalse())
-				Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
-				Expect(f.MetricsCollector.CollectedMetrics()[1].Group).To(Equal("d8_updating"))
-				Expect(f.MetricsCollector.CollectedMetrics()[1].Action).To(Equal("expire"))
-			})
+	Context("Update: Release is deployed", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhousePodYaml + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-26-0
+spec:
+  version: "v1.26.0"
+status:
+  phase: Deployed
+---
+apiVersion: v1
+data:
+  isUpdating: "true"
+  notified: "false"
+kind: ConfigMap
+metadata:
+  name: d8-release-data
+  namespace: d8-system
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("IsUpdating flag should be reset", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r126 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			Expect(r126.Field("status.phase").String()).To(Equal("Deployed"))
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "d8-release-data")
+			Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
+			Expect(cm.Field("data.notified").Bool()).To(BeFalse())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Group).To(Equal("d8_updating"))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Action).To(Equal("expire"))
 		})
 	})
 
