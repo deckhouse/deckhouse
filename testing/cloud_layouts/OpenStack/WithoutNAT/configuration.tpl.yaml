@@ -50,5 +50,3 @@ masterNodeGroup:
     imageName: "debian-11-genericcloud-amd64-20220911-1135"
   volumeTypeMap:
     ru-3a: "fast.ru-3a"
-  zones:
-    - ru-3a
