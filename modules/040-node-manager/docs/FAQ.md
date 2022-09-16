@@ -471,6 +471,7 @@ as described [here](#how-to-change-cri-for-nodegroup).
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
 1. Deckhouse updates nodes in master NodeGroup one by one, so you need to discover which node is updating right now:
+
   ```shell
   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
   ```
@@ -478,7 +479,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
 1. Confirm the disruption of the master node that was discovered on previous step:
 
   ```shell
-  kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
+  kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
   ```
 
 1. Wait for the updated master node to switch to `Ready` state. Repeat steps for the next master node.

@@ -474,6 +474,7 @@ spec:
 При изменении CRI в кластере для master-узлов необходимо выполнить дополнительные шаги:
 
 1. Deckhouse обновляет узлы в master NodeGroup по одному, поэтому необходимо определить, какой узел на данный момент обновляется:
+
   ```shell
   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
   ```
