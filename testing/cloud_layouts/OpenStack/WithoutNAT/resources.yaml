@@ -26,5 +26,6 @@ kind: OpenStackInstanceClass
 metadata:
   name: system
 spec:
+  rootDiskSize: 20
   flavorName: m1.large
-  imageName: debian-11-cloud-amd64
+  imageName: "debian-11-genericcloud-amd64-20220911-1135"
