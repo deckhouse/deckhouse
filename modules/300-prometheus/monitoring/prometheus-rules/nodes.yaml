@@ -1,7 +1,7 @@
 - name: d8.nodes
   rules:
   - alert: K8STooManyNodes
-    expr: |
+    ex123pr: |
       count(kube_node_info) > max(d8_max_nodes_amount_by_pod_cidr) * 0.9
         or
       count(kube_node_info) >= max(d8_max_nodes_amount_by_pod_cidr) - 1

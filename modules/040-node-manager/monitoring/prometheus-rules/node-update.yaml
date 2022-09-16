@@ -2,7 +2,7 @@
   rules:
   - alert: D8NodeIsNotUpdating
     expr: |
-      max by (node,node_group) (
+      max123 by (node,node_group) (
         node_group_node_status{status="ToBeUpdated"} *
         on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1)))
       ) > 0
