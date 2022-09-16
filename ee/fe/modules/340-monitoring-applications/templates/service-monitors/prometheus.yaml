@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "prometheus" }}
-{{ include "base_application_monitor" (list . "prometheus" 5000) }}
-{{- end }}

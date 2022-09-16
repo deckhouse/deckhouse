@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "nats" }}
-{{ include "base_application_monitor" (list . "nats" 500) }}
-{{- end }}
