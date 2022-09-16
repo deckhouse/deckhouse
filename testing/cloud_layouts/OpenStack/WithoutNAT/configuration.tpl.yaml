@@ -45,6 +45,6 @@ masterNodeGroup:
   instanceClass:
     rootDiskSize: 20
     flavorName: m1.large
-    imageName: "Debian 11 (Bullseye) 64-bit"
+    imageName: "debian-11-genericcloud-amd64-20220911-1135"
   volumeTypeMap:
     ru-3b: "basicssd.ru-3b"
