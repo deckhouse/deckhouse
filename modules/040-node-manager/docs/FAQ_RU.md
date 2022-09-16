@@ -445,6 +445,8 @@ spec:
 
 ## Как изменить CRI для всего кластера?
 
+> **Внимание!** Docker deprecated, возможен переход только с Docker на Containerd. Переход с Containerd на Docker запрещён.
+
 Необходимо при помощи утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
 Также возможно выполнить эту операцию при помощи `kubectl patch`. Пример:
@@ -470,47 +472,19 @@ spec:
 > Предпочтительный вариант — сделать multimaster и поменять тип CRI!
 
 При изменении CRI в кластере для master-узлов необходимо выполнить дополнительные шаги:
-* Дополнительные шаги при переходе с Docker на Containerd
 
-  Для каждого master-узла по очереди необходимо будет:
-  1. В случае, если для master NodeGroup `approvalMode` установлен в `Manual`, подтвердить disruption:
-
-     ```shell
-     kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
-     ```
-
-  2. Дождаться перехода обновленного master-узла в `Ready`.
-
-* Дополнительные шаги при переходе с Containerd на Docker
-
-  Перед изменением `defaultCRI` необходимо на каждом master-узле сформировать Docker config:
-
+1. Deckhouse обновляет узлы в master NodeGroup по одному, поэтому необходимо определить, какой узел на данный момент обновляется:
   ```shell
-  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
-  jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
+  kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
   ```
 
-  Для каждого master-узла по очереди необходимо будет:
-  1. В случае, если для master NodeGroup `approvalMode` установлен в `Manual`, подтвердить disruption:
+1. Подтвердить disruption для мастера, полученного на предыдущем шаге:
 
-     ```shell
-     kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
-     ```
+  ```shell
+  kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
+  ```
 
-  2. После обновления CRI и перезагрузки выполнить команду:
-
-     ```shell
-     for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-       docker pull $image
-     done
-     ```
-
-  3. Дождаться перехода обновленного master-узла в `Ready`.
-  4. Удалить на обновленном master-узле Docker config:
-
-     ```shell
-     rm -f ~/.docker/config.json
-     ```
+1. Дождаться перехода обновленного master-узла в `Ready`. Выполнить итерацию для следующего мастера.
 
 ## Как добавить шаг для конфигурации узлов?
 

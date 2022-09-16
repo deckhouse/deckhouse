@@ -442,6 +442,8 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
+> **Note!** Docker is deprecated, CRI can only be switched from Docker to Containerd. It's prohibited to switch from Containerd to Docker.
+
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
@@ -468,47 +470,18 @@ as described [here](#how-to-change-cri-for-nodegroup).
 
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
-* Additional steps for changing from Docker to Containerd
-
-  For each master node in turn, it will be necessary:
-  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
-
-     ```shell
-     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-     ```
-
-  2. Wait for the updated master node to switch to `Ready` state.
-
-* Additional steps for changing from Containerd to Docker
-
-  Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
-
+1. Deckhouse updates nodes in master NodeGroup one by one, so you need to discover which node is updating right now:
   ```shell
-  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
-  jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
+  kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
   ```
 
-  For each master node in turn, it will be necessary:
-  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
+1. Confirm the disruption of the master node that was discovered on previous step:
 
-     ```shell
-     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-     ```
+  ```shell
+  kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
+  ```
 
-  2. After updating the CRI and reboot, run the command:
-
-     ```shell
-     for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-       docker pull $image
-     done
-     ```
-
-  3. Wait for the updated master node to switch to `Ready` state.
-  4. Remove docker config from the updated master node:
-
-     ```shell
-     rm -f ~/.docker/config.json
-     ```
+1. Wait for the updated master node to switch to `Ready` state. Repeat steps for the next master node.
 
 ## How to add node configuration step?
 
