@@ -42,8 +42,8 @@ provider:
   region: 'ru-3'
 masterNodeGroup:
   replicas: 1
-  rootDiskSize: 20
   instanceClass:
+    rootDiskSize: 20
     flavorName: m1.large
     imageName: "Debian 11 (Bullseye) 64-bit"
   volumeTypeMap:
