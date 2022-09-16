@@ -78,7 +78,7 @@ spec:
         - '--collector.ntp.server-is-local'
         - '--collector.processes'
         - '--collector.filesystem.ignored-mount-points'
-        - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)'
+        - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
         - '--collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$'
         - '--collector.netdev.ignored-devices=^(veth.*|[a-f0-9]{15})$'
         - '--collector.filesystem.ignored-fs-types'
