@@ -32,7 +32,7 @@ standard:
     - 8.8.8.8
   internalNetworkCIDR: 192.168.195.0/24
   internalNetworkSecurity: false
-  externalNetworkName: public
+  externalNetworkName: "external-network"
 provider:
   authURL: 'https://api.selvpc.ru/identity/v3'
   domainName: '48348'
@@ -42,8 +42,9 @@ provider:
   region: 'ru-3'
 masterNodeGroup:
   replicas: 1
+  rootDiskSize: 20
   instanceClass:
     flavorName: m1.large
     imageName: "Debian 11 (Bullseye) 64-bit"
   volumeTypeMap:
-    nova: "basicssd.ru-3b"
+    ru-3b: "basicssd.ru-3b"
