@@ -473,6 +473,15 @@ spec:
  rules: [{}]
 ```
 
+## Control the data-plane behavior
+
+### [experimental feature] Prevent istio-proxy from terminating before the main application's connections are closed
+
+By default, isiot-proxy terminates after receiving a SIGTERM signal before terminating established connections and closing sockets open for listening by the main application.
+This behavior can be corrected by setting the following annotation on the application's pod: `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
+Setting this annotation will force sidecar-injector to insert a preStop-hook for istio-proxy, which when receiving the SIGTERM signal will cause istio-proxy to wait for all established connections to be closed and sockets open for listening, but no more than the `terminationGracePeriodSeconds` interval.
+In some cases, this will prevent the application from terminating incorrectly.
+
 ## Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
