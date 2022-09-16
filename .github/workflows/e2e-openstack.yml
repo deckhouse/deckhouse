@@ -2,20 +2,6 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-# Copyright 2022 Flant JSC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 # <template: e2e_workflow_template>
 name: 'e2e: OpenStack'
 on:
@@ -46,7 +32,7 @@ on:
         description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.21 to 1.25.'
+        description: 'A comma-separated list of versions to test. Available: from 1.20 to 1.24.'
         required: false
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
@@ -95,6 +81,7 @@ jobs:
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
+      pr_number: ${{ steps.git_info.outputs.pr_number }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
@@ -111,12 +98,13 @@ jobs:
             let githubBranch = ''
             let githubTag = ''
             let githubSHA = ''
+            let prNumber = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
               // Trigger: workflow_dispatch with pull_request_ref.
               // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+              prNumber = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
 
-              refSlug       = `pr${prNum}`
+              refSlug       = `pr${prNumber}`
               refName       = context.payload.inputs.ci_commit_ref_name
               refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
@@ -134,6 +122,7 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+              prNumber = context.issue.number
             } else {
               // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
               // refName is 'main' or tag name, so slugification is not necessary.
@@ -153,6 +142,7 @@ jobs:
             core.setOutput(`ci_commit_branch`, githubBranch)
             core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setOutput('pr_number', prNumber)
             core.setCommandEcho(false)
 
   # </template: git_info_job>
@@ -163,16 +153,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
 
+      run_docker_1_20: ${{ steps.check.outputs.run_docker_1_20 }}
       run_docker_1_21: ${{ steps.check.outputs.run_docker_1_21 }}
       run_docker_1_22: ${{ steps.check.outputs.run_docker_1_22 }}
       run_docker_1_23: ${{ steps.check.outputs.run_docker_1_23 }}
       run_docker_1_24: ${{ steps.check.outputs.run_docker_1_24 }}
-      run_docker_1_25: ${{ steps.check.outputs.run_docker_1_25 }}
+      run_containerd_1_20: ${{ steps.check.outputs.run_containerd_1_20 }}
       run_containerd_1_21: ${{ steps.check.outputs.run_containerd_1_21 }}
       run_containerd_1_22: ${{ steps.check.outputs.run_containerd_1_22 }}
       run_containerd_1_23: ${{ steps.check.outputs.run_containerd_1_23 }}
       run_containerd_1_24: ${{ steps.check.outputs.run_containerd_1_24 }}
-      run_containerd_1_25: ${{ steps.check.outputs.run_containerd_1_25 }}
     steps:
 
       # <template: checkout_step>
@@ -193,12 +183,446 @@ jobs:
 
 
   # <template: e2e_run_job_template>
+  run_docker_1_20:
+    name: "e2e: OpenStack, Docker, Kubernetes 1.20"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_docker_1_20 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;docker;1.20"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
+    env:
+      PROVIDER: OpenStack
+      CRI: Docker
+      LAYOUT: Standard
+      KUBERNETES_VERSION: "1.20"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'e2e: OpenStack, Docker, Kubernetes 1.20';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
+          MANUAL_RUN: "true"
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI and PROVIDER values are trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+          if [[ "${MANUAL_RUN}" == "false" ]] ; then
+            # for jobs which run multiple providers concurrency (daily e2e, for example)
+            # add provider suffix to prevent "directory already exists" error
+            DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
+          fi
+          # converts to DNS-like (all letters in lower case and replace all dots to dash)
+          # because it prefix will use for k8s resources names (nodes, for example)
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
+
+          echo '::echo::off'
+
+      - name: "Run e2e test: OpenStack/Docker/1.20"
+        id: e2e_test_run
+        timeout-minutes: 60
+        env:
+          PROVIDER: OpenStack
+          CRI: Docker
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.20"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+          "
+
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
+      - name: Cleanup bootstrapped cluster
+        if: success()
+        id: cleanup_cluster
+        timeout-minutes: 60
+        env:
+          PROVIDER: OpenStack
+          CRI: Docker
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.20"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+          "
+
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_docker_1_20
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_openstack_docker_1_20
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'e2e: OpenStack, Docker, Kubernetes 1.20';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
   run_docker_1_21:
     name: "e2e: OpenStack, Docker, Kubernetes 1.21"
     needs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_21 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;docker;1.21"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Docker
@@ -372,16 +796,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Docker/1.21"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -397,6 +826,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -410,6 +844,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -418,7 +868,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -432,9 +884,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -447,9 +919,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -463,6 +939,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -471,7 +952,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -486,13 +969,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_docker_1_21
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_docker_1_21
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -544,6 +1039,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_22 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;docker;1.22"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Docker
@@ -717,16 +1221,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Docker/1.22"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -742,6 +1251,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -755,6 +1269,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -763,7 +1293,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -777,9 +1309,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -792,9 +1344,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -808,6 +1364,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -816,7 +1377,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -831,13 +1394,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_docker_1_22
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_docker_1_22
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -889,6 +1464,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_23 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;docker;1.23"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Docker
@@ -1062,16 +1646,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Docker/1.23"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -1087,6 +1676,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1100,6 +1694,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1108,7 +1718,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1122,9 +1734,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -1137,9 +1769,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1153,6 +1789,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1161,7 +1802,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1176,13 +1819,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_docker_1_23
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_docker_1_23
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1234,6 +1889,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_24 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;docker;1.24"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Docker
@@ -1407,16 +2071,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Docker/1.24"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -1432,6 +2101,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1445,6 +2119,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1453,7 +2143,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1467,9 +2159,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -1482,9 +2194,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1498,6 +2214,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1506,7 +2227,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1521,13 +2244,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_docker_1_24
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_docker_1_24
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1573,17 +2308,26 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_docker_1_25:
-    name: "e2e: OpenStack, Docker, Kubernetes 1.25"
+  run_containerd_1_20:
+    name: "e2e: OpenStack, Containerd, Kubernetes 1.20"
     needs:
       - check_e2e_labels
       - git_info
-    if: needs.check_e2e_labels.outputs.run_docker_1_25 == 'true'
+    if: needs.check_e2e_labels.outputs.run_containerd_1_20 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;containerd;1.20"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
-      CRI: Docker
+      CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.25"
+      KUBERNETES_VERSION: "1.20"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1610,7 +2354,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: OpenStack, Docker, Kubernetes 1.25';
+            const name = 'e2e: OpenStack, Containerd, Kubernetes 1.20';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1752,22 +2496,27 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
-      - name: "Run e2e test: OpenStack/Docker/1.25"
+      - name: "Run e2e test: OpenStack/Containerd/1.20"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
-          CRI: Docker
+          CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.25"
+          KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1777,6 +2526,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1790,6 +2544,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1798,7 +2568,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1812,24 +2584,48 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
-          CRI: Docker
+          CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.25"
+          KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1843,6 +2639,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1851,7 +2652,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -1866,13 +2669,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_containerd_1_20
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output_openstack_docker_1_25
+          name: test_output_openstack_containerd_1_20
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1898,7 +2713,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: OpenStack, Docker, Kubernetes 1.25';
+            const name = 'e2e: OpenStack, Containerd, Kubernetes 1.20';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1924,6 +2739,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;containerd;1.21"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
@@ -2097,16 +2921,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.21"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2122,6 +2951,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2135,6 +2969,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2143,7 +2993,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2157,9 +3009,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2172,9 +3044,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2188,6 +3064,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2196,7 +3077,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2211,13 +3094,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_containerd_1_21
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_containerd_1_21
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2269,6 +3164,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_22 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;containerd;1.22"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
@@ -2442,16 +3346,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.22"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2467,6 +3376,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2480,6 +3394,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2488,7 +3418,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2502,9 +3434,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2517,9 +3469,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2533,6 +3489,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2541,7 +3502,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2556,13 +3519,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_containerd_1_22
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_containerd_1_22
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2614,6 +3589,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_23 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;containerd;1.23"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
@@ -2787,16 +3771,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.23"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2812,6 +3801,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2825,6 +3819,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2833,7 +3843,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2847,9 +3859,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -2862,9 +3894,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2878,6 +3914,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2886,7 +3927,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -2901,13 +3944,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_containerd_1_23
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_containerd_1_23
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2959,6 +4014,15 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_24 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "openstack;Standard;containerd;1.24"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
@@ -3132,16 +4196,21 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.24"
+        id: e2e_test_run
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -3157,6 +4226,11 @@ jobs:
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3170,6 +4244,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3178,7 +4268,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -3192,9 +4284,29 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
+        id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: OpenStack
@@ -3207,9 +4319,13 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3223,6 +4339,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3231,7 +4352,9 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
@@ -3246,13 +4369,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_openstack_containerd_1_24
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_containerd_1_24
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -3297,360 +4432,15 @@ jobs:
       # </template: update_comment_on_finish>
   # </template: e2e_run_job_template>
 
-  # <template: e2e_run_job_template>
-  run_containerd_1_25:
-    name: "e2e: OpenStack, Containerd, Kubernetes 1.25"
-    needs:
-      - check_e2e_labels
-      - git_info
-    if: needs.check_e2e_labels.outputs.run_containerd_1_25 == 'true'
-    env:
-      PROVIDER: OpenStack
-      CRI: Containerd
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.25"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e: OpenStack, Containerd, Kubernetes 1.25';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          REF_FULL: ${{needs.git_info.outputs.ref_full}}
-          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
-          MANUAL_RUN: "true"
-        run: |
-          # Calculate unique prefix for e2e test.
-          # GITHUB_RUN_ID is a unique number for each workflow run.
-          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
-          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          # CRI and PROVIDER values are trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
-          if [[ "${MANUAL_RUN}" == "false" ]] ; then
-            # for jobs which run multiple providers concurrency (daily e2e, for example)
-            # add provider suffix to prevent "directory already exists" error
-            DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
-          fi
-          # converts to DNS-like (all letters in lower case and replace all dots to dash)
-          # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          ## Source: ci_templates/build.yml
-
-          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-            REPO_SUFFIX=
-          fi
-
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-
-          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-            # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-          fi
-
-          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
-          INITIAL_IMAGE_TAG=
-          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          fi
-
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-
-          INSTALL_IMAGE_NAME=
-          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-          fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-          fi
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Run e2e test: OpenStack/Containerd/1.25"
-        timeout-minutes: 60
-        env:
-          PROVIDER: OpenStack
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.25"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-        run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
-
-        # </template: e2e_run_template>
-
-      - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
-        env:
-          PROVIDER: OpenStack
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.25"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Save test results
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: test_output_openstack_containerd_1_25
-          path: |
-            testing/cloud_layouts/
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e: OpenStack, Containerd, Kubernetes 1.25';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","git_info","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_docker_1_25","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24","run_containerd_1_25"]
+    needs: ["started_at","git_info","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_21":"e2e: OpenStack, Containerd, Kubernetes 1.21","run_containerd_1_22":"e2e: OpenStack, Containerd, Kubernetes 1.22","run_containerd_1_23":"e2e: OpenStack, Containerd, Kubernetes 1.23","run_containerd_1_24":"e2e: OpenStack, Containerd, Kubernetes 1.24","run_containerd_1_25":"e2e: OpenStack, Containerd, Kubernetes 1.25","run_docker_1_21":"e2e: OpenStack, Docker, Kubernetes 1.21","run_docker_1_22":"e2e: OpenStack, Docker, Kubernetes 1.22","run_docker_1_23":"e2e: OpenStack, Docker, Kubernetes 1.23","run_docker_1_24":"e2e: OpenStack, Docker, Kubernetes 1.24","run_docker_1_25":"e2e: OpenStack, Docker, Kubernetes 1.25"}
+        {"run_containerd_1_20":"e2e: OpenStack, Containerd, Kubernetes 1.20","run_containerd_1_21":"e2e: OpenStack, Containerd, Kubernetes 1.21","run_containerd_1_22":"e2e: OpenStack, Containerd, Kubernetes 1.22","run_containerd_1_23":"e2e: OpenStack, Containerd, Kubernetes 1.23","run_containerd_1_24":"e2e: OpenStack, Containerd, Kubernetes 1.24","run_docker_1_20":"e2e: OpenStack, Docker, Kubernetes 1.20","run_docker_1_21":"e2e: OpenStack, Docker, Kubernetes 1.21","run_docker_1_22":"e2e: OpenStack, Docker, Kubernetes 1.22","run_docker_1_23":"e2e: OpenStack, Docker, Kubernetes 1.23","run_docker_1_24":"e2e: OpenStack, Docker, Kubernetes 1.24"}
     steps:
 
       # <template: checkout_step>

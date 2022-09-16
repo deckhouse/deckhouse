@@ -31,6 +31,7 @@ git_info:
     ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
     ref_full: ${{ steps.git_info.outputs.ref_full }}
     github_sha: ${{ steps.git_info.outputs.github_sha }}
+    pr_number: ${{ steps.git_info.outputs.pr_number }}
   # Skip the CI for automation PRs, e.g. changelog
   if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
   steps:
@@ -47,12 +48,13 @@ git_info:
           let githubBranch = ''
           let githubTag = ''
           let githubSHA = ''
+          let prNumber = ''
           if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
             // Trigger: workflow_dispatch with pull_request_ref.
             // Extract pull request number from 'refs/pull/<NUM>/merge'
-            const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+            prNumber = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
 
-            refSlug       = `pr${prNum}`
+            refSlug       = `pr${prNumber}`
             refName       = context.payload.inputs.ci_commit_ref_name
             refFull       = context.payload.inputs.pull_request_ref
             githubBranch  = refName
@@ -70,6 +72,7 @@ git_info:
             githubBranch = refName
             githubSHA = context.payload.pull_request.head.sha
             core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            prNumber = context.issue.number
           } else {
             // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
             // refName is 'main' or tag name, so slugification is not necessary.
@@ -89,6 +92,7 @@ git_info:
           core.setOutput(`ci_commit_branch`, githubBranch)
           core.setOutput(`ref_full`, refFull)
           core.setOutput('github_sha', githubSHA)
+          core.setOutput('pr_number', prNumber)
           core.setCommandEcho(false)
 
 # </template: git_info_job>
