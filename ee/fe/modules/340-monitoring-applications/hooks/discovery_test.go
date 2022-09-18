@@ -93,7 +93,7 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 			Expect(f).To(ExecuteSuccessfully())
 			// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
 			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(
-				MatchUnorderedJSON(`["php-fpm", "winword", "test", "nats"]`))
+				MatchUnorderedJSON(`["php-fpm", "nats"]`))
 		})
 	})
 
@@ -108,7 +108,7 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 		It("monitoringApplications.internal.enabledApplicationsSummary must be unique sum of two lists", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(
-				MatchUnorderedJSON(`["test","nats","redis"]`))
+				MatchUnorderedJSON(`["nats","redis"]`))
 		})
 	})
 

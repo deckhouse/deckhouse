@@ -17,6 +17,27 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
+// TODO(nabokihms): think about how to avoid hardcode there
+var allowedApplications = set.New(
+	"consul",
+	"elasticsearch",
+	"etcd3",
+	"fluentd",
+	"memcached",
+	"minio",
+	"mongodb",
+	"nats",
+	"nginx",
+	"php-fpm",
+	"prometheus",
+	"rabbitmq",
+	"redis",
+	"sidekiq",
+	"trickster",
+	"grafana",
+	"uwsgi",
+)
+
 func nameFromService(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
 	err := sdk.FromUnstructured(obj, service)
@@ -82,6 +103,8 @@ func discoverApps(input *go_hook.HookInput) error {
 	enabledApps.
 		AddSet(set.NewFromSnapshot(input.Snapshots["service"])).
 		AddSet(set.NewFromValues(input.Values, enabledApplicationsPath))
+
+	enabledApps = enabledApps.Intersection(allowedApplications)
 
 	input.Values.Set(enabledApplicationsSummaryPath, enabledApps.Slice())
 	return nil
