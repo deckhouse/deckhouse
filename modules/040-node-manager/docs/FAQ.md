@@ -15,8 +15,8 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
    kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
    ```
 
-3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
-   - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
+3. Before configuring Kubernetes on the node, make sure you have performed all the necessary actions for the node to work correctly in the cluster:
+   - Added all the necessary mount points (NFS, Ceph, etc.) to `/etc/fstab`;
    - Installed the suitable `ceph-common` version on the node as well as other packages;
    - Configured the network in the cluster;
 4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
@@ -129,7 +129,7 @@ To take a node out of `node-manager` control, you need to:
 
 ## How to clean up a node for adding to the cluster?
 
-This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
+This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
 1. Delete the node from the Kubernetes cluster:
 
@@ -271,7 +271,7 @@ Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource f
 
 Changing the `instancePrefix` parameter in the Deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones.
 
-During the disruption update, an evict of the pods from the node is performed. If any pod failed to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
+During the disruption update, an evict of the pods from the node is performed. If any pod failes to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
 
 ## How do I redeploy ephemeral machines in the cloud with a new configuration?
 
@@ -442,6 +442,8 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
+> **Note!** Docker is deprecated, CRI can only be switched from Docker to Containerd. It's prohibited to switch from Containerd to Docker.
+
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
@@ -468,47 +470,19 @@ as described [here](#how-to-change-cri-for-nodegroup).
 
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
-* Additional steps for changing from Docker to Containerd
+1. Deckhouse updates nodes in master NodeGroup one by one, so you need to discover which node is updating right now:
 
-  For each master node in turn, it will be necessary:
-  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
+   ```shell
+   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   ```
 
-     ```shell
-     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-     ```
+1. Confirm the disruption of the master node that was discovered in the previous step:
 
-  2. Wait for the updated master node to switch to `Ready` state.
+   ```shell
+   kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+   ```
 
-* Additional steps for changing from Containerd to Docker
-
-  Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
-
-  ```shell
-  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
-  jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
-  ```
-
-  For each master node in turn, it will be necessary:
-  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
-
-     ```shell
-     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-     ```
-
-  2. After updating the CRI and reboot, run the command:
-
-     ```shell
-     for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-       docker pull $image
-     done
-     ```
-
-  3. Wait for the updated master node to switch to `Ready` state.
-  4. Remove docker config from the updated master node:
-
-     ```shell
-     rm -f ~/.docker/config.json
-     ```
+1. Wait for the updated master node to switch to `Ready` state. Repeat steps for the next master node.
 
 ## How to add node configuration step?
 
