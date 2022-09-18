@@ -1561,7 +1561,7 @@ jobs:
     env:
       PROVIDER: OpenStack
       CRI: Containerd
-      LAYOUT: WithoutNAT
+      LAYOUT: Standard
       KUBERNETES_VERSION: "1.21"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -1731,7 +1731,7 @@ jobs:
         env:
           PROVIDER: OpenStack
           CRI: Containerd
-          LAYOUT: WithoutNAT
+          LAYOUT: Standard
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
@@ -1783,7 +1783,7 @@ jobs:
         env:
           PROVIDER: OpenStack
           CRI: Containerd
-          LAYOUT: WithoutNAT
+          LAYOUT: Standard
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
@@ -1872,7 +1872,7 @@ jobs:
             "labels": {
               "cri": "Containerd",
               "kube_version": "1.21",
-              "layout": "WithoutNAT",
+              "layout": "Standard",
               "provider": "OpenStack",
               "trigger": "CloudLayoutTestFailed",
 

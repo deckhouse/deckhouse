@@ -5,6 +5,9 @@
 {!{- if eq $ctx.provider "azure"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
+{!{- if eq $ctx.provider "openstack"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
