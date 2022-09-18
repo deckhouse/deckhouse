@@ -476,7 +476,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
    kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
-1. Confirm the disruption of the master node that was discovered on previous step:
+1. Confirm the disruption of the master node that was discovered in the previous step:
 
    ```shell
    kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
