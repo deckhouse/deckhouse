@@ -58,6 +58,7 @@
  - **[monitoring-kubernetes]** Check current `node_memory_SUnreclaim_bytes` in the `NodeSUnreclaimBytesUsageHigh` alert. [#2510](https://github.com/deckhouse/deckhouse/pull/2510)
  - **[monitoring-kubernetes]** Better way to ignore kubelet mounts for node-exporter. [#2427](https://github.com/deckhouse/deckhouse/pull/2427)
  - **[monitoring-kubernetes]** Change steppedLine to false for CPU panels and add sorting. [#2371](https://github.com/deckhouse/deckhouse/pull/2371)
+ - **[node-manager]** Updated govmomi to the latest version so that VMs with Networks under Distributed Virtual Switch can be created. [#2444](https://github.com/deckhouse/deckhouse/pull/2444)
  - **[node-manager]** Fail early-oom gracefully with a helpful log message and a low-severity alert if PSI subsystem is unavailable. [#2451](https://github.com/deckhouse/deckhouse/pull/2451)
  - **[node-manager]** Fixed a bug with spot Machine deletion in Yandex.Cloud. It now correctly deletes machines in 15 minute intervals. [#2394](https://github.com/deckhouse/deckhouse/pull/2394)
  - **[node-manager]** Do not drain single-master and single standalone nodes where Deckhouse works with automatic approve mode for disruption. [#2386](https://github.com/deckhouse/deckhouse/pull/2386)
@@ -87,5 +88,6 @@
  - **[log-shipper]** Update Vector to 0.23 [#2192](https://github.com/deckhouse/deckhouse/pull/2192)
  - **[monitoring-deckhouse]** Separate monitoring rules from the `deckhouse` module to handle CRDs creation order. [#2412](https://github.com/deckhouse/deckhouse/pull/2412)
  - **[monitoring-kubernetes]** Bump `kube-state-metrics` to version `2.6.0`. [#2291](https://github.com/deckhouse/deckhouse/pull/2291)
+ - **[node-manager]** Clarify master NodeGroup cri change. [#2525](https://github.com/deckhouse/deckhouse/pull/2525)
  - **[priority-class]** Changed the module order from 010 to 001. [#2412](https://github.com/deckhouse/deckhouse/pull/2412)
 
