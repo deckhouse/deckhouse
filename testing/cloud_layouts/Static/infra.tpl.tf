@@ -1,3 +1,15 @@
+variable "az_zone" {
+  default = "ru-3a"
+}
+
+variable "region" {
+  default = "ru-3"
+}
+
+variable "volume_type" {
+  default = "fast.ru-3a"
+}
+
 terraform {
   required_providers {
     openstack = {
@@ -13,7 +25,7 @@ provider "openstack" {
   tenant_id = "80625ad45e604fbe86679e63b704f3b8"
   user_name = "deckhouse-e2e"
   password = "${OS_PASSWORD}"
-  region = "ru-3"
+  region = var.region
 }
 
 data "openstack_networking_network_v2" "external" {
@@ -94,7 +106,7 @@ resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
-  availability_zone = "ru-3a"
+  availability_zone = var.az_zone
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
@@ -126,7 +138,7 @@ resource "openstack_compute_instance_v2" "system" {
   name = "candi-${PREFIX}-system-0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
-  availability_zone = "ru-3a"
+  availability_zone = var.az_zone
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
