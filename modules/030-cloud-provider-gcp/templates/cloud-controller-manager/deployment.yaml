@@ -5,7 +5,7 @@ memory: 50Mi
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- if hasKey .Values.global.modulesImages.tags.cloudProviderGcp $ccmImageName }}
+{{- if $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -75,7 +75,7 @@ spec:
       containers:
         - name: gcp-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ include "helm_lib_module_image" (list . $ccmImageName) }}
+          image: {{ $ccmImage }}
           command:
           - /usr/local/bin/cloud-controller-manager
           - --leader-elect=true

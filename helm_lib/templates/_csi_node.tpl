@@ -23,12 +23,8 @@ memory: 25Mi
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
-
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
-  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
-
-  {{- if $driverRegistrarImageTag }}
+  {{- if $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
     {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
