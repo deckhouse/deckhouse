@@ -8,16 +8,16 @@ terraform {
 }
 
 provider "openstack" {
-  auth_url = "https://cloud.flant.com/v3/"
-  domain_name = "Default"
-  tenant_name = "d8-tests"
-  user_name = "e2e-tests"
+  auth_url = "https://api.selvpc.ru/identity/v3"
+  domain_name = "48348"
+  tenant_id = "80625ad45e604fbe86679e63b704f3b8"
+  user_name = "deckhouse-e2e"
   password = "${OS_PASSWORD}"
-  region = "HetznerFinland"
+  region = "ru-3"
 }
 
 data "openstack_networking_network_v2" "external" {
-  name = "public"
+  name = "external-network"
 }
 
 resource "openstack_networking_network_v2" "internal" {
@@ -77,7 +77,7 @@ resource "openstack_compute_instance_v2" "master" {
   image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
-  availability_zone = "nova"
+  availability_zone = "ru-3a"
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
@@ -90,7 +90,7 @@ resource "openstack_compute_instance_v2" "system" {
   image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
-  availability_zone = "nova"
+  availability_zone = "ru-3a"
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
