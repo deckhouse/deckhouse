@@ -72,9 +72,14 @@ resource "openstack_compute_keypair_v2" "ssh" {
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKTJfR8h+skMYjXHBv/nJN6J2eBvQlebnhfZngxTvHYYxl0XeRu3KEz5v23gIidT21o9x0+tD4b2PcyZ24o64GwnF/oFnQ9mYBJDRisZNdXYPadTp/RafQ0qNUX/6h8vZYlSPM77dhW7Oyf6hcbaniAmOD30bO89UM//VHbllGgfhlIbU382/EnPOfGvAHReATADBBHmxxtTCLbu48rN35DlOtMgPob3ZwOsJI3keRrIZOf5qxeF3VB0Ox4inoR6PUzWMFLCJyIMp7hzY+JLakO4dqfvRJZjgTZHQUvjDs+aeUcH8tD4Wd5NDzmxnHLtJup0lkHkqgjo6vqWIcQeDXuXsk3+YGw0PwMpwO2HMVPs2SnfT6cZ+Mo6Dmq0t1EjtSBXLMe5C5aac5w6NrXuypRQDoce7p3uZP2TVsxmpyvkd6RyiWr+wuOOB3h/k8q+kRh4LKzivJMEkZoZeCxkJiIWDknxEAU1sl25W4hEU="
 }
 
+data "openstack_images_image_v2" "orel_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "orel-vanilla-2.12.43-cloud-mg6.5.0"
+}
+
 resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
-  image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
   availability_zone = "ru-3a"
@@ -83,17 +88,56 @@ resource "openstack_compute_instance_v2" "master" {
     port = openstack_networking_port_v2.master_internal_without_security.id
   }
 
+  resource "openstack_blockstorage_volume_v3" "master" {
+    name                 = "volume-for-master"
+    size                 = "20"
+    image_id             = data.openstack_images_image_v2.orel_image.id
+    volume_type          = var.volume_type
+    availability_zone    = var.az_zone
+    enable_online_resize = true
+    lifecycle {
+      ignore_changes = [image_id]
+    }
+  }
+
+  block_device {
+    uuid             = openstack_blockstorage_volume_v3.master.id
+    source_type      = "volume"
+    destination_type = "volume"
+    boot_index       = 0
+    delete_on_termination = true
+  }
+
 }
 
 resource "openstack_compute_instance_v2" "system" {
   name = "candi-${PREFIX}-system-0"
-  image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
   availability_zone = "ru-3a"
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
+  }
+
+  resource "openstack_blockstorage_volume_v3" "system" {
+    name                 = "volume-for-system"
+    size                 = "20"
+    image_id             = data.openstack_images_image_v2.orel_image.id
+    volume_type          = var.volume_type
+    availability_zone    = var.az_zone
+    enable_online_resize = true
+    lifecycle {
+      ignore_changes = [image_id]
+    }
+  }
+
+  block_device {
+    uuid             = openstack_blockstorage_volume_v3.system.id
+    source_type      = "volume"
+    destination_type = "volume"
+    boot_index       = 0
+    delete_on_termination = true
   }
 
 }
