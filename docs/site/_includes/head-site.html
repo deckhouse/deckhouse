@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300;1,400;1,600;1,700;1,800&family=Source+Code+Pro:wght@200;300;400;500;600;700;900&display=swap" rel="stylesheet">
 
 <!-- styles -->
-<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+{% asset slick.css %}
 {% asset normalize.css %}
 {% asset syntax.css %}
 {% asset site.css %}
@@ -33,13 +33,13 @@
     <script src="https://embed.small.chat/T037FSPS9C01V5672DPV.js" async></script>
 {%- endif %}
 {%- endunless %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
-<script src="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+{% asset jquery.min.js %}
+{% asset jquery.cookie.min.js %}
+{% asset bootstrap.min.js %}
+{% asset slick.min.js %}
 
-<script src="https://unpkg.com/@popperjs/core@2"></script>
-<script src="https://unpkg.com/tippy.js@6"></script>
+{% asset popper.min.js %}
+{% asset tippy-bundle.umd.min.js %}
 <script>
   $(document).ready(function() {
     tippy('[title]', {
@@ -53,7 +53,6 @@
 </script>
 
 {% asset jquery.navgoco.min.js %}
-{% asset bootstrap.min.js %}
 {% asset anchor.min.js %}
 {% asset toc.js %}
 {% asset details.js %}
@@ -105,8 +104,8 @@
 </script>
 {% if page.datatable == true %}
 <!-- Include the standard DataTables bits -->
-<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
-<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
+{% asset jquery.dataTables.css %}
+{% asset jquery.dataTables.min.js %}
 <!-- First, this walks through the tables that occur between ...-begin
      and ...-end and add the "datatable" class to them.
      Then it invokes DataTable's standard initializer
@@ -145,8 +144,8 @@
 <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 <!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+{% asset html5shiv.js %}
+{% asset respond.min.js %}
 <![endif]-->
 
  <script type="text/javascript">
