@@ -12,6 +12,7 @@
       <ul class="header__navigation">
           {% for entry in topnav %}
               {% for item in entry.items %}
+              {%- if site.mode == 'local' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
               {%- assign item_url_parts = item.url | split: '/' -%}
               {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
               <li class="header__navigation-item
@@ -22,7 +23,7 @@
                   {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
                   {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
                   {%- if item.items %} data-proofer-ignore{% endif %}>
-                  <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title %}{{ item.title }}{% else %}{{ item.title }}{% endif -%}</a>
+                  <a {% if item.external_url %}href="{{ item.external_url }}" target="_blank"{% else %}href="/{{ page.lang }}{{ item.url }}"{% endif %}>{{ item.title }}</a>
 
                   {% if item.items %}
                     <div class="submenu-container">
