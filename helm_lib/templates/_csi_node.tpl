@@ -26,7 +26,7 @@ memory: 25Mi
 
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
-  {{- $driverRegistrarImage := include "helm_lib_module_common_image" (list $context $driverRegistrarImageName) }}
+  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
 
   {{- if $driverRegistrarImageTag }}
     {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") }}

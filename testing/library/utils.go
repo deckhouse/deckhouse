@@ -19,10 +19,8 @@ package library
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -70,10 +68,7 @@ func GetModulesImagesTags(modulePath string) (map[string]map[string]string, erro
 
 	var err error
 	if search {
-		modulesTags, err = getModulesImagesTagsFromWerfConfig()
-		if err != nil {
-			return nil, err
-		}
+		modulesTags = DefaultImagesTags
 	} else {
 		modulesTags, err = getModulesImagesTagsFromLocalPath(modulePath)
 		if err != nil {
@@ -82,62 +77,6 @@ func GetModulesImagesTags(modulePath string) (map[string]map[string]string, erro
 	}
 
 	return modulesTags, nil
-}
-
-type Spec struct {
-	Image        string       `yaml:"image"`
-	Dependencies []Dependency `yaml:"dependencies"`
-}
-
-type Dependency struct {
-	Imports []Import `yaml:"imports"`
-}
-
-type Import struct {
-	TargetEnv string `yaml:"targetEnv"`
-}
-
-func getModulesImagesTagsFromWerfConfig() (map[string]map[string]string, error) {
-	tags := make(map[string]map[string]string)
-
-	cmd := exec.Command("go", "run", "main.go", "-dir", "/deckhouse", "-env", "FE")
-	cmd.Dir = "/deckhouse/tools/fakewerf"
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	a := strings.NewReader(string(out))
-	d := yaml.NewDecoder(a)
-	for {
-		spec := new(Spec)
-		err := d.Decode(&spec)
-		if spec == nil {
-			continue
-		}
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if spec.Image == "images-tags" {
-			for _, dependency := range spec.Dependencies {
-				for _, i := range dependency.Imports {
-					s := strings.Split(i.TargetEnv, "_")
-					module := s[3]
-					tag := s[4]
-					if tags[module] == nil {
-						tags[module] = make(map[string]string)
-					}
-					tags[module][tag] = "imageHash"
-				}
-			}
-			break
-		}
-	}
-
-	return tags, nil
 }
 
 func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]map[string]string, error) {

@@ -62,19 +62,19 @@ memory: 50Mi
 
   {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $provisionerImageTag := index $context.Values.global.modulesImages.tags.common $provisionerImageName }}
-  {{- $provisionerImage := include "helm_lib_module_common_image" (list $context $provisionerImageName) }}
+  {{- $provisionerImage := include "helm_lib_module_common_image_no_fail" (list $context $provisionerImageName) }}
 
   {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $attacherImage := include "helm_lib_module_common_image" (list $context $attacherImageName) }}
+  {{- $attacherImage := include "helm_lib_module_common_image_no_fail" (list $context $attacherImageName) }}
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $resizerImage := include "helm_lib_module_common_image" (list $context $resizerImageName) }}
+  {{- $resizerImage := include "helm_lib_module_common_image_no_fail" (list $context $resizerImageName) }}
 
   {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $snapshotterImage := include "helm_lib_module_common_image" (list $context $snapshotterImageName) }}
+  {{- $snapshotterImage := include "helm_lib_module_common_image_no_fail" (list $context $snapshotterImageName) }}
 
   {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $livenessprobeImage := include "helm_lib_module_common_image" (list $context $livenessprobeImageName) }}
+  {{- $livenessprobeImage := include "helm_lib_module_common_image_no_fail" (list $context $livenessprobeImageName) }}
 
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
