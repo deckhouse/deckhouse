@@ -51,7 +51,7 @@ func marshalChartYaml(object storage.StoreObject) (marshal []byte, hash string, 
 	if err != nil {
 		return
 	}
-	hash = string(newSHA256(marshal))
+	hash = newSHA256(marshal)
 	return
 }
 
@@ -67,11 +67,7 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 	}
 
 	err = renderedFile.Close()
-	if err != nil {
-		return renderedFile.Name(), err
-	}
-
-	return renderedFile.Name(), nil
+	return renderedFile.Name(), err
 }
 
 func checkRuleFile(path string) error {
@@ -83,9 +79,8 @@ func checkRuleFile(path string) error {
 	return nil
 }
 
-func newSHA256(data []byte) []byte {
-	hash := sha256.Sum256(data)
-	return hash[:]
+func newSHA256(data []byte) string {
+	return string(sha256.Sum256(data)[:])
 }
 
 func createPromtoolError(m utils.Module, errMsg string) errors.LintRuleError {
