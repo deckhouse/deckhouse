@@ -78,6 +78,18 @@ data "openstack_images_image_v2" "orel_image" {
   name        = "orel-vanilla-2.12.43-cloud-mg6.5.0"
 }
 
+resource "openstack_blockstorage_volume_v3" "master" {
+  name                 = "candi-${PREFIX}-master-0"
+  size                 = "20"
+  image_id             = data.openstack_images_image_v2.orel_image.id
+  volume_type          = var.volume_type
+  availability_zone    = var.az_zone
+  enable_online_resize = true
+  lifecycle {
+    ignore_changes = [image_id]
+  }
+}
+
 resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
   flavor_name = "m1.large"
@@ -86,18 +98,6 @@ resource "openstack_compute_instance_v2" "master" {
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
-  }
-
-  resource "openstack_blockstorage_volume_v3" "master" {
-    name                 = "volume-for-master"
-    size                 = "20"
-    image_id             = data.openstack_images_image_v2.orel_image.id
-    volume_type          = var.volume_type
-    availability_zone    = var.az_zone
-    enable_online_resize = true
-    lifecycle {
-      ignore_changes = [image_id]
-    }
   }
 
   block_device {
@@ -110,6 +110,18 @@ resource "openstack_compute_instance_v2" "master" {
 
 }
 
+resource "openstack_blockstorage_volume_v3" "system" {
+  name                 = "candi-${PREFIX}-system-0"
+  size                 = "20"
+  image_id             = data.openstack_images_image_v2.orel_image.id
+  volume_type          = var.volume_type
+  availability_zone    = var.az_zone
+  enable_online_resize = true
+  lifecycle {
+    ignore_changes = [image_id]
+  }
+}
+
 resource "openstack_compute_instance_v2" "system" {
   name = "candi-${PREFIX}-system-0"
   flavor_name = "m1.large"
@@ -118,18 +130,6 @@ resource "openstack_compute_instance_v2" "system" {
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
-  }
-
-  resource "openstack_blockstorage_volume_v3" "system" {
-    name                 = "volume-for-system"
-    size                 = "20"
-    image_id             = data.openstack_images_image_v2.orel_image.id
-    volume_type          = var.volume_type
-    availability_zone    = var.az_zone
-    enable_online_resize = true
-    lifecycle {
-      ignore_changes = [image_id]
-    }
   }
 
   block_device {
