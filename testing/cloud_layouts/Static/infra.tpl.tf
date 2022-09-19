@@ -10,6 +10,10 @@ variable "volume_type" {
   default = "fast.ru-3a"
 }
 
+variable "flavor_name" {
+  default = "m1.large"
+}
+
 terraform {
   required_providers {
     openstack = {
@@ -104,7 +108,7 @@ resource "openstack_blockstorage_volume_v3" "master" {
 
 resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
-  flavor_name = "m1.large"
+  flavor_name = var.flavor_name
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
 
@@ -136,7 +140,7 @@ resource "openstack_blockstorage_volume_v3" "system" {
 
 resource "openstack_compute_instance_v2" "system" {
   name = "candi-${PREFIX}-system-0"
-  flavor_name = "m1.large"
+  flavor_name = var.flavor_name
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
 
