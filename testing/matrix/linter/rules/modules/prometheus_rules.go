@@ -47,8 +47,8 @@ var rulesCache = rulesCacheStruct{
 }
 
 func promtoolAvailable() bool {
-	info, _ := os.Stat(promtoolPath)
-	return info != nil && (info.Mode().Perm()&0111 != 0)
+	info, err := os.Stat(promtoolPath)
+	return err == nil && (info.Mode().Perm()&0111 != 0)
 }
 
 func marshalChartYaml(object storage.StoreObject) ([]byte, string, error) {
