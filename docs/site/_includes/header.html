@@ -23,7 +23,7 @@
                   {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
                   {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
                   {%- if item.items %} data-proofer-ignore{% endif %}>
-                  <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title %}{{ item.title }}{% else %}{{ item.title }}{% endif -%}</a>
+                  <a {% if item.external_url %}href="{{ item.external_url }}" target="_blank"{% else %}href="/{{ page.lang }}{{ item.url }}"{% endif %}>{{ item.title }}</a>
 
                   {% if item.items %}
                     <div class="submenu-container">
