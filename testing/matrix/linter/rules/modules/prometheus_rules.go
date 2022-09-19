@@ -34,25 +34,29 @@ type checkResult struct {
 	errMsg  string
 }
 
+type rulesCacheStruct struct {
+	cache map[string]checkResult
+	mu    sync.RWMutex
+}
+
 const promtoolPath = "/deckhouse/bin/promtool"
 
-var (
-	rulesCache   = map[string]checkResult{}
-	rulesCacheMu = sync.RWMutex{}
-)
+var rulesCache = rulesCacheStruct{
+	cache: map[string]checkResult{},
+	mu:    sync.RWMutex{},
+}
 
 func promtoolAvailable() bool {
 	info, _ := os.Stat(promtoolPath)
 	return info != nil && (info.Mode().Perm()&0111 != 0)
 }
 
-func marshalChartYaml(object storage.StoreObject) (marshal []byte, hash string, err error) {
-	marshal, err = yaml.Marshal(object.Unstructured.Object["spec"])
+func marshalChartYaml(object storage.StoreObject) ([]byte, string, error) {
+	marshal, err := yaml.Marshal(object.Unstructured.Object["spec"])
 	if err != nil {
-		return
+		return nil, "", err
 	}
-	hash = newSHA256(marshal)
-	return
+	return marshal, newSHA256(marshal), nil
 }
 
 func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path string, err error) {
@@ -80,7 +84,8 @@ func checkRuleFile(path string) error {
 }
 
 func newSHA256(data []byte) string {
-	return string(sha256.Sum256(data)[:])
+	hash := sha256.Sum256(data)
+	return string(hash[:])
 }
 
 func createPromtoolError(m utils.Module, errMsg string) errors.LintRuleError {
@@ -114,9 +119,9 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 			)
 		}
 
-		rulesCacheMu.RLock()
-		res, ok := rulesCache[hash]
-		rulesCacheMu.RUnlock()
+		rulesCache.mu.RLock()
+		res, ok := rulesCache.cache[hash]
+		rulesCache.mu.RUnlock()
 		if ok {
 			if !res.success {
 				return createPromtoolError(m, res.errMsg)
@@ -141,17 +146,17 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 		err = checkRuleFile(path)
 		if err != nil {
 			errorMessage := string(err.(*exec.ExitError).Stderr)
-			rulesCacheMu.Lock()
-			rulesCache[hash] = checkResult{
+			rulesCache.mu.Lock()
+			rulesCache.cache[hash] = checkResult{
 				success: false,
 				errMsg:  errorMessage,
 			}
-			rulesCacheMu.Unlock()
+			rulesCache.mu.Unlock()
 			return createPromtoolError(m, errorMessage)
 		}
-		rulesCacheMu.Lock()
-		rulesCache[hash] = checkResult{success: true}
-		rulesCacheMu.Unlock()
+		rulesCache.mu.Lock()
+		rulesCache.cache[hash] = checkResult{success: true}
+		rulesCache.mu.Unlock()
 	}
 	return errors.EmptyRuleError
 }
