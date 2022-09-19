@@ -17,5 +17,8 @@
       plk_labels_as_annotations: "pod"
       summary: >
         The {{`{{$labels.pod}}`}} Pod has detected unavailable PSI subsystem.
-        Check logs for additional information: `kubectl -n d8-cloud-instance-manager logs {{`{{$labels.pod}}`}}`
+        Check logs for additional information:
+        ```
+        kubectl -n d8-cloud-instance-manager logs {{`{{$labels.pod}}`}} -c psi-monitor
+        ```
 {{- end }}
