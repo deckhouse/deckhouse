@@ -41,61 +41,6 @@ const (
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        alpine: be0a73850874a7000b223b461e37c32263e95574d379d4ea3305006e-1624978147531
-        csiExternalAttacher119: 9b875cd5df6c7c8a27d5ae6f6fa4b90e05797857c2a2d434d90fa384-1624991865774
-        csiExternalAttacher120: 53055872b801779298431ef159edc41c3270059750e41ad7ce547815-1624991942422
-        csiExternalAttacher121: f553f9fe2efa329f1df967dc1ad2433db463af49675cbabeddc2eb54-1644311199940
-        csiExternalAttacher122: f553f9fe2efa329f1df967dc1ad2433db463af49675cbabeddc2eb54-1644311199940
-        csiExternalProvisioner119: a71ffdcb6ea573ecc44d7cbe22ba713331e92e08c8768023ecd62be0-1624991501421
-        csiExternalProvisioner120: 7c94147745b7f3b3bc85cf0466e4a9d47027064cb95e0a776638d88c-1624991909639
-        csiExternalProvisioner121: 2a208c02726d0fe0dad5298b2185661280664f4180968293e897cebd-1644311194495
-        csiExternalProvisioner122: 2a208c02726d0fe0dad5298b2185661280664f4180968293e897cebd-1644311194495
-        csiExternalResizer119: 2267cc7565514b5968ec95c99c3aca19d1930d40e2e34845f7723774-1624992194047
-        csiExternalResizer120: 217459a0507b191a1744974c564df5e7de5046e5711bbafcf341a978-1624992095833
-        csiExternalResizer121: e21da1d5629d422962e8dc7fce05c2a0777bc53fb7088bb71bff91b8-1644311196688
-        csiExternalResizer122: e21da1d5629d422962e8dc7fce05c2a0777bc53fb7088bb71bff91b8-1644311196688
-        csiExternalSnapshotter121: d554e018513a74708418c139ba57aeb75f782209d86980a729a4d97a-1644311215309
-        csiExternalSnapshotter122: d554e018513a74708418c139ba57aeb75f782209d86980a729a4d97a-1644311215309
-        csiLivenessprobe121: cb71a0e242c71416ee53e4e02fe0785d47c4147ee4df8bdcf0d2dfcc-1644311213440
-        csiLivenessprobe122: cb71a0e242c71416ee53e4e02fe0785d47c4147ee4df8bdcf0d2dfcc-1644311213440
-        csiNodeDriverRegistrar119: ecd5587d4fa58d22f91609028527b03da2f7ab9ed3c190ef90179c4b-1624991634159
-        csiNodeDriverRegistrar120: 29bdbc548dd7bcab6d9cbc6156afd70870fe6818e9ea48d3a9a7eccd-1624991527573
-        csiNodeDriverRegistrar121: 121aea9e665ab86dc8a83e3198acbf6a76c894c1612003c808405fb6-1638785322286
-        csiNodeDriverRegistrar122: 121aea9e665ab86dc8a83e3198acbf6a76c894c1612003c808405fb6-1638785322286
-        kubeRbacProxy: a4506c2aa962611cf1858c774129d2a4f233502ecc376929aa97b9f5-1639403210069
-        pause: 47e1a07baefaaa885a306bb24546c929b910fe9cffffd07218b66c0a-1624979682719
-      controlPlaneManager:
-        controlPlaneManager: 1f38a0fe42ff3bf0f5f9f8ad64b4f40222cd4d61b3baef6f4bafedcc-1640185889591
-        etcd: c47d237beff7354f150a2cd3aec929128c234b33b4b6fe938d5ab72a-1638791306829
-        kubeApiserver119: 06b5098beceeac658d5341c5d80e0db913f78d07eb00ab30a5f0ebb4-1637671290445
-        kubeApiserver120: a1a8cd4e196d3b911064a6116d81597766d93c26cbe341b182c5fe40-1642136416005
-        kubeApiserver121: 362117904594fa9d53419d2b15147b86f267a476101d23433b2777dc-1642136422488
-        kubeApiserver122: 1f4a61dacd707406cc3910850d25b9bef7ca1af7a2ff0d855c711a41-1642136422073
-        kubeApiserverHealthcheck: b02dbae788d175642cac34c8756f293ef88458eb37d9223cb78c8f50-1633690869147
-        kubeControllerManager119: 137373b5a99ed2521938721cb23ae3afd3e0a962511cd02617c7e5f2-1637671233259
-        kubeControllerManager120: 0a59b00c342dc65bebde55398f5ad6d5bbbe7296a883bc49046b227a-1642136414827
-        kubeControllerManager121: 072aaf59b94d041723cb7d9f950487860d1596066afd0eada8ff33a5-1642136450138
-        kubeControllerManager122: ddb9e578e919ae6ab3092319694bb982ff0b04a650f1386bb92cbd2a-1642136474454
-        kubeScheduler119: 1461eb1f0c2bfe9fb4fc5dd385cae767647a5b34930fb8833e2c61d3-1637671257076
-        kubeScheduler120: f4d3608314eadfffae29f014e06309459e530694b2207ca2719d85da-1637671227093
-        kubeScheduler121: 681c4418478128757e7228e8bfc63aebd02c9ae86ce608aaebf9a97e-1637671225838
-        kubeScheduler122: d09a77dd6e222aa0bddd0ca86bb4a5c3a607726185a5e383af5010a5-1638785328832
-      linstor:
-        drbdDriverLoader: 21bc3c1a59277950aded33134152c200391b57ade099fa4e7423961d-1644342326034
-        drbdReactor: 2341ed461153707d8149b6d33d32579efe2fbc3c052713053ea451f0-1644308732079
-        linstorCsi: 83155bc6b3ea547f2cfc9ed392fcb0166e4abc5a5dd2eba933d308f9-1644308320933
-        linstorSchedulerExtender: 81f00b8ff68814e12b378b57f990acd399482ecd6aba5a0e1679ccbf-1644280748097
-        linstorServer: 68396b91baf9d4d939ad9b519a978e2e9481eaff352113b6e6007b3d-1644311161910
-        linstorPoolsImporter: 06c10d03185040625eb4e27044e6d150aea7d98575b60d105d12e61f-1645450496557
-        linstorAffinityController: 06c10d03185040625eb4e27044e6d150aea7d98575b60d105d12e61f-1645450496557
-        piraeusHaController: 5714ab9fe2b64540bd84514baf06bd8d9a2f63d7e4613ea37e5a8d58-1644280738598
-        piraeusOperator: 8ce1396af1abafd7eee5ba256b8b8ba50ab4c2314af8400446550617-1644308310060
-        spaas: 2a30d9bbcd62f517d5c48510f7022b20235901aaf507a5336d6c7d5c-1654870522353
 `
 	moduleValues = `
   internal:
@@ -237,6 +182,7 @@ var _ = Describe("Module :: linstor :: helm template ::", func() {
 	Context("Standard setup with SSL", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("linstor", moduleValues)
 			f.HelmRender()
 		})

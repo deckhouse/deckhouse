@@ -41,15 +41,6 @@ const (
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        kubeRbacProxy: a4506c2aa962611cf1858c774129d2a4f233502ecc376929aa97b9f5-1639403210069
-      snapshotController:
-        snapshotController: c5ea7eea9e0dc2984e8f0f7164961bc3a7b35e9004f5c9163f8673d9-1647642694163
-        snapshotValidationWebhook: 97f79f3229931b2503a6d136ca020f5dec1e5cfed7b144f676b878de-1647642710881
 `
 	moduleValues = `
   internal:
@@ -97,6 +88,7 @@ var _ = Describe("Module :: snapshot-controller :: helm template ::", func() {
 	Context("Standard setup with SSL", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("snapshotController", moduleValues)
 			f.HelmRender()
 		})

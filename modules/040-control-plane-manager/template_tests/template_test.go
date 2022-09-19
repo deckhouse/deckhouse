@@ -49,17 +49,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
         memoryControlPlane: 536870912
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      controlPlaneManager:
-        controlPlaneManager: imagehash
-        etcd: imagehash
-        kubeApiserver119: imagehash
-        kubeControllerManager119: imagehash
-        kubeScheduler119: imagehash
-        kubeApiserverHealthcheck: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -81,6 +70,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("controlPlaneManager", moduleValues)
 	})
 

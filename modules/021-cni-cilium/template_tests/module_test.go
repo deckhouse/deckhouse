@@ -49,19 +49,6 @@ discovery:
   kubernetesVersion: "1.21.16"
   d8SpecificNodeCountByRole:
     system: 1
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  registryAddress: registry.deckhouse.io
-  registryPath: /deckhouse/fe
-  registryCA: CACACA
-  registryScheme: https
-  tags:
-    common:
-      kubeRbacProxy: hash
-    cniCilium:
-      cilium: hash
-      operator: hash
 modules:
   https:
     mode: CustomCertificate
@@ -101,6 +88,7 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 	Context("Cluster with cniCilium", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
 			f.HelmRender()
 		})

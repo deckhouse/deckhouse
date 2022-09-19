@@ -247,6 +247,7 @@ subsets:
 			Context("control plane manager is disabled", func() {
 				BeforeEach(func() {
 					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
 
 					f.RunHook()
 				})
@@ -290,6 +291,7 @@ subsets:
 		Context("control plane manager is disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 
 				f.RunHook()
 			})
@@ -421,6 +423,7 @@ subsets:
 		Context("control plane manager is disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 
 				f.RunHook()
 			})

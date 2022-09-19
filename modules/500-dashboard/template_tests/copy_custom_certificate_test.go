@@ -26,16 +26,6 @@ import (
 var _ = Describe("Module :: dashboard :: helm template :: custom-certificate", func() {
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "dashboard"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    dashboard:
-      dashboard: tagstring
-      metricsScraper: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -59,6 +49,7 @@ internal:
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", customCertificatePresent)
 			f.HelmRender()
 		})

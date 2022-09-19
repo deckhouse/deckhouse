@@ -39,18 +39,6 @@ var _ = Describe("Module :: prometheus :: helm template :: render data sources",
 		return fmt.Sprintf(`
 %s
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    prometheus:
-      grafana: tagstring
-      grafanaDashboardProvisioner: tagstring
-      prometheus: tagstring
-      trickster: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -122,6 +110,7 @@ internal:
 		"Grafana datasources secret was rendered correctly",
 		func(haEnabled bool, longtermRetentionDays, countSources, countDeleted int) {
 			f.ValuesSetFromYaml("global", getGlobalValues(haEnabled))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", getPrometheusValues(longtermRetentionDays))
 			f.HelmRender()
 

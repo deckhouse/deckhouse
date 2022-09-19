@@ -32,15 +32,6 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    dashboard:
-      dashboard: tagstring
-      metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -54,15 +45,6 @@ discovery:
 
 const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    dashboard:
-      dashboard: tagstring
-      metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -77,15 +59,6 @@ discovery:
 
 const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    dashboard:
-      dashboard: tagstring
-      metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -99,15 +72,6 @@ discovery:
 const globalValuesManagedHa = `
 highAvailability: true
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    dashboard:
-      dashboard: tagstring
-      metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -132,6 +96,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", dashboard)
 			f.HelmRender()
 		})
@@ -181,6 +146,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 	Context("DefaultHA", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", dashboard)
 			f.HelmRender()
 		})
@@ -252,6 +218,7 @@ podAntiAffinity:
 	Context("Managed", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManaged)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", dashboard)
 			f.HelmRender()
 		})
@@ -300,6 +267,7 @@ podAntiAffinity:
 	Context("ManagedHa", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", dashboard)
 			f.HelmRender()
 		})

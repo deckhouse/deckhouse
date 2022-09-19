@@ -45,19 +45,6 @@ const globalValues = `
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner121: imagehash
-        csiExternalAttacher121: imagehash
-        csiExternalResizer121: imagehash
-        csiNodeDriverRegistrar121: imagehash
-        resolvWatcher: imagehash
-      cloudProviderOpenstack:
-        cinderCsiPlugin121: imagehash
-        cloudControllerManager121: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       master: 3
@@ -132,6 +119,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 	Context("Openstack", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.HelmRender()
 		})
@@ -263,6 +251,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
 			f.HelmRender()
@@ -287,6 +276,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
 		})
@@ -300,6 +290,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 			f.HelmRender()
@@ -315,6 +306,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
 			f.HelmRender()

@@ -125,6 +125,18 @@ func SetupHelmConfig(values string) *Config {
 	return config
 }
 
+func GetModulesImages() map[string]interface{} {
+	tags, err := library.GetModulesImagesTags("")
+	if err != nil {
+		panic(err)
+	}
+	return map[string]interface{}{
+		"registry":          "registry.example.com",
+		"registryDockercfg": "Y2ZnCg==",
+		"tags":              tags,
+	}
+}
+
 func (hec *Config) HelmRender() {
 	// Validate Helm values
 	err := values_validation.ValidateHelmValues(hec.ValuesValidator, hec.moduleName, string(hec.values.JSONRepr))

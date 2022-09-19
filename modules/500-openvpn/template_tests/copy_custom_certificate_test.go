@@ -32,16 +32,6 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "openvpn"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    openvpn:
-      openvpn: tagstring
-      ovpnAdmin: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -71,6 +61,7 @@ var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", fun
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("openvpn", customCertificatePresent)
 			f.HelmRender()
 		})

@@ -57,23 +57,6 @@ const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalProvisioner121: imagehash
-        csiExternalAttacher121: imagehash
-        csiExternalResizer116: imagehash
-        csiExternalResizer121: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiNodeDriverRegistrar121: imagehash
-      cloudProviderAzure:
-        cloudControllerManager116: imagehash
-        cloudControllerManager121: imagehash
-        azurediskCsi: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -129,6 +112,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 	Context("Azure", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
 			fmt.Println(f.ValuesGet(""))
 			f.HelmRender()
@@ -224,6 +208,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()

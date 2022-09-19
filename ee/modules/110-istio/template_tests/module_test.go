@@ -33,23 +33,6 @@ modules:
     certManager:
       clusterIssuerName: letsencrypt
     mode: CertManager
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: hashstring
-    istio:
-      apiProxy: hashstring
-      metadataExporter: hashstring
-      metadataDiscovery: hashstring
-      kiali: hashstring
-      operatorV1x8x0alpha1: ov180a1hashstring
-      operatorV1x8x1: ov181hashstring
-      pilotV1x8x0alpha1: piv180a1hashstring
-      pilotV1x8x1: piv181hashstring
-      proxyv2V1x8x0alpha1: prv180a1hashstring
-      proxyv2V1x8x1: prv181hashstring
 discovery:
   clusterControlPlaneIsHighlyAvailable: true
   d8SpecificNodeCountByRole:
@@ -114,6 +97,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 	Context("tlsMode = Off, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.tlsMode", "Off")
 			f.HelmRender()
@@ -163,6 +147,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 	Context("tlsMode = Mutual, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.tlsMode", "Mutual")
 			f.HelmRender()
@@ -212,6 +197,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 	Context("tlsMode = MutualPermissive, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.tlsMode", "MutualPermissive")
 			f.HelmRender()
@@ -259,6 +245,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 	Context("There are revisions to install, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1,v1x8x0alpha1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1,v1x8x0alpha1]`)
@@ -352,6 +339,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 	Context("There are some federations", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1]`)
@@ -428,6 +416,7 @@ neighbour-0:
 	Context("There are some multiclusters, multiclustersNeedIngressGateway = true", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1]`)
@@ -525,6 +514,7 @@ a-b-c-1-2-3:
 	Context("istiod with default resourcesManagement configuration", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.HelmRender()
@@ -566,6 +556,7 @@ resourcePolicy:
 	Context("istiod with custom static resourcesManagement configuration", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
@@ -609,6 +600,7 @@ updatePolicy:
 	Context("istiod with custom vpa resourcesManagement configuration case #1", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
@@ -665,6 +657,7 @@ updatePolicy:
 	Context("istiod with custom vpa resourcesManagement configuration case #2", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `

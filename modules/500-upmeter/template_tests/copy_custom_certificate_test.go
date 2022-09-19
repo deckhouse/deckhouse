@@ -45,19 +45,6 @@ clusterConfiguration:
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
 enabledModules: ["vertical-pod-autoscaler-crd", "upmeter"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-      alpine: tagstring
-    upmeter:
-      smokeMini: tagstring
-      status: tagstring
-      upmeter: tagstring
-      webui: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -103,6 +90,7 @@ var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", fun
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("upmeter", customCertificatePresent)
 			f.HelmRender()
 		})

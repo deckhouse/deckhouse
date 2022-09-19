@@ -33,15 +33,6 @@ func Test(t *testing.T) {
 const globalValues = `
 clusterIsBootstrapped: false
 enabledModules: ["vertical-pod-autoscaler-crd", "deckhouse-web"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    deckhouseWeb:
-      web: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -67,6 +58,7 @@ var _ = Describe("Module :: deckhouseWeb :: helm template :: custom-certificate"
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("deckhouseWeb", customCertificatePresent)
 			f.HelmRender()
 		})

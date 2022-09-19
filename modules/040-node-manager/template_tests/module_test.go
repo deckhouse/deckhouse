@@ -39,21 +39,6 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/ce
-  registryDockercfg: Y2ZnCg==
-  registryAddress: registry.deckhouse.io
-  registryPath: /deckhouse/ce
-  registryScheme: https
-  tags:
-    nodeManager:
-      clusterAutoscaler: imagehash
-      machineControllerManager: imagehash
-    common:
-      kubeRbacProxy: imagehash
-      alpine: tagstring
-    registrypackages:
-      jq16: imagehash
 discovery:
   d8SpecificNodeCountByRole:
     master: 3
@@ -514,6 +499,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
 	})
 
 	Context("Prometheus rules", func() {
@@ -1250,6 +1236,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.aws.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1280,6 +1267,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.openstack.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1310,6 +1298,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAzure)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.azure.additionalTags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1340,6 +1329,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerGCP)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.gcp.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
@@ -1370,6 +1360,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandex)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.yandex.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)

@@ -48,16 +48,6 @@ discovery:
   prometheusScrapeInterval: 30
   d8SpecificNodeCountByRole:
     system: 1
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  registryAddress: registry.deckhouse.io
-  registryPath: /deckhouse/fe
-  registryCA: CACACA
-  registryScheme: https
-  tags:
-    deckhouse:
-      webhookHandler: hash
 modules:
   placement: {}
   proxy:
@@ -101,6 +91,7 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 	Context("Cluster with deckhouse on master node", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
 			f.HelmRender()
 		})
@@ -124,6 +115,7 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 	Context("Cluster with deckhouse on system node", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
 			f.HelmRender()
 		})

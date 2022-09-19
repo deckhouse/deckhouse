@@ -57,24 +57,6 @@ const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner121: imagehash
-        csiExternalAttacher121: imagehash
-        csiExternalResizer121: imagehash
-        csiNodeDriverRegistrar121: imagehash
-        resolvWatcher: imagehash
-      cloudProviderGcp:
-        cloudControllerManager116: imagehash
-        cloudControllerManager121: imagehash
-        pdCsiPlugin: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -129,6 +111,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 	Context("GCP", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
 			fmt.Println(f.ValuesGet(""))
 			f.HelmRender()
@@ -232,6 +215,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()
@@ -248,6 +232,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("GCP with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderGcp.internal.defaultStorageClass", `pd-ssd-replicated`)
 			f.HelmRender()
