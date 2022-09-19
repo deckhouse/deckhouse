@@ -374,7 +374,7 @@ ENDSSH
 
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
-  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
+  $ssh_command -o "ServerAliveInterval=5" -o "ServerAliveCountMax=5" -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
