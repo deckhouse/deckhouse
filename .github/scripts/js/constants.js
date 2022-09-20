@@ -1,5 +1,8 @@
 //@ts-check
 
+const skipE2eLabel = 'skip/e2e';
+module.exports.skipE2eLabel = skipE2eLabel;
+
 // Labels available for pull requests.
 const labels = {
   // Skip validations.

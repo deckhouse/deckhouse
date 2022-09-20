@@ -90,7 +90,7 @@ jobs:
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
-{!{- $lastCommentNeeds := slice "started_at" -}!}
+{!{- $lastCommentNeeds := slice "started_at" "git_info" -}!}
 {!{- $jobNames := dict -}!}
 {!{- range $criName := $ctx.criNames -}!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
@@ -118,6 +118,7 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "workflow,final,no-skipped,restore-separate" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 6 }!}
 # </template: e2e_workflow_template>
 {!{ end -}!}
 

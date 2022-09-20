@@ -3731,7 +3731,7 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
+    needs: ["started_at","git_info","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
@@ -3774,4 +3774,21 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+
+      # <template: set_e2e_requirement_status>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        if: ${{ always() }}
+        uses: actions/github-script@v5.0.0
+        env:
+          JOB_STATUS: ${{ job.status }}
+          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            await e2eStatus.setStatusAfterE2eRun({github, context, core});
+      # </template: set_e2e_requirement_status>
 # </template: e2e_workflow_template>

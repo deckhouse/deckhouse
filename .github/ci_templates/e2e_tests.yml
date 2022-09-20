@@ -17,6 +17,27 @@
 {!{ $layout }!}
 {!{ end -}!}
 
+# job for set e2e requirement status
+# $1 - name of function to set status. see ../scripts/e2e-commit-status.js
+{!{ define "set_e2e_requirement_status" }!}
+
+# <template: set_e2e_requirement_status>
+- name: Set commit status after e2e run
+  id: set_e2e_requirement_status
+  if: ${{ always() }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  env:
+    JOB_STATUS: ${{ job.status }}
+    STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    script: |
+      const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+      await e2eStatus.setStatusAfterE2eRun({github, context, core});
+# </template: set_e2e_requirement_status>
+{!{- end -}!}
+
 {!{ define "e2e_send_alert_template" }!}
 {!{- $ctx := index . 0 -}!}
 
