@@ -67,7 +67,7 @@
         == 0
       for: 5m
       labels:
-        severity_level: "3"
+        severity_level: "4"
         tier: cluster
       annotations:
         plk_markup_format: "markdown"
