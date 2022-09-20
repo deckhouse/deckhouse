@@ -113,6 +113,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       - 2.2.2.2
     maxReplicas: 6
     minReplicas: 2
+    additionalHeaders:
+      X-Foo: bar
 - name: test-without-hpa
   spec:
     inlet: LoadBalancer
@@ -173,6 +175,9 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
 
+			fakeIng := hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-custom-headers-reload")
+			Expect(fakeIng.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-admission").Exists()).To(BeTrue())
 			Expect(hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-ingress-nginx-admission").Exists()).To(BeTrue())
@@ -210,7 +215,8 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Field("spec.loadBalancerSourceRanges")).To(MatchJSON(`["1.1.1.1","2.2.2.2"]`))
 
 			configMapData = hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Field("data")
-
+			fakeIng = hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-lbwpp-custom-headers-reload")
+			Expect(fakeIng.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/d18475119d75d3c873bd30e53f4615ef66bf84d9ae1508df173dcc114cfecbb4"))
 			// Use the Raw property to check is value quoted correctly
 			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))

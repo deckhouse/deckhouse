@@ -225,6 +225,10 @@ data:
   {{ $key }}: {{ $value | quote }}
     {{- end }}
   {{- end }}
+
+{{/*include fake ingress for triggering config reload on custom headers change*/}}
+{{- $headersChecksum := join "," $crd.spec.additionalHeaders | sha256sum }}
+{{ include "fake-ingress" (list $context $crd.name $crd.spec.ingressClass "custom-headers" (printf "/%s" $headersChecksum) )}}
 {{- end }}
 ---
 apiVersion: v1
