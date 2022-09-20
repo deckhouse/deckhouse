@@ -122,6 +122,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
+			Expect(mwh.Exists()).To(BeTrue())
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+
 			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
 			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
 			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
@@ -167,6 +171,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
+			Expect(mwh.Exists()).To(BeTrue())
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+
 			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
 			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
 			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
@@ -211,6 +219,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
+			Expect(mwh.Exists()).To(BeTrue())
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
 
 			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
 			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
@@ -258,6 +270,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
+			Expect(mwh.Exists()).To(BeTrue())
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
+
 			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
 			iopV180alpha1 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x0alpha1")
 
@@ -270,7 +286,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
 
 			serviceGlobal := f.KubernetesResource("Service", "d8-istio", "istiod")
-			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
 
 			Expect(iopV181.Exists()).To(BeTrue())
 			Expect(iopV180alpha1.Exists()).To(BeTrue())
@@ -440,6 +455,10 @@ neighbour-0:
 
 		It("ServiceEntry and DestinationRule must be created, metadata-exporter and ingressgateway must be deployed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
+			Expect(mwh.Exists()).To(BeTrue())
+			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
 
 			kubeconfigSecret := f.KubernetesResource("Secret", "d8-istio", "istio-remote-secret-neighbour-0")
 			Expect(kubeconfigSecret.Exists()).To(BeTrue())
