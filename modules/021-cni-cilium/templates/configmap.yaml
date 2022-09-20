@@ -41,7 +41,10 @@ data:
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
+    {{- if or (eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes") (eq .Values.cniCilium.internal.mode "Direct") }}
+  # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
   install-no-conntrack-iptables-rules: "true"
+    {{- end }}
   {{- end }}
 
   enable-ipv4-masquerade: "true"
