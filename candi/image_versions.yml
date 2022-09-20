@@ -1,10 +1,4 @@
-#
-# Use crane command to copy image to our registry:
-#
-# $ crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
-#
-# See: https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
-#
+# To copy images, please use regcopy. You can find all the information in the tools/regcopy/README.md file.
 
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: "registry.deckhouse.io/base_images/"
