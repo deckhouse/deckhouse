@@ -82,6 +82,9 @@ locals {
             use-hostname: false
             use-routes: false
             use-domains: false
+          routes:
+          - to: "${var.node_network_cidr}"
+            link
     EOF
 
     netplan apply
