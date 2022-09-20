@@ -107,3 +107,10 @@ data:
   hubble-tls-cert-file: /var/lib/cilium/tls/hubble/server.crt
   hubble-tls-key-file: /var/lib/cilium/tls/hubble/server.key
   hubble-tls-client-ca-files: /var/lib/cilium/tls/hubble/client-ca.crt
+
+  # https://docs.cilium.io/en/v1.12/policy/language/#alpine-musl-deployments-and-dns-refused
+  tofqdns-dns-reject-response-code: nameError
+
+  # disabled since they may generate absurd amount of requests in count and size
+  # we've found no use for status field of CNP and CCNP
+  disable-cnp-status-updates: "true"
