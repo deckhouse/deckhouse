@@ -27,23 +27,26 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKTJfR8h+skMYjXHBv/nJN6J2eBvQlebnhfZngxTvHYYxl0XeRu3KEz5v23gIidT21o9x0+tD4b2PcyZ24o64GwnF/oFnQ9mYBJDRisZNdXYPadTp/RafQ0qNUX/6h8vZYlSPM77dhW7Oyf6hcbaniAmOD30bO89UM//VHbllGgfhlIbU382/EnPOfGvAHReATADBBHmxxtTCLbu48rN35DlOtMgPob3ZwOsJI3keRrIZOf5qxeF3VB0Ox4inoR6PUzWMFLCJyIMp7hzY+JLakO4dqfvRJZjgTZHQUvjDs+aeUcH8tD4Wd5NDzmxnHLtJup0lkHkqgjo6vqWIcQeDXuXsk3+YGw0PwMpwO2HMVPs2SnfT6cZ+Mo6Dmq0t1EjtSBXLMe5C5aac5w6NrXuypRQDoce7p3uZP2TVsxmpyvkd6RyiWr+wuOOB3h/k8q+kRh4LKzivJMEkZoZeCxkJiIWDknxEAU1sl25W4hEU="
+zones:
+  - ru-3a
 standard:
   internalNetworkDNSServers:
     - 8.8.8.8
   internalNetworkCIDR: 192.168.195.0/24
-  internalNetworkSecurity: true
-  externalNetworkName: public
+  internalNetworkSecurity: false
+  externalNetworkName: "external-network"
 provider:
-  authURL: 'https://cloud.flant.com/v3/'
-  domainName: 'Default'
-  tenantName: 'd8-tests'
-  username: 'e2e-tests'
+  authURL: 'https://api.selvpc.ru/identity/v3'
+  domainName: '48348'
+  tenantID: '80625ad45e604fbe86679e63b704f3b8'
+  username: 'deckhouse-e2e'
   password: '${OS_PASSWORD}'
-  region: 'HetznerFinland'
+  region: 'ru-3'
 masterNodeGroup:
   replicas: 1
   instanceClass:
+    rootDiskSize: 20
     flavorName: m1.large
-    imageName: debian-11-cloud-amd64
+    imageName: "debian-11-genericcloud-amd64-20220911-1135"
   volumeTypeMap:
-    nova: ceph-ssd
+    ru-3a: "fast.ru-3a"
