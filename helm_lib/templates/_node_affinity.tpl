@@ -17,6 +17,9 @@
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 {{- end }}
 
 {{- define "helm_lib_node_selector" }}
