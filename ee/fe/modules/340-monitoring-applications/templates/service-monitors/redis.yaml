@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "redis" }}
-{{ include "base_application_monitor" (list . "redis" 1000) }}
-{{- end }}

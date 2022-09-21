@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "php-fpm" }}
-{{ include "base_application_monitor" (list . "php-fpm" 1000) }}
-{{- end }}

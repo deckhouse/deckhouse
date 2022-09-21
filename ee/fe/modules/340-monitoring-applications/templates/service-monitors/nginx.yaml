@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "nginx" }}
-{{ include "base_application_monitor" (list . "nginx" 500)}}
-{{- end }}

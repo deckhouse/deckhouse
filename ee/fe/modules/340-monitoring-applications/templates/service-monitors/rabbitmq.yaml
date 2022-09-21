@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "rabbitmq" }}
-{{ include "base_application_monitor" (list . "rabbitmq" 2500) }}
-{{- end }}

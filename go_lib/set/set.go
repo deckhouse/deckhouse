@@ -65,6 +65,23 @@ func (s Set) AddSet(o Set) Set {
 	return s
 }
 
+func (s Set) Intersection(o Set) Set {
+	n := Set{}
+
+	iterate, check := o, s
+	if s.Size() > o.Size() {
+		iterate = s
+		check = o
+	}
+
+	for x := range iterate {
+		if check.Has(x) {
+			n.Add(x)
+		}
+	}
+	return n
+}
+
 func (s Set) Delete(x string) Set {
 	delete(s, x)
 	return s
