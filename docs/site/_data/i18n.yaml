@@ -15,3 +15,21 @@ soon:
   ru: "скоро..."
 ce: Community Edition
 ee: Enterprise Edition
+current-version-header:
+  en: Current Deckhouse versions
+  ru: Текущие версии Deckhouse
+loading-data:
+  en: Loading data...
+  ru: Загрузка данных...
+loading-data-error:
+  en: Failed to load data.
+  ru: Ошибка загрузки данных.
+documentation:
+  en: documentation
+  ru: документация
+release-channels:
+  en: release channels
+  ru: каналы обновлений
+release-date-title:
+  en: Date the version appeared on the release channel
+  ru: Дата появления версии на канале обновлений

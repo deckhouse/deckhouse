@@ -1,0 +1,9 @@
+editions:
+  ce: CE (Community Edition)
+  ee: EE (Enterprise Edition)
+channels:
+  alpha: Alpha
+  beta: Beta
+  ea: Early Access
+  stable: Stable
+  rs: Rock Solid

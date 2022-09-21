@@ -9,10 +9,9 @@ lang: ru
 
 <link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path | true_relative_url }}' />
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
-<script type="text/javascript" src='{{ assets["release-info.js"].digest_path | true_relative_url }}'></script>
 
 {%- unless site.mode == "local" %}
-{% include release_status.html %}
+<!--#include virtual="/{{ page.lang }}/includes/releases.html" -->
 {%- endunless %}
 
 <div class="page__container page_releases">

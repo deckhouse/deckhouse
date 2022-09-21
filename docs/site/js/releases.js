@@ -10,23 +10,6 @@ function getHue4Version(version) {
   return result
 }
 
-function getEditionName(edition) {
-  switch (edition) {
-    case 'fe':
-      return 'FE (Flant Edition)';
-    case 'ee':
-      return 'EE (Enterprise Edition)';
-    case 'ce':
-      return 'CE (Community Edition)';
-    default:
-      return '';
-  }
-}
-
-function getTitle() {
-  return getPageLocale() === 'ru' ? 'Дата появления версии на канале обновлений' : 'Date the version appeared on the release channel';
-}
-
 function formatDate(date) {
   return new Intl.DateTimeFormat(getPageLocale() === 'ru' ? 'ru-RU' : 'en-US', {
       weekday: 'short',
@@ -40,9 +23,9 @@ async function showReleaseChannelStatus(apiURL) {
   const channelCodes = {
     "alpha": 'a',
     "beta": 'b',
-    "early-access": 'ea',
+    "ea": 'ea',
     "stable": 's',
-    "rock-solid": 'rs' };
+    "rs": 'rs' };
   const editions = ['ee', 'ce'];
 
   await fetch(apiURL, {
@@ -59,7 +42,7 @@ async function showReleaseChannelStatus(apiURL) {
            const date = new Date(Date.parse(itemData['date']))
            itemElement.find('.version span a').html(`${itemData['version'].replace(/^v/,'')}`).attr('href', `${ghURL}/releases/tag/${itemData['version']}/`);
            itemElement.find('.version span').first().css('background-color', `hsl(${getHue4Version(itemData['version'])}, 50%, 85%)`);
-           itemElement.find('.date').html(`${formatDate(date)}`).attr('title', getTitle());
+           itemElement.find('.date').html(`${formatDate(date)}`);
            itemElement.find('.doc a').attr('href', `../${itemData['version']}/`);
         }
       }
@@ -78,5 +61,16 @@ document.addEventListener("DOMContentLoaded", function () {
       })
     .finally( () => {
       $('.releases-page__loadblock.progress').removeClass('active')
+      });
+});
+
+$(document).ready(function () {
+    tippy('[data-tippy-content]', {
+        interactive: false,
+        interactiveDebounce: 15,
+        maxWidth: 600,
+        theme: 'custom',
+        allowHTML: true,
+        arrow: false,
       });
 });
