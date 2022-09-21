@@ -64,23 +64,22 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 	if err != nil {
 		return "", err
 	}
+	defer func(renderedFile *os.File) {
+		err = renderedFile.Close()
+	}(renderedFile)
 
 	_, err = renderedFile.Write(marshalledYaml)
 	if err != nil {
 		return "", err
 	}
 
-	err = renderedFile.Close()
-	return renderedFile.Name(), err
+	return renderedFile.Name(), nil
 }
 
 func checkRuleFile(path string) error {
 	promtoolComand := exec.Command(promtoolPath, "check", "rules", path)
 	_, err := promtoolComand.Output()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func newSHA256(data []byte) string {
