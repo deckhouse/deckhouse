@@ -1,10 +1,10 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_DEBIAN_BULLSEYE as linstor-builder
+FROM $BASE_UBUNTU_JAMMY as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.19.1
+ARG LINSTOR_VERSION=1.20.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -27,12 +27,12 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE as client-builder
+FROM $BASE_UBUNTU_JAMMY as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
-ARG API_VERSION=1.14.0
+ARG API_VERSION=1.15.1
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
-ARG CLIENT_VERSION=1.14.0
+ARG CLIENT_VERSION=1.15.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -44,8 +44,8 @@ RUN git clone --recurse-submodules ${API_GITREPO} /linstor-api-py
 WORKDIR /linstor-api-py
 RUN git checkout v${API_VERSION} \
  && make debrelease \
- && mv ./dist/python-linstor-${API_VERSION}.tar.gz ../python-linstor_${API_VERSION}.orig.tar.gz \
- && tar -C / -xvf /python-linstor_${API_VERSION}.orig.tar.gz
+ && mv ./dist/python-linstor-${API_VERSION}.tar.gz ../python-linstor_$(echo ${API_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf /python-linstor_$(echo ${API_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /python-linstor-${API_VERSION}
 RUN dpkg-buildpackage -us -uc
 
@@ -56,8 +56,8 @@ RUN git clone ${CLIENT_GITREPO} /linstor-client
 WORKDIR /linstor-client
 RUN git checkout v${CLIENT_VERSION} \
  && make debrelease \
- && mv dist/linstor-client-${CLIENT_VERSION}.tar.gz /linstor-client_${CLIENT_VERSION}.orig.tar.gz \
- && tar -C / -xvf /linstor-client_${CLIENT_VERSION}.orig.tar.gz
+ && mv dist/linstor-client-${CLIENT_VERSION}.tar.gz /linstor-client_$(echo ${CLIENT_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf /linstor-client_$(echo ${CLIENT_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /linstor-client-${CLIENT_VERSION}
 RUN dpkg-buildpackage -us -uc
 
@@ -76,10 +76,10 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE as utils-builder
+FROM $BASE_UBUNTU_JAMMY as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.21.4
+ARG UTILS_VERSION=9.22.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -100,8 +100,8 @@ RUN git checkout v${UTILS_VERSION} \
  && ./autogen.sh \
  && ./configure \
  && make debrelease VERSION=${UTILS_VERSION} \
- && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_${UTILS_VERSION}.orig.tar.gz \
- && tar -C / -xvf ../drbd-utils_${UTILS_VERSION}.orig.tar.gz
+ && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /drbd-utils-${UTILS_VERSION}
 RUN dpkg-buildpackage -us -uc
 
@@ -112,16 +112,16 @@ RUN git clone --recurse-submodules ${THIN_SEND_RECV_GITREPO} /thin-send-recv
 WORKDIR /thin-send-recv
 RUN git checkout v${THIN_SEND_RECV_VERSION} \
  && make debrelease \
- && mv thin-send-recv-${THIN_SEND_RECV_VERSION}.tar.gz ../thin-send-recv_${THIN_SEND_RECV_VERSION}.orig.tar.gz \
- && tar -C / -xvf ../thin-send-recv_${THIN_SEND_RECV_VERSION}.orig.tar.gz
+ && mv thin-send-recv-${THIN_SEND_RECV_VERSION}.tar.gz ../thin-send-recv_$(echo ${THIN_SEND_RECV_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf ../thin-send-recv_$(echo ${THIN_SEND_RECV_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /thin-send-recv-${THIN_SEND_RECV_VERSION}
 RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
-ARG PIRAEUS_COMMIT_REF=01a24d397bde1942ec3e12955ebeda076a5797fc
+ARG PIRAEUS_COMMIT_REF=0254e4a7ab1e23e8c5f683952aaa7fb798d0b001
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/

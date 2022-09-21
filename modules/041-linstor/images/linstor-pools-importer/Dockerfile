@@ -1,4 +1,4 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -15,14 +15,11 @@ RUN git clone https://github.com/LINBIT/linstor-wait-until /usr/local/go/linstor
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 COPY --from=builder /linstor-pools-importer /linstor-wait-until /
 
-# needs a newer lvm, debian bug #932433
-RUN printf 'Package: *\nPin: release a=%s\nPin-Priority: %s\n\n' stable 700 testing 650 > /etc/apt/preferences \
- && echo 'deb http://deb.debian.org/debian/ bullseye main contrib' >> /etc/apt/sources.list \
- && apt-get update \
- && apt-get install -y -t bullseye lvm2 \
+RUN apt-get update \
+ && apt-get install -y lvm2 \
  && apt-get remove -y udev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
