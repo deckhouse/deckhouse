@@ -477,11 +477,9 @@ spec:
 
 ### [experimental feature] Prevent istio-proxy from terminating before the main application's connections are closed
 
-By default, isiot-proxy terminates after receiving a SIGTERM signal before terminating established connections and closing sockets open for listening by the main application.
-This behavior can be corrected by setting the following annotation on the application's pod: `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
-Setting this annotation will force sidecar-injector to insert a preStop-hook for istio-proxy, which when receiving the SIGTERM signal will cause istio-proxy to wait for all established connections to be closed and sockets open for listening, but no more than the `terminationGracePeriodSeconds` interval.
-In some cases, this will prevent the application from terminating incorrectly.
-
+By default, during termination, all containers in a Pod, including istio-proxy one, receive SIGTERM signal simultanuesly. But some applications need time to properly handle the termination and sometimes they need to do some network requests. It isn't possible when the istio-proxy stops before the application do. The solution is to add a preStop hook which evaluates the application's network sockets status and stops when they aren't in network namespace.
+The annotation below adds the preStop hook to istio-proxy container in application's Pod:
+`inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
 ## Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
