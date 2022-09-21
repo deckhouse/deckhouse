@@ -1014,11 +1014,11 @@ ul .resources__prop_title {
   }
 }
 
-#the-canvas {
-  direction: ltr;
-}
+.pdf-slider {
+  &__canvas {
+    border: 1px solid rgba(241, 243, 244, .949);
+  }
 
-.slider {
   &__nav {
     display: flex;
     align-items: center;
@@ -1038,8 +1038,16 @@ ul .resources__prop_title {
     margin: 2px;
     padding: 2px;
 
-    &:hover {
+    &.disabled {
+      opacity: 0.2;
+      pointer-events: none;
+      cursor: default;
+      display: block !important;
+    }
+
+    &:not(.disabled):hover {
       background: #fff;
+      cursor: pointer;
     }
 
     & .fa-chevron-left,

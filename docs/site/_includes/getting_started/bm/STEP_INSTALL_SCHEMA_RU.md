@@ -1,3 +1,2 @@
-{% include getting_started/global/partials/STEP_INSTALL_SCHEMA_RU.liquid
-   presentation="https://docs.google.com/presentation/d/e/2PACX-1vRsDHWhHjtEPHuNH3MEVRxJSW1t8_43oRjOOcEh4stj_sM3oMeOrG_12jWfCPg6V2-Vr_vUTvFy2qPV/embed?start=false&loop=true&delayms=999999"
-   width="920" height="554" %}
+{% include getting_started/global/partials/STEP_INSTALL_SCHEMA_RU.liquid presentation="/presentations/getting_started_bm_ru.pdf" %}
+<!-- Source: https://docs.google.com/presentation/d/12Ep9k0jb1niU1NSviYRYm2-UUZFLtLBPjf-HO0NIn_k/ -->

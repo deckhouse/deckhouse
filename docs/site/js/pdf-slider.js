@@ -1,200 +1,154 @@
 document.addEventListener('DOMContentLoaded', () => {
-// If absolute URL from the remote server is provided, configure the CORS
-// header on that server.
-  const wrappers = document.querySelectorAll('.canvas__wrap');
+  const wrappers = document.querySelectorAll('[data-presentation]');
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
 
-  // var url = '/images/Deckhouse_Getting_started_Cloud_RU.pdf';
-
-// Loaded via <script> tag, create shortcut to access PDF.js exports.
-  var pdfjsLib = window['pdfjs-dist/build/pdf'];
-
-// The workerSrc property shall be specified.
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.js';
 
   class PdfDocClass {
-    constructor(pdfDoc, pageNum, pageRendering, pageNumPending, scale, canvas) {
-      this.pdfDoc = pdfDoc;
-      this.pageNum = pageNum;
-      this.pageRendering = pageRendering;
-      this.pageNumPending = pageNumPending;
-      this.scale = scale;
-      this.canvas = canvas;
-      this.ctx = canvas.getContext('2d');
+    constructor(container) {
+      this.pdfDoc = null;
+      this.pageNum = 1;
+      this.pageRendering = false;
+      this.pageNumPending = null;
+      this.container = container;
+      this.canvas = this.initializeCanvas();
+      this.ctx = this.canvas.getContext('2d');
+      this.nav = this.initializeNav();
     }
 
-    // renderPage(num) {
-    //   this.pageRendering = true;
-    //   // Using promise to fetch the page
-    //   this.pdfDoc.getPage(num).then(function (page) {
-    //     var viewport = page.getViewport({scale: this.scale});
-    //     this.canvas.height = viewport.height;
-    //     this.canvas.width = viewport.width;
-    //
-    //     // Render PDF page into canvas context
-    //     var renderContext = {
-    //       canvasContext: this.ctx,
-    //       viewport: viewport
-    //     };
-    //     var renderTask = page.render(renderContext);
-    //
-    //     // Wait for rendering to finish
-    //     renderTask.promise.then(function () {
-    //       this.pageRendering = false;
-    //       if (this.pageNumPending !== null) {
-    //         // New page rendering is pending
-    //         this.renderPage(pageNumPending);
-    //         pageNumPending = null;
-    //       }
-    //     });
-    //   });
-    //   // document.getElementById('page_num').textContent = num;
-    // }
-    //
-    // /**
-    //  * If another page rendering in progress, waits until the rendering is
-    //  * finised. Otherwise, executes rendering immediately.
-    //  */
-    // queueRenderPage(num) {
-    //   if (this.pageRendering) {
-    //     this.pageNumPending = num;
-    //   } else {
-    //     this.renderPage(num);
-    //   }
-    // }
-    //
-    //
-    // onPrevPage() {
-    //   if (this.pageNum <= 1) {
-    //     return;
-    //   }
-    //   this.pageNum--;
-    //   this.queueRenderPage(this.pageNum);
-    // }
-    //
-    // // document.getElementById('prev').addEventListener('click', onPrevPage);
-    //
-    // onNextPage() {
-    //   if (this.pageNum >= this.pdfDoc.numPages) {
-    //     return;
-    //   }
-    //   this.pageNum++;
-    //   this.queueRenderPage(this.pageNum);
-    // }
+    initializeCanvas() {
+      let canvas;
 
-    // document.getElementById('next').addEventListener('click', onNextPage);
+      canvas = document.createElement('canvas');
+      canvas.classList.add('pdf-slider__canvas');
+
+      this.container.appendChild(canvas);
+
+      return canvas;
+    }
+
+    initializeNav() {
+      let v = this;
+      let nav = {};
+
+      nav.container = document.createElement('div')
+      nav.container.classList.add('pdf-slider__nav');
+
+      nav.prev = document.createElement('button')
+      nav.prev.classList.add('pdf-slider__nav--button', 'pdf-slider__nav--button-prev');
+      nav.prev.innerHTML = '<i class="fa fa-chevron-left" aria-hidden="true"></i>';
+      nav.prev.addEventListener('click', function() { v.prevPage() });
+
+      nav.next = document.createElement('button')
+      nav.next.classList.add('pdf-slider__nav--button', 'pdf-slider__nav--button-prev');
+      nav.next.innerHTML = '<i class="fa fa-chevron-right" aria-hidden="true"></i>';
+      nav.next.addEventListener('click', function() { v.nextPage() } );
+
+      nav.num = document.createElement('span')
+      nav.num.classList.add('pdf-slider__nav--page-num');
+
+      nav.container.appendChild(nav.prev);
+      nav.container.appendChild(nav.num);
+      nav.container.appendChild(nav.next);
+
+      this.container.appendChild(nav.container);
+
+      return nav;
+    }
+
+    renderPage(num) {
+      let scales = { 1: 3.2, 2: 4 },
+        defaultScale = 3,
+        scale = scales[window.devicePixelRatio] || defaultScale;
+
+      let displaySize = 1.25;
+
+      let v = this;
+      this.pageRendering = true;
+      // Using promise to fetch the page
+      this.pdfDoc.getPage(num).then(function (page) {
+        let viewport = page.getViewport({scale: scale});
+        v.canvas.height = viewport.height;
+        v.canvas.width = viewport.width;
+
+        v.canvas.style.width = `${viewport.width * displaySize / scale}px`;
+        v.canvas.style.height = `${viewport.height * displaySize / scale}px`;
+
+        // Render PDF page into canvas context
+        let renderContext = {
+          canvasContext: v.ctx,
+          viewport: viewport
+        };
+
+        v.nav.container.style.width = `${(viewport.width * displaySize / scale) + 2}px`;
+
+        let renderTask = page.render(renderContext);
+
+        // Wait for rendering to finish
+        renderTask.promise.then(function () {
+          v.pageRendering = false;
+          if (v.pageNumPending !== null) {
+            v.renderPage(v.pageNumPending);
+            v.pageNumPending = null;
+          }
+        });
+      });
+
+      this.nav.num.textContent = num;
+      this.checkPageLock();
+    }
+
+    prevPage() {
+      if (this.pageNum <= 1) {
+        return;
+      }
+      this.pageNum--;
+      this.queueRenderPage(this.pageNum);
+    }
+
+    nextPage() {
+      if (this.pageNum >= this.pdfDoc.numPages) {
+        return;
+      }
+      this.pageNum++;
+      this.queueRenderPage(this.pageNum);
+    }
+
+    checkPageLock() {
+      if (this.pageNum == 1) {
+        this.nav.prev.classList.add('disabled');
+      } else {
+        this.nav.prev.classList.remove('disabled');
+      }
+      if (this.pageNum >= this.pdfDoc.numPages) {
+        this.nav.next.classList.add('disabled');
+      } else {
+        this.nav.next.classList.remove('disabled');
+      }
+    }
+
+    queueRenderPage(num) {
+      if (this.pageRendering) {
+        this.pageNumPending = num;
+      } else {
+        this.renderPage(num);
+      }
+    }
   }
 
   let pdfFiles = [];
 
   wrappers.forEach((i, idx)=> {
-    const canvas = i.querySelector('.the-canvas');
-    const navbar = i.querySelector('.slider__nav');
 
-    pdfFiles.push(new PdfDocClass(null, 1, false, null, 1.1, canvas));
-
-
-    // var pdfDoc = null;
-      // pageNum = 1,
-      // pageRendering = false,
-      // pageNumPending = null,
-      // scale = 0.8,
-      // canvas = document.getElementById('the-canvas'),
-      // ctx = canvas.getContext('2d');
-
-    /**
-     * Get page info from document, resize canvas accordingly, and render page.
-     * @param num Page number.
-     */
-    function renderPage(num) {
-      pdfFiles[idx].pageRendering = true;
-      // Using promise to fetch the page
-      pdfFiles[idx].pdfDoc.getPage(num).then(function (page) {
-        var viewport = page.getViewport({scale: pdfFiles[idx].scale});
-        pdfFiles[idx].canvas.height = viewport.height;
-        pdfFiles[idx].canvas.width = viewport.width;
-
-        // Render PDF page into canvas context
-        var renderContext = {
-          canvasContext: pdfFiles[idx].ctx,
-          viewport: viewport
-        };
-        navbar.style.width = `${viewport.width}px`;
-
-        var renderTask = page.render(renderContext);
-
-        // Wait for rendering to finish
-        renderTask.promise.then(function () {
-          pdfFiles[idx].pageRendering = false;
-          if (pdfFiles[idx].pageNumPending !== null) {
-            // New page rendering is pending
-            renderPage(pdfFiles[idx].pageNumPending);
-            pdfFiles[idx].pageNumPending = null;
-          }
-        });
-      });
-
-      // Update page counters
-      i.querySelector('.slider__nav--page-num').textContent = num;
-    }
-
-    /**
-     * If another page rendering in progress, waits until the rendering is
-     * finised. Otherwise, executes rendering immediately.
-     */
-    function queueRenderPage(num) {
-      if (pdfFiles[idx].pageRendering) {
-        pdfFiles[idx].pageNumPending = num;
-      } else {
-        renderPage(num);
-      }
-    }
-
-    /**
-     * Displays previous page.
-     */
-    function onPrevPage() {
-      if (pdfFiles[idx].pageNum <= 1) {
-        return;
-      }
-      pdfFiles[idx].pageNum--;
-      queueRenderPage(pdfFiles[idx].pageNum);
-    }
-
-    i.querySelector('.slider__nav--button-prev').addEventListener('click', onPrevPage);
-
-    /**
-     * Displays next page.
-     */
-    function onNextPage() {
-      if (pdfFiles[idx].pageNum >= pdfFiles[idx].pdfDoc.numPages) {
-        return;
-      }
-      pdfFiles[idx].pageNum++;
-      queueRenderPage(pdfFiles[idx].pageNum);
-    }
-
-    i.querySelector('.slider__nav--button-next').addEventListener('click', onNextPage);
+    pdfFiles.push(new PdfDocClass(i));
 
     /**
      * Asynchronously downloads PDF.
      */
-    const url = `/images/${canvas.dataset.presentation}.pdf`
+    const url = `${pdfFiles[idx].container.dataset.presentation}`
     pdfjsLib.getDocument(url).promise.then(function (pdfDoc_) {
       pdfFiles[idx].pdfDoc = pdfDoc_;
-      // document.getElementById('page_count').textContent = pdfDoc.numPages;
-
-      // Initial/first page rendering
-      renderPage(1);
+      pdfFiles[idx].renderPage(1);
     });
   })
-
-  // pdfjsLib.getDocument(url).promise.then(function (pdfDoc_) {
-  //   test.pdfDoc = pdfDoc_;
-  //   console.log(test.pdfDoc);
-  //   console.log(test);
-  //   // document.getElementById('page_count').textContent = pdfDoc.numPages;
-  //
-  //   // Initial/first page rendering
-  //   renderPage(1);
-  // });
 })
