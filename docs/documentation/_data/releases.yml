@@ -40,3 +40,12 @@ channels:
     tooltip:
       en: The most stable release channel
       ru: Наиболее стабильный канал обновлений
+editions:
+  ce: CE (Community Edition)
+  ee: EE (Enterprise Edition)
+channels2:
+  alpha: Alpha
+  beta: Beta
+  ea: Early Access
+  stable: Stable
+  rs: Rock Solid

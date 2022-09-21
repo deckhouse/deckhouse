@@ -12,10 +12,7 @@ lang: ru
 <script type="text/javascript" src='{{ assets["release-info.js"].digest_path | true_relative_url }}'></script>
 
 {%- unless site.mode == "local" %}
-<h2 class="releases-page__table--title">Текущие версии Deckhouse</h2>
-<div class="releases-page__loadblock progress active">Загрузка данных... <img src="{{ assets["loading.gif"].digest_path | true_relative_url }}" /></div>
-<div class="releases-page__loadblock failed">Ошибка загрузки данных.</div>
-<div class="releases-page__table--content"></div>
+{% include release_status.html %}
 {%- endunless %}
 
 <div class="page__container page_releases">

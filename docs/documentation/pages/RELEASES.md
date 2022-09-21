@@ -11,10 +11,7 @@ toc: false
 <script type="text/javascript" src='{{ assets["release-info.js"].digest_path | true_relative_url }}'></script>
 
 {%- unless site.mode == "local" %}
-<h2 class="releases-page__table--title">Current Deckhouse versions</h2>
-<div class="releases-page__loadblock progress active">Loading data... <img src="{{ assets["loading.gif"].digest_path | true_relative_url }}" /></div>
-<div class="releases-page__loadblock failed">Failed to load data.</div>
-<div class="releases-page__table--content"></div>
+{% include release_status.html %}
 {%- endunless%}
 
 <div class="page__container page_releases">

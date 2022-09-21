@@ -383,19 +383,30 @@ font-size: 12px;
   display: block;
 }
 
-.releases-page__table--content p.link {
+.releases-page__table--content p.version {
   margin: 0px;
   font-size: 1.5em;
   font-weight: 600;
 }
 
+.releases-page__table--content p.version span {
+  padding: .15em;
+  border-radius: .2em;
+}
+
 .releases-page__table--content p.date {
+  margin: 5px 0px 0px 0px;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.releases-page__table--content p.doc {
   margin: 0px;
   font-size: 0.8em;
   font-weight: 400;
 }
 
 .releases-page__table--content td.channel-name {
-  font-size: 1.5em;
+  font-size: 1.3em;
   font-weight: 600;
 }
