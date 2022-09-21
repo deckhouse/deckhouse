@@ -12,16 +12,13 @@
   {{- printf "%s:%s" $context.Values.global.modulesImages.registry $imageHash }}
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} */ -}}
+{{- /* Usage: {{ include "helm_lib_module_image_exists" (list . "<container-name>") }} */ -}}
 {{- /* returns image name if found */ -}}
-{{- define "helm_lib_module_image_no_fail" }}
+{{- define "helm_lib_module_image_exists" }}
   {{- $context := index . 0 }}
   {{- $containerName := index . 1 | trimAll "\"" }}
   {{- $moduleName := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
-  {{- $imageHash := index $context.Values.global.modulesImages.tags $moduleName $containerName }}
-  {{- if $imageHash }}
-  {{- printf "%s:%s" $context.Values.global.modulesImages.registry $imageHash }}
-  {{- end }}
+  {{- hasKey (index $context.Values.global.modulesImages.tags $moduleName) $containerName }}
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_common_image" (list . "<container-name>") }} */ -}}
@@ -37,13 +34,10 @@
   {{- printf "%s:%s" $context.Values.global.modulesImages.registry $imageHash }}
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_module_common_image_no_fail" (list . "<container-name>") }} */ -}}
+{{- /* Usage: {{ include "helm_lib_module_common_image_exists" (list . "<container-name>") }} */ -}}
 {{- /* returns image name from common module if found */ -}}
-{{- define "helm_lib_module_common_image_no_fail" }}
+{{- define "helm_lib_module_common_image_exists" }}
   {{- $context := index . 0 }}
   {{- $containerName := index . 1 | trimAll "\"" }}
-  {{- $imageHash := index $context.Values.global.modulesImages.tags "common" $containerName }}
-  {{- if $imageHash }}
-  {{- printf "%s:%s" $context.Values.global.modulesImages.registry $imageHash }}
-  {{- end }}
+  {{- hasKey $context.Values.global.modulesImages.tags.common $containerName }}
 {{- end }}

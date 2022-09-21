@@ -5,7 +5,8 @@ memory: 50Mi
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- if $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- if include "helm_lib_module_image_exists" (list . $ccmImageName) }}
+  {{- $ccmImage := include "helm_lib_module_image" (list . $ccmImageName) }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
