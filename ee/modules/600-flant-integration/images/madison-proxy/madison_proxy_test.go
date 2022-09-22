@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,6 +27,7 @@ func TestProxy(t *testing.T) {
 		w.Header().Set("X-Echo-Host", rs.Host)
 		switch rs.URL.String() {
 		case "/api/events/prometheus/" + c.MadisonAuthKey:
+			time.Sleep(15 * time.Second)
 			w.WriteHeader(http.StatusOK)
 			return
 
