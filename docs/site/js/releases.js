@@ -1,13 +1,21 @@
+const bcrypt = dcodeIO.bcrypt;
+const hashSalt = '$2a$04$x5mLOTSdT1Czq48qWrDOCu';
+
 function getPageLocale() {
   return $('.header__logo > a').first().attr('href') === '/ru/' ? 'ru' : 'en';
 }
 
-function getHue4Version(version) {
-  let result = 0
+function getHSL4Version(versionRaw) {
+  let hashValue = 0
+  let version = bcrypt.hashSync(versionRaw, hashSalt);
   for (let i = 0; i < version.length; ++i)
-    result = Math.imul(31, result) + version.charCodeAt(i)
-  result = Math.abs(result)
-  return result
+    hashValue += version.charCodeAt(i)
+  hashValue = Math.abs(hashValue)
+  const hue = ( hashValue % 50 ) * 6 + 30; // from 50 to 197
+  const saturation = ( hashValue % 10 ) * 9 + 19; // from 00 to 100
+  const lightness = ( hashValue % 20 ) * 4 + 24; // from 24 to 100
+  const hslString = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  return hslString
 }
 
 function formatDate(date) {
@@ -41,7 +49,7 @@ async function showReleaseChannelStatus(apiURL) {
            const itemElement = $(`.releases-page__table--content td.${channelItem}.${edition}`);
            const date = new Date(Date.parse(itemData['date']))
            itemElement.find('.version span a').html(`${itemData['version'].replace(/^v/,'')}`).attr('href', `${ghURL}/releases/tag/${itemData['version']}/`);
-           itemElement.find('.version span').first().css('background-color', `hsl(${getHue4Version(itemData['version'])}, 50%, 85%)`);
+           itemElement.find('.version span').first().attr('style', `background-color: ${getHSL4Version(itemData['version'])};`);
            itemElement.find('.date').html(`${formatDate(date)}`);
            itemElement.find('.doc a').attr('href', `../${itemData['version']}/`);
         }

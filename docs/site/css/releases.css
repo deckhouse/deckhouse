@@ -31,6 +31,7 @@
   margin: 0px;
   font-size: 1.5em;
   font-weight: 600;
+  text-shadow: 1px 1px white;
 }
 
 .releases-page__table--content p.version span {
