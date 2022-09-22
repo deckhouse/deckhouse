@@ -203,14 +203,19 @@ spec:
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
 > **Note!** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+> **Note!** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-`hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
-
-If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
+The IngressNginxController is deployed using Daemonset. Daemonset does not provide horizontal scaling capabilities, so
+`hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa` and
+if CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
 
 `hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
+
+Notes:
+* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the nodegroup where ingressNginxController is deployed.
+* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the nodegroup where ingressNginxController is deployed.
 
 ## How to use IngressClass with IngressClassParameters?
 
