@@ -1,14 +1,12 @@
-{{- $whv := dict
-  "caCert" .Values.istio.internal.ca.cert
-  "globalRevision" .Values.istio.internal.globalRevision
-}}
-{{- define "core" }}
-- name: {{.Prefix}}sidecar-injector.istio.io
+{{- define "mwh_common" }}
+  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $prefix := index . 1 }}  {{- /* argv1 */ -}}
+- name: {{ $prefix }}sidecar-injector.istio.io
   admissionReviewVersions: ["v1beta1", "v1"]
   clientConfig:
-    caBundle: {{ .caCert | b64enc }}
+    caBundle: {{ $context.Values.istio.internal.ca.cert | b64enc }}
     service:
-      name: istiod-{{ .globalRevision }}
+      name: istiod-{{ $context.Values.istio.internal.globalRevision }}
       namespace: d8-istio
       path: "/inject"
       port: 443
@@ -32,8 +30,8 @@ metadata:
   name: d8-istio-sidecar-injector-global
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 webhooks:
-{{- /* Case 1: Namespace selector enabled, and object selector is not injected */}}
-{{- include "core" (mergeOverwrite (deepCopy $whv) (dict "Prefix" "namespace-") ) }}
+{{- /* Case 1: Injection for namespace */}}
+{{ include "mwh_common" (list . "namespace-") }}
   namespaceSelector:
     matchExpressions:
     - key: istio-injection
@@ -48,8 +46,8 @@ webhooks:
       operator: NotIn
       values:
       - "false"
-{{- /* Case 2: no namespace label, but object selector is enabled (and revision label is not, which has priority) */}}
-{{- include "core" (mergeOverwrite (deepCopy $whv) (dict "Prefix" "object-") ) }}
+{{- /* Case 2: Injection for individual pods */}}
+{{ include "mwh_common" (list . "object-") }}
   namespaceSelector:
     matchExpressions:
       - key: istio-injection
