@@ -1,6 +1,6 @@
 {{- define "mwh_common" }}
-  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
-  {{- $prefix := index . 1 }}  {{- /* argv1 */ -}}
+  {{- $context := index . 0 }}
+  {{- $prefix := index . 1 }}
 - name: {{ $prefix }}sidecar-injector.istio.io
   admissionReviewVersions: ["v1beta1", "v1"]
   clientConfig:
@@ -30,7 +30,7 @@ metadata:
   name: d8-istio-sidecar-injector-global
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 webhooks:
-{{- /* Case 1: Injection for namespace */}}
+{{- /* Case 1: Namespace-wide injection */}}
 {{ include "mwh_common" (list . "namespace-") }}
   namespaceSelector:
     matchExpressions:
