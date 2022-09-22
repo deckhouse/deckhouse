@@ -65,7 +65,10 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 		return "", err
 	}
 	defer func(renderedFile *os.File) {
-		err = renderedFile.Close()
+		errClose := renderedFile.Close()
+		if err == nil {
+			err = errClose
+		}
 	}(renderedFile)
 
 	_, err = renderedFile.Write(marshalledYaml)
