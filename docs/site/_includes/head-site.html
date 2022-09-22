@@ -9,9 +9,8 @@
 <meta name="theme-color" content="#ffffff">
 
 <!-- fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com" data-proofer-ignore>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-proofer-ignore>
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300;1,400;1,600;1,700;1,800&family=Source+Code+Pro:wght@200;300;400;500;600;700;900&display=swap" rel="stylesheet">
+{% asset font-awesome.min.css %}
+{% asset fonts.css %}
 
 <!-- styles -->
 {% asset slick.css %}
@@ -23,7 +22,6 @@
 {% asset docs.css %}
 {% asset cards.css %}
 {% asset featherlight.min.css %}
-{% asset font-awesome.min.css %}
 
 <!-- scripts -->
 {%- unless site.mode == "local" %}
