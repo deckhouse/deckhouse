@@ -143,7 +143,13 @@ properties:
         minimum: 0.01
         maximum: 100.0
         multipleOf: 0.01
-        description: Value of sampling rate in percents. The sampling rate should be in the range of 0.0 to 100.0 with a precision of 0.01.
+        description: |
+          Sampling rate in percents. The rate should be in the range of 0.0 to 100.0 with a precision of 0.01. It is possible to override this setting with Pod annotation:
+          ```
+          proxy.istio.io/config: |
+            tracing:
+              sampling: 100.0
+          ```
         default: 1.0
         x-examples: [1, 1.0, 1.01, 50.0, 100.0, 100]
       collector:
