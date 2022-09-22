@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -248,7 +247,6 @@ subsets:
 			Context("control plane manager is disabled", func() {
 				BeforeEach(func() {
 					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
-					f.ValuesSet("global.modulesImages", helm.GetModulesImages())
 
 					f.RunHook()
 				})
@@ -292,7 +290,6 @@ subsets:
 		Context("control plane manager is disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
-				f.ValuesSet("global.modulesImages", helm.GetModulesImages())
 
 				f.RunHook()
 			})
@@ -424,7 +421,6 @@ subsets:
 		Context("control plane manager is disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
-				f.ValuesSet("global.modulesImages", helm.GetModulesImages())
 
 				f.RunHook()
 			})

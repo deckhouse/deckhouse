@@ -292,14 +292,14 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV13.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(iopV12.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
-			Expect(deploymentOperatorv181.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash`))
-			Expect(deploymentOperatorv180alpha1.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash`))
+			Expect(deploymentOperatorv181.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x13`))
+			Expect(deploymentOperatorv180alpha1.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x12`))
 
-			Expect(iopV13.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash`))
-			Expect(iopV12.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash`))
+			Expect(iopV13.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x13`))
+			Expect(iopV12.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x12`))
 
-			Expect(iopV13.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash`))
-			Expect(iopV12.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash`))
+			Expect(iopV13.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash-istio-pilotV1x13`))
+			Expect(iopV12.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash-istio-pilotV1x12`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x13`))
 			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")

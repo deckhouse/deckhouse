@@ -79,7 +79,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool werf ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/werf ## Install dev dependencies.
 
 ##@ Tests
 
@@ -143,7 +143,7 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 ##@ Generate
 
 .PHONY: generate render-workflow
-generate: werf ## Run all generate-* jobs in bulk.
+generate: bin/werf ## Run all generate-* jobs in bulk.
 	cd tools; go generate
 
 render-workflow: ## Generate CI workflow instructions.

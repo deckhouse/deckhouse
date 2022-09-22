@@ -213,11 +213,11 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 				"All images must be deployed from the same default registry - "+defaultRegistry,
 			)
 		}
-		if tag != "imageHash" {
+		if !strings.HasPrefix(tag, "imageHash-") {
 			return errors.NewLintRuleError("CONTAINER004",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag should be `imageHash`",
+				"Image tag should start from `imageHash-`",
 			)
 		}
 	}

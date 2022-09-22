@@ -25,9 +25,9 @@ global:
     registryDockercfg: Y2ZnCg==
     tags:
       openvpn:
-        ovpnAdmin: "imageHash"
+        ovpnAdmin: "imageHash-openvpn-ovpnAdmin"
       common:
-        kubeRbacProxy: "imageHash"
+        kubeRbacProxy: "imageHash-common-kubeRbacProxy"
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]

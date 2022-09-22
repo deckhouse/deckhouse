@@ -43,7 +43,6 @@ discovery:
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"certificate":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)

@@ -145,9 +145,9 @@ jobs:
 
       - name: Run go generate
         run: |
-          BASE_GOLANG_ALPINE="registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
-          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse ${BASE_GOLANG_ALPINE} sh -c 'apk add --no-cache make curl git && make generate'
-          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+          TESTS_IMAGE_NAME="registry.deckhouse.io/base_images/golang:1.18.5-buster@sha256:eb4b3bd59da4604b0ab27d3837e39dacfba4a48cdd289419a3c49993c0eadba4"
+          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} make generate
+          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${TESTS_IMAGE_NAME} go generate .
 
       - name: Check generated code
         run: |

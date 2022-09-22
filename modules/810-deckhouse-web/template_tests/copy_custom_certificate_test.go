@@ -58,7 +58,6 @@ var _ = Describe("Module :: deckhouseWeb :: helm template :: custom-certificate"
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("deckhouseWeb", customCertificatePresent)
 			f.HelmRender()
 		})

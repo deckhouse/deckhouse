@@ -110,7 +110,6 @@ internal:
 		"Grafana datasources secret was rendered correctly",
 		func(haEnabled bool, longtermRetentionDays, countSources, countDeleted int) {
 			f.ValuesSetFromYaml("global", getGlobalValues(haEnabled))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", getPrometheusValues(longtermRetentionDays))
 			f.HelmRender()
 

@@ -8,7 +8,7 @@ global:
     registryDockercfg: Y2ZnCg==
     tags:
       monitoringKubernetesControlPlane:
-        proxy: "imageHash"
+        proxy: "imageHash-monitoringKubernetesControlPlane-proxy"
       common: {}
   discovery:
     kubernetesVersion:

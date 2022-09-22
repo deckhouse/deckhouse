@@ -34,10 +34,10 @@ global:
     registryDockercfg: Y2ZnCg==
     tags:
       metallb:
-        speaker: "imageHash"
-        controller: "imageHash"
+        speaker: "imageHash-metallb-speaker"
+        controller: "imageHash-metallb-controller"
       common:
-        kubeRbacProxy: "imageHash"
+        kubeRbacProxy: "imageHash-common-kubeRbacProxy"
   discovery:
     d8SpecificNodeCountByRole:
       __ConstantChoices__:
