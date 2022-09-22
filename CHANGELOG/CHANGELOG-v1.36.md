@@ -34,15 +34,18 @@
 ## Fixes
 
 
+ - **[cloud-provider-aws]** Bump cloud provider version to fix LB target group creation. [#2560](https://github.com/deckhouse/deckhouse/pull/2560)
  - **[cni-cilium]** Fix cilium mode for static clusters. [#2452](https://github.com/deckhouse/deckhouse/pull/2452)
     `cilium-agents` will be restarted.
  - **[cni-cilium]** Fix Cilium Terminating Endpoints with `externalTrafficPolicy: Local`. Backported https://github.com/cilium/cilium/pull/21062 [#2324](https://github.com/deckhouse/deckhouse/pull/2324)
+ - **[deckhouse]** Bump shell-operator image to avoid panic. [#2547](https://github.com/deckhouse/deckhouse/pull/2547)
  - **[deckhouse]** Fix stucked `DeckhouseUpdating` alert during the deckhouse update process. [#2472](https://github.com/deckhouse/deckhouse/pull/2472)
  - **[deckhouse]** Fix panic in a release tracking during the deckhouse update process. [#2465](https://github.com/deckhouse/deckhouse/pull/2465)
  - **[dhctl]** Fail if there is an empty host for SSH connection. [#2346](https://github.com/deckhouse/deckhouse/pull/2346)
  - **[ingress-nginx]** Improve metrics collection script. [#2350](https://github.com/deckhouse/deckhouse/pull/2350)
     Ingress Nginx controllers will restart.
  - **[ingress-nginx]** The ability to change the `defaultControllerVersion` parameter without rebooting Deckhouse. [#2338](https://github.com/deckhouse/deckhouse/pull/2338)
+ - **[istio]** Fixed `D8IstioActualDataPlaneRevisionNeDesired` alert. [#2558](https://github.com/deckhouse/deckhouse/pull/2558)
  - **[istio]** Fix default `tlsMode` behavior. [#2479](https://github.com/deckhouse/deckhouse/pull/2479)
  - **[istio]** Fix `tlsMode` param behavior. [#2385](https://github.com/deckhouse/deckhouse/pull/2385)
  - **[istio]** Use `maxUnavailable` strategy for istiod Deployment instead of the default one (25%). [#2202](https://github.com/deckhouse/deckhouse/pull/2202)
