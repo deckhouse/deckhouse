@@ -135,7 +135,7 @@ Service'у.
 nodegroups`. Подробнее об этом в
 [документации](/{{ page.lang }}/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
 
-Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minReplicas` и `maxReplicas`. При этом,
+Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
 Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
