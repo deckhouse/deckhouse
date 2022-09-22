@@ -128,7 +128,7 @@
         There are Pods with istio data-plane revision `{{$labels.revision}}`,
         but desired revision is `{{$labels.desired_revision}}`
     expr: |
-      d8_istio_pod_revision{desired_revision!="absent"}
+      d8_istio_pod_revision{revision!="absent", desired_revision!="absent"}
       unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_pod_revision{}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
     labels:
