@@ -246,7 +246,7 @@ apiVersions:
           ru-central1-b: e2lu8r1tbbtryhdpa9ro
           ru-central1-c: e2lu8r1tbbtryhdpa9ro
           ```
-          !!!Warning!!! Deckhouse will create route tabale that must be manually attached to these subnets!
+          !!!Warning!!! Deckhouse will create route table that must be manually attached to these subnets!
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
