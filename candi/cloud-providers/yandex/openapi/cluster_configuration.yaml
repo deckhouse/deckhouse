@@ -246,6 +246,7 @@ apiVersions:
           ru-central1-b: e2lu8r1tbbtryhdpa9ro
           ru-central1-c: e2lu8r1tbbtryhdpa9ro
           ```
+          !!!Warning!!! In this case, we must manually bind the route table to the subnet !
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'

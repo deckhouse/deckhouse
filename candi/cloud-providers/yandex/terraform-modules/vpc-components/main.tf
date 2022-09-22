@@ -65,6 +65,7 @@ resource "yandex_vpc_subnet" "kube_a" {
   name           = "${var.prefix}-a"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_a_v4_cidr_block]
+  route_table_id = yandex_vpc_route_table.kube.id
   zone           = "ru-central1-a"
 
   dynamic "dhcp_options" {
@@ -84,15 +85,12 @@ resource "yandex_vpc_subnet" "kube_a" {
   labels = var.labels
 }
 
-resource "yandex_vpc_subnet" "kube_a" {
-  route_table_id = yandex_vpc_route_table.kube.id
-}
-
 resource "yandex_vpc_subnet" "kube_b" {
   count          = local.should_create_subnets ? 1 : 0
   name           = "${var.prefix}-b"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_b_v4_cidr_block]
+  route_table_id = yandex_vpc_route_table.kube.id
   zone           = "ru-central1-b"
 
   dynamic "dhcp_options" {
@@ -112,15 +110,12 @@ resource "yandex_vpc_subnet" "kube_b" {
   labels = var.labels
 }
 
-resource "yandex_vpc_subnet" "kube_b" {
-  route_table_id = yandex_vpc_route_table.kube.id
-}
-
 resource "yandex_vpc_subnet" "kube_c" {
   count          = local.should_create_subnets ? 1 : 0
   name           = "${var.prefix}-c"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_c_v4_cidr_block]
+  route_table_id = yandex_vpc_route_table.kube.id
   zone           = "ru-central1-c"
 
   dynamic "dhcp_options" {
@@ -138,8 +133,4 @@ resource "yandex_vpc_subnet" "kube_c" {
   }
 
   labels = var.labels
-}
-
-resource "yandex_vpc_subnet" "kube_c" {
-  route_table_id = yandex_vpc_route_table.kube.id
 }
