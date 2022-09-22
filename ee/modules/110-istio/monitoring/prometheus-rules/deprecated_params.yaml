@@ -1,10 +1,10 @@
 - name: d8.istio.deprecated.params
   rules:
-    - alert: D8IstioDeprecatedModuleParamMtlsModeFound
+    - alert: D8IstioTLSModeModuleParamIsDeprecated
       expr: d8_istio_deprecated_module_param{param="tlsMode"}==1
       for: 1m
       labels:
-        severity_level: "6"
+        severity_level: "4"
         tier: cluster
         d8_module: istio
       annotations:

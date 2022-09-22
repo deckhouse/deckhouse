@@ -9,8 +9,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 const (
@@ -20,13 +18,12 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("deprecated-parameters-monitoring"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, getRidOfDeprecatedParams)
 
 func getRidOfDeprecatedParams(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(deprecatedModuleParamMonitoringMetricsGroup)
-	if input.ConfigValues.Get(istioTLSModePath).Exists() {
+	if input.ConfigValues.Exists(istioTLSModePath) {
 		labels := map[string]string{
 			"param": "tlsMode",
 		}
