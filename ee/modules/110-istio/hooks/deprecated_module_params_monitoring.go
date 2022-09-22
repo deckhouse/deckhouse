@@ -6,16 +6,17 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 const (
 	deprecatedModuleParamMetricName             = "d8_istio_deprecated_module_param"
 	deprecatedModuleParamMonitoringMetricsGroup = "deprecated_module_param"
-	istioTlsModePath                            = "istio.tlsMode"
+	istioTLSModePath                            = "istio.tlsMode"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -25,7 +26,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func getRidOfDeprecatedParams(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(deprecatedModuleParamMonitoringMetricsGroup)
-	if input.ConfigValues.Get(istioTlsModePath).Exists() {
+	if input.ConfigValues.Get(istioTLSModePath).Exists() {
 		labels := map[string]string{
 			"param": "tlsMode",
 		}
