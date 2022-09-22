@@ -1,0 +1,17 @@
+cloud-provider-aws:
+  fixes:
+    - summary: Bump cloud provider version to fix LB target group creation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2560
+cni-cilium:
+  fixes:
+    - summary: fix error running in VXLAN mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2549
+deckhouse:
+  fixes:
+    - summary: Bump shell-operator image to avoid panic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2547
+istio:
+  fixes:
+    - summary: Fixed `D8IstioActualDataPlaneRevisionNeDesired` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2558
+
