@@ -17,6 +17,7 @@ properties:
     description: |
       Режим работы тоннеля.
 
+      !!!Внимание!!! Если вы изменяете этот параметр, необходимо перезагрузить все узлы иначе могут быть проблемы с доступностью Pod'ов !
   svcSourceRangeCheck:
     description: |
       Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
