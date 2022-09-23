@@ -170,6 +170,15 @@ spec:
         enabled: true
 
     sidecarInjectorWebhook:
+      templates:
+        d8-hold-istio-proxy-termination-until-application-stops: |
+          spec:
+            containers:
+            - name: istio-proxy
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh", "-c", "curl -X POST localhost:15000/drain_listeners?inboundonly; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
       neverInjectSelector:
       - matchExpressions:
         - key: job-name
