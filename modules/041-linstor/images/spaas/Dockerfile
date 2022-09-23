@@ -35,6 +35,8 @@ RUN apt-get update \
       libc6-dev \
       make \
       coccinelle \
+      libpython3-dev \
+ && update-alternatives --install /usr/bin/python python /usr/bin/python3 100 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && ln -sf /proc/mounts /etc/mtab
