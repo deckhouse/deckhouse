@@ -1,7 +1,7 @@
 # CE Bundle "Default"
 certManagerEnabled: true
 chronyEnabled: true
-ciliumHubbleEnabled: true
+ciliumHubbleEnabled: false
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
