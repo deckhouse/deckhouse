@@ -69,6 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -1065,6 +1066,164 @@ spec:
 					Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
 				}
 
+			})
+		})
+	})
+
+	Context("Rolling Update", func() {
+		Context("without update windows", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  disruptions:
+    approvalMode: RollingUpdate
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-1
+  namespace: d8-cloud-instance-manager
+  labels:
+    node: worker-1
+`))
+				f.RunHook()
+			})
+
+			It("machine should be deleted", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				Expect(m.Exists()).To(BeFalse())
+			})
+		})
+		Context("inside update windows", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  disruptions:
+    approvalMode: RollingUpdate
+    rollingUpdate:
+      windows:
+        - from: "8:00"
+          to: "18:00"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-1
+  namespace: d8-cloud-instance-manager
+  labels:
+    node: worker-1
+`))
+				f.RunHook()
+			})
+
+			It("machine should be deleted", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				Expect(m.Exists()).To(BeFalse())
+			})
+		})
+		Context("out of update windows", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  disruptions:
+    approvalMode: RollingUpdate
+    rollingUpdate:
+      windows:
+        - from: "18:00"
+          to: "21:00"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: Machine
+metadata:
+  name: worker-1
+  namespace: d8-cloud-instance-manager
+  labels:
+    node: worker-1
+`))
+				f.RunHook()
+			})
+
+			It("machine should be deleted", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				Expect(m.Exists()).To(BeTrue())
 			})
 		})
 	})

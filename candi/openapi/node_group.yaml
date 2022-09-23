@@ -422,18 +422,18 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  required:
-                    - approvalMode
                   properties:
                     approvalMode:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
                         - `Automatic` —  automatically approve disruption-involving updates (the default value).
+                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
                       enum:
                         - Manual
                         - Automatic
+                        - RollingUpdate
                     automatic:
                       type: object
                       description: |
@@ -444,11 +444,11 @@ spec:
                           x-doc-default: true
                           description: |
                             Drain Pods from the nodes before approving disruption.
-                            
+
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows:
+                        windows: &windows
                           type: array
                           description: |
                             Time windows for node disruptive updates.
@@ -484,6 +484,35 @@ spec:
                                     - Fri
                                     - Sat
                                     - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows: *windows
+                  oneOf:
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Automatic]
+                      automatic: {}
+                    not:
+                      required: [rollingUpdate]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [RollingUpdate]
+                      rollingUpdate: {}
+                    not:
+                      required: [automatic]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Manual]
+                    not:
+                      anyOf:
+                      - required: [rollingUpdate]
+                      - required: [automatic]
                 docker:
                   description: |
                     Docker settings for nodes.
