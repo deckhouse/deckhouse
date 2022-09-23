@@ -161,7 +161,7 @@
         Usually, this alert means that the Deckhouse Pod is having difficulties with connecting to the Internet.
 
   - alert: D8DeckhouseQueueIsHung
-    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier"}[__SCRAPE_INTERVAL_X_3__])) != 0
+    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])) != 0
     for: 10m
     labels:
       severity_level: "7"
