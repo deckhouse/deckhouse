@@ -112,6 +112,7 @@ apiVersions:
           ru-central1-b: e2lu8r1tbbtryhdpa9ro
           ru-central1-c: e2lu8r1tbbtryhdpa9ro
           ```
+          !!!Внимание!!! Deckhouse создаст таблицу маршрутизации, которую необходимо вручную привязать к указанными подсетям!
       labels:
         description: |
           Лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
