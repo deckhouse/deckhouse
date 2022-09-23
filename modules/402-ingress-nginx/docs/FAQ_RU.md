@@ -214,8 +214,8 @@ IngressNginxController разверачивается при помощи Daemon
 в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
 
 Примечания:
-* Минимальное реальное количество реплик ingressNginxController не может быть меньше минимального к-ва узлов в nodegroup, куда деплоится ingressNginxController.
-* Максимальное реальное количество реплик ingressNginxController не может быть больше максимального к-ва узлов в nodegroup, куда деплоится ingressNginxController.
+* Минимальное реальное количество реплик ingressNginxController не может быть меньше минимального количества узлов в nodegroup, в которую разворачивается ingressNginxController.
+* Максимальное реальное количество реплик ingressNginxController не может быть больше максимального количества узлов в NodeGroup, в которую разворачивается ingressNginxController.
 
 ## Как использовать IngressClass с установленными IngressClassParameters
 
