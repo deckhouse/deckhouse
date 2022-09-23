@@ -15,9 +15,10 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
-}, removeKalaiCRD)
+}, getRidOf1x10x1Heritage)
 
-func removeKalaiCRD(input *go_hook.HookInput) error {
+func getRidOf1x10x1Heritage(input *go_hook.HookInput) error {
 	input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "monitoringdashboards.monitoring.kiali.io", object_patch.InForeground())
+	input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "istiod-d8-istio", object_patch.InForeground())
 	return nil
 }
