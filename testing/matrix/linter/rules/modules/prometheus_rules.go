@@ -42,7 +42,7 @@ type rulesCacheStruct struct {
 const promtoolPath = "/deckhouse/bin/promtool"
 
 var rulesCache = rulesCacheStruct{
-	cache: map[string]checkResult{},
+	cache: make(map[string]checkResult),
 	mu:    sync.RWMutex{},
 }
 
@@ -65,17 +65,14 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 		return "", err
 	}
 	defer func(renderedFile *os.File) {
-		errClose := renderedFile.Close()
-		if err == nil {
-			err = errClose
-		}
+		_ = renderedFile.Close()
 	}(renderedFile)
 
 	_, err = renderedFile.Write(marshalledYaml)
 	if err != nil {
 		return "", err
 	}
-
+_ = renderedFile.Sync()
 	return renderedFile.Name(), nil
 }
 
@@ -132,6 +129,9 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 		}
 
 		path, err := writeTempRuleFileFromObject(m, marshal)
+		defer func(name string) {
+			_ = os.Remove(name)
+		}(path)
 		if err != nil {
 			return errors.NewLintRuleError(
 				"MODULE060",
@@ -141,9 +141,6 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 				err.Error(),
 			)
 		}
-		defer func(name string) {
-			_ = os.Remove(name)
-		}(path)
 
 		err = checkRuleFile(path)
 		if err != nil {
