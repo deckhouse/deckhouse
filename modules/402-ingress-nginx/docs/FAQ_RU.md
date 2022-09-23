@@ -213,7 +213,7 @@ IngressNginxController деплоится при помощи DaemonSet. DaemonS
 при CPU utilization > 50% HPA закажет новую реплику для `hpa-scaler` (в рамках minReplicas и maxReplicas).
 
 `hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно
-в рамках своей nodegroup), куда автоматически будет размещен еще один ingress-controller.
+в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
 
 Примечания:
 * Минимальное реальное количество реплик ingressNginxController не может быть меньше минимального к-ва узлов в nodegroup, куда деплоится ingressNginxController.
