@@ -94,6 +94,11 @@ type GenSelfSignedTLSHookConf struct {
 	// Data in values store as plain text
 	// In helm templates you need use `b64enc` function to encode
 	FullValuesPathPrefix string
+
+	// BeforeHookCheck runs check function before hook execution. Function should return boolean 'continue' value
+	// if return value is false - hook will stop its execution
+	// if return value is true - hook will continue
+	BeforeHookCheck func(input *go_hook.HookInput) bool
 }
 
 func (gss GenSelfSignedTLSHookConf) generatePaths() (caPath, certPath, keyPath string) {
@@ -157,6 +162,13 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 	caPath, certPath, keyPath := conf.generatePaths()
 
 	return func(input *go_hook.HookInput) error {
+		if conf.BeforeHookCheck != nil {
+			passed := conf.BeforeHookCheck(input)
+			if !passed {
+				return nil
+			}
+		}
+
 		var cert certificate.Certificate
 		var err error
 
