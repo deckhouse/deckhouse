@@ -422,6 +422,16 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
+                  x-examples:
+                    - approvalMode: Automatic
+                      automatic:
+                        drainBeforeApproval: false
+                        windows:
+                          - from: '06:00'
+                            to: '08:00'
+                            days:
+                              - Tue
+                              - Sun
                   properties:
                     approvalMode:
                       type: string
@@ -474,6 +484,7 @@ spec:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
+                                example: ["Mon", "Wed"]
                                 items:
                                   type: string
                                   enum:
