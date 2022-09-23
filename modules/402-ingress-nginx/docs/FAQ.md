@@ -212,8 +212,8 @@ The IngressNginxController is deployed using Daemonset. Daemonset does not provi
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
 Notes:
-* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the nodegroup where ingressNginxController is deployed.
-* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the nodegroup where ingressNginxController is deployed.
+* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
+* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
 
 ## How to use IngressClass with IngressClassParameters?
 
