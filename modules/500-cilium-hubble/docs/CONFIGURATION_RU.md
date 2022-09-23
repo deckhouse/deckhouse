@@ -10,7 +10,7 @@ title: "Модуль cilium-hubble: настройки"
 ciliumHubbleEnabled: "true"
 ```
 
-Модуль останется отключенным вне зависимости от параметра `ciliumHubbleEnabled:`, если не включен модуль `cni-cilium`. 
+Модуль останется отключенным вне зависимости от параметра `ciliumHubbleEnabled:`, если не включен модуль `cni-cilium`.
 
 ## Параметры
 
