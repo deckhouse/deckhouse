@@ -46,7 +46,7 @@ var rulesCache = rulesCacheStruct{
 	mu:    sync.RWMutex{},
 }
 
-func promtoolAvailable() bool {
+func PromtoolAvailable() bool {
 	info, err := os.Stat(promtoolPath)
 	return err == nil && (info.Mode().Perm()&0111 != 0)
 }
@@ -99,15 +99,6 @@ func createPromtoolError(m utils.Module, errMsg string) errors.LintRuleError {
 
 func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	if object.Unstructured.GetKind() == "PrometheusRule" {
-		if !promtoolAvailable() {
-			return errors.NewLintRuleError(
-				"MODULE060",
-				m.Name,
-				m.Path,
-				"Promtool is not available. Execute `make bin/promtool` prior to starting matrix tests.",
-			)
-		}
-
 		marshal, hash, err := marshalChartYaml(object)
 		if err != nil {
 			return errors.NewLintRuleError(

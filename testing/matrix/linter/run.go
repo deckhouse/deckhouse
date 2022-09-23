@@ -17,6 +17,7 @@ limitations under the License.
 package linter
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -54,6 +55,10 @@ func Run(tmpDir string, m utils.Module) error {
 	var values []string
 	if err != nil {
 		return err
+	}
+
+	if !modules.PromtoolAvailable() {
+		return errors.New("promtool is not available, execute `make bin/promtool` prior to starting matrix tests")
 	}
 
 	if isExist(m.Path, "openapi") && !isExist(m.Path, "values_matrix_test.yaml") {
