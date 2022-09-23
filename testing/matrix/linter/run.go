@@ -57,7 +57,7 @@ func Run(tmpDir string, m utils.Module) error {
 		return err
 	}
 
-	if !modules.PromtoolAvailable() {
+	if isExist(m.Path, filepath.Join("monitoring", "prometheus-rules")) && !modules.PromtoolAvailable() {
 		return errors.New("promtool is not available, execute `make bin/promtool` prior to starting matrix tests")
 	}
 
