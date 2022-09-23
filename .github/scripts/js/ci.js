@@ -1122,6 +1122,10 @@ You can trigger release related actions by commenting on this issue:
 - \`/e2e/run/<provider> git_ref\` will run e2e using provider and an \`install\` image built from git_ref.
   - \`provider\` is one of \`${availableProviders}\`
   - \`git_ref\` is ${possibleGitRefs}
+- \`/e2e/run/<provider> git_ref_1 git_ref_2\` will run e2e using provider and git_ref_1 and then switch to git_ref_2.
+  - \`provider\` is one of \`${availableProviders}\`
+  - \`git_ref_1\` is a release-* or main branch
+  - \`git_ref_2\` is a release-* or main branch
 - \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
   - \`cri_name\` is one of \`${availableCRI}\`
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
@@ -1143,6 +1147,16 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 
 This comment will run 4 e2e jobs on AWS with Docker and containerd
 and with Kubernetes version 1.20 and 1.23 using image built from main branch.
+\`\`\`
+
+\`\`\`
+/e2e/run/aws release-1.35 release-1.36
+/e2e/use/cri/containerd
+/e2e/use/k8s/1.23
+
+This comment will create cluster in AWS using Deckhouse built from release-1.35 branch
+and then switch to images built from release-1.36 branch.
+'use' options are supported, cluster will use containerd and Kubernetes version 1.23.
 \`\`\`
 
 **Note 2:**
