@@ -202,9 +202,7 @@ apiVersions:
         additionalProperties: false
         required: []
         description: Layout is **deprecated**.
-        properties:
-          associatePublicIPToMasters:
-            type: boolean
+        properties: {}
       withoutNAT:
         type: object
         additionalProperties: false
