@@ -427,9 +427,9 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
                         - `Automatic` —  automatically approve disruption-involving updates (the default value).
-                        - `RollingUpdate` - recreate cloud node with new settings. Available only for cloud nodes.
+                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
                       enum:
                         - Manual
                         - Automatic
