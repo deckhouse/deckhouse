@@ -72,7 +72,7 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 	if err != nil {
 		return "", err
 	}
-_ = renderedFile.Sync()
+	_ = renderedFile.Sync()
 	return renderedFile.Name(), nil
 }
 
@@ -98,55 +98,58 @@ func createPromtoolError(m utils.Module, errMsg string) errors.LintRuleError {
 }
 
 func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRuleError {
-	if object.Unstructured.GetKind() == "PrometheusRule" {
-		marshal, hash, err := marshalChartYaml(object)
-		if err != nil {
-			return errors.NewLintRuleError(
-				"MODULE060",
-				m.Name,
-				m.Path,
-				"Error marshalling Helm chart to yaml",
-			)
-		}
-
-		rulesCache.mu.RLock()
-		res, ok := rulesCache.cache[hash]
-		rulesCache.mu.RUnlock()
-		if ok {
-			if !res.success {
-				return createPromtoolError(m, res.errMsg)
-			}
-			return errors.EmptyRuleError
-		}
-
-		path, err := writeTempRuleFileFromObject(m, marshal)
-		defer func(name string) {
-			_ = os.Remove(name)
-		}(path)
-		if err != nil {
-			return errors.NewLintRuleError(
-				"MODULE060",
-				m.Name,
-				m.Path,
-				"Error creating temporary rule file from Helm chart:\n%s",
-				err.Error(),
-			)
-		}
-
-		err = checkRuleFile(path)
-		if err != nil {
-			errorMessage := string(err.(*exec.ExitError).Stderr)
-			rulesCache.mu.Lock()
-			rulesCache.cache[hash] = checkResult{
-				success: false,
-				errMsg:  errorMessage,
-			}
-			rulesCache.mu.Unlock()
-			return createPromtoolError(m, errorMessage)
-		}
-		rulesCache.mu.Lock()
-		rulesCache.cache[hash] = checkResult{success: true}
-		rulesCache.mu.Unlock()
+	if object.Unstructured.GetKind() != "PrometheusRule" {
+		return errors.EmptyRuleError
 	}
+
+	marshal, hash, err := marshalChartYaml(object)
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MODULE060",
+			m.Name,
+			m.Path,
+			"Error marshalling Helm chart to yaml",
+		)
+	}
+
+	rulesCache.mu.RLock()
+	res, ok := rulesCache.cache[hash]
+	rulesCache.mu.RUnlock()
+	if ok {
+		if !res.success {
+			return createPromtoolError(m, res.errMsg)
+		}
+		return errors.EmptyRuleError
+	}
+
+	path, err := writeTempRuleFileFromObject(m, marshal)
+	defer func(name string) {
+		_ = os.Remove(name)
+	}(path)
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MODULE060",
+			m.Name,
+			m.Path,
+			"Error creating temporary rule file from Helm chart:\n%s",
+			err.Error(),
+		)
+	}
+
+	err = checkRuleFile(path)
+	if err != nil {
+		errorMessage := string(err.(*exec.ExitError).Stderr)
+		rulesCache.mu.Lock()
+		rulesCache.cache[hash] = checkResult{
+			success: false,
+			errMsg:  errorMessage,
+		}
+		rulesCache.mu.Unlock()
+		return createPromtoolError(m, errorMessage)
+	}
+	rulesCache.mu.Lock()
+	rulesCache.cache[hash] = checkResult{success: true}
+	rulesCache.mu.Unlock()
+
 	return errors.EmptyRuleError
 }
