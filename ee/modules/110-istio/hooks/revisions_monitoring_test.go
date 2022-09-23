@@ -47,7 +47,7 @@ metadata:
   namespace: {{ .Namespace }}
   labels:
     service.istio.io/canonical-name: {{ .Name }}
-    {{ if .DisableInjectionLabel }}sidecar.istio.io/inject: "false"{{ end }}
+    {{ if .InjectionLabel }}sidecar.istio.io/inject: "{{ .InjectionLabelValue }}"{{ end }}
     {{ if .DefiniteRevision }}istio.io/rev: {{ .DefiniteRevision }}{{ end }}
   annotations:
     some-annotation: some-value
@@ -59,7 +59,8 @@ spec: {}
 `
 
 type podParams struct {
-	DisableInjectionLabel      bool
+	InjectionLabel             bool
+	InjectionLabelValue        bool
 	DisableInjectionAnnotation bool
 	DefiniteRevision           string
 	CurrentRevision            string
@@ -136,16 +137,31 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 		}))
 	},
 		Entry("Empty cluster", []string{}, nil),
-		Entry("Pod to ignore with inject=false label",
+		Entry("NS with global revision, Pod to ignore with inject=false label",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
 				}),
 				istioPodYAML(podParams{
-					DisableInjectionLabel: true,
+					InjectionLabel:      true,
+					InjectionLabelValue: false,
 				}),
 			}, nil),
-		Entry("Pod to ignore with inject=false annotation",
+		Entry("NS without any revisions, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: false,
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x42",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x42",
+				DesiredRevision: "v1x42",
+			}),
+		Entry("NS with global revision, Pod to ignore with inject=false annotation",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
@@ -154,7 +170,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					DisableInjectionAnnotation: true,
 				}),
 			}, nil),
-		Entry("NS global revision, pod revision is actual",
+		Entry("NS with global revision, Pod revision is actual",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,

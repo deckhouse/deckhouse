@@ -82,7 +82,6 @@
       summary: There are Pods with istio sidecars, but without istio-injection configured
     expr: |
       d8_istio_pod_revision{desired_revision="absent",revision!="absent"}
-      unless on (dataplane_pod) label_replace(kube_pod_labels{label_sidecar_istio_io_inject="true"}, "dataplane_pod", "$1", "pod", "(.+)")
     for: 5m
     labels:
       severity_level: "4"
