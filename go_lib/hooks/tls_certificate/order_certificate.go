@@ -184,7 +184,7 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 
 			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
 				// Check that certificate is not expired and has the same order request
-				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*7)
+				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*15)
 				if err != nil {
 					return err
 				}
