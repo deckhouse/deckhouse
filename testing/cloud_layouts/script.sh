@@ -359,6 +359,7 @@ function bootstrap_static() {
   for ((i=0; i<10; i++)); do
     bootstrap_system="$($ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
 ENDSSH
@@ -376,6 +377,7 @@ ENDSSH
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
   $ssh_command -o "ServerAliveInterval=5" -o "ServerAliveCountMax=5" -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
 ENDSSH
@@ -385,6 +387,7 @@ ENDSSH
   for ((i=1; i<=10; i++)); do
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl get nodes
 kubectl get nodes -o json | jq -re '.items | length > 0' >/dev/null
@@ -429,6 +432,7 @@ function bootstrap() {
   for ((i=1; i<=20; i++)); do
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
 kubectl -n d8-cloud-instance-manager get machine -o json | jq -re '.items | length > 0' >/dev/null
@@ -460,6 +464,7 @@ function change_deckhouse_image() {
   >&2 echo "Change Deckhouse image to ${new_image_tag}."
   if ! $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
 ENDSSH
@@ -469,6 +474,7 @@ ENDSSH
 
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system get pods -l app=deckhouse
 [[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')" ==  "True" ]]
@@ -503,6 +509,7 @@ function wait_cluster_ready() {
 
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 
 function pause-the-test() {
