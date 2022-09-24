@@ -59,3 +59,23 @@ Data that will be collected:
 * cloud controller manager logs
 * all firing alerts from Prometheus
 * terraform-state-exporter metrics
+
+## How to debug pod problems with ephemeral containers ?
+
+Running the following command:
+
+```shell
+kubectl -n <nmamespace> debug -it <pod_name> --image=ubuntu <container_name>
+```
+
+More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
+
+## How to debug node problems with ephemeral containers ?
+
+Running the following command:
+
+```shell
+kubectl debug node/mynode -it --image=ubuntu
+```
+
+More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).
