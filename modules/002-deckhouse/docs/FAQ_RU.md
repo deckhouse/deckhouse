@@ -74,7 +74,6 @@ kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 
 Выполните следующую команду:
 
-
 ```shell
 kubectl debug node/mynode -it --image=ubuntu
 ```
