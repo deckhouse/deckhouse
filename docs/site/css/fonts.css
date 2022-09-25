@@ -1,3 +1,6 @@
+---
+---
+
 @font-face {
   font-family: 'Open Sans';
   font-style: italic;
@@ -52,7 +55,8 @@
   font-weight: 400;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-regular.ttf') format('truetype');
+  /*src: url('/fonts/opensans/opensans-regular.ttf') format('truetype');*/
+  src: url('{{ assets["opensans/opensans-regular.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
