@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,40 +51,19 @@ type DeschedulerSpec struct {
 }
 
 type DeschedulerDeploymentTemplate struct {
-	// NodeSelector is a selector which must be true for the pod to fit on a node.
-	// Selector which must match a node's labels for the pod to be scheduled on that node.
-	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// If specified, the pod's tolerations.
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-
-	// Resource allocation policy
-	ResourcesRequests *ResourcesRequests `json:"resourcesRequests,omitempty"`
 }
-
-type ResourcesRequests struct {
-	// Defines VPA mode that applies to a given descheduler Deployment
-	// +kubebuilder:default=VPA
-	// +kubebuilder:validation:Enum=Manual;VPA;Off
-	Mode ResourcesRequestsMode `json:"mode,omitempty"`
-}
-
-type ResourcesRequestsMode string
-
-const (
-	ResourcesRequestsModeManual = "Manual"
-	ResourcesRequestsModeVPA    = "VPA"
-	ResourcesRequestsModeOff    = "Off"
-)
 
 type DeschedulerPolicy struct {
 	// Parameters that apply to all policies
 	CommonParameters CommonParameters `json:"parameters,omitempty"`
 
 	// List of strategies with corresponding parameters for a given Descheduler instances
-	// To enable a strategy without giving it any parameters, specify it like this:
+	// To enable a strategy with default parameters, specify it like this:
 	// removePodsViolatingNodeAffinity: {}
+	// +kubebuilder:default={removePodsViolatingInterPodAntiAffinity: {}, removePodsViolatingNodeAffinity: {}}
 	Strategies DeschedulerStrategies `json:"strategies,omitempty"`
 }
 
@@ -135,6 +114,10 @@ type DeschedulerStrategies struct {
 }
 
 type RemoveDuplicates struct {
+	Params *RemoveDuplicatesParams `json:"params,omitempty"`
+}
+
+type RemoveDuplicatesParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	NodeFitFiltering             `json:",inline"`
@@ -143,18 +126,32 @@ type RemoveDuplicates struct {
 }
 
 type LowNodeUtilization struct {
+	// +kubebuilder:default={nodeResourceUtilizationThresholds: {thresholds: {cpu: 20, memory: 20, pods: 20}, targetThresholds: {cpu: 50, memory: 50, pods: 50}}}
+	Params *LowNodeUtilizationParams `json:"params,omitempty"`
+}
+
+type LowNodeUtilizationParams struct {
 	NodeFitFiltering `json:",inline"`
 
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholdsFiltering `json:"nodeResourceUtilizationThresholds,omitempty"`
 }
 
 type HighNodeUtilization struct {
+	// +kubebuilder:default={nodeResourceUtilizationThresholds: {thresholds: {cpu: 50, memory: 50}}}
+	Params *HighNodeUtilizationParams `json:"params,omitempty"`
+}
+
+type HighNodeUtilizationParams struct {
 	NodeFitFiltering `json:",inline"`
 
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholdsFiltering `json:"nodeResourceUtilizationThresholds,omitempty"`
 }
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
+	Params *RemovePodsViolatingInterPodAntiAffinityParams `json:"params,omitempty"`
+}
+
+type RemovePodsViolatingInterPodAntiAffinityParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -162,6 +159,11 @@ type RemovePodsViolatingInterPodAntiAffinity struct {
 }
 
 type RemovePodsViolatingNodeAffinity struct {
+	// +kubebuilder:default={nodeAffinityType: {"requiredDuringSchedulingIgnoredDuringExecution",}}
+	Params *RemovePodsViolatingNodeAffinityParams `json:"params,omitempty"`
+}
+
+type RemovePodsViolatingNodeAffinityParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -171,6 +173,10 @@ type RemovePodsViolatingNodeAffinity struct {
 }
 
 type RemovePodsViolatingNodeTaints struct {
+	Params *RemovePodsViolatingNodeTaintsParams `json:"params,omitempty"`
+}
+
+type RemovePodsViolatingNodeTaintsParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -180,6 +186,10 @@ type RemovePodsViolatingNodeTaints struct {
 }
 
 type RemovePodsViolatingTopologySpreadConstraint struct {
+	Params *RemovePodsViolatingTopologySpreadConstraintParams `json:"params,omitempty"`
+}
+
+type RemovePodsViolatingTopologySpreadConstraintParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -189,6 +199,11 @@ type RemovePodsViolatingTopologySpreadConstraint struct {
 }
 
 type RemovePodsHavingTooManyRestarts struct {
+	// +kubebuilder:default={podsHavingTooManyRestarts: {podRestartThreshold: 100, includingInitContainers: true}}
+	Params *RemovePodsHavingTooManyRestartsParams `json:"params,omitempty"`
+}
+
+type RemovePodsHavingTooManyRestartsParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -198,6 +213,11 @@ type RemovePodsHavingTooManyRestarts struct {
 }
 
 type PodLifeTime struct {
+	// +kubebuilder:default={podLifeTime: {maxPodLifeTimeSeconds: 86400, podStatusPhases: {"Pending",}}}
+	Params *PodLifeTimeParams `json:"params,omitempty"`
+}
+
+type PodLifeTimeParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`
@@ -206,6 +226,10 @@ type PodLifeTime struct {
 }
 
 type RemoveFailedPods struct {
+	Params *RemoveFailedPodsParams `json:"params,omitempty"`
+}
+
+type RemoveFailedPodsParams struct {
 	ThresholdPrioritiesFiltering `json:",inline"`
 	NamespacesFiltering          `json:",inline"`
 	LabelSelectorFiltering       `json:",inline"`

@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,13 +48,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "default",
 		},
-		Spec: v1alpha1.DeschedulerSpec{
-			DeploymentTemplate: v1alpha1.DeschedulerDeploymentTemplate{
-				ResourcesRequests: &v1alpha1.ResourcesRequests{
-					Mode: v1alpha1.ResourcesRequestsModeVPA,
-				},
-			},
-		},
+		Spec: v1alpha1.DeschedulerSpec{},
 	}
 
 	if value := config.Get("removeDuplicates"); value.Exists() {
@@ -62,26 +56,30 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 	if value := config.Get("lowNodeUtilization"); value.Exists() {
 		deschedulerCR.Spec.DeschedulerPolicy.Strategies.LowNodeUtilization = &v1alpha1.LowNodeUtilization{
-			NodeResourceUtilizationThresholds: &v1alpha1.NodeResourceUtilizationThresholdsFiltering{
-				Thresholds: map[v1.ResourceName]v1alpha1.Percentage{
-					"cpu":    40,
-					"memory": 50,
-					"pods":   40,
-				},
-				TargetThresholds: map[v1.ResourceName]v1alpha1.Percentage{
-					"cpu":    80,
-					"memory": 90,
-					"pods":   90,
+			Params: &v1alpha1.LowNodeUtilizationParams{
+				NodeResourceUtilizationThresholds: &v1alpha1.NodeResourceUtilizationThresholdsFiltering{
+					Thresholds: map[v1.ResourceName]v1alpha1.Percentage{
+						"cpu":    40,
+						"memory": 50,
+						"pods":   40,
+					},
+					TargetThresholds: map[v1.ResourceName]v1alpha1.Percentage{
+						"cpu":    80,
+						"memory": 90,
+						"pods":   90,
+					},
 				},
 			},
 		}
 	}
 	if value := config.Get("highNodeUtilization"); value.Exists() {
 		deschedulerCR.Spec.DeschedulerPolicy.Strategies.HighNodeUtilization = &v1alpha1.HighNodeUtilization{
-			NodeResourceUtilizationThresholds: &v1alpha1.NodeResourceUtilizationThresholdsFiltering{
-				Thresholds: map[v1.ResourceName]v1alpha1.Percentage{
-					"cpu":    50,
-					"memory": 50,
+			Params: &v1alpha1.HighNodeUtilizationParams{
+				NodeResourceUtilizationThresholds: &v1alpha1.NodeResourceUtilizationThresholdsFiltering{
+					Thresholds: map[v1.ResourceName]v1alpha1.Percentage{
+						"cpu":    50,
+						"memory": 50,
+					},
 				},
 			},
 		}
@@ -91,7 +89,9 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 	if value := config.Get("removePodsViolatingNodeAffinity"); value.Exists() {
 		deschedulerCR.Spec.DeschedulerPolicy.Strategies.RemovePodsViolatingNodeAffinity = &v1alpha1.RemovePodsViolatingNodeAffinity{
-			NodeAffinityType: []string{"requiredDuringSchedulingIgnoredDuringExecution"},
+			Params: &v1alpha1.RemovePodsViolatingNodeAffinityParams{
+				NodeAffinityType: []string{"requiredDuringSchedulingIgnoredDuringExecution"},
+			},
 		}
 	}
 	if value := config.Get("removePodsViolatingNodeTaints"); value.Exists() {
@@ -102,17 +102,21 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 	if value := config.Get("removePodsHavingTooManyRestarts"); value.Exists() {
 		deschedulerCR.Spec.DeschedulerPolicy.Strategies.RemovePodsHavingTooManyRestarts = &v1alpha1.RemovePodsHavingTooManyRestarts{
-			PodsHavingTooManyRestarts: &v1alpha1.PodsHavingTooManyRestartsParameters{
-				PodRestartThreshold:     100,
-				IncludingInitContainers: true,
+			Params: &v1alpha1.RemovePodsHavingTooManyRestartsParams{
+				PodsHavingTooManyRestarts: &v1alpha1.PodsHavingTooManyRestartsParameters{
+					PodRestartThreshold:     100,
+					IncludingInitContainers: true,
+				},
 			},
 		}
 	}
 	if value := config.Get("podLifeTime"); value.Exists() {
 		deschedulerCR.Spec.DeschedulerPolicy.Strategies.PodLifeTime = &v1alpha1.PodLifeTime{
-			PodLifeTime: &v1alpha1.PodLifeTimeParameters{
-				MaxPodLifeTimeSeconds: uintPtr(86400),
-				PodStatusPhases:       []string{"Pending"},
+			Params: &v1alpha1.PodLifeTimeParams{
+				PodLifeTime: &v1alpha1.PodLifeTimeParameters{
+					MaxPodLifeTimeSeconds: uintPtr(86400),
+					PodStatusPhases:       []string{"Pending"},
+				},
 			},
 		}
 	}

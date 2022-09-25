@@ -1,0 +1,878 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: ""
+  creationTimestamp: null
+  name: deschedulers.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Descheduler
+    listKind: DeschedulerList
+    plural: deschedulers
+    singular: descheduler
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: status.ready
+      name: Ready
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Descheduler is a description of a single descheduler instance
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the behavior of a descheduler instance.
+            properties:
+              deploymentTemplate:
+                description: Defines Template of a descedhuler Deployment
+                properties:
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  tolerations:
+                    items:
+                      description: The pod this Toleration is attached to tolerates
+                        any taint that matches the triple <key,value,effect> using
+                        the matching operator <operator>.
+                      properties:
+                        effect:
+                          description: Effect indicates the taint effect to match.
+                            Empty means match all taint effects. When specified, allowed
+                            values are NoSchedule, PreferNoSchedule and NoExecute.
+                          type: string
+                        key:
+                          description: Key is the taint key that the toleration applies
+                            to. Empty means match all taint keys. If the key is empty,
+                            operator must be Exists; this combination means to match
+                            all values and all keys.
+                          type: string
+                        operator:
+                          description: Operator represents a key's relationship to
+                            the value. Valid operators are Exists and Equal. Defaults
+                            to Equal. Exists is equivalent to wildcard for value,
+                            so that a pod can tolerate all taints of a particular
+                            category.
+                          type: string
+                        tolerationSeconds:
+                          description: TolerationSeconds represents the period of
+                            time the toleration (which must be of effect NoExecute,
+                            otherwise this field is ignored) tolerates the taint.
+                            By default, it is not set, which means tolerate the taint
+                            forever (do not evict). Zero and negative values will
+                            be treated as 0 (evict immediately) by the system.
+                          format: int64
+                          type: integer
+                        value:
+                          description: Value is the taint value the toleration matches
+                            to. If the operator is Exists, the value should be empty,
+                            otherwise just a regular string.
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              deschedulerPolicy:
+                description: commonParameters and strategies follow descheduler's
+                  documentation https://github.com/kubernetes-sigs/descheduler#policy-and-strategies
+                properties:
+                  parameters:
+                    description: Parameters that apply to all policies
+                    properties:
+                      evictFailedBarePods:
+                        description: EvictFailedBarePods allows pods without ownerReferences
+                          and in failed phase to be evicted.
+                        type: boolean
+                      evictLocalStoragePods:
+                        description: EvictLocalStoragePods allows pods using local
+                          storage to be evicted.
+                        type: boolean
+                      evictSystemCriticalPods:
+                        description: 'EvictSystemCriticalPods allows eviction of pods
+                          of any priority (including Kubernetes system pods) Note:
+                          Setting evictSystemCriticalPods to true disables priority
+                          filtering entirely.'
+                        type: boolean
+                      ignorePvcPods:
+                        description: IgnorePVCPods prevents pods with PVCs from being
+                          evicted.
+                        type: boolean
+                      maxNoOfPodsToEvictPerNamespace:
+                        description: MaxNoOfPodsToEvictPerNamespace restricts maximum
+                          of pods to be evicted per namespace.
+                        type: integer
+                      maxNoOfPodsToEvictPerNode:
+                        description: MaxNoOfPodsToEvictPerNode restricts maximum of
+                          pods to be evicted per node.
+                        type: integer
+                      nodeSelector:
+                        description: NodeSelector for a set of nodes to operate over
+                        type: string
+                    type: object
+                  strategies:
+                    default:
+                      removePodsViolatingInterPodAntiAffinity: null
+                      removePodsViolatingNodeAffinity: null
+                    description: 'List of strategies with corresponding parameters
+                      for a given Descheduler instances To enable a strategy with
+                      default parameters, specify it like this: removePodsViolatingNodeAffinity:
+                      {}'
+                    properties:
+                      highNodeUtilization:
+                        properties:
+                          params:
+                            default:
+                              nodeResourceUtilizationThresholds:
+                                thresholds:
+                                  cpu: 50
+                                  memory: 50
+                            properties:
+                              nodeFit:
+                                type: boolean
+                              nodeResourceUtilizationThresholds:
+                                properties:
+                                  numberOfNodes:
+                                    type: integer
+                                  targetThresholds:
+                                    additionalProperties:
+                                      type: number
+                                    type: object
+                                  thresholds:
+                                    additionalProperties:
+                                      type: number
+                                    type: object
+                                  useDeviationThresholds:
+                                    type: boolean
+                                type: object
+                            type: object
+                        type: object
+                      lowNodeUtilization:
+                        properties:
+                          params:
+                            default:
+                              nodeResourceUtilizationThresholds:
+                                targetThresholds:
+                                  cpu: 50
+                                  memory: 50
+                                  pods: 50
+                                thresholds:
+                                  cpu: 20
+                                  memory: 20
+                                  pods: 20
+                            properties:
+                              nodeFit:
+                                type: boolean
+                              nodeResourceUtilizationThresholds:
+                                properties:
+                                  numberOfNodes:
+                                    type: integer
+                                  targetThresholds:
+                                    additionalProperties:
+                                      type: number
+                                    type: object
+                                  thresholds:
+                                    additionalProperties:
+                                      type: number
+                                    type: object
+                                  useDeviationThresholds:
+                                    type: boolean
+                                type: object
+                            type: object
+                        type: object
+                      podLifeTime:
+                        properties:
+                          params:
+                            default:
+                              podLifeTime:
+                                maxPodLifeTimeSeconds: 86400
+                                podStatusPhases:
+                                - Pending
+                            properties:
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              podLifeTime:
+                                properties:
+                                  maxPodLifeTimeSeconds:
+                                    type: integer
+                                  podStatusPhases:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removeDuplicates:
+                        properties:
+                          params:
+                            properties:
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              removeDuplicates:
+                                properties:
+                                  excludeOwnerKinds:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removeFailedPods:
+                        properties:
+                          params:
+                            properties:
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              removeFailedPods:
+                                properties:
+                                  excludeOwnerKinds:
+                                    items:
+                                      type: string
+                                    type: array
+                                  includingInitContainers:
+                                    type: boolean
+                                  minPodLifetimeSeconds:
+                                    type: integer
+                                  reasons:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removePodsHavingTooManyRestarts:
+                        properties:
+                          params:
+                            default:
+                              podsHavingTooManyRestarts:
+                                includingInitContainers: true
+                                podRestartThreshold: 100
+                            properties:
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              podsHavingTooManyRestarts:
+                                properties:
+                                  includingInitContainers:
+                                    type: boolean
+                                  podRestartThreshold:
+                                    format: int32
+                                    type: integer
+                                type: object
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removePodsViolatingInterPodAntiAffinity:
+                        properties:
+                          params:
+                            properties:
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removePodsViolatingNodeAffinity:
+                        properties:
+                          params:
+                            default:
+                              nodeAffinityType:
+                              - requiredDuringSchedulingIgnoredDuringExecution
+                            properties:
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeAffinityType:
+                                items:
+                                  type: string
+                                type: array
+                              nodeFit:
+                                type: boolean
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removePodsViolatingNodeTaints:
+                        properties:
+                          params:
+                            properties:
+                              excludedTaints:
+                                items:
+                                  type: string
+                                type: array
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                      removePodsViolatingTopologySpreadConstraint:
+                        properties:
+                          params:
+                            properties:
+                              includeSoftConstraints:
+                                type: boolean
+                              labelSelector:
+                                description: A label selector is a label query over
+                                  a set of resources. The result of matchLabels and
+                                  matchExpressions are ANDed. An empty label selector
+                                  matches all objects. A null label selector matches
+                                  no objects.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - exclude
+                                - include
+                                type: object
+                              nodeFit:
+                                type: boolean
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            required:
+                            - includeSoftConstraints
+                            - thresholdPriority
+                            - thresholdPriorityClassName
+                            type: object
+                        type: object
+                    type: object
+                type: object
+            type: object
+          status:
+            description: Most recently observed status of a descheduler instance.
+            properties:
+              ready:
+                type: boolean
+            required:
+            - ready
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

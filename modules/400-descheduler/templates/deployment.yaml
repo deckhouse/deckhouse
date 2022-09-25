@@ -5,14 +5,14 @@ memory: 50Mi
 
 {{- range $d := .Values.descheduler.internal.deschedulers }}
   {{- $deschedulerSpec := $d.spec }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -24,19 +24,18 @@ spec:
     containerPolicies:
     - containerName: "descheduler"
       minAllowed:
-        {{- include "descheduler_resources" . | nindent 8 }}
+        {{- include "descheduler_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
   {{- end }}
-{{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -48,7 +47,7 @@ kind: Deployment
 metadata:
   name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -60,19 +59,19 @@ spec:
       labels:
         app: descheduler-{{ $d.metadata.name }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }} # TODO, don't roll every single one
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }} # TODO, don't roll every single one
     spec:
       serviceAccountName: descheduler
       imagePullSecrets:
       - name: deckhouse-registry
-      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
       containers:
       - name: descheduler
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "descheduler") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "descheduler") }}
         volumeMounts:
         - mountPath: /policy
           name: policy-volume
@@ -89,9 +88,9 @@ spec:
         - "15m"
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "descheduler_resources" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+{{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "descheduler_resources" $ | nindent 12 }}
 {{- end }}
       volumes:
       - name: policy-volume

@@ -8,5 +8,4 @@ properties:
       deschedulers:
         type: array
         items:
-          type: object
-          additionalProperties: true
+          $ref: '/deckhouse/modules/400-descheduler/openapi/descheduler_v1alpha1.yaml'

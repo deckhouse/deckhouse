@@ -1,7 +1,7 @@
 //go:generate controller-gen object:headerFile=boilerplate.go.txt crd:allowDangerousTypes=true output:artifacts:config=../../../../crds
 
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
