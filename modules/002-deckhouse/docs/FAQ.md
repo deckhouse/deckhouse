@@ -72,7 +72,7 @@ More info in [official documentation](https://kubernetes.io/docs/tasks/debug/deb
 
 ## How to debug node problems with ephemeral containers ?
 
-Running the following command:
+Run the following command:
 
 ```shell
 kubectl debug node/mynode -it --image=ubuntu
