@@ -195,7 +195,7 @@ type RemovePodsViolatingTopologySpreadConstraintParams struct {
 	LabelSelectorFiltering       `json:",inline"`
 	NodeFitFiltering             `json:",inline"`
 
-	IncludeSoftConstraints bool `json:"includeSoftConstraints"`
+	IncludeSoftConstraints bool `json:"includeSoftConstraints,omitempty"`
 }
 
 type RemovePodsHavingTooManyRestarts struct {
@@ -264,13 +264,13 @@ type NamespacesFiltering struct {
 }
 
 type Namespaces struct {
-	Include []string `json:"include"`
-	Exclude []string `json:"exclude"`
+	Include []string `json:"include,omitempty"`
+	Exclude []string `json:"exclude,omitempty"`
 }
 
 type ThresholdPrioritiesFiltering struct {
-	ThresholdPriority          *int32 `json:"thresholdPriority"`
-	ThresholdPriorityClassName string `json:"thresholdPriorityClassName"`
+	ThresholdPriority          *int32 `json:"thresholdPriority,omitempty"`
+	ThresholdPriorityClassName string `json:"thresholdPriorityClassName,omitempty"`
 }
 
 type LabelSelectorFiltering struct {

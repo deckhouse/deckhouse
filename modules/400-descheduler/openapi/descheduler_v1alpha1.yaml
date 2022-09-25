@@ -156,9 +156,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       podLifeTime:
                         properties:
@@ -174,9 +171,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removeDuplicates:
@@ -193,9 +187,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -211,9 +202,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removeFailedPods:
@@ -260,9 +248,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -286,9 +271,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removePodsHavingTooManyRestarts:
@@ -335,9 +317,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -354,9 +333,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removePodsViolatingInterPodAntiAffinity:
@@ -403,9 +379,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -414,9 +387,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removePodsViolatingNodeAffinity:
@@ -463,9 +433,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeAffinityType:
                         items:
@@ -478,9 +445,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removePodsViolatingNodeTaints:
@@ -531,9 +495,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -542,9 +503,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
               removePodsViolatingTopologySpreadConstraint:
@@ -593,9 +551,6 @@ properties:
                             items:
                               type: string
                             type: array
-                        required:
-                          - exclude
-                          - include
                         type: object
                       nodeFit:
                         type: boolean
@@ -604,10 +559,6 @@ properties:
                         type: integer
                       thresholdPriorityClassName:
                         type: string
-                    required:
-                      - includeSoftConstraints
-                      - thresholdPriority
-                      - thresholdPriorityClassName
                     type: object
                 type: object
             type: object

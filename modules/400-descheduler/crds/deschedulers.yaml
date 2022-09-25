@@ -201,9 +201,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 podLifeTime:
                                   properties:
@@ -219,9 +216,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removeDuplicates:
@@ -238,9 +232,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -256,9 +247,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removeFailedPods:
@@ -305,9 +293,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -331,9 +316,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removePodsHavingTooManyRestarts:
@@ -384,9 +366,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -403,9 +382,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removePodsViolatingInterPodAntiAffinity:
@@ -452,9 +428,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -463,9 +436,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removePodsViolatingNodeAffinity:
@@ -515,9 +485,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeAffinityType:
                                   items:
@@ -530,9 +497,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removePodsViolatingNodeTaints:
@@ -583,9 +547,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -594,9 +555,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                         removePodsViolatingTopologySpreadConstraint:
@@ -645,9 +603,6 @@ spec:
                                       items:
                                         type: string
                                       type: array
-                                  required:
-                                    - exclude
-                                    - include
                                   type: object
                                 nodeFit:
                                   type: boolean
@@ -656,10 +611,6 @@ spec:
                                   type: integer
                                 thresholdPriorityClassName:
                                   type: string
-                              required:
-                                - includeSoftConstraints
-                                - thresholdPriority
-                                - thresholdPriorityClassName
                               type: object
                           type: object
                       type: object
