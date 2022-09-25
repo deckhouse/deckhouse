@@ -62,7 +62,7 @@ Data that will be collected:
 
 ## How to debug pod problems with ephemeral containers ?
 
-Running the following command:
+Run the following command:
 
 ```shell
 kubectl -n <nmamespace> debug -it <pod_name> --image=ubuntu <container_name>
