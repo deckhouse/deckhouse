@@ -23,6 +23,8 @@ properties:
     default: "Disabled"
     description: |
       Tunnel mode.
+
+      > Note! After changing the parameter, it is necessary to restart all nodes, otherwise, there may be problems with the availability of Pods!
   svcSourceRangeCheck:
     type: boolean
     default: false

@@ -16,8 +16,8 @@ title: "Модуль cni-cilium"
    * Debian
      * 11
    * CentOS
-     * 7 (необходимо новое ядро с [репозитория](http://elrepo.org))
-     * 8 (необходимо новое ядро с [репозитория](http://elrepo.org))
+     * 7 (необходимо новое ядро из [репозитория](http://elrepo.org))
+     * 8 (необходимо новое ядро из [репозитория](http://elrepo.org))
 
 ## Заметка о CiliumClusterwideNetworkPolicies
 
@@ -39,3 +39,7 @@ title: "Модуль cni-cilium"
         matchLabels:
           node-role.kubernetes.io/control-plane: ""
     ```
+
+## Заметка о смене режима работы Cilium
+
+При смене режима работы Cilium (параметр `tunnelMode`) c `Disabled` на `VXLAN` или обратно, необходимо перезагрузить все узлы, иначе возможны проблемы с доступностью Pod'ов.

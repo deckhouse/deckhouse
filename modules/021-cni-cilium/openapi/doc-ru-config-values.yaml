@@ -15,8 +15,9 @@ properties:
 
   tunnelMode:
     description: |
-      Режим работы тоннеля.
+      Режим работы туннеля.
 
+      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью Pod'ов.
   svcSourceRangeCheck:
     description: |
       Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
