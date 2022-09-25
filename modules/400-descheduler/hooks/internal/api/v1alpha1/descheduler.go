@@ -26,7 +26,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:printcolumn:JSONPath=status.ready,name=Ready,type=boolean
+// +kubebuilder:printcolumn:JSONPath=.status.ready,name=Ready,type=boolean
 type Descheduler struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.

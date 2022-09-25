@@ -5,5 +5,9 @@ cat /deckhouse/modules/400-descheduler/crds/deckhouse.io_deschedulers.yaml | yq 
 ```
 
 ```shell
-cat /deckhouse/modules/400-descheduler/crds/deckhouse.io_deschedulers.yaml | yq '.spec.versions[] | select(.name == "v1alpha1") | .schema.openAPIV3Schema | del(.. | select(has("default")).default)' | tee /home/zuzzas/projects/go/deckhouse-oss/modules/400-descheduler/openapi/descheduler_v1alpha1.yaml
+rm /deckhouse/modules/400-descheduler/crds/deckhouse.io_deschedulers.yaml
+```
+
+```shell
+cat /deckhouse/modules/400-descheduler/crds/deschedulers.yaml | yq '.spec.versions[] | select(.name == "v1alpha1") | .schema.openAPIV3Schema | del(.. | select(has("default")).default)' | tee /deckhouse/modules/400-descheduler/openapi/descheduler_v1alpha1.yaml
 ```

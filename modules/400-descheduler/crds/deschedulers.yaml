@@ -15,7 +15,7 @@ spec:
   scope: Cluster
   versions:
     - additionalPrinterColumns:
-        - jsonPath: status.ready
+        - jsonPath: .status.ready
           name: Ready
           type: boolean
       name: v1alpha1
