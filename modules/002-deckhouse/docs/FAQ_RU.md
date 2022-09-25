@@ -65,7 +65,7 @@ kubectl logs job.batch/kube-bench
 Выполните следующую команду:
 
 ```shell
-kubectl -n <nmamespace> debug -it <pod_name> --image=ubuntu <container_name>
+kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
 Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).

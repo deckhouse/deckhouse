@@ -65,12 +65,12 @@ Data that will be collected:
 Run the following command:
 
 ```shell
-kubectl -n <nmamespace> debug -it <pod_name> --image=ubuntu <container_name>
+kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
 More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
 
-## How to debug node problems with ephemeral containers ?
+## How to debug node problems with ephemeral containers?
 
 Run the following command:
 
