@@ -12,7 +12,7 @@
   font-weight: 400;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-italic') format('truetype');
+  src: url('/fonts/opensans/opensans-italic.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
