@@ -10,7 +10,12 @@
 
 <!-- fonts -->
 {% asset font-awesome.min.css %}
-{% asset fonts.css %}
+<style type="text/css">
+ {% capture fonts_file %}
+   {% include fonts.css %}
+ {% endcapture %}
+ {{ fonts_file | scssify }}
+</style>
 
 <!-- styles -->
 {% asset slick.css %}

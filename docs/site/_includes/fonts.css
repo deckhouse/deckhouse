@@ -1,13 +1,10 @@
----
----
-
 @font-face {
   font-family: 'Open Sans';
   font-style: italic;
   font-weight: 300;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-lightitalic.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-lightitalic.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -15,7 +12,7 @@
   font-weight: 400;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-italic.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-italic.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -23,7 +20,7 @@
   font-weight: 600;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-semibolditalic.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-semibolditalic.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -31,7 +28,7 @@
   font-weight: 700;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-bolditalic.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-bolditalic.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -39,7 +36,7 @@
   font-weight: 800;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-extrabolditalic.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-extrabolditalic.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -47,7 +44,7 @@
   font-weight: 300;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-light.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-light.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -55,7 +52,6 @@
   font-weight: 400;
   font-stretch: normal;
   font-display: swap;
-  /*src: url('/fonts/opensans/opensans-regular.ttf') format('truetype');*/
   src: url('{{ assets["opensans/opensans-regular.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
@@ -64,7 +60,7 @@
   font-weight: 600;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-semibold.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-semibold.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -72,7 +68,7 @@
   font-weight: 700;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-bold.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-bold.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Open Sans';
@@ -80,54 +76,54 @@
   font-weight: 800;
   font-stretch: normal;
   font-display: swap;
-  src: url('/fonts/opensans/opensans-extrabold.ttf') format('truetype');
+  src: url('{{ assets["opensans/opensans-extrabold.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 200;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-extralight.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-extralight.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-light.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-light.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-regular.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-regular.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-medium.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-medium.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-semibold.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-semibold.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-bold.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-bold.ttf"].digest_path }}') format('truetype');
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url('/fonts/source-code-pro/sourcecodepro-black.ttf') format('truetype');
+  src: url('{{ assets["source-code-pro/sourcecodepro-black.ttf"].digest_path }}') format('truetype');
 }
