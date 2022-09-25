@@ -60,7 +60,7 @@ Data that will be collected:
 * all firing alerts from Prometheus
 * terraform-state-exporter metrics
 
-## How to debug pod problems with ephemeral containers ?
+## How to debug pod problems with ephemeral containers?
 
 Run the following command:
 
