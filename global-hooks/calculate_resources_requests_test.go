@@ -99,10 +99,10 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			f.RunHook()
 		})
 
-		It("Hook should run, control-plane resource values should be equal (master-node with less resources - resources for components working on every node) divided by 2", func() {
+		It(fmt.Sprintf("Hook should run, control-plane resource values should be equal %d%% of (master-node with less resources - resources for components working on every node)", controlPlanePercent), func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(850)))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(1792 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64((2000 - configEveryNodeMilliCPU) * controlPlanePercent / 100)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64((4096*1024*1024 - configEveryNodeMemory) * controlPlanePercent / 100)))
 		})
 
 	})
