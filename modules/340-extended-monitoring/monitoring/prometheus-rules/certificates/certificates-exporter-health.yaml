@@ -75,25 +75,3 @@
         The recommended course of action:
         1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
         2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
-
-- name: d8.extended-monitoring.cert-exporter.malfunctioning
-  rules:
-
-  - alert: D8CertExporterStuck
-    expr: |
-      increase(promhttp_metric_handler_requests_total{job="cert-exporter", code="200"}[10m])
-    for: 20m
-    labels:
-      severity_level: "8"
-      d8_module: extended-monitoring
-      d8_component: cert-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
-      description: |
-        The `cert-exporter` failed to perform any checks for the certificates expiration for over 20 minutes.
-
-        You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
-      summary: image-cert-exporter has crashed.
