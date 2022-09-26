@@ -27,13 +27,13 @@ apiVersions:
             description: Протокол доступа к container registry (HTTP или HTTPS).
           releaseChannel:
             description: |
-              Устанавливаемый в кластере [канал обновлений](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
+              Устанавливаемый в кластере [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
           bundle:
             description: |
-              Устанавливаемый в кластере [вариант поставки](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) Deckhouse.
+              Устанавливаемый в кластере [вариант поставки](../modules/002-deckhouse/configuration.html#parameters-bundle) Deckhouse.
           logLevel:
             description: |
-              [Уровень логирования](/ru/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
+              [Уровень логирования](../modules/002-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
           configOverrides:
             description: |
               Начальная [конфигурация Deckhouse](/ru/documentation/v1/#конфигурация-deckhouse).

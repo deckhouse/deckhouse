@@ -72,20 +72,20 @@ apiVersions:
           releaseChannel:
             type: string
             description: |
-              The [release channel](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
+              The [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) to use in the cluster.
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
           bundle:
             type: string
             description: |
-              The [Deckhouse bundle](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
+              The [Deckhouse bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) to use in the cluster.
             enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string
             description: |
-              Deckhouse [logging Level](/en/documentation/v1/modules/020-deckhouse/configuration.html#parameters-loglevel).
+              Deckhouse [logging Level](../modules/002-deckhouse/configuration.html#parameters-loglevel).
             enum: [Debug, Info, Error]
             default: Info
           configOverrides:
