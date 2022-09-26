@@ -47,7 +47,7 @@ kind: Deployment
 metadata:
   name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler") | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2

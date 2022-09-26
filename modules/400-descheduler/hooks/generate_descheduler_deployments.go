@@ -20,7 +20,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/api/v1alpha1"
@@ -42,11 +44,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyDeschedulerFilter,
 		},
 		{
-			Name:          "deployments",
-			ApiVersion:    "apps/v1",
-			Kind:          "Deployments",
-			FilterFunc:    deschedulerDeploymentReadiness,
-			LabelSelector: nil,
+			Name:              "deployments",
+			ApiVersion:        "apps/v1",
+			Kind:              "Deployments",
+			FilterFunc:        deschedulerDeploymentReadiness,
+			LabelSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"app": "descheduler"}},
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"d8-descheduler"}}},
 		},
 	},
 }, generateValues)
