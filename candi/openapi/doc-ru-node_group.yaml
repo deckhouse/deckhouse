@@ -263,6 +263,8 @@ spec:
                               days:
                                 description: |
                                   Дни недели, в которые применяется окно обновлений.
+                                items:
+                                  description: День недели.
                 docker:
                   description: |
                     Параметры настройки Docker.

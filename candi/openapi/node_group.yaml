@@ -487,6 +487,7 @@ spec:
                                 example: ["Mon", "Wed"]
                                 items:
                                   type: string
+                                  description: Day of the week.
                                   enum:
                                     - Mon
                                     - Tue
