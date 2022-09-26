@@ -251,7 +251,7 @@ spec:
                             description: Список конфигураций для отправки оповещений через PagerDuty.
                             items:
                               description: |
-                                Конфигурация определяет параметры отправки оповещений с помощью PagerDuty. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
+                                Конфигурация определяет параметры отправки оповещений с помощью PagerDuty. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
                               properties:
                                 class:
                                   description: Класс/тип события.
