@@ -65,6 +65,9 @@ common:
   examples:
     en: examples
     ru: примеры
+  element_of_array:
+    en: element of the array
+    ru: элемент массива
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
