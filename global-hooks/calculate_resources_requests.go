@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	controlPlanePercent     = 50                     // %
+	controlPlanePercent     = 40                     // %
 	configEveryNodeMilliCPU = 300                    // 0.3 Cpu
 	configEveryNodeMemory   = 512 * 1024 * 1024      // 512Mb
 	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
