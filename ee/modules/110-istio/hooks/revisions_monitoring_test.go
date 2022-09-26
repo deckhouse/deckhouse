@@ -161,10 +161,86 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x42",
 				DesiredRevision: "v1x42",
 			}),
+		Entry("NS with global revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x42",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x42",
+				DesiredRevision: "v1x42",
+			}),
+		Entry("NS with definite revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x15",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x15",
+				DesiredRevision: "v1x15",
+			}),
+		FEntry("NS without any revisions, pod with istio.io/rev label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: false,
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x15",
+					CurrentRevision:  "v1x15",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x15",
+				DesiredRevision: "v1x15",
+			}),
+		FEntry("NS with global revision, pod with istio.io/rev label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x15",
+					CurrentRevision:  "v1x15",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x15",
+				DesiredRevision: "v1x15",
+			}),
+		Entry("NS with definite revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x155",
+					CurrentRevision:  "v1x155",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x155",
+				DesiredRevision: "v1x155",
+			}),
 		Entry("NS with global revision, Pod to ignore with inject=false annotation",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					DisableInjectionAnnotation: true,
+				}),
+			}, nil),
+		FEntry("NS with definite revision, Pod to ignore with inject=false annotation",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
 				}),
 				istioPodYAML(podParams{
 					DisableInjectionAnnotation: true,

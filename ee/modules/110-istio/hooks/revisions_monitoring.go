@@ -93,8 +93,9 @@ type IstioPodInfo struct {
 	Name             string
 	Namespace        string
 	Revision         string
-	DesiredRevision  string
+	SpecificRevision string
 	InjectAnnotation bool
+	InjectLabel      bool
 }
 
 func (p *IstioDrivenPod) getIstioCurrentRevision() string {
@@ -127,14 +128,19 @@ func (p *IstioDrivenPod) injectAnnotation() bool {
 	return NeedInject
 }
 
-func (p *IstioDrivenPod) getIstioDesiredRevision() string {
-	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
-		return specificPodRevision
-	}
+func (p *IstioDrivenPod) injectLabel() bool {
+	NeedInject := false
 	if inject, ok := p.Labels["sidecar.istio.io/inject"]; ok {
 		if inject == "true" {
-			return "global"
+			NeedInject = true
 		}
+	}
+	return NeedInject
+}
+
+func (p *IstioDrivenPod) getIstioSpecificRevision() string {
+	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
+		return specificPodRevision
 	}
 	return ""
 }
@@ -150,8 +156,9 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Name:             istioPod.Name,
 		Namespace:        istioPod.Namespace,
 		Revision:         istioPod.getIstioCurrentRevision(),
-		DesiredRevision:  istioPod.getIstioDesiredRevision(),
+		SpecificRevision: istioPod.getIstioSpecificRevision(),
 		InjectAnnotation: istioPod.injectAnnotation(),
+		InjectLabel:      istioPod.injectLabel(),
 	}
 
 	return result, nil
@@ -185,15 +192,18 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		}
 
 		desiredRevision := istioRevsionAbsent
+
+		// if label sidecar.istio.io/inject=true -> use global revision
+		if istioPodInfo.InjectLabel {
+			desiredRevision = globalRevision
+		}
+		// override if injection labels on namespace
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
 		}
-		if istioPodInfo.DesiredRevision != "" {
-			if istioPodInfo.DesiredRevision == "global" {
-				desiredRevision = globalRevision
-			} else {
-				desiredRevision = istioPodInfo.DesiredRevision
-			}
+		// override if label istio.io/rev with specific revision exists
+		if istioPodInfo.SpecificRevision != "" {
+			desiredRevision = istioPodInfo.SpecificRevision
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
