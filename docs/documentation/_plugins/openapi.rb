@@ -15,10 +15,12 @@ module Jekyll
             result = ''
         end
 
-        if get_hash_value(primaryLanguage, "items", "description") then
-            result += %Q(\n\n#{primaryLanguage["items"]["description"]})
-        elsif get_hash_value(fallbackLanguage, "items", "description") then
-            result += %Q(\n\n#{fallbackLanguage["items"]["description"]})
+        if get_hash_value(primaryLanguage, "items", "properties") or get_hash_value(fallbackLanguage, "items", "properties")
+            if get_hash_value(primaryLanguage, "items", "description") then
+              result += %Q(\n\n#{primaryLanguage["items"]["description"]})
+            elsif get_hash_value(fallbackLanguage, "items", "description") then
+              result += %Q(\n\n#{fallbackLanguage["items"]["description"]})
+            end
         end
 
         result
@@ -125,32 +127,32 @@ module Jekyll
             example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{exampleTitle}:</span>)
             exampleContent = ""
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
-                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject['oneOf']} else exampleObject['oneOf'] end).to_yaml.delete_prefix("---\n")}```)
+                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject['oneOf']} else exampleObject['oneOf'] end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                         elsif exampleObject.is_a?(Hash)
-                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject} else exampleObject end).to_yaml.delete_prefix("---\n")}```)
+                            exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject} else exampleObject end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
                             if exampleObject[0].class.to_s == "String" and exampleObject[0] =~ /\`\`\`|\n/
                                 exampleContent = "#{exampleObject[0]}"
                             else
-                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject[0]} else exampleObject[0] end).to_yaml.delete_prefix("---\n")}```)
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject[0]} else exampleObject[0] end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             end
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
                             exampleObject.each do | value |
                                 if value == nil then continue end
                                 if exampleContent.length > 0 then exampleContent = exampleContent + "\n" end
-                                exampleContent = %Q(#{exampleContent}\n```yaml\n#{(if name then {name => value} else value end).to_yaml.delete_prefix("---\n")}```)
+                                exampleContent = %Q(#{exampleContent}\n```yaml\n#{(if name then {name => value} else value end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             end
                         elsif exampleObject.is_a?(Array)
-                            exampleContent = %Q(```yaml\n#{( if name then {name => exampleObject} else exampleObject end).to_yaml.delete_prefix("---\n")}```)
+                            exampleContent = %Q(```yaml\n#{( if name then {name => exampleObject} else exampleObject end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                         else
                             if exampleObject =~ /\`\`\`|\n/
                                 exampleContent = "#{exampleObject}"
                             elsif attributes['type'] == 'boolean' then
-                                exampleContent = %Q(```yaml\n#{(if name then {name => (exampleObject and true)} else (exampleObject and true) end).to_yaml.delete_prefix("---\n")}```)
+                                exampleContent = %Q(```yaml\n#{(if name then {name => (exampleObject and true)} else (exampleObject and true) end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             elsif attributes['type'] == 'integer' or attributes['type'] == 'number' then
-                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_i} else exampleObject.to_i end).to_yaml.delete_prefix("---\n")}```)
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_i} else exampleObject.to_i end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             else
-                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_s} else exampleObject.to_s end).to_yaml.delete_prefix("---\n")}```)
+                                exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject.to_s} else exampleObject.to_s end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             end
 
                         end
@@ -286,37 +288,49 @@ module Jekyll
     def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [])
         result = Array.new()
 
-        fullPath = ancestors + [name]
-        linkAnchor = fullPath.join("-").downcase
-        pathString = fullPath.slice(1,fullPath.length-1).join(".")
+        if name.nil?
+            fullPath = ancestors + ['element']
+            parameterTitle = get_i18n_term('element_of_array').capitalize
+        elsif name != ''
+            fullPath = ancestors + [name]
+            parameterTitle = name
+        else
+            puts 'ERROR: Empty parameter name!'
+            puts 'Parent: ', parent
+            puts 'Attributes: ', attributes
+            abort
+        end
 
-        if name != ""
-            name_text = ''
+        linkAnchor = fullPath.join('-').downcase
+        pathString = fullPath.slice(1,fullPath.length-1).join('.')
+
+        if parameterTitle != ''
+            parameterTextContent = ''
             result.push('<li>')
-            attributes_type = ''
+            attributesType = ''
             if attributes.is_a?(Hash)
               if attributes.has_key?('type')
-                 attributes_type = attributes["type"]
+                 attributesType = attributes["type"]
               elsif attributes.has_key?('x-kubernetes-int-or-string')
-                 attributes_type = "x-kubernetes-int-or-string"
+                 attributesType = "x-kubernetes-int-or-string"
               end
             end
 
             if get_hash_value(attributes, 'x-doc-deprecated')
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span data-tippy-content="%s">%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, pathString, name, get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
+                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span data-tippy-content="%s">%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, pathString, parameterTitle, get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
+                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, parameterTitle)
             end
 
-            if attributes_type != ''
+            if attributesType != ''
                 if attributes.is_a?(Hash) and attributes.has_key?("items")
-                    name_text += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributes_type, attributes["items"]["type"]))
+                    parameterTextContent += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributesType, attributes["items"]["type"]))
                 else
-                    name_text += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributes_type, nil))
+                    parameterTextContent += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributesType, nil))
                 end
             end
 
-            result.push(name_text)
+            result.push(parameterTextContent)
         end
 
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
@@ -329,18 +343,28 @@ module Jekyll
             result.push('</ul>')
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
             if get_hash_value(attributes,'items','properties')
-                # object items
+                #  Array of objects
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
                     result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath))
                 end
                 result.push('</ul>')
+            else
+                # Array of non-objects (string, integer, etc.)
+                keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength']
+                if (attributes['items'].keys & keysToShow).length > 0
+                    lang = @context.registers[:page]["lang"]
+                    i18n = @context.registers[:site].data["i18n"]["common"]
+                    result.push('<ul>')
+                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath))
+                    result.push('</ul>')
+                end
             end
         else
             # result.push("no properties for #{name}")
         end
 
-        if name != ""
+        if parameterTitle != ''
             result.push('</li>')
         end
         result.join
