@@ -7,11 +7,13 @@ package hooks
 
 import (
 	"context"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
@@ -34,8 +36,8 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 	Context("Application namespaces with labels but pods with labels", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
-			f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-1"}}, metav1.CreateOptions{})
-			f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-2"}}, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-1"}}, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-2"}}, metav1.CreateOptions{})
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 # pod with global revision
