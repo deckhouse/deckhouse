@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -90,6 +91,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Pod",
 			FilterFunc: applyDiscoveryAppIstioPodFilter,
+			NamespaceSelector: &types.NamespaceSelector{
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "istio.io/rev",
+							Operator: "DoesNotExist",
+						},
+						{
+							Key:      "istio-injection",
+							Operator: "NotIn",
+							Values:   []string{"enabled"},
+						},
+					},
+				},
+			},
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

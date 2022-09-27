@@ -123,6 +123,12 @@ metadata:
     sidecar.istio.io/inject: "true"
 spec: {}
 ---
+# ns-pod-2
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-pod-2
+---
 # pod with definite revision
 apiVersion: v1
 kind: Pod
