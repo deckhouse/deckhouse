@@ -35,6 +35,13 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return namespaceInfo, nil
 }
 
+func applyDiscoveryAppIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var namespaceInfo = NamespaceInfo{
+		Name: obj.GetNamespace(),
+	}
+	return namespaceInfo, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -59,13 +66,50 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 		},
+		{
+			Name:       "istio_pod_global_rev",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			FilterFunc: applyDiscoveryAppIstioPodFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "sidecar.istio.io/inject",
+						Operator: "In",
+						Values:   []string{"true"},
+					},
+					{
+						Key:      "istio.io/rev",
+						Operator: "DoesNotExist",
+					},
+				},
+			},
+		},
+		{
+			Name:       "istio_pod_definite_rev",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			FilterFunc: applyDiscoveryAppIstioPodFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "istio.io/rev",
+						Operator: "Exists",
+					},
+				},
+			},
+		},
 	},
 }, applicationNamespacesDiscovery)
 
 func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	var applicationNamespaces = make([]string, 0)
-
-	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
+	var namespaces = make([]go_hook.FilterResult, 0)
+	namespaces = append(namespaces, input.Snapshots["namespaces_definite_revision"]...)
+	namespaces = append(namespaces, input.Snapshots["namespaces_global_revision"]...)
+	namespaces = append(namespaces, input.Snapshots["istio_pod_global_rev"]...)
+	namespaces = append(namespaces, input.Snapshots["istio_pod_definite_rev"]...)
+	for _, ns := range namespaces {
 		nsInfo := ns.(NamespaceInfo)
 		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)

@@ -31,6 +31,7 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 
 	Context("Application namespaces with labels and IstioOperator", func() {
 		BeforeEach(func() {
+
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 # regular ns
@@ -96,7 +97,7 @@ metadata:
   labels:
     istio-injection: enabled
 ---
-# ns with definitee revision with kube prefix
+# ns with definite revision with kube prefix
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -111,13 +112,32 @@ metadata:
   name: kube-ns9
   labels:
     istio-injection: enabled
+---
+# pod with global revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-pod-1
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+# pod with definite revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-2
+  namespace: ns-pod-2
+  labels:
+    istio.io/rev: v1x11
+spec: {}
 `))
-
 			f.RunHook()
 		})
 		It("Should count all namespaces properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns1", "ns2", "ns3", "ns4", "ns5"}))
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns-pod-1", "ns-pod-2", "ns1", "ns2", "ns3", "ns4", "ns5"}))
 		})
 	})
 })
