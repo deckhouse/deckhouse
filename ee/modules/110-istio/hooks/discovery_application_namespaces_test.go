@@ -6,10 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+	v1core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
@@ -29,9 +31,45 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 		})
 	})
 
+	Context("Application namespaces with labels but pods with labels", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-1"}}, metav1.CreateOptions{})
+			f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-2"}}, metav1.CreateOptions{})
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+# pod with global revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-pod-1
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+# pod with definite revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-2
+  namespace: ns-pod-2
+  labels:
+    istio.io/rev: v1x11
+spec: {}
+`))
+
+			f.RunHook()
+		})
+
+		It("Should count all pods namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-pod-1", "ns-pod-2"}))
+		})
+	})
+
 	Context("Application namespaces with labels and IstioOperator", func() {
 		BeforeEach(func() {
-
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 # regular ns
@@ -112,38 +150,12 @@ metadata:
   name: kube-ns9
   labels:
     istio-injection: enabled
----
-# pod with global revision
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-1
-  namespace: ns-pod-1
-  labels:
-    sidecar.istio.io/inject: "true"
-spec: {}
----
-# ns-pod-2
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-pod-2
----
-# pod with definite revision
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-2
-  namespace: ns-pod-2
-  labels:
-    istio.io/rev: v1x11
-spec: {}
 `))
 			f.RunHook()
 		})
 		It("Should count all namespaces properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns-pod-1", "ns-pod-2", "ns1", "ns2", "ns3", "ns4", "ns5"}))
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns1", "ns2", "ns3", "ns4", "ns5"}))
 		})
 	})
 })
