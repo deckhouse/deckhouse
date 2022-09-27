@@ -11,6 +11,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/350-node-local-dns/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/380-metallb/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-keepalived/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks"

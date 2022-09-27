@@ -1,0 +1,74 @@
+type: object
+properties:
+  nodeSelector:
+    description: |
+      Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod для главного контроллера.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  speaker:
+    description: |
+      Настройки компонента `speaker`, который реализует протокол публикации (`bgp` или `layer2` (LVS)) и направляет на свой узел прикладной трафик сервисов.
+    properties:
+      nodeSelector:
+        description: |
+          Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      tolerations:
+        description: |
+          Структура, аналогичная  `spec.tolerations` в Kubernetes Pod для DaemonSet speaker.
+
+          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  bgpPeers:
+    description: |
+      Список внешних BGP-роутеров, которые будут работать с этим модулем.
+
+      Формат — массив [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
+      Если используется только протокол публикации сервисов `layer2`, то параметр — необязательный.
+    items:
+      properties:
+        peer-address:
+          description: |
+            IP внешнего BGP-роутера.
+        peer-asn:
+          description: |
+            Номер автономной системы на внешнем BGP-роутере.
+        my-asn:
+          description: |
+            Номер автономной системы на вашем кластере.
+        source-address:
+          description: |
+            IP-адрес для исходящих соединений.
+        hold-time:
+          description: |
+            Таймаут, после которого партнёрский BGP-пир считается утерянным. Это значение делится на три и получается интервал для keep-alive.
+
+            Рекомендуемое значение — `3s` (keep-alive раз в секунду), протокол BGP не поддерживает значения меньше.
+            По умолчанию — `90s` (keep-alive раз в 30 секунд).
+        node-selector:
+          description: |
+            Дополнительный псевдо-селектор, который реализуется приложением speaker-а. Говорит о том, с каких узлов стоит устанавливать связь с внешними BGP-роутерами. Не путать с `speaker.nodeSelector` и  `nodeSelector`.
+
+            Опциональный параметр.
+            Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+  addressPools:
+    description: |
+      Список диапазонов IP, которые будут выдаваться сервисам.
+
+      Формат — массив [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+    items:
+      properties:
+        name:
+          description: |
+            Имя пула, которое можно уточнять с помощью аннотации к сервису `metallb.universe.tf/address-pool: <name>`.
+        protocol:
+          description: |
+            Технология публикации сервисов, которую должен реализовать speaker.
+        addresses:
+          description: |
+            Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон через "-".

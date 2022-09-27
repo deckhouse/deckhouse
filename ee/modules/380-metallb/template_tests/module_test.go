@@ -28,7 +28,10 @@ const (
     - peer-address: 1.1.1.2
       peer-asn: 65000
       my-asn: 64000
-      hold-time: 3s`
+      hold-time: 3s
+      node-selector:
+        matchLabels:
+        - node: metallb`
 
 	addressPools = `
     - name: mypool
@@ -41,7 +44,7 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	BeforeEach(func() {
-		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
+		f.ValuesSet("global.discovery.kubernetesVersion", "1.23.5")
 		f.ValuesSet("global.modulesImages.registry", "registryAddr")
 
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", "{}")

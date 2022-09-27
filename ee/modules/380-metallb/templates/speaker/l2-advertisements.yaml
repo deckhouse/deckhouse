@@ -1,0 +1,10 @@
+{{- range $ipaddressPool := .Values.metallb.addressPools }}
+  {{ if eq $ipaddressPool.protocol "layer2" }}
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: {{ $ipaddressPool.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- end }}
+{{- end }}

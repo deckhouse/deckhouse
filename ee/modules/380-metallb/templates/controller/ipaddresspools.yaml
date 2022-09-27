@@ -1,0 +1,11 @@
+{{- range $ipaddressPool := .Values.metallb.addressPools }}
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ $ipaddressPool.name }}
+  namespace: d8-{{ $.Chart.Name }}
+spec:
+  addresses:
+  {{- $ipaddressPool.addresses | toYaml | nindent 4 }}
+{{- end }}

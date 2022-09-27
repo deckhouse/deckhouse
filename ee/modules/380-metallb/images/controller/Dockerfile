@@ -1,6 +1,6 @@
-# Based on https://github.com/metallb/metallb/blob/v0.10.2/speaker/Dockerfile
+# based on https://raw.githubusercontent.com/metallb/metallb/v0.13.5/config/manifests/metallb-native.yaml
 ARG BASE_ALPINE
-FROM metallb/controller:v0.11.0@sha256:55b4ff4dbbce4cd87e30e5c8214dbee49d73cf8a2fef05fa2d16d8af58beea83 as artifact
+FROM quay.io/metallb/controller:v0.13.5@sha256:44e7d8b0f20d944156bb6f6a9df0230305a2e420c6f5fd2f3ecb3f6efee9b4ff as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /controller /

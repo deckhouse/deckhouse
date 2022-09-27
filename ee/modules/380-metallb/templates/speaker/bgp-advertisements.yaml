@@ -1,0 +1,10 @@
+{{- range $ipaddressPool := .Values.metallb.addressPools }}
+  {{ if eq $ipaddressPool.protocol "bgp" }}
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: {{ $ipaddressPool.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- end }}
+{{- end }}
