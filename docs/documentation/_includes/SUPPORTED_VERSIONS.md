@@ -1,34 +1,25 @@
-{%- assign osVersions = site.data.version_map.bashible  %}
-{%- assign k8sVersions = site.data.version_map.k8s  %}
+{%- assign osVersions = site.data.supported_versions.bashible | sort %}
+{%- assign k8sVersions = site.data.supported_versions.k8s  %}
+{%- assign langSupportKey = page.lang | append: "_support" %}
 
-{%- if page.lang == 'ru' %}
 ## Linux
 
-В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux:
-{%- else %}
-## Linux
-
-The following Linux Distributions are currently supported for nodes:
-{%- endif %}
+{{ site.data.i18n.common['os_supported_phrase'][page.lang] }}:
 
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- for osData in osItem[1] %}
-{%- assign osVersion = osData[0]  %}
-- {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}{% if page.lang == 'ru' %}.{%- endif %}
+{%- assign osVersion = osData[0] %}
+
+{%- if osData[1][langSupportKey] and osData[1][langSupportKey] != "true" %}{% continue %}{% endif %}
+- {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
 {%- endfor %}
 {%- endfor %}
 
-{% if page.lang == 'ru' %}
 ## Kubernetes
 
-В настоящий момент поддерживаются следующие версии Kubernetes:
-{%- else %}
-## Kubernetes
-
-The following Kubernetes versions are currently supported:
-{%- endif %}
+{{ site.data.i18n.common['k8s_supported_phrase'][page.lang] }}::
 <table>
 <thead>
     <tr>

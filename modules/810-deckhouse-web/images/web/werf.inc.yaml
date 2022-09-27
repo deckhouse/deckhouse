@@ -119,6 +119,13 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Make the supported OS & K8S version array"
+      shell: |
+        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - name: "Convert public documentation links to internal relative"
       shell: |
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \

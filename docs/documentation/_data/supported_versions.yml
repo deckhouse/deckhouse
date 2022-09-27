@@ -5,6 +5,10 @@ osDistributions:
     name: CentOS
   debian:
     name: Debian
+  astra:
+    name: Astra Linux Special Edition
+  '_redos':
+    name: 'РЭД ОС'
 
 k8s_statuses:
   end-of-life:
