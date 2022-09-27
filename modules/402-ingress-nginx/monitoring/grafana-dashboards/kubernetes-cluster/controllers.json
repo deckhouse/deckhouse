@@ -92,7 +92,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -100,7 +100,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -202,7 +202,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -210,7 +210,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -312,7 +312,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\"}\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -320,7 +320,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\"}\n) by (pod, node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -422,7 +422,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -430,7 +430,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
