@@ -118,9 +118,9 @@ type RemoveDuplicates struct {
 }
 
 type RemoveDuplicatesParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
 	RemoveDuplicates *RemoveDuplicatesParameters `json:"removeDuplicates,omitempty"`
 }
@@ -131,7 +131,7 @@ type LowNodeUtilization struct {
 }
 
 type LowNodeUtilizationParams struct {
-	NodeFitFiltering `json:",inline"`
+	*NodeFitFiltering `json:",inline"`
 
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholdsFiltering `json:"nodeResourceUtilizationThresholds,omitempty"`
 }
@@ -142,7 +142,7 @@ type HighNodeUtilization struct {
 }
 
 type HighNodeUtilizationParams struct {
-	NodeFitFiltering `json:",inline"`
+	*NodeFitFiltering `json:",inline"`
 
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholdsFiltering `json:"nodeResourceUtilizationThresholds,omitempty"`
 }
@@ -152,10 +152,10 @@ type RemovePodsViolatingInterPodAntiAffinity struct {
 }
 
 type RemovePodsViolatingInterPodAntiAffinityParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 }
 
 type RemovePodsViolatingNodeAffinity struct {
@@ -164,10 +164,10 @@ type RemovePodsViolatingNodeAffinity struct {
 }
 
 type RemovePodsViolatingNodeAffinityParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
 	NodeAffinityType []string `json:"nodeAffinityType,omitempty"`
 }
@@ -177,10 +177,10 @@ type RemovePodsViolatingNodeTaints struct {
 }
 
 type RemovePodsViolatingNodeTaintsParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
 	ExcludedTaints []string `json:"excludedTaints,omitempty"`
 }
@@ -190,12 +190,12 @@ type RemovePodsViolatingTopologySpreadConstraint struct {
 }
 
 type RemovePodsViolatingTopologySpreadConstraintParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
-	IncludeSoftConstraints bool `json:"includeSoftConstraints,omitempty"`
+	IncludeSoftConstraints *bool `json:"includeSoftConstraints,omitempty"`
 }
 
 type RemovePodsHavingTooManyRestarts struct {
@@ -204,10 +204,10 @@ type RemovePodsHavingTooManyRestarts struct {
 }
 
 type RemovePodsHavingTooManyRestartsParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
 	PodsHavingTooManyRestarts *PodsHavingTooManyRestartsParameters `json:"podsHavingTooManyRestarts,omitempty"`
 }
@@ -218,9 +218,9 @@ type PodLifeTime struct {
 }
 
 type PodLifeTimeParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
 
 	PodLifeTime *PodLifeTimeParameters `json:"podLifeTime,omitempty"`
 }
@@ -230,10 +230,10 @@ type RemoveFailedPods struct {
 }
 
 type RemoveFailedPodsParams struct {
-	ThresholdPrioritiesFiltering `json:",inline"`
-	NamespacesFiltering          `json:",inline"`
-	LabelSelectorFiltering       `json:",inline"`
-	NodeFitFiltering             `json:",inline"`
+	*ThresholdPrioritiesFiltering `json:",inline"`
+	*NamespacesFiltering          `json:",inline"`
+	*LabelSelectorFiltering       `json:",inline"`
+	*NodeFitFiltering             `json:",inline"`
 
 	RemoveFailedPods *RemoveFailedPodsParameters `json:"removeFailedPods,omitempty"`
 }
