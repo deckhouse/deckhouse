@@ -14,7 +14,7 @@
 # limitations under the License.
 */}}
 #!/bin/bash
-
+export LANG=C
 if ! type jq 2>/dev/null || ! type curl 2>/dev/null || ! type nc 2>/dev/null; then
   apt update
   export DEBIAN_FRONTEND=noninteractive
