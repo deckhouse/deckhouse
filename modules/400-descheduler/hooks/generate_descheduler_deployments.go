@@ -93,6 +93,10 @@ func generateValues(input *go_hook.HookInput) error {
 		deployments  = input.Snapshots["deployments"]
 	)
 
+	if len(deschedulers) == 0 {
+		return nil
+	}
+
 	input.Values.Set(deschedulerSpecsValuesPath, deschedulers)
 
 	for _, deploymentRaw := range deployments {
