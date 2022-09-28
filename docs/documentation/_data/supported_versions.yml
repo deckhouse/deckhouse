@@ -1,14 +1,24 @@
 osDistributions:
   ubuntu:
     name: Ubuntu
+    imagePath: osdistros/ubuntu-cof.png
+    url: https://ubuntu.com/download/server
   centos:
     name: CentOS
+    imagePath: osdistros/centos-logo.png
+    url: https://www.centos.org/
   debian:
     name: Debian
+    imagePath: osdistros/debian-logo.png
+    url: https://www.debian.org/
   astra:
     name: Astra Linux Special Edition
+    imagePath: osdistros/astra-logo.png
+    url: https://astralinux.ru/products/astra-linux-special-edition/
   '_redos':
     name: 'РЭД ОС'
+    imagePath: osdistros/redos.svg
+    url: https://redos.red-soft.ru/product/server/
 
 k8s_statuses:
   end-of-life:

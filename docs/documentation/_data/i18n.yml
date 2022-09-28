@@ -102,11 +102,17 @@ common:
     en: Available only in
     ru: Доступно только в
   version:
-    en: Version
-    ru: Версия
+    en: version
+    ru: версия
+  versions:
+    en: versions
+    ru: версии
+  versions_supported:
+    en: Supported versions
+    ru: Поддерживаемые версии
   status:
-    en: Status
-    ru: Статус
+    en: status
+    ru: статус
   or:
     en: or
     ru: или
@@ -119,6 +125,9 @@ common:
   k8s_supported_phrase:
     en: The following Kubernetes versions are currently supported
     ru: В настоящий момент поддерживаются следующие версии Kubernetes
+  linux_distro:
+    en: Linux Distribution
+    ru: Дистрибутив Linux
 features:
   experimental:
     en: This feature is actively developed. It might significantly change in the future.

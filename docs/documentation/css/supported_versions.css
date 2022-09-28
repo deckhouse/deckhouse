@@ -1,0 +1,27 @@
+.supported_versions th.versions {
+   text-align: left;
+}
+
+.supported_versions tr {
+   vertical-align: middle;
+}
+
+.supported_versions td.name {
+   height: 50px;
+   text-align: left;
+   white-space: nowrap;
+   font-weight: normal;
+}
+
+.supported_versions img {
+   max-height: 40px;
+   max-width: 40px;
+}
+
+.supported_versions td.versions {
+   height: 50px;
+   text-align: left;
+   font-weight: bold;
+   font-size: normal;
+   width: 80%;
+}
