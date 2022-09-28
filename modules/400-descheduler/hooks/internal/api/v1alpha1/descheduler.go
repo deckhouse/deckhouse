@@ -260,7 +260,7 @@ type RemoveFailedPodsParameters struct {
 }
 
 type NamespacesFiltering struct {
-	Namespaces `json:"namespaces,omitempty"`
+	*Namespaces `json:"namespaces,omitempty"`
 }
 
 type Namespaces struct {
