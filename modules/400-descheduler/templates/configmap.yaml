@@ -13,6 +13,7 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha1"
     kind: "DeschedulerPolicy"
+  {{- $commonParameters | toYaml | nindent 4 }}
     strategies:
   {{- if hasKey $strategies "removeDuplicates" }}
       "RemoveDuplicates":
