@@ -36,9 +36,18 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 	Context("Application namespaces with labels but pods with labels", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-0"}}, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-1"}}, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-2"}}, metav1.CreateOptions{})
 			f.BindingContexts.Set(f.KubeStateSet(`
+---
+# pod without any revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-pod-1
+spec: {}
 ---
 # pod with global revision
 apiVersion: v1
