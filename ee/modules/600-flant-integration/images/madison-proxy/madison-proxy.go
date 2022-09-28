@@ -36,9 +36,10 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 
 	res, e := lrt.Proxied.RoundTrip(req)
 
-	log.Infof("%s", string(dump))
 	if res != nil {
-		log.Infof("response: %s", res.Status)
+		log.Infof("request: %s, response: %d", string(dump), res.StatusCode)
+	} else {
+		log.Infof("request: %s, no response", string(dump))
 	}
 
 	return res, e
@@ -171,6 +172,7 @@ func newMadisonProxy(c config) http.Handler {
 	// [http2: Transport received Server's graceful shutdown GOAWAY] after Request.Body was written;
 	// define Request.GetBody to avoid this error
 	transport.(*http.Transport).TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+	transport.(*http.Transport).ResponseHeaderTimeout = 10 * time.Second
 
 	return &httputil.ReverseProxy{
 		Transport: PathCheckRoundTripper{LoggingRoundTripper{transport}},
