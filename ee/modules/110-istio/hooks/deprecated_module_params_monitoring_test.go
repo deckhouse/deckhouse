@@ -59,7 +59,6 @@ var _ = Describe("Istio hooks :: deprecated_module_params_monitoring ::", func()
 					"param": "tlsMode",
 				},
 			}))
-
 		})
 	})
 })
