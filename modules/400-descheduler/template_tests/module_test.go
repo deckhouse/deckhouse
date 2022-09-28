@@ -50,19 +50,111 @@ var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template
 	f := SetupHelmConfig(``)
 
 	Context("Defaults are applied on an empty CR", func() {
+		var resultingCM = `
+apiVersion: "descheduler/v1alpha1"
+kind: "DeschedulerPolicy"
+evictFailedBarePods: true
+strategies:
+  "RemoveDuplicates":
+    enabled: true
+  "RemovePodsViolatingNodeAffinity":
+    enabled: true
+    params:
+      nodeAffinityType:
+      - requiredDuringSchedulingIgnoredDuringExecution
+  "RemovePodsViolatingInterPodAntiAffinity":
+    enabled: true
+  "LowNodeUtilization":
+    enabled: true
+    params:
+      nodeResourceUtilizationThresholds:
+        targetThresholds:
+          cpu: 50
+          memory: 50
+          pods: 50
+        thresholds:
+          cpu: 20
+          memory: 20
+          pods: 20
+  "HighNodeUtilization":
+    enabled: true
+    params:
+      nodeResourceUtilizationThresholds:
+        thresholds:
+          cpu: 50
+          memory: 50
+  "RemovePodsViolatingNodeTaints":
+    enabled: true
+  "RemovePodsViolatingTopologySpreadConstraint":
+    enabled: true
+  "RemovePodsHavingTooManyRestarts":
+    enabled: true
+    params:
+      podsHavingTooManyRestarts:
+        includingInitContainers: true
+        podRestartThreshold: 100
+  "PodLifeTime":
+    enabled: true
+    params:
+      podLifeTime:
+        maxPodLifeTimeSeconds: 86400
+        podStatusPhases:
+        - Pending
+`
+
 		BeforeEach(func() {
 			moduleValues := `
 internal:
   deschedulers:
-  - metadata:
+  - apiVersion: deckhouse.io/v1alpha1
+    kind: Descheduler
+    metadata:
       name: test
     spec:
+      deploymentTemplate: {}
       deschedulerPolicy:
+        parameters:
+          evictFailedBarePods: true
         strategies:
           highNodeUtilization:
             params:
               nodeResourceUtilizationThresholds:
-                numberOfNodes: 2
+                thresholds:
+                  cpu: 50
+                  memory: 50
+          lowNodeUtilization:
+            params:
+              nodeResourceUtilizationThresholds:
+                targetThresholds:
+                  cpu: 50
+                  memory: 50
+                  pods: 50
+                thresholds:
+                  cpu: 20
+                  memory: 20
+                  pods: 20
+          podLifeTime:
+            params:
+              podLifeTime:
+                maxPodLifeTimeSeconds: 86400
+                podStatusPhases:
+                - Pending
+          removeDuplicates: {}
+          removeFailedPods: {}
+          removePodsHavingTooManyRestarts:
+            params:
+              podsHavingTooManyRestarts:
+                includingInitContainers: true
+                podRestartThreshold: 100
+          removePodsViolatingInterPodAntiAffinity: {}
+          removePodsViolatingNodeAffinity:
+            params:
+              nodeAffinityType:
+              - requiredDuringSchedulingIgnoredDuringExecution
+          removePodsViolatingNodeTaints: {}
+          removePodsViolatingTopologySpreadConstraint: {}
+    status:
+      ready: false
 `
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("descheduler", moduleValues)
@@ -72,7 +164,8 @@ internal:
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy-test")
-			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(resultingCM))
+			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-test").Exists()).To(BeTrue())
 		})
 	})
 })

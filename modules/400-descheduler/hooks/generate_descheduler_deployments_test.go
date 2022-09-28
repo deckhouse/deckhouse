@@ -40,8 +40,9 @@ spec:
       evictFailedBarePods: true
     strategies:
       lowNodeUtilization:
-        nodeResourceUtilizationThresholds:
-          useDeviationThresholds: true
+        params:
+          nodeResourceUtilizationThresholds:
+            useDeviationThresholds: true
 status:
   ready: false
 `

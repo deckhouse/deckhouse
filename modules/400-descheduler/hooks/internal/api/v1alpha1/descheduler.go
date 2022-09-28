@@ -43,7 +43,7 @@ type Descheduler struct {
 
 type DeschedulerSpec struct {
 	// Defines Template of a descedhuler Deployment
-	DeploymentTemplate DeschedulerDeploymentTemplate `json:"deploymentTemplate,omitempty"`
+	DeploymentTemplate *DeschedulerDeploymentTemplate `json:"deploymentTemplate,omitempty"`
 
 	// commonParameters and strategies follow descheduler's documentation
 	// https://github.com/kubernetes-sigs/descheduler#policy-and-strategies
