@@ -81,12 +81,6 @@ provider:
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   region: eu-central-1
-# [<en>] the "standard" layout parameters
-# [<ru>] параметры архитектуры "standard"
-standard:
-  # [<en>] associate public IP to master nodes
-  # [<ru>] назначать публичные IP master-узлам
-  associatePublicIPToMasters: false
 # [<en>] parameters of the master node group
 # [<ru>] параметры группы master-узлов
 masterNodeGroup:
