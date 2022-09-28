@@ -4,8 +4,10 @@ type: object
 properties:
   internal:
     type: object
+    default: {}
     properties:
       deschedulers:
         type: array
+        default: []
         items:
           $ref: '/deckhouse/modules/400-descheduler/openapi/descheduler_v1alpha1.yaml'
