@@ -95,5 +95,5 @@ spec:
       volumes:
       - name: policy-volume
         configMap:
-          name: descheduler-policy-configmap-{{ $d.metadata.name }}
+          name: descheduler-policy-{{ $d.metadata.name }}
 {{- end }}

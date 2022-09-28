@@ -1,6 +1,6 @@
 {{- range $d := .Values.descheduler.internal.deschedulers }}
   {{- $deschedulerSpec := $d.spec }}
-  {{- $commonParameters := $deschedulerSpec.deschedulerPolicy.commonParameters }}
+  {{- $commonParameters := $deschedulerSpec.deschedulerPolicy.parameters }}
   {{- $strategies := $deschedulerSpec.deschedulerPolicy.strategies }}
 ---
 apiVersion: v1

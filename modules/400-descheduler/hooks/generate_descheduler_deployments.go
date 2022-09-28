@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -30,7 +32,6 @@ import (
 
 const (
 	deschedulerSpecsValuesPath = "descheduler.internal.deschedulers"
-	deschedulerNamespace       = "d8-descheduler"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -79,8 +80,10 @@ func deschedulerDeploymentReadiness(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
+	name := strings.TrimPrefix(deployment.Name, "descheduler-")
+
 	deschedulerDeploymentInfo := &DeschedulerDeploymentInfo{
-		Name:  deployment.Name,
+		Name:  name,
 		Ready: deployment.Status.ReadyReplicas == deployment.Status.Replicas,
 	}
 
@@ -104,7 +107,7 @@ func generateValues(input *go_hook.HookInput) error {
 
 		input.PatchCollector.MergePatch(map[string]v1alpha1.DeschedulerStatus{
 			"status": {Ready: deployment.Ready}},
-			"deckhouse.io/v1alpha1", "Descheduler", deschedulerNamespace,
+			"deckhouse.io/v1alpha1", "Descheduler", "",
 			deployment.Name, object_patch.WithSubresource("status"))
 	}
 
