@@ -1,4 +1,4 @@
-export DOCKERIZED := 1
+export DOCKERIZED ?= 1
 export PATH := $(abspath bin/):${PATH}
 
 FORMATTING_BEGIN_YELLOW = \033[0;33m
@@ -168,11 +168,10 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 .PHONY: generate render-workflow
 generate: ## Run all generate-* jobs in bulk.
 	@./tools/dockerized.sh \
-		"cd tools; go generate"
+		"cd tools; go generates"
 
 render-workflow: ## Generate CI workflow instructions.
-	@./tools/dockerized.sh \
-		"./.github/render-workflows.sh"
+	./.github/render-workflows.sh
 
 ##@ Security
 
@@ -233,4 +232,4 @@ bin/crane: ## Install crane deps for update-patchversion script.
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
-	cd candi/tools; bash -x update_kubernetes_patchversions.sh
+	cd candi/tools; bash update_kubernetes_patchversions.sh

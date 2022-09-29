@@ -16,11 +16,7 @@
 
 set -e
 
-script=$(
-  for i in "$@"; do
-    echo "$i"
-  done
-)
+script=$(printf "%s\n" "$@")
 
 if [ "$DOCKERIZED" != 1 ]; then
   echo "$script" >&2
@@ -28,7 +24,7 @@ if [ "$DOCKERIZED" != 1 ]; then
   exit $?
 fi
 
-DOCKER_DEFAULT_PLATFORM=linux/amd64
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
 
 running=$(docker inspect deckhouse-dev -f "{{.State.Running}}" 2>/dev/null || true)
 
@@ -38,25 +34,25 @@ elif [ -z "$running" ]; then
   docker build -t deckhouse-dev $(dirname "$0")/toolbox
   docker run -d -l deckhouse-dev --name deckhouse-dev deckhouse-dev /bin/sleep infinity >/dev/null
 fi
+trap 'docker stop deckhouse-dev -t 0 >/dev/null' EXIT
 
 # Sync source code. We don't use docker volumes because they are too slow
-docker exec -ti deckhouse-dev rm -rf "${PWD}" "/deckhouse"
-docker exec -ti deckhouse-dev mkdir -p "$(dirname $PWD)"
-docker cp . "deckhouse-dev:${PWD}"
+docker exec deckhouse-dev rm -rf "$PWD" "/deckhouse"
+docker exec deckhouse-dev mkdir -p "$(dirname "$PWD")"
+docker cp "$PWD" "deckhouse-dev:$(dirname "$PWD")"
 
 # Setup /deckhouse symlink
-docker exec deckhouse-dev mkdir -p "$(dirname "${PWD}")"
-docker exec deckhouse-dev ln -sf "${PWD}" "/deckhouse"
+docker exec deckhouse-dev ln -sf "$PWD" "/deckhouse"
 
 # Run script
 echo "$script" >&2
 docker exec -i deckhouse-dev sh -s <<EOT
-cd "${PWD}"
+cd "$PWD"
 export FOCUS=$FOCUS
 export TESTS_TIMEOUT=$TESTS_TIMEOUT
-export PATH=\$PATH:$PWD/bin
+export PATH=\$PATH:${PWD}/bin
 $script
 EOT
 
 # Sync changes
-docker cp -L deckhouse-dev:"${PWD}" $(dirname "${PWD}")
+docker cp -L "deckhouse-dev:${PWD}" "$(dirname "$PWD")"
