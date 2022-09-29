@@ -93,11 +93,9 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
-tests-matrix: bin/fakewerf bin/promtool ## Test how helm templates are rendered with different input values generated from values examples.
+tests-matrix: bin/promtool ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-	fakewerf images-tags > $(PWD)/modules/images_tags.json
 	go test ./testing/matrix/ -v
-	rm -f $(PWD)/modules/images_tags.json
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -153,10 +151,6 @@ render-workflow: ## Generate CI workflow instructions.
 bin/regcopy: ## App to copy docker images to the Deckhouse registry
 	mkdir -p bin
 	cd tools/regcopy; go build -o $(PWD)/bin/regcopy
-
-bin/fakewerf: ## Used by matrix tests
-	mkdir -p bin
-	cd tools/fakewerf; go build -o $(PWD)/bin/fakewerf
 
 bin/trivy:
 	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}

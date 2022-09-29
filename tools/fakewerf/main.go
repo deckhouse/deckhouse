@@ -1,16 +1,28 @@
+/*
+Copyright 2022 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -19,38 +31,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Spec struct {
-	Image        string       `yaml:"image"`
-	Dependencies []Dependency `yaml:"dependencies"`
-}
+/*
+fakewerf is a simple werf.yaml config renderer
 
-type Dependency struct {
-	Imports []Import `yaml:"imports"`
-}
+It is used by matrix tests to generate fake images tags.
+Hovewer it also can be used for initial validation of werf configuration.
 
-type Import struct {
-	TargetEnv string `yaml:"targetEnv"`
-}
+USAGE:
 
-func myUsage() {
-	fmt.Printf("Usage:\n")
-	fmt.Printf("  fakewerf [OPTIONS] render\n\trender werf.yaml\n")
-	fmt.Printf("  fakewerf [OPTIONS] images-tags\n\tgenerate images_tags.json\n")
-	fmt.Printf("\nOptions:\n")
-	flag.PrintDefaults()
-}
+  ./fakewerf -dir /deckhouse -config werf.yaml -env FE
+*/
 
 func main() {
-
-	flag.Usage = myUsage
+	env := flag.String("env", ".", "Enviroment name")
 	dir := flag.String("dir", ".", "Path to project")
 	file := flag.String("config", "werf.yaml", "Relative path to werf.yaml")
 	flag.Parse()
-	args := flag.Args()
-	if flag.NArg() != 1 || (args[0] != "render" && args[0] != "images-tags") {
-		flag.Usage()
-		os.Exit(1)
-	}
 
 	err := os.Chdir(*dir)
 	if err != nil {
@@ -66,53 +62,12 @@ func main() {
 
 	templateData := make(map[string]interface{})
 	templateData["Files"] = files{}
+	templateData["Env"] = *env
 
-	var b bytes.Buffer
-	err = tmpl.ExecuteTemplate(&b, *file, templateData)
+	err = tmpl.ExecuteTemplate(os.Stdout, *file, templateData)
 	if err != nil {
 		panic(err)
 	}
-	werfConfig := b.String()
-	if args[0] == "render" {
-		fmt.Println(werfConfig)
-		os.Exit(0)
-	}
-
-	imagesTags := make(map[string]map[string]string)
-	a := strings.NewReader(werfConfig)
-	d := yaml.NewDecoder(a)
-	for {
-		spec := new(Spec)
-		err := d.Decode(&spec)
-		if spec == nil {
-			continue
-		}
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			panic(err)
-		}
-		if spec.Image == "images-tags" {
-			for _, dependency := range spec.Dependencies {
-				for _, i := range dependency.Imports {
-					s := strings.Split(i.TargetEnv, "_")
-					module := s[3]
-					tag := s[4]
-					if imagesTags[module] == nil {
-						imagesTags[module] = make(map[string]string)
-					}
-					imagesTags[module][tag] = "imageHash"
-				}
-			}
-			break
-		}
-	}
-	j, err := json.Marshal(imagesTags)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%s\n", j)
 }
 
 func funcMap(tmpl *template.Template) template.FuncMap {
@@ -172,15 +127,15 @@ func addTemplate(tmpl *template.Template, templateName, templateContent string) 
 type files struct{}
 
 func (f files) Get(relPath string) string {
-	data, _ := ioutil.ReadFile(relPath)
-	//if err != nil {
-	//	panic(err.Error())
-	//}
+	data, err := ioutil.ReadFile(relPath)
+	if err != nil {
+		panic(err.Error())
+	}
 	return string(data)
 }
 
-func (f files) Glob(pattern string) map[string]string {
-	nf := make(map[string]string)
+func (f files) Glob(pattern string) map[string]interface{} {
+	nf := make(map[string]interface{})
 
 	pathMatcher := path_matcher.NewPathMatcher(path_matcher.PathMatcherOptions{
 		BasePath:     ".",

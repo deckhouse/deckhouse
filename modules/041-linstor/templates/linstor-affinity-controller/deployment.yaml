@@ -95,6 +95,13 @@ spec:
                 secretKeyRef:
                   name: linstor-client-https-cert
                   key: ca.crt
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "linstor_affinity_controller_resources" . | nindent 14 }}
+              {{- end }}
+
       containers:
         - name: linstor-affinity-controller
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
@@ -150,7 +157,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "linstor_affinity_controller_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
 

@@ -33,8 +33,11 @@ global:
     registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
-      metallb: {}
-      common: {}
+      metallb:
+        speaker: "imageHash"
+        controller: "imageHash"
+      common:
+        kubeRbacProxy: "imageHash"
   discovery:
     d8SpecificNodeCountByRole:
       __ConstantChoices__:

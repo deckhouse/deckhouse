@@ -24,8 +24,10 @@ global:
     registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
-      openvpn: {}
-      common: {}
+      openvpn:
+        ovpnAdmin: "imageHash"
+      common:
+        kubeRbacProxy: "imageHash"
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]

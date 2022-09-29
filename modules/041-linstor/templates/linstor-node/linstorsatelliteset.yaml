@@ -62,9 +62,9 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
       {{- include "linstor_satellite_resources" . | nindent 6 }}
-{{- end }}
+      {{- end }}
   monitoringImage: {{ include "helm_lib_module_image" (list . "drbdReactor") }}
   monitoringBindAddress: 127.0.0.1
   kernelModuleInjectionImage: {{ include "helm_lib_module_image" (list . "drbdDriverLoader") }}
@@ -114,7 +114,6 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
-{{- end }}
-
+        {{- end }}

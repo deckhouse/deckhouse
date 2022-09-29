@@ -7,7 +7,8 @@ global:
     registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
-      monitoringKubernetesControlPlane: {}
+      monitoringKubernetesControlPlane:
+        proxy: "imageHash"
       common: {}
   discovery:
     kubernetesVersion:

@@ -64,6 +64,7 @@ spec:
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
       - name: migrator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
         command:
           - /migrate
@@ -75,6 +76,12 @@ spec:
           - mountPath: /db
             name: data
             readOnly: false
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "agent_resources" . | nindent 12 }}
+{{- end }}
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}

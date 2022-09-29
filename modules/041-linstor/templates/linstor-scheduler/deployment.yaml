@@ -131,9 +131,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "kube_scheduler_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
         - name: linstor-scheduler-extender
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "linstorSchedulerExtender") }}
@@ -161,9 +161,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "linstor_scheduler_extender_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
       {{- if semverCompare ">= 1.22" .Values.global.discovery.kubernetesVersion }}
       volumes:
       - configMap:
