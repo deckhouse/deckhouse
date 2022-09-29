@@ -125,12 +125,14 @@ check_requirements() {
     return 1
   fi
 
-  if [[ "$EDITION" == "ee" ]] && [[ "$LICENSE" == "" ]]; then
-    echo "License is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license."
-    return 1
-  else
-    docker login -u license-token -p "$LICENSE" $REGISTRY_ROOT
-    crane auth login $REGISTRY_ROOT -u license-token -p "$LICENSE"
+  if [[ "$EDITION" == "ee" ]]; then
+    if [[ "$LICENSE" == "" ]]; then
+      echo "License is required to download Deckhouse Enterprise Edition. Please provide it with CLI argument --license."
+      return 1
+    else
+      docker login -u license-token -p "$LICENSE" $REGISTRY_ROOT
+      crane auth login $REGISTRY_ROOT -u license-token -p "$LICENSE"
+    fi
   fi
 
   mkdir -p "$OUTPUT_DIR"
