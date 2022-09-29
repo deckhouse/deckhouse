@@ -45,6 +45,7 @@
  - **[ingress-nginx]** Improve metrics collection script. [#2350](https://github.com/deckhouse/deckhouse/pull/2350)
     Ingress Nginx controllers will restart.
  - **[ingress-nginx]** The ability to change the `defaultControllerVersion` parameter without rebooting Deckhouse. [#2338](https://github.com/deckhouse/deckhouse/pull/2338)
+ - **[istio]** Fix `D8IstioDataPlaneWithoutIstioInjectionConfigured` alert description. [#2599](https://github.com/deckhouse/deckhouse/pull/2599)
  - **[istio]** Fixed `D8IstioActualDataPlaneRevisionNeDesired` alert. [#2558](https://github.com/deckhouse/deckhouse/pull/2558)
  - **[istio]** Fix default `tlsMode` behavior. [#2479](https://github.com/deckhouse/deckhouse/pull/2479)
  - **[istio]** Fix `tlsMode` param behavior. [#2385](https://github.com/deckhouse/deckhouse/pull/2385)
@@ -68,6 +69,7 @@
     A node in the `master` nodeGroup with a single node and `Automatic` disruption approval mode will not be drained before approval.
     If Deckhouse works not on a master node and this node is single (or one node in Ready status) in the nodeGroup, and for this nodeGroup the `Automatic` disruption approval mode is set, then disruption operations will be approved for this node without draining.
  - **[node-manager]** Changed cluster autoscaler timeouts to avoid node flapping. [#2279](https://github.com/deckhouse/deckhouse/pull/2279)
+ - **[prometheus]** Fixed input lag by bumping Grafana version to `8.5.13`. [#2603](https://github.com/deckhouse/deckhouse/pull/2603)
  - **[snapshot-controller]** Fix `maxSurge` for `snapshot-validation-webhook`. [#2450](https://github.com/deckhouse/deckhouse/pull/2450)
  - **[upmeter]** Fix non-working statuspage by removing hardcoded localhost in backend URL [#2499](https://github.com/deckhouse/deckhouse/pull/2499)
  - **[upmeter]** Fix deckhouse probe by placing EnableKubeEventCb call properly. [#2422](https://github.com/deckhouse/deckhouse/pull/2422)
