@@ -106,11 +106,11 @@ spec:
         {{ $multicluster.networkName }}:
           endpoints:
           - fromRegistry: {{ $multicluster.name }}
-          gateways:
-          {{- range $ingressGateway := $multicluster.ingressGateways }}
-          - address: {{ $ingressGateway.address }}
-            port: {{ $ingressGateway.port }}
-          {{- end }}
+{{/*          gateways:*/}}
+{{/*          {{- range $ingressGateway := $multicluster.ingressGateways }}*/}}
+{{/*          - address: {{ $ingressGateway.address }}*/}}
+{{/*            port: {{ $ingressGateway.port }}*/}}
+{{/*          {{- end }}*/}}
         {{- end }}
       {{- end }}
   {{- end }}
