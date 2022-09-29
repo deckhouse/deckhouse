@@ -6,8 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -26,6 +30,52 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
+		})
+	})
+
+	Context("Application namespaces with labels but pods with labels", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-0"}}, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-1"}}, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-pod-2"}}, metav1.CreateOptions{})
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+# pod without any revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-pod-1
+spec: {}
+---
+# pod with global revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-1
+  namespace: ns-pod-1
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+# pod with definite revision
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-2
+  namespace: ns-pod-2
+  labels:
+    istio.io/rev: v1x11
+spec: {}
+`))
+
+			f.RunHook()
+		})
+
+		It("Should count all pods namespaces properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-pod-1", "ns-pod-2"}))
 		})
 	})
 
@@ -96,7 +146,7 @@ metadata:
   labels:
     istio-injection: enabled
 ---
-# ns with definitee revision with kube prefix
+# ns with definite revision with kube prefix
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -112,7 +162,6 @@ metadata:
   labels:
     istio-injection: enabled
 `))
-
 			f.RunHook()
 		})
 		It("Should count all namespaces properly", func() {

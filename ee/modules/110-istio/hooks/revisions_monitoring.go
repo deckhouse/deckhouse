@@ -19,7 +19,9 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
-const istioRevsionAbsent = "absent"
+const (
+	istioRevsionAbsent = "absent"
+)
 
 var (
 	revisionsMonitoringMetricsGroup = "revisions"
@@ -93,6 +95,7 @@ type IstioPodInfo struct {
 	Revision         string
 	SpecificRevision string
 	InjectAnnotation bool
+	InjectLabel      bool
 }
 
 func (p *IstioDrivenPod) getIstioCurrentRevision() string {
@@ -125,6 +128,16 @@ func (p *IstioDrivenPod) injectAnnotation() bool {
 	return NeedInject
 }
 
+func (p *IstioDrivenPod) injectLabel() bool {
+	NeedInject := false
+	if inject, ok := p.Labels["sidecar.istio.io/inject"]; ok {
+		if inject == "true" {
+			NeedInject = true
+		}
+	}
+	return NeedInject
+}
+
 func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
 		return specificPodRevision
@@ -145,6 +158,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Revision:         istioPod.getIstioCurrentRevision(),
 		SpecificRevision: istioPod.getIstioSpecificRevision(),
 		InjectAnnotation: istioPod.injectAnnotation(),
+		InjectLabel:      istioPod.injectLabel(),
 	}
 
 	return result, nil
@@ -178,9 +192,16 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		}
 
 		desiredRevision := istioRevsionAbsent
+
+		// if label sidecar.istio.io/inject=true -> use global revision
+		if istioPodInfo.InjectLabel {
+			desiredRevision = globalRevision
+		}
+		// override if injection labels on namespace
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
 		}
+		// override if label istio.io/rev with specific revision exists
 		if istioPodInfo.SpecificRevision != "" {
 			desiredRevision = istioPodInfo.SpecificRevision
 		}

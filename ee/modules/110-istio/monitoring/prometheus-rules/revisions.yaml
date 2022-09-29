@@ -81,7 +81,7 @@
       plk_protocol_version: "1"
       summary: There are Pods with istio sidecars, but without istio-injection configured
     expr: |
-      d8_istio_pod_revision{revision!="absent", desired_revision="absent"}
+      d8_istio_pod_revision{desired_revision="absent",revision!="absent"}
     for: 5m
     labels:
       severity_level: "4"
