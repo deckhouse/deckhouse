@@ -139,7 +139,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 			return fmt.Errorf("can't decode existing tolerations %+v: %s", value.Value(), err)
 		}
 
-		deschedulerCR.Spec.DeploymentTemplate.Tolerations = tolerations
+		deschedulerCR.Spec.DeploymentTemplate = &v1alpha1.DeschedulerDeploymentTemplate{Tolerations: tolerations}
 	}
 
 	input.PatchCollector.Create(deschedulerCR, object_patch.UpdateIfExists())
