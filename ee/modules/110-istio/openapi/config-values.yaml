@@ -144,8 +144,7 @@ properties:
         maximum: 100.0
         multipleOf: 0.01
         description: |
-          Trace data is often produced in large volumes, it is not only expensive to collect and store but also expensive to transmit. In order to strike a balance between observability and expenses, traces are sampled. Sampling is the process by which a decision is made on whether to process/export a span or not.
-          `sampling` - option can be used to control what percentage of requests get reported to the tracing system.  It is possible to override this setting with Pod annotation:
+          The percentage of requests that will be sampled for sending to jaeger. It is possible to override this setting with Pod annotation:
           ```yaml
           proxy.istio.io/config: |
             tracing:
