@@ -1,0 +1,44 @@
+- name: d8.istio.deprecated.params
+  rules:
+    - alert: D8IstioTLSModeModuleParamIsDeprecated
+      expr: d8_istio_deprecated_module_param{param="tlsMode"}==1
+      for: 1m
+      labels:
+        severity_level: "4"
+        tier: cluster
+        d8_module: istio
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__d8istio_operator_malfunctioning: "D8IstioTLSModeModuleParamIsDeprecated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8istio_operator_malfunctioning: "D8IstioTLSModeModuleParamIsDeprecated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: deprecated `tlsMode` parameter will be removed in deckhouse version 1.38.0
+        description: |
+          The `tlsMode` parameter is now deprecated, it will be removed in deckhouse version 1.38.0.
+          If necessary, create the PeerAuthentication and DestinationsRule resources for configuring mTLS manually.
+
+          PeerAuthentication:
+          ```
+            apiVersion: security.istio.io/v1beta1
+            kind: PeerAuthentication
+            metadata:
+              name: <name>
+              namespace: <namespace>
+            spec:
+              mtls:
+                mode: <mtls mode>
+          ```
+
+          DestinationRule:
+          ```
+            apiVersion: networking.istio.io/v1beta1
+            kind: DestinationRule
+            metadata:
+              name: <name>
+              namespace: <namespace>
+            spec:
+              host: "<host name>"
+              trafficPolicy:
+                tls:
+                  mode: <mtls mode>
+          ```
