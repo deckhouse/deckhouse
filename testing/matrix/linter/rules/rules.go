@@ -200,21 +200,11 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 			)
 		}
 		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
-		tag := t.TagStr()
-
 		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
 				"All images must be deployed from the same default registry - "+defaultRegistry,
-			)
-		}
-
-		if tag != "imageHash" {
-			return errors.NewLintRuleError("CONTAINER004",
-				object.Identity()+"; container = "+c.Name,
-				nil,
-				"Image tag should be `imageHash`",
 			)
 		}
 	}
