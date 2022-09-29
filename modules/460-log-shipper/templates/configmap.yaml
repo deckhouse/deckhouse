@@ -8,6 +8,7 @@ data:
   defaults.json: |
     {
       "data_dir": "/vector-data",
+      "expire_metrics_secs": 1200,
       "api" : {
         "address" : "127.0.0.1:8686",
         "enabled" : true,
