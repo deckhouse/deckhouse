@@ -47,7 +47,6 @@ var	DefaultImagesTags = map[string]map[string]string{
 `
 
 func main() {
-	os.Exit(0) // TODO: remove
 	var (
 		output string
 		stream = os.Stdout
@@ -67,8 +66,10 @@ func main() {
 
 	tags := make(map[string]map[string]string)
 
-	cmd := exec.Command("go", "run", "main.go", "-dir", "../..", "-env", "FE")
-	cmd.Dir = path.Join("fakewerf")
+	cmd := exec.Command("werf", "config", "render")
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
+	cmd.Dir = path.Join("..")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println(string(out))
