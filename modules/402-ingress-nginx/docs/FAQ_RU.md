@@ -204,14 +204,18 @@ spec:
 ## Как включить HorizontalPodAutoscaling для IngressNginxController?
 
 > **Важно!** Режим HPA возможен только для контроллеров с inlet: `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
+> **Важно!** Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
 
 HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-При этом создается deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
+IngressNginxController разверачивается при помощи DaemonSet. DaemonSet не предоставляет возможности горизонтального масштабирования, поэтому создается дополнительный deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. Если CPU utilization превысит 50%, HPA закажет новую реплику для `hpa-scaler` (с учетом minReplicas и maxReplicas).
 
-При CPU utilization > 50% HPA закажет новую реплику для `hpa-scaler` (в рамках minReplicas и maxReplicas).
+`hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно
+в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
 
-`hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
+Примечания:
+* Минимальное реальное количество реплик ingressNginxController не может быть меньше минимального количества узлов в nodegroup, в которую разворачивается ingressNginxController.
+* Максимальное реальное количество реплик ingressNginxController не может быть больше максимального количества узлов в NodeGroup, в которую разворачивается ingressNginxController.
 
 ## Как использовать IngressClass с установленными IngressClassParameters
 

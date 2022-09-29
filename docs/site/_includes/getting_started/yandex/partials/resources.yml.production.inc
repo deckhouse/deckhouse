@@ -155,8 +155,6 @@ spec:
   # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
-  maxReplicas: 3
-  minReplicas: 2
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

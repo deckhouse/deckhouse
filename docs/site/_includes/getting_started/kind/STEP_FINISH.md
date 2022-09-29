@@ -134,7 +134,7 @@ Managing nodes
 <div class="cards-item__text" markdown="1">
 Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/{{ page.lang }}/documentation/v1/modules/040-node-manager/).
 
-You only need to make changes to `minReplicas` and `maxReplicas` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
+You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
 [InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) and a
