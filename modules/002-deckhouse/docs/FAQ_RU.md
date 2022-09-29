@@ -59,3 +59,23 @@ kubectl logs job.batch/kube-bench
 * логи cloud controller manager
 * все горящие уведомления в Prometheus
 * метрики terraform-state-exporter
+
+## Как отлаживать проблемы в Pod'ах при помощи ephemeral containers?
+
+Выполните следующую команду:
+
+```shell
+kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
+```
+
+Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
+
+## Как отлаживать проблемы на узлах при помощи ephemeral containers?
+
+Выполните следующую команду:
+
+```shell
+kubectl debug node/mynode -it --image=ubuntu
+```
+
+Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).
