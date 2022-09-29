@@ -73,7 +73,7 @@
         Impact — Pods will lose their istio sidecars after re-creation.
         Getting affected Pods:
         ```
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" | fromjson | .revision == $revision) | .metadata.name'
+        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
