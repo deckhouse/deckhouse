@@ -476,6 +476,7 @@ spec:
                                   Days of the week when node could be updated.
                                 items:
                                   type: string
+                                  description: Day of the week.
                                   enum:
                                     - Mon
                                     - Tue
