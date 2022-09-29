@@ -54,7 +54,7 @@ modulesImages:
 modules:
   https:
     mode: CustomCertificate
-  publicDomainTemplate: "%%s.example.com"
+  publicDomainTemplate: "%s.example.com"
   placement: {}
 discovery:
   d8SpecificNodeCountByRole:
