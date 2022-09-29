@@ -77,6 +77,7 @@ spec:
       holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
+        sampling: {{ $.Values.istio.tracing.sampling }}
         zipkin:
           address: {{ $.Values.istio.tracing.collector.zipkin.address }}
   {{- end }}

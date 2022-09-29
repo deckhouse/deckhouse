@@ -138,6 +138,21 @@ properties:
         description: Turn on or off tracing collection and displaying in kiali.
         default: false
         x-examples: [true]
+      sampling:
+        type: number
+        minimum: 0.01
+        maximum: 100.0
+        multipleOf: 0.01
+        description: |
+          The sampling rate option can be used to control what percentage of requests get reported to your tracing system. This should be configured depending upon your traffic in the mesh and the amount of tracing data you want to collect. It is possible to override this option with Pod annotation:
+          ```yaml
+          proxy.istio.io/config: |
+            tracing:
+              sampling: 100.0
+          ```
+
+        default: 1.0
+        x-examples: [50.05]
       collector:
         type: object
         description: Tracing collection settings.
