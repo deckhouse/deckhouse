@@ -144,7 +144,7 @@ properties:
         maximum: 100.0
         multipleOf: 0.01
         description: |
-          Sampling rate in percents. The rate should be in the range of 0.0 to 100.0 with a precision of 0.01. It is possible to override this setting with Pod annotation:
+          Sampling rate in percentages. This option can be used to control what percentage of requests get reported to the tracing system.  It is possible to override this setting with Pod annotation:
           ```yaml
           proxy.istio.io/config: |
             tracing:
