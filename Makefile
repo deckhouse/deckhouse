@@ -1,3 +1,4 @@
+export DOCKERIZED := 1
 export PATH := $(abspath bin/):${PATH}
 
 FORMATTING_BEGIN_YELLOW = \033[0;33m
@@ -7,14 +8,24 @@ FORMATTING_END = \033[0m
 TESTS_TIMEOUT="15m"
 FOCUS=""
 
+PROMTOOL_VERSION = 2.37.0
+GOLANGCI_VERSION = 1.46.2
+TRIVY_VERSION= 0.28.1
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
-PLATFORM_NAME := $(shell uname -p)
-OS_NAME := $(shell uname)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
+endif
+
+# Owerride system paraeters for docker
+ifeq ($(DOCKERIZED), 1)
+	OS_NAME := Linux
+	PLATFORM_NAME := x86_64
+else
+	PLATFORM_NAME := $(shell uname -p)
+	OS_NAME := $(shell uname)
 endif
 
 # Set platform for jq
@@ -48,6 +59,13 @@ endif
 GOHOSTARCH := $(shell go env GOHOSTARCH)
 GOHOSTOS := $(shell go env GOHOSTOS)
 
+# Set testing path for tests-modules
+ifeq ($(FOCUS),"")
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+else
+	TESTS_PATH = $(wildcard ./modules/*-${FOCUS} ./ee/modules/*-${FOCUS} ./ee/fe/modules/*-${FOCUS})/...
+endif
+
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
 	"" \
@@ -69,14 +87,15 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.46.2
-TRIVY_VERSION= 0.28.1
-PROMTOOL_VERSION = 2.37.0
-TESTS_TIMEOUT="15m"
-
 ##@ General
 
 deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool ## Install dev dependencies.
+
+clean: ## Clean up working directory and remove dev image
+	rm -rf ./bin
+	docker ps -aqf label=deckhouse-dev | xargs docker rm -rf
+	docker images -qf label=deckhouse-dev | xargs docker rmi -rf
+	docker volume rm -f deckhouse-dev-gopath deckhouse-dev-bin
 
 ##@ Tests
 
@@ -91,29 +110,37 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+  ##~ Options: FOCUS=module-name
+	@./tools/dockerized.sh \
+		"go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}"
 
 tests-matrix: bin/promtool ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-	go test ./testing/matrix/ -v
+	@./tools/dockerized.sh \
+		"go test ./testing/matrix/ -v"
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	@./tools/dockerized.sh \
+		"go test -vet=off ./testing/openapi_cases/"
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
-	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
+	@./tools/dockerized.sh \
+		"go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/..."
 
 bin/golangci-lint:
-	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	@./tools/dockerized.sh \
+		"mkdir -p bin" \
+		"curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}"
 
 .PHONY: lint lint-fix
 lint: ## Run linter.
-	golangci-lint run
+	@./tools/dockerized.sh \
+		"golangci-lint run"
 
 lint-fix: ## Fix lint violations.
-	golangci-lint run --fix
+	@./tools/dockerized.sh \
+		"golangci-lint run --fix"
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -141,19 +168,23 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 
 .PHONY: generate render-workflow
 generate: ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	@./tools/dockerized.sh \
+		"cd tools; go generate"
 
 render-workflow: ## Generate CI workflow instructions.
-	./.github/render-workflows.sh
+	@./tools/dockerized.sh \
+		"./.github/render-workflows.sh"
 
 ##@ Security
 
 bin/regcopy: ## App to copy docker images to the Deckhouse registry
-	mkdir -p bin
-	cd tools/regcopy; go build -o $(PWD)/bin/regcopy
+	@./tools/dockerized.sh \
+		"mkdir -p bin" \
+		"cd tools/regcopy; go build -o $(PWD)/bin/regcopy"
 
 bin/trivy:
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
+	@./tools/dockerized.sh \
+		"curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}"
 
 .PHONY: cve-report cve-base-images
 cve-report: ## Generate CVE report for a Deckhouse release.
@@ -187,14 +218,20 @@ docs-down: ## Stop all the documentation containers.
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq: ## Install jq deps for update-patchversion script.
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
+	@./tools/dockerized.sh \
+		"curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq" \
+		"chmod +x $(PWD)/bin/jq"
 
 bin/yq: ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq && chmod +x $(PWD)/bin/yq
+	@./tools/dockerized.sh \
+		"curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq" \
+		"chmod +x $(PWD)/bin/yq"
 
 bin/crane: ## Install crane deps for update-patchversion script.
-	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane
+	@./tools/dockerized.sh \
+		"curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane" \
+		"mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane"
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
-	cd candi/tools; bash update_kubernetes_patchversions.sh
+	cd candi/tools; bash -x update_kubernetes_patchversions.sh
