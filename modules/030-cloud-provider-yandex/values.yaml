@@ -1,0 +1,528 @@
+cloudProviderYandex:
+  additionalExternalNetworkIDs: []
+  internal: {}
+global:
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
+    clusterType: Static
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.21"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  clusterIsBootstrapped: true
+  deckhouseEdition: FE
+  deckhouseVersion: dev
+  discovery:
+    clusterControlPlaneIsHighlyAvailable: false
+    clusterDNSAddress: 10.222.0.10
+    clusterDomain: cluster.local
+    clusterMasterCount: 1
+    clusterUUID: 02da35a8-6c73-4b78-9353-a01f7e1189ef
+    d8SpecificNodeCountByRole: {}
+    extensionAPIServerAuthenticationRequestheaderClientCA: |
+      -----BEGIN CERTIFICATE-----
+      MIIC7zCCAdegAwIBAgIBADANBgkqhkiG9w0BAQsFADAZMRcwFQYDVQQDEw5mcm9u
+      dC1wcm94eS1jYTAeFw0yMjAxMTcyMjI0NTRaFw0zMjAxMTUyMjI0NTRaMBkxFzAV
+      BgNVBAMTDmZyb250LXByb3h5LWNhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+      CgKCAQEAsY0vGTqmTuDtkhuJFHIkJPWuZUlzWkATHtiDwMp7sbpugGhFWrgKUnoj
+      8r9CUD9YcFjLqHFJax+J1kxe9aZyx8trS83KnCBF/kKGANP9sk9t8Mny7aOInRji
+      M5/jjvrcGvMMZ8RP9qFC9gOOmJLInV42yA/PZoUDG3B84FvgL2jYCQV+2WsDxagI
+      yrTuwJE6nIeHZmyJ9Zw1hZpuIHLIt6UwbS4oTSQbOaL4WFPo38mF472/IUsu64ZI
+      kBthc4lX506uksH92chlxLF32M7+8UCTmBAE7zQGkWiPCaW+9TFpzKW+N7NY5qfN
+      wFbCOEJx4gqPBlYy+TwWUkFUVwt9ZwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAqQw
+      DwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUDDed5NEuo+0EqUEP5Ip/vjBzC7Ew
+      DQYJKoZIhvcNAQELBQADggEBAAk3sYh1UPXV8q+m7mv7X6Bopgs4ZjLw+oDPUOEW
+      ASliZZD4AsdySHz92ikNKwywf0QW61J8n43GXIbBKwjS7dmz9KT4QGbMFHY43PUl
+      aKUtXmrLRuVYLZ+Pok0t3X5d1QnmJI0N9b6/pG5HyIxlgXOOCjoinsYUAVrr+j57
+      6uN5dcnWkdKLFpW0qLBI3r/CRcdcICNI7eG4Y+1CSzwbl7j+F5fPcah83+7hmVzS
+      5S/jOhl628IwMWgKYYrF6TITnkZpcDIHHAuSywHLS88saKENKlczyD8vfWXNY0ji
+      eFQxLZP73O9qIefDzJZKbJ9QWfFtO3Hlzvf0ENvxLtCBoa4=
+      -----END CERTIFICATE-----
+    kubernetesCA: |
+      -----BEGIN CERTIFICATE-----
+      MIIC5zCCAc+gAwIBAgIBADANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwprdWJl
+      cm5ldGVzMB4XDTIyMDExNzIyMjQ0MVoXDTMyMDExNTIyMjQ0MVowFTETMBEGA1UE
+      AxMKa3ViZXJuZXRlczCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPtT
+      Kx/y3wfeUhgq0FUaaVevQxBIp7L/kwXwfJOmXWOL5UG0bMrNUfbwuTU+a+gDi3rE
+      E/qRKdNR7zrFOcGEDFf2TC0cVHiDvcqkZWKiAAztzF+2+N4t8jCHYFnWF+Gl0Zsd
+      dGyjNCmZOLBCsz6TG80Ny3kWsI+i4nwVwhqSUxSZl3+z4vRBCfgmgb23/lXXhLA8
+      kjkVKe9kRTrGXm9rNRF9JuD2pMvlT8Z0QmmhoSgBQwcvMz23NDT20XKYjzmXHkX+
+      OdJxz3gT7AaPbQJkExZeyR0p1S5SaB/257Iuk6ZV3uqLn8hu9A9ktEpZmWva4G87
+      LXv8tsxos6W2H1LTCx0CAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB
+      /wQFMAMBAf8wHQYDVR0OBBYEFEqDBN2/YihUfsIKNDDDvmjFu8oMMA0GCSqGSIb3
+      DQEBCwUAA4IBAQBUIITp9RLcH++zFrJt8lt1wrhkKX1pNzmumeuQE6U6bta+7rPC
+      WsHqugV85LV9Mvaws5ICKEernUs1xozsu/tpqVhRib4Lo5M6rRQmPPdjAsH4Je2Z
+      ZmPAH36n5Kk8KaA5xZikavqX5qt3PsLitAH52yYzwnSKEzTp5o+a7C+EN7A+6A6b
+      7SSbNgY0WDazeXjwIqwTSbbS2cBSiyzerbPDOet7H4KgN4PUr+DqWsmIOcwATZQ4
+      2v03CEnOQE4hHXFmpjWmaRQt3hQnZx29vu50eSgS9tRieZobe5iojS+lsjrHWskM
+      LEtiFBnxw3tCsM4YKqg0ojB5fovBN6BDfgd6
+      -----END CERTIFICATE-----
+    kubernetesVersion: 1.21.14
+    kubernetesVersions:
+    - 1.21.14
+    podSubnet: 10.111.0.0/16
+    prometheusScrapeInterval: 30
+    serviceSubnet: 10.222.0.0/16
+  enabledModules:
+  - priority-class
+  - deckhouse
+  - operator-prometheus-crd
+  - prometheus-crd
+  - snapshot-controller-crd
+  - user-authn-crd
+  - vertical-pod-autoscaler-crd
+  - helm
+  - cni-cilium
+  - local-path-provisioner
+  - control-plane-manager
+  - node-manager
+  - linstor
+  - kube-dns
+  - snapshot-controller
+  - cert-manager
+  - user-authz
+  - user-authn
+  - operator-prometheus
+  - prometheus
+  - prometheus-metrics-adapter
+  - vertical-pod-autoscaler
+  - extended-monitoring
+  - monitoring-applications
+  - monitoring-custom
+  - monitoring-deckhouse
+  - monitoring-kubernetes
+  - monitoring-kubernetes-control-plane
+  - monitoring-ping
+  - node-local-dns
+  - descheduler
+  - ingress-nginx
+  - log-shipper
+  - pod-reloader
+  - chrony
+  - cilium-hubble
+  - dashboard
+  - upmeter
+  - flant-integration
+  - namespace-configurator
+  - secret-copier
+  - deckhouse-web
+  - cdi
+  - virtualization
+  internal:
+    modules:
+      resourcesRequests:
+        memoryControlPlane: 4026531840
+        milliCpuControlPlane: 1850
+  modules:
+    https:
+      certManager:
+        clusterIssuerName: letsencrypt
+      mode: CertManager
+    ingressClass: nginx
+    placement: {}
+    publicDomainTemplate: '%s.kubevirt.dev-rnd.flant.com'
+    resourcesRequests:
+      controlPlane: {}
+      everyNode:
+        cpu: 300m
+        memory: 512Mi
+  modulesImages:
+    registry: dev-registry.deckhouse.io/sys/deckhouse-oss
+    registryAddress: dev-registry.deckhouse.io
+    registryCA: ""
+    registryDockercfg: eyJhdXRocyI6eyJkZXYtcmVnaXN0cnkuZGVja2hvdXNlLmlvIjp7InVzZXJuYW1lIjoid3JpdGV0b2tlbiIsInBhc3N3b3JkIjoiNGFjOWZlMmI3MGM1NGQwOWY2ZDQzNTMyOGRmZjA4NDQiLCJhdXRoIjoiZDNKcGRHVjBiMnRsYmpvMFlXTTVabVV5WWpjd1l6VTBaREE1Wmpaa05ETTFNekk0WkdabU1EZzBOQT09In19fQ==
+    registryPath: /sys/deckhouse-oss
+    registryScheme: https
+    tags:
+      basicAuth:
+        nginx: a54e13169259477f328f1f2285100c1d3f627b434f5eba86babe3804-1655992728869
+      cdi:
+        cdiApiserver: d19b7568e91dcd409dbcbf66b23c263aa21099b570c53520e94c80b8-1662047386982
+        cdiCloner: 8177de5ea9f5179443c9bd6be69b13629c8da51c4fa2bdb718903fc3-1662024156585
+        cdiController: 5f56ce9a389666ba45cbc9125a6737547f288b4ff62cdd3f4423bd51-1662047352395
+        cdiImporter: c10b72dc0149b093a14a244adb16ab8b69c08e7d094251854f74a01e-1664198712932
+        cdiOperator: a632f5c75f803ee82fb036b2b58b066e3cc87c53bc8a77d9e03229ec-1662047269469
+        cdiUploadproxy: f10dc39defcaa1664971f474730ed69f01a7d011645c2205d26c8b6b-1662024250673
+        cdiUploadserver: 013835279793d148ce8358c2deb85bb6827a63defb961592710a3118-1664198773242
+      cephCsi:
+        cephcsi: 118166c83e3d3e4264de939c90d9b111caeacf9fa1f711eec3dcf6ad-1647238705395
+      certManager:
+        annotationsConverter: 2feb8ad7852c93d0a311285eed8e5e366fe3ac41bf7a5f332ebb9937-1655994167348
+        certManagerAcmeSolver: 8e99b64519ed83ad88b5601c353aafcd6692609484e3a518c75f894c-1657285772610
+        certManagerCainjector: 64fc19881ebee3e3f2116ada7dbc7bcce9323d682c0e2963229ecb25-1657285739948
+        certManagerController: c8a37a0ef7038e7660f6dcae0e9d80a47de5f8fec19a72d990f89576-1657285732076
+        certManagerWebhook: 6b85b20bf82cab47fd9e984d94f0bbf4e90405e430ea226ae4f3a19e-1657285764153
+        legacyCertManagerAcmeSolver: 42456cf42abd0be663c9e5a9eae08b11bdcb0d769fb7b02469e3348e-1655994756061
+        legacyCertManagerCainjector: 49d217cd57bdc789d47c4f78f23e674be74577a5623149f5874a1ef5-1655992164327
+        legacyCertManagerController: 9282a532c06ca7c932de39bfca82e4619d9f4afbadb68133d8ba19f7-1655993492083
+        legacyCertManagerWebhook: e2faf35838b28f48f7db3ffa5a4d9b9885a8c3403f16cf5c2b4385e1-1655995817449
+      chrony:
+        chrony: 177644cee75a04be983e6415459c671e9f24f9dae4c5437538b0fbf9-1655996850977
+      ciliumHubble:
+        relay: 7f95a957c325e6efe6be70fa2ef55bb078f38ab812f06cad3d104f60-1655990914669
+        uiBackend: c6c6f150999b4a75ea0634b65252682aa73ac1d6d2355b450e44d60b-1656684620500
+        uiFrontend: 7d36bdea1c76dd2e58db3144bc34a7350203d43429c53179b79b6d64-1655997342324
+        uiProxy: 8d640e72434e203fc557b37401317cfe6bdf4f5ade38ad8c2d7260e2-1655993335752
+      cloudProviderAws:
+        cloudControllerManager120: dd604fcc7e893da042a0b8329d3b9fe057ba1a983ee220a6443b00f8-1656696220978
+        cloudControllerManager121: ba0bc2efcc617b0c0884a73fe404bd429422b8a1048f16372c7c3a67-1663770653797
+        cloudControllerManager122: 7c10e507e67b0f93cebfccac93965c9928def150f77cde89dd9457e1-1663770637167
+        cloudControllerManager123: cc399e8133a12ed11b2e7f7042c060c44f29a6c7d4da5ee0290f5146-1663770645507
+        cloudControllerManager124: 93660e961665cc03d7dbb056779ffa523c5dad9da16a51a4a634ce0e-1660596836113
+        ebsCsiPlugin: 264e307e2a0dc695b35c0371d77be3203c4b40a2cc501e2e8a74ecdb-1656684545745
+        nodeTerminationHandler: 55b3bac1e4e50b114c7287b00e8e26473dcc6e8cb343f2497e2d2271-1655993216170
+      cloudProviderAzure:
+        azurediskCsi: de4cf6ab503e6fd9651a522741ea6df9dbefc256ef0a97328b070b9e-1656684720069
+        cloudControllerManager120: ddcb4e456fff8e46c01b9561174b241038a1b45b3ca51b65057530d5-1656695964393
+        cloudControllerManager121: eba4e80240be9895707429f9705612f240413edf1e438f3d2cfb358f-1656697295923
+        cloudControllerManager122: 530006107b4c8c991087e40560d0c3d320993c2fea3ef2e7cc8ff70f-1656696806380
+        cloudControllerManager123: 47d7673a551a39bf0628b9d9a0fbdfda5f775cb7b3bc9e461f19c90c-1656696871671
+        cloudControllerManager124: 3e66ddfa2dcc0b482b3ed142250a033865d7aa8849c145c11bea5cab-1660589007072
+      cloudProviderGcp:
+        cloudControllerManager120: 65a41768b5f458d30d3b6073dd3cc51cd52738d87a6fc8e12b852ed7-1656697415661
+        cloudControllerManager121: 6943fa74844a0af60335cc591e6306a1552a15790f06c54e790466fd-1656695489852
+        cloudControllerManager122: 6943fa74844a0af60335cc591e6306a1552a15790f06c54e790466fd-1656695489852
+        cloudControllerManager123: daec36daf226e87fc1b907b721dd2bef59f345237c6c82dd97bbe8f8-1656696291541
+        cloudControllerManager124: 7fdc36d1bcd6c5fa8dbdab2662298fd8fba5c817feaf0a570fc175d2-1660589084146
+        pdCsiPlugin: 1504ca92b0b7d2f2d76668d87e56ab92ed33a909ef474b326e98bc6c-1656684612051
+      cloudProviderOpenstack:
+        cinderCsiPlugin120: 7e7ed96dc4547e254dbb97877ef58da4967806e1d69d3fa502771e1e-1656695224947
+        cinderCsiPlugin121: e2c3a86f97f99beb0f7ed2df4c45a43945e62bebab01045e22d958e2-1656695534455
+        cinderCsiPlugin122: 4cc618706341e696c711100b3162117cd28659d6f0582358ee8c7d18-1656695193817
+        cinderCsiPlugin123: 83e55a9309dcd474a2cc1026ef95e23c1af37b6d4d3e8ce0bcc31c20-1656695282528
+        cinderCsiPlugin124: 73621c7cf6101f1a3027ca97fac6d116474d597e5d30d0dd2aeaa645-1660589175138
+        cloudControllerManager120: 5f1260db70d4f386890dc4c7991637f2251499b0efe2c0010f67e403-1660596881581
+        cloudControllerManager121: cd23e843eb4c7a440ba3d879de66d2db71982dc5b95084d85d32456f-1660596928538
+        cloudControllerManager122: 7dd20fe489250a2d0107520ff8c3d78c4f842065afadaad5145c193f-1660596828708
+        cloudControllerManager123: b8895676b2fbef7505c0855c52c924ebcb0174e7eb5e1d547400a3da-1660596874018
+        cloudControllerManager124: 75f4959ea61969ece2761e28b744a55eaee83a3d9d33f1936f46c7ff-1660596843998
+      cloudProviderVsphere:
+        cloudControllerManager120: cb048e0bd62828a1d44f38aedf2a147900650074bf949261bff73e87-1656696366221
+        cloudControllerManager121: 39cc019a913f5520a6cbbb6fe870324e113656eb86a78dc5971a1189-1656696320613
+        cloudControllerManager122: 0c747bec92e7f763a8f3c747ed11cf66f2777e747cb652a5ec257ef9-1656697192372
+        cloudControllerManager123: 795a3165cab150a87a8cfb2fa3c8c491f01377621c75997575d3b477-1656695436809
+        cloudControllerManager124: 8652b7240963a2c770bccd2c97a98745ea426f415946d7e29f62a5d8-1660596821381
+        vsphereCsiPlugin: 3be64a3daa1732ef8a2c2927290dc326b415bd98a4237d1fe96474cb-1656684532290
+        vsphereCsiPluginLegacy: 85aa9401e75b2860cfb6158c677cac3ac4103b28bf94ec9cfb6fbe8f-1656684653460
+      cloudProviderYandex:
+        cloudControllerManager120: 9eb8bd3b8e16bdc43e3f0bbfd152ca41bac5c3b99f02d49c71313258-1656696657979
+        cloudControllerManager121: ce39136501862bddac70beb705eae635864ce01fe3f6f51f33f8f1d3-1656697652180
+        cloudControllerManager122: aa8ffa0d56a800b18c2d5febf0235db63ffe901f90eae135580185d7-1656697497855
+        cloudControllerManager123: cbb7182634eb29004ccb9e4c6baf98867ebe9ea2102f7cc7ff85c61b-1656697321584
+        cloudControllerManager124: 843549c1299c75e3d225509b7809ac2428adf4660684aad7fd993d88-1660589273136
+        cloudMetricsExporter: 21a75ff2e0ee67f0bd280c27ac1330ee7919093fea14528153ed5327-1656697237434
+        yandexCsiPlugin: c56ff2edb5d794c8b77c352c15eb81a805f0551decec74fabcb1d4a5-1655994573754
+      cniCilium:
+        cilium: e35ce0c78041e1a67c6fe429e92334aa9e79ddaa1b7533c029705b92-1664384090401
+        operator: 6bd16df91c62ca617c7a85e17d1623d33727e7029bb722708f3078ec-1655993230787
+      cniFlannel:
+        flanneld: d61cab84f5d4ce1db1c0e8a0df28dea8b1c4a40576c73df2754d822d-1655992192886
+      cniSimpleBridge:
+        simpleBridge: cc8e62971f216a6098dab39c096aefb8ab93dd6f9f88b4994bf7e99c-1662463308673
+      common:
+        alpine: 970a8aadfbc6b7ca150d263c29116b38387f82b72ae7b0647ac179ac-1655992266200
+        csiExternalAttacher120: dc3c57949f4041bc5ef7b3e1f3e3cf5b6e300b309d4f2ed1fe050e11-1656696484386
+        csiExternalAttacher121: 7fff28555984f71981d648d3c9d7e3f6cdd7f2c8cda1c7d01d33aa44-1658986094620
+        csiExternalAttacher122: 7fff28555984f71981d648d3c9d7e3f6cdd7f2c8cda1c7d01d33aa44-1658986094620
+        csiExternalAttacher123: 7fff28555984f71981d648d3c9d7e3f6cdd7f2c8cda1c7d01d33aa44-1658986094620
+        csiExternalAttacher124: 7fff28555984f71981d648d3c9d7e3f6cdd7f2c8cda1c7d01d33aa44-1658986094620
+        csiExternalProvisioner120: 55423fa428455ef13f5d239017a8ae63ca4ce2372e8307aed8a1e711-1656695267341
+        csiExternalProvisioner121: 4b0d42fc1d66fd4dad72809c79b4e67c6906a1c6dd0b47471309f95e-1658986108983
+        csiExternalProvisioner122: 4b0d42fc1d66fd4dad72809c79b4e67c6906a1c6dd0b47471309f95e-1658986108983
+        csiExternalProvisioner123: 4b0d42fc1d66fd4dad72809c79b4e67c6906a1c6dd0b47471309f95e-1658986108983
+        csiExternalProvisioner124: 4b0d42fc1d66fd4dad72809c79b4e67c6906a1c6dd0b47471309f95e-1658986108983
+        csiExternalResizer120: f80137ad49334791d65c721a75d7bd99f83df07b10d025cd2a2b4489-1656695350430
+        csiExternalResizer121: 0b0122e15004b7b29863b12372e71444441e94884e896ac387f65d83-1658986135537
+        csiExternalResizer122: 0b0122e15004b7b29863b12372e71444441e94884e896ac387f65d83-1658986135537
+        csiExternalResizer123: 0b0122e15004b7b29863b12372e71444441e94884e896ac387f65d83-1658986135537
+        csiExternalResizer124: 0b0122e15004b7b29863b12372e71444441e94884e896ac387f65d83-1658986135537
+        csiExternalSnapshotter120: 7956ae5296a57cba94b8c240a505f4e576a16f00045d33c1148c5b9f-1656695894305
+        csiExternalSnapshotter121: 0c7a5299b9d94b7060812f7ee5f13ed45ccca16b5df35e7299d2ca77-1658986081452
+        csiExternalSnapshotter122: 0c7a5299b9d94b7060812f7ee5f13ed45ccca16b5df35e7299d2ca77-1658986081452
+        csiExternalSnapshotter123: 0c7a5299b9d94b7060812f7ee5f13ed45ccca16b5df35e7299d2ca77-1658986081452
+        csiExternalSnapshotter124: 0c7a5299b9d94b7060812f7ee5f13ed45ccca16b5df35e7299d2ca77-1658986081452
+        csiLivenessprobe120: c1b05c3c56230b80879b51818ce841e7ee2b5f3a76b4158b01fadf6a-1656695276168
+        csiLivenessprobe121: 9e4b5da0c998dc0c88a14a0da7cd3b5876ffbbf50aeea3b45a6f96a4-1658986088206
+        csiLivenessprobe122: 9e4b5da0c998dc0c88a14a0da7cd3b5876ffbbf50aeea3b45a6f96a4-1658986088206
+        csiLivenessprobe123: 9e4b5da0c998dc0c88a14a0da7cd3b5876ffbbf50aeea3b45a6f96a4-1658986088206
+        csiLivenessprobe124: 9e4b5da0c998dc0c88a14a0da7cd3b5876ffbbf50aeea3b45a6f96a4-1658986088206
+        csiNodeDriverRegistrar120: bc10f1132905a9967570179a6cf37cc6fc771964768647417b3ced12-1656695709439
+        csiNodeDriverRegistrar121: cbd7924a970fa0472ad28180c7d01a60c4cc3f9c3e3815f0db297655-1658986136579
+        csiNodeDriverRegistrar122: cbd7924a970fa0472ad28180c7d01a60c4cc3f9c3e3815f0db297655-1658986136579
+        csiNodeDriverRegistrar123: cbd7924a970fa0472ad28180c7d01a60c4cc3f9c3e3815f0db297655-1658986136579
+        csiNodeDriverRegistrar124: cbd7924a970fa0472ad28180c7d01a60c4cc3f9c3e3815f0db297655-1658986136579
+        kubeRbacProxy: a2f2ad59603e2f95332110d193d028597e1776df5d56da55e2add6fa-1655992756966
+        pause: c5120536ab49040dbbff34be987469227fd9c241a6fd73da694c13c1-1654517843943
+      controlPlaneManager:
+        controlPlaneManager120: e70afc1bc3b5aa305b83f4ecaa2be2bef323b908dd1432471b926c17-1662030711321
+        controlPlaneManager121: cbcdc2493768e9a1cc5895872dc90a9a9f7035fe27d485fb04bd5646-1662030628507
+        controlPlaneManager122: 82104f2181375b315368a53ad7866b58277765a71843b352b2effcb0-1662030663283
+        controlPlaneManager123: b9337607287baa2b9cf941c6c10ede2c7b94662c948d030d87261464-1662030687510
+        controlPlaneManager124: e518cafafe819bb4c53ef5e227ae88ce7feae21eb190a573b22d3af6-1662030564116
+        etcd: 7feef18acb6f63b690bb290b94ff09149d57957b5c65844f79d12fec-1656696587236
+        kubeApiserver120: dbff5f87777f3abedd0d76e94c15cf6300d239243dd6b3bfcaff25fc-1662030554387
+        kubeApiserver121: 8ed0d80051f3c44d9ad78cd4391ec32669fe000bd5865d4c1e7c1892-1662030608947
+        kubeApiserver122: 27b90a8b7d4be963be96de6a8925cee1f621fe4d6bc136f34774ed25-1662030573858
+        kubeApiserver123: 15d18548d8507716fefd0f23e4b9cdd97da3f1ca80ae27c78844d402-1662030747129
+        kubeApiserver124: 5fa74fc2449628f4fd2c17199b312fa148024dae11beb7bd4618cb28-1662030426909
+        kubeApiserverHealthcheck: b0b3a01e1edbba7fb325f2db483b1a81ad216ee245c1249fc789b9fd-1656696708106
+        kubeControllerManager120: 324a3fef12eb2f70e62d823809826a218b194e1ec5d3768472546a20-1662030581686
+        kubeControllerManager121: ddca472e3cb497a198aba19ac243ebe5d47e2f8b79db629523db7995-1662030417659
+        kubeControllerManager122: 53ddefe542b533138cce0c305b3e0a45e9df8961475bc6acabf9dd5c-1662030621439
+        kubeControllerManager123: 272796d1deac7b58315af2146529ee2898453add31835a5f2ea8131d-1662030655323
+        kubeControllerManager124: c024d72acd0039d0fc891dc95042acf556d049d9fb4e4c93930161e1-1662030468441
+        kubeScheduler120: 7643c7465433dff938b865a8ff4fd5747316187a19413b28891f6221-1656697146141
+        kubeScheduler121: 7c6d9dec1d12157590e275705b577ad1dbdf468d568d5c744e4d8db7-1656695946339
+        kubeScheduler122: dccaf1042ac2d939e40a4f8d2d4f918450377be17d780b453f5e7ec2-1657808606053
+        kubeScheduler123: d7e48387c194dcbbf7fbd26e2697fa75f0bdcdb204b5aebdc367bf3b-1657808701764
+        kubeScheduler124: 5fc18dc7daaf9446de33e8df4b5ed466719cfa35bfc7c2500c0261aa-1660588566371
+        kubernetesApiProxy: 13f99723cea5e7cd5d5658f483b72846bdb9dfaae8a5ad062738ed99-1656932126605
+      dashboard:
+        dashboard: bc08cb049afd66a93bdbb551f98887ffd1a9f32ddecaa54136e3cf9e-1655996871706
+        metricsScraper: 75825b65f19dff6fa2c65955758531b4042be7b133b8cdea8984974e-1655990658555
+      deckhouse:
+        imagesCopier: df9575a4924aeebb6119fedf827693bb9185de102c5a7435c9962fe2-1655995161438
+        webhookHandler: b5e54317bd340f2dd146b07a1687eede76df15091f388913decce510-1663838005644
+      deckhouseWeb:
+        web: b86f58571298ba63561145d9f2d0a2cb78bc1b39c19b1f26b3744899-1664384223038
+      descheduler:
+        descheduler: d5dfd5b261ecd4e5534abc64fc1d961cf05b3e8a020db2b09bd4c607-1655992460107
+      extendedMonitoring:
+        certExporter: 35b57eb5cd760bccd9c5f08c633a7925e5a1478193fa6ba505aff87b-1655995994682
+        eventsExporter: 455e11821e7de375b7983d5ae7e35578cc032d25a19d55505ba664c8-1660540516591
+        extendedMonitoringExporter: 300bf85c97e07c3a6e96399782e2c06898b2de98c99dd7a2e42b44b5-1655992295091
+        imageAvailabilityExporter: e6bbe6e14b91d99e96033b7308c6336148cdc53b948d51234dd0f18b-1655993237654
+      flantIntegration:
+        flantPricing: 881a254654c94f03d4269a64d138a7d2316358076360007a6cd41c72-1663674014125
+        grafanaAgent: 9de625094e324db1cc0bab2adfdf3f46aa4fb2bc755550d1add29d9e-1656694797254
+        madisonProxy: ee9b170fc5e3cdf87579450876abe963beede8877829eaa75ea225e3-1660820018819
+      ingressNginx:
+        controller11: 50b3ab05eb8cd1ce7eba9f312a6a993d732bf78c822eac29793d6a45-1661779742641
+        controller033: 647e1556fdc837f5e7d0d072ee03f1b6b86a8e5bf512f52ecd1b8cf6-1661781190154
+        controller046: 089282562e96ed3bf48406b68ef5c58d2fc33800f3e58f6289a78d06-1661781240458
+        controller048: c53645d7ad3e5b204bb082813c3f6d9b1d2c77a138b3e8a829f250ae-1661781182251
+        controller049: d19507e13641ee3b9ee49a22ec4389746be95b7f8f1538adc90e12ce-1661781201161
+        nginxExporter: 68f645595ead39bc1bb7bfdd653b1e7223877af7fcbf9abfee94e42f-1656684382641
+        protobufExporter: b7f8a546966911bd54dcee972b56375fcd8de90f292828cb61875345-1660681846715
+        proxyFailover: f1b598954f4f1beecd8b201c21651233fe70ed10ca54061d2024548d-1655993253522
+        proxyFailoverIptables: 0e88728026db8f575be645c9b5eec550c6d61817e39aed61ffd9b380-1655992197620
+      istio:
+        apiProxy: b2838f47d871a31ab9295715ffe054d961f5a21038703a9c39843767-1655994607496
+        kiali: 2dc9e3d333fddaeff082785e428a7783d14c5d59cba1f4e58bd395e9-1657003521126
+        metadataDiscovery: a67f17075d5571381b8f60db036b831da8a6fc7d47231b6db9262002-1663673950854
+        metadataExporter: a1c0dd393ffcc38efbb6f60cfb99929edbd248898483c2a0df0a1d2c-1658184744723
+        operatorV1x10x1: cd9e61be4aa3b5b74bc1cf4e3257f8b04bae0fdbd8360d357206ff9a-1656694726238
+        operatorV1x12: 8f4d94aa061bafff32b8756c98e4f65572f199df791778f72e42c4f0-1656694705397
+        operatorV1x13: f2383910244b45802a0e89b38ebea9f01e6a4b554a2ac065ac9c59a0-1662389047831
+        pilotV1x10x1: 20e72bb8225287c5c7e1eb95b5a1e2d118d3b2504f17cc31c1a64a0c-1656684662329
+        pilotV1x12: eaa0f9f5e5e7fafe5c5273a11446165e89d76ff5dd4c3460daca9d27-1656684486566
+        pilotV1x13: 2a1b9cc5d61b1fbd6c45069602ba06c29c382ad093178d5f2e8f3ab4-1662389023155
+        proxyv2V1x10x1: fd2ed46d6eee03a49d98246d436447ac63e1826098540fbf75f26e58-1656694721836
+        proxyv2V1x12: 116f86bb5648af1a453aed0d3fa600d3611563c6870b9592cb6d4a6e-1656684415410
+        proxyv2V1x13: 63071429aa21699ea47d80c24215c4b8bf9b62b763962f8a52bcf4ef-1662400526099
+      keepalived:
+        keepalived: 9b66870f08c91ceb20eb828a76b4933abdf92efda0edf0cce9ae2fa7-1655993153394
+      kubeDns:
+        coredns: 2e7ecbcbbcc36b6a8f64ff40a7a2edda521250e1016e9987a82c25ba-1657731284479
+        resolvWatcher: 0368a60d29ad768d670625f2e66e891ab6a2a2f70e39deb32b82b98b-1655990713716
+        stsPodsHostsAppenderInitContainer: dad78c3a56d010719e0569e41dbb42a085c672495dbd11a3994ba121-1655993857637
+        stsPodsHostsAppenderWebhook: 2f5c24efb5d8bb18415ae637d06784a70773466776fcd748d85c9ae1-1655995785621
+      kubeProxy:
+        initContainer: 004010fc07cd1476f99d206da303b3c835c60317b076208cd5f841e0-1655993485084
+        kubeProxy120: 9f40665b315205462a0786517cada8bcfb11f6f37d790812f12b1f86-1656932473957
+        kubeProxy121: c9c199284ff6cc5f594dfee359b8dc5bc6e239cbd495bbbe11708a64-1656932598905
+        kubeProxy122: e3c1d245e7ede3dee3f7bfef312ce262558ba6a404994035475020f0-1657852765952
+        kubeProxy123: 93b8d7b30fa5fe67e7c6f8205dd0e051bab2e78a7312a30f5d76a5d0-1657852780964
+        kubeProxy124: 9f1ad0d2073ca9a3763f2cbd345d8073875e9bbaaf99476b0739aa10-1661329733621
+      linstor:
+        drbdDriverLoader: f5a059d11b15e9eb246b235c7e0fbf43485e4731d3a4d7082072f6bc-1661773954915
+        drbdReactor: 6e84b87a62c8e137723bdf0355939706c4c7c3beaaf7f01837bc75f1-1658239209725
+        linstorAffinityController: 5c4bdee65fd4e727d1a7cff3045e7bb6385342d4f4612198e9d72392-1658984123195
+        linstorCsi: cf12f9f7a64b971b7cff3ddd0284e4c3099c72249e8e8c4ca3597035-1658343954624
+        linstorPoolsImporter: cb98f327a331a1d71a1d16567b5881159a0c922b478848e4e2d4532e-1658239067914
+        linstorSchedulerExtender: a2f1e876c1110313aca6f09b408fc776aef40ce6f812454c4ebbd0d5-1658238896491
+        linstorServer: 8ebc42b654b8e98d9de0f061087cc3b7b3f341ea62374382ece804fb-1658984394800
+        piraeusHaController: ba55dafc0d1edfeb2032075c72e5ead71ae0fdc1dee3ce93ef293b5a-1660040279658
+        piraeusOperator: 72bd054e852b5bd1a0f85d4af98fd69cf6b3fe27be0e1268ca8969a7-1661239820216
+        spaas: 24f7eb056e545ce79b483cf3176948df11f84a6aa4a6b0bc0675f27d-1661773942373
+      localPathProvisioner:
+        helper: 970a8aadfbc6b7ca150d263c29116b38387f82b72ae7b0647ac179ac-1655992266200
+        localPathProvisioner: 6728a9c1f47571a70a631488045eaa2c09b567ed6ababacae9ae961a-1655993190521
+      logShipper:
+        vector: 983e6137b62f1a93160840d0a222fbb6b46a7152b132ff126e29acd8-1660251123682
+      metallb:
+        controller: 60a6d5613b4766fe5e1e68a71909c0b94fc5c68550fb4c7e27115bef-1655993930329
+        speaker: 27878552e88143b1202aa52c47fed55510cd6cc60ec6db4d2233d228-1655993461346
+      monitoringKubernetes:
+        ebpfExporter: 1b4fdea2e05bddf21d91e579268b381d461e5c1c4dbb768d7f5ea54a-1655994633660
+        kubeStateMetrics: 4aeeb5159181c147b9fbf27f5b72142035fd6f8d1172fab01772437f-1661367586971
+        kubeletEvictionThresholdsExporter: b720e06e6497f3d203801d316c9b1c02057e444b1ad9b9f94af6c85b-1658241892176
+        nodeExporter: b3f9d6c42068ed0b342dfa96d22d7f4a997d30cf44e27c3aeb6b439a-1655990679784
+      monitoringKubernetesControlPlane:
+        proxy: bff97599dc2ef7470396433e5030fa24c2c0faa8e27c95495dcd7ab6-1655992179164
+      monitoringPing:
+        monitoringPing: e7189bc43b9bf6cc5cb8fe37c4c889117a3281abc7c2e99f903f6132-1655994060354
+      networkGateway:
+        dnsmasq: fe6f7a1c4fab453c02eb9efb76ca4e4aa28f630d1f49d7314991d7e3-1655993286598
+        snat: 90e64066ef4956f133ec2a9de42db94dbd5782f0424b537fde72d33b-1655992236023
+      networkPolicyEngine:
+        kubeRouter: d167c815d2da2382effadbd0e9e3a634be5eea46bb3cc639e8946098-1655995859840
+      nodeLocalDns:
+        coredns: ca354728de3b58ca2c03069b1db857398866986ff73854dd2058ac8e-1658915189456
+        iptablesLoop: 4ac001ddf7808ab2a78092874b4ed04c33e136c80bee9f43ada9de2e-1655992201629
+      nodeManager:
+        bashibleApiserver: 15a45312f25b4a250088123fc807dd32e26bb06634022a835aeac662-1663254345708
+        clusterAutoscaler: 0bf8ca6c340017528e0942d83442db5386c06111d1e30115be058e3d-1655992538375
+        earlyOom: 0f0bfd3bd7d97547157570ba1891480bd5c90285f857fbf113156eaa-1663262605704
+        machineControllerManager: 44f0dfcf0c02291c5f2c71e91238907d3ead6753a1acb09ca5a2fad3-1663186994544
+      openvpn:
+        easyrsaMigrator: 482ef221ff0c6244434d68eb8adf22db8af768ec5eaf4a7960c5405c-1655994039032
+        openvpn: 64624ec37d2c7216538d0a9557e3690be4cdd168ab3ab903bd647910-1655996894239
+        ovpnAdmin: 235f93cc1a9ad381430fc64c39221634c777649928d706a3d7b2fb4a-1656685271638
+      operatorPrometheus:
+        prometheusConfigReloader: 32a43e20024f073b10221ff41e447092ad530f1bc555019d3bda138d-1655996019564
+        prometheusOperator: dbce891e2c1a2245067af7d76a2a5ed1c2fb38a1e82799f9bb6fb3a6-1658403009444
+      podReloader:
+        podReloader: 9384535d04eeeaec4b888315d515e06c58e958adba57bda8efd7faee-1659943736989
+      prometheus:
+        alertmanager: 03dba8cfc19ab42a382c374b59c2e90003039c5ca37d95f4592414f2-1655993235781
+        grafana: 73bcb9c4750c69e157fe5959ea82d301697a6128fd6dece6d5ea7296-1660646254703
+        grafanaDashboardProvisioner: ded010afeebd5f75ce47f9f484acdd2c44be789f1f826e83bcf31178-1663673952247
+        prometheus: 89e45a2dea1b561d7cb7fad108e2f45e1f43cbd479c46c28a7ce3d8d-1657873987467
+        trickster: 535561184921a6db6c8bec457322d217d80852c1f3e168b719dab07f-1655992249150
+      prometheusMetricsAdapter:
+        k8sPrometheusAdapter: f29d9449e0434cdc4bea77f68f02e09945819a34d4db9c58372916db-1655992550234
+        prometheusReverseProxy: 43712030911db36c7b4e2820e58ed97fd1163afcbeb48154dec1ba74-1658243460853
+      prometheusPushgateway:
+        pushgateway: c3c02fbbba0b039fc84d83c5eabf42d0176cd37766b25912091e8992-1655992496257
+      registrypackages:
+        conntrackDebian1462: 65a78c4930c07210d0ede554fa01d2b4230b48f8809ecaa5b0858b26-1656695070083
+        containerdCentos14631El7X8664: bd8272f4430145e7a87d29aa1b408d6224b595e96200576f48cffa24-1656695165932
+        containerdCentos14631El8X8664: bd041443c1216e0737c67a579685eb4ef994897125a62a509c5cb193-1656696637489
+        containerdCentos16731El9X8664: 05235fbd3dc27d4bf46a0340d9fac0a7fe8c54911620da6d51e95a4a-1661504208887
+        containerdCentos151131El7X8664: 3600a482d6ce7a10a2772250de65c7b10e11ca1ba77e0a591c39b000-1656697311912
+        containerdCentos151131El8X8664: 68c74ce7b3fc5e3acd9d0f7761008b5f1a0a5b92f66d6b9f3111513e-1656695029105
+        containerdDebian1431Stretch: 02dfe93286f488569a9939b2ce7a0014f2c599f7e1cb19ed449830cf-1656696171178
+        containerdDebian1461Bullseye: 3da3435f656c7322bbe90450263d21702f2853a4d06516c56754e1a9-1656695648706
+        containerdDebian1461Buster: bda55286fb14d4ece51c891966161dc21fc010fc539e499562a88372-1656697543067
+        containerdDebian15111Bullseye: 59fe203e23e171845478be6de245a4543918266b4eadd26df462a2c1-1656695010683
+        containerdDebian15111Buster: 1804ccced9a085f3a889715fd58a614c62f4033d42916e258f932043-1656695231075
+        containerdFe1511: 24a1653594701b110e64726043cbdaa934dffbd009218d95f4ea1be7-1656695219064
+        containerdUbuntu1461Bionic: f9b753de55e60bea5392ea07df6bb9d0dd2cbe48f4d38abe81106f76-1656696265208
+        containerdUbuntu1461Focal: 9859b3952339a62969d297b24b03f8f001db23f297cf68b665f5591f-1656697504380
+        containerdUbuntu1461Xenial: 71ef75bbaea26d36f8328a5d90c8789fecd89e8e8cd59cddd2b26e8a-1656697326484
+        containerdUbuntu15111Bionic: 1455eb1bac88744ea07b022b7e6f2376abe94eabb599090a467b4eab-1656697690248
+        containerdUbuntu15111Focal: 121c99e52b6162b4bba3063081e876df6df3583c4edcb68a1c983f80-1656695327986
+        containerdUbuntu15111Jammy: 9895f3ccb7a67f737308104d2b3cb65f9def6fc89dfea4f57ce79a3f-1656696679561
+        crictl120: 7bfe2f2869a816771c7e186e9ba8a74f67ea18782b2a1a9a27533bd6-1656696910797
+        crictl121: 38fb072b7afd1b293ee82a46d74ad6abb74ef2aa6d6cf0a7329518c3-1656696228266
+        crictl122: eaa8294ff2dfe03225743226e43890322619531d0bc86a4dbea8fdc6-1656695904264
+        crictl123: 8c1ffc39cb056b4a595c7ea1bb466a11dec00f003afd2e22b2451fa5-1656695470566
+        crictl124: 713e1f853399d9635167c26c9bacfde96abe98df16394f8239941a2e-1660588828351
+        d8Curl7800: b1a2442a033715717540c428c833504ffa64af1f01c5666491ab531e-1656695952012
+        dockerCentos1903153El7X86647: dd1b8ec70307b9312330e1f30c0f9409540aae2d508b0b19eef163f7-1659362837694
+        dockerCentos1903153El8X86648: d3d5b43787d8d705691d1304e27edd847b67f4712e9093061af4145a-1656697250776
+        dockerCentos2010173El9X86649: a7e5cb681a70415409843efe24e7eb4078ff8e436abbc84bef46a5fe-1661504193710
+        dockerDebian519031530DebianStretch: 45dcde4225e205af48dd05195d6fbb36b32d356679975fbf18466e42-1656696449558
+        dockerDebian520101230DebianBullseye: 6fdea391882eca9d05b86bac2b8103ee8422cefe87ee58c46ef25adf-1656695709197
+        dockerDebian520101230DebianBuster: 2adc2f6cd6ffcbc015318730251e90698ba42297c84af44d8911bfcc-1656696400743
+        dockerUbuntu519031330UbuntuBionic: f16680a2a4659cf95b1a158620e34728a67eacd26e69e3cb7f9d0594-1656697204833
+        dockerUbuntu519031330UbuntuFocal: b8d3233d1b0df2510b1740bdd199c065aad97bab5450b143b0f076b5-1656697588644
+        dockerUbuntu519031330UbuntuXenial: 4ea32a3f982e4ded7bcea25c04d43f6295b7c13230a938f5ff582e52-1659362830996
+        dockerUbuntu520101430UbuntuJammy: 302499c7f0bd779aa641f174748e56530f1e0acdc0a18c9b8a0a8104-1656696559753
+        inotifyToolsCentos73149: bb21d62958ddb7e49849921e2637b8cf0e55111cfbcc66ab866d2105-1656696630378
+        inotifyToolsCentos831419: c2efadf8d53226e0cbcff40856c0b504e8853ac61eba7bd0e926c65d-1656696887906
+        inotifyToolsCentos9322101: 427da921067b2c1f8d673f2796547326676b4db59093e790e158f89b-1661862242734
+        jq16: 91db4237340e01f0f8b61d6b1238a5b7367483b113a02bd52a717d90-1656697437199
+        kubeadmCentos1239: f18eb9b0c9b80e6decfaff147e293c9750f31dceb0b4f7d942318b54-1660647156921
+        kubeadmCentos1243: 6eb7709671cdf87020971c1d96f4c06b17eec0ab93685a7aaee1ec8a-1660647534568
+        kubeadmCentos12015: 9763c6a44e4a38ff4a3b5f5e86811bc31c3003c6ad3351924e001eca-1660647409223
+        kubeadmCentos12114: 8ca8e91225342c822add6f43103afdd91e295b520401ec8e1e29eb3b-1660647527125
+        kubeadmCentos12212: 872f73f60e9510c98876f63a06d4c3fbac1e1aec11271f2c2eaf86ba-1660647385793
+        kubeadmDebian1239: 2a956c7244610399a8aff7a80e982b6244dabad7decc88fe361979c0-1660647233519
+        kubeadmDebian1243: 052b14fbc9583fb8cb68d84cbad92348fcf5adf4ee70256c02228742-1660647682911
+        kubeadmDebian12015: fb19824c0e024ebef3f65a8000dd1d0ac3c41246d28b35ffb0580800-1660647706216
+        kubeadmDebian12114: 553d4d9be6eee12c4a3e229a9d2479cc04bd180d2e4c4bc7eca99007-1660647581804
+        kubeadmDebian12212: b324b9c44a3f31834f49d90f1478f4f41564c56f7c44b05f3de6ae4d-1660647294901
+        kubeadmUbuntu1239: 7cdd3ccb7223e18c213b1d3cba645d8095fa58dce4bf9d50719293d5-1660647462958
+        kubeadmUbuntu1243: 57670b3c6f6cf6ef008d23edee30e36a9c29fe695be235608c181ab2-1660647447584
+        kubeadmUbuntu12015: d388fdef31d147ae70de8caa9208bbb3358878d7bd766ace4a76a339-1660647363619
+        kubeadmUbuntu12114: bc301ad3119e9b39aa5e64ee6377fbb9dcc9a7d094b891493d831afa-1660647621636
+        kubeadmUbuntu12212: f6a2cdd7f445f6a91fc2d4e88ec7516898207be3c75110dc4aafbce5-1660647194987
+        kubectlCentos1239: 39bd7b3462ecdd5d72c408220110e7691261a62bce1fc1b2c053f603-1657808560650
+        kubectlCentos1243: 0ba518f2c557f419a32e665cd648cb3a77c78545a8c9a74f62f33007-1660589161072
+        kubectlCentos12015: 3f9ca4a3a183bb205a7ed0cbe5249e4b0e3ed1d922d4dd08e5051a48-1656695372060
+        kubectlCentos12114: 66595e0e4cb8dd5d27c79d4a90c3e219bace9aa925e59367fa9b0a9c-1656696651247
+        kubectlCentos12212: 772f2340531b161a0225001b01f60a925581504be2dd7e2ac07473eb-1657808676751
+        kubectlDebian1239: 98d88eb4405945eab470a42948ea3c1a69ce6726ec091b83c28527b1-1657808755390
+        kubectlDebian1243: 73684f2b80230fc57295368a0b1f887508565842dca904e18aedf790-1660588972140
+        kubectlDebian12015: a134644cb0ec228ec24070033b680fb97d8bad71a66fd4f6ccdff4c2-1656697177456
+        kubectlDebian12114: 36081d385ff8eebaa7cf9fd066fb1a6c124b42afb771c91ffb52eb28-1656696407399
+        kubectlDebian12212: e47f6db8d448a6821a412cb6df0e51a46c5c88dfaab99c6065da7896-1657808788907
+        kubectlUbuntu1239: 284f5da0973038bf07628a1f718845b581ad39fb1eb098d65cf113a2-1657808469848
+        kubectlUbuntu1243: 98d42bf5d7f62b3bc35f37ee15404bb9875499d54e4713960bed1d0b-1660588958446
+        kubectlUbuntu12015: 41339292cf4bff06fd2ba695a94c9b4d17a58660e20541450a063783-1656697060367
+        kubectlUbuntu12114: ed30544bf0c0f84ea06aec6dd319266262b4ab4f10e9ca6dc423aea7-1656695591800
+        kubectlUbuntu12212: 690939d34073e831002ac4991f35ff5df06af1469d6b089ccfd23aad-1657808886449
+        kubeletCentos1239: 79abf451a84654f1e9759995ae888cae26d52e61be9f442298c1903c-1657808571856
+        kubeletCentos1243: c3bc4f214ecdf5f503d1f47533a89c3efa6260317c12e4d2da392f6c-1660588873890
+        kubeletCentos12015: 9d8961cc2f7a5ea195ede3c75b12cfb3c8f3f03bd081b6b86988d2a3-1656696770338
+        kubeletCentos12114: 6c435bcd2b357bca38891f85848eefbbcbef3fe83297640ee015f31d-1656696029599
+        kubeletCentos12212: c6a8cddbd5d93e8cd5fc50fcc58eb645702035df1f0e9e4692ad302b-1657808815831
+        kubeletDebian1239: 2f92da853144c8495e49c5b2e69485a46cd2f75327dbf44cf4d78550-1658424202917
+        kubeletDebian1243: 0f7078ca6a0f7590de5c345769a39ea80798f9ecbb1bb74d80ea8574-1661325713234
+        kubeletDebian12015: a6824776dbe9d32b3347bef2a7a61c6f296534d1c43f12aa4abb3ba2-1658424171436
+        kubeletDebian12114: 0fe7ae333952a36a893510829ad067f655f0d82cdfbc43e8dc985a13-1658424179329
+        kubeletDebian12212: 803a2353841f70f36ee3d5fad5a58f12fe03dbfe1a39089778f6a60e-1658424226565
+        kubeletUbuntu1239: f5f1ccf8e3d727206aa9455b012f892f63711ee33b450fc37f4ef880-1658424140113
+        kubeletUbuntu1243: cf9b7b1d0cc3d1f5348c45373e47650f7cc584611ec03d31575ecc9a-1661325747521
+        kubeletUbuntu12015: fdfb2e1b099f6cd25991925a3749a6371b2dc1ae3f99845b34fcfb15-1658424116436
+        kubeletUbuntu12114: 398255eb4cb4f4283a82e986ec1e7ec2befa0d72d9ffc7f0ab8cdf93-1658424187058
+        kubeletUbuntu12212: 75dbb26ab5d04caf62b0d6e82302c8ceede60a0b2571f5a19d15eaa8-1658424234209
+        kubernetesCniCentos087: 58575de38a63c822ef3392de96eea66ab1423e583f1f958014fd3a22-1656695723533
+        kubernetesCniDebian087: e42afa58bff5b697376e0c90e43d097a768eb2bfe022b01ce122e7e5-1656696790500
+        kubernetesCniUbuntu087: 89613549f89003fc0a89fab19b1529ec308cd86f19ac4f3b2c03cec3-1656695585413
+        virtWhatDebian1151Deb9u1: 9d553b561e1c0a299a58284f411bdce98323ce6f1e482ebdb1db9038-1656696372815
+      snapshotController:
+        snapshotController: d2cb5447032c6eaa49a77438d946013f360b388a4da895c6a031c4af-1655992216210
+        snapshotValidationWebhook: 8cad6b120ae6756095c444d2ed33142541359fc3ef968fbc93d6d714-1655993513320
+      terraformManager:
+        baseTerraformManager: 26137ad73452a79b363b5fa044948a811a2d6231dd12970b5e6b728f-1663838596198
+        terraformManagerAws: 0de38877b44e2de486949cd63c4a01dfa4ab97dd728532e094b50f07-1663838773605
+        terraformManagerAzure: da426549f7657e113ea8b5a6597d310ed98d81ef1e3e6456248687b0-1663838709108
+        terraformManagerGcp: 400350447cabc8a3224fe9e491bc5f0179cd4a1d8c60358108546d64-1663838753536
+        terraformManagerOpenstack: 0041a426c2463ccb2134c92537a0906ea2d6166d433afcb1b5a0acf4-1663838713822
+        terraformManagerVsphere: e901c85b303c53dff5bba3122f8475c5380003ed556a2ae2dce5997d-1663838730991
+        terraformManagerYandex: 551b59a8548c3c391d4c44e8b77025a29ccf148d0031ee00da404001-1663838736470
+      upmeter:
+        smokeMini: 88ff8c1223e79a2aaa23358ce3f3d8cbbf8f7e4a60e580781abc7e9b-1655993828518
+        status: 31b08c4b81656c12bc653df2c04f8b730c19d5e30bb19a53c381aa8c-1663230490942
+        upmeter: 24537a85ddbd7a783db71395880e911e6af978646c2676fed79404da-1662652885461
+        webui: eafa71001fe11cafd56104be9b9d181b614a49dedcc6ce44d6225a44-1661525990754
+      userAuthn:
+        cfssl: 481dbbd6e9355fbee27b7117b8854070aa27e0a9080c189c59e2d179-1655992168973
+        crowdBasicAuthProxy: 7e2ca8cacf8b54ac05f4162fa671e65fb3be0c28e1f7352566003979-1655990742214
+        dex: ceab8d3264a96071bca8499679b7deb03aa4ecee2c43cd4219f60f8d-1655992472824
+        dexAuthenticator: 2a918cc6a4cbcab2569708f01576229a8e958a3ea23cd3e87cc6df3e-1655990624962
+        dexAuthenticatorRedis: 7ac819478e4b935f81ae30d1c1fe83c7f540ffce6dd639558cf10ac1-1655993196172
+        kubeconfigGenerator: e23c12016890a0269bbafdb94909aed931c76f2d5b4f3fa8b6ee0f64-1657031018594
+      userAuthz:
+        webhook: fddad4d8a2d467641be892ac1f98a574ab2b04dd9972c569e3ee307a-1655993839745
+      verticalPodAutoscaler:
+        admissionController: dab702cc08654052092033be0131aeb7d96ad8883798ff2aa8091063-1655990654913
+        recommender: 1daa80cc8b48a5d01b7f8d042b170034c789a35f02e0041c2e5fef36-1655994306754
+        updater: 5251b4d51abf5f7a07f8c7c9797c42d03b0f368195a51779638c0104-1655994814146
+      virtualization:
+        libguestfs: d9912b51707da0a11fa0ded5cf43f0d7ea313553472b55ba48b7f9eb-1664198711720
+        virtApi: 4643a4d4855a17ec0ac9202da6e860f9b0efceee0a617c394f7088f5-1664198829034
+        virtController: 668d6f5a42a20bb7363dd572b4e4b262a7b5f09a14a0d4810b877a57-1664198722780
+        virtExportproxy: c488d15c2e082dde9986fc17aa9fb2c1c62356f739a90e33fec7f4c6-1664198730075
+        virtExportserver: 6edbe51e5f96366c406f1084d59fd8d6176d07168f0c27c6c2d9a9b8-1664198788991
+        virtHandler: 63a0e63c7b18d528eea4bb1767efe077fa4ec8112839826483b5a1c4-1664198871519
+        virtLauncher: a825a99d78e25fb196c7805cc5aa0cb6a0d3d9006f5881b6d318010a-1664198764368
+        virtOperator: 0d1bfb83bb6ad8ccc2ddc29b634262054e00b5f63c0b3627daf1c50b-1664198780849
+        vmiRouter: cba7a63c8a09388d173154b835454d9291af546e43b0efef22cb3b9c-1664197030039
+

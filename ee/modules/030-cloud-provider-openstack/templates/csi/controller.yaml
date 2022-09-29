@@ -51,8 +51,8 @@
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := join "" (list "cinderCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- if include "helm_lib_module_image_exists" (list . $csiImageName) }}
-  {{- $csiControllerImage := include "helm_lib_module_image" (list . $csiImageName) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- if $csiControllerImage }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
