@@ -225,7 +225,7 @@
           "yaxes": [
             {
               "format": "bps",
-              "label": "cores",
+              "label": "bits / second",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -328,7 +328,7 @@
           "yaxes": [
             {
               "format": "decbytes",
-              "label": "",
+              "label": "bytes",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -431,7 +431,7 @@
           "yaxes": [
             {
               "format": "bps",
-              "label": "cores",
+              "label": "bits / second",
               "logBase": 1,
               "max": null,
               "min": "0",
