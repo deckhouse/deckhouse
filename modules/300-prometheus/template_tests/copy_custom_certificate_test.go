@@ -66,6 +66,7 @@ var _ = Describe("Module :: prometheus :: helm template :: custom-certificate", 
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", customCertificatePresent)
 			f.HelmRender()
 		})

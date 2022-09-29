@@ -90,6 +90,7 @@ var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", fun
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("upmeter", customCertificatePresent)
 			f.HelmRender()
 		})

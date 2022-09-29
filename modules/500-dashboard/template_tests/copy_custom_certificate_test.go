@@ -49,6 +49,7 @@ internal:
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("dashboard", customCertificatePresent)
 			f.HelmRender()
 		})
