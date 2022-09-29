@@ -144,7 +144,7 @@ properties:
         maximum: 100.0
         multipleOf: 0.01
         description: |
-          The percentage of requests that will be sampled for sending to jaeger. It is possible to override this setting with Pod annotation:
+          The sampling rate option can be used to control what percentage of requests get reported to your tracing system. This should be configured depending upon your traffic in the mesh and the amount of tracing data you want to collect. It is possible to override this option with Pod annotation:
           ```yaml
           proxy.istio.io/config: |
             tracing:
