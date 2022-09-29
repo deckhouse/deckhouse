@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,23 +84,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterDeckhouseRelease,
-		},
-		{
-			// TODO: delete after 1.36
-			Name:       "updating_cm",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-release-updating"},
-			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterUpdatingCM,
 		},
 		{
 			Name:       "release_data",
@@ -186,11 +168,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
-		if isUpdatingCMExists(input) || releaseData.IsUpdating {
-			deleteUpdatingCM(input)
+		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
-	} else if isUpdatingCMExists(input) || releaseData.IsUpdating {
+	} else if releaseData.IsUpdating {
 		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
 	}
 
@@ -313,10 +294,6 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	}, nil
 }
 
-func filterUpdatingCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return unstructured.GetName(), nil
-}
-
 func filterReleaseDataCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm corev1.ConfigMap
 
@@ -382,7 +359,7 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 // tagUpdate update by tag, in dev mode or specified image
 func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *deckhousePodInfo) error {
 	if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
-		// pod is restarting or something like that, try more in a 15 seconds
+		// pod is restarting or something like that, try more in 15 seconds
 		return nil
 	}
 
@@ -431,17 +408,6 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *
 	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
 
 	return nil
-}
-
-// TODO: delete after 1.36
-func isUpdatingCMExists(input *go_hook.HookInput) bool {
-	snap := input.Snapshots["updating_cm"]
-	return len(snap) > 0
-}
-
-// TODO: delete after 1.36
-func deleteUpdatingCM(input *go_hook.HookInput) {
-	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "d8-release-updating", object_patch.InBackground())
 }
 
 func getDeckhousePod(snap []go_hook.FilterResult) *deckhousePodInfo {
