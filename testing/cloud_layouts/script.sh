@@ -324,7 +324,7 @@ function run-test() {
   fi
 
   if [[ "$PROVIDER" == "Static" ]]; then
-    run_linstor_tests "$ssh_private_key_path" "$ssh_user" "${master_ip}"
+    run_linstor_tests || return $?
   fi
 }
 
@@ -637,7 +637,7 @@ function run_linstor_tests() {
 
   testScript=$(cat <<"END_SCRIPT"
 set -Eeuo pipefail
->&2 echo "Running linstor suit tests ..."
+>&2 echo "Running linstor test suite ..."
 set -x
 >&2 kubectl -n d8-system exec deploy/deckhouse -- helm test -n d8-system linstor
 END_SCRIPT
@@ -645,7 +645,7 @@ END_SCRIPT
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       test_failed=""
       break
     else
