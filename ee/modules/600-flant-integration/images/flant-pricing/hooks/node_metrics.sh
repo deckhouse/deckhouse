@@ -24,9 +24,9 @@ function __config__() {
           operator: Exists
 
       # We do not charge for control plane nodes which are in desired state
-      #   1. we check it is from non-master node group, we charge for it
+      #   1. we check the node is NOT control plane node group, so we charge for it
       #   OR
-      #   2. we check it is from master node group, BUT has unexpected taints
+      #   2. the node is from control plane node group, BUT has no expected taints
       #      meaning they were reconfigured by user
 
       jqFilter: |
