@@ -31,24 +31,23 @@ function __config__() {
 
       jqFilter: |
         select(
+          .metadata.labels."node.deckhouse.io/group" != "master"
+          or
           (
-            .metadata.labels."node.deckhouse.io/group" != "master"
+            .spec.taints == null
             or
             (
-              .spec.taints == null
-              or
-              (
-                [
-                  .spec.taints[]
-                  | select(
-                    .key == "node-role.kubernetes.io/control-plane" or
-                    .key == "node-role.kubernetes.io/master"
-                  )
-                ]
-                | length == 0
-              )
+              [
+                .spec.taints[]
+                | select(
+                  .key == "node-role.kubernetes.io/control-plane" or
+                  .key == "node-role.kubernetes.io/master"
+                )
+              ]
+              | length == 0
             )
           )
+        )
         | {
           "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
           "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
