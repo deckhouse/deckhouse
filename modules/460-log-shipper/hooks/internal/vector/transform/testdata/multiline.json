@@ -4,9 +4,7 @@
 			"file",
 			"stream"
 		],
-		"inputs": [
-			"testit"
-		],
+		"inputs": [],
 		"merge_strategies": {
 			"message": "concat"
 		},

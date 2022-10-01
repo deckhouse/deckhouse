@@ -39,7 +39,7 @@
     "transform/destination/test-es-dest/00_elastic_dedot": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/02_parse_json"
+        "transform/source/test-source/01_clean_up"
       ],
       "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
@@ -75,14 +75,6 @@
         "transform/source/test-source/00_owner_ref"
       ],
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
-      "type": "remap"
-    },
-    "transform/source/test-source/02_parse_json": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/source/test-source/01_clean_up"
-      ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
       "type": "remap"
     }
   },
