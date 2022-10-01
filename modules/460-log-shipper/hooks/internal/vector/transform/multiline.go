@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
@@ -25,8 +26,9 @@ import (
 func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []apis.LogTransform {
 	multiLineTransform := DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "multiline",
-			Type: "reduce",
+			Name:   "multiline",
+			Type:   "reduce",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"group_by": []string{

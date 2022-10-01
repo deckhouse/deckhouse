@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
@@ -117,8 +118,9 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 
 	return &Loki{
 		CommonSettings: CommonSettings{
-			Name: ComposeName(name),
-			Type: "loki",
+			Name:   ComposeName(name),
+			Type:   "loki",
+			Inputs: set.New(),
 		},
 		Auth: LokiAuth{
 			User:     spec.Auth.User,

@@ -16,7 +16,10 @@ limitations under the License.
 
 package destination
 
-import "github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+)
 
 type Vector struct {
 	CommonSettings
@@ -61,8 +64,9 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 
 	return &Vector{
 		CommonSettings: CommonSettings{
-			Name: ComposeName(name),
-			Type: "vector",
+			Name:   ComposeName(name),
+			Type:   "vector",
+			Inputs: set.New(),
 		},
 		TLS:     tls,
 		Version: "2",
