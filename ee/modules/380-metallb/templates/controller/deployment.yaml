@@ -98,16 +98,6 @@ spec:
                       resource: deployments
                       subresource: prometheus-metrics
                       name: metallb
-          livenessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /metrics
-              port: https-metrics
-              scheme: HTTPS
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
