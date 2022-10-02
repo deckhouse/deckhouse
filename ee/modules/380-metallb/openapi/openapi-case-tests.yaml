@@ -14,7 +14,7 @@ positive:
             - 192.168.101.0/24
 negative:
   configValues:
-    # wrong peer address
+    # Network in peer-address is not allowed.
     - bgpPeers:
         - peer-address: 192.168.1.1/24
           peer-asn: 1111
@@ -27,7 +27,7 @@ negative:
           addresses:
             - 192.168.100.1-192.168.100.10
             - 192.168.101.0/24
-    # wrong as number
+    # Peer AS number should be all numeric.
     - bgpPeers:
         - peer-address: 192.168.1.1
           peer-asn: as1111
@@ -40,7 +40,7 @@ negative:
           addresses:
             - 192.168.100.1-192.168.100.10
             - 192.168.101.0/24
-    # wrong as number
+    # AS number should be all numeric.
     - bgpPeers:
         - peer-address: 192.168.1.1
           peer-asn: 1111
@@ -53,7 +53,7 @@ negative:
           addresses:
             - 192.168.100.1-192.168.100.10
             - 192.168.101.0/24
-    # wrong source address
+    # Network in source-address is not allowed.
     - bgpPeers:
         - peer-address: 192.168.1.1
           peer-asn: 1111
@@ -66,7 +66,7 @@ negative:
           addresses:
             - 192.168.100.1-192.168.100.10
             - 192.168.101.0/24
-    # wrong address pool addresses
+    # Range of networks is not allowed.
     - bgpPeers:
         - peer-address: 192.168.1.1
           peer-asn: 1111
