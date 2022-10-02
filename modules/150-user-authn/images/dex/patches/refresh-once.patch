@@ -1,5 +1,5 @@
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a8165300..fb80cc48 100644
+index 0c9b1393d..ecfda137f 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
 @@ -28,6 +28,10 @@ type refreshError struct {
@@ -7,7 +7,7 @@ index a8165300..fb80cc48 100644
  }
 
 +func (r *refreshError) Error() string {
-+	return fmt.Sprintf("Status %d: %s: %s", r.code, r.msg, r.desc)
++	return fmt.Sprintf("refresh token error: status %d, %q %s", r.code, r.msg, r.desc)
 +}
 +
  func newInternalServerError() *refreshError {
@@ -37,8 +37,8 @@ index a8165300..fb80cc48 100644
 +	// Get RefreshToken
  	refresh, err := s.storage.GetRefresh(token.RefreshId)
  	if err != nil {
- 		s.logger.Errorf("failed to get refresh token: %v", err)
-@@ -104,7 +121,31 @@ func (s *Server) getRefreshTokenFromStorage(clientID string, token *internal.Ref
+ 		if err != storage.ErrNotFound {
+@@ -103,7 +120,31 @@ func (s *Server) getRefreshTokenFromStorage(clientID string, token *internal.Ref
  		return nil, expiredErr
  	}
 
@@ -71,7 +71,7 @@ index a8165300..fb80cc48 100644
  }
 
  func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken) ([]string, *refreshError) {
-@@ -139,59 +180,23 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
+@@ -138,59 +179,23 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
  	return requestedScopes, nil
  }
 
@@ -139,7 +139,7 @@ index a8165300..fb80cc48 100644
  	return ident, nil
  }
 
-@@ -201,8 +206,14 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
+@@ -200,8 +205,14 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
  		if old.Refresh[refresh.ClientID].ID != refresh.ID {
  			return old, errors.New("refresh token invalid")
  		}
@@ -155,7 +155,7 @@ index a8165300..fb80cc48 100644
  		return old, nil
  	}
 
-@@ -218,61 +229,101 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
+@@ -217,33 +228,74 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
  }
 
  // updateRefreshToken updates refresh token and offline session in the storage
@@ -205,9 +205,9 @@ index a8165300..fb80cc48 100644
 +
 +		case rotationEnabled && reusingAllowed:
 +			if old.Token != rCtx.requestToken.Token && old.ObsoleteToken != rCtx.requestToken.Token {
-+				return old, errors.New("refresh token claimed twice")
-+			}
-+
+ 				return old, errors.New("refresh token claimed twice")
+ 			}
+
 +			// Return previously generated token for all requests with an obsolete tokens
 +			if old.ObsoleteToken == rCtx.requestToken.Token {
 +				newToken.Token = old.Token
@@ -220,47 +220,39 @@ index a8165300..fb80cc48 100644
 +
 +		case rotationEnabled && !reusingAllowed:
 +			if old.Token != rCtx.requestToken.Token {
- 				return old, errors.New("refresh token claimed twice")
- 			}
-
++				return old, errors.New("refresh token claimed twice")
++			}
++
 +			// Issue new refresh token
  			old.ObsoleteToken = old.Token
 +			newToken.Token = storage.NewID()
  		}
 
  		old.Token = newToken.Token
--		// Update the claims of the refresh token.
--		//
--		// UserID intentionally ignored for now.
--		old.Claims.Username = ident.Username
--		old.Claims.PreferredUsername = ident.PreferredUsername
--		old.Claims.Email = ident.Email
--		old.Claims.EmailVerified = ident.EmailVerified
--		old.Claims.Groups = ident.Groups
- 		old.LastUsed = lastUsed
-
- 		// ConnectorData has been moved to OfflineSession
- 		old.ConnectorData = []byte{}
++		old.LastUsed = lastUsed
++
++		// ConnectorData has been moved to OfflineSession
++		old.ConnectorData = []byte{}
 +
 +		// Call  only once if there is a request which is not in the reuse interval.
 +		// This is required to avoid multiple calls to the external IdP for concurrent requests.
 +		// Dex will call the connector's Refresh method only once if request is not in reuse interval.
-+		newIdent, rerr := s.refreshWithConnector(ctx, rCtx, ident)
++		ident, rerr = s.refreshWithConnector(ctx, rCtx, ident)
 +		if rerr != nil {
 +			return old, rerr
 +		}
 +
-+		ident.ConnectorData = newIdent.ConnectorData
-+
-+		// Update the claims of the refresh token.
-+		//
-+		// UserID intentionally ignored for now.
-+		old.Claims.Username = newIdent.Username
-+		old.Claims.PreferredUsername = newIdent.PreferredUsername
-+		old.Claims.Email = newIdent.Email
-+		old.Claims.EmailVerified = newIdent.EmailVerified
-+		old.Claims.Groups = newIdent.Groups
-+
+ 		// Update the claims of the refresh token.
+ 		//
+ 		// UserID intentionally ignored for now.
+@@ -252,26 +304,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+ 		old.Claims.Email = ident.Email
+ 		old.Claims.EmailVerified = ident.EmailVerified
+ 		old.Claims.Groups = ident.Groups
+-		old.LastUsed = lastUsed
+
+-		// ConnectorData has been moved to OfflineSession
+-		old.ConnectorData = []byte{}
  		return old, nil
  	}
 
@@ -285,7 +277,7 @@ index a8165300..fb80cc48 100644
  }
 
  // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
-@@ -284,19 +335,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -283,19 +332,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -308,7 +300,7 @@ index a8165300..fb80cc48 100644
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
  		return
-@@ -311,26 +362,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -310,26 +359,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		Groups:            ident.Groups,
  	}
 
@@ -339,10 +331,10 @@ index a8165300..fb80cc48 100644
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
 diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
 new file mode 100644
-index 00000000..7c40499f
+index 000000000..798c1f161
 --- /dev/null
 +++ b/storage/kubernetes/lock.go
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,124 @@
 +package kubernetes
 +
 +import (
@@ -388,7 +380,6 @@ index 00000000..7c40499f
 +		time.Sleep(lockCheckPeriod)
 +	}
 +	return fmt.Errorf("timeout waiting for refresh token %s lock", id)
-+
 +}
 +
 +func (l *refreshTokenLock) Unlock(id string) {
@@ -469,10 +460,10 @@ index 00000000..7c40499f
 +	return false, err
 +}
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index ca505859..9f0575e6 100644
+index 033d3e235..0979f14ac 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -447,11 +447,19 @@ func (cli *client) DeleteConnector(id string) error {
+@@ -451,11 +451,19 @@ func (cli *client) DeleteConnector(id string) error {
  }
 
  func (cli *client) UpdateRefreshToken(id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
@@ -492,7 +483,7 @@ index ca505859..9f0575e6 100644
  		updated, err := updater(toStorageRefreshToken(r))
  		if err != nil {
  			return err
-@@ -460,6 +468,7 @@ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.Refres
+@@ -464,6 +472,7 @@ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.Refres
 
  		newToken := cli.fromStorageRefreshToken(updated)
  		newToken.ObjectMeta = r.ObjectMeta
@@ -501,7 +492,7 @@ index ca505859..9f0575e6 100644
  	})
  }
 diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
-index 4571327a..9d4d04d0 100644
+index 828ff472c..d0048506b 100644
 --- a/storage/kubernetes/storage_test.go
 +++ b/storage/kubernetes/storage_test.go
 @@ -11,6 +11,7 @@ import (
@@ -546,7 +537,7 @@ index 4571327a..9d4d04d0 100644
 +
 +func TestRefreshTokenLock(t *testing.T) {
 +	if os.Getenv(kubeconfigPathVariableName) == "" {
-+		t.Skip(fmt.Sprintf("variable %q not set, skipping kubernetes storage tests\n", kubeconfigPathVariableName))
++		t.Skipf("variable %q not set, skipping kubernetes storage tests\n", kubeconfigPathVariableName)
 +	}
 +
 +	kubeconfigPath, err := expandDir(os.Getenv(kubeconfigPathVariableName))
