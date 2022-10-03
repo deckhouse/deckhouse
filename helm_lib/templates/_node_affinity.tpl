@@ -60,6 +60,8 @@ nodeSelector:
 
   {{- else if eq $strategy "master" }}
     {{- if gt (index $context.Values.global.discovery "clusterMasterCount" | int) 0 }}
+
+{{/* TODO  node-role.kubernetes.io/master: "" */}}
 nodeSelector:
   node-role.kubernetes.io/control-plane: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}

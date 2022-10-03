@@ -338,6 +338,7 @@ func generateJob(registry, tag, csrb64 string) *batchv1.Job {
 					},
 					HostPID: true,
 					NodeSelector: map[string]string{
+						// TODO: support node-role.kubernetes.io/master
 						"node-role.kubernetes.io/control-plane": "",
 					},
 					Tolerations: []corev1.Toleration{
@@ -351,8 +352,7 @@ func generateJob(registry, tag, csrb64 string) *batchv1.Job {
 	}
 }
 
-var (
-	script = `set -e
+var script = `set -e
 regex="--requestheader-client-ca-file[=| ][^ ]*"
 ca_path="$([[ $(ps aux| grep kube-apiserver) =~ $regex ]] && echo ${BASH_REMATCH[0]} | awk -F '=| ' '{ print $2 }')"
 key_path="$([[ $ca_path =~ ^(.+?)\.[^\.]+$ ]] && echo ${BASH_REMATCH[1]}).key"
@@ -361,7 +361,6 @@ csr_config='{"CN":"front-proxy-client","hosts":[""],"key":{"algo": "rsa","size":
 signed_cert=$(echo $CSR | base64 -d | cfssl sign -ca=$ca_path -ca-key=$key_path -config=<(echo $csr_config) - )
 echo "Certificate: $(echo $signed_cert | jq .cert -r | base64 | tr -d '\n')"
 `
-)
 
 const (
 	testingCert = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUIwRENDQVRHZ0F3SUJBZ0lCQVRBS0JnZ3Foa2pPUFFRREJEQVNNUkF3RGdZRFZRUUtFd2RCWTIxbElFTnYKTUI0WERUQTVNVEV4TURJek1EQXdNRm9YRFRFd01EVXdPVEl6TURBd01Gb3dFakVRTUE0R0ExVUVDaE1IUVdOdApaU0JEYnpDQm16QVFCZ2NxaGtqT1BRSUJCZ1VyZ1FRQUl3T0JoZ0FFQVpaWWN3dlJTdVp0SkxtS25PTUM2NUh3Ck1OQ01YZU5EbWUybFBDUnJta2FQazBJUEpVU1Rta0JndmRxeDR1cG1NVTZ0VGtZSlUyTjNsZnVxTUU4RGh0dHQKQUM1eHNxeWcrMEdCaXZhZTM0NXlzVzNnMFMyWlJzTjA5M0IvampxTUpMbjNROEwyUDAydHJZaEd0Wm8yeG0wMgp3UWVWL0J2SjhKWUlla3FDU1h2Q1Q2cnhvelV3TXpBT0JnTlZIUThCQWY4RUJBTUNCYUF3RXdZRFZSMGxCQXd3CkNnWUlLd1lCQlFVSEF3RXdEQVlEVlIwVEFRSC9CQUl3QURBS0JnZ3Foa2pPUFFRREJBT0JqQUF3Z1lnQ1FnRzcKTlRtQ0JMQXl1bXhQY2NtY2dodmYxK2NiOXh6TVYwd3RBUVNlL2RxaURUWk81QmZ3blVGWjBUY0NZSXNCak1uUwoxbnNNamFnckQvUDdJc2UrVmZaQkhRSkNBZmdkT0JJMzRuQXcrampGWTR6SUMxOVoraHFzMjZaZ1UvREcwQVJ1CnNNVXFWMjJBb1dWUEQ0S2tEUklZR0lxK3h0WGJyTnR3TW9rQ0lNTExobWZFK3ZPVAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="

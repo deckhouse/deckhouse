@@ -36,11 +36,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterNodes,
 		},
+		{
+			Name:       "nodes_master",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""},
+			},
+			FieldSelector:                nil,
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   filterNodes,
+		},
 	},
 }, handleAllMasterNodes)
 
 func handleAllMasterNodes(input *go_hook.HookInput) error {
 	nodesSnap := input.Snapshots["nodes"]
+	nodesSnapM := input.Snapshots["nodes_master"]
+	nodesSnap = append(nodesSnap, nodesSnapM...)
 
 	totalCount := len(nodesSnap)
 	var initializedCount int

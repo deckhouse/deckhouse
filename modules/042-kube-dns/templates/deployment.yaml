@@ -162,6 +162,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
+            #  TODO: support node-role.kubernetes.io/master
               - key: "node-role.kubernetes.io/control-plane"
                 operator: "Exists"
             - matchExpressions:
@@ -175,6 +176,7 @@ spec:
           - weight: 1
             preference:
               matchExpressions:
+              #  TODO: support node-role.kubernetes.io/master
               - key: "node-role.kubernetes.io/control-plane"
                 operator: "Exists"
 {{- end }}

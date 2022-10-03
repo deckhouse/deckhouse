@@ -5,6 +5,7 @@ metadata:
   name: master-gateway
 spec:
   nodeSelector:
+    # TODO: support master
     node-role.kubernetes.io/control-plane: ""
   tolerations:
   - operator: Exists

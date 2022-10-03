@@ -54,25 +54,35 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return n, nil
 }
 
-var (
-	_ = sdk.RegisterFunc(&go_hook.HookConfig{
-		OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
-		Kubernetes: []go_hook.KubernetesConfig{
-			{
-				Name:       "NodesResources",
-				ApiVersion: "v1",
-				Kind:       "Node",
-				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "node-role.kubernetes.io/control-plane",
-						Operator: "Exists",
-					},
-				}},
-				FilterFunc: applyNodesResourcesFilter,
-			},
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "NodesResources",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "node-role.kubernetes.io/control-plane",
+					Operator: "Exists",
+				},
+			}},
+			FilterFunc: applyNodesResourcesFilter,
 		},
-	}, calculateResourcesRequests)
-)
+		{
+			Name:       "NodesResourcesMaster",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "node-role.kubernetes.io/master",
+					Operator: "Exists",
+				},
+			}},
+			FilterFunc: applyNodesResourcesFilter,
+		},
+	},
+}, calculateResourcesRequests)
 
 func calculateResourcesRequests(input *go_hook.HookInput) error {
 	var (
@@ -86,6 +96,8 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		discoveryMasterNodeMemory   int64
 	)
 	snapshots := input.Snapshots["NodesResources"]
+	snapshotsM := input.Snapshots["NodesResourcesMaster"]
+	snapshots = append(snapshots, snapshotsM...)
 
 	// Managed cloud
 	if len(snapshots) == 0 {

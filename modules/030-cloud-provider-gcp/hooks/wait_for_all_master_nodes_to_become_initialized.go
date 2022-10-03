@@ -23,10 +23,12 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 const uninitializedTaintKey = "node.cloudprovider.kubernetes.io/uninitialized"
@@ -41,13 +43,14 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 		input.LogEntry.Errorf("%v", err)
 		return false, err
 	}
-	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+
+	nodes, err := findControlPlaneNodes(kubeClient)
 	if err != nil {
 		input.LogEntry.Errorf("%v", err)
 		return false, err
 	}
 
-	for _, node := range masterNodes.Items {
+	for _, node := range nodes {
 		for _, taint := range node.Spec.Taints {
 			if taint.Key == uninitializedTaintKey {
 				return false, fmt.Errorf("master has taint %s", uninitializedTaintKey)
@@ -67,10 +70,25 @@ func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc depen
 
 		return false, err
 	})
-
 	if err != nil {
 		return fmt.Errorf("timeout waiting for master nodes")
 	}
 
 	return nil
+}
+
+func findControlPlaneNodes(kubeClient k8s.Client) ([]v1.Node, error) {
+	nodes := make([]v1.Node, 0)
+	controlPlaneNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+	if err != nil {
+		return nil, err
+	}
+	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/master="})
+	if err != nil {
+		return nil, err
+	}
+	nodes = append(nodes, controlPlaneNodes.Items...)
+	nodes = append(nodes, masterNodes.Items...)
+
+	return nodes, nil
 }

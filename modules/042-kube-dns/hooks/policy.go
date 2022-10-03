@@ -43,8 +43,9 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	// We need special order here
 	// Firstly we select master node with label node-role.kubernetes.io/control-plane
-	_, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/control-plane"]
-	if ok {
+	_, cpOk := node.ObjectMeta.Labels["node-role.kubernetes.io/control-plane"]
+	_, mOk := node.ObjectMeta.Labels["node-role.kubernetes.io/master"]
+	if cpOk || mOk {
 		role = "master"
 	} else {
 		keys := make([]string, 0, len(node.ObjectMeta.Labels))
