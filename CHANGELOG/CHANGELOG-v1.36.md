@@ -42,6 +42,7 @@
  - **[deckhouse]** Fix stucked `DeckhouseUpdating` alert during the deckhouse update process. [#2472](https://github.com/deckhouse/deckhouse/pull/2472)
  - **[deckhouse]** Fix panic in a release tracking during the deckhouse update process. [#2465](https://github.com/deckhouse/deckhouse/pull/2465)
  - **[dhctl]** Fail if there is an empty host for SSH connection. [#2346](https://github.com/deckhouse/deckhouse/pull/2346)
+ - **[flant-integration]** Fixed telemetry reporting control-plane nodes as nodes for charge. [#2617](https://github.com/deckhouse/deckhouse/pull/2617)
  - **[ingress-nginx]** Improve metrics collection script. [#2350](https://github.com/deckhouse/deckhouse/pull/2350)
     Ingress Nginx controllers will restart.
  - **[ingress-nginx]** The ability to change the `defaultControllerVersion` parameter without rebooting Deckhouse. [#2338](https://github.com/deckhouse/deckhouse/pull/2338)
