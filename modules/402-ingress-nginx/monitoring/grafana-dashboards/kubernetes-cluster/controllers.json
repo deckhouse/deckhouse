@@ -510,12 +510,19 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
           "stack": true,
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"})",
+              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -523,7 +530,7 @@
               "step": 10
             },
             {
-              "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $by",
+              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -615,12 +622,19 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "bars": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
           "stack": true,
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", state=\"accepted\", job=\"nginx-ingress-controller\"}[$__interval_sx4]))",
+              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -628,7 +642,7 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", state=\"accepted\", job=\"nginx-ingress-controller\"}[$__interval_sx4])) $by",
+              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -738,12 +752,19 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "Total",
+          "bars": false,
+          "stack": false
+        }
+      ],
       "spaceLength": 10,
       "stack": true,
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"})",
+          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -751,7 +772,7 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller(-failover)?\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $by",
+          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -855,7 +876,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $by / scalar(sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}))",
+          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
