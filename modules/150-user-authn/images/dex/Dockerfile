@@ -1,15 +1,14 @@
-# Based on https://github.com/dexidp/dex/blob/v2.31.0/Dockerfile
-ARG BASE_GOLANG_16_ALPINE
+# Based on https://github.com/dexidp/dex/blob/v2.34.0/Dockerfile
+ARG BASE_GOLANG_18_ALPINE
 ARG BASE_ALPINE
-FROM $BASE_GOLANG_16_ALPINE as artifact
+FROM $BASE_GOLANG_18_ALPINE as artifact
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch patches/refresh-once.patch patches/gitlab-refresh-tokens.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.31.0.tar.gz -O - | tar -xz --strip-components=1 \
+COPY patches/client-groups.patch patches/static-user-groups.patch patches/refresh-once.patch /
+RUN wget https://github.com/dexidp/dex/archive/v2.34.0.tar.gz -O - | tar -xz --strip-components=1 \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
-  && git apply /refresh-once.patch \
-  && git apply /gitlab-refresh-tokens.patch
+  && git apply /refresh-once.patch
 RUN go build ./cmd/dex
 
 FROM $BASE_ALPINE
