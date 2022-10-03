@@ -93,7 +93,7 @@ LOOP:
 			continue LOOP
 		}
 		for _, toleration := range linstorDeploymentSnapshot.Tollertations {
-			if toleration.Key == "node-role.kubernetes.io/master" {
+			if toleration.Key == "node-role.kubernetes.io/control-plane" {
 				input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 				continue LOOP
 			}
@@ -103,7 +103,7 @@ LOOP:
 		}
 		for _, terms := range linstorDeploymentSnapshot.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			for _, a := range terms.MatchExpressions {
-				if a.Key == "node-role.kubernetes.io/master" {
+				if a.Key == "node-role.kubernetes.io/control-plane" {
 					input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 					continue LOOP
 				}
