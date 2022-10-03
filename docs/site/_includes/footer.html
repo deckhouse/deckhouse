@@ -10,20 +10,22 @@
                 </a>
             </div>
             <div class="footer__contact-info">
+                <a href="mailto:contact@deckhouse.io">
+                  contact@deckhouse.io
+                </a>
+            </div>
+            <div class="footer__contact-info">
                 <a href="tel:74957211027">
-                    <i class="fa fa-phone" aria-hidden="true"></i>
                     +7 (495) 721-10-27
                 </a>
             </div>
             <div class="footer__contact-info">
-                <a href="mailto:contact@deckhouse.io">
-                    <i class="fa fa-at" aria-hidden="true"></i>
-                    contact@deckhouse.io
-                </a>
-            </div>
-            <div class="footer__contact-info">
-                <a href="#" class="button button_alt">
+                <a href="javascript:rcOpen()" class="button button_alt">
+                  {%- if page.lang == "ru" %}
                   Перезвоните мне
+                  {%- else %}
+                  Request a call
+                  {%- endif %}
                 </a>
             </div>
         </div>

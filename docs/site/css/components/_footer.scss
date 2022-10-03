@@ -29,7 +29,7 @@ body {
 
   &__contact-info {
     margin-top: 20px;
-    margin-left: 40px;
+    margin-left: 100px;
     margin-bottom: 20px;
 
     &:first-child {
@@ -41,12 +41,17 @@ body {
     }
 
     & a {
-      font-size: 14px;
+      //font-size: 14px;
+      font-size: 18px;
       color: #fff;
       text-decoration: none;
 
-      &.button_alt:hover {
-        border: 2px solid $color-alt;
+      &.button_alt {
+        font-size: 14px;
+
+        &:hover {
+          border: 2px solid $color-alt;
+        }
       }
     }
   }
