@@ -77,8 +77,8 @@ func createMasterNodeGroup(input *go_hook.HookInput) error {
 		return err
 	}
 
-	// Force updating node group to support the required label set
-	input.PatchCollector.Create(ng, object_patch.UpdateIfExists())
+	// Do not patch node group if it already exists to avoid conflicts with user changes.
+	input.PatchCollector.Create(ng, object_patch.IgnoreIfExists())
 
 	return nil
 }
