@@ -22,12 +22,36 @@ function __config__() {
         matchExpressions:
         - key: "node.deckhouse.io/group"
           operator: Exists
+
+      # We do not charge for control plane nodes which are in desired state
+      #   1. we check the node is NOT control plane node group, so we charge for it
+      #   OR
+      #   2. the node is from control plane node group, BUT has no expected taints
+      #      meaning they were reconfigured by user
+
       jqFilter: |
-        select((.metadata.labels."node.deckhouse.io/group" == "master" and (.spec.taints == null or .spec.taints[].key != "node-role.kubernetes.io/control-plane")) or .metadata.labels."node.deckhouse.io/group" != "master") |
-        {
-          "nodeGroup": .metadata.labels."node.deckhouse.io/group",
-          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType" // "unknown"),
-          "virtualization": (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        select(
+          .metadata.labels."node.deckhouse.io/group" != "master"
+          or
+          (
+            .spec.taints == null
+            or
+            (
+              [
+                .spec.taints[]
+                | select(
+                  .key == "node-role.kubernetes.io/control-plane" or
+                  .key == "node-role.kubernetes.io/master"
+                )
+              ]
+              | length == 0
+            )
+          )
+        )
+        | {
+          "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
         }
     - name: ngs
       group: main
