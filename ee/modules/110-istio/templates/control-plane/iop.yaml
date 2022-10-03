@@ -99,21 +99,21 @@ spec:
       externalIstiod: false
       jwtPolicy: {{ include "istioJWTPolicy" $ }}
 
-  {{- if $.Values.istio.multicluster.enabled }}
-      meshNetworks:
-      {{- range $multicluster := $.Values.istio.internal.multiclusters }}
-        {{- if $multicluster.enableIngressGateway }}
-        {{ $multicluster.networkName }}:
-          endpoints:
-          - fromRegistry: {{ $multicluster.name }}
+{{/*  {{- if $.Values.istio.multicluster.enabled }}*/}}
+{{/*      meshNetworks:*/}}
+{{/*      {{- range $multicluster := $.Values.istio.internal.multiclusters }}*/}}
+{{/*        {{- if $multicluster.enableIngressGateway }}*/}}
+{{/*        {{ $multicluster.networkName }}:*/}}
+{{/*          endpoints:*/}}
+{{/*          - fromRegistry: {{ $multicluster.name }}*/}}
 {{/*          gateways:*/}}
 {{/*          {{- range $ingressGateway := $multicluster.ingressGateways }}*/}}
 {{/*          - address: {{ $ingressGateway.address }}*/}}
 {{/*            port: {{ $ingressGateway.port }}*/}}
 {{/*          {{- end }}*/}}
-        {{- end }}
-      {{- end }}
-  {{- end }}
+{{/*        {{- end }}*/}}
+{{/*      {{- end }}*/}}
+{{/*  {{- end }}*/}}
 
       logging:
         level: "default:info"
