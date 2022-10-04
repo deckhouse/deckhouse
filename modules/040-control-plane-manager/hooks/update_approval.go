@@ -30,14 +30,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "master_nodes",
+			Name:                   "nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			WaitForSynchronization: pointer.BoolPtr(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      controlPlaneLabelKey,
+						Key:      masterLabelKey,
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
@@ -145,7 +145,7 @@ type approvedPod struct {
 }
 
 func handleUpdateApproval(input *go_hook.HookInput) error {
-	snap := input.Snapshots["master_nodes"]
+	snap := input.Snapshots["nodes"]
 
 	nodeMap := make(map[string]approvedNode)
 	for _, s := range snap {

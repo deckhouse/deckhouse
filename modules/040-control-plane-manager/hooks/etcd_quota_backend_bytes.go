@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					controlPlaneLabelKey: "",
+					masterLabelKey: "",
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
@@ -106,7 +106,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		isMaster := taint.Key == controlPlaneLabelKey
+		isMaster := taint.Key == masterLabelKey
 		if isMaster && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
