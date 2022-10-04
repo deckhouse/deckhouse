@@ -35,6 +35,7 @@
  - **[kube-dns]** kube-dns ExternalName Service fix — clusterDomain is taken into account. [#2430](https://github.com/deckhouse/deckhouse/pull/2430)
  - **[linstor]** Fix scheduling CNI Pods on tainted nodes. [#2551](https://github.com/deckhouse/deckhouse/pull/2551)
     CNI plugin Pods and `kube-proxy` will be restarted.
+ - **[monitoring-kubernetes]** Add deployments to kube-state-metrics's allowlist. [#2636](https://github.com/deckhouse/deckhouse/pull/2636)
  - **[node-manager]** Fixed the `D8EarlyOOMPodIsNotReady` alert description. [#2541](https://github.com/deckhouse/deckhouse/pull/2541)
 
 ## Chore
