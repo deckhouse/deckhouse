@@ -37,10 +37,6 @@ type NodeStats struct {
 	MinimalKubeletVersion string `json:"minimalKubeletVersion"`
 }
 
-const (
-	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-)
-
 func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
@@ -55,12 +51,12 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		n.Type = t
 	}
 
-	if _, ok := node.ObjectMeta.Labels[controlPlaneLabelKey]; !ok {
+	if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/control-plane"]; !ok {
 		return n, err
 	}
 
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == controlPlaneLabelKey {
+		if taint.Key == "node-role.kubernetes.io/control-plane" {
 			n.MasterNodeInfo.IsDedicated = true
 			break
 		}
