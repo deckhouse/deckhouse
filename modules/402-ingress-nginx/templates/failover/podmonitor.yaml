@@ -27,7 +27,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
-    - targetLabel: test-label
+    - targetLabel: test_label
       replacement: test-label-value
 
   selector:
