@@ -87,7 +87,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 const (
 	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-	masterLabelKey       = "node-role.kubernetes.io/master"
 )
 
 func deleteWrongResources(input *go_hook.HookInput) error {
@@ -98,7 +97,7 @@ LOOP:
 			continue LOOP
 		}
 		for _, toleration := range linstorDeploymentSnapshot.Tollertations {
-			if toleration.Key == controlPlaneLabelKey || toleration.Key == masterLabelKey {
+			if toleration.Key == controlPlaneLabelKey {
 				input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 				continue LOOP
 			}
@@ -108,7 +107,7 @@ LOOP:
 		}
 		for _, terms := range linstorDeploymentSnapshot.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			for _, a := range terms.MatchExpressions {
-				if a.Key == controlPlaneLabelKey || a.Key == masterLabelKey {
+				if a.Key == controlPlaneLabelKey {
 					input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 					continue LOOP
 				}

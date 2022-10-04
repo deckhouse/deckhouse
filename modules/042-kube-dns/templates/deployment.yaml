@@ -165,9 +165,6 @@ spec:
               - key: "node-role.kubernetes.io/control-plane"
                 operator: "Exists"
             - matchExpressions:
-              - key: "node-role.kubernetes.io/master"
-                operator: "Exists"
-            - matchExpressions:
               - key: "node-role.deckhouse.io/{{ .Values.kubeDns.internal.specificNodeType }}"
                 operator: "Exists"
             - matchExpressions:
@@ -179,11 +176,6 @@ spec:
             preference:
               matchExpressions:
               - key: "node-role.kubernetes.io/control-plane"
-                operator: "Exists"
-          - weight: 1
-            preference:
-              matchExpressions:
-              - key: "node-role.kubernetes.io/master"
                 operator: "Exists"
 {{- end }}
         podAntiAffinity:
