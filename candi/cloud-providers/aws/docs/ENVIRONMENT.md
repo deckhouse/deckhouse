@@ -170,6 +170,12 @@ And apply the created Policy to it:
 
 Save credentials (`Access key ID` and `Secret access key`).
 
+Then check if the created user has access to the desired regions. Select the desired region from the selector in the upper right corner, and if you see a message like this
+
+![enable region](REGION_ENABLE.png)
+
+press `Continue` to enable region.
+
 ## Configuring IAM via the CLI
 
 Create the `JSON specification` using the following command.
