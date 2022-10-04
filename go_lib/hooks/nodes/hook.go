@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
-	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const uninitializedTaintKey = "node.cloudprovider.kubernetes.io/uninitialized"
@@ -46,13 +44,16 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 		return false, err
 	}
 
-	nodes, err := findControlPlaneNodes(kubeClient)
+	// TODO Migration (in d8 1.38): change to control-plane node role
+	// labelSelector := "node-role.kubernetes.io/control-plane="
+	labelSelector := "node-role.kubernetes.io/master="
+	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		input.LogEntry.Errorf("%v", err)
 		return false, err
 	}
 
-	for _, node := range nodes {
+	for _, node := range masterNodes.Items {
 		for _, taint := range node.Spec.Taints {
 			if taint.Key == uninitializedTaintKey {
 				return false, fmt.Errorf("master has taint %s", uninitializedTaintKey)
@@ -67,6 +68,7 @@ func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc depen
 	err := wait.Poll(time.Second, 120*time.Second, func() (done bool, err error) {
 		input.LogEntry.Infof("waiting for master nodes to become initialized by cloud provider")
 		ok, err := isAllMasterNodesInitialized(input, dc)
+
 		if err != nil {
 			lastErr = err
 			return false, err
@@ -74,20 +76,10 @@ func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc depen
 
 		return ok, nil
 	})
+
 	if err != nil {
 		return fmt.Errorf("timeout waiting for master nodes. last error: %v", lastErr)
 	}
 
 	return nil
-}
-
-func findControlPlaneNodes(kubeClient k8s.Client) ([]v1.Node, error) {
-	// TODO Migration (in d8 1.38): change to control-plane node role
-	// const labelSelector = "node-role.kubernetes.io/control-plane="
-	const labelSelector = "node-role.kubernetes.io/master="
-	nodeList, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
-	if err != nil {
-		return nil, err
-	}
-	return nodeList.Items, nil
 }
