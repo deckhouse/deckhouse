@@ -126,6 +126,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, nodeTemplatesHandler)
 
+const (
+	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
+	masterLabelKey       = "node-role.kubernetes.io/master"
+)
+
 // nodeTemplatesHandler applies annotations, labels and taints to Hybrid and Static nodes from NodeGroup's nodeTemplate.
 // Also, "node.deckhouse.io/uninitialized" taint is deleted.
 func nodeTemplatesHandler(input *go_hook.HookInput) error {
@@ -184,6 +189,11 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				if err != nil {
 					return nil, err
 				}
+			}
+
+			// Migration (remove in d8 1.38): adding 'control-plane' node role to prepare for k8s 1.25
+			if _, ok := nodeObj.Labels[masterLabelKey]; ok {
+				nodeObj.Labels[controlPlaneLabelKey] = ""
 			}
 
 			nodeObj.Status = v1.NodeStatus{}

@@ -65,6 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
+<<<<<<< Updated upstream
 					masterLabelKey: "",
 				},
 			},
@@ -77,6 +78,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					controlPlaneLabelKey: "",
+=======
+					"node-role.kubernetes.io/master": "",
+>>>>>>> Stashed changes
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
