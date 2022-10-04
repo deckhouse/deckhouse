@@ -36,7 +36,7 @@ kind: Node
 metadata:
   name: sandbox-%d
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role
 status:
   allocatable:
     cpu: "%s"
