@@ -106,7 +106,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == masterLabelKey && taint.Effect == corev1.TaintEffectNoSchedule {
+		if taint.Key == "node-role.kubernetes.io/control-plane" && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
 		}
