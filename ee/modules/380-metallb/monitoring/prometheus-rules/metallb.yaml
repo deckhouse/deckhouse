@@ -31,8 +31,8 @@
       plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBAddressPoolUsage80Percent,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_metallb_failed: D8MetalLBAddressPoolUsage80Percent,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: |
-        {{ $labels.job }} - MetalLB {{ $labels.container }} on {{ $labels.pod}} has address pool {{ $labels.pool }} past 80% usage
-        To see the problem, check controller logs:
+        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has address pool {{ $labels.pool }} past 80% usage. Consider extending `addressPools` array.
+        Details are in logs:
         ```
         kubectl -n d8-metallb logs deploy/controller -c controller
         ```
