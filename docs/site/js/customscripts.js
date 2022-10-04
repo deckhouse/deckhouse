@@ -144,8 +144,14 @@ function raOpen() {
 }
 
 $(document).ready(function() {
-    ra.base = $('#request_access');
-    ra.form = $('#request_access_form');
+    // const btn = [$('#request_access'), $('#request_callback')]
+    if ($('#request_access')) {
+      ra.base = $('#request_access');
+      ra.form = $('#request_access_form');
+    } else {
+      ra.base = $('#request_callback');
+      ra.form = $('#request_callback_form');
+    }
     ra.intro = $('#request_access_intro');
     ra.success = $('#request_access_success');
     ra.error = $('#request_access_error');
@@ -155,6 +161,57 @@ $(document).ready(function() {
 
 $(document).on('keydown', function(event) {
     event.key == "Escape" && raClose();
+});
+
+/* Request callback */
+var rc = {};
+rc.api_url = 'https://submit-form.com/T1D8NgqF';
+
+function rcSend(e) {
+    e.preventDefault();
+    if ($('#h0n3y').val() != '') {
+        rcError()
+    } else {
+        $.ajax({
+            type: 'POST',
+            url: rc.api_url,
+            data: rc.form.serialize(),
+            dataType: 'json',
+            success: rcSuccess,
+            error: rcError
+        });
+    }
+}
+function rcSuccess() {
+    rc.intro.hide();
+    rc.success.show();
+}
+function rcError() {
+    rc.intro.hide();
+    rc.error.show();
+}
+function rcClose() {
+    rc.base.hide();
+    rc.intro.show();
+    rc.error.hide();
+    rc.success.hide();
+}
+function rcOpen() {
+    rc.base.show();
+}
+
+$(document).ready(function() {
+    rc.base = $('#request_callback');
+    rc.form = $('#request_callback_form');
+    rc.intro = $('#request_callback_intro');
+    rc.success = $('#request_callback_success');
+    rc.error = $('#request_callback_error');
+
+    rc.form.on('submit', rcSend);
+});
+
+$(document).on('keydown', function(event) {
+    event.key == "Escape" && rcClose();
 });
 
 // Clipbord copy functionality

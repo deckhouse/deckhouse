@@ -65,6 +65,15 @@ html {
                     fill: $color-main;
                 }
             }
+            & .fa-phone,
+            & .fa-envelope-o {
+              font-size: 21px;
+              color: $color-alt;
+
+              &:hover {
+                color: $color-main;
+              }
+            }
         }
 
         &-item {

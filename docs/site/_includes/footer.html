@@ -2,11 +2,32 @@
 
 <footer class="footer">
     <div class="footer__content container">
-        <div class="footer__logo">
-            <a href="/">
-                <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-white.svg"
-                     alt="Deckhouse Kubernetes Platform"/>
-            </a>
+        <div class="footer__content--wrap">
+            <div class="footer__logo">
+                <a href="/">
+                    <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-white.svg"
+                         alt="Deckhouse Kubernetes Platform"/>
+                </a>
+            </div>
+            <div class="footer__contact-info">
+                <a href="mailto:contact@deckhouse.io">
+                  contact@deckhouse.io
+                </a>
+            </div>
+            <div class="footer__contact-info">
+                <a href="tel:74957211027">
+                    +7 (495) 721-10-27
+                </a>
+            </div>
+            <div class="footer__contact-info">
+                <a href="javascript:rcOpen()" class="button button_alt">
+                  {%- if page.lang == "ru" %}
+                  Перезвоните мне
+                  {%- else %}
+                  Request a call
+                  {%- endif %}
+                </a>
+            </div>
         </div>
         <div class="footer__navigation">
             {%- for column in site.data.footer.columns[page.lang] %}
