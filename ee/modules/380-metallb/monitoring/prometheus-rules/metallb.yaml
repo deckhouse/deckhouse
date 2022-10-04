@@ -12,7 +12,7 @@
       plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_metallb_failed: D8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: |
-        {{ $labels.job }} - MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
+        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
         ```
         kubectl -n d8-metallb logs deploy/controller -c controller
