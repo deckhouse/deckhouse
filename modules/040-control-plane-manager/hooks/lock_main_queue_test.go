@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: lock_main_queue ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: lock_main_queue ::", func() {
 	const (
 		initValuesString       = `{"global": {"clusterIsBootstrapped": true}, "controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		initConfigValuesString = ``

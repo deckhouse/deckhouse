@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
 	var (
 		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	)
@@ -62,7 +62,7 @@ kind: Node
 metadata:
   name: main-master-0
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role: ""
 status:
   addresses:
     - address: 192.168.1.1
@@ -73,7 +73,7 @@ kind: Node
 metadata:
   name: main-master-1
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role: ""
 status:
   addresses:
     - address: 192.168.1.2
@@ -84,7 +84,7 @@ kind: Node
 metadata:
   name: main-master-2
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role: ""
 status:
   addresses:
     - address: 192.168.1.3
@@ -150,7 +150,7 @@ kind: Node
 metadata:
   name: main-master-3
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role: ""
 status:
   addresses:
     - address: 192.168.1.4

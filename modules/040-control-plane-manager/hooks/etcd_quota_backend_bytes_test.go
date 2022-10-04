@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-backend-bytes ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backend-bytes ::", func() {
 	Context("CalcNewQuota", func() {
 		casesIncrementalIncrease := []struct {
 			nodeSize, newQuota int64
@@ -345,7 +345,7 @@ kind: Node
 metadata:
   name: %s
   labels:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role
 %s
 status:
   addresses:
