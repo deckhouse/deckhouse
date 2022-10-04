@@ -59,6 +59,7 @@ if ! kubectl -n kube-system get secret d8-pki > /dev/null 2> /dev/null ; then
   exit 1
 fi
 
+#  TODO: support node-role.kubernetes.io/master
 masterInternalIP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane='' -o json | jq '.items[0].status.addresses[] | select(.type == "InternalIP") | .address' -r)
 etcdMemberList=$(kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1 | cut -d/ -f2) -- etcdctl --ca-file /etc/kubernetes/pki/etcd/ca.crt --cert-file /etc/kubernetes/pki/etcd/ca.crt --key-file /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list)
 
