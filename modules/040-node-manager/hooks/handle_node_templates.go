@@ -223,7 +223,7 @@ func fixCloudNodeTaints(nodeObj *v1.Node, nodeGroup NodeSettings) {
 	}
 }
 
-func applyNodeTemplate(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettings) error {
+func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 	// 1. Labels
 	// 1.1. Merge node.labels with nodeTemplate.labels and remove excess keys.
 	var lastLabels map[string]string
