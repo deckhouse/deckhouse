@@ -39,7 +39,6 @@ func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) 
 		"nodeTemplate": map[string]interface{}{
 			"labels": map[string]interface{}{
 				"node-role.kubernetes.io/control-plane": "",
-				"node-role.kubernetes.io/master":        "", // supporting for compatibility until kubernetes v1.25
 			},
 			"taints": []map[string]interface{}{
 				{
