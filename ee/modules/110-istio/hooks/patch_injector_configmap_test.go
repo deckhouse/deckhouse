@@ -61,6 +61,24 @@ metadata:
   name: istio-sidecar-injector-v1x33
   namespace: d8-istio
 `
+
+		patchedValues := `
+{ 
+  "global": {
+    "proxy": {
+      "resources": {
+        "limits": {
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        }
+      }
+    }
+  }
+}
+`
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(cm))
 			f.RunHook()
@@ -70,6 +88,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").ToYaml()).NotTo(MatchYAML(cm))
 			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").Field("data.config").String()).To(Equal("test_config_data"))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").Field("data.values").String()).To(MatchJSON(patchedValues))
 		})
 	})
 
