@@ -79,8 +79,8 @@ func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc depen
 
 func findControlPlaneNodes(kubeClient k8s.Client) ([]v1.Node, error) {
 	// TODO Migration (in d8 1.38): change to control-plane node role
-	// const labelSelector = "node-role.kubernetes.io/control-plane"
-	const labelSelector = "node-role.kubernetes.io/master"
+	// const labelSelector = "node-role.kubernetes.io/control-plane="
+	const labelSelector = "node-role.kubernetes.io/master="
 	nodeList, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, err
