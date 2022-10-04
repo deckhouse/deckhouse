@@ -54,25 +54,27 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return n, nil
 }
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "NodesResources",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					// TODO Migration (in d8 1.38): change to control-plane node role
-					// Key:      "node-role.kubernetes.io/control-plane",
-					Key:      "node-role.kubernetes.io/master",
-					Operator: "Exists",
-				},
-			}},
-			FilterFunc: applyNodesResourcesFilter,
+var (
+	_ = sdk.RegisterFunc(&go_hook.HookConfig{
+		OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       "NodesResources",
+				ApiVersion: "v1",
+				Kind:       "Node",
+				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						// TODO Migration (in d8 1.38): change to control-plane node role
+						// Key:      "node-role.kubernetes.io/control-plane",
+						Key:      "node-role.kubernetes.io/master",
+						Operator: "Exists",
+					},
+				}},
+				FilterFunc: applyNodesResourcesFilter,
+			},
 		},
-	},
-}, calculateResourcesRequests)
+	}, calculateResourcesRequests)
+)
 
 func calculateResourcesRequests(input *go_hook.HookInput) error {
 	var (

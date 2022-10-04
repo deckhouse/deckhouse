@@ -67,20 +67,22 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 	return dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
 }
 
-var etcdSecretK8sConfig = go_hook.KubernetesConfig{
-	Name:       "etcd-certificate",
-	ApiVersion: "v1",
-	Kind:       "Secret",
-	NamespaceSelector: &types.NamespaceSelector{
-		NameSelector: &types.NameSelector{
-			MatchNames: []string{"kube-system"},
+var (
+	etcdSecretK8sConfig = go_hook.KubernetesConfig{
+		Name:       "etcd-certificate",
+		ApiVersion: "v1",
+		Kind:       "Secret",
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kube-system"},
+			},
 		},
-	},
-	NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-pki"}},
-	ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-	ExecuteHookOnEvents:          pointer.BoolPtr(false),
-	FilterFunc:                   syncEtcdFilter,
-}
+		NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-pki"}},
+		ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+		ExecuteHookOnEvents:          pointer.BoolPtr(false),
+		FilterFunc:                   syncEtcdFilter,
+	}
+)
 
 func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec corev1.Secret
