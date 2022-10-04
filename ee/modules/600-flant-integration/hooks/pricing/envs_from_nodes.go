@@ -38,9 +38,7 @@ type NodeStats struct {
 }
 
 const (
-	// TODO Migration (in d8 1.38): change to control-plane node role
-	// controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-	controlPlaneLabelKey = "node-role.kubernetes.io/master"
+	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
 )
 
 func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -57,8 +55,7 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		n.Type = t
 	}
 
-	_, ok := node.ObjectMeta.Labels[controlPlaneLabelKey]
-	if !ok {
+	if _, ok := node.ObjectMeta.Labels[controlPlaneLabelKey]; !ok {
 		return n, err
 	}
 
