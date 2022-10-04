@@ -29,18 +29,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
-			},
-			FieldSelector:                nil,
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			FilterFunc:                   filterNodes,
-		},
-		{
-			Name:       "nodes_master",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
+				// TODO Migration (in d8 1.38): change to control-plane node role
+				// MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 				MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""},
 			},
 			FieldSelector:                nil,
@@ -53,8 +43,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleAllMasterNodes(input *go_hook.HookInput) error {
 	nodesSnap := input.Snapshots["nodes"]
-	nodesSnapM := input.Snapshots["nodes_master"]
-	nodesSnap = append(nodesSnap, nodesSnapM...)
 
 	totalCount := len(nodesSnap)
 	var initializedCount int

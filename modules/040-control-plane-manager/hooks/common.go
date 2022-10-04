@@ -34,6 +34,10 @@ import (
 
 const (
 	moduleQueue = "/modules/control-plane-manager"
+
+	// TODO Migration (in d8 1.38): change to control-plane node role
+	// controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
+	controlPlaneLabelKey = "node-role.kubernetes.io/master"
 )
 
 type etcdInstance struct {

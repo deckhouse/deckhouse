@@ -38,8 +38,9 @@ type NodeStats struct {
 }
 
 const (
-	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-	masterLabelKey       = "node-role.kubernetes.io/master"
+	// TODO Migration (in d8 1.38): change to control-plane node role
+	// controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
+	controlPlaneLabelKey = "node-role.kubernetes.io/master"
 )
 
 func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -56,15 +57,13 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		n.Type = t
 	}
 
-	_, cpOk := node.ObjectMeta.Labels[controlPlaneLabelKey]
-	_, mOk := node.ObjectMeta.Labels[masterLabelKey]
-	ok := cpOk || mOk
+	_, ok := node.ObjectMeta.Labels[controlPlaneLabelKey]
 	if !ok {
 		return n, err
 	}
 
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == controlPlaneLabelKey || taint.Key == masterLabelKey {
+		if taint.Key == controlPlaneLabelKey {
 			n.MasterNodeInfo.IsDedicated = true
 			break
 		}

@@ -41,23 +41,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "controlplane_nodes",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/control-plane": "",
-				},
-			},
-			FilterFunc: reconcicleEtcdFilterNode,
-		},
-		{
 			Name:       "master_nodes",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/master": "",
+					controlPlaneLabelKey: "",
 				},
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
@@ -105,8 +94,6 @@ type recicleEtcdNode struct {
 
 func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
 	snap := input.Snapshots["master_nodes"]
-	snapsCP := input.Snapshots["controlplane_nodes"]
-	snap = append(snap, snapsCP...)
 
 	if len(snap) == 0 {
 		input.LogEntry.Debug("No master Nodes found in snapshot, skipping iteration")

@@ -51,11 +51,6 @@ var (
 	defaultEtcdMaxSize = gb(2)
 )
 
-const (
-	controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-	masterLabelKey       = "node-role.kubernetes.io/master"
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/etcd_maintenance",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -65,22 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-<<<<<<< Updated upstream
-					masterLabelKey: "",
-				},
-			},
-			FilterFunc: etcdQuotaFilterNode,
-		},
-		{
-			Name:       "controlplane_nodes",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
 					controlPlaneLabelKey: "",
-=======
-					"node-role.kubernetes.io/master": "",
->>>>>>> Stashed changes
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
@@ -126,7 +106,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		isMaster := taint.Key == controlPlaneLabelKey || taint.Key == masterLabelKey
+		isMaster := taint.Key == controlPlaneLabelKey
 		if isMaster && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
@@ -245,8 +225,6 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
 
 	snaps := input.Snapshots["master_nodes"]
-	snapsCP := input.Snapshots["controlplane_nodes"]
-	snaps = append(snaps, snapsCP...)
 
 	node := getNodeWithMinimalMemory(snaps)
 	if node == nil {

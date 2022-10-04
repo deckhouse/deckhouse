@@ -61,12 +61,19 @@ nodeSelector:
   {{- else if eq $strategy "master" }}
     {{- if gt (index $context.Values.global.discovery "clusterMasterCount" | int) 0 }}
 
-{{/* TODO  node-role.kubernetes.io/master: "" */}}
 nodeSelector:
+  {{/*
+	TODO Migration (in d8 1.38): change to control-plane node role
   node-role.kubernetes.io/control-plane: ""
+  */}}
+  node-role.kubernetes.io/master: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 nodeSelector:
-  node-role.deckhouse.io/control-plane: ""
+  {{/*
+	TODO Migration (in d8 1.38): change to control-plane node role
+  node-role.kubernetes.io/control-plane: ""
+  */}}
+  node-role.deckhouse.io/master: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/system: ""

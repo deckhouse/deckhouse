@@ -24,22 +24,13 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "controlplane_node_names",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/control-plane": "",
-				},
-			},
-			FilterFunc: applyMasterNodeFilter,
-		},
-		{
 			Name:       "master_node_names",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
+					// TODO Migration (in d8 1.38): change to control-plane node role
+					// "node-role.kubernetes.io/control-plane": "",
 					"node-role.kubernetes.io/master": "",
 				},
 			},
@@ -54,10 +45,8 @@ func applyMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 func isHighAvailabilityCluster(input *go_hook.HookInput) error {
 	masterNodesSnap := input.Snapshots["master_node_names"]
-	controlPlaneNodesSnap := input.Snapshots["controlplane_node_names"]
-	controlPlaneNodesSnap = append(controlPlaneNodesSnap, masterNodesSnap...)
 
-	mastersCount := len(controlPlaneNodesSnap)
+	mastersCount := len(masterNodesSnap)
 
 	input.Values.Set("global.discovery.clusterMasterCount", mastersCount)
 	input.Values.Set("global.discovery.clusterControlPlaneIsHighlyAvailable", mastersCount > 1)
