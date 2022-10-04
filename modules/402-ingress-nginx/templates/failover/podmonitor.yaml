@@ -27,6 +27,9 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: test-label
+      replacement: test-label-value
+
   selector:
     matchLabels:
       app: proxy-failover
