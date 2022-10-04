@@ -16,6 +16,8 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
+    - regex: endpoint|namespace|pod
+      action: labeldrop
     - targetLabel: job
       replacement: proxy-failover
     - sourceLabels: [__meta_kubernetes_pod_node_name]
