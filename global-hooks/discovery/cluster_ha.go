@@ -57,10 +57,10 @@ func isHighAvailabilityCluster(input *go_hook.HookInput) error {
 	controlPlaneNodesSnap := input.Snapshots["controlplane_node_names"]
 	controlPlaneNodesSnap = append(controlPlaneNodesSnap, masterNodesSnap...)
 
-	cpCount := len(controlPlaneNodesSnap)
+	mastersCount := len(controlPlaneNodesSnap)
 
-	input.Values.Set("global.discovery.clusterMasterCount", cpCount)
-	input.Values.Set("global.discovery.clusterControlPlaneIsHighlyAvailable", cpCount > 1)
+	input.Values.Set("global.discovery.clusterMasterCount", mastersCount)
+	input.Values.Set("global.discovery.clusterControlPlaneIsHighlyAvailable", mastersCount > 1)
 
 	return nil
 }
