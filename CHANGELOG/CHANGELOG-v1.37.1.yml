@@ -1,0 +1,5 @@
+monitoring-kubernetes:
+  fixes:
+    - summary: Add deployments to kube-state-metrics's allowlist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2636
+
