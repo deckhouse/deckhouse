@@ -58,7 +58,8 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	_, cpOk := node.ObjectMeta.Labels[controlPlaneLabelKey]
 	_, mOk := node.ObjectMeta.Labels[masterLabelKey]
-	if !cpOk && !mOk {
+	ok := cpOk || mOk
+	if !ok {
 		return n, err
 	}
 
