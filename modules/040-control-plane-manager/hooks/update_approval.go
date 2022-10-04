@@ -145,9 +145,9 @@ type approvedPod struct {
 }
 
 func handleUpdateApproval(input *go_hook.HookInput) error {
+	nodeMap := make(map[string]approvedNode)
 	snap := input.Snapshots["nodes"]
 
-	nodeMap := make(map[string]approvedNode)
 	for _, s := range snap {
 		node := s.(approvedNode)
 		nodeMap[node.Name] = node
