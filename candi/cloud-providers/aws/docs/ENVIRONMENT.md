@@ -174,7 +174,7 @@ Save credentials (`Access key ID` and `Secret access key`).
 
 > Make sure that you have access to the desired regions. Select the desired region from the dropdown list in the upper right corner.
 >
-> If there is a switch to the selected region, then there is access to the region..
+> If there is a switch to the selected region, then there is access to the region.
 >
 > If there is no access to the region, then you will receive the following message (may differ):
 >
