@@ -81,7 +81,12 @@ func ComposeValuesFromSchemas(m utils.Module) ([]chartutil.Values, error) {
 
 	camelizedModuleName := strcase.ToLowerCamel(m.Name)
 
-	moduleSchema := *validator.SchemaStorage.ModuleSchemas[camelizedModuleName]["values"]
+	values := validator.SchemaStorage.ModuleSchemas[camelizedModuleName]["values"]
+	if values == nil {
+		return nil, fmt.Errorf("cannot find openapi values schema for module %s", m.Name)
+	}
+
+	moduleSchema := *values
 	moduleSchema.Default = make(map[string]interface{})
 
 	globalSchema := *validator.SchemaStorage.GlobalSchemas["values"]

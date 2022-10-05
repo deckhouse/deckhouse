@@ -5,6 +5,7 @@ kind: IPAddressPool
 metadata:
   name: {{ $ipaddressPool.name }}
   namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "controller")) | nindent 2 }}
 spec:
   addresses:
   {{- $ipaddressPool.addresses | toYaml | nindent 4 }}

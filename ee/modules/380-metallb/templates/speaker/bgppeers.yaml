@@ -5,6 +5,7 @@ kind: BGPPeer
 metadata:
   name: bgp-peer-{{ $idx }}
   namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
 spec:
   myASN: {{ index $bgpPeer "my-asn" }}
   peerASN: {{ index $bgpPeer "peer-asn" }}
