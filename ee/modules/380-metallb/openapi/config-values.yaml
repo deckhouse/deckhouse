@@ -168,3 +168,7 @@ x-examples:
   speaker:
     nodeSelector:
       mylabel: "speaker"
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: speaker

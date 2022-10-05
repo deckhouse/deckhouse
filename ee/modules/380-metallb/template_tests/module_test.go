@@ -30,8 +30,7 @@ const (
       my-asn: 64000
       hold-time: 3s
       node-selector:
-        matchLabels:
-        - node: metallb`
+        node: "metallb"`
 
 	addressPoolsBGP = `
     - name: mypool
@@ -89,8 +88,7 @@ peerAddress: 1.1.1.1
 holdTime: 3s
 myASN: 64000
 nodeSelectors:
-- matchLabels:
-  - node: metallb
+  node: metallb
 peerASN: 65000
 peerAddress: 1.1.1.2
 `))
