@@ -80,8 +80,15 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "lines": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
-          "stack": false,
+          "stack": true,
           "steppedLine": true,
           "targets": [
             {
@@ -183,8 +190,15 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "lines": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
-          "stack": false,
+          "stack": true,
           "steppedLine": true,
           "targets": [
             {
@@ -286,8 +300,15 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "lines": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
-          "stack": false,
+          "stack": true,
           "steppedLine": true,
           "targets": [
             {
@@ -389,8 +410,15 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Total",
+              "lines": false,
+              "stack": false
+            }
+          ],
           "spaceLength": 10,
-          "stack": false,
+          "stack": true,
           "steppedLine": true,
           "targets": [
             {
