@@ -30,7 +30,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: kubeadm_config_cleanup ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: kubeadm_config_cleanup ::", func() {
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": false}}}`
