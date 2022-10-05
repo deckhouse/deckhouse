@@ -9,14 +9,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
-	_ "github.com/evanphx/json-patch"
+
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, patchInjectorConfigmap)
 
-var injectorConfigMapJsonPatch = []byte(`[ {"op": "remove", "path": "/global/proxy/resources/limits/cpu"} ]`)
+var injectorConfigMapJSONPatch = []byte(`[ {"op": "remove", "path": "/global/proxy/resources/limits/cpu"} ]`)
 
 func applyInjectorConfigmapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	cm := v1.ConfigMap{}
@@ -71,7 +72,7 @@ func patchInjectorConfigmap(input *go_hook.HookInput) error {
 		if !ok {
 			continue
 		}
-		decodedPatch, err := jsonpatch.DecodePatch(injectorConfigMapJsonPatch)
+		decodedPatch, err := jsonpatch.DecodePatch(injectorConfigMapJSONPatch)
 		if err != nil {
 			return err
 		}
