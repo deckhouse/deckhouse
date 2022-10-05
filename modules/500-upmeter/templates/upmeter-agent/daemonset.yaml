@@ -139,10 +139,11 @@ spec:
             value: "json"
           - name: UPMETER_EXPORT_TIMEOUT
             value: "15s"
+          # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables
           - name: KUBE_CLIENT_QPS
-            value: "30"
+            value: "5"
           - name: KUBE_CLIENT_BURST
-            value: "60"
+            value: "10"
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
