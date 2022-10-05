@@ -28,7 +28,7 @@
        <img src="./images/{{ site.data.supported_versions.osDistributions[osKey].imagePath }}" alt="{{ osName }}" />
      </a>
   </td>
-  <td class="name"><span>{{ osName }}</span></td>
+  <td class="name"><span {% if firstItemData[1]['ru_support'] and firstItemData[1]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>{{ osName }}</span></td>
   <td class="versions">
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0] %}
@@ -40,6 +40,14 @@
 {%- endfor %}
 </tbody>
 </table>
+{% if page.lang == 'ru' %}
+<em>* Базовая поддержка доступна в редакции CE. Расширенная поддержка предоставляется только в редакции EE. В расширенную поддержку входит:</em>
+<ul>
+<li><em>Гарантия совместимости Deckhouse с ОС.</em></li>
+<li><em>Приоритетное исправление ошибок и выпуск обновлений.</em></li>
+<li><em>Консультации по миграции на ОС.</em></li>
+</ul>
+{%  endif %}
 </div>
 
 ## Kubernetes
