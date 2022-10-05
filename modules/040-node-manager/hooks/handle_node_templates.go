@@ -186,13 +186,14 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				}
 			}
 
-			// Migration (remove in d8 1.38): adding 'control-plane' node role to prepare for k8s 1.25
-			const (
-				controlPlaneLabelKey = "node-role.kubernetes.io/control-plane"
-				masterLabelKey       = "node-role.kubernetes.io/master"
-			)
-			if _, ok := nodeObj.Labels[masterLabelKey]; ok {
-				nodeObj.Labels[controlPlaneLabelKey] = ""
+			if nodeGroup.Name == "master" {
+				// We have global hook which takes care of these labels. Along with
+				// that, we apply this code as an additional safety measure.
+
+				// Enforce 'control-plane' node role to prepare for k8s 1.25.
+				nodeObj.Labels["node-role.kubernetes.io/control-plane"] = ""
+				// Preseve 'master' node role for backward compatibility with user software.
+				nodeObj.Labels["node-role.kubernetes.io/master"] = ""
 			}
 
 			nodeObj.Status = v1.NodeStatus{}
