@@ -41,9 +41,7 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 		input.LogEntry.Errorf("%v", err)
 		return false, err
 	}
-
-	labelSelector := "node-role.kubernetes.io/control-plane="
-	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
+	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 	if err != nil {
 		input.LogEntry.Errorf("%v", err)
 		return false, err

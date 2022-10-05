@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					controlPlaneNodeRoleLabelName: "",
+					"node-role.kubernetes.io/control-plane": "",
 				},
 			},
 			FilterFunc: reconcicleEtcdFilterNode,

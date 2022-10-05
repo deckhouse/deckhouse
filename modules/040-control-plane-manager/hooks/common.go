@@ -33,8 +33,7 @@ import (
 )
 
 const (
-	moduleQueue                   = "/modules/control-plane-manager"
-	controlPlaneNodeRoleLabelName = "node-role.kubernetes.io/control-plane"
+	moduleQueue = "/modules/control-plane-manager"
 )
 
 type etcdInstance struct {
