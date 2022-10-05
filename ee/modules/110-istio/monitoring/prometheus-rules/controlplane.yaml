@@ -58,7 +58,7 @@
                 (
                   (
                     kube_pod_status_phase{namespace="d8-istio", pod=~"istiod-.+", phase="Running"}
-                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{} == 0
+                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{namespace="d8-istio", pod=~"istiod-.+"} == 0
                   )
                 * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod-.+"}
                 # exclude global revision
