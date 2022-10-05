@@ -31,7 +31,7 @@ properties:
         x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
-        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The template with the `%s` key as the dynamic string parameter.
           (e.g. '%s.kube.company.my' or 'kube-%s.company.my', regex used for validation is '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$').
