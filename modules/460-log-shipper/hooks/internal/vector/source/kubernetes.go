@@ -27,6 +27,8 @@ import (
 
 const defaultGlobCooldownMs = 1000
 
+var _ apis.LogSource = (*Kubernetes)(nil)
+
 // Kubernetes represents a source for collecting Kubernetes logs.
 //
 // Because of how selectors work in Kubernetes, it is not possible to declare OR selector.

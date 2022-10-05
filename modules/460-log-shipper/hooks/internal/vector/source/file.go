@@ -21,6 +21,8 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
+var _ apis.LogSource = (*File)(nil)
+
 // File represents `file` vector source
 // https://vector.dev/docs/reference/configuration/sources/file/
 type File struct {
