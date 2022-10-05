@@ -19,6 +19,7 @@ package destination
 import (
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
@@ -112,8 +113,9 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 
 	return &Elasticsearch{
 		CommonSettings: CommonSettings{
-			Name: ComposeName(name),
-			Type: "elasticsearch",
+			Name:   ComposeName(name),
+			Type:   "elasticsearch",
+			Inputs: set.New(),
 		},
 		Auth: ElasticsearchAuth{
 			AwsAccessKey:  decodeB64(spec.Auth.AwsAccessKey),
