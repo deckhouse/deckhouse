@@ -17,32 +17,36 @@ limitations under the License.
 package transform
 
 import (
-	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/clarketm/json"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
-func BuildFromMapSlice(prefix, inputName string, trans []apis.LogTransform) ([]apis.LogTransform, error) {
-	prevInput := inputName
+func BuildFromMapSlice(prefix, inputName string, transforms []apis.LogTransform) ([]apis.LogTransform, error) {
+	prevInput := ""
 
-	for i, trm := range trans {
-		trm.SetName(fmt.Sprintf("transform/%s/%s/%02d_%s", prefix, inputName, i, trm.GetName()))
-		trm.SetInputs([]string{prevInput})
-		prevInput = trm.GetName()
-		trans[i] = trm
+	for i, transform := range transforms {
+		name := fmt.Sprintf("transform/%s/%s/%02d_%s", prefix, inputName, i, transform.GetName())
+
+		transform.SetName(name)
+		if prevInput != "" {
+			transform.SetInputs([]string{prevInput})
+		}
+
+		prevInput = transform.GetName()
+		transforms[i] = transform
 	}
 
-	return trans, nil
+	return transforms, nil
 }
 
 type CommonTransform struct {
-	Name   string   `json:"-"`
-	Type   string   `json:"type"`
-	Inputs []string `json:"inputs"`
+	Name   string  `json:"-"`
+	Type   string  `json:"type"`
+	Inputs set.Set `json:"inputs"`
 }
 
 func (cs *CommonTransform) GetName() string {
@@ -57,12 +61,11 @@ func (cs *CommonTransform) SetName(name string) {
 }
 
 func (cs *CommonTransform) SetInputs(inp []string) {
-	sort.Strings(inp)
-	cs.Inputs = inp
+	cs.Inputs.Add(inp...)
 }
 
 func (cs *CommonTransform) GetInputs() []string {
-	return cs.Inputs
+	return cs.Inputs.Slice()
 }
 
 type DynamicTransform struct {
@@ -85,37 +88,4 @@ func (t *DynamicTransform) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(m)
-}
-
-func (t *DynamicTransform) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// TODO(nabokihms): I fixed this function, but it previously did not work, yet results are the same in all tests
-	var transformMap map[string]interface{}
-	err := unmarshal(&transformMap)
-	if err != nil {
-		return err
-	}
-
-	tstr, ok := transformMap["type"].(string)
-	if !ok {
-		return errors.New("the `type` is required and it has to be of the string type")
-	}
-
-	inp, ok := transformMap["inputs"].([]string)
-	if !ok {
-		inp = make([]string, 0)
-	}
-
-	delete(transformMap, "inputs")
-	delete(transformMap, "type")
-
-	// nolint: ineffassign
-	t = &DynamicTransform{
-		CommonTransform: CommonTransform{
-			Type:   tstr,
-			Inputs: inp,
-		},
-		DynamicArgsMap: transformMap,
-	}
-
-	return nil
 }
