@@ -9950,38 +9950,14 @@
         "useTags": false
       },
       {
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": "$ds_prometheus",
-        "definition": "",
         "description": null,
         "error": null,
-        "hide": 0,
-        "includeAll": true,
+        "hide": 2,
         "label": "App",
-        "multi": true,
         "name": "app",
-        "options": [],
-        "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\"}, app)",
-          "refId": "main-app-Variable-Query"
-        },
-        "refresh": 2,
-        "regex": "",
+        "query": ".*",
         "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
+        "type": "constant"
       },
       {
         "allValue": ".*",
