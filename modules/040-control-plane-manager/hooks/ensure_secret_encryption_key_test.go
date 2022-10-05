@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encryption_key ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: ensure_secret_encryption_key ::", func() {
 	f := HookExecutionConfigInit(`{"controlPlaneManager":{"apiserver":{"encryptionEnabled":true}, "internal":{}}}`, ``)
 
 	Context("Empty cluster, encryptionEnabled = true", func() {
