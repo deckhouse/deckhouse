@@ -912,4 +912,67 @@ spec:
 			})
 		})
 	})
+
+	Context("Two sources to single destination", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-file
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-vector-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-kubernetes
+spec:
+  type: KubernetesPods
+  destinationRefs:
+    - test-vector-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-vector-dest
+spec:
+  type: Vector
+  vector:
+    endpoint: "192.168.1.1:9200"
+    tls:
+      verifyCertificate: false
+      verifyHostname: false
+---
+`))
+			f.RunHook()
+		})
+
+		It("Should create secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
+
+			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
+			Expect(secret).To(Not(BeEmpty()))
+
+			assertConfig(secret, "many-to-one.json")
+		})
+		Context("With deleting object", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunHook()
+			})
+			It("Should delete secret and deactivate module", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeFalse())
+				Expect(f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config").Exists()).To(BeFalse())
+			})
+		})
+	})
+
 })
