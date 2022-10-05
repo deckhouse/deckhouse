@@ -19,6 +19,7 @@ package transform
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
@@ -27,8 +28,9 @@ import (
 func OwnerReferenceSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "owner_ref",
-			Type: "remap",
+			Name:   "owner_ref",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.OwnerReferenceRule.String(),
@@ -40,8 +42,9 @@ func OwnerReferenceSourceTransform() *DynamicTransform {
 func CleanUpAfterSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "clean_up",
-			Type: "remap",
+			Name:   "clean_up",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.CleanUpAfterSourceRule.String(),
