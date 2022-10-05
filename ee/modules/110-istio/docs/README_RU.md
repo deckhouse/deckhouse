@@ -2,6 +2,8 @@
 title: "Модуль istio"
 ---
 
+{::options parse_block_html="false" /}
+
 ## Задачи, которые решает Istio
 
 [Istio](https://istio.io/) — фреймворк централизованного управления сетевым трафиком, реализующий подход Service Mesh.
@@ -160,21 +162,13 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Приложение с выключенным Istio
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSN2yCNumnHC-Q9sgQ7LstaLuG8lWjYkvKrN27zNM4P8JxejasMeCazGIX5zYNSLuv6DieoXgI1Mx7u/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_disabled_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/ --->
 
 #### Приложение с включенным Istio
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSBqX8-US32uDhUYKpra4Co9rYsh9wqbhUV2pMh69WC-daXwW7CYeaofH_yhDOl4pdN-tO5pIPDMqtw/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1gQfX9ge2vhp74yF5LOfpdK2nY47l_4DIvk6px_tAMPU/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_enabled_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1gQfX9ge2vhp74yF5LOfpdK2nY47l_4DIvk6px_tAMPU/ --->
 
 ## Как активировать Istio для приложения
 
@@ -219,12 +213,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 * Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации, нужно в кластере A сделать кластер Б доверенным, и аналогично в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
 * Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который описывает публичный адрес ingress-gateway кластера Б.
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRGnHBdHyQq7xGP3v3kaUCsMkfBGXun5NJb4R6nRQtjOlrq4BSyZ4hIUbA92JN4OCJcoR5A3M6VCtS8/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/federation_common_principles_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/ --->
 
 #### Включение федерации
 
@@ -237,12 +227,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление федерацией
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQtxDlMcQFmJT7Jc1HDose3KXwe8dGqLs_C1JSoKg0Dv6tZq9a2nibRPZh9Yihy4UoyXMHKBAFKZDIM/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/federation_istio_federation_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/ --->
 
 Для построения федерации необходимо:
 * В каждом кластере создать набор ресурсов `IstioFederation`, которые описывают все остальные кластеры.
@@ -252,12 +238,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Общие принципы
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQBozUYrpJ3Qzk4BWxkkAtiHuJjvG3dL0K43ZdQy6dJjkSToEAZT_2pqVlpv4vjdlmgBv16pH9juBY1/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/multicluster_common_principles_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/ --->
 
 * Мультикластер требует установления взаимного доверия между кластерами. Соответственно, для построения мультикластера, нужно в кластере A сделать кластер Б доверенным, и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
 * Для сбора информации о соседних сервисах, Istio подключается напрямую к API-серверу соседнего кластера. Данный модуль Deckhouse берёт на себя организацию соответствующего канала связи.
@@ -276,12 +258,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление мультикластером
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSg7WC5U6u8hpVKQFFOKRo8b1NwIhzXXMx26gNNrWekAcTvZOVT4-nzTAnzPnjzlAfFSYL5-U4_Qa1h/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Исходник: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/multicluster_istio_multicluster_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/ --->
 
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.
 

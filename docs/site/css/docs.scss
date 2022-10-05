@@ -1013,3 +1013,59 @@ ul .resources__prop_title {
     border-radius: 4px;
   }
 }
+
+.pdf-slider {
+  &__canvas {
+    border: 1px solid rgba(241, 243, 244, .949);
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    box-sizing:  border-box;
+    margin-top: -4px;
+    padding: 2px 8px;
+    background: rgba(241, 243, 244, .949);
+    box-shadow: none;
+  }
+
+  &__nav--button {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    margin: 2px;
+    padding: 2px;
+
+    &.disabled {
+      opacity: 0.2;
+      pointer-events: none;
+      cursor: default;
+      display: block !important;
+    }
+
+    &:not(.disabled):hover {
+      background: #fff;
+      cursor: pointer;
+    }
+
+    & .fa-chevron-left,
+    & .fa-chevron-right {
+      color: #3C4043;
+    }
+  }
+
+  &__nav--page-num {
+    font-size: 16px;
+    line-height: 28px;
+    color: #3c4043;
+    text-align: center;
+    background: #fff;
+    border-radius: 22px;
+    height: 28px;
+    width: 26px;
+    margin: 0 7px;
+    padding: 0 8px;
+  }
+}
