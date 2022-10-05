@@ -17,11 +17,8 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -29,16 +26,31 @@ const (
 	controlPlaneNodeRole = "node-role.kubernetes.io/control-plane"
 )
 
+var (
+	roleLabelsPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": map[string]string{
+				masterNodeRole:       "",
+				controlPlaneNodeRole: "",
+			},
+		},
+	}
+)
+
 // This hook adds node-role.kubernetes.io/control-plane label to all nodes with
 // node-role.kubernetes.io/master label. And vice versa.
 func applyBothNodeRoles(input *go_hook.HookInput) error {
-	var (
-		controlPlaneNames = set.NewFromSnapshot(input.Snapshots["control_plane_nodes"])
-		masterNames       = set.NewFromSnapshot(input.Snapshots["master_nodes"])
-	)
+	snapshots := input.Snapshots["master_nodes"]
+	snapshots = append(snapshots, input.Snapshots["control_plane_nodes"]...)
 
-	applyNodeRole(input, controlPlaneNames, masterNodeRole)
-	applyNodeRole(input, masterNames, controlPlaneNodeRole)
+	for _, nodeSnap := range snapshots {
+		node := nodeSnap.(labeledNode)
+		if node.MasterLabelExists && node.ControlPlaneLabelExists {
+			continue
+		}
+
+		input.PatchCollector.MergePatch(roleLabelsPatch, "v1", "Node", "", node.Name)
+	}
 
 	return nil
 }
@@ -53,7 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				Key:      controlPlaneNodeRole,
 				Operator: metav1.LabelSelectorOpExists,
 			}}},
-			FilterFunc: filterName,
+			FilterFunc: filterLabeledNode,
 		},
 		{
 			Name:       "master_nodes",
@@ -63,31 +75,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				Key:      masterNodeRole,
 				Operator: metav1.LabelSelectorOpExists,
 			}}},
-			FilterFunc: filterName,
+			FilterFunc: filterLabeledNode,
 		},
 	},
 }, applyBothNodeRoles)
 
-func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+func filterLabeledNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+
+	labels := obj.GetLabels()
+
+	var masterLabelExists, controlPlaneLabelExists bool
+
+	if _, ok := labels[masterNodeRole]; ok {
+		masterLabelExists = true
+	}
+
+	if _, ok := labels[controlPlaneNodeRole]; ok {
+		controlPlaneLabelExists = true
+	}
+
+	return labeledNode{
+		Name:                    obj.GetName(),
+		MasterLabelExists:       masterLabelExists,
+		ControlPlaneLabelExists: controlPlaneLabelExists,
+	}, nil
 }
 
-func applyNodeRole(input *go_hook.HookInput, names set.Set, label string) {
-	for _, name := range names.Slice() {
-		input.PatchCollector.Filter(getLabelPatch(label), "v1", "Node", "", name)
-	}
-}
-
-func getLabelPatch(label string) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		node := new(v1.Node)
-		err := sdk.FromUnstructured(obj, node)
-		if err != nil {
-			return nil, err
-		}
-
-		node.Labels[label] = ""
-
-		return sdk.ToUnstructured(node)
-	}
+type labeledNode struct {
+	Name                    string
+	MasterLabelExists       bool
+	ControlPlaneLabelExists bool
 }

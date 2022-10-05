@@ -148,6 +148,5 @@ func nodeRoleYAMLs(roles, names []string) string {
 	}
 
 	state := strings.Join(yamls, "\n---\n")
-	fmt.Println(state)
 	return state
 }
