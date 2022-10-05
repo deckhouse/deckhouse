@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					masterLabelKey: "",
+					controlPlaneNodeRoleLabelName: "",
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,

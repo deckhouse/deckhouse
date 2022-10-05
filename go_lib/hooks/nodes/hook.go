@@ -44,9 +44,7 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 		return false, err
 	}
 
-	// TODO Migration (in d8 1.38): change to control-plane node role
-	// labelSelector := "node-role.kubernetes.io/control-plane="
-	labelSelector := "node-role.kubernetes.io/master="
+	labelSelector := "node-role.kubernetes.io/control-plane="
 	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		input.LogEntry.Errorf("%v", err)

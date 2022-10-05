@@ -29,9 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					// TODO Migration (in d8 1.38): change to control-plane node role
-					// "node-role.kubernetes.io/control-plane": "",
-					"node-role.kubernetes.io/master": "",
+					"node-role.kubernetes.io/control-plane": "",
 				},
 			},
 			FilterFunc: applyMasterNodeFilter,

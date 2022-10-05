@@ -42,7 +42,7 @@ kind: Node
 metadata:
   name: master-0
   labels:
-    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role
+    node-role.kubernetes.io/control-plane: ""
 `
 
 		stateSecondMasterNode = `
@@ -52,7 +52,7 @@ kind: Node
 metadata:
   name: master-1
   labels:
-    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role
+    node-role.kubernetes.io/control-plane: ""
 `
 	)
 

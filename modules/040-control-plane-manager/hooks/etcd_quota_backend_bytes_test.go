@@ -345,7 +345,7 @@ kind: Node
 metadata:
   name: %s
   labels:
-    node-role.kubernetes.io/master: "" # TODO migration (in d8 1.38): revert to control-plane node role
+    node-role.kubernetes.io/control-plane: ""
 %s
 status:
   addresses:

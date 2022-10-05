@@ -64,9 +64,7 @@ var (
 				Kind:       "Node",
 				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						// TODO Migration (in d8 1.38): change to control-plane node role
-						// Key:      "node-role.kubernetes.io/control-plane",
-						Key:      "node-role.kubernetes.io/master",
+						Key:      "node-role.kubernetes.io/control-plane",
 						Operator: "Exists",
 					},
 				}},

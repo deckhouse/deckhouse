@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      masterLabelKey,
+						Key:      controlPlaneNodeRoleLabelName,
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
