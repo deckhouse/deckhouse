@@ -32,8 +32,14 @@ const (
 // This hook adds node-role.kubernetes.io/control-plane label to all nodes with
 // node-role.kubernetes.io/master label. And vice versa.
 func applyBothNodeRoles(input *go_hook.HookInput) error {
-	applyNodeRole(input, set.NewFromSnapshot(input.Snapshots["control_plane_nodes"]), masterNodeRole)
-	applyNodeRole(input, set.NewFromSnapshot(input.Snapshots["master_nodes"]), controlPlaneNodeRole)
+	var (
+		controlPlaneNames = set.NewFromSnapshot(input.Snapshots["control_plane_nodes"])
+		masterNames       = set.NewFromSnapshot(input.Snapshots["master_nodes"])
+	)
+
+	applyNodeRole(input, controlPlaneNames, masterNodeRole)
+	applyNodeRole(input, masterNames, controlPlaneNodeRole)
+
 	return nil
 }
 
