@@ -85,7 +85,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -93,7 +93,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -188,7 +188,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -196,7 +196,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -291,7 +291,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\"}\n)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -299,7 +299,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\"}\n) by (pod, node)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n) by (pod, node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -394,7 +394,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -402,7 +402,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\"}[$__interval_sx4])\n) by (pod, node) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
