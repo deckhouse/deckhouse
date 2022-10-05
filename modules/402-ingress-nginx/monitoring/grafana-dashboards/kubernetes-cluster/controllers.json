@@ -764,7 +764,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -772,7 +772,7 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $by",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -876,7 +876,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $by / scalar(sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller!~\".*-failover\", app=~\"$app\", node=~\"$node\", job=\"nginx-ingress-controller\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
