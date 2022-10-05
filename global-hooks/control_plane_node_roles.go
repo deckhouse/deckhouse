@@ -81,18 +81,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, applyBothNodeRoles)
 
 func filterLabeledNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-
 	labels := obj.GetLabels()
 
-	var masterLabelExists, controlPlaneLabelExists bool
-
-	if _, ok := labels[masterNodeRole]; ok {
-		masterLabelExists = true
-	}
-
-	if _, ok := labels[controlPlaneNodeRole]; ok {
-		controlPlaneLabelExists = true
-	}
+	_, masterLabelExists := labels[masterNodeRole]
+	_, controlPlaneLabelExists := labels[controlPlaneNodeRole]
 
 	return labeledNode{
 		Name:                    obj.GetName(),
