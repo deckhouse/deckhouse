@@ -72,29 +72,22 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
-		// if errors.Is(err, ErrNoData) {
-		// w.WriteHeader(http.StatusOK)
-		// } else {
-		w.WriteHeader(http.StatusInternalServerError)
-		// }
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, jsonError(err.Error()))
-		log.Errorln("Cannot get current status: %w", err)
+		log.Errorf("Cannot get current status: %w\n", err)
+		// Skipping the error because the JSON structure is defined in advance.
+		out, _ := json.Marshal(&PublicStatusResponse{
+			Rows:   []GroupStatus{},
+			Status: "No data",
+		})
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
 		return
 	}
 
-	out, err := json.Marshal(&PublicStatusResponse{
+	// Skipping the error because the JSON structure is defined in advance.
+	out, _ := json.Marshal(&PublicStatusResponse{
 		Rows:   statuses,
 		Status: status,
 	})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		message := fmt.Sprintf("%d Error: %s\n", http.StatusInternalServerError, err)
-		fmt.Fprint(w, jsonError(message))
-		log.Errorln("Cannot marshal status summary to JSON: %w", err)
-		return
-	}
-
 	w.Write(out)
 }
 
