@@ -13,12 +13,8 @@ Allows setting groups for the `User` kind. It makes convenient authenticating as
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
-### Call connector refresh method only once
+### Gitlab refresh context
 
-If Dex receives many concurrent requests, it will send refresh request to an external provider for each.
-It does not work for providers that only allow refreshing once, e.g., Gitlab (because Gitlab rotates refresh token).
+Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
-Now Dex uses annotation lock for Kubernetes storage to achieve this behavior.
-Only one request does actual refreshing, others will wait for refreshing completion to read the result from the Kubernetes storage.
-
-GitHub issue: TBA (since the problem is too complicated)
+To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
