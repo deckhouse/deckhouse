@@ -7,6 +7,7 @@
 	async function fetchStatusJSON() {
 		const r = await fetch("/public/api/status", {
 			headers: { accept: "application/json" },
+			mode: "no-cors",
 		});
 		return await r.json();
 	}
@@ -23,11 +24,14 @@
 			data = await fetchStatusJSON();
 			error = null;
 			pendingUpdateText = "";
+			console.log({ data });
 		} catch (e) {
 			console.error(e);
 			error = e;
 			pendingUpdateText = " (pending update...)";
+			console.log({ error });
 		}
+		console.log({ data, error });
 	}
 
 	// The update loop
@@ -45,13 +49,13 @@
 			<h1 class="display-4">Status</h1>
 		</Col>
 		<Col class="text-end">
-			<h2 class="display-4 fw-light">
+			<h4 class="fw-normal text-muted">
 				{#if data == null && error == null}
 					Wait a second...
-				{:else if data != null}
-					<StatusText status={data.status} text={data.status + pendingUpdateText} mute={error != null} />
+				{:else}
+					<StatusText status={data.status} text={data.status + pendingUpdateText} />
 				{/if}
-			</h2>
+			</h4>
 		</Col>
 	</Row>
 
