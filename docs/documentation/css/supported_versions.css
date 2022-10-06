@@ -6,6 +6,11 @@
    vertical-align: middle;
 }
 
+.docs table.supported_versions tbody  td,
+.docs table.supported_versions__kubernetes tbody td {
+  padding: 0 10px;
+}
+
 .supported_versions td.name {
    height: 50px;
    text-align: left;
@@ -22,6 +27,6 @@
    height: 50px;
    text-align: left;
    font-weight: bold;
-   font-size: normal;
+   /*font-size: normal;*/
    width: 80%;
 }
