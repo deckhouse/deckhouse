@@ -58,12 +58,12 @@ metadata:
     operator.istio.io/managed: Reconcile
     operator.istio.io/version: 1.33.7
     release: istio
-  name: istio-sidecar-injector-v1x33
+  name: istio-sidecar-injector-v1x33-limits-exists
   namespace: d8-istio
 `
 
 		patchedValues := `
-{ 
+{
   "global": {
     "proxy": {
       "resources": {
@@ -86,9 +86,9 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").ToYaml()).NotTo(MatchYAML(cm))
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").Field("data.config").String()).To(Equal("test_config_data"))
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").Field("data.values").String()).To(MatchJSON(patchedValues))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-limits-exists").ToYaml()).NotTo(MatchYAML(cm))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-limits-exists").Field("data.config").String()).To(Equal("test_config_data"))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-limits-exists").Field("data.values").String()).To(MatchJSON(patchedValues))
 		})
 	})
 
@@ -121,7 +121,7 @@ metadata:
     operator.istio.io/managed: Reconcile
     operator.istio.io/version: 1.33.7
     release: istio
-  name: istio-sidecar-injector-v1x33
+  name: istio-sidecar-injector-v1x33-limits-absent
   namespace: d8-istio
 `
 		BeforeEach(func() {
@@ -131,7 +131,7 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").ToYaml()).To(MatchYAML(cm))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-limits-absent").ToYaml()).To(MatchYAML(cm))
 		})
 	})
 
@@ -152,7 +152,7 @@ metadata:
     operator.istio.io/managed: Reconcile
     operator.istio.io/version: 1.33.7
     release: istio
-  name: istio-sidecar-injector-v1x33
+  name: istio-sidecar-injector-v1x33-wrong-data
   namespace: d8-istio
 `
 		BeforeEach(func() {
@@ -162,7 +162,7 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").ToYaml()).To(MatchYAML(cm))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-wrong-data").ToYaml()).To(MatchYAML(cm))
 		})
 	})
 
@@ -183,7 +183,7 @@ metadata:
     operator.istio.io/managed: Reconcile
     operator.istio.io/version: 1.33.7
     release: istio
-  name: istio-sidecar-injector-v1x33
+  name: istio-sidecar-injector-v1x33-no-fields
   namespace: d8-istio
 `
 		BeforeEach(func() {
@@ -193,7 +193,7 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33").ToYaml()).To(MatchYAML(cm))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x33-no-fields").ToYaml()).To(MatchYAML(cm))
 		})
 	})
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
+
+const istioInjectorCPULimitPath = "global.proxy.resources.limits.cpu"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("patch-injector-configmap"),
@@ -51,24 +54,39 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, patchInjectorConfigmap)
 
+type injectorConfigMap struct {
+	Name   string
+	Values string
+}
+
 func applyInjectorConfigmapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	cm := v1.ConfigMap{}
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert ConfigMap object to ConfigMap: %v", err)
 	}
-	return cm, nil
+	values, ok := cm.Data["values"]
+	// missing values to Patch -> skip it
+	if !ok {
+		return nil, nil
+	}
+	if gjson.Get(values, istioInjectorCPULimitPath).String() == "" {
+		return nil, nil
+	}
+
+	return injectorConfigMap{
+		Name:   cm.Name,
+		Values: values,
+	}, nil
 }
 
 func patchInjectorConfigmap(input *go_hook.HookInput) error {
-	for _, cmRaw := range input.Snapshots["injector_configmap"] {
-		cm := cmRaw.(v1.ConfigMap)
-		values, ok := cm.Data["values"]
-		// missing values to Patch -> skip it
-		if !ok {
+	for _, imRaw := range input.Snapshots["injector_configmap"] {
+		if imRaw == nil {
 			continue
 		}
-		patchedValues, err := sjson.Delete(values, "global.proxy.resources.limits.cpu")
+		im := imRaw.(injectorConfigMap)
+		patchedValues, err := sjson.Delete(im.Values, istioInjectorCPULimitPath)
 		if err != nil {
 			return err
 		}
@@ -77,7 +95,7 @@ func patchInjectorConfigmap(input *go_hook.HookInput) error {
 				"values": patchedValues,
 			},
 		}
-		input.PatchCollector.MergePatch(cmPatch, "v1", "ConfigMap", cm.Namespace, cm.Name)
+		input.PatchCollector.MergePatch(cmPatch, "v1", "ConfigMap", "d8-istio", im.Name)
 	}
 	return nil
 }
