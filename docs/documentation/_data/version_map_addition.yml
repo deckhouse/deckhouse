@@ -1,0 +1,12 @@
+  alteros:
+    '7':
+      ru_support: 'true'
+      en_support: 'false'
+  astra:
+    '1.7':
+      ru_support: 'true'
+      en_support: 'false'
+  '_redos':
+    '7.3':
+      ru_support: 'true'
+      en_support: 'false'
