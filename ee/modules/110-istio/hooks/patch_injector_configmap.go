@@ -3,6 +3,8 @@ Copyright 2022 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
+// The hook will lose relevance after solving the issue — https://github.com/istio/istio/issues/40078.
+
 package hooks
 
 import (
