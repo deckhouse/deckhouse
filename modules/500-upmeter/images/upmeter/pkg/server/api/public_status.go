@@ -72,7 +72,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
-		log.Errorf("Cannot get current status: %w\n", err)
+		log.Errorf("Cannot get current status: %v\n", err)
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
@@ -107,7 +107,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	}
 
 	groups := h.ProbeLister.Groups()
-	groupStatuses := make([]GroupStatus, 0)
+	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
 		ref := check.ProbeRef{
 			Group: group,
@@ -168,7 +168,7 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	episodeSummaries := statuses[g][p]
 	n := len(episodeSummaries) - 1 // ignore summary column in the end
 	if n != 3 {
-		return nil, fmt.Errorf("bad results count %d for group '%s' probe '%s'", n, g, p)
+		return nil, fmt.Errorf("unexpected count %d!=3 for probe '%s/%s'", n, g, p)
 	}
 
 	return episodeSummaries[:3], nil
