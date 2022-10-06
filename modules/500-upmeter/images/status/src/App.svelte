@@ -7,7 +7,6 @@
 	async function fetchStatusJSON() {
 		const r = await fetch("/public/api/status", {
 			headers: { accept: "application/json" },
-			mode: "no-cors",
 		});
 		return await r.json();
 	}
@@ -43,7 +42,7 @@
 <Container style="width: 600px">
 	<Row class="mt-5 align-items-end">
 		<Col>
-			<h1 class="display-4">Status</h1>
+			<h1 class="display-4 m-0">Status</h1>
 		</Col>
 		<Col class="text-end">
 			<h4 class="fw-normal text-muted">
