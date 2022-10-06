@@ -18,6 +18,6 @@ spec:
   {{- end }}
   {{- if index $bgpPeer "node-selector" }}
   nodeSelectors:
-    {{- index $bgpPeer "node-selector" | toYaml | nindent 4 }}
+  - {{- index $bgpPeer "node-selector" | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}

@@ -106,13 +106,32 @@ properties:
             By default, the parameter is set to `90s` (i.e., keep-alive packets are sent every 30 seconds).
         node-selector:
           type: object
-          additionalProperties:
-            type: string
           description: |
             The additional pseudo-selector implemented by the speaker application. It selects nodes allowed to connect to external BGP routers. Do not confuse it with `speaker.nodeSelector` and  `nodeSelector`.
 
             An optional parameter.
             The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+          properties:
+            matchExpressions:
+              items:
+                properties:
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                  values:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - key
+                - operator
+                type: object
+              type: array
+            matchLabels:
+              additionalProperties:
+                type: string
+              type: object
   addressPools:
     type: array
     default: []
@@ -150,6 +169,9 @@ x-examples:
     my-asn: 2222
     source-address: 192.168.1.2
     hold-time: 10s
+    node-selector:
+      matchLabels:
+        node: test
   addressPools:
   - name: myPoolBGP
     protocol: bgp
