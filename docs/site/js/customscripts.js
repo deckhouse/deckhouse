@@ -210,3 +210,155 @@ $(document).ready(function(){
         $.cookie('gdpr-status', 'accepted', {path: '/' ,  expires: 3650 });
     })
 });
+
+//Fixed sidebar
+// $(document).ready(function() {
+window.onload = function() {
+  const wrapper = $('.content');
+  const sidebarWrapperInner = $('.sidebar__wrapper-inner');
+  const sidebar = $('.sidebar__container');
+  const sidebarOffsetTop = sidebar.offset().top - 100;
+  const sidebarTopClass = 'sidebar-fixed__top';
+  const sidebarBottomClass = 'sidebar-fixed__bottom';
+  const footerHeight = $('.footer').height();
+  const headerHeight = $('.header').height();
+  const docHeight = $(document).height();
+  const screenHeight = $(window).outerHeight();
+
+  // console.log($(window).scrollTop(), 'scrollTop');
+  // console.log(window.scrollY, 'window.scrollY');
+  // console.log($(document).height(), 'document.height');
+  // console.log($(window).outerHeight(), 'window.outerHeight');
+  // console.log($(document).height() - (319 + $(window).outerHeight()), 'sum');
+
+  // if ($(window).scrollTop() > ($(document).height() - (319 + $(window).outerHeight()))) {
+  //   console.log('class bottom');
+  //   console.log($(window).scrollTop());
+  //   console.log(($(document).height() - (319 + $(window).outerHeight())));
+  //
+  //
+  //   wrapper.removeClass(sidebarTopClass);
+  //   wrapper.addClass(sidebarBottomClass);
+  //   sidebarWrapperInner.css({
+  //     height: $('.layout-sidebar__content').css('height')
+  //   });
+  //   console.log('in if logs')
+  //   console.log($(window).height(), 'window).height');
+  //   console.log(headerHeight, 'headerHeight');
+  //   console.log(docHeight, 'docHeight');
+  //   console.log($(window).scrollTop(), 'window).scrollTop');
+  //   console.log(footerHeight, 'footerHeight');
+  //   sidebar.css({
+  //     height: `calc(100vh - (190px + ${$(window).height() - headerHeight - (docHeight - $(window).scrollTop() - footerHeight)}px))`,
+  //     bottom: '25px'
+  //   });
+  // } else if (wrapper.hasClass(sidebarBottomClass) && $(window).scrollTop() < ($(document).height() - (319 + $(window).outerHeight()))) {
+  //   console.log('no class bottom');
+  //   wrapper.removeClass(sidebarBottomClass);
+  //   wrapper.addClass(sidebarTopClass);
+  //   sidebarWrapperInner.css({
+  //     height: 'calc(100vh - 130px)'
+  //   })
+  //   sidebar.css({
+  //     height: '',
+  //     bottom: 'auto'
+  //   });
+  // }
+  let bottomFixPoint = docHeight - (footerHeight + screenHeight);
+
+  if ($('.layout-sidebar__content').height() > screenHeight) {
+    console.log(123)
+    setFooterClass(screenHeight, bottomFixPoint, sidebar, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, headerHeight, footerHeight, docHeight)
+  } else {
+    console.log(3333)
+  }
+
+
+  setTopClass($(window).scrollTop(), sidebarOffsetTop, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, bottomFixPoint);
+
+  $(window).scroll(function() {
+    const scrolled = $(this).scrollTop();
+    // const footerHeightCalc = docHeight - scrolled - footerHeight;
+    bottomFixPoint = $(document).height() - (319 + $(window).outerHeight());
+
+
+    setTopClass(scrolled, sidebarOffsetTop, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, bottomFixPoint);
+
+    // if (scrolled > sidebarOffsetTop) {
+    //   wrapper.addClass(sidebarTopClass);
+    // } else if (scrolled < sidebarOffsetTop) {
+    //   wrapper.removeClass(sidebarTopClass);
+    //   sidebarWrapperInner.css({
+    //     height: `calc(100vh - (190px - ${scrolled}px))`
+    //   });
+    // }
+
+    // const bottomFixPoint = $(document).height() - (sidebarHeight + footerHeight + $(window).outerHeight());
+
+    if ($('.layout-sidebar__content').height() > screenHeight) {
+      setFooterClass(scrolled, bottomFixPoint, sidebar, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, headerHeight, footerHeight, docHeight);
+    }
+
+    // if (scrolled > bottomFixPoint) {
+    //   wrapper.removeClass(sidebarTopClass);
+    //   wrapper.addClass(sidebarBottomClass);
+    //   sidebarWrapperInner.css({
+    //     height: $('.layout-sidebar__content').css('height')
+    //   })
+    //   sidebar.css({
+    //     height: `calc(100vh - (190px + ${$(window).height() - headerHeight - footerHeightCalc}px))`,
+    //     bottom: '25px'
+    //   });
+    // } else if (wrapper.hasClass(sidebarBottomClass) && scrolled < bottomFixPoint) {
+    //   wrapper.removeClass(sidebarBottomClass);
+    //   wrapper.addClass(sidebarTopClass);
+    //   sidebarWrapperInner.css({
+    //     height: 'calc(100vh - 130px)'
+    //   })
+    //   sidebar.css({
+    //     height: '',
+    //     bottom: 'auto'
+    //   });
+    // }
+  });
+};
+
+function setTopClass(scrolled, sidebarOffsetTop, wrapper, classTop, classBottom, sidebarWrapper, bottomFixPoint) {
+  if (scrolled > sidebarOffsetTop && scrolled < bottomFixPoint) {
+    wrapper.addClass(classTop);
+    sidebarWrapper.css({
+      height: `calc(100vh - 130px)`
+    });
+  } else if (scrolled < sidebarOffsetTop || wrapper.hasClass(classBottom)) {
+    wrapper.removeClass(classTop);
+    sidebarWrapper.css({
+      height: `calc(100vh - (190px - ${scrolled}px))`
+    });
+  }
+}
+
+function setFooterClass(scrolled, bottomFixPoint, sidebar, wrapper, classTop, classBottom, sidebarWrapper, headerHeight, footerHeight, docHeight) {
+  const footerHeightCalc = docHeight - scrolled - footerHeight;
+
+  if (scrolled > bottomFixPoint) {
+    wrapper.removeClass(classTop);
+    wrapper.addClass(classBottom);
+    sidebarWrapper.css({
+      height: $('.layout-sidebar__content').css('height')
+    })
+    sidebar.css({
+      height: `calc(100vh - (190px + ${$(window).height() - headerHeight - footerHeightCalc}px))`,
+      bottom: '25px'
+    });
+  } else if (wrapper.hasClass(classBottom) && scrolled < bottomFixPoint) {
+    wrapper.removeClass(classBottom);
+    wrapper.addClass(classTop);
+    sidebarWrapper.css({
+      height: 'calc(100vh - 130px)'
+    })
+    sidebar.css({
+      height: '',
+      bottom: 'auto'
+    });
+  }
+}
