@@ -18,7 +18,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -61,25 +60,25 @@ type PublicStatusHandler struct {
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infoln("PublicStatus", r.RemoteAddr, r.RequestURI)
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%s not allowed, use GET\n", r.Method)
+		message := fmt.Sprintf("%s not allowed, use GET\n", r.Method)
+		fmt.Fprint(w, jsonError(message))
 		return
 	}
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
-		if errors.Is(err, ErrNoData) {
-			w.WriteHeader(http.StatusOK)
-			w.Header().Set("Content-Type", "application/json")
-			out, err := json.Marshal(map[string]string{"error": err.Error()})
-			if err != nil {
-				w.Write(out)
-				return
-			}
-		}
+		// if errors.Is(err, ErrNoData) {
+		// w.WriteHeader(http.StatusOK)
+		// } else {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Cannot get current status\n")
+		// }
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jsonError(err.Error()))
 		log.Errorln("Cannot get current status: %w", err)
 		return
 	}
@@ -90,12 +89,11 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
+		message := fmt.Sprintf("%d Error: %s\n", http.StatusInternalServerError, err)
+		fmt.Fprint(w, jsonError(message))
+		log.Errorln("Cannot marshal status summary to JSON: %w", err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	w.Write(out)
 }
@@ -226,4 +224,8 @@ func calculateTotalStatus(statuses []GroupStatus) PublicStatus {
 		return StatusDegraded
 	}
 	return StatusOperational
+}
+
+func jsonError(msg string) string {
+	return fmt.Sprintf(`{"error": %q}`, msg)
 }
