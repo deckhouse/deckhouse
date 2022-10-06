@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -62,15 +63,24 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%d GET is required\n", http.StatusMethodNotAllowed)
+		fmt.Fprintf(w, "%s is not allowed, use GET\n", http.StatusMethodNotAllowed, r.Method)
 		return
 	}
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
+		if errors.Is(err, ErrNoData) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			out, jsonerr := json.Marshal(map[string]string{"error": err.Error()})
+			if jsonerr != nil {
+				w.Write(out)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)
-		log.Errorln("Cannot get status: %w", err)
+		fmt.Fprintf(w, "Cannot get current status\n", http.StatusInternalServerError)
+		log.Errorln("Cannot get current status: %w", err)
 		return
 	}
 
@@ -127,7 +137,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 
 		summary, err := pickSummary(ref, resp.Statuses)
 		if err != nil {
-			log.Errorf("cannot parse status for group %s: %v", group, err)
+			log.Errorf("generating summary %s: %v", group, err)
 			return nil, StatusOutage, err
 		}
 
@@ -150,16 +160,18 @@ func threeStepRange(now time.Time) ranges.StepRange {
 	return ranges.NewStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
+var ErrNoData = fmt.Errorf("no data")
+
 // pickSummary makes assertions
 func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
 
 	if _, ok := statuses[g]; !ok {
-		return nil, fmt.Errorf("no status for group '%s'", g)
+		return nil, fmt.Errorf("%w for group '%s'", ErrNoData, g)
 	}
 	if _, ok := statuses[g][p]; !ok {
-		return nil, fmt.Errorf("no status for group '%s' probe '%s'", g, p)
+		return nil, fmt.Errorf("%s for probe '%s/%s'", ErrNoData, g, p)
 	}
 
 	episodeSummaries := statuses[g][p]
