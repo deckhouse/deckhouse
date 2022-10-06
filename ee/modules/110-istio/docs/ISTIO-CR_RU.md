@@ -57,8 +57,6 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 Позволяет определить стратегию MTLS в отдельном NS. Принимать или нет нешифрованные запросы. Каждый mTLS-запрос автоматически позволяет определить источник и использовать его в правилах авторизации.
 
-Для глобального включения mTLS используйте [параметр](configuration.html#параметры) `tlsMode`.
-
 ### RequestAuthentication
 
 [Reference](https://istio.io/latest/docs/reference/config/security/request_authentication/).
