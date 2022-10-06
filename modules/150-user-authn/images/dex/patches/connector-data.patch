@@ -1,0 +1,38 @@
+diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
+index ecfda137..af7bc019 100644
+--- a/server/refreshhandlers.go
++++ b/server/refreshhandlers.go
+@@ -245,7 +245,6 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+ 		Email:             rCtx.storageToken.Claims.Email,
+ 		EmailVerified:     rCtx.storageToken.Claims.EmailVerified,
+ 		Groups:            rCtx.storageToken.Claims.Groups,
+-		ConnectorData:     rCtx.connectorData,
+ 	}
+
+ 	refreshTokenUpdater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
+@@ -255,6 +254,7 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+ 		switch {
+ 		case !rotationEnabled && reusingAllowed:
+ 			// If rotation is disabled and the offline session was updated not so long ago - skip further actions.
++			old.ConnectorData = nil
+ 			return old, nil
+
+ 		case rotationEnabled && reusingAllowed:
+@@ -269,7 +269,7 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+
+ 			// Do not update last used time for offline session if token is allowed to be reused
+ 			lastUsed = old.LastUsed
+-			ident.ConnectorData = nil
++			old.ConnectorData = nil
+ 			return old, nil
+
+ 		case rotationEnabled && !reusingAllowed:
+@@ -286,7 +286,7 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+ 		old.LastUsed = lastUsed
+
+ 		// ConnectorData has been moved to OfflineSession
+-		old.ConnectorData = []byte{}
++		old.ConnectorData = nil
+
+ 		// Call  only once if there is a request which is not in the reuse interval.
+ 		// This is required to avoid multiple calls to the external IdP for concurrent requests.

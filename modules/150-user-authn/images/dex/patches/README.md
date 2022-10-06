@@ -18,3 +18,7 @@ This problem is not solved in upstream, and our patch will not be accepted.
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
 To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
+
+### Connector data patch
+
+There is a bug in Dex that it saves connector data to the refresh token object and reads it first then the date from offline session.
