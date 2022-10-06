@@ -63,7 +63,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%s is not allowed, use GET\n", http.StatusMethodNotAllowed, r.Method)
+		fmt.Fprintf(w, "%s not allowed, use GET\n", r.Method)
 		return
 	}
 
@@ -72,14 +72,14 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if errors.Is(err, ErrNoData) {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			out, jsonerr := json.Marshal(map[string]string{"error": err.Error()})
-			if jsonerr != nil {
+			out, err := json.Marshal(map[string]string{"error": err.Error()})
+			if err != nil {
 				w.Write(out)
 				return
 			}
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Cannot get current status\n", http.StatusInternalServerError)
+		fmt.Fprintf(w, "Cannot get current status\n")
 		log.Errorln("Cannot get current status: %w", err)
 		return
 	}
