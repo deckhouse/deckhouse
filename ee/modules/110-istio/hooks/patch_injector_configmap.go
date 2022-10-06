@@ -70,10 +70,9 @@ func applyInjectorConfigmapFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	if !ok {
 		return nil, nil
 	}
-	if gjson.Get(values, istioInjectorCPULimitPath).String() == "" {
+	if !gjson.Get(values, istioInjectorCPULimitPath).Exists() {
 		return nil, nil
 	}
-
 	return injectorConfigMap{
 		Name:   cm.Name,
 		Values: values,
