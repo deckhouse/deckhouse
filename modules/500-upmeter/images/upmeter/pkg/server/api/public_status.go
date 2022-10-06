@@ -76,7 +76,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
-			Status: "No data",
+			Status: "No data for last 15 min",
 		})
 		w.WriteHeader(http.StatusOK)
 		w.Write(out)

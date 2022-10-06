@@ -24,14 +24,11 @@
 			data = await fetchStatusJSON();
 			error = null;
 			pendingUpdateText = "";
-			console.log({ data });
 		} catch (e) {
 			console.error(e);
 			error = e;
 			pendingUpdateText = " (pending update...)";
-			console.log({ error });
 		}
-		console.log({ data, error });
 	}
 
 	// The update loop
