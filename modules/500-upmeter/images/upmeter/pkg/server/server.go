@@ -35,6 +35,7 @@ import (
 	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/probe/checker"
 	"d8.io/upmeter/pkg/registry"
 	"d8.io/upmeter/pkg/server/api"
 	"d8.io/upmeter/pkg/server/remotewrite"
@@ -224,7 +225,8 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 	}
-	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, noLogger)
+	dummyDoer := checker.NoopDoer{}
+	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, dummyDoer, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
 	return registry.NewProbeLister(runLoader, calcLoader)

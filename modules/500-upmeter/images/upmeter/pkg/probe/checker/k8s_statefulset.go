@@ -32,6 +32,7 @@ import (
 // StatefulSetPodLifecycle is a checker constructor and configurator
 type StatefulSetPodLifecycle struct {
 	Access    kubernetes.Access
+	Preflight Doer
 	Namespace string
 
 	AgentID string
@@ -43,8 +44,6 @@ type StatefulSetPodLifecycle struct {
 }
 
 func (c StatefulSetPodLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	stsName, podName := c.Name, c.Name+"-0"
 	sts := createStatefulSetObject(stsName, c.AgentID)
 
@@ -72,7 +71,7 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 	}
 
 	checker := &KubeControllerObjectLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 
 		parentGetter:  stsGetter,
 		parentCreator: stsCreator,

@@ -32,7 +32,8 @@ import (
 
 // CertificateSecretLifecycle is a checker constructor and configurator
 type CertificateSecretLifecycle struct {
-	Access kubernetes.Access
+	Access    kubernetes.Access
+	Preflight Doer
 
 	Namespace string
 	AgentID   string
@@ -44,8 +45,6 @@ type CertificateSecretLifecycle struct {
 }
 
 func (c CertificateSecretLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	certCreator := doWithTimeout(
@@ -70,7 +69,7 @@ func (c CertificateSecretLifecycle) Checker() check.Checker {
 	}
 
 	checker := &KubeControllerObjectLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 
 		parentGetter:  certGetter,
 		parentCreator: certCreator,

@@ -24,7 +24,7 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initControlPlane(access kubernetes.Access) []runnerConfig {
+func initControlPlane(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
 	const (
 		groupControlPlane = "control-plane"
 		namespace         = "d8-upmeter"
@@ -39,8 +39,8 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: 5 * time.Second,
 			config: checker.ControlPlaneAvailable{
-				Access:  access,
-				Timeout: cpTimeout,
+				VersionGetter: preflight,
+				Timeout:       cpTimeout,
 			},
 		}, {
 			group:  groupControlPlane,
@@ -49,6 +49,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			period: 5 * time.Second,
 			config: checker.ConfigMapLifecycle{
 				Access:    access,
+				Preflight: preflight,
 				Namespace: namespace,
 
 				AgentID: run.ID(),
@@ -77,6 +78,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			period: time.Minute,
 			config: checker.StatefulSetPodLifecycle{
 				Access:    access,
+				Preflight: preflight,
 				Namespace: namespace,
 
 				AgentID: run.ID(),
@@ -93,6 +95,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			period: time.Minute,
 			config: checker.PodScheduling{
 				Access:    access,
+				Preflight: preflight,
 				Namespace: namespace,
 
 				Node:  access.SchedulerProbeNode(),
@@ -112,6 +115,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			period: time.Minute,
 			config: checker.CertificateSecretLifecycle{
 				Access:    access,
+				Preflight: preflight,
 				Namespace: namespace,
 
 				AgentID: run.ID(),

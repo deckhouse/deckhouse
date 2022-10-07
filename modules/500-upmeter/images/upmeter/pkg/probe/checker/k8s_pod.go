@@ -58,8 +58,10 @@ type AtLeastOnePodReady struct {
 	Namespace     string
 	LabelSelector string
 
-	Timeout                   time.Duration
-	ControlPlaneAccessTimeout time.Duration
+	Timeout time.Duration
+
+	// PreflightChecker verifies preconditions before running the check
+	PreflightChecker check.Checker
 }
 
 func (c AtLeastOnePodReady) Checker() check.Checker {
@@ -70,7 +72,7 @@ func (c AtLeastOnePodReady) Checker() check.Checker {
 	}
 
 	return sequence(
-		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		c.PreflightChecker,
 		withTimeout(podsChecker, c.Timeout),
 	)
 }

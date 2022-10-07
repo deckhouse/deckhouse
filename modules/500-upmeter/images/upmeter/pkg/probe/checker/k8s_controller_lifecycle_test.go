@@ -29,14 +29,14 @@ import (
 
 func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 	type fields struct {
-		preflight doer
+		preflight Doer
 
-		parentGetter  doer
-		parentCreator doer
-		parentDeleter doer
+		parentGetter  Doer
+		parentCreator Doer
+		parentDeleter Doer
 
-		childGetter  doer
-		childDeleter doer
+		childGetter  Doer
+		childDeleter Doer
 	}
 	tests := []struct {
 		name   string
