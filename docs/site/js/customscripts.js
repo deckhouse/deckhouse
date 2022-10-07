@@ -212,153 +212,56 @@ $(document).ready(function(){
 });
 
 //Fixed sidebar
-// $(document).ready(function() {
 window.onload = function() {
-  const wrapper = $('.content');
   const sidebarWrapperInner = $('.sidebar__wrapper-inner');
   const sidebar = $('.sidebar__container');
   const sidebarOffsetTop = sidebar.offset().top - 100;
-  const sidebarTopClass = 'sidebar-fixed__top';
-  const sidebarBottomClass = 'sidebar-fixed__bottom';
   const footerHeight = $('.footer').height();
   const headerHeight = $('.header').height();
   const docHeight = $(document).height();
   const screenHeight = $(window).outerHeight();
-
-  // console.log($(window).scrollTop(), 'scrollTop');
-  // console.log(window.scrollY, 'window.scrollY');
-  // console.log($(document).height(), 'document.height');
-  // console.log($(window).outerHeight(), 'window.outerHeight');
-  // console.log($(document).height() - (319 + $(window).outerHeight()), 'sum');
-
-  // if ($(window).scrollTop() > ($(document).height() - (319 + $(window).outerHeight()))) {
-  //   console.log('class bottom');
-  //   console.log($(window).scrollTop());
-  //   console.log(($(document).height() - (319 + $(window).outerHeight())));
-  //
-  //
-  //   wrapper.removeClass(sidebarTopClass);
-  //   wrapper.addClass(sidebarBottomClass);
-  //   sidebarWrapperInner.css({
-  //     height: $('.layout-sidebar__content').css('height')
-  //   });
-  //   console.log('in if logs')
-  //   console.log($(window).height(), 'window).height');
-  //   console.log(headerHeight, 'headerHeight');
-  //   console.log(docHeight, 'docHeight');
-  //   console.log($(window).scrollTop(), 'window).scrollTop');
-  //   console.log(footerHeight, 'footerHeight');
-  //   sidebar.css({
-  //     height: `calc(100vh - (190px + ${$(window).height() - headerHeight - (docHeight - $(window).scrollTop() - footerHeight)}px))`,
-  //     bottom: '25px'
-  //   });
-  // } else if (wrapper.hasClass(sidebarBottomClass) && $(window).scrollTop() < ($(document).height() - (319 + $(window).outerHeight()))) {
-  //   console.log('no class bottom');
-  //   wrapper.removeClass(sidebarBottomClass);
-  //   wrapper.addClass(sidebarTopClass);
-  //   sidebarWrapperInner.css({
-  //     height: 'calc(100vh - 130px)'
-  //   })
-  //   sidebar.css({
-  //     height: '',
-  //     bottom: 'auto'
-  //   });
-  // }
   let bottomFixPoint = docHeight - (footerHeight + screenHeight);
 
-  if ($('.layout-sidebar__content').height() > screenHeight) {
-    console.log(123)
-    setFooterClass(screenHeight, bottomFixPoint, sidebar, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, headerHeight, footerHeight, docHeight)
+  if ($(window).scrollTop() > 120) {
+    sidebarWrapperInner.css({
+      top: `100px`,
+    });
   } else {
-    console.log(3333)
+    setTopOffset($(window).scrollTop(), sidebarOffsetTop, sidebarWrapperInner, headerHeight);
   }
 
-
-  setTopClass($(window).scrollTop(), sidebarOffsetTop, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, bottomFixPoint);
+  setFooterOffset($(window).scrollTop(), bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight);
 
   $(window).scroll(function() {
     const scrolled = $(this).scrollTop();
-    // const footerHeightCalc = docHeight - scrolled - footerHeight;
-    bottomFixPoint = $(document).height() - (319 + $(window).outerHeight());
+    bottomFixPoint = $(document).height() - (footerHeight + screenHeight);
 
+    setTopOffset(scrolled, sidebarOffsetTop, sidebarWrapperInner, headerHeight);
 
-    setTopClass(scrolled, sidebarOffsetTop, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, bottomFixPoint);
-
-    // if (scrolled > sidebarOffsetTop) {
-    //   wrapper.addClass(sidebarTopClass);
-    // } else if (scrolled < sidebarOffsetTop) {
-    //   wrapper.removeClass(sidebarTopClass);
-    //   sidebarWrapperInner.css({
-    //     height: `calc(100vh - (190px - ${scrolled}px))`
-    //   });
-    // }
-
-    // const bottomFixPoint = $(document).height() - (sidebarHeight + footerHeight + $(window).outerHeight());
-
-    if ($('.layout-sidebar__content').height() > screenHeight) {
-      setFooterClass(scrolled, bottomFixPoint, sidebar, wrapper, sidebarTopClass, sidebarBottomClass, sidebarWrapperInner, headerHeight, footerHeight, docHeight);
-    }
-
-    // if (scrolled > bottomFixPoint) {
-    //   wrapper.removeClass(sidebarTopClass);
-    //   wrapper.addClass(sidebarBottomClass);
-    //   sidebarWrapperInner.css({
-    //     height: $('.layout-sidebar__content').css('height')
-    //   })
-    //   sidebar.css({
-    //     height: `calc(100vh - (190px + ${$(window).height() - headerHeight - footerHeightCalc}px))`,
-    //     bottom: '25px'
-    //   });
-    // } else if (wrapper.hasClass(sidebarBottomClass) && scrolled < bottomFixPoint) {
-    //   wrapper.removeClass(sidebarBottomClass);
-    //   wrapper.addClass(sidebarTopClass);
-    //   sidebarWrapperInner.css({
-    //     height: 'calc(100vh - 130px)'
-    //   })
-    //   sidebar.css({
-    //     height: '',
-    //     bottom: 'auto'
-    //   });
-    // }
+    setFooterOffset(scrolled, bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight)
   });
 };
 
-function setTopClass(scrolled, sidebarOffsetTop, wrapper, classTop, classBottom, sidebarWrapper, bottomFixPoint) {
-  if (scrolled > sidebarOffsetTop && scrolled < bottomFixPoint) {
-    wrapper.addClass(classTop);
+function setTopOffset(scrolled, offsetTop, sidebarWrapper) {
+  if (scrolled > offsetTop) {
     sidebarWrapper.css({
-      height: `calc(100vh - 130px)`
+      top: `100px`,
     });
-  } else if (scrolled < sidebarOffsetTop || wrapper.hasClass(classBottom)) {
-    wrapper.removeClass(classTop);
+  } else if (scrolled < offsetTop && scrolled < 60) {
     sidebarWrapper.css({
-      height: `calc(100vh - (190px - ${scrolled}px))`
+      top: `${160 - scrolled}px`,
     });
   }
 }
 
-function setFooterClass(scrolled, bottomFixPoint, sidebar, wrapper, classTop, classBottom, sidebarWrapper, headerHeight, footerHeight, docHeight) {
-  const footerHeightCalc = docHeight - scrolled - footerHeight;
-
+function setFooterOffset(scrolled, bottomFixPoint, sidebarWrapper, screenHeight, footerHeight, docHeight) {
   if (scrolled > bottomFixPoint) {
-    wrapper.removeClass(classTop);
-    wrapper.addClass(classBottom);
     sidebarWrapper.css({
-      height: $('.layout-sidebar__content').css('height')
+      bottom: `${scrolled + screenHeight + footerHeight + 25 - docHeight}px`
     })
-    sidebar.css({
-      height: `calc(100vh - (190px + ${$(window).height() - headerHeight - footerHeightCalc}px))`,
-      bottom: '25px'
-    });
-  } else if (wrapper.hasClass(classBottom) && scrolled < bottomFixPoint) {
-    wrapper.removeClass(classBottom);
-    wrapper.addClass(classTop);
+  } else if (scrolled < bottomFixPoint) {
     sidebarWrapper.css({
-      height: 'calc(100vh - 130px)'
+      bottom: `25px`
     })
-    sidebar.css({
-      height: '',
-      bottom: 'auto'
-    });
   }
 }
