@@ -185,9 +185,7 @@ func Test_pollingPodNodeFetcher_Node(t *testing.T) {
 		timeout  time.Duration
 		interval time.Duration
 	}
-	type args struct {
-		ctx context.Context
-	}
+
 	tests := []struct {
 		name     string
 		fields   fields

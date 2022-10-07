@@ -67,9 +67,8 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 }
 
 type namespaceCreator struct {
-	access  kubernetes.Access
-	ns      *v1.Namespace
-	timeout time.Duration
+	access kubernetes.Access
+	ns     *v1.Namespace
 }
 
 func (c *namespaceCreator) Do(ctx context.Context) error {
