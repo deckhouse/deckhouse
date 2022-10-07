@@ -9981,13 +9981,13 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\"}, node)",
+          "query": "label_values(kube_pod_info{namespace=\"d8-ingress-nginx\", pod=~\"controller-.*\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 5,
         "tagValuesQuery": "",
         "tagsQuery": "",
         "type": "query",
