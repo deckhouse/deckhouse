@@ -341,7 +341,6 @@ ansible:
 
   - raw: rm -rf /var/cache/apk/*
 
-  setupCacheVersion: "9"
   setup:
   - name: "Migrate ee/fe internal packages imports"
     shell: |

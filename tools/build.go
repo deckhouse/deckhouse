@@ -234,10 +234,11 @@ func executeEdition(edition string) {
 	switch edition {
 	case "FE":
 		writeSections(writeSettings{
-			Edition: edition,
-			Prefix:  "ee/fe",
-			Dir:     "modules",
-			SaveTo:  modulesFileName,
+			Edition:           edition,
+			Prefix:            "ee/fe",
+			Dir:               "modules",
+			SaveTo:            modulesFileName,
+			StageDependencies: stageDependencies,
 		})
 		writeSections(writeSettings{
 			Edition:      edition,
@@ -261,10 +262,11 @@ func executeEdition(edition string) {
 		fallthrough
 	case "EE":
 		writeSections(writeSettings{
-			Edition: edition,
-			Prefix:  "ee",
-			Dir:     "modules",
-			SaveTo:  modulesFileName,
+			Edition:           edition,
+			Prefix:            "ee",
+			Dir:               "modules",
+			SaveTo:            modulesFileName,
+			StageDependencies: stageDependencies,
 		})
 		writeSections(writeSettings{
 			Edition:      edition,
