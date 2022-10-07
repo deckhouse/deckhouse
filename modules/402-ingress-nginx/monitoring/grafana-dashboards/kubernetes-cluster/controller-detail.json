@@ -459,7 +459,7 @@
           "yaxes": [
             {
               "format": "bps",
-              "label": "bytes / second",
+              "label": "bits / second",
               "logBase": 1,
               "max": null,
               "min": "0",
