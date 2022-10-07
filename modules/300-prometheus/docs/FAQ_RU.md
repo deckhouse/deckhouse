@@ -460,6 +460,6 @@ spec:
 ## Как увеличить размер диска
 
 1. Для увеличения размера отредактируйте PersistentVolumeClaim, указав новый размер в поле `spec.resources.requests.storage`.
-    * Увеличение размера возможно если в StorageClass поле `allowVolumeExpansion` установлено в `true`.
+   * Увеличение размера возможно если в StorageClass поле `allowVolumeExpansion` установлено в `true`.
 2. Если используемое хранилище не поддерживает изменение диска на лету, то в статусе PersistentVolumeClaim появится сообщение `Waiting for user to (re-)start a pod to finish file system resize of volume on node.`.
 3. Перезапустите Pod для завершения изменения размера файловой системы.
