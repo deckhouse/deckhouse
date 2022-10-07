@@ -100,10 +100,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -210,10 +210,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -320,10 +320,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n) by (pod, node)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -430,10 +430,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (pod, node) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -9223,6 +9223,20 @@
         "label": null,
         "name": "legend_format",
         "query": "{{controller}}",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "cadvisor_legend_format",
+        "query": "{{node}} ({{pod}})",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "cadvisor_by",
+        "query": "by (node, pod)",
         "skipUrlSync": false,
         "type": "constant"
       },
