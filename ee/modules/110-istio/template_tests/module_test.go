@@ -79,7 +79,6 @@ const istioValues = `
       externalAuthentication: {}
       password: qqq
     outboundTrafficPolicyMode: AllowAny
-    tlsMode: "Off"
     sidecar:
       includeOutboundIPRanges: ["10.0.0.0/24"]
       excludeOutboundIPRanges: ["1.2.3.4/32"]
@@ -111,11 +110,10 @@ const istioValues = `
 var _ = Describe("Module :: istio :: helm template :: main", func() {
 	f := SetupHelmConfig(``)
 
-	Context("tlsMode = Off, no federations or multiclusters", func() {
+	Context("no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSet("istio.tlsMode", "Off")
 			f.HelmRender()
 		})
 
@@ -126,16 +124,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
 
-			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
-			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
 			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
-
-			Expect(paDefault.Exists()).To(BeTrue())
-			Expect(paDefault.Field("spec.mtls.mode").String()).To(Equal(`PERMISSIVE`))
-
-			Expect(drDefault.Exists()).To(BeTrue())
-			Expect(drDefault.Field("spec.host").String()).To(Equal(`*.my.domain`))
-			Expect(drDefault.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`DISABLE`))
 
 			Expect(drApiserver.Exists()).To(BeTrue())
 			Expect(drApiserver.Field("spec.host").String()).To(Equal(`kubernetes.default.svc.my.domain`))
@@ -146,102 +135,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("Ingress", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
-
-			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("tlsMode = Mutual, no federations or multiclusters", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSet("istio.tlsMode", "Mutual")
-			f.HelmRender()
-		})
-
-		It("", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
-			Expect(mwh.Exists()).To(BeTrue())
-			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
-
-			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
-			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
-			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
-
-			Expect(paDefault.Exists()).To(BeTrue())
-			Expect(paDefault.Field("spec.mtls.mode").String()).To(Equal(`STRICT`))
-
-			Expect(drDefault.Exists()).To(BeTrue())
-			Expect(drDefault.Field("spec.host").String()).To(Equal(`*.my.domain`))
-			Expect(drDefault.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`ISTIO_MUTUAL`))
-
-			Expect(drApiserver.Exists()).To(BeTrue())
-			Expect(drApiserver.Field("spec.host").String()).To(Equal(`kubernetes.default.svc.my.domain`))
-			Expect(drApiserver.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`DISABLE`))
-
-			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Ingress", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
-
-			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("tlsMode = MutualPermissive, no federations or multiclusters", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSet("istio.tlsMode", "MutualPermissive")
-			f.HelmRender()
-		})
-
-		It("", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			mwh := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global")
-			Expect(mwh.Exists()).To(BeTrue())
-			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
-
-			paDefault := f.KubernetesResource("PeerAuthentication", "d8-istio", "default")
-			drDefault := f.KubernetesResource("DestinationRule", "d8-istio", "default")
-			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
-
-			Expect(paDefault.Exists()).To(BeTrue())
-			Expect(paDefault.Field("spec.mtls.mode").String()).To(Equal(`PERMISSIVE`))
-
-			Expect(drDefault.Exists()).To(BeFalse())
-
-			Expect(drApiserver.Exists()).To(BeTrue())
-			Expect(drApiserver.Field("spec.host").String()).To(Equal(`kubernetes.default.svc.my.domain`))
-			Expect(drApiserver.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`DISABLE`))
-
-			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Ingress", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeFalse())
 
@@ -263,7 +156,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1,v1x8x0alpha1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1,v1x8x0alpha1]`)
 			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `[foo,bar]`)
-			f.ValuesSet("istio.tlsMode", "Off")
 			f.HelmRender()
 		})
 
@@ -356,7 +248,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1]`)
 			f.ValuesSet("istio.federation.enabled", true)
-			f.ValuesSet("istio.tlsMode", "Off")
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: neighbour-0
   trustDomain: n.n0
@@ -432,7 +323,6 @@ neighbour-0:
 			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
 			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1]`)
 			f.ValuesSet("istio.multicluster.enabled", true)
-			f.ValuesSet("istio.tlsMode", "Off")
 			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
 			f.ValuesSetFromYaml("istio.internal.multiclusters", `
 - name: neighbour-0

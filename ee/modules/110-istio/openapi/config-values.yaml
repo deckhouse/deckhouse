@@ -14,17 +14,6 @@ properties:
     default: []
     items:
       type: string
-  tlsMode:
-    type: string
-    enum: ["Off", MutualPermissive, Mutual]
-    x-examples: ["Mutual"]
-    description: |
-      The mode for transparent encryption of inter-pod traffic ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
-      - `Off` — outgoing requests are not encrypted; incoming unencrypted requests are accepted.
-      - `MutualPermissive` — outgoing requests are encrypted; incoming unencrypted requests are accepted. This mode is useful when migrating to mTLS.
-      - `Mutual` — outgoing requests are encrypted; incoming unencrypted requests are rejected (pods accept only encrypted requests).
-      You can manage the mTLS mode separately for each application and for its client connections using the [AuthorizationPolicy](istio-cr.html#authorizationpolicy) and [DestinationRule](istio-cr.html#destinationrule) resources.
-    default: "MutualPermissive"
   outboundTrafficPolicyMode:
     type: string
     enum: [AllowAny, RegistryOnly]

@@ -35,11 +35,6 @@ Mutual TLS is the main method of mutual service authentication. It is based on t
 
 Each service gets its own identifier of the following format: `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>` where `TrustDomain` is the cluster domain in our case. You can assign your own ServiceAccount to each service or use the regular “default” one. The service ID can be used for authorization and other purposes. This is the identifier used as a name to validate against in TLS certificates.
 
-Each cluster has a [global configuration of Mutual TLS](configuration.html#parameters-tlsmode) that includes several operating modes:
-* `Off` — Mutual TLS is disabled.
-* `MutualPermissive` — A service can accept both plain text and mutual TLS traffic. Outgoing service connections managed by Istio are encrypted.
-* `Mutual` — Both incoming and outgoing connections are established in encrypted form only.
-
 You can redefine this settings at the Namespace level.
 
 ## Authorization
