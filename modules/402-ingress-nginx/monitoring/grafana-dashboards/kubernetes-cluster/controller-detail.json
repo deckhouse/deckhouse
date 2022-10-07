@@ -799,10 +799,10 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $protobuf_by",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$legend_format",
+          "legendFormat": "$protobuf_legend_format",
           "refId": "A",
           "step": 10
         }
@@ -911,10 +911,10 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $protobuf_by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$legend_format",
+          "legendFormat": "$protobuf_legend_format",
           "refId": "A",
           "step": 10
         }
