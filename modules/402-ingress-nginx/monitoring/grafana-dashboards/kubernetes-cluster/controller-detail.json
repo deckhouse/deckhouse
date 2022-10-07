@@ -557,10 +557,10 @@
               "step": 10
             },
             {
-              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "A",
               "step": 10
             }
@@ -669,10 +669,10 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
+              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "A",
               "step": 10
             }
