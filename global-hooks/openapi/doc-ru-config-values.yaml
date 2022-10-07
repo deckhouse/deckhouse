@@ -18,7 +18,6 @@ properties:
         description: |
           Класс Ingress-контроллера ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
       publicDomainTemplate:
-        # only check that is containing %s
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
 
