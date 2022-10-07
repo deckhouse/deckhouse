@@ -66,6 +66,7 @@ steps:
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
 {!{- end }!}
+      WERF_BUILDAH_MODE: native-chroot
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
