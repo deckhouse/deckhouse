@@ -194,18 +194,32 @@
 
 .layout-sidebar {
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
     justify-content: flex-start;
 }
 
 .layout-sidebar__sidebar {
     width: 260px;
     margin-right: 40px;
+    display: block;
+}
+
+.sidebar__wrapper-inner {
+  position: fixed;
+  width: 260px;
+  top: 100px;
+  bottom: 25px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar__container {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .layout-sidebar__content {
     width: calc(1000px - 260px - 40px);
+    flex: 1;
     @media (min-width: 1441px) {
         width: calc(1400px - 260px - 40px);
     }
@@ -219,6 +233,9 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
 .sidebar__item {
