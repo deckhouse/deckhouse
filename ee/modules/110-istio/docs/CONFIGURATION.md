@@ -11,7 +11,7 @@ data:
 
 ## Authentication
 
-[user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](../150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
 If these options are disabled, the module will use basic auth with the auto-generated password.
 
 Use kubectl to see password:
@@ -26,7 +26,7 @@ Delete secret to re-generate password:
 kubectl -n d8-istio delete secret/kiali-basic-auth
 ```
 
-**Note:** auth.password parameter is deprecated.
+> **Note!** The `auth.password` parameter is deprecated.
 
 ## Parameters
 
