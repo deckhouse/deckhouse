@@ -18,6 +18,7 @@ package checker
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -39,8 +40,9 @@ func (c ControlPlaneAvailable) Checker() check.Checker {
 type k8sVersionGetter struct {
 	access   kubernetes.Access
 	err      error
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	interval time.Duration
+	called   bool
 }
 
 func NewK8sVersionGetter(access kubernetes.Access, interval time.Duration) *k8sVersionGetter {
@@ -51,6 +53,13 @@ func NewK8sVersionGetter(access kubernetes.Access, interval time.Duration) *k8sV
 }
 
 func (c *k8sVersionGetter) Do(_ context.Context) error {
+	if c.called {
+		c.mu.RLock()
+		defer c.mu.RUnlock()
+		return c.err
+	}
+	c.fetch() // first run
+	c.called = true
 	return c.err
 }
 
@@ -59,14 +68,24 @@ func (c *k8sVersionGetter) Start() {
 
 	go func() {
 		for range ticker.C {
-			_, err := c.access.Kubernetes().Discovery().ServerVersion()
-			if c.err == err {
-				continue
-			}
-
-			c.mu.Lock()
-			c.err = err
-			c.mu.Unlock()
+			c.fetch()
 		}
 	}()
+}
+
+func (c *k8sVersionGetter) fetch() {
+	_, err := c.access.Kubernetes().Discovery().ServerVersion()
+
+	c.mu.RLock()
+	prevErr := c.err
+	c.mu.RUnlock()
+
+	if errors.Is(prevErr, err) {
+		// The error did not change, no need to block
+		return
+	}
+
+	c.mu.Lock()
+	c.err = err
+	c.mu.Unlock()
 }

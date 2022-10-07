@@ -100,7 +100,7 @@ func (a *Agent) Start(ctx context.Context) error {
 
 	// The interval is chosen as the smallest period among probes consuming this preflight check.
 	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, time.Second)
-
+	controlPlanePreflight.Start()
 	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
