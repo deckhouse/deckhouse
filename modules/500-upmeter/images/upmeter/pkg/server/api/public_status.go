@@ -60,33 +60,34 @@ type PublicStatusHandler struct {
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infoln("PublicStatus", r.RemoteAddr, r.RequestURI)
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%d GET is required\n", http.StatusMethodNotAllowed)
+		message := fmt.Sprintf("%s not allowed, use GET\n", r.Method)
+		fmt.Fprint(w, jsonError(message))
 		return
 	}
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)
-		log.Errorln("Cannot get status: %w", err)
+		log.Errorf("Cannot get current status: %v\n", err)
+		// Skipping the error because the JSON structure is defined in advance.
+		out, _ := json.Marshal(&PublicStatusResponse{
+			Rows:   []GroupStatus{},
+			Status: "No data for last 15 min",
+		})
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
 		return
 	}
 
-	out, err := json.Marshal(&PublicStatusResponse{
+	// Skipping the error because the JSON structure is defined in advance.
+	out, _ := json.Marshal(&PublicStatusResponse{
 		Rows:   statuses,
 		Status: status,
 	})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	w.Write(out)
 }
 
@@ -106,7 +107,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	}
 
 	groups := h.ProbeLister.Groups()
-	groupStatuses := make([]GroupStatus, 0)
+	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
 		ref := check.ProbeRef{
 			Group: group,
@@ -127,7 +128,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 
 		summary, err := pickSummary(ref, resp.Statuses)
 		if err != nil {
-			log.Errorf("cannot parse status for group %s: %v", group, err)
+			log.Errorf("generating summary %s: %v", group, err)
 			return nil, StatusOutage, err
 		}
 
@@ -150,22 +151,24 @@ func threeStepRange(now time.Time) ranges.StepRange {
 	return ranges.NewStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
+var ErrNoData = fmt.Errorf("no data")
+
 // pickSummary makes assertions
 func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
 
 	if _, ok := statuses[g]; !ok {
-		return nil, fmt.Errorf("no status for group '%s'", g)
+		return nil, fmt.Errorf("%w for group '%s'", ErrNoData, g)
 	}
 	if _, ok := statuses[g][p]; !ok {
-		return nil, fmt.Errorf("no status for group '%s' probe '%s'", g, p)
+		return nil, fmt.Errorf("%s for probe '%s/%s'", ErrNoData, g, p)
 	}
 
 	episodeSummaries := statuses[g][p]
 	n := len(episodeSummaries) - 1 // ignore summary column in the end
 	if n != 3 {
-		return nil, fmt.Errorf("bad results count %d for group '%s' probe '%s'", n, g, p)
+		return nil, fmt.Errorf("unexpected count %d!=3 for probe '%s/%s'", n, g, p)
 	}
 
 	return episodeSummaries[:3], nil
@@ -214,4 +217,8 @@ func calculateTotalStatus(statuses []GroupStatus) PublicStatus {
 		return StatusDegraded
 	}
 	return StatusOperational
+}
+
+func jsonError(msg string) string {
+	return fmt.Sprintf(`{"error": %q}`, msg)
 }
