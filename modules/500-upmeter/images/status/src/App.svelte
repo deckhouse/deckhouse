@@ -42,16 +42,16 @@
 <Container style="width: 600px">
 	<Row class="mt-5 align-items-end">
 		<Col>
-			<h1 class="display-4">Status</h1>
+			<h1 class="display-4 m-0">Status</h1>
 		</Col>
 		<Col class="text-end">
-			<h2 class="display-4 fw-light">
+			<h4 class="fw-normal text-muted">
 				{#if data == null && error == null}
 					Wait a second...
-				{:else if data != null}
-					<StatusText status={data.status} text={data.status + pendingUpdateText} mute={error != null} />
+				{:else}
+					<StatusText status={data.status} text={data.status + pendingUpdateText} />
 				{/if}
-			</h2>
+			</h4>
 		</Col>
 	</Row>
 
