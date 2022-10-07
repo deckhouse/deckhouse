@@ -63,7 +63,8 @@ func initControlPlane(access kubernetes.Access, preflight checker.Doer) []runner
 			check:  "_",
 			period: time.Minute,
 			config: checker.NamespaceLifecycle{
-				Access: access,
+				Access:    access,
+				Preflight: preflight,
 
 				AgentID: run.ID(),
 				Name:    run.StaticIdentifier("upmeter-probe-namespace"),

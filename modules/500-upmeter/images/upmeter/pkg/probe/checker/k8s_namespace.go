@@ -31,7 +31,7 @@ import (
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
 	Access    kubernetes.Access
-	preflight Doer
+	Preflight Doer
 
 	AgentID string
 	Name    string
@@ -57,7 +57,7 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 	)
 
 	checker := &KubeObjectBasicLifecycle{
-		preflight: c.preflight,
+		preflight: c.Preflight,
 		creator:   creator,
 		getter:    getter,
 		deleter:   deleter,
