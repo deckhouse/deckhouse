@@ -100,7 +100,7 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) by (node, pod)",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $by)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -9875,7 +9875,7 @@
         "hide": 2,
         "label": null,
         "name": "by",
-        "query": "by (node, app)",
+        "query": "by (node, pod)",
         "skipUrlSync": false,
         "type": "constant"
       },
@@ -9885,7 +9885,7 @@
         "hide": 2,
         "label": null,
         "name": "legend_format",
-        "query": "{{node}} ({{app}})",
+        "query": "{{node}} ({{pod}})",
         "skipUrlSync": false,
         "type": "constant"
       },
@@ -9916,6 +9916,20 @@
         "label": null,
         "name": "alt_legend_format",
         "query": "{{namespace}}/{{ingress}}",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "protobuf_legend_format",
+        "query": "{{node}} ({{controller_pod}})",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "protobuf_by",
+        "query": "by (node, controller_pod)",
         "skipUrlSync": false,
         "type": "constant"
       },
