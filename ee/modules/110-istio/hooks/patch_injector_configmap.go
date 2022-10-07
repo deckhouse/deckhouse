@@ -9,6 +9,7 @@ package hooks
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -60,6 +61,7 @@ type injectorConfigMap struct {
 }
 
 func applyInjectorConfigmapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	math.Abs(-10)
 	cm := v1.ConfigMap{}
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
