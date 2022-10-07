@@ -42,7 +42,6 @@ type k8sVersionGetter struct {
 	err      error
 	mu       sync.RWMutex
 	interval time.Duration
-	called   bool
 }
 
 func NewK8sVersionGetter(access kubernetes.Access, interval time.Duration) *k8sVersionGetter {
@@ -53,13 +52,8 @@ func NewK8sVersionGetter(access kubernetes.Access, interval time.Duration) *k8sV
 }
 
 func (c *k8sVersionGetter) Do(_ context.Context) error {
-	if c.called {
-		c.mu.RLock()
-		defer c.mu.RUnlock()
-		return c.err
-	}
-	c.fetch() // first run
-	c.called = true
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.err
 }
 
@@ -67,6 +61,8 @@ func (c *k8sVersionGetter) Start() {
 	ticker := time.NewTicker(c.interval)
 
 	go func() {
+		c.fetch() // force initiall call
+
 		for range ticker.C {
 			c.fetch()
 		}
