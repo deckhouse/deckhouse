@@ -33,7 +33,7 @@ Delete secret to re-generate password for status page:
 kubectl -n d8-upmeter delete secret/basic-auth-status
 ```
 
-**Note:** auth.status.password and auth.webui.password parameters are deprecated.
+> **Note!** `auth.status.password` and `auth.webui.password` parameters are deprecated.
 
 ## Parameters
 

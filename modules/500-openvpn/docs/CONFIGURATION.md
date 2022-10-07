@@ -26,7 +26,7 @@ Delete secret to re-generate password:
 kubectl -n d8-openvpn delete secret/basic-auth
 ```
 
-**Note:** auth.password parameter is deprecated.
+> **Note!** The `auth.password` parameter is deprecated.
 
 ## Parameters
 

@@ -33,7 +33,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values
 kubectl -n d8-upmeter delete secret/basic-auth-status
 ```
 
-**Внимание:** параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
+> **Внимание!** Параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
 
 ## Параметры
 

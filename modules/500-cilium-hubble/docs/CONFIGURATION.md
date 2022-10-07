@@ -29,7 +29,7 @@ Delete secret to re-generate password:
 kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 ```
 
-**Note:** auth.password parameter is deprecated.
+> **Note!** The `auth.password` parameter is deprecated.
 
 ## Parameters
 

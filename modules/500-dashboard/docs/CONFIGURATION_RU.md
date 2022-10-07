@@ -21,7 +21,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values
 kubectl -n d8-dashboard delete secret/basic-auth
 ```
 
-**Внимание:** параметр `auth.password` больше не поддерживается.
+> **Внимание!** Параметр `auth.password` больше не поддерживается.
 
 ## Параметры
 

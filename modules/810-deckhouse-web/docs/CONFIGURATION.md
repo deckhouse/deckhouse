@@ -21,7 +21,7 @@ Delete secret to re-generate password:
 kubectl -n d8-system delete secret/deckhouse-web-basic-auth
 ```
 
-**Note:** auth.password parameter is deprecated.
+> **Note!** The `auth.password` parameter is deprecated.
 
 ## Parameters
 
