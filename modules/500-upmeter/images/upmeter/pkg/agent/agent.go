@@ -98,9 +98,12 @@ func (a *Agent) Start(ctx context.Context) error {
 		return fmt.Errorf("starting node monitor: %v", err)
 	}
 
-	// The interval is chosen as the smallest period among probes consuming this preflight check.
-	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, time.Second)
+	// The preflight interval is chosen as the smallest period among probe runs which use the
+	// preflight check.
+	preflightInterval := 5 * time.Second
+	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, preflightInterval)
 	controlPlanePreflight.Start()
+
 	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
