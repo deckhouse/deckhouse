@@ -1,0 +1,18 @@
+- name: admission-policy-engine.audit
+  rules:
+    - alert: PodSecurityStandardsViolation
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",violating_kind="Pod",violating_namespace=~".*",kind=~"D8PSS.*"})) > 0
+      for: 10m
+      labels:
+        severity_level: "7"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: At least one pod violates configured cluster pod security standards.
+        description: |-
+          You have configured pod security standards (https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+
+          You can find already Running pods which are violate standards by running `count by (violating_namespace, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny", violating_namespace=~".*",violating_kind="Pod",kind=~"D8PSS.*"})`
+          prometheus query or via the Admission policy engine grafana dashboard.

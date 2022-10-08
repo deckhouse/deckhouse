@@ -1,0 +1,15 @@
+type: object
+properties:
+  podSecurityStandards:
+    description: "настройки Pod Security Standards."
+    properties:
+      enforcementAction:
+        description: "Действие, которое будет выполнено по результатам проверки ограничений."
+      policies:
+        properties:
+          hostPorts:
+            description: "настройки ограничения HostPort."
+            properties:
+              knownRanges:
+                description: "Установить диапазон известных портов, которые будут разрешены в привязке hostPort."
+

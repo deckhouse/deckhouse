@@ -1,0 +1,34 @@
+type: object
+properties:
+  podSecurityStandards:
+    type: object
+    default: {}
+    description: "Pod Security Standards settings."
+    properties:
+      enforcementAction:
+        type: string
+        default: "Deny"
+        description: "Enforcement action which will control what to do with the result of a constraint."
+        enum:
+          - Warn
+          - Deny
+          - Dryrun
+      policies:
+        type: object
+        properties:
+          hostPorts:
+            type: object
+            default: {}
+            description: "HostPort constraint settings."
+            properties:
+              knownRanges:
+                type: array
+                description: "Set the range of known ports which will be allowed in a hostPort binding."
+                items:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+
