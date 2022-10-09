@@ -63,7 +63,7 @@ func providerClusterConfigurationMigration(input *go_hook.HookInput, dc dependen
 	}
 
 	if _, ok := config["standard"]; !ok {
-		input.LogEntry.Info("paramaters for layout Standard not found, migration is not needed")
+		input.LogEntry.Info("parameters for layout Standard not found, migration is not needed")
 		return nil
 	}
 
