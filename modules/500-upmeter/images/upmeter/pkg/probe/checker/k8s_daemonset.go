@@ -48,8 +48,8 @@ type DaemonSetPodsReady struct {
 	PodCreationTimeout time.Duration
 	PodDeletionTimeout time.Duration
 
-	// ControlPlaneAccessTimeout is the timeout to verify apiserver availability
-	ControlPlaneAccessTimeout time.Duration
+	// PreflightChecker verifies preconditions before running the check
+	PreflightChecker check.Checker
 }
 
 func (c DaemonSetPodsReady) Checker() check.Checker {
@@ -68,7 +68,7 @@ func (c DaemonSetPodsReady) Checker() check.Checker {
 	}
 
 	return sequence(
-		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		c.PreflightChecker,
 		withTimeout(dsChecker, c.RequestTimeout),
 	)
 }
@@ -216,8 +216,8 @@ func isNodeReady(node *v1.Node) bool {
 
 // isTolerated checks if the given tolerations tolerates all taints
 //
-//      Copied from https://github.com/kubernetes/component-helpers/blob/v0.21.0/scheduling/corev1/helpers.go
-//      It is not imported since k8s dependencies versions would require to rise to at least 0.20.
+//	Copied from https://github.com/kubernetes/component-helpers/blob/v0.21.0/scheduling/corev1/helpers.go
+//	It is not imported since k8s dependencies versions would require to rise to at least 0.20.
 func isTolerated(taints []v1.Taint, tolerations []v1.Toleration) bool {
 	for _, taint := range taints {
 		if !tolerationsTolerateTaint(tolerations, &taint) {
@@ -229,8 +229,8 @@ func isTolerated(taints []v1.Taint, tolerations []v1.Toleration) bool {
 
 // tolerationsTolerateTaint checks if taint is tolerated by any of the tolerations.
 //
-//      Copied from https://github.com/kubernetes/component-helpers/blob/v0.21.0/scheduling/corev1/helpers.go
-//      It is not imported since k8s dependencies versions would require to rise to at least 0.20.
+//	Copied from https://github.com/kubernetes/component-helpers/blob/v0.21.0/scheduling/corev1/helpers.go
+//	It is not imported since k8s dependencies versions would require to rise to at least 0.20.
 func tolerationsTolerateTaint(tolerations []v1.Toleration, taint *v1.Taint) bool {
 	for i := range tolerations {
 		if tolerations[i].ToleratesTaint(taint) {

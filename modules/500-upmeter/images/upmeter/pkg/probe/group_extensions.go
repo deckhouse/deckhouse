@@ -23,11 +23,13 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initExtensions(access kubernetes.Access) []runnerConfig {
+func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
 	const (
-		groupExtensions = "extensions"
-		cpTimeout       = 5 * time.Second
+		groupExtensions     = "extensions"
+		controlPlaneTimeout = 5 * time.Second
 	)
+
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
 		{
@@ -36,11 +38,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "bashible-apiserver",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-cloud-instance-manager",
-				LabelSelector:             "app=bashible-apiserver",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-cloud-instance-manager",
+				LabelSelector:    "app=bashible-apiserver",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -48,11 +50,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "machine-controller-manager",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-cloud-instance-manager",
-				LabelSelector:             "app=machine-controller-manager",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-cloud-instance-manager",
+				LabelSelector:    "app=machine-controller-manager",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -60,11 +62,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "cloud-controller-manager",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 access.CloudControllerManagerNamespace(),
-				LabelSelector:             "app=cloud-controller-manager",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        access.CloudControllerManagerNamespace(),
+				LabelSelector:    "app=cloud-controller-manager",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -72,11 +74,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "cluster-autoscaler",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-cloud-instance-manager",
-				LabelSelector:             "app=cluster-autoscaler",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-cloud-instance-manager",
+				LabelSelector:    "app=cluster-autoscaler",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -84,11 +86,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "app=grafana",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "app=grafana",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -96,11 +98,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-openvpn",
-				LabelSelector:             "app=openvpn",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-openvpn",
+				LabelSelector:    "app=openvpn",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -108,11 +110,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "prometheus=longterm",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "prometheus=longterm",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -130,11 +132,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-dashboard",
-				LabelSelector:             "app=dashboard",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-dashboard",
+				LabelSelector:    "app=dashboard",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,
@@ -142,11 +144,11 @@ func initExtensions(access kubernetes.Access) []runnerConfig {
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-user-authn",
-				LabelSelector:             "app=dex",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-user-authn",
+				LabelSelector:    "app=dex",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupExtensions,

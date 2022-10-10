@@ -29,10 +29,10 @@ import (
 
 func TestPodSchedulingChecker_Check(t *testing.T) {
 	type fields struct {
-		preflight   doer
-		getter      doer
-		creator     doer
-		deleter     doer
+		preflight   Doer
+		getter      Doer
+		creator     Doer
+		deleter     Doer
 		nodeFetcher nodeNameFetcher
 		node        string
 	}
@@ -185,9 +185,7 @@ func Test_pollingPodNodeFetcher_Node(t *testing.T) {
 		timeout  time.Duration
 		interval time.Duration
 	}
-	type args struct {
-		ctx context.Context
-	}
+
 	tests := []struct {
 		name     string
 		fields   fields

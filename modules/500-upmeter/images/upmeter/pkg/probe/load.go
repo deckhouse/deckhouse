@@ -29,13 +29,21 @@ import (
 	"d8.io/upmeter/pkg/set"
 )
 
-func NewLoader(filter Filter, access kubernetes.Access, nodeLister node.Lister, dynamic DynamicConfig, logger *logrus.Logger) *Loader {
+func NewLoader(
+	filter Filter,
+	access kubernetes.Access,
+	nodeLister node.Lister,
+	dynamic DynamicConfig,
+	preflight checker.Doer,
+	logger *logrus.Logger,
+) *Loader {
 	return &Loader{
 		filter:     filter,
 		access:     access,
-		logger:     logger,
 		dynamic:    dynamic,
 		nodeLister: nodeLister,
+		preflight:  preflight,
+		logger:     logger,
 	}
 }
 
@@ -45,6 +53,7 @@ type Loader struct {
 	logger     *logrus.Logger
 	dynamic    DynamicConfig
 	nodeLister node.Lister
+	preflight  checker.Doer
 
 	// inner state
 
@@ -131,13 +140,13 @@ func (l *Loader) collectConfigs() []runnerConfig {
 
 	l.configs = make([]runnerConfig, 0)
 	l.configs = append(l.configs, initSynthetic(l.access, l.logger)...)
-	l.configs = append(l.configs, initControlPlane(l.access)...)
-	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access, l.nodeLister)...)
-	l.configs = append(l.configs, initExtensions(l.access)...)
-	l.configs = append(l.configs, initLoadBalancing(l.access)...)
-	l.configs = append(l.configs, initDeckhouse(l.access, l.logger)...)
-	l.configs = append(l.configs, initNginx(l.access, l.dynamic.IngressNginxControllers)...)
-	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.dynamic.NodeGroups, l.dynamic.Zones)...)
+	l.configs = append(l.configs, initControlPlane(l.access, l.preflight)...)
+	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access, l.nodeLister, l.preflight)...)
+	l.configs = append(l.configs, initExtensions(l.access, l.preflight)...)
+	l.configs = append(l.configs, initLoadBalancing(l.access, l.preflight)...)
+	l.configs = append(l.configs, initDeckhouse(l.access, l.preflight, l.logger)...)
+	l.configs = append(l.configs, initNginx(l.access, l.preflight, l.dynamic.IngressNginxControllers)...)
+	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.preflight, l.dynamic.NodeGroups, l.dynamic.Zones)...)
 
 	return l.configs
 }
