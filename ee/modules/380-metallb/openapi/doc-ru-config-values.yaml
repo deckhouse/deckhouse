@@ -2,12 +2,12 @@ type: object
 properties:
   nodeSelector:
     description: |
-      Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` Pod'ов Kubernetes.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod для главного контроллера.
+      Структура, аналогичная параметру `spec.tolerations` Pod'ов Kubernetes для главного контроллера.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   speaker:
@@ -16,12 +16,12 @@ properties:
     properties:
       nodeSelector:
         description: |
-          Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+          Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная параметру `spec.nodeSelector` Pod'ов Kubernetes.
 
           Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
         description: |
-          Структура, аналогичная  `spec.tolerations` в Kubernetes Pod для DaemonSet speaker.
+          Структура, аналогичная параметру `spec.tolerations` Pod'ов Kubernetes для DaemonSet'а speaker.
 
           Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   bgpPeers:
@@ -29,7 +29,7 @@ properties:
       Список внешних BGP-роутеров, которые будут работать с этим модулем.
 
       Формат — массив [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
-      Если используется только протокол публикации сервисов `layer2`, то параметр — необязательный.
+      Необязательный параметр, если используется только протокол публикации сервисов `layer2`.
     items:
       properties:
         peer-address:
@@ -48,7 +48,7 @@ properties:
           description: |
             Таймаут, после которого партнёрский BGP-пир считается утерянным. Это значение делится на 3 и получается интервал для keep-alive.
 
-            Рекомендуемое значение — `3s` (keep-alive раз в секунду), протокол BGP не поддерживает значения меньше.
+            Рекомендуемое значение — `3s` (keep-alive раз в секунду), протокол BGP не поддерживает меньшие значения.
             По умолчанию — `90s` (keep-alive раз в 30 секунд).
         node-selector:
           description: |
@@ -71,4 +71,4 @@ properties:
             Технология публикации сервисов, которую должен реализовать speaker.
         addresses:
           description: |
-            Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон через "-".
+            Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон значений с "-" в качестве разделителя.
