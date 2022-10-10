@@ -24,11 +24,13 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.Lister) []runnerConfig {
+func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer) []runnerConfig {
 	const (
 		groupMonitoringAndAutoscaling = "monitoring-and-autoscaling"
-		cpTimeout                     = 5 * time.Second
+		controlPlaneTimeout           = 5 * time.Second
 	)
+
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
 		{
@@ -37,11 +39,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "prometheus=main",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "prometheus=main",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -59,11 +61,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "app=trickster",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "app=trickster",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -81,11 +83,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "pod",
 			period: 5 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "app=prometheus-metrics-adapter",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "app=prometheus-metrics-adapter",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -103,11 +105,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "vpa-updater",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "kube-system",
-				LabelSelector:             "app=vpa-updater",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "kube-system",
+				LabelSelector:    "app=vpa-updater",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -115,11 +117,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "vpa-recommender",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "kube-system",
-				LabelSelector:             "app=vpa-recommender",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "kube-system",
+				LabelSelector:    "app=vpa-recommender",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -127,11 +129,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "vpa-admission-controller",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "kube-system",
-				LabelSelector:             "app=vpa-admission-controller",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "kube-system",
+				LabelSelector:    "app=vpa-admission-controller",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -139,14 +141,14 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "node-exporter",
 			period: 10 * time.Second,
 			config: checker.DaemonSetPodsReady{
-				Access:                    access,
-				NodeLister:                nodeLister,
-				Namespace:                 "d8-monitoring",
-				Name:                      "node-exporter",
-				RequestTimeout:            5 * time.Second,
-				PodCreationTimeout:        time.Minute,
-				PodDeletionTimeout:        5 * time.Second,
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:             access,
+				NodeLister:         nodeLister,
+				Namespace:          "d8-monitoring",
+				Name:               "node-exporter",
+				RequestTimeout:     5 * time.Second,
+				PodCreationTimeout: time.Minute,
+				PodDeletionTimeout: 5 * time.Second,
+				PreflightChecker:   controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
@@ -154,11 +156,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			check:  "kube-state-metrics",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-monitoring",
-				LabelSelector:             "app=kube-state-metrics",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-monitoring",
+				LabelSelector:    "app=kube-state-metrics",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,

@@ -21,28 +21,38 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
+	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, nodeGroupNames, knownZones []string) []runnerConfig {
+func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer, nodeGroupNames, knownZones []string) []runnerConfig {
 	const (
-		groupNodeGroups = "nodegroups"
-		cpTimeout       = 5 * time.Second
+		groupNodeGroups     = "nodegroups"
+		controlPlaneTimeout = 5 * time.Second
 	)
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	configs := []runnerConfig{}
 
 	for _, ngName := range nodeGroupNames {
 		configs = append(configs,
-			nodeGroupChecker(access, nodeLister, groupNodeGroups, cpTimeout, ngName, knownZones),
+			nodeGroupChecker(access, nodeLister, groupNodeGroups, controlPlanePinger, controlPlaneTimeout, ngName, knownZones),
 		)
 	}
 	return configs
 }
 
-func nodeGroupChecker(access kubernetes.Access, nodeLister node.Lister, group string, cpTimeout time.Duration, ngName string, zones []string) runnerConfig {
+func nodeGroupChecker(
+	access kubernetes.Access,
+	nodeLister node.Lister,
+	group string,
+	controlPlanePinger check.Checker,
+	controlPlaneTimeout time.Duration,
+	ngName string,
+	zones []string,
+) runnerConfig {
 	ngLister := &nodeGroupLister{
 		name:     ngName,
 		allNodes: nodeLister,
@@ -57,12 +67,11 @@ func nodeGroupChecker(access kubernetes.Access, nodeLister node.Lister, group st
 			Access:     access,
 			NodeLister: ngLister,
 
+			PreflightChecker: controlPlanePinger,
+			RequestTimeout:   controlPlaneTimeout,
+
 			Name:       ngName,
 			KnownZones: zones,
-
-			RequestTimeout: cpTimeout,
-
-			ControlPlaneAccessTimeout: cpTimeout,
 		},
 	}
 }

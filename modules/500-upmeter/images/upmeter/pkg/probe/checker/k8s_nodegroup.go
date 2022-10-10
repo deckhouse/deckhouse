@@ -44,8 +44,9 @@ type NodegroupHasDesiredAmountOfNodes struct {
 
 	// RequestTimeout is common for api operations
 	RequestTimeout time.Duration
-	// ControlPlaneAccessTimeout is the timeout to verify apiserver availability
-	ControlPlaneAccessTimeout time.Duration
+
+	// PreflightChecker verifies preconditions before running the check
+	PreflightChecker check.Checker
 }
 
 func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
@@ -63,7 +64,7 @@ func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
 	}
 
 	return sequence(
-		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		c.PreflightChecker,
 		withTimeout(ngChecker, c.RequestTimeout),
 	)
 }

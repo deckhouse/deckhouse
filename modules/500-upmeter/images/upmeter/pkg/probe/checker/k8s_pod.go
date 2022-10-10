@@ -27,39 +27,16 @@ import (
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
-// Checks that at least one Pod is in "Pending" state.
-// FIXME by the task, should check it is not PodUnknown ???
-type pendingPodChecker struct {
-	access    kubernetes.Access
-	namespace string
-	listOpts  *metav1.ListOptions
-}
-
-func (c *pendingPodChecker) Check() check.Error {
-	client := c.access.Kubernetes()
-
-	podList, err := client.CoreV1().Pods(c.namespace).List(context.TODO(), *c.listOpts)
-	if err != nil {
-		return check.ErrUnknown("listing pods %s/%s: %v", c.namespace, c.listOpts, err)
-	}
-
-	for _, pod := range podList.Items {
-		if pod.Status.Phase == v1.PodPending {
-			return nil
-		}
-	}
-
-	return check.ErrFail("did not find pod %s/%s", c.namespace, c.listOpts)
-}
-
 // AtLeastOnePodReady is a checker constructor and configurator
 type AtLeastOnePodReady struct {
 	Access        kubernetes.Access
 	Namespace     string
 	LabelSelector string
 
-	Timeout                   time.Duration
-	ControlPlaneAccessTimeout time.Duration
+	Timeout time.Duration
+
+	// PreflightChecker verifies preconditions before running the check
+	PreflightChecker check.Checker
 }
 
 func (c AtLeastOnePodReady) Checker() check.Checker {
@@ -70,7 +47,7 @@ func (c AtLeastOnePodReady) Checker() check.Checker {
 	}
 
 	return sequence(
-		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		c.PreflightChecker,
 		withTimeout(podsChecker, c.Timeout),
 	)
 }
