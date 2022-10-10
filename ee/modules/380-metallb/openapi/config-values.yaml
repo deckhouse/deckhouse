@@ -100,7 +100,7 @@ properties:
           x-kubernetes-int-or-string: true
           pattern: '^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$'
           description: |
-            The timeout after which the connection to the neighboring BGP peer is considered lost. This value is divided by three to get the keep-alive interval.
+            The timeout after which the neighboring BGP peer is considered dead. This value is divided by three to get the keep-alive interval.
 
             The recommended value is `3s` (i.e., keep-alive packets are sent once per second). Note that the BGP protocol does not support values lower than this.
             By default, the parameter is set to `90s` (i.e., keep-alive packets are sent every 30 seconds).
