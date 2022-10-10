@@ -58,10 +58,12 @@ EOF
 {{- end }}
 {{- end }}
 
-{{- if .registry.auth }}
 if docker version >/dev/null 2>/dev/null; then
+{{- if .registry.auth }}
   username="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $1}')"
   password="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $2}')"
   HOME=/ docker login --username "${username}" --password "${password}" {{ .registry.address }}
-fi
+{{- else }}
+  HOME=/ docker logout {{ .registry.address }}
 {{- end }}
+fi
