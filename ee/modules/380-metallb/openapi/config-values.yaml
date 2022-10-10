@@ -6,13 +6,13 @@ properties:
     additionalProperties:
       type: string
     description: |
-      A selector for the main controller. It is the same as the pods `spec.nodeSelector` parameter in Kubernetes.
+      A selector for the main controller. It is the same as the Pod's `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      Tolerations for the main controller. They are the same as the pods `spec.tolerations` parameter in Kubernetes.
+      Tolerations for the main controller. They are the same as the Pod's `spec.tolerations` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
     items:
@@ -33,20 +33,20 @@ properties:
     type: object
     required: ["nodeSelector"]
     description: |
-      Parameters of the `speaker` component that announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
+      Parameters of the `speaker` component, which announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
     properties:
       nodeSelector:
         type: object
         additionalProperties:
           type: string
         description: |
-          A selector for the speaker DaemonSet. It is the same as the pods `spec.nodeSelector` parameter in Kubernetes.
+          A selector for the speaker DaemonSet. It is the same as the Pod's `spec.nodeSelector` parameter in Kubernetes.
 
           If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
       tolerations:
         type: array
         description: |
-          Tolerations for the speaker DaemonSet. They are the same as the pods `spec.tolerations` parameter in Kubernetes.
+          Tolerations for the speaker DaemonSet. They are the same as the Pod's `spec.tolerations` parameter in Kubernetes.
 
           If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
         items:
@@ -91,7 +91,7 @@ properties:
         source-address:
           type: string
           description: |
-            Source IP address for outbound connections.
+            The source IP address for outbound connections.
           pattern: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
         hold-time:
           anyOf:
@@ -100,14 +100,14 @@ properties:
           x-kubernetes-int-or-string: true
           pattern: '^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$'
           description: |
-            The timeout after which the neighboring BGP peer is considered lost. This value is divided by three to get the keep-alive interval.
+            The timeout after which the connection to the neighboring BGP peer is considered lost. This value is divided by three to get the keep-alive interval.
 
-            The recommended value is `3s` (i.e., keep-alive packets are sent once per second). Note that the BGP protocol does not support lower values.
+            The recommended value is `3s` (i.e., keep-alive packets are sent once per second). Note that the BGP protocol does not support values lower than this.
             By default, the parameter is set to `90s` (i.e., keep-alive packets are sent every 30 seconds).
         node-selector:
           type: object
           description: |
-            The additional pseudo-selector implemented by the speaker application. It selects nodes allowed to connect to external BGP routers. Do not confuse it with `speaker.nodeSelector` and  `nodeSelector`.
+            The additional pseudo-selector implemented by the speaker application. It selects nodes that are allowed to connect to external BGP routers. Do not confuse it with `speaker.nodeSelector` and  `nodeSelector`.
 
             An optional parameter.
             The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
@@ -156,7 +156,7 @@ properties:
         addresses:
           type: array
           description: |
-            A list of ranges, where each range can look like a subnet/mask or a numeric address range (with a "-" delimiter).
+            A list of ranges, where each range can look like a subnet/mask or a numeric address range (with "-" as a delimiter).
           items:
             type: string
             oneOf:
