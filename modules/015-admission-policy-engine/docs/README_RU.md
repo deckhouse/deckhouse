@@ -2,26 +2,21 @@
 title: "Модуль admission-policy-engine"
 ---
 
-Обеспечивает политики безопасности в кластере с помощью [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/)
+Позволяет использовать в кластере политики безопасности согласно [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)  Kubernetes. Модуль для работы использует [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
 
-## Pod Security Standards
+Pod Security Standards определяют три политики, которые охватывают весь спектр безопасности. Эти политики являются кумулятивными политиками, т.е. состоящими из набора политик, и варьируются по уровню ограничений от неограничивающего до ограничивающего значительно.
 
-Pod Security Standards определяют три различных политики, которые широко охватывают спектр безопасности. Эти политики являются кумулятивными и варьируются от высокоразрешительных до высокоограничительных.
+Список политик, предлагаемых модулем для использования:
+- `Privileged` — неограничивающая политика, предоставляющая максимально широкий уровень разрешений (используется по умолчанию).
+- `Baseline` — минимально ограничивающая политика, которая предотвращает использование наиболее известных способов повышения привилегий. Позволяет использовать стандартную (минимально заданную) конфигурацию Pod'а.
+- `Restricted` — политика со значительными ограничениями, обеспечивает самые жесткие требования к Pod'ам.
 
-- Privileged - неограниченная политика, предоставляющая максимально широкий уровень разрешений (используется по-умолчанию).
-- Baseline - Минимально ограничительная политика, которая предотвращает известное повышение привилегий. Позволяет использовать стандартную (минимально заданную) конфигурацию Pod.
-- Restricted - политика со значительными ограничениями, обеспечивает самые жесткие требования к Pod'ам.
+Подробнее про каждый набор политик и их ограничения можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 
-Подробнее про каждый набор политик можно прочитать [здесь](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
+Для применения политики достаточно установить label `security.deckhouse.io/pod-policy=<POLICY_NAME>` на Namespace.
 
-Для применения данных политик нужно навесить label на желаемый namespace:
-- `security.deckhouse.io/pod-policy=baseline`
-- `security.deckhouse.io/pod-policy=restricted`
-
-Например:
+Пример установки политики `Restricted` для всех Pod'ов в Namespace `my-namespace`:
 
 ```bash
 kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
-
-Установит политику `Restricted` для всех Pod в Namespace `my-namespace`

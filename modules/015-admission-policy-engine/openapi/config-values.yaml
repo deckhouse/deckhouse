@@ -3,12 +3,16 @@ properties:
   podSecurityStandards:
     type: object
     default: {}
-    description: "Pod Security Standards settings."
+    description: "Pod Security Standards policy settings."
     properties:
       enforcementAction:
         type: string
         default: "Deny"
-        description: "Enforcement action which will control what to do with the result of a constraint."
+        description: |
+          Enforcement action which will control what to do with the result of a constraint.
+          - Deny — Deny action.
+          - Dryrun — No action. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или в консоли с помощью kubectl.
+          - Warn — Same as `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, why that constraint would have been denied, если установить `Deny` вместо `Warn`.
         enum:
           - Warn
           - Deny
