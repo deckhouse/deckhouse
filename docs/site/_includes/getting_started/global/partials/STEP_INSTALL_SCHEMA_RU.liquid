@@ -112,10 +112,5 @@
 
 Обратите внимание, что в презентации представлен упрощённый, примерный план действий, а точные действия и команды, которые необходимо выполнить, будут указаны в следующих шагах.
 
-<iframe src="{{ include.presentation }}" frameborder="0" width="{{ include.width }}" height="{{ include.height }}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Управляйте презентацией
-</p>
+<div data-presentation="{{ include.presentation }}"></div>
 {%- endif %}

@@ -1,4 +1,4 @@
-# Helm cannot deploy the DestinationRule and PeerAuthentication manifests for tlsMode parameter because it stumbles on this webhook.
+# Helm cannot deploy the kube-apiserver DestinationRule because it stumbles on this webhook.
 # isGlobalRevisionIstiodReady is under discovery_istiod_health.go hook control.
 
 {{- if .Values.istio.internal.isGlobalRevisionIstiodReady }}

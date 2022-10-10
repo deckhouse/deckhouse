@@ -88,7 +88,7 @@ func TestTransformSnippet(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 5)
-		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
+		assert.Len(t, tr[0].GetInputs(), 0)
 
 		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
@@ -113,7 +113,7 @@ func TestTransformSnippet(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
-		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
+		assert.Len(t, tr[0].GetInputs(), 0)
 
 		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
@@ -148,7 +148,7 @@ func TestTransformSnippet(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
-		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
+		assert.Len(t, tr[0].GetInputs(), 0)
 
 		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)

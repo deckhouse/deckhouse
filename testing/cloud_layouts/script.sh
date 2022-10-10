@@ -481,7 +481,7 @@ kubectl -n d8-system get pods -l app=deckhouse
 END_SCRIPT
 )
 
-  testRunAttempts=5
+  testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
     >&2 echo "Check Deckhouse pod readiness."
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then

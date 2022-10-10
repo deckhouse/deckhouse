@@ -14,17 +14,6 @@ properties:
     default: []
     items:
       type: string
-  tlsMode:
-    type: string
-    enum: ["Off", MutualPermissive, Mutual]
-    x-examples: ["Mutual"]
-    description: |
-      The mode for transparent encryption of inter-pod traffic ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
-      - `Off` — outgoing requests are not encrypted; incoming unencrypted requests are accepted.
-      - `MutualPermissive` — outgoing requests are encrypted; incoming unencrypted requests are accepted. This mode is useful when migrating to mTLS.
-      - `Mutual` — outgoing requests are encrypted; incoming unencrypted requests are rejected (pods accept only encrypted requests).
-      You can manage the mTLS mode separately for each application and for its client connections using the [AuthorizationPolicy](istio-cr.html#authorizationpolicy) and [DestinationRule](istio-cr.html#destinationrule) resources.
-    default: "MutualPermissive"
   outboundTrafficPolicyMode:
     type: string
     enum: [AllowAny, RegistryOnly]
@@ -144,13 +133,17 @@ properties:
         maximum: 100.0
         multipleOf: 0.01
         description: |
-          The sampling rate option can be used to control what percentage of requests get reported to your tracing system. This should be configured depending upon your traffic in the mesh and the amount of tracing data you want to collect. It is possible to override this option with Pod annotation:
+          The sampling rate option can be used to control what percentage of requests get reported to your tracing system.
+
+          This should be configured depending upon your traffic in the mesh and the amount of tracing data you want to collect.
+
+          It is possible to override this option with the following Pod annotation:
+
           ```yaml
           proxy.istio.io/config: |
             tracing:
               sampling: 100.0
           ```
-
         default: 1.0
         x-examples: [50.05]
       collector:

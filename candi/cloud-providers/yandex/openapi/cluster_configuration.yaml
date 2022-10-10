@@ -140,7 +140,6 @@ apiVersions:
         items:
           type: object
           required: [name, replicas, instanceClass]
-          additionalProperties: false
           properties:
             name:
               description: |
@@ -216,7 +215,6 @@ apiVersions:
                         type: string
             instanceClass:
               required: [cores, memory, imageID]
-              additionalProperties: false
               type: object
               description: |
                 Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).

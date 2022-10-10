@@ -88,18 +88,22 @@ func (v *VectorFile) AppendLogPipeline(pipeline *Pipeline) error {
 		v.Sources[src.GetName()] = src
 	}
 
-	destinationInputs := make([]string, 0)
-
 	sourcesNames := set.New()
 	for _, src := range compiledSrc {
 		sourcesNames.Add(src.GetName())
 	}
 
+	destinationInputs := make([]string, 0)
+
+	// If source has attached transforms, use the first one for all generated source
+	// and the last one for the destination input
 	if len(pipeline.Source.Transforms) > 0 {
 		pipeline.Source.Transforms[0].SetInputs(sourcesNames.Slice())
-		destinationInputs = append(destinationInputs, pipeline.Source.Transforms[len(pipeline.Source.Transforms)-1].GetName())
+
+		lastTransform := pipeline.Source.Transforms[len(pipeline.Source.Transforms)-1].GetName()
+		destinationInputs = append(destinationInputs, lastTransform)
 	} else {
-		destinationInputs = sourcesNames.Slice()
+		destinationInputs = append(destinationInputs, sourcesNames.Slice()...)
 	}
 
 	for _, trans := range pipeline.Source.Transforms {
@@ -114,14 +118,17 @@ func (v *VectorFile) AppendLogPipeline(pipeline *Pipeline) error {
 		}
 
 		for _, trans := range pipelineDest.Transforms {
-			v.Transforms[trans.GetName()] = trans
+			if _, ok := v.Transforms[trans.GetName()]; !ok {
+				v.Transforms[trans.GetName()] = trans
+			}
 		}
 
 		if len(pipelineDest.Transforms) > 0 {
-			pipelineDest.Transforms[0].SetInputs(destinationInputs)
-			v.Sinks[dest.GetName()].SetInputs(
-				[]string{pipelineDest.Transforms[len(pipelineDest.Transforms)-1].GetName()},
-			)
+			v.Transforms[pipelineDest.Transforms[0].GetName()].SetInputs(destinationInputs)
+
+			v.Sinks[dest.GetName()].SetInputs([]string{
+				pipelineDest.Transforms[len(pipelineDest.Transforms)-1].GetName(),
+			})
 		} else {
 			v.Sinks[dest.GetName()].SetInputs(destinationInputs)
 		}

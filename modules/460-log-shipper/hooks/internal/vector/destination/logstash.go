@@ -17,6 +17,7 @@ limitations under the License.
 package destination
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
@@ -72,8 +73,9 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 
 	return &Logstash{
 		CommonSettings: CommonSettings{
-			Name: ComposeName(name),
-			Type: "socket",
+			Name:   ComposeName(name),
+			Type:   "socket",
+			Inputs: set.New(),
 		},
 		Encoding: LogstashEncoding{
 			Codec:           "json",

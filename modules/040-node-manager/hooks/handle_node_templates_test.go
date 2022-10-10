@@ -655,4 +655,46 @@ spec:
 			Expect(taintKeys).ToNot(HaveKey("a"), "taint with key 'a' should be removed")
 		})
 	})
+
+	Context("NG master", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: kube-master-0
+  labels:
+    node.deckhouse.io/group: master
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node-role.deckhouse.io/control-plane
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully; control-plane node-roles must be added", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			labels := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("metadata.labels")
+
+			value, ok := labels.Map()["node-role.kubernetes.io/master"]
+			Expect(ok).To(BeTrue())
+			Expect(value.Str).To(Equal(""))
+
+			value, ok = labels.Map()["node-role.kubernetes.io/control-plane"]
+			Expect(ok).To(BeTrue())
+			Expect(value.Str).To(Equal(""))
+
+		})
+	})
 })

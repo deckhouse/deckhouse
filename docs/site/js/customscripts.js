@@ -144,8 +144,14 @@ function raOpen() {
 }
 
 $(document).ready(function() {
-    ra.base = $('#request_access');
-    ra.form = $('#request_access_form');
+    // const btn = [$('#request_access'), $('#request_callback')]
+    if ($('#request_access')) {
+      ra.base = $('#request_access');
+      ra.form = $('#request_access_form');
+    } else {
+      ra.base = $('#request_callback');
+      ra.form = $('#request_callback_form');
+    }
     ra.intro = $('#request_access_intro');
     ra.success = $('#request_access_success');
     ra.error = $('#request_access_error');
@@ -155,6 +161,57 @@ $(document).ready(function() {
 
 $(document).on('keydown', function(event) {
     event.key == "Escape" && raClose();
+});
+
+/* Request callback */
+var rc = {};
+rc.api_url = 'https://submit-form.com/T1D8NgqF';
+
+function rcSend(e) {
+    e.preventDefault();
+    if ($('#h0n3y').val() != '') {
+        rcError()
+    } else {
+        $.ajax({
+            type: 'POST',
+            url: rc.api_url,
+            data: rc.form.serialize(),
+            dataType: 'json',
+            success: rcSuccess,
+            error: rcError
+        });
+    }
+}
+function rcSuccess() {
+    rc.intro.hide();
+    rc.success.show();
+}
+function rcError() {
+    rc.intro.hide();
+    rc.error.show();
+}
+function rcClose() {
+    rc.base.hide();
+    rc.intro.show();
+    rc.error.hide();
+    rc.success.hide();
+}
+function rcOpen() {
+    rc.base.show();
+}
+
+$(document).ready(function() {
+    rc.base = $('#request_callback');
+    rc.form = $('#request_callback_form');
+    rc.intro = $('#request_callback_intro');
+    rc.success = $('#request_callback_success');
+    rc.error = $('#request_callback_error');
+
+    rc.form.on('submit', rcSend);
+});
+
+$(document).on('keydown', function(event) {
+    event.key == "Escape" && rcClose();
 });
 
 // Clipbord copy functionality
@@ -210,3 +267,62 @@ $(document).ready(function(){
         $.cookie('gdpr-status', 'accepted', {path: '/' ,  expires: 3650 });
     })
 });
+
+//Fixed sidebar
+window.onload = function() {
+  const headerHeight = $('.header').height();
+  const breadcrumbs = $('.breadcrumbs-container');
+  const breadcrumbsHeight = breadcrumbs.height();
+  const fullBreadcrumbsHeight = breadcrumbs.outerHeight(true);
+  const breadcrumbsMarginTop = parseInt(breadcrumbs.css('margin-top'), 10);
+  const sidebarWrapperInner = $('.sidebar__wrapper-inner');
+  const sidebar = $('.sidebar__container');
+  const sidebarOffsetTop = sidebar.offset().top - breadcrumbsHeight + breadcrumbsMarginTop;
+  const footerHeight = $('.footer').height();
+  const docHeight = $(document).height();
+  const screenHeight = $(window).outerHeight();
+  let bottomFixPoint = docHeight - (footerHeight + screenHeight);
+
+  if ($(window).scrollTop() > breadcrumbsHeight + breadcrumbsMarginTop) {
+    sidebarWrapperInner.css({
+      top: `${headerHeight + breadcrumbsMarginTop}px`
+    });
+  } else {
+    setTopOffset($(window).scrollTop(), sidebarOffsetTop, sidebarWrapperInner, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight);
+  }
+
+  setFooterOffset($(window).scrollTop(), bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight);
+
+  $(window).scroll(function() {
+    const scrolled = $(this).scrollTop();
+    bottomFixPoint = $(document).height() - (footerHeight + screenHeight);
+
+    setTopOffset(scrolled, sidebarOffsetTop, sidebarWrapperInner, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight);
+
+    setFooterOffset(scrolled, bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight)
+  });
+};
+
+function setTopOffset(scrolled, offsetTop, sidebarWrapper, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight) {
+  if (scrolled > offsetTop) {
+    sidebarWrapper.css({
+      top: `${headerHeight + breadcrumbsMarginTop}px`
+    });
+  } else if (scrolled < offsetTop && scrolled < breadcrumbsHeight + breadcrumbsMarginTop) {
+    sidebarWrapper.css({
+      top: `${headerHeight + fullBreadcrumbsHeight - scrolled}px`,
+    });
+  }
+}
+
+function setFooterOffset(scrolled, bottomFixPoint, sidebarWrapper, screenHeight, footerHeight, docHeight) {
+  if (scrolled > bottomFixPoint) {
+    sidebarWrapper.css({
+      bottom: `${scrolled + screenHeight + footerHeight + 25 - docHeight}px`
+    })
+  } else if (scrolled < bottomFixPoint) {
+    sidebarWrapper.css({
+      bottom: `25px`
+    })
+  }
+}

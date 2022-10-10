@@ -27,7 +27,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	dockerImage := "timberio/vector:0.23.3-debian"
+	dockerImage := "timberio/vector:0.24.1-debian"
 
 	script := `
 	set -e

@@ -35,7 +35,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: audit_policy ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: audit_policy ::", func() {
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {}}}`

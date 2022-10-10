@@ -21,27 +21,31 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-    
+
     # DRBD kernel-module-injector requires the kernel sources to be installed.
 
-    # Install actual kernel headers
     version_in_use="$(uname -r)"
     if bb-is-distro-like? centos; then
-      bb-yum-install "kernel-devel-${version_in_use}"
-    fi
-    if bb-is-distro-like? debian; then
-      bb-apt-install "linux-headers-${version_in_use}"
-    fi
+      # Install actual kernel headers
+      #   kernel         --> kernel-devel
+      #   kernel-core    --> kernel-devel
+      #   kernel-lt      --> kernel-lt-devel
+      #   kernel-lt-core --> kernel-lt-devel
+      package_name="$(rpm -qf --qf "%{NAME}" "/lib/modules/${version_in_use}" | sed 's/\(-core\)\?$/-devel/')"
+      bb-yum-install "${package_name}-${version_in_use}"
 
-    # Remove unused kernel-headers
-    if bb-is-distro-like? centos; then
-      packages_to_remove="$(rpm -q kernel-devel | grep -Ev "^kernel-devel-${version_in_use}$" || true)"
+      # Remove unused kernel-headers
+      packages_to_remove="$(rpm -q "$package_name" | grep -Ev "^${package_name}-${version_in_use}$" || true)"
       if [ -n "$packages_to_remove" ]; then
         bb-yum-remove $packages_to_remove
       fi
     fi
 
     if bb-is-distro-like? debian; then
+      # Install actual kernel headers
+      bb-apt-install "linux-headers-${version_in_use}"
+
+      # Remove unused kernel-headers
       version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-[a-z0-9\.-]+(\1|\1-\2)$/')"
       packages_to_remove="$(
         dpkg --get-selections | grep -E '^linux-headers-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$version_in_use_pattern" | grep -Ev 'linux-headers-[^0-9]+$' || true

@@ -1,0 +1,33 @@
+control-plane-manager:
+  fixes:
+    - summary: Fixed panic when a node with minimal RAM cannot be found.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2670
+deckhouse-web:
+  fixes:
+    - summary: Switched google slides to a self-hosted solution.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2654
+docs:
+  fixes:
+    - summary: Switched google slides to a self-hosted solution.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2654
+istio:
+  fixes:
+    - summary: Fix `D8IstioAdditionalControlplaneDoesntWork` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2665
+log-shipper:
+  fixes:
+    - summary: Stop generating pointless 'parse_json' transform, which improves performance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2662
+    - summary: Fix the bug when the many sources point to the same input and only the last is working.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2662
+node-manager:
+  fixes:
+    - summary: Fixed failing on not existing control-plane node labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2670
+upmeter:
+  fixes:
+    - summary: >-
+        Reduces QPS and burst in `upmeter-agent` to reduce `kube-apiserver` latency in
+        multi-control-plane setups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2668
+

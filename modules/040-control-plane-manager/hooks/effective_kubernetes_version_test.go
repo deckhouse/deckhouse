@@ -155,7 +155,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 	hec.BindingContexts.Set(hec.KubeStateSet(b.String()))
 }
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksum ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum ::", func() {
 	Context("Empty cluster", func() {
 		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
 

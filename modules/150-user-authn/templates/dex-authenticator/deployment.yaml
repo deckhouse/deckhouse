@@ -144,7 +144,7 @@ spec:
         # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
         - --skip-oidc-discovery
         - --redeem-url=https://dex.d8-user-authn/token
-        - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}//auth
+        - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/auth
         - --oidc-jwks-url=https://dex.d8-user-authn/keys
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true

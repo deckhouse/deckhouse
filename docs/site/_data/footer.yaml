@@ -35,6 +35,8 @@ columns:
         url: '/terms-of-service.html'
       - title: Technical support regulations
         url: '/regulations.html'
+      - title: Blog
+        external_url: 'https://blog.deckhouse.io/'
   ru:
   - items:
       - title: Быстрый старт
@@ -71,3 +73,5 @@ columns:
         url: '/regulations.html'
       - title: Лицензионное соглашение
         url: '/license.html'
+      - title: Блог
+        external_url: 'https://blog.deckhouse.io/'
