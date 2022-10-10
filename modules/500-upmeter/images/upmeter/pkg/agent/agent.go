@@ -32,6 +32,7 @@ import (
 	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/probe/checker"
 	"d8.io/upmeter/pkg/registry"
 )
 
@@ -97,7 +98,13 @@ func (a *Agent) Start(ctx context.Context) error {
 		return fmt.Errorf("starting node monitor: %v", err)
 	}
 
-	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, a.logger)
+	// The preflight interval is chosen as the smallest period among probe runs which use the
+	// preflight check.
+	preflightInterval := 5 * time.Second
+	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, preflightInterval)
+	controlPlanePreflight.Start()
+
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
 

@@ -30,6 +30,7 @@ import (
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
 	Access    kubernetes.Access
+	Preflight Doer
 	Namespace string
 
 	AgentID string
@@ -39,15 +40,13 @@ type ConfigMapLifecycle struct {
 }
 
 func (c ConfigMapLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	cm := createConfigMapObject(c.Name, c.AgentID)
 	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, cm: cm}
 	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	checker := &KubeObjectBasicLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 		creator:   creator,
 		getter:    getter,
 		deleter:   deleter,
