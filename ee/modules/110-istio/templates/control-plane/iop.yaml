@@ -171,6 +171,8 @@ spec:
         enabled: true
 
     sidecarInjectorWebhook:
+      injectedAnnotations:
+        istio.deckhouse.io/injected-sidecar-version: "{{ get $.Values.istio.internal.revisionFullVersionMap $revision }}"
       templates:
         d8-hold-istio-proxy-termination-until-application-stops: |
           spec:
