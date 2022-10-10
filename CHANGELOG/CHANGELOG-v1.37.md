@@ -24,6 +24,7 @@
  - **[cloud-provider-yandex]** Reverted changes in the YandexClusterConfiguration (removed `additionalProperties: false`). [#2649](https://github.com/deckhouse/deckhouse/pull/2649)
  - **[cloud-provider-yandex]** Fix allowing additional properties for `nodeGroups[*]` and `nodeGroups[*].instanceClass`. [#2504](https://github.com/deckhouse/deckhouse/pull/2504)
  - **[control-plane-manager]** Fixed panic when a node with minimal RAM cannot be found. [#2670](https://github.com/deckhouse/deckhouse/pull/2670)
+ - **[docs]** Stick sidebar to the top of the page in the documentation. [#2686](https://github.com/deckhouse/deckhouse/pull/2686)
  - **[extended-monitoring]** Remove the `D8CertExporterStuck` alert. [#2589](https://github.com/deckhouse/deckhouse/pull/2589)
  - **[global-hooks]** Reduce static requests for control plane Pods. [#2588](https://github.com/deckhouse/deckhouse/pull/2588)
     Control plane components will restart.
@@ -42,8 +43,11 @@
  - **[log-shipper]** Stop generating pointless 'parse_json' transform, which improves performance. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[log-shipper]** Fix the bug when the many sources point to the same input and only the last is working. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[monitoring-kubernetes]** Add deployments to kube-state-metrics's allowlist. [#2636](https://github.com/deckhouse/deckhouse/pull/2636)
+ - **[node-manager]** Added VPA for early-oom daemonset. [#2695](https://github.com/deckhouse/deckhouse/pull/2695)
  - **[node-manager]** Fixed failing on not existing control-plane node labels. [#2670](https://github.com/deckhouse/deckhouse/pull/2670)
  - **[node-manager]** Fixed the `D8EarlyOOMPodIsNotReady` alert description. [#2541](https://github.com/deckhouse/deckhouse/pull/2541)
+ - **[upmeter]** Reduced API calls throttling by the deduplication of preflight checks in probes. [#2687](https://github.com/deckhouse/deckhouse/pull/2687)
+ - **[upmeter]** Fixed empty status page when there is no data in the upmeter server. [#2683](https://github.com/deckhouse/deckhouse/pull/2683)
  - **[upmeter]** Reduces QPS and burst in `upmeter-agent` to reduce `kube-apiserver` latency in multi-control-plane setups. [#2668](https://github.com/deckhouse/deckhouse/pull/2668)
 
 ## Chore
