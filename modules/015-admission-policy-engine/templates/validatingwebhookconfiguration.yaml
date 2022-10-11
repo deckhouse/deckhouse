@@ -51,7 +51,7 @@ webhooks:
     # For constraints that mitigate CVE-2020-8554
     - 'services/status'
   sideEffects: None
-  timeoutSeconds: 10
+  timeoutSeconds: 3
 - admissionReviewVersions:
   - v1
   - v1beta1
