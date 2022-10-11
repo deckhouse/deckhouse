@@ -64,7 +64,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(`{"deckhouse": { "internal":{}}}`, `{}`)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -75,6 +75,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeFalse())
 		})
 	})
 
@@ -88,6 +89,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeFalse())
 		})
 
 		Context("Cilium module enabled, added node with improper kernel", func() {
@@ -97,8 +99,8 @@ status:
 				f.RunHook()
 			})
 
-			It("Hook should fail, metric should be set", func() {
-				Expect(f).To(Not(ExecuteSuccessfully()))
+			It("Hook must execute successfully, metric must be set", func() {
+				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(2))
 				Expect(m[1].Labels).To(Equal(map[string]string{
@@ -107,6 +109,7 @@ status:
 					"name":           "node-2",
 					"kernel_version": "3.10.0-1127.el7.x86_64",
 				}))
+				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())
 			})
 		})
 	})
@@ -121,6 +124,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeFalse())
 		})
 
 		Context("Cilium and istio modules enabled, added node with improper kernel", func() {
@@ -130,8 +134,8 @@ status:
 				f.RunHook()
 			})
 
-			It("Hook should fail, metric should be set", func() {
-				Expect(f).To(Not(ExecuteSuccessfully()))
+			It("Hook must execute successfully, metric must be set", func() {
+				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(4))
 				Expect(m[1].Labels).To(Equal(map[string]string{
@@ -146,6 +150,8 @@ status:
 					"name":           "node-2",
 					"kernel_version": "3.10.0-1127.el7.x86_64",
 				}))
+
+				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())
 			})
 		})
 	})
