@@ -13,6 +13,6 @@
         plk_create_group_if_not_exists__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Node {{ $labels.name }} has unmet kernel requirements
-  description: |
-    Kernel version {{ $labels.kernel_version }} on node {{ $labels.name }}
-    unmet constraint {{ $labels.constraint }} for module {{ $labels.module }}.
+        description: |-
+          Kernel version {{ $labels.kernel_version }} on node {{ $labels.name }}
+          unmet constraint {{ $labels.constraint }} for module {{ $labels.module }}.
