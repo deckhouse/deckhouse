@@ -19,8 +19,10 @@ webhooks:
   name: admission-policy-engine.deckhouse.io
   namespaceSelector:
     matchExpressions:
-    - key: admission.gatekeeper.sh/ignore
-      operator: DoesNotExist
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
   objectSelector: {}
   rules:
   - apiGroups:
@@ -52,27 +54,3 @@ webhooks:
     - 'services/status'
   sideEffects: None
   timeoutSeconds: 3
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
-    service:
-      name: gatekeeper-webhook-service
-      namespace: d8-admission-policy-engine
-      path: /v1/admitlabel
-  failurePolicy: Fail
-  matchPolicy: Exact
-  name: check-ignore-label.gatekeeper.sh
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - '*'
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - namespaces
-  sideEffects: None
-  timeoutSeconds: 10
