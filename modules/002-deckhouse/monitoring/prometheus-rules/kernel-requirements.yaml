@@ -1,0 +1,18 @@
+- name: d8.kernel-requirements
+  rules:
+    - alert: D8HasUnmetKernelRequirements
+      expr: >-
+        max_over_time(network_connections_quota_utilization{nat_instance="true"}[5m]) > 85
+      for: 5m
+      labels:
+        severity_level: "9"
+        tier: cluster
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Node {{ $labels.name }} has unmet kernel requirements
+  description: |
+    Kernel version {{ $labels.kernel_version }} on node {{ $labels.name }}
+    unmet constraint {{ $labels.constraint }} for module {{ $labels.module }}.
