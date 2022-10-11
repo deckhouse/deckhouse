@@ -63,6 +63,8 @@ const istioValues = `
     internal:
       applicationNamespaces: []
       globalRevision: v1x8x1
+      revisionFullVersionMap:
+        "v1x8x1": "1.8.1"
       operatorRevisionsToInstall:  []
       revisionsToInstall: []
       federations: []

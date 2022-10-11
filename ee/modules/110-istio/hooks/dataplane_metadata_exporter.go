@@ -22,14 +22,14 @@ import (
 const (
 	istioRevsionAbsent           = "absent"
 	istioVersionAbsent           = "absent"
-	istioPodMetadataMetricName   = "d8_istio_pod_metadata"
+	istioPodMetadataMetricName   = "d8_istio_pod_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
 )
 
 var ()
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("revisions-discovery-monitoring"),
+	Queue: internal.Queue("dataplane-metadata"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "namespaces_global_revision",
@@ -79,7 +79,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 	},
-}, revisionsMonitoring)
+}, dataplaneMetadataExporter)
 
 // Needed to extend v1.Pod with our methods
 type IstioDrivenPod v1.Pod
@@ -174,7 +174,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return result, nil
 }
 
-func revisionsMonitoring(input *go_hook.HookInput) error {
+func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 	if !input.Values.Get("istio.internal.globalRevision").Exists() {
 		return nil
 	}
