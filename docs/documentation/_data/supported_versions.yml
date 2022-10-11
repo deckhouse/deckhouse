@@ -10,7 +10,7 @@ osDistributions:
   alteros:
     name: AlterOS
   '_redos':
-    name: 'РЭД ОС'
+    name: 'РЕД ОС'
 
 k8s_statuses:
   end-of-life:
