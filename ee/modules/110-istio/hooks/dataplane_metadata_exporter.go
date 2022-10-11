@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	istioRevsionAbsent             = "absent"
-	injectSidecarVersionAnnotation = "istio.deckhouse.io/injected-sidecar-version"
-	istioPodMetadataMetricName     = "d8_istio_pod_metadata"
-	metadataExporterMetricsGroup   = "metadata"
+	istioRevsionAbsent           = "absent"
+	istioVersionAbsent           = "absent"
+	istioPodMetadataMetricName   = "d8_istio_pod_metadata"
+	metadataExporterMetricsGroup = "metadata"
 )
 
 var ()
@@ -148,10 +148,10 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 }
 
 func (p *IstioDrivenPod) getIstioVersion() string {
-	if specificPodVersion, ok := p.Annotations[injectSidecarVersionAnnotation]; ok {
+	if specificPodVersion, ok := p.Annotations["istio.deckhouse.io/injected-sidecar-version"]; ok {
 		return specificPodVersion
 	}
-	return ""
+	return istioVersionAbsent
 }
 
 func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -230,7 +230,7 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 
 		desiredVersion, ok := revisionFullVersionMap[desiredRevision]
 		if !ok {
-			desiredVersion = "absent"
+			desiredVersion = istioVersionAbsent
 		}
 
 		labels := map[string]string{

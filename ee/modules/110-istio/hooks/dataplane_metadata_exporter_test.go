@@ -346,6 +346,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 			}, &wantedMetric{
 				Revision:        "absent",
 				DesiredRevision: "v1x42",
+				Version:         "absent",
 				DesiredVersion:  "1.42.42",
 			}),
 		Entry("Namespace with definite revision, pod revision is not actual",
@@ -372,6 +373,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 			}, &wantedMetric{
 				Revision:        "absent",
 				DesiredRevision: "v1x15",
+				Version:         "absent",
 				DesiredVersion:  "1.15.15",
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is actual",
@@ -429,6 +431,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 			}, &wantedMetric{
 				Revision:        "absent",
 				DesiredRevision: "v1x77",
+				Version:         "absent",
 				DesiredVersion:  "1.77.77",
 			}),
 		Entry("Pod orphan",
