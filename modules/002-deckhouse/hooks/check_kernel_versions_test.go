@@ -100,9 +100,9 @@ status:
 			It("Hook should fail, metric should be set", func() {
 				Expect(f).To(Not(ExecuteSuccessfully()))
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(1))
-				Expect(m[0].Labels).To(Equal(map[string]string{
-					"module":         "cilium",
+				Expect(m).To(HaveLen(2))
+				Expect(m[1].Labels).To(Equal(map[string]string{
+					"module":         "cni-cilium",
 					"constraint":     ">= 4.9.17",
 					"name":           "node-2",
 					"kernel_version": "3.10.0-1127.el7.x86_64",
@@ -123,7 +123,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		Context("Cilium and isio modules enabled, added node with improper kernel", func() {
+		Context("Cilium and istio modules enabled, added node with improper kernel", func() {
 			BeforeEach(func() {
 				f.KubeStateSet(stateNode1 + stateNode2 + stateNode3)
 				f.BindingContexts.Set(f.GenerateAfterHelmContext())
@@ -133,15 +133,15 @@ status:
 			It("Hook should fail, metric should be set", func() {
 				Expect(f).To(Not(ExecuteSuccessfully()))
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(3))
-				Expect(m[0].Labels).To(Equal(map[string]string{
-					"module":         "cilium,istio",
+				Expect(m).To(HaveLen(4))
+				Expect(m[1].Labels).To(Equal(map[string]string{
+					"module":         "cni-cilium,istio",
 					"constraint":     ">= 5.7",
 					"name":           "node-1",
 					"kernel_version": "5.4.0-90-generic",
 				}))
-				Expect(m[1].Labels).To(Equal(map[string]string{
-					"module":         "cilium",
+				Expect(m[2].Labels).To(Equal(map[string]string{
+					"module":         "cni-cilium",
 					"constraint":     ">= 4.9.17",
 					"name":           "node-2",
 					"kernel_version": "3.10.0-1127.el7.x86_64",
