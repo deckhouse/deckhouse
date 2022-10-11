@@ -170,11 +170,11 @@ bin/trivy: bin
 	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
 
 .PHONY: cve-report cve-base-images
-cve-report: ## Generate CVE report for a Deckhouse release.
+cve-report: bin/trivy ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/release.sh
 
-cve-base-images: ## Check CVE in our base images.
+cve-base-images: bin/trivy ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
 
