@@ -75,6 +75,8 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func handleNodes(input *go_hook.HookInput) error {
+	res := true
+
 	snap := input.Snapshots["nodes"]
 	for _, n := range snap {
 		node := n.(nodeKernelVersion)
@@ -92,7 +94,8 @@ func handleNodes(input *go_hook.HookInput) error {
 			}
 			if !c.Check(v) {
 				input.MetricsCollector.Set("d8_node_kernel_does_not_satisfy_requirements", 1, map[string]string{"name": node.Name, "kernel_version": node.KernelVersion, "module": "cilium", "constraint": ciliumConstraint})
-				return fmt.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
+				input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
+				res = false
 			}
 
 			// check kernel requirements for cilium and istio
@@ -103,11 +106,16 @@ func handleNodes(input *go_hook.HookInput) error {
 				}
 				if !c.Check(v) {
 					input.MetricsCollector.Set("d8_node_kernel_does_not_satisfy_requirements", 1, map[string]string{"name": node.Name, "kernel_version": node.KernelVersion, "module": "cilium,istio", "constraint": ciliumAndIstioConstraint})
-					return fmt.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
+					input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
+					res = false
 				}
 			}
 		}
 	}
 
-	return nil
+	if res {
+		return nil
+	}
+
+	return fmt.Errorf("nodes have unmet kernel requirements")
 }

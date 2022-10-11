@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -128,12 +128,18 @@ status:
 			It("Hook should fail, metric should be set", func() {
 				Expect(f).To(Not(ExecuteSuccessfully()))
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(1))
+				Expect(m).To(HaveLen(3))
 				Expect(m[0].Labels).To(Equal(map[string]string{
 					"module":         "cilium,istio",
 					"constraint":     ">= 5.7",
 					"name":           "node-1",
 					"kernel_version": "5.4.0-90-generic",
+				}))
+				Expect(m[1].Labels).To(Equal(map[string]string{
+					"module":         "cilium",
+					"constraint":     ">= 4.9.17",
+					"name":           "node-2",
+					"kernel_version": "3.10.0-1127.el7.x86_64",
 				}))
 			})
 		})
