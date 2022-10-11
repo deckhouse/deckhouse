@@ -22,7 +22,7 @@ import (
 const (
 	istioRevsionAbsent           = "absent"
 	istioVersionAbsent           = "absent"
-	istioPodMetadataMetricName   = "d8_istio_pod_dataplane_metadata"
+	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
 )
 
