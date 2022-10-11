@@ -137,10 +137,10 @@
   - alert: D8IstioDataPlaneVersionMismatch
     annotations:
       description: |
-        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.tag}}` which differ from control-plane one `{{$labels.istiod_tag}}`.
+        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.version}}` which differ from control-plane one `{{$labels.desired_revision}}`.
         Consider restarting affected Pods, use PromQL query to get the list:
         ```
-        max by (namespace, pod) (istio_build{component="proxy", tag="{{$labels.tag}}"})
+        max by (namespace, dataplane_pod) (d8_istio_pod_metadata{version="{{$labels.version}}"})
         ```
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -150,34 +150,8 @@
         There are Pods with data-plane version different from control-plane
         one.
     expr: |
-      ( # join d8_istio_pod_metadata and istio_build metrics to get every Pod's istio version
-        max by (namespace, pod, revision, tag)
-        (
-          label_replace(
-            d8_istio_pod_metadata, "pod", "$1", "dataplane_pod", "(.+)"
-          )
-          + on (pod,namespace) group_left (tag) istio_build{component="proxy"}
-        )
-      )
-      # enrich the metric above with control-plane istio version (will come in handy for the alert description)
-      + on (revision) group_left (istiod_tag)
-      (
-        max by (istiod_tag, revision)
-        ( # get istiod revision from Pod's label `istio.io/rev`
-          label_replace(
-            istio_build{component="pilot"}, "istiod_tag", "$1", "tag", "(.+)"
-          )
-          + on (pod,namespace) group_left(revision)
-          (
-            label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
-          )
-        )
-      )
-      # exclude Pod's with an actual istio version, so only the inappropriate ones left
-      unless on (tag)
-      (
-        istio_build{component="pilot"}
-      )
+      d8_istio_pod_metadata{version!~"(|absent)", desired_version!="absent"}
+      unless on (version, dataplane_pod, namespace) label_replace(d8_istio_pod_metadata{}, "version", "$1", "desired_version", "(.+)")
     for: 5m
     labels:
       severity_level: "8"
