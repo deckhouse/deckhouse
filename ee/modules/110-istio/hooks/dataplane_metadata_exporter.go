@@ -20,12 +20,13 @@ import (
 )
 
 const (
-	istioRevsionAbsent = "absent"
+	istioRevsionAbsent             = "absent"
+	injectSidecarVersionAnnotation = "istio.deckhouse.io/injected-sidecar-version"
+	istioPodMetadataMetricName     = "d8_istio_pod_metadata"
+	metadataExporterMetricsGroup   = "metadata"
 )
 
-var (
-	revisionsMonitoringMetricsGroup = "revisions"
-)
+var ()
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("revisions-discovery-monitoring"),
@@ -92,7 +93,8 @@ type IstioPodStatus struct {
 type IstioPodInfo struct {
 	Name             string
 	Namespace        string
-	Revision         string
+	Version          string // currently used
+	Revision         string // currently used
 	SpecificRevision string
 	InjectAnnotation bool
 	InjectLabel      bool
@@ -145,6 +147,13 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	return ""
 }
 
+func (p *IstioDrivenPod) getIstioVersion() string {
+	if specificPodVersion, ok := p.Annotations[injectSidecarVersionAnnotation]; ok {
+		return specificPodVersion
+	}
+	return ""
+}
+
 func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	pod := v1.Pod{}
 	err := sdk.FromUnstructured(obj, &pod)
@@ -155,6 +164,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	result := IstioPodInfo{
 		Name:             istioPod.Name,
 		Namespace:        istioPod.Namespace,
+		Version:          istioPod.getIstioVersion(),
 		Revision:         istioPod.getIstioCurrentRevision(),
 		SpecificRevision: istioPod.getIstioSpecificRevision(),
 		InjectAnnotation: istioPod.injectAnnotation(),
@@ -169,7 +179,14 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.MetricsCollector.Expire(revisionsMonitoringMetricsGroup)
+	revisionFullVersionMap := make(map[string]string, 0)
+	if input.Values.Get("istio.internal.revisionFullVersionMap").Exists() {
+		for k, v := range input.Values.Get("istio.internal.revisionFullVersionMap").Map() {
+			revisionFullVersionMap[k] = v.String()
+		}
+	}
+
+	input.MetricsCollector.Expire(metadataExporterMetricsGroup)
 
 	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()
 
@@ -211,13 +228,20 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 			continue
 		}
 
+		desiredVersion, ok := revisionFullVersionMap[desiredRevision]
+		if !ok {
+			desiredVersion = "absent"
+		}
+
 		labels := map[string]string{
 			"namespace":        istioPodInfo.Namespace,
 			"dataplane_pod":    istioPodInfo.Name,
 			"desired_revision": desiredRevision,
 			"revision":         istioPodInfo.Revision,
+			"version":          istioPodInfo.Version,
+			"desired_version":  desiredVersion,
 		}
-		input.MetricsCollector.Set("d8_istio_pod_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
+		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
 	}
 	return nil
 }

@@ -19,7 +19,7 @@ import (
 
 type NamespaceInfo struct {
 	Name     string
-	Revision string // for revisions_monitoring.go
+	Revision string // for dataplane_metadata_exporter.go
 }
 
 func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
