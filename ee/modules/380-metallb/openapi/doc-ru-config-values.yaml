@@ -29,6 +29,7 @@ properties:
       Список внешних BGP-роутеров, которые будут работать с этим модулем.
 
       Формат — массив [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
+
       Необязательный параметр, если используется только протокол публикации сервисов `layer2`.
     items:
       properties:

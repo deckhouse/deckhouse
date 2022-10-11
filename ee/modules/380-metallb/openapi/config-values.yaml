@@ -70,6 +70,7 @@ properties:
       A list of external BGP routers to use with the module.
 
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
+
       The parameter is optional if only the `layer2` mode is used to announce services.
     items:
       type: object

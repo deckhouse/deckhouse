@@ -26,7 +26,9 @@ Layer 2 mode has two main limitations you should be aware of:
   In layer 2 mode, a single leader-elected node receives all traffic for the service IP. This means that your service’s Ingress bandwidth is limited to the bandwidth of a single node. This is a fundamental limitation of using ARP and NDP to direct traffic.
 - **Potentially slow failover.** 
 
-  In the current implementation, failover between nodes depends on client cooperation. When failover occurs, MetalLB sends some gratuitous layer 2 packets (a bit of a misnomer — it should really be called “unsolicited layer 2 packets”) to notify clients that the MAC address associated with the service IP has changed. Most operating systems correctly handle “gratuitous” packets and promptly update their neighbor caches. In that case, failover occurs within seconds. However, some systems either don’t implement gratuitous handling or have buggy implementations that delay cache updates.  All modern versions of major OSes (Windows, Mac, Linux) implement layer 2 failover correctly, so problems may only arise in older or less common operating systems. To minimize the impact of a planned failover on buggy clients, you should keep the old leader node running for a couple of minutes after the leader change so that it can continue forwarding traffic to the old clients until their caches are updated. During an unplanned failover, the service IPs will be unreachable until the buggy clients update their cache entries.
+  In the current implementation, failover between nodes depends on client cooperation. When failover occurs, MetalLB sends some gratuitous layer 2 packets (a bit of a misnomer — it should really be called “unsolicited layer 2 packets”) to notify clients that the MAC address associated with the service IP has changed. Most operating systems correctly handle “gratuitous” packets and promptly update their neighbor caches. In that case, failover occurs within seconds. However, some systems either don’t implement gratuitous handling or have buggy implementations that delay cache updates.
+
+  All modern versions of major OSes (Windows, Mac, Linux) implement layer 2 failover correctly, so problems may only arise in older or less common operating systems. To minimize the impact of a planned failover on buggy clients, you should keep the old leader node running for a couple of minutes after the leader change so that it can continue forwarding traffic to the old clients until their caches are updated. During an unplanned failover, the service IPs will be unreachable until the buggy clients update their cache entries.
 
 ### Comparison To Keepalived
 
@@ -60,8 +62,11 @@ In general, it’s preferable to put as much entropy as possible into the packet
 
 ### Limitations
 
-Using BGP as a load-balancing mechanism allows you to use standard router hardware rather than bespoke load balancers. However, it also has its disadvantages. The biggest one is that BGP-based load balancing does not react gracefully to changes in the backend set for an address. This means that when a cluster node goes down, all the active connections to your service are expected to fail (users will see the “Connection reset by peer” error message).
+Using BGP as a load-balancing mechanism allows you to use standard router hardware rather than bespoke load balancers. However, it also has its disadvantages.
+
+The biggest one is that BGP-based load balancing does not react gracefully to changes in the backend set for an address. This means that when a cluster node goes down, all the active connections to your service are expected to fail (users will see the “Connection reset by peer” error message).
 BGP-based routers implement stateless load balancing. They assign a given packet to a specific next hop by hashing some fields in the packet header and using that hash as an index into the array of available backends.
+
 The problem is that the hashes used in routers are usually not stable, so whenever the size of the backend set changes (e.g., when a node’s BGP session goes down), existing connections will be rehashed effectively at random. That means that most existing connections will suddenly be redirected to a different backend with no knowledge of the connection in question.
 The consequence is that whenever the IP→Node mapping gets changed for your service, you should expect to see a one-time hit with the active connections to the service being dropped. There’s no ongoing packet loss or blackholing, just a one-time clean break.
 
