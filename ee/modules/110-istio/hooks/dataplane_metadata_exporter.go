@@ -147,6 +147,9 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 
 func (p *IstioDrivenPod) getIstioVersion() string {
 	if specificPodVersion, ok := p.Annotations["istio.deckhouse.io/injected-sidecar-version"]; ok {
+		if specificPodVersion == "" {
+			return istioVersionAbsent
+		}
 		return specificPodVersion
 	}
 	return istioVersionAbsent
