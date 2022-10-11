@@ -2,7 +2,7 @@
   rules:
     - alert: D8HasUnmetKernelRequirements
       expr: >-
-        max_over_time(network_connections_quota_utilization{nat_instance="true"}[5m]) > 85
+        d8_node_kernel_does_not_satisfy_requirements == 1
       for: 5m
       labels:
         severity_level: "9"
