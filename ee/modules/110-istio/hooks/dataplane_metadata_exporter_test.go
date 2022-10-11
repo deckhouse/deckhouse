@@ -173,6 +173,23 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					InjectionLabelValue: false,
 				}),
 			}, nil),
+		Entry("NS with definite revision, but revision is absent in revisionFullVersionMap",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x00",
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x00",
+					Version:             "1.0.0",
+				}),
+			}, &wantedMetric{
+				Revision:        "v1x00",
+				DesiredRevision: "v1x00",
+				Version:         "1.0.0",
+				DesiredVersion:  "absent",
+			}),
 		Entry("NS without any revisions, pod with inject=true label",
 			[]string{
 				istioNsYAML(nsParams{
