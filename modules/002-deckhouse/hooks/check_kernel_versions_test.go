@@ -68,7 +68,8 @@ status:
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -80,7 +81,8 @@ status:
 	Context("Cilium module enabled, nodes with proper kernels", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
-			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode3))
+			f.KubeStateSet(stateNode1 + stateNode3)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -111,7 +113,8 @@ status:
 	Context("Cilium and istio modules enabled, nodes with proper kernels", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio]"))
-			f.BindingContexts.Set(f.KubeStateSet(stateNode3))
+			f.KubeStateSet(stateNode3)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -121,7 +124,8 @@ status:
 
 		Context("Cilium and ision modules enabled, added node with improper kernel", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
+				f.KubeStateSet(stateNode1 + stateNode2 + stateNode3)
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 			})
 
