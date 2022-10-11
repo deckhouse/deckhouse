@@ -52,7 +52,7 @@ metadata:
   annotations:
     some-annotation: some-value
     {{ if .Version }}
-    istio.deckhouse.io/injected-sidecar-version: '{{ .Version }}'
+    istio.deckhouse.io/version: '{{ .Version }}'
     {{ end }}
     {{ if .CurrentRevision }}
     sidecar.istio.io/status: '{"a":"b", "revision":"{{ .CurrentRevision }}" }'
@@ -188,7 +188,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x00",
 				DesiredRevision: "v1x00",
 				Version:         "absent",
-				DesiredVersion:  "absent",
+				DesiredVersion:  "unknown",
 			}),
 		Entry("NS without any revisions, pod with inject=true label",
 			[]string{
@@ -462,7 +462,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x77",
 				DesiredRevision: "absent",
 				Version:         "1.77.77",
-				DesiredVersion:  "absent",
+				DesiredVersion:  "unknown",
 			}),
 		Entry("Pod without current and desired revisions",
 			[]string{

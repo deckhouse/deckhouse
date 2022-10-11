@@ -16,7 +16,7 @@
       summary: Desired control-plane version isn't installed
     expr: |
       (
-        d8_istio_dataplane_metadata{revision!="absent"}
+        max by (dataplane_pod, namespace, revision, desired_revision) (d8_istio_dataplane_metadata{revision!="absent"})
       )
       unless on (revision)
       (
@@ -52,7 +52,10 @@
       summary: Desired control-plane version isn't installed
     expr: |
       (
-        label_replace(d8_istio_dataplane_metadata{desired_revision!="absent"}, "revision", "$1", "desired_revision", "(.+)")
+        max by (dataplane_pod, namespace, revision)
+          (
+             label_replace(d8_istio_dataplane_metadata{desired_revision!="absent"}, "revision", "$1", "desired_revision", "(.+)")
+          )
       )
       unless on (revision)
       (
@@ -81,7 +84,10 @@
       plk_protocol_version: "1"
       summary: There are Pods with istio sidecars, but without istio-injection configured
     expr: |
-      d8_istio_dataplane_metadata{desired_revision="absent",revision!="absent"}
+      max by (dataplane_pod, namespace, revision, desired_revision)
+        (
+           d8_istio_dataplane_metadata{desired_revision="absent",revision!="absent"}
+        )
     for: 5m
     labels:
       severity_level: "4"
@@ -100,7 +106,10 @@
       plk_protocol_version: "1"
       summary: There are Pods without istio sidecars, but with istio-injection configured
     expr: |
-      d8_istio_dataplane_metadata{revision="absent", desired_revision!=""}
+      max by (dataplane_pod, namespace, revision, desired_revision)
+        (
+           d8_istio_dataplane_metadata{revision="absent", desired_revision!=""}
+        )
     for: 5m
     labels:
       severity_level: "4"
@@ -128,7 +137,10 @@
         There are Pods with istio data-plane revision `{{$labels.revision}}`,
         but desired revision is `{{$labels.desired_revision}}`
     expr: |
-      d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent"}
+      max by (dataplane_pod, namespace, revision, desired_revision)
+      (
+        d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent"}
+      )
       unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
     labels:
@@ -137,7 +149,7 @@
   - alert: D8IstioDataPlaneVersionMismatch
     annotations:
       description: |
-        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.version}}` which differ from control-plane one `{{$labels.desired_revision}}`.
+        There are Pods in `{{$labels.namespace}}` namespace with istio data-plane version `{{$labels.version}}` which differ from control-plane one `{{$labels.desired_revision}}`.
         Consider restarting affected Pods, use PromQL query to get the list:
         ```
         max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{version="{{$labels.version}}"})
@@ -151,8 +163,11 @@
         one.
     expr: |
       # An empty version label is needed for backward compatibility for those pods without a version annotation, so as not to cause a false alert.
-      d8_istio_dataplane_metadata{version!~"(|absent)", desired_version!="absent"}
-      unless on (version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "version", "$1", "desired_version", "(.+)")
+      max by (dataplane_pod, namespace, version, desired_version)
+        (
+           d8_istio_dataplane_metadata{version!~"(|absent)", desired_version!="absent"}
+           unless on (version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "version", "$1", "desired_version", "(.+)")
+        )
     for: 5m
     labels:
       severity_level: "8"

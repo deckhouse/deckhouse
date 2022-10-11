@@ -15,7 +15,7 @@ properties:
           "v1x12": "1.12.6"
           "v1x10x1": "1.10.1"
         x-examples:
-        - {"1x77": "1.77.7"}
+        - {"v1x77": "1.77.7"}
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]

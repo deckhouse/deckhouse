@@ -22,6 +22,7 @@ import (
 const (
 	istioRevsionAbsent           = "absent"
 	istioVersionAbsent           = "absent"
+	istioVersionUnknown          = "unknown"
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
 )
@@ -91,11 +92,11 @@ type IstioPodStatus struct {
 type IstioPodInfo struct {
 	Name             string
 	Namespace        string
-	Version          string // currently used
-	Revision         string // currently used
-	SpecificRevision string
-	InjectAnnotation bool
-	InjectLabel      bool
+	Version          string // istio dataplane version
+	Revision         string // istio dataplane revision
+	SpecificRevision string // istio.io/rev: vXxYZ label if it is
+	InjectAnnotation bool   // sidecar.istio.io/inject: true annotation if it is
+	InjectLabel      bool   // sidecar.istio.io/inject: true label if it is
 }
 
 func (p *IstioDrivenPod) getIstioCurrentRevision() string {
@@ -146,7 +147,7 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 }
 
 func (p *IstioDrivenPod) getIstioVersion() string {
-	if specificPodVersion, ok := p.Annotations["istio.deckhouse.io/injected-sidecar-version"]; ok {
+	if specificPodVersion, ok := p.Annotations["istio.deckhouse.io/version"]; ok {
 		if specificPodVersion == "" {
 			return istioVersionAbsent
 		}
@@ -180,11 +181,9 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	revisionFullVersionMap := make(map[string]string, 0)
-	if input.Values.Get("istio.internal.revisionFullVersionMap").Exists() {
-		for k, v := range input.Values.Get("istio.internal.revisionFullVersionMap").Map() {
-			revisionFullVersionMap[k] = v.String()
-		}
+	revisionFullVersionMap := make(map[string]string, len(input.Values.Get("istio.internal.revisionFullVersionMap").Map()))
+	for k, v := range input.Values.Get("istio.internal.revisionFullVersionMap").Map() {
+		revisionFullVersionMap[k] = v.String()
 	}
 
 	input.MetricsCollector.Expire(metadataExporterMetricsGroup)
@@ -231,7 +230,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 
 		desiredVersion, ok := revisionFullVersionMap[desiredRevision]
 		if !ok {
-			desiredVersion = istioVersionAbsent
+			desiredVersion = istioVersionUnknown
 		}
 
 		labels := map[string]string{
