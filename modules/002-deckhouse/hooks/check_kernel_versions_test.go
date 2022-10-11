@@ -104,10 +104,10 @@ status:
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(2))
 				Expect(m[1].Labels).To(Equal(map[string]string{
-					"module":         "cni-cilium",
-					"constraint":     ">= 4.9.17",
-					"name":           "node-2",
-					"kernel_version": "3.10.0-1127.el7.x86_64",
+					"affected_module": "cni-cilium",
+					"constraint":      ">= 4.9.17",
+					"node":            "node-2",
+					"kernel_version":  "3.10.0-1127.el7.x86_64",
 				}))
 				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())
 			})
@@ -139,16 +139,16 @@ status:
 				m := f.MetricsCollector.CollectedMetrics()
 				Expect(m).To(HaveLen(4))
 				Expect(m[1].Labels).To(Equal(map[string]string{
-					"module":         "cni-cilium,istio",
-					"constraint":     ">= 5.7",
-					"name":           "node-1",
-					"kernel_version": "5.4.0-90-generic",
+					"affected_module": "cni-cilium,istio",
+					"constraint":      ">= 5.7",
+					"node":            "node-1",
+					"kernel_version":  "5.4.0-90-generic",
 				}))
 				Expect(m[2].Labels).To(Equal(map[string]string{
-					"module":         "cni-cilium",
-					"constraint":     ">= 4.9.17",
-					"name":           "node-2",
-					"kernel_version": "3.10.0-1127.el7.x86_64",
+					"affected_module": "cni-cilium",
+					"constraint":      ">= 4.9.17",
+					"node":            "node-2",
+					"kernel_version":  "3.10.0-1127.el7.x86_64",
 				}))
 
 				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())

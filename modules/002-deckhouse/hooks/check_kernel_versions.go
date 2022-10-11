@@ -102,7 +102,7 @@ func handleNodes(input *go_hook.HookInput) error {
 				return err
 			}
 			if !c.Check(v) {
-				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"name": node.Name, "kernel_version": node.KernelVersion, "module": "cni-cilium", "constraint": ciliumConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium", "constraint": ciliumConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
 				input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
 				res = true
 			}
@@ -114,7 +114,7 @@ func handleNodes(input *go_hook.HookInput) error {
 					return err
 				}
 				if !c.Check(v) {
-					input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"name": node.Name, "kernel_version": node.KernelVersion, "module": "cni-cilium,istio", "constraint": ciliumAndIstioConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+					input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium,istio", "constraint": ciliumAndIstioConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
 					input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
 					res = true
 				}
