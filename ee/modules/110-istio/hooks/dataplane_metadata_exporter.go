@@ -26,8 +26,6 @@ const (
 	metadataExporterMetricsGroup = "metadata"
 )
 
-var ()
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("dataplane-metadata"),
 	Kubernetes: []go_hook.KubernetesConfig{
