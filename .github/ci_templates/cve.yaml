@@ -11,7 +11,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run CVE tests
     run: |
-      echo "⚓️ 🏎 Running CVE tests on $GITHUB_REF_NAME...'
+      echo "⚓️ 🏎 Running CVE tests on ${{ github.ref_name }}..."
       make {!{ $args }!}
 # </template: cve_tests>
 {!{- end -}!}
