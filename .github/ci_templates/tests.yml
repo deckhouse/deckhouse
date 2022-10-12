@@ -12,20 +12,6 @@ docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xter
 # </template: matrix_run_args>
 {!{- end -}!}
 
-{!{ define "cve_base_images_run_args" }!}
-# <template: cve_base_images_run_args>
-args: 'make cve-base-images'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/deckhouse-bin-cache:/deckhouse/bin -v ~/.docker:/root/.docker'
-# </template: cve_base_images_run_args>
-{!{- end -}!}
-
-{!{ define "cve_report_run_args" }!}
-# <template: cve_report_run_args>
-args: 'make cve-report'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/deckhouse-bin-cache:/deckhouse/bin -v ~/.docker:/root/.docker'
-# </template: cve_report_run_args>
-{!{- end -}!}
-
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
