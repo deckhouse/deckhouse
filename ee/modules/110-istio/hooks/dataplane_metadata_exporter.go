@@ -92,11 +92,11 @@ type IstioPodStatus struct {
 type IstioPodInfo struct {
 	Name             string
 	Namespace        string
-	Version          string // istio dataplane version
-	Revision         string // istio dataplane revision
+	Version          string // istio dataplane version (i.e. "1.15.6")
+	Revision         string // istio dataplane revision (i.e. "v1x15")
 	SpecificRevision string // istio.io/rev: vXxYZ label if it is
-	InjectAnnotation bool   // sidecar.istio.io/inject: true annotation if it is
-	InjectLabel      bool   // sidecar.istio.io/inject: true label if it is
+	InjectAnnotation bool   // sidecar.istio.io/inject annotation if it is
+	InjectLabel      bool   // sidecar.istio.io/inject label if it is
 }
 
 func (p *IstioDrivenPod) getIstioCurrentRevision() string {
