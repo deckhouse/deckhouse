@@ -11,8 +11,8 @@ properties:
         description: |
           Enforcement action which will control what to do with the result of a constraint.
           - Deny — Deny action.
-          - Dryrun — No action. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или в консоли с помощью kubectl.
-          - Warn — Same as `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, why that constraint would have been denied, если установить `Deny` вместо `Warn`.
+          - Dryrun - No action. It is used when debugging. Information about the event can be viewed in Grafana or in console with kubectl.
+          - Warn - Same as `Dryrun`, but in addition to the event information there will be information about why that constraint would have been denied if you set `Deny` instead of `Warn`.
         enum:
           - Warn
           - Deny
