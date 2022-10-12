@@ -37,15 +37,20 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	var globalVersion string
-	if input.ConfigValues.Exists("istio.globalVersion") {
+
+	switch {
+	case input.ConfigValues.Exists("istio.globalVersion"):
 		// globalVersion is set in CM — use it
 		globalVersion = input.ConfigValues.Get("istio.globalVersion").String()
 
 		if !internal.Contains(supportedVersions, globalVersion) {
 			unsupportedVersions = append(unsupportedVersions, globalVersion)
 		}
-	} else {
-		// let's check the d8-istio/istiod Service's istio.deckhouse.io/global-version annotation
+	case input.Values.Exists("istio.internal.globalVersion"):
+		// globalVersion was previously discovered — use it
+		globalVersion = input.Values.Get("istio.internal.globalVersion").String()
+	default:
+		// maybe there is a global istiod Service with annotation?
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
 			return err
@@ -53,17 +58,20 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 		service, err := k8sClient.CoreV1().Services("d8-istio").Get(context.TODO(), "istiod", metav1.GetOptions{})
 		if err == nil {
-			// there is the global istiod Service — let's check the annotation
+			// there is the global istiod Service — let's get the annotation
 			if version, ok := service.GetAnnotations()["istio.deckhouse.io/global-version"]; ok {
 				globalVersion = version
 			} else {
-				// migration from v1.10.1: delete this "else" after deploying to all clusters
-				globalVersion = "1.10.1"
+				return fmt.Errorf("can't find istio.deckhouse.io/global-version annotation for istiod global Service d8-istio/istiod")
 			}
-		} else {
-			globalVersion = input.Values.Get("istio.globalVersion").String() // default from openapi/config-values.yaml
 		}
 	}
+
+	// couldn't discover globalVersion — let's use default value from openapi/config-values.yaml
+	if globalVersion == "" {
+		globalVersion = input.Values.Get("istio.globalVersion").String()
+	}
+
 	globalRevision = internal.VersionToRevision(globalVersion)
 
 	var additionalRevisions []string
@@ -90,9 +98,9 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 	sort.Strings(revisionsToInstall)
 
+	input.Values.Set("istio.internal.globalVersion", globalVersion)
 	input.Values.Set("istio.internal.globalRevision", globalRevision)
 	input.Values.Set("istio.internal.revisionsToInstall", revisionsToInstall)
-	input.ConfigValues.Set("istio.globalVersion", globalVersion)
 
 	return nil
 }

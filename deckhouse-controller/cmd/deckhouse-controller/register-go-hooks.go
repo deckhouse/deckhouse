@@ -19,7 +19,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/pricing"
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
-	_ "github.com/deckhouse/deckhouse/global-hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/global-hooks/resources"
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"

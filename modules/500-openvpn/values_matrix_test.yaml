@@ -50,5 +50,7 @@ openvpn:
     customCertificateData:
       tls.crt: plainstring
       tls.key: plainstring
+    auth:
+      password: test
   auth:
     password: test

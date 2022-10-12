@@ -91,6 +91,7 @@ internal:
   prometheusScraperTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY
+  auth: {}
 `, longtermRetentionDays)
 
 	}

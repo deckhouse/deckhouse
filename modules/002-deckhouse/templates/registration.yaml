@@ -1,3 +1,4 @@
+{{/* Release channel and bundle for 600-flant-integration module.  */}}
 {{- if (.Values.global.enabledModules | has "flant-integration") }}
 ---
 apiVersion: v1

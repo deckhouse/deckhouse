@@ -1,4 +1,19 @@
 x-extend:
   schema: config-values.yaml
 type: object
-properties: {}
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+      - locations
+    properties:
+      locations:
+        type: array
+        default: []
+        items:
+          type: object
+          required:
+            - location
+          additionalProperties: true
+          x-kubernetes-preserve-unknown-fields: true

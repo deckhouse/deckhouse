@@ -66,7 +66,15 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 }
 
 func VersionToRevision(version string) string {
-	version = "v" + version
+	// Restore 'v' prefix.
+	if !strings.HasPrefix(version, "v") {
+		version = "v" + version
+	}
+
+	// Check if version is already converted.
+	if !strings.ContainsAny(version, ".-") {
+		return version
+	}
 
 	// v1.2.3-alpha.4 -> v1.2.3-alpha4
 	var re = regexp.MustCompile(`([a-z])\.([0-9])`)

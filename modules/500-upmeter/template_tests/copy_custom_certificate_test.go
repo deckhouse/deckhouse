@@ -17,12 +17,14 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -72,10 +74,8 @@ discovery:
 
 const customCertificatePresent = `
 auth:
-  status:
-    password: qw
-  webui:
-    password: zx
+  webui: {}
+  status: {}
 disabledProbes: []
 https:
   mode: CustomCertificate
@@ -91,7 +91,11 @@ internal:
       c: {}
       d: {}
       e: {}
-  upmeter: {}
+  auth:
+    status:
+      password: testP4ssw0rd
+    webui:
+      password: testP4ssw0rd
 smokeMini: { auth: {} }
 smokeMiniDisabled: false
 statusPageAuthDisabled: false
@@ -118,6 +122,19 @@ var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", fun
 			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "ingress-tls-webui-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "basic-auth-status")
+			Expect(createdSecret.Exists()).To(BeTrue())
+			ensureBasicAuthPassword(createdSecret, "testP4ssw0rd")
+			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "basic-auth-webui")
+			Expect(createdSecret.Exists()).To(BeTrue())
+			ensureBasicAuthPassword(createdSecret, "testP4ssw0rd")
 		})
 	})
 })
+
+func ensureBasicAuthPassword(secret object_store.KubeObject, pass string) {
+	Expect(secret.Field("data").Map()).To(HaveKey("auth"))
+	decodedBytes, err := base64.StdEncoding.DecodeString(secret.Field("data.auth").String())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(string(decodedBytes)).To(ContainSubstring(pass))
+}

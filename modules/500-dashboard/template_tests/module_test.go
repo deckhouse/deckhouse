@@ -120,7 +120,8 @@ discovery:
 
 const dashboard = `
 accessLevel: User
-internal: {}
+internal:
+  auth: {}
 auth: {}
 https:
   mode: OnlyInURI

@@ -9,4 +9,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = generate_password.RegisterHook("istio")
+const (
+	moduleValuesKey = "istio"
+	authSecretNS    = "d8-istio"
+	authSecretName  = "kiali-basic-auth"
+)
+
+var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)
