@@ -29,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleStopMainQueue(input *go_hook.HookInput) error {
 	if res := input.Values.Get("deckhouse.internal.stopMainQueue").Bool(); res {
-		return fmt.Errorf("main queue stopped due to node kernel requirements error. Get deckhouse logs to see errors and after fix restart deckhouse pod manually")
+		return fmt.Errorf("main queue stopped due to node kernel requirement errors. Get deckhouse logs to get more information")
 	}
 	return nil
 }
