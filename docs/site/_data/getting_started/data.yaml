@@ -68,6 +68,7 @@ presets:
 
 installTypes:
   aws:
+    iconPath: images/icons/platforms/amazon_aws.png
     layouts:
       without_nat:
         name: WithoutNAT
@@ -113,6 +114,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   gcp:
+    iconPath: images/icons/platforms/google_cloude_engine.png
     layouts:
       without_nat:
         name: WithoutNAT
@@ -158,6 +160,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   azure:
+    iconPath: images/icons/platforms/microsoft_azure.png
     layouts:
       standard:
         name: Standard
@@ -201,6 +204,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   openstack:
+    iconPath: images/icons/platforms/corp_cloud_open_stack.png
     ee_only: true
     layouts:
       standard:
@@ -247,6 +251,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   vsphere:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true
     type: cloud
     name:
@@ -291,6 +296,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   yandex:
+    iconPath: images/icons/platforms/yandex_cloud.png
     layouts:
       without_nat:
         name: WithoutNAT
@@ -304,8 +310,8 @@ installTypes:
       ru: "Deckhouse Platform в Яндекс.Облаке"
     type: cloud
     name:
-      en: Yandex.Cloud
-      ru: Яндекс.Облако
+      en: "Yandex Cloud"
+      ru: "Яндекс Облако"
     steps:
       step2:
         name:
@@ -338,6 +344,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   existing:
+    iconPath: images/icons/platforms/kubernetes.svg
     layouts:
       default:
         name: Default
@@ -376,6 +383,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   kind:
+    iconPath: images/icons/platforms/kind.png
     layouts:
       default:
         name: Default
@@ -409,6 +417,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   bm-private:
+    iconPath: images/icons/platforms/lock.png
     ce_only: true
     layouts:
       default:
@@ -448,6 +457,7 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   bm:
+    iconPath: images/icons/platforms/bare_metal.png
     layouts:
       default:
         name: Default
