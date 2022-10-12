@@ -32,7 +32,7 @@ type istioVersion struct {
 	version     string
 }
 
-// pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "1x22", "imageSuffix": "V1x22x33", version: "1.22"}
+// pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "v1x22", "imageSuffix": "V1x22x33", version: "1.22"}
 func imageToIstioVersion(img string) (*istioVersion, error) {
 	re := regexp.MustCompile(imageRegex)
 	match := re.FindStringSubmatch(img)

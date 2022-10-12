@@ -137,7 +137,7 @@ properties:
         type: boolean
         default: false
         x-examples: [true]
-      versionssToInstall:
+      versionsToInstall:
         type: array
         items:
           type: string
