@@ -147,11 +147,11 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 }
 
 func (p *IstioDrivenPod) getIstioVersion() string {
-	if specificPodVersion, ok := p.Annotations["istio.deckhouse.io/version"]; ok {
-		if specificPodVersion == "" {
+	if istioVersion, ok := p.Annotations["istio.deckhouse.io/version"]; ok {
+		if istioVersion == "" {
 			return istioVersionAbsent
 		}
-		return specificPodVersion
+		return istioVersion
 	}
 	return istioVersionAbsent
 }
