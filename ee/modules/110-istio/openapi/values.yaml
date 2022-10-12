@@ -6,6 +6,21 @@ properties:
     type: object
     default: {}
     properties:
+      versionMap:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          properties:
+            fullVersion:
+              type: string
+              x-examples: ["1.22.33"]
+            revision:
+              type: string
+              x-examples: ["v1x22"]
+            imageSuffix:
+              type: string
+              x-examples: ["V1x22x33"]
       revisionFullVersionMap:
         type: object
         additionalProperties:
