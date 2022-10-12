@@ -1,369 +1,337 @@
 spec:
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Описывает параметры инстанса descheduler.
-        properties:
-          spec:
-            description: Параметры инстанса descheduler.
-            properties:
-              deploymentTemplate:
-                description: |
-                  Шаблон Deployment'а descheduler.
-                properties:
-                  nodeSelector:
-                    description: |
-                      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
-
-                      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-                  resourcesRequests:
-                    description: Политика распределения системных ресурсов для самого Deployment'а descheduler.
-                    properties:
-                      mode:
-                        description: Режим работы VPA для данного Deployment'а.
-                  tolerations:
-                    description: |
-                      Структура, аналогичная `spec.tolerations` в Kubernetes Pod.
-
-                      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-                    items:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Описывает параметры инстанса descheduler.
+          properties:
+            spec:
+              description: Параметры инстанса descheduler.
+              properties:
+                deploymentTemplate:
+                  description: Шаблон Deployment'а descheduler.
+                deschedulerPolicy:
+                  description: '`parameters` и `strategies` полностью соответствуют [документации]( https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).'
+                  properties:
+                    parameters:
+                      description: Параметры, применяющиеся ко всем политикам.
                       properties:
-                        effect:
-                          description: Определяет какому effect'у taint'а соответствует описываемый toleration. Пустой подразумевает соответствие любому effect.
-                        key:
+                        evictFailedBarePods:
+                          description: Позволяет Pod'ам без установленного `ownerReferences` и в фазе failed быть вытесненными.
+                        evictLocalStoragePods:
+                          description: Позволяет Pod'ам с local storage быть вытесненными.
+                        evictSystemCriticalPods:
                           description: |
-                            Определяет какому ключу (key) taint'a соответствует описываемый toleration. Пустой подразумевает соответствие любому ключу.
+                            Разрешает вытеснять Pod'ы с любым приоритетом (включая системные Pod'ы Kubernetes).
 
-                            Если ключ (key) не указан (пуст), то `operator` должен быть — `Exists`, что подразумевает соответствие любым `value` и `key`.
-                        operator:
-                          description: |
-                            Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению, или допустимо существование ключа с любым значением.
+                            > **Внимание!** Включение опции полностью отключит priority filtering политики.
+                        ignorePvcPods:
+                          description: Отключает вытеснение Pod'ов с PVC.
+                        maxNoOfPodsToEvictPerNamespace:
+                          description: Ограничивает количество Pod'ов в отдельном Namespace, которые можно вытеснять одновременно.
+                        maxNoOfPodsToEvictPerNode:
+                          description: Ограничивает количество Pod'ов на отдельном узле, которые можно вытеснять одновременно.
+                        nodeSelector:
+                          description: NodeSelector для узлов, на Pod'ы которых буду действовать стратегии этого descheduler.
+                    strategies:
+                      description: |
+                        Список [стратегий](./#стратегий) и их параметров инстанса этого Descheduler.
 
-                            Указание `Exists` равносильно допуску любого значения (для value), чтобы Pod с указанным toleration удовлетворял соответствующему taint.
-                        tolerationSeconds:
-                          description: |
-                            Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем выгнать (evict) Pod с узла, если `toleration` перестал удовлетворять `taint` (справедливо **только** для effect `NoExecute`, иначе игнорируется).
-
-                            Если установлен в ноль (или отрицателен), то Pod будет выгнан с узла немедленно, если  toleration перестал удовлетворять taint.
-
-                            **По умолчанию**: не установлено, т.е. Pod не будет выгнан с узла.
-                        value:
-                          description: |
-                            Значение, которому должен удовлетворять `toleration`.
-
-                            Должно быть пустым, если operator — `Exists`.
-              deschedulerPolicy:
-                description: Параметры `commonParameters` и `strategies` полностью соответствуют [документации]( https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
-                properties:
-                  parameters:
-                    description: Параметры, применяющиеся ко всем политикам.
-                    properties:
-                      evictFailedBarePods:
-                        description: Позволяет Pod'ам без установленного `ownerReferences` и в фазе failed быть вытесненными.
-                      evictLocalStoragePods:
-                        description: Позволяет Pod'ам с local storage быть вытесненными.
-                      evictSystemCriticalPods:
-                        description: |
-                          Разрешает вытеснять Pod'ы с любым приоритетом (включая системные Pod'ы Kubernetes).
-
-                          > **Внимание!** Включение опции полностью отключит priority filtering политики.
-                      ignorePvcPods:
-                        description: Отключает вытеснение Pod'ов с PVC.
-                      maxNoOfPodsToEvictPerNamespace:
-                        description: Ограничивает количество Pod'ов в отдельном Namespace, которые можно вытеснять одновременно.
-                      maxNoOfPodsToEvictPerNode:
-                        description: Ограничивает количество Pod'ов на отдельном узле, которые можно вытеснять одновременно.
-                      nodeSelector:
-                        description: NodeSelector для узлов, на Pod'ы которых буду действовать стратегии этого descheduler.
-                  strategies:
-                    description: |
-                      Список [стратегий](./#стратегий) и их параметров инстанса этого Descheduler.
-
-                      Чтобы применить стратегию, но не передавать ей каких-либо параметров, просто укажите её так:
-                      `removePodsViolatingNodeAffinity: {}`.
-                    properties:
-                      highNodeUtilization:
-                        description: |
-                          Находит узлы, которые недостаточно используются, и удаляет модули в надежде, что эти модули будут компактно распределены по меньшему количеству узлов.
-
-                          Должна использоваться со стратегией планировщика `MostRequestedPriority`.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#highnodeutilization)
-                        properties:
-                          nodeFit:
-                            type: boolean
-                          nodeResourceUtilizationThresholds:
-                            properties:
-                              numberOfNodes:
-                                type: integer
-                              targetThresholds:
-                                additionalProperties:
-                                  type: number
-                                type: object
-                              thresholds:
-                                additionalProperties:
-                                  type: number
-                                type: object
-                              useDeviationThresholds:
-                                type: boolean
-                            type: object
-                        type: object
-                      lowNodeUtilization:
-                        description: |
-                          Находит нагруженные и не нагруженные узлы в кластере по cpu/memory/Pod'ам (в процентах) и, при наличии и тех и других, вытесняет Pod'ы с нагруженных узлов.
-
-                          > Обратите внимание, что стратегия учитывает не реально потребленные ресурсы на узле, а requests у Pod'ов.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#lownodeutilization)
-                        properties:
-                          nodeFit:
-                            type: boolean
-                          nodeResourceUtilizationThresholds:
-                            properties:
-                              numberOfNodes:
-                                type: integer
-                              targetThresholds:
-                                additionalProperties:
-                                  type: number
-                                type: object
-                              thresholds:
-                                additionalProperties:
-                                  type: number
-                                type: object
-                              useDeviationThresholds:
-                                type: boolean
-                            type: object
-                        type: object
-                      podLifeTime:
-                        description: |
-                          Гарантирует, что Pod'ы в состоянии Pending старше 24 часов, будут удалены с узлов.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#podlifetime)
-                        properties:
-                          labelSelector: &labelSelector
-                            description: |
-                              Позволяет задать фильтр по ресурсам.
-
-                              Подробнее про выражения можно узнать в [документации](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/).
-                            properties:
-                              matchExpressions:
-                                description: Список выражений для label, которые должен иметь Pod.
-                              matchLabels:
-                                description: Список label, которые должен иметь Pod.
-                            type: object
-                          namespaces: &namespaces
-                            description: |
-                              Позволяет указывать список namespace и исключений соответственно, которые должен иметь Pod.
-                            properties:
-                              exclude:
-                                items:
-                                  type: string
-                                type: array
-                              include:
-                                items:
-                                  type: string
-                                type: array
-                            required:
-                            - exclude
-                            - include
-                            type: object
-                          podLifeTime:
-                            properties:
-                              maxPodLifeTimeSeconds:
-                                type: integer
-                              podStatusPhases:
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removeDuplicates:
-                        description: |
-                          Следит за тем, чтобы на одном узле не было запущенно более одного Pod'а одного контроллера (RS, RC, Deploy, Job).
-
-                          Если таких Pod'ов два на одном узле, descheduler убивает один Pod.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removeduplicates)
-                        properties:
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          removeDuplicates:
-                            properties:
-                              excludeOwnerKinds:
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removeFailedPods:
-                        description: |
-                          Вытесняет Pod'ы, которые находятся в статусе ошибки.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removefailedpods)
-                        properties:
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          removeFailedPods:
-                            properties:
-                              excludeOwnerKinds:
-                                items:
-                                  type: string
-                                type: array
-                              includingInitContainers:
-                                type: boolean
-                              minPodLifetimeSeconds:
-                                type: integer
-                              reasons:
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removePodsHavingTooManyRestarts:
-                        description: |
-                          Гарантирует, что Pod'ы, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removepodshavingtoomanyrestarts)
-                        properties:
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          podsHavingTooManyRestarts:
-                            properties:
-                              includingInitContainers:
-                                type: boolean
-                              podRestartThreshold:
-                                format: int32
-                                type: integer
-                            type: object
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removePodsViolatingInterPodAntiAffinity:
-                        description: |
-                          Следит за тем, чтобы все "нарушители" anti-affinity были удалены.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatinginterpodantiaffinity)
-                        properties:
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removePodsViolatingNodeAffinity:
-                        description: |
-                          Отвечает за кейс, когда Pod был привязан к узлу по условиям (`requiredDuringSchedulingIgnoredDuringExecution`), но потом узел перестал им удовлетворять. Тогда descheduler увидит это и сделает все, что бы Pod переехал туда, где он будет удовлетворять условиям.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingnodeaffinity)
-                        properties:
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeAffinityType:
-                            items:
-                              type: string
-                            type: array
-                          nodeFit:
-                            type: boolean
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removePodsViolatingNodeTaints:
-                        description: |
-                          Гарантирует, что Pod'ы, нарушающие NoSchedule на узлах, будут удалены.
-
-                          Например, есть Pod, имеющий toleration и запущенный на узле с соответствующим taint. Если taint на узле будет изменён или удален, Pod будет вытеснен с узла.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingnodetaints)
-                        properties:
-                          excludedTaints:
-                            items:
-                              type: string
-                            type: array
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                      removePodsViolatingTopologySpreadConstraint:
-                        description: |
-                          Гарантирует, что Pod'ы, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.
-
-                          [Подробнее...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingtopologyspreadconstraint)
-                        properties:
-                          includeSoftConstraints:
-                            type: boolean
-                          labelSelector: *labelSelector
-                          namespaces: *namespaces
-                          nodeFit:
-                            type: boolean
-                          thresholdPriority:
-                            format: int32
-                            type: integer
-                          thresholdPriorityClassName:
-                            type: string
-                        required:
-                        - includeSoftConstraints
-                        - thresholdPriority
-                        - thresholdPriorityClassName
-                        type: object
-                    type: object
-                type: object
-          status:
-            description: Последний известный статус descheduler Deployment'а.
+                        Чтобы применить стратегию, но не передавать ей каких-либо параметров, просто укажите её так:
+                        `removePodsViolatingNodeAffinity: {}`.
+                      properties:
+                        highNodeUtilization:
+                          properties:
+                            params:
+                              default:
+                                nodeResourceUtilizationThresholds:
+                                  thresholds:
+                                    cpu: 50
+                                    memory: 50
+                              properties:
+                                nodeFit:
+                                nodeResourceUtilizationThresholds:
+                                  properties:
+                                    numberOfNodes:
+                                    targetThresholds:
+                                      additionalProperties:
+                                    thresholds:
+                                      additionalProperties:
+                                    useDeviationThresholds:
+                        lowNodeUtilization:
+                          properties:
+                            params:
+                              default:
+                                nodeResourceUtilizationThresholds:
+                                  targetThresholds:
+                                    cpu: 50
+                                    memory: 50
+                                    pods: 50
+                                  thresholds:
+                                    cpu: 20
+                                    memory: 20
+                                    pods: 20
+                              properties:
+                                nodeFit:
+                                nodeResourceUtilizationThresholds:
+                                  properties:
+                                    numberOfNodes:
+                                    targetThresholds:
+                                      additionalProperties:
+                                    thresholds:
+                                      additionalProperties:
+                                    useDeviationThresholds:
+                        podLifeTime:
+                          properties:
+                            params:
+                              default:
+                                podLifeTime:
+                                  maxPodLifeTimeSeconds: 86400
+                                  podStatusPhases:
+                                    - Pending
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                podLifeTime:
+                                  properties:
+                                    maxPodLifeTimeSeconds:
+                                    podStatusPhases:
+                                      items:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removeDuplicates:
+                          properties:
+                            params:
+                              properties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                removeDuplicates:
+                                  properties:
+                                    excludeOwnerKinds:
+                                      items:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removeFailedPods:
+                          properties:
+                            params:
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                removeFailedPods:
+                                  properties:
+                                    excludeOwnerKinds:
+                                      items:
+                                    includingInitContainers:
+                                    minPodLifetimeSeconds:
+                                    reasons:
+                                      items:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removePodsHavingTooManyRestarts:
+                          properties:
+                            params:
+                              default:
+                                podsHavingTooManyRestarts:
+                                  includingInitContainers: true
+                                  podRestartThreshold: 100
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                podsHavingTooManyRestarts:
+                                  properties:
+                                    includingInitContainers:
+                                    podRestartThreshold:
+                                      format: int32
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removePodsViolatingInterPodAntiAffinity:
+                          properties:
+                            params:
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removePodsViolatingNodeAffinity:
+                          properties:
+                            params:
+                              default:
+                                  - requiredDuringSchedulingIgnoredDuringExecution
+                              properties:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                  items:
+                                nodeFit:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removePodsViolatingNodeTaints:
+                          properties:
+                            params:
+                              properties:
+                                excludedTaints:
+                                  items:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+                        removePodsViolatingTopologySpreadConstraint:
+                          properties:
+                            params:
+                              properties:
+                                includeSoftConstraints:
+                                labelSelector:
+                                  properties:
+                                    matchExpressions:
+                                      items:
+                                        properties:
+                                          key:
+                                          operator:
+                                          values:
+                                            items:
+                                        required:
+                                          - key
+                                          - operator
+                                    matchLabels:
+                                      additionalProperties:
+                                namespaces:
+                                  properties:
+                                    exclude:
+                                      items:
+                                    include:
+                                      items:
+                                nodeFit:
+                                thresholdPriority:
+                                  format: int32
+                                thresholdPriorityClassName:
+            status:
+              description: Most recently observed status of a descheduler instance.
+              properties:
+                ready:
+              required:
+                - ready
+          required:
+            - spec
