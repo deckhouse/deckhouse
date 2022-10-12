@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Istio hooks :: discovery_versions ::", func() {
+var _ = Describe("Istio hooks :: discovery_versions ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{ "internal": {} }}`, "")
 
 	Context("Empty cluster and no settings", func() {
@@ -34,6 +34,10 @@ operatorV1x22x3: "operator-img"
 pilotV1x22x3: "pilot-img"
 operatorV1x55x6: "operator-img"
 pilotV1x55x6: "pilot-img"
+pilot: "old-pilot-img"
+pilotV11: "old-pilot-img"
+pilotV1x11: "old-pilot-img"
+pilotVx11x11x11x11: "old-pilot-img"
 `
 			f.ValuesSetFromYaml("global.modulesImages.tags.istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(``))

@@ -6,9 +6,18 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"fmt"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"strings"
+	"regexp"
+)
+
+const (
+	versionTemplate     = "%s.%s"
+	fullVersionTemplate = "%s.%s.%s"
+	revisionTemplate    = "v%sx%s"
+	imageSuffixTemplate = "V%sx%sx%s"
+	imageRegex          = `pilotV(?P<major>\d+)x(?P<minor>\d+)x(?P<patch>\d+)`
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -19,28 +28,39 @@ type istioVersionInfo struct {
 	FullVersion string `json:"fullVersion"`
 	Revision    string `json:"revision"`
 	ImageSuffix string `json:"imageSuffix"`
+	version     string
 }
 
-// pilotV1x22x33 --> 1.22, { "fullVersion": "1.22.33", "revision": "1x22", "imageSuffix": "V1x22x33" }
-func imageToIstioVersionInfo(img string) (string, istioVersionInfo) {
-	imageSuffix := img[strings.Index(img, "V"):]                                   // V1x22x33
-	revision := strings.ToLower(imageSuffix[:strings.LastIndex(imageSuffix, "x")]) // v1x22
-	fullVersion := strings.ReplaceAll(imageSuffix[1:], "x", ".")                   // 1.22.33
-	version := fullVersion[:strings.LastIndex(fullVersion, ".")]                   // 1.22
-	return version, istioVersionInfo{
-		FullVersion: fullVersion,
-		Revision:    revision,
-		ImageSuffix: imageSuffix,
+// pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "1x22", "imageSuffix": "V1x22x33", version: "1.22"}
+func imageToIstioVersionInfo(img string) (*istioVersionInfo, error) {
+	re, err := regexp.Compile(imageRegex)
+	if err != nil {
+		return nil, err
 	}
+	match := re.FindStringSubmatch(img)
+	if len(match) != 4 { // img, major, minor, patch
+		return nil, fmt.Errorf("can not parse image alias %s", img)
+	}
+	major := match[re.SubexpIndex("major")]
+	minor := match[re.SubexpIndex("minor")]
+	patch := match[re.SubexpIndex("patch")]
+	return &istioVersionInfo{
+		version:     fmt.Sprintf(versionTemplate, major, minor),
+		FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
+		Revision:    fmt.Sprintf(revisionTemplate, major, minor),
+		ImageSuffix: fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+	}, nil
 }
 
 func versionsDiscovery(input *go_hook.HookInput) error {
 	versionMap := make(map[string]istioVersionInfo, 0)
 	for img, _ := range input.Values.Get("global.modulesImages.tags.istio").Map() {
-		if strings.HasPrefix(img, "pilot") {
-			version, info := imageToIstioVersionInfo(img)
-			versionMap[version] = info
+		info, err := imageToIstioVersionInfo(img)
+		if err != nil {
+			continue
 		}
+		versionMap[info.version] = *info
+
 	}
 	input.Values.Set("istio.internal.versionMap", versionMap)
 	return nil
