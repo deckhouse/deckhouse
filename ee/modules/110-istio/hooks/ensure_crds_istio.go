@@ -34,8 +34,8 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 		additionalVersions = append(additionalVersions, versionResult.String())
 	}
 
-	for _, versionResult := range input.Values.Get("istio.internal.supportedVersions").Array() {
-		version := versionResult.String()
+	for versionResult := range input.Values.Get("istio.internal.versionMap").Map() {
+		version := versionResult
 		if version == globalVersion || internal.Contains(additionalVersions, version) {
 			theNewestVersion = version
 		}

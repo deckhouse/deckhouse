@@ -108,16 +108,6 @@ properties:
           priv:
             type: string
             x-examples: ["---PRIV KEY---"]
-      supportedVersions:
-        type: array
-        items:
-          type: string
-        default:
-        - "1.10.1"
-        - "1.12"
-        - "1.13"
-        x-examples:
-        - ["1.12", "1.13"]
       deprecatedVersions:
         type: array
         items:
@@ -147,20 +137,20 @@ properties:
         type: boolean
         default: false
         x-examples: [true]
-      revisionsToInstall:
+      versionssToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - [v1x10x1] # must be real
-      operatorRevisionsToInstall:
+        - [1.10] # must be real
+      operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - [v1x10x1] # must be real
+        - [1.10] # must be real
       applicationNamespaces:
         type: array
         items:

@@ -16,7 +16,11 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 	f := HookExecutionConfigInit(`{
   "istio": {
     "internal": {
-      "supportedVersions": ["4.2-test.0", "4.2-test.1", "4.2-test.2"],
+      "versionMap": {
+        "4.2-test.0": {},
+        "4.2-test.1": {},
+        "4.2-test.2": {}
+      }
     },
   }
 }`, `{"istio":{}}`)
