@@ -30,6 +30,7 @@
     Control plane components will restart.
  - **[go_lib]** Changed certificate re-issue time to 15 days before expiration to avoid useless `CertificateSecretExpiredSoon` alerts. [#2582](https://github.com/deckhouse/deckhouse/pull/2582)
  - **[ingress-nginx]** Reload ingress controller configuration on `additionalHeaders` field change. This will automatically add configured custom headers to the nginx.conf file without restarting the controller. [#2545](https://github.com/deckhouse/deckhouse/pull/2545)
+ - **[istio]** Fix the `D8IstioGlobalControlplaneDoesntWork` alert. [#2714](https://github.com/deckhouse/deckhouse/pull/2714)
  - **[istio]** Fix `D8IstioAdditionalControlplaneDoesntWork` alert. [#2665](https://github.com/deckhouse/deckhouse/pull/2665)
  - **[istio]** Added missing global validating webhook for istio. Global webhook is enabled when isiod pods for global revision are ready to handle requests.
     Added a hack to restart an istio operator that hangs in an error state.
