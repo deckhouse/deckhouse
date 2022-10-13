@@ -18,3 +18,19 @@
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
 {{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_init_container_check_linux_kernel" (list . ">= 4.9.17") }} */ -}}
+{{- /* returns initContainer which checks kernel version on node for compliance to semver constraint */ -}}
+{{- define "helm_lib_module_init_container_check_linux_kernel"  }}
+  {{- $context := index . 0 -}}
+  {{- $semver_constraint := index . 1  -}}
+- name: check-linux-kernel
+  image: {{ include "helm_lib_module_common_image" (list $context "checkLinuxKernel") }}
+  env:
+  - name: KERNEL_CONSTRAINT
+    value: {{ $semver_constraint | quote }}
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+{{- end }}
