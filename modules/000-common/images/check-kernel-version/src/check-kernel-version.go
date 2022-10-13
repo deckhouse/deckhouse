@@ -46,4 +46,5 @@ func main() {
 	if !c.Check(v) {
 		log.Fatalf("the kernel %s does not meet the requirements: %s", kernelVersion, kernelConstraint)
 	}
+	log.Printf("the kernel %s meets the requirements: %s", kernelVersion, kernelConstraint)
 }
