@@ -43,6 +43,6 @@ func (vm IstioVersionsMapType) GetAllVersions() []string {
 
 func VersionMapStrToVersionMapType(versionMapRaw string) IstioVersionsMapType {
 	versionMap := make(IstioVersionsMapType)
-	json.Unmarshal([]byte(versionMapRaw), &versionMap)
+	_ = json.Unmarshal([]byte(versionMapRaw), &versionMap)
 	return versionMap
 }

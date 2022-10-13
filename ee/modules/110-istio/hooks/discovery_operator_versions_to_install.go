@@ -7,7 +7,6 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"sort"
 	"strings"
 
@@ -17,6 +16,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 )
 
 type IstioOperatorCrdInfo struct {

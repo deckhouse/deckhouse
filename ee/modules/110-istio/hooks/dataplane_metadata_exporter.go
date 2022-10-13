@@ -8,7 +8,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -18,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 )
 
 const (

@@ -7,11 +7,12 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 )
 
 const (

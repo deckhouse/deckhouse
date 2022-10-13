@@ -81,7 +81,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 		}
 	} else {
 		if !internal.Contains(versionsToInstall, globalVersion) {
-			versionsToInstall = append(unsupportedVersions, globalVersion)
+			versionsToInstall = append(versionsToInstall, globalVersion)
 		}
 	}
 

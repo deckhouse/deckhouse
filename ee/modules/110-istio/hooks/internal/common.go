@@ -7,9 +7,10 @@ package internal
 
 import (
 	"fmt"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
