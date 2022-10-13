@@ -1,0 +1,190 @@
+---
+title: Импортозамещение
+description: Импортозамещение
+permalink: ru/substitution.html
+layout: default
+toc: false
+lang: ru
+anchors_disabled: true
+---
+
+{::options parse_block_html="false" /}
+
+<section class="intro">
+  <div class="intro__content container">
+    <h1 class="intro__title text_lead text_alt">
+      Deckhouse как инструмент <br/>импортозамещения
+    </h1>
+    <div class="intro__row">
+      <div>
+        <p class="text text_big">
+          Deckhouse — продукт, который разрабатывается в России на основе компонентов с открытым исходным кодом. Платформа зарегистрирована в едином реестре российского ПО. Подходит для замены OpenShift, Rancher, Tanzu и других K8s-платформ зарубежных вендоров.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="supported-os block">
+  <div class="container">
+      <h2 class="text text_lead">
+        Поддержка российских операционных систем
+      </h2>
+      <div class="block__columns block__columns_top">
+        <div>
+          <p class="text text_big">
+            Deckhouse сертифицирована для работы с <a href="https://redos.red-soft.ru/about/news/novosti/kubernetes-platforma-deckhouse-sovmestima-s-red-os/">«Ред ОС»</a>,
+            <a href="https://astralinux.ru/news/category-news/2022/kubernetes-platforma-deckhouse-sertificzirovana-po-programme-ready-for-astra-linux/">Astra Linux</a> и
+            <a href="https://almi-partner.ru/operaczionnaya-sistema-alteros-sovmestima-s-kubernetes-platformoj-deckhouse/">AlterOS</a>. Пользователи могут разворачивать платформу на базе российских ОС и пользоваться всей функциональностью, доступной в редакциях Deckhouse Platform CE и Deckhouse Platform EE.
+          </p>
+        </div>
+        <div>
+          <p class="text text_big">
+            В редакции Deckhouse Platform Enterprise Edition (EE) <a href="https://deckhouse.io/ru/documentation/v1.37.4/supported_versions.html">предоставляется</a> расширенная поддержка совместимых российских ОС. Она включает приоритетное исправление ошибок и выпуск обновлений, а также консультации по миграции на совместимые ОС.
+          </p>
+        </div>
+      </div>
+  </div>
+</section>
+
+<section class="deckhouse-in-register">
+  <div class="features__item features__item_even">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Deckhouse в реестре Минцифры
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>
+          Платформа <a href="https://reestr.digital.gov.ru/request/473248/">включена</a> в единый реестр российского ПО по классу «Системы контейнеризации и контейнеры» (запись №12338 от 21.12.2021). Deckhouse стала первым российским решением в этом классе.
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="alternative">
+  <div class="features__item features__item_odd">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Альтернатива OpenShift, Rancher, Tanzu
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>
+          По своим техническим возможностям Deckhouse не уступает зарубежным аналогам. Платформа предлагает достаточный уровень унификации и стандартизации: ее можно быстро интегрировать в существующую инфраструктуру, управление во многом автоматизировано и не требует участия большой команды инженеров.
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="security">
+  <div class="features__item features__item_even">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Особое внимание безопасности
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>
+          Deckhouse <a href="https://deckhouse.io/ru/security.html">предоставляет</a> набор решений для безопасной аутентификации, авторизации, управления сетевыми политиками, заказа TLS-сертификатов и других функций, связанных с информационной безопасностью.
+        </li>
+        <li>
+          Платформа соответствует рекомендациям CIS Kubernetes Benchmark и поддерживает стандарт Security-Enhanced Linux (SELinux).
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="capabilities">
+  <div class="features__item features__item_odd">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Возможность установки в закрытый контур
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>
+          С помощью Deckhouse кластер Kubernetes можно развернуть <a href="https://deckhouse.io/ru/gs/bm-private/step2.html">в закрытом окружении</a>, из которого нет прямого доступа к внешнему хранилищу образов контейнеров или внешним репозиториям с deb/rpm-пакетами.
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="support">
+  <div class="features__item features__item_even">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Техподдержка от вендора 24x7
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>
+          Пользователи Deckhouse Platform EE <a href="https://deckhouse.io/ru/products/enterprise_edition.html">получают</a> круглосуточную поддержку на русском языке, в том числе:
+        </li>
+        <li>
+          <ul>
+            <li>
+              помощь персонального менеджера;
+            </li>
+            <li>
+              поддержку при развертывании платформы в нестандартных окружениях;
+            </li>
+            <li>
+              рекомендации по необходимой адаптации инфраструктуры для развертывания платформы;
+            </li>
+            <li>
+              помощь в локализации и устранении проблем с рабочими нагрузками в кластере.
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="features__item features__item_odd">
+    <div class="features__item-content container">
+      <div class="features__item-header">
+        <h2 class="features__item-title text_h1">
+          Планы по развитию
+        </h2>
+      </div>
+      <ul class="features__item-list">
+        <li>Продукт постоянно развивается с учетом потребностей пользователей: инженеров, разработчиков, специалистов по информационной безопасности.</li>
+        <li>
+          <ul>
+            <li>
+              Бесшовная миграция ваших нагрузок с Red Hat OpenShift.
+            </li>
+            <li>
+              Подсистема виртуализации и управления дисками для миграции с VMware.
+            </li>
+            <li>
+              Регистрация продукта во ФСТЭК.
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="who-already-use">
+  <div class="features__item features__item_even">
+    <div class="container">
+      <h2 class="text text_lead">
+        Российские компании, <br/>которые уже используют Deckhouse
+      </h2>
+    </div>
+      {% include clients.html %}
+  </div>
+</section>
+
