@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,48 +26,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 0},
 }, versionsDiscovery)
 
-type VersionMapType map[string]IstioVersion
-
 type IstioVersion struct {
-	FullVersion string `json:"fullVersion"`
-	Revision    string `json:"revision"`
-	ImageSuffix string `json:"imageSuffix"`
-	version     string
+	info    istio_versions.IstioVersionInfo
+	version string
 }
 
-func (vm VersionMapType) GetVersionByRevision(rev string) string {
-	for ver, istioVerInfo := range vm {
-		if istioVerInfo.Revision == rev {
-			return ver
-		}
-	}
-	return ""
-}
-
-func (vm VersionMapType) GetFullVersionByRevision(rev string) string {
-	for _, istioVerInfo := range vm {
-		if istioVerInfo.Revision == rev {
-			return istioVerInfo.FullVersion
-		}
-	}
-	return ""
-}
-
-func (vm VersionMapType) GetAllVersions() []string {
-	versions := make([]string, len(vm))
-	for ver := range vm {
-		versions = append(versions, ver)
-	}
-	return versions
-}
-
-func VersionMapStrToVersionMapType(versionMapRaw string) VersionMapType {
-	versionMap := make(VersionMapType)
-	json.Unmarshal([]byte(versionMapRaw), &versionMap)
-	return versionMap
-}
-
-// pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "v1x22", "imageSuffix": "V1x22x33", version: "1.22"}
+// pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "v1x22", "imageSuffix": "V1x22x33", Version: "1.22"}
 func imageToIstioVersion(img string) (*IstioVersion, error) {
 	re := regexp.MustCompile(imageRegex)
 	match := re.FindStringSubmatch(img)
@@ -78,21 +42,23 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	minor := match[re.SubexpIndex("minor")]
 	patch := match[re.SubexpIndex("patch")]
 	return &IstioVersion{
-		version:     fmt.Sprintf(versionTemplate, major, minor),
-		FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
-		Revision:    fmt.Sprintf(revisionTemplate, major, minor),
-		ImageSuffix: fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+		version: fmt.Sprintf(versionTemplate, major, minor),
+		info: istio_versions.IstioVersionInfo{
+			FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
+			Revision:    fmt.Sprintf(revisionTemplate, major, minor),
+			ImageSuffix: fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+		},
 	}, nil
 }
 
 func versionsDiscovery(input *go_hook.HookInput) error {
-	versionMap := make(map[string]IstioVersion, 0)
+	versionMap := make(map[string]istio_versions.IstioVersionInfo, 0)
 	for img := range input.Values.Get("global.modulesImages.tags.istio").Map() {
-		info, err := imageToIstioVersion(img)
+		ver, err := imageToIstioVersion(img)
 		if err != nil {
 			continue
 		}
-		versionMap[info.version] = *info
+		versionMap[ver.version] = ver.info
 	}
 	input.Values.Set("istio.internal.versionMap", versionMap)
 	return nil

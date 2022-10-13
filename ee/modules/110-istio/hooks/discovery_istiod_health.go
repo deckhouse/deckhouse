@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -69,7 +70,7 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	versionMap := VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
 
 	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	for _, podRaw := range input.Snapshots["istiod_pods"] {

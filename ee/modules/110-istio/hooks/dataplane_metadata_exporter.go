@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -181,7 +182,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	versionMap := VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
 	globalRevision := versionMap[input.Values.Get("istio.internal.globalVersion").String()].Revision
 
 	input.MetricsCollector.Expire(metadataExporterMetricsGroup)

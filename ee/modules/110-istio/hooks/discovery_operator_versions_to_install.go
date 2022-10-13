@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"sort"
 	"strings"
 
@@ -54,7 +55,7 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	var operatorVersionsToInstall = make([]string, 0)
 	var unsupportedRevisions = make([]string, 0)
 
-	versionMap := VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, revisionResult := range versionsToInstallResult {
