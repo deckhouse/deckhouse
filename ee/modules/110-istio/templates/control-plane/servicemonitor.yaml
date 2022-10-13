@@ -1,5 +1,7 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
-  {{- range $revision := .Values.istio.internal.revisionsToInstall }}
+  {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
