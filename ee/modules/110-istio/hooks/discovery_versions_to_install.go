@@ -26,25 +26,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(revisionsDiscovery))
 
 func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+	var globalVersion string
 	var versionsToInstall = make([]string, 0)
-	var unsupportedVersions []string
+	var unsupportedVersions = make([]string, 0)
+	var supportedVersions = make([]string, 0)
 
-	var supportedVersions []string
 	var supportedVersionsResult = input.Values.Get("istio.internal.versionMap").Map()
 	for versionResult := range supportedVersionsResult {
 		supportedVersions = append(supportedVersions, versionResult)
 	}
 
-	var globalVersion string
-
 	switch {
 	case input.ConfigValues.Exists("istio.globalVersion"):
 		// globalVersion is set in CM — use it
 		globalVersion = input.ConfigValues.Get("istio.globalVersion").String()
-
-		if !internal.Contains(supportedVersions, globalVersion) {
-			unsupportedVersions = append(unsupportedVersions, globalVersion)
-		}
 	case input.Values.Exists("istio.internal.globalVersion"):
 		// globalVersion was previously discovered — use it
 		globalVersion = input.Values.Get("istio.internal.globalVersion").String()
@@ -80,8 +75,14 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 		versionsToInstall = append(versionsToInstall, versionResult.String())
 	}
 
-	if !internal.Contains(versionsToInstall, globalVersion) {
-		versionsToInstall = append(unsupportedVersions, globalVersion)
+	if !internal.Contains(supportedVersions, globalVersion) {
+		if !internal.Contains(unsupportedVersions, globalVersion) {
+			unsupportedVersions = append(unsupportedVersions, globalVersion)
+		}
+	} else {
+		if !internal.Contains(versionsToInstall, globalVersion) {
+			versionsToInstall = append(unsupportedVersions, globalVersion)
+		}
 	}
 
 	if len(unsupportedVersions) > 0 {
