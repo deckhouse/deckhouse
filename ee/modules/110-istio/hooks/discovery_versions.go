@@ -44,6 +44,15 @@ func (vm versionMapType) GetVersionByRevision(rev string) string {
 	return ""
 }
 
+func (vm versionMapType) GetFullVersionByRevision(rev string) string {
+	for _, istioVerInfo := range vm {
+		if istioVerInfo.Revision == rev {
+			return istioVerInfo.FullVersion
+		}
+	}
+	return ""
+}
+
 func (vm versionMapType) GetAllVersions() []string {
 	versions := make([]string, len(vm))
 	for ver := range vm {

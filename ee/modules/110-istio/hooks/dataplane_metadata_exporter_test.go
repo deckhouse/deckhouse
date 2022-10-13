@@ -95,12 +95,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 	var hookInitValues = `
 {  "istio":
   { "internal":
-    { "revisionFullVersionMap":
+    { "versionMap":
       {
-         "v1x15": "1.15.15",
-         "v1x42": "1.42.42",
-         "v1x77": "1.77.77",
-         "v1x155": "1.155.155",
+         "1.15": { revision: "v1x15", fullVersion: "1.15.15" },
+         "1.42": { revision: "v1x42", fullVersion: "1.42.42" },
+         "1.77": { revision: "v1x77", fullVersion: "1.77.77" },
+         "1.155": { revision: "v1x155", fullVersion: "1.155.155" }
       }
     }
   }
@@ -124,7 +124,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 	})
 
 	DescribeTable("There are different desired and actual revisions", func(objectsYAMLs []string, want *wantedMetric) {
-		f.ValuesSet("istio.internal.globalRevision", "v1x42")
+		f.ValuesSet("istio.internal.globalVersion", "1.42")
 		yamlState := strings.Join(objectsYAMLs, "\n---\n")
 		f.BindingContexts.Set(f.KubeStateSet(yamlState))
 

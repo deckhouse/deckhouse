@@ -177,18 +177,14 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func dataplaneMetadataExporter(input *go_hook.HookInput) error {
-	if !input.Values.Get("istio.internal.globalRevision").Exists() {
+	if !input.Values.Get("istio.internal.globalVersion").Exists() {
 		return nil
 	}
 
-	revisionFullVersionMap := make(map[string]string, len(input.Values.Get("istio.internal.revisionFullVersionMap").Map()))
-	for k, v := range input.Values.Get("istio.internal.revisionFullVersionMap").Map() {
-		revisionFullVersionMap[k] = v.String()
-	}
+	versionMap := versionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
+	globalRevision := versionMap[input.Values.Get("istio.internal.globalVersion").String()].Revision
 
 	input.MetricsCollector.Expire(metadataExporterMetricsGroup)
-
-	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()
 
 	var namespaceRevisionMap = map[string]string{}
 	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
@@ -228,9 +224,9 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			continue
 		}
 
-		desiredVersion, ok := revisionFullVersionMap[desiredRevision]
-		if !ok {
-			desiredVersion = istioVersionUnknown
+		desiredFullVersion := versionMap.GetFullVersionByRevision(desiredRevision)
+		if desiredFullVersion == "" {
+			desiredFullVersion = istioVersionUnknown
 		}
 
 		labels := map[string]string{
@@ -239,7 +235,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"desired_revision": desiredRevision,
 			"revision":         istioPodInfo.Revision,
 			"version":          istioPodInfo.Version,
-			"desired_version":  desiredVersion,
+			"desired_version":  desiredFullVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
 	}
