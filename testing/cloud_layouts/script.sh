@@ -322,10 +322,6 @@ function run-test() {
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_cluster_ready || return $?
   fi
-
-  if [[ "$PROVIDER" == "Static" ]]; then
-    run_linstor_tests || return $?
-  fi
 }
 
 function bootstrap_static() {
@@ -509,6 +505,11 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  if [[ "$PROVIDER" == "Static" ]]; then
+    run_linstor_tests || return $?
+  fi
+  echo "Linstor test suite: success"
+
   test_failed=
 
   testScript=$(cat <<"END_SCRIPT"
