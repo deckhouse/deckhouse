@@ -36,6 +36,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", 
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
+    bootstrapped: true
     webhook:
       ca: YjY0ZW5jX3N0cmluZwo=
       crt: YjY0ZW5jX3N0cmluZwo=
@@ -73,7 +74,7 @@ admissionPolicyEngine:
 				_ = ioutil.WriteFile(newPath, []byte(content), 0444)
 			}
 			_ = filepath.Walk("../templates/policies", func(fpath string, info fs.FileInfo, err error) error {
-				if strings.HasSuffix(fpath, "test_suite.yaml") || strings.Contains(fpath, "/test_samples/") || strings.HasSuffix(fpath, "ctemplate.yaml") {
+				if strings.HasSuffix(fpath, "test_suite.yaml") || strings.Contains(fpath, "/test_samples/") {
 					newPath := path.Join(tmpDir, strings.Replace(fpath, "../", "admission-policy-engine/", 1))
 					_ = os.MkdirAll(path.Dir(newPath), 0755)
 					input, _ := ioutil.ReadFile(fpath)

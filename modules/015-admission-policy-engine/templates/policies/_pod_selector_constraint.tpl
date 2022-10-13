@@ -26,6 +26,7 @@
   {{- $policyCRDName := index . 2 }}
   {{- $parameters := index . 3 }}
 
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
@@ -53,4 +54,5 @@ spec:
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}

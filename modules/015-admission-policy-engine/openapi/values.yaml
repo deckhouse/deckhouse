@@ -6,6 +6,9 @@ properties:
     type: object
     default: {}
     properties:
+      bootstrapped:
+        type: boolean
+        default: false
       webhook:
         type: object
         default: {}
