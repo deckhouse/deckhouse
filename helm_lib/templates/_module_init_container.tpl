@@ -25,7 +25,7 @@
   {{- $context := index . 0 -}}
   {{- $semver_constraint := index . 1  -}}
 - name: check-linux-kernel
-  image: {{ include "helm_lib_module_common_image" (list $context "checkLinuxKernel") }}
+  image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
   env:
   - name: KERNEL_CONSTRAINT
     value: {{ $semver_constraint | quote }}
