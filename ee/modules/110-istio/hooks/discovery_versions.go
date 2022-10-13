@@ -26,16 +26,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 0},
 }, versionsDiscovery)
 
-type versionMapType map[string]istioVersion
+type VersionMapType map[string]IstioVersion
 
-type istioVersion struct {
+type IstioVersion struct {
 	FullVersion string `json:"fullVersion"`
 	Revision    string `json:"revision"`
 	ImageSuffix string `json:"imageSuffix"`
 	version     string
 }
 
-func (vm versionMapType) GetVersionByRevision(rev string) string {
+func (vm VersionMapType) GetVersionByRevision(rev string) string {
 	for ver, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
 			return ver
@@ -44,7 +44,7 @@ func (vm versionMapType) GetVersionByRevision(rev string) string {
 	return ""
 }
 
-func (vm versionMapType) GetFullVersionByRevision(rev string) string {
+func (vm VersionMapType) GetFullVersionByRevision(rev string) string {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
 			return istioVerInfo.FullVersion
@@ -53,7 +53,7 @@ func (vm versionMapType) GetFullVersionByRevision(rev string) string {
 	return ""
 }
 
-func (vm versionMapType) GetAllVersions() []string {
+func (vm VersionMapType) GetAllVersions() []string {
 	versions := make([]string, len(vm))
 	for ver := range vm {
 		versions = append(versions, ver)
@@ -61,14 +61,14 @@ func (vm versionMapType) GetAllVersions() []string {
 	return versions
 }
 
-func versionMapStrToVersionMapType(versionMapRaw string) versionMapType {
-	versionMap := make(versionMapType)
+func VersionMapStrToVersionMapType(versionMapRaw string) VersionMapType {
+	versionMap := make(VersionMapType)
 	json.Unmarshal([]byte(versionMapRaw), &versionMap)
 	return versionMap
 }
 
 // pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "v1x22", "imageSuffix": "V1x22x33", version: "1.22"}
-func imageToIstioVersion(img string) (*istioVersion, error) {
+func imageToIstioVersion(img string) (*IstioVersion, error) {
 	re := regexp.MustCompile(imageRegex)
 	match := re.FindStringSubmatch(img)
 	if len(match) != 4 { // img, major, minor, patch
@@ -77,7 +77,7 @@ func imageToIstioVersion(img string) (*istioVersion, error) {
 	major := match[re.SubexpIndex("major")]
 	minor := match[re.SubexpIndex("minor")]
 	patch := match[re.SubexpIndex("patch")]
-	return &istioVersion{
+	return &IstioVersion{
 		version:     fmt.Sprintf(versionTemplate, major, minor),
 		FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
 		Revision:    fmt.Sprintf(revisionTemplate, major, minor),
@@ -86,7 +86,7 @@ func imageToIstioVersion(img string) (*istioVersion, error) {
 }
 
 func versionsDiscovery(input *go_hook.HookInput) error {
-	versionMap := make(map[string]istioVersion, 0)
+	versionMap := make(map[string]IstioVersion, 0)
 	for img := range input.Values.Get("global.modulesImages.tags.istio").Map() {
 		info, err := imageToIstioVersion(img)
 		if err != nil {
