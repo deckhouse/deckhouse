@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -25,11 +26,36 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 0},
 }, versionsDiscovery)
 
+type versionMapType map[string]istioVersion
+
 type istioVersion struct {
 	FullVersion string `json:"fullVersion"`
 	Revision    string `json:"revision"`
 	ImageSuffix string `json:"imageSuffix"`
 	version     string
+}
+
+func (vm versionMapType) GetVersionByRevision(rev string) string {
+	for ver, istioVerInfo := range vm {
+		if istioVerInfo.Revision == rev {
+			return ver
+		}
+	}
+	return ""
+}
+
+func (vm versionMapType) GetAllVersions() []string {
+	versions := make([]string, len(vm))
+	for ver := range vm {
+		versions = append(versions, ver)
+	}
+	return versions
+}
+
+func versionMapStrToVersionMapType(versionMapRaw string) versionMapType {
+	versionMap := make(versionMapType)
+	json.Unmarshal([]byte(versionMapRaw), &versionMap)
+	return versionMap
 }
 
 // pilotV1x22x33 --> { "fullVersion": "1.22.33", "revision": "v1x22", "imageSuffix": "V1x22x33", version: "1.22"}

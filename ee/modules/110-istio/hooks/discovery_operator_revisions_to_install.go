@@ -51,39 +51,35 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, operatorRevisionsToInstallDiscovery)
 
 func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
-	var operatorRevisionsToInstall = make([]string, 0)
+	var operatorVersionsToInstall = make([]string, 0)
+	var unsupportedRevisions = make([]string, 0)
 
-	var supportedRevisions []string
-	var supportedVersionsResult = input.Values.Get("istio.internal.supportedVersions").Array()
-	for _, versionResult := range supportedVersionsResult {
-		supportedRevisions = append(supportedRevisions, internal.VersionToRevision(versionResult.String()))
-	}
+	var versionMapStr = input.Values.Get("istio.internal.versionMap").String()
+	versionMap := versionMapStrToVersionMapType(versionMapStr)
 
-	var revisionsToInstallResult = input.Values.Get("istio.internal.revisionsToInstall").Array()
-	for _, revisionResult := range revisionsToInstallResult {
-		operatorRevisionsToInstall = append(operatorRevisionsToInstall, revisionResult.String())
+	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
+	for _, revisionResult := range versionsToInstallResult {
+		operatorVersionsToInstall = append(operatorVersionsToInstall, revisionResult.String())
 	}
 
 	for _, iop := range input.Snapshots["istiooperators"] {
 		iopInfo := iop.(IstioOperatorCrdInfo)
-		if !internal.Contains(operatorRevisionsToInstall, iopInfo.Revision) {
-			operatorRevisionsToInstall = append(operatorRevisionsToInstall, iopInfo.Revision)
+		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
+		if iopVer == "" {
+			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+		}
+		if !internal.Contains(operatorVersionsToInstall, iopVer) {
+			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
 		}
 	}
 
-	var unsupportedRevisions []string
-	for _, rev := range operatorRevisionsToInstall {
-		if !internal.Contains(supportedRevisions, rev) {
-			unsupportedRevisions = append(unsupportedRevisions, rev)
-		}
-	}
 	if len(unsupportedRevisions) > 0 {
 		sort.Strings(unsupportedRevisions)
 		return fmt.Errorf("unsupported revisions: [%s]", strings.Join(unsupportedRevisions, ","))
 	}
 
-	sort.Strings(operatorRevisionsToInstall)
-	input.Values.Set("istio.internal.operatorRevisionsToInstall", operatorRevisionsToInstall)
+	sort.Strings(operatorVersionsToInstall)
+	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
 
 	return nil
 }

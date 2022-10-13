@@ -12,7 +12,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: discovery_operator_revisions_to_install ::", func() {
+var _ = Describe("Istio hooks :: discovery_operator_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
 
@@ -20,8 +20,12 @@ var _ = Describe("Istio hooks :: discovery_operator_revisions_to_install ::", fu
 		BeforeEach(func() {
 			values := `
 internal:
-  supportedVersions: ["1.1","1.2.3-beta.45"]
-  revisionsToInstall: ["v1x1"]
+  versionMap:
+     "1.1":
+        revision: "v1x1"
+     "1.2.3-beta.45":
+        revision: "v1x2x3-betax45"
+  versionsToInstall: ["1.1"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 
@@ -33,7 +37,7 @@ internal:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
-			Expect(f.ValuesGet("istio.internal.operatorRevisionsToInstall").String()).To(MatchJSON(`["v1x1"]`))
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").String()).To(MatchJSON(`["1.1"]`))
 		})
 	})
 
@@ -41,8 +45,18 @@ internal:
 		BeforeEach(func() {
 			values := `
 internal:
-  supportedVersions: ["1.1.0", "1.8.0-alpha.2", "1.2", "1.3", "1.4"]
-  revisionsToInstall: ["v1x3", "v1x4"]
+  versionMap:
+    "1.1.0":
+        revision: "v1x1x0"
+    "1.8.0-alpha.2":
+        revision: "v1x8x0alpha2"
+    "1.2":
+        revision: "v1x2"
+    "1.3":
+        revision: "v1x3"
+    "1.4":
+        revision: "v1x4"
+  versionsToInstall: ["1.3", "1.4"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -50,7 +64,7 @@ internal:
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
-  name: v1x8x0alpha2
+  name: v1x8x0-alpha2
   namespace: d8-istio
 spec:
   revision: v1x8x0alpha2
@@ -68,7 +82,7 @@ spec:
 		})
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.operatorRevisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x2", "v1x3", "v1x4", "v1x8x0alpha2"}))
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8.0-alpha.2"}))
 		})
 	})
 
@@ -76,8 +90,18 @@ spec:
 		BeforeEach(func() {
 			values := `
 internal:
-  supportedVersions: ["1.1.0", "1.8.0-alpha.2", "1.2", "1.3", "1.4"]
-  revisionsToInstall: ["v1x3", "v1x4"]
+  versionMap:
+    "1.1.0":
+        revision: "v1x1x0"
+    "1.8.0-alpha.2":
+        revision: "v1x8x0alpha2"
+    "1.2":
+        revision: "v1x2"
+    "1.3":
+        revision: "v1x3"
+    "1.4":
+        revision: "v1x4"
+  versionsToInstall: ["1.3", "1.4"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -112,7 +136,6 @@ spec:
 
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
-
 			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9x0]"))
 		})
 	})

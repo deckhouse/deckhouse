@@ -21,16 +21,6 @@ properties:
             imageSuffix:
               type: string
               x-examples: ["V1x22x33"]
-      revisionFullVersionMap:
-        type: object
-        additionalProperties:
-          type: string
-        default:
-          "v1x13": "1.13.7"
-          "v1x12": "1.12.6"
-          "v1x10x1": "1.10.1"
-        x-examples:
-        - {"v1x77": "1.77.7"}
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
@@ -130,10 +120,7 @@ properties:
       globalVersion:
         type: string
         x-examples: [1.10.1] # must be real
-      globalRevision:
-        type: string
-        x-examples: [v1x10x1] # must be real
-      isGlobalRevisionIstiodReady:
+      isGlobalVersionIstiodReady:
         type: boolean
         default: false
         x-examples: [true]
