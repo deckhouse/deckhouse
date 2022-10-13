@@ -25,20 +25,6 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
   }
 }`, `{"istio":{}}`)
 
-	Context("Empty cluster, no globalVersion in values", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			f.RunHook()
-		})
-
-		It("Hook must fail", func() {
-			Expect(f).ToNot(ExecuteSuccessfully())
-			Expect(f.GoHookError).To(MatchError("istio.internal.globalVersion value isn't discovered by revisions_discovery.go yet"))
-			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Exists()).To(BeFalse())
-		})
-	})
-
 	Context("Only globalVersion in values", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)

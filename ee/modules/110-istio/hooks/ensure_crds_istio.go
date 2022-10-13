@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -25,9 +23,6 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	var theNewestVersion string
 
 	var globalVersion string
-	if !input.Values.Exists("istio.internal.globalVersion") {
-		return fmt.Errorf("istio.internal.globalVersion value isn't discovered by revisions_discovery.go yet")
-	}
 	globalVersion = input.Values.Get("istio.internal.globalVersion").String()
 	var additionalVersions = make([]string, 0)
 	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {

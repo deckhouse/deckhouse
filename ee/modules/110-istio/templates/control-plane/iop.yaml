@@ -1,6 +1,6 @@
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- $revision := get $versionInfo "revision" }}
+  {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

@@ -23,8 +23,8 @@ internal:
   versionMap:
      "1.1":
         revision: "v1x1"
-     "1.2.3-beta.45":
-        revision: "v1x2x3-betax45"
+     "1.2":
+        revision: "v1x2"
   versionsToInstall: ["1.1"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -46,10 +46,10 @@ internal:
 			values := `
 internal:
   versionMap:
-    "1.1.0":
-        revision: "v1x1x0"
-    "1.8.0-alpha.2":
-        revision: "v1x8x0alpha2"
+    "1.1":
+        revision: "v1x1"
+    "1.8":
+        revision: "v1x8"
     "1.2":
         revision: "v1x2"
     "1.3":
@@ -64,10 +64,10 @@ internal:
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
-  name: v1x8x0-alpha2
+  name: v1x8
   namespace: d8-istio
 spec:
-  revision: v1x8x0alpha2
+  revision: v1x8
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -82,7 +82,7 @@ spec:
 		})
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8.0-alpha.2"}))
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
 		})
 	})
 
@@ -91,10 +91,10 @@ spec:
 			values := `
 internal:
   versionMap:
-    "1.1.0":
-        revision: "v1x1x0"
-    "1.8.0-alpha.2":
-        revision: "v1x8x0alpha2"
+    "1.1":
+        revision: "v1x1"
+    "1.8":
+        revision: "v1x8"
     "1.2":
         revision: "v1x2"
     "1.3":
@@ -109,10 +109,10 @@ internal:
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
-  name: v1x9x0-bad
+  name: v1x9-bad
   namespace: d8-istio
 spec:
-  revision: v1x9x0
+  revision: v1x9
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -136,7 +136,7 @@ spec:
 
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
-			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9x0]"))
+			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9]"))
 		})
 	})
 })
