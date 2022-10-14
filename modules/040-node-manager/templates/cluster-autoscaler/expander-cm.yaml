@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-priority-expander
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+data:
+  priorities: |-
+    10:
+      - .*t2\.large.*
+      - .*t3\.large.*
+    50:
+      - .*m4\.4xlarge.*

@@ -104,6 +104,8 @@ spec:
         - --unremovable-node-recheck-timeout=30s
         - --scale-down-delay-after-add=15m
         - --address=127.0.0.1:8085
+        - --balance-similar-node-groups=true
+        - --expander=priority,least-waste
         - --v=2
         env:
         - name: CONTROL_NAMESPACE

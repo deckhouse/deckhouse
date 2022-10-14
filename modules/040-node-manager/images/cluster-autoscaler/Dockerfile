@@ -6,7 +6,7 @@ COPY "patches/do-not-violate-minsize-when-fixing-nodegroup.patch" /
 COPY "patches/daemonset-eviction.patch" /
 
 RUN apk add --no-cache linux-headers build-base git mercurial patch && \
-    wget https://github.com/gardener/autoscaler/archive/v0.19.0.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/gardener/autoscaler/ && \
+    wget https://github.com/gardener/autoscaler/archive/v1.24.0.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/github.com/gardener/autoscaler/ && \
     patch -p1 < "/do-not-violate-minsize-when-fixing-nodegroup.patch" && \
     patch -p1 < "/daemonset-eviction.patch" && \
     cd cluster-autoscaler && \
