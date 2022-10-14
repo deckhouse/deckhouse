@@ -72,11 +72,12 @@ help:
 GOLANGCI_VERSION = 1.46.2
 TRIVY_VERSION= 0.28.1
 PROMTOOL_VERSION = 2.37.0
+GATOR_VERSION = 3.9.0
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator ## Install dev dependencies.
 
 ##@ Tests
 
@@ -89,11 +90,20 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 	rm -f bin/promtool
 	ln -s /deckhouse/bin/promtool-${PROMTOOL_VERSION}/promtool bin/promtool
 
+bin/gator-${GATOR_VERSION}/gator:
+	mkdir -p bin/gator-${GATOR_VERSION}
+	curl -sSfL https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz | tar zxf - -C bin/gator-${GATOR_VERSION} --strip=1 gator
+
+.PHONY: bin/gator
+bin/gator: bin/gator-${GATOR_VERSION}/gator
+	rm -f bin/gator
+	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
+
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
-tests-matrix: bin/promtool ## Test how helm templates are rendered with different input values generated from values examples.
+tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
 	go test ./testing/matrix/ -v
 

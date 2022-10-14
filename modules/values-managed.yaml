@@ -27,3 +27,4 @@ upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
+admissionPolicyEngineEnabled: true
