@@ -55,21 +55,12 @@ rules:
   verbs:
   - patch
   - update
-# expander cms
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - list
-  - watch
+# expander cm
 - apiGroups:
   - ""
   resources:
   - configmaps
   resourceNames:
-  - cluster-autoscaler-status
   - cluster-autoscaler-priority-expander
   verbs:
   - delete
