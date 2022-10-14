@@ -66,6 +66,8 @@ topnav:
       - title: Информация
         url: '#'
         items:
+          - title: Импортозамещение
+            url: /substitution.html
           - title: Безопасность Deckhouse
             url: /security.html
           - title: Сравнение с KaaS
