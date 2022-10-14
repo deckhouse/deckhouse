@@ -1,9 +1,3 @@
-{{ $tcpDefaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
-{{ $udpDefaultTunnelNetwork := "172.25.176.0/255.255.255.0" }}
-{{ $tcpTunnelNetworkAddress := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $tcpDefaultTunnelNetwork)) 0 }}
-{{ $tcpTunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $tcpDefaultTunnelNetwork)) 1 }}
-{{ $udpTunnelNetworkAddress := index (splitList "/" (.Values.openvpn.udpTunnelNetwork | default $udpDefaultTunnelNetwork)) 0 }}
-{{ $udpTunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.udpTunnelNetwork | default $udpDefaultTunnelNetwork)) 1 }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -13,7 +7,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
   openvpn-tcp.conf: |-
-    server {{ $tcpTunnelNetworkAddress }} {{ $tcpTunnelNetworkNetmask }}
+    server {{ include "get_network_address" (list . .Values.openvpn.tunnelNetwork) }} {{ include "get_dotted_network_mask" (list . .Values.openvpn.tunnelNetwork) }}
     verb 3
     tls-server
     ca /etc/openvpn/certs/pki/ca.crt
@@ -22,7 +16,7 @@ data:
     dh /etc/openvpn/certs/pki/dh.pem
     crl-verify /etc/openvpn/certs/pki/crl.pem
     tls-auth /etc/openvpn/certs/pki/ta.key
-    client-config-dir /etc/openvpn/ccd
+    client-config-dir /etc/openvpn/ccd-tcp
     key-direction 0
     cipher AES-128-CBC
     management 127.0.0.1 8989
@@ -40,7 +34,7 @@ data:
     push "route-metric 9999"
     {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
     {{- range $route := .Values.openvpn.internal.pushToClientRoutes }}
-    push "route {{ $route | replace "/" " " }}"
+    push "route {{ include "push_route_format" (list . $route) }}"
     {{- end }}
     {{- else }}
     {{- end }}
@@ -50,8 +44,9 @@ data:
     push "dhcp-option DOMAIN {{ $searchDomain }}"
       {{- end }}
     {{- end }}
+ {{- if .Values.openvpn.udpEnabled }}
   openvpn-udp.conf: |-
-    server {{ $udpTunnelNetworkAddress }} {{ $udpTunnelNetworkNetmask }}
+    server {{ include "get_network_address" (list . .Values.openvpn.udpTunnelNetwork) }} {{ include "get_dotted_network_mask" (list . .Values.openvpn.udpTunnelNetwork) }}
     verb 3
     tls-server
     ca /etc/openvpn/certs/pki/ca.crt
@@ -60,7 +55,7 @@ data:
     dh /etc/openvpn/certs/pki/dh.pem
     crl-verify /etc/openvpn/certs/pki/crl.pem
     tls-auth /etc/openvpn/certs/pki/ta.key
-    client-config-dir /etc/openvpn/ccd
+    client-config-dir /etc/openvpn/ccd-udp
     key-direction 0
     cipher AES-128-CBC
     management 127.0.0.1 9090
@@ -78,7 +73,7 @@ data:
     push "route-metric 9999"
     {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
     {{- range $route := .Values.openvpn.internal.pushToClientRoutes }}
-    push "route {{ $route | replace "/" " " }}"
+    push "route {{ include "push_route_format" (list . $route) }}"
     {{- end }}
     {{- else }}
     {{- end }}
@@ -88,12 +83,34 @@ data:
     push "dhcp-option DOMAIN {{ $searchDomain }}"
       {{- end }}
     {{- end }}
+{{- end }}
+  sync_ccd.sh: |-
+    #!/bin/sh
+
+    tcp_network="$(echo $1 | rev | sed 's/\./ /' | rev | awk '{print $1}')"
+    udp_network="$(echo $2 | rev | sed 's/\./ /' | rev | awk '{print $1}')"
+
+    while true; do
+
+      if [ -d /etc/openvpn/ccd-tcp ]; then
+        for f in $(ls -1 /etc/openvpn/ccd-tcp); do
+          cat "/etc/openvpn/ccd-tcp/${f}" | sed "s/$tcp_network/$udp_network/g" > "/etc/openvpn/ccd-udp/${f}"
+        done
+      fi
+
+      sleep 10
+    done
 
   entrypoint.sh: |-
     #!/bin/sh
 
-    iptables -t nat -A POSTROUTING -s {{ $tcpTunnelNetworkAddress }}/{{ $tcpTunnelNetworkNetmask }} ! -d {{ $tcpTunnelNetworkAddress }}/{{ $tcpTunnelNetworkNetmask }} -j MASQUERADE
-    iptables -t nat -A POSTROUTING -s {{ $udpTunnelNetworkAddress }}/{{ $udpTunnelNetworkNetmask }} ! -d {{ $udpTunnelNetworkAddress }}/{{ $udpTunnelNetworkNetmask }} -j MASQUERADE
+    {{- if .Values.openvpn.tcpEnabled }}
+    iptables -t nat -A POSTROUTING -s {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }} ! -d {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }} -j MASQUERADE
+    {{- end }}
+
+    {{- if .Values.openvpn.udpEnabled }}
+    iptables -t nat -A POSTROUTING -s {{ include "get_network_with_bitmask" (list . .Values.openvpn.udpTunnelNetwork) }} ! -d {{ include "get_network_with_bitmask" (list . .Values.openvpn.udpTunnelNetwork) }} -j MASQUERADE
+    {{- end }}
 
     mkdir -p /dev/net
     if [ ! -c /dev/net/tun ]; then

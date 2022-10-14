@@ -10,6 +10,14 @@ memory: 50Mi
 cpu: 50m
 memory: 50Mi
 {{- end }}
+{{- define "openvpn_sync_ccd_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+{{- define "openvpn_migration_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -28,6 +36,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
+    - containerName: sync-ccd
+      minAllowed:
+        {{- include "openvpn_sync_ccd_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
   {{- if .Values.openvpn.udpEnabled }}
     - containerName: openvpn-udp
       minAllowed:
@@ -87,13 +101,41 @@ spec:
 {{- if not .Values.openvpn.internal.migrated }}
       initContainers:
       - name: migration
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "easyrsaMigrator") }}
         command: [ '/app/easyrsa-migrator' ]
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_migration_resources" . | nindent 12 }}
+  {{- end }}
+
 {{- end }}
       containers:
+# sync-ccd
+      - name: sync-ccd
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "openvpn") }}
+        command: [ '/sync_ccd.sh', "{{ .Values.openvpn.tunnelNetwork }}", "{{ .Values.openvpn.udpTunnelNetwork }}" ]
+        volumeMounts:
+          - name: ccd-tcp
+            mountPath: /etc/openvpn/ccd-tcp
+          - name: ccd-udp
+            mountPath: /etc/openvpn/ccd-udp
+          - name: scripts
+            mountPath: /sync_ccd.sh
+            subPath: sync_ccd.sh
+            readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_sync_ccd_resources" . | nindent 12 }}
+  {{- end }}
 {{- if .Values.openvpn.tcpEnabled }}
 # openvpn-tcp
       - name: openvpn-tcp
@@ -112,19 +154,19 @@ spec:
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
-          - name: ccd
-            mountPath: /etc/openvpn/ccd
+          - name: ccd-tcp
+            mountPath: /etc/openvpn/ccd-tcp
           - name: config
             mountPath: /etc/openvpn/openvpn-tcp.conf
             subPath: openvpn-tcp.conf
             readOnly: true
-          - name: entrypoint
+          - name: scripts
             mountPath: /entrypoint.sh
             subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "openvpn_tcp_resources" . | nindent 12 }}
   {{- end }}
@@ -147,19 +189,19 @@ spec:
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
-          - name: ccd
-            mountPath: /etc/openvpn/ccd
+          - name: ccd-udp
+            mountPath: /etc/openvpn/ccd-udp
           - name: config
             mountPath: /etc/openvpn/openvpn-udp.conf
             subPath: openvpn-udp.conf
             readOnly: true
-          - name: entrypoint
+          - name: scripts
             mountPath: /entrypoint.sh
             subPath: entrypoint.sh
             readOnly: true
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "openvpn_udp_resources" . | nindent 12 }}
   {{- end }}
@@ -177,6 +219,7 @@ spec:
             --listen.host="127.0.0.1"
             --listen.port="8000"
             --role="master"
+            --ovpn.network="{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
             {{- if hasKey .Values.openvpn "inlet" }}
               {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
             --ovpn.server.behindLB
@@ -217,7 +260,7 @@ spec:
           - mountPath: /mnt/easyrsa
             name: certs
             readOnly: false
-          - name: ccd
+          - name: ccd-tcp
             mountPath: /mnt/ccd
           - name: tmp
             mountPath: /tmp
@@ -267,7 +310,7 @@ spec:
         configMap:
           name: openvpn
           defaultMode: 0644
-      - name: entrypoint
+      - name: scripts
         configMap:
           name: openvpn
           defaultMode: 0755
@@ -279,7 +322,11 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
-      - name: ccd
+      - name: ccd-tcp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: ccd-udp
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi

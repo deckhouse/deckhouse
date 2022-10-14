@@ -9,6 +9,11 @@ data:
   openvpnEnabled: "true"
 ```
 
+**Внимание!** В панели администратора всегда используется `tunnelNetwork`, статические адреса необходимо выдавать из неё. Если используется UDP, то эти адреса будут сконвертированны для использования в подсети `udpTunnelNetwork`, при этом, `tunnelNetwork` и `udpTunnelNetwork` должны быть одного размера. Пример:
+* `tunnelNetwork`: 10.5.5.0/24
+* `udpTunnelNetwork`: 10.5.6.0/24
+* адрес для пользователя 10.5.5.8 (из диапазона `tunnelNetwork`) будет сконвертирован в 10.5.6.8 (из диапазона `udpTunnelNetwork`)
+
 ## Аутентификация
 
 По умолчанию используется модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).

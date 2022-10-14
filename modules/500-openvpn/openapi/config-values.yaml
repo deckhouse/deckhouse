@@ -59,12 +59,16 @@ properties:
     type: string
     description: |
       Tunnel network for TCP OpenVPN server.
-    x-doc-default: '172.25.175.0/255.255.255.0'
+    x-doc-default: '172.25.175.0/24'
+    default: '172.25.175.0/24'
+    x-examples: ["172.25.175.0/24"]
   udpTunnelNetwork:
     type: string
     description: |
       Tunnel network for UDP OpenVPN server.
-    x-doc-default: '172.25.176.0/255.255.255.0'
+    x-doc-default: '172.25.176.0/24'
+    default: '172.25.176.0/24'
+    x-examples: ["172.25.176.0/24"]
   pushToClientRoutes:
     type: array
     items:
@@ -134,6 +138,7 @@ properties:
       An IP address or a domain clients use to connect to the OpenVPN server.
 
       By default, data from an `openvpn-external` service are used.
+    x-examples: ["1.2.3.4"]
   ingressClass:
     type: string
     description: |
