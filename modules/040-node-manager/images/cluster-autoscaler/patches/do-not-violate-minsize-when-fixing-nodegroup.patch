@@ -1,8 +1,7 @@
 diff --git a/cluster-autoscaler/core/static_autoscaler.go b/cluster-autoscaler/core/static_autoscaler.go
-index 878936ed7..006353713 100644
---- a/cluster-autoscaler/core/static_autoscaler.go
-+++ b/cluster-autoscaler/core/static_autoscaler.go
-@@ -568,7 +568,9 @@ func fixNodeGroupSize(context *context.AutoscalingContext, clusterStateRegistry
+--- a/cluster-autoscaler/core/static_autoscaler.go	(revision 58db272ad294a693d963112e3b5312618da445ca)
++++ b/cluster-autoscaler/core/static_autoscaler.go	(date 1665766472248)
+@@ -599,7 +599,9 @@
  		}
  		if incorrectSize.FirstObserved.Add(context.MaxNodeProvisionTime).Before(currentTime) {
  			delta := incorrectSize.CurrentSize - incorrectSize.ExpectedSize
