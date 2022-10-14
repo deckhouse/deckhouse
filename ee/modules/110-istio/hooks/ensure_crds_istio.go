@@ -22,8 +22,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	var theNewestVersion string
 
-	var globalVersion string
-	globalVersion = input.Values.Get("istio.internal.globalVersion").String()
+	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	var additionalVersions = make([]string, 0)
 	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {
 		additionalVersions = append(additionalVersions, versionResult.String())
