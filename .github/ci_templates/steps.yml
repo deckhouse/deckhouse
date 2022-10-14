@@ -31,6 +31,16 @@
 # </template: checkout_from_event_ref_step>
 {!{- end }!}
 
+{!{ define "checkout_ref" }!}
+# <template: checkout_ref>
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    ref: {!{ .ref }!}
+    fetch-depth: 0
+# </template: checkout_ref>
+{!{- end }!}
+
 {!{/* if: ${{secrets.NNN}} not supported, additional step is required.  */}!}
 {!{ define "login_dev_registry_step" }!}
 # <template: login_dev_registry_step>

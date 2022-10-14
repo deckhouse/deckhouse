@@ -6,7 +6,7 @@
 runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_ref"            $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run CVE tests
