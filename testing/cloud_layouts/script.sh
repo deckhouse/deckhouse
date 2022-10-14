@@ -505,6 +505,11 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  if [[ "$PROVIDER" == "Static" ]]; then
+    run_linstor_tests || return $?
+  fi
+  echo "Linstor test suite: success"
+
   test_failed=
 
   testScript=$(cat <<"END_SCRIPT"
@@ -619,6 +624,44 @@ ENDSSH
     return 1
   fi
 }
+
+# run_linstor_tests executes helm test for linstor module
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+#
+# TODO: replace with testing framework: https://github.com/deckhouse/deckhouse/issues/2380
+function run_linstor_tests() {
+  test_failed=
+
+  testScript=$(cat <<"END_SCRIPT"
+set -Eeuo pipefail
+>&2 echo "Running linstor test suite ..."
+set -x
+>&2 kubectl -n d8-system exec deploy/deckhouse -- helm test -n d8-system linstor
+END_SCRIPT
+)
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+}
+
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."

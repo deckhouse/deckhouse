@@ -203,6 +203,7 @@ apiVersions:
         required: []
         description: Layout is **deprecated**.
         properties: {}
+        deprecated: true
       withoutNAT:
         type: object
         additionalProperties: false

@@ -19,39 +19,42 @@ package probe
 import (
 	"time"
 
+	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initNginx(access kubernetes.Access, names []string) []runnerConfig {
+func initNginx(access kubernetes.Access, preflight checker.Doer, names []string) []runnerConfig {
 	const (
-		groupNginx = "nginx"
-		cpTimeout  = 5 * time.Second
+		groupNginx          = "nginx"
+		controlPlaneTimeout = 5 * time.Second
 	)
+
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	configs := []runnerConfig{}
 
 	for _, controllerName := range names {
 		configs = append(configs,
-			nginxPodChecker(access, groupNginx, cpTimeout, controllerName),
+			nginxPodChecker(access, groupNginx, controlPlanePinger, controllerName),
 			// TBD: check default backend
 		)
 	}
 	return configs
 }
 
-func nginxPodChecker(access kubernetes.Access, groupNginx string, cpTimeout time.Duration, controllerName string) runnerConfig {
+func nginxPodChecker(access kubernetes.Access, groupNginx string, controlPlanePinger check.Checker, controllerName string) runnerConfig {
 	return runnerConfig{
 		group:  groupNginx,
 		probe:  controllerName,
 		check:  "pod",
 		period: 10 * time.Second,
 		config: checker.AtLeastOnePodReady{
-			Access:                    access,
-			Timeout:                   5 * time.Second,
-			Namespace:                 "d8-ingress-nginx",
-			LabelSelector:             "app=controller,name=" + controllerName,
-			ControlPlaneAccessTimeout: cpTimeout,
+			Access:           access,
+			Timeout:          5 * time.Second,
+			Namespace:        "d8-ingress-nginx",
+			LabelSelector:    "app=controller,name=" + controllerName,
+			PreflightChecker: controlPlanePinger,
 		},
 	}
 }

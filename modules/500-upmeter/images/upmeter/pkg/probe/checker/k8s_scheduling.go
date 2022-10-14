@@ -33,6 +33,7 @@ import (
 type PodScheduling struct {
 	Access    kubernetes.Access
 	Namespace string
+	Preflight Doer
 
 	Node  string
 	Image *kubernetes.ProbeImage
@@ -46,8 +47,6 @@ type PodScheduling struct {
 }
 
 func (c PodScheduling) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	pod := createPodObject(c.Name, c.Node, c.AgentID, c.Image)
 
 	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
@@ -71,7 +70,7 @@ func (c PodScheduling) Checker() check.Checker {
 	}
 
 	checker := &podSchedulingChecker{
-		preflight:   preflight,
+		preflight:   c.Preflight,
 		creator:     creator,
 		getter:      getter,
 		deleter:     deleter,
@@ -84,10 +83,10 @@ func (c PodScheduling) Checker() check.Checker {
 
 // podSchedulingChecker checks pod node. All apiserver related errors result in undetermined status.
 type podSchedulingChecker struct {
-	preflight doer
-	getter    doer
-	creator   doer
-	deleter   doer
+	preflight Doer
+	getter    Doer
+	creator   Doer
+	deleter   Doer
 
 	nodeFetcher nodeNameFetcher
 	node        string

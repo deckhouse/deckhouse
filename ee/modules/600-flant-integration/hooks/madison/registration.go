@@ -7,7 +7,6 @@ package madison
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,15 +14,54 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+// This hooks registers cluster in madison using license key and store an authentication token in the Secret.
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/flant-integration/connect_registration",
+	Queue: "/modules/flant-integration/connect_registration",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       madisonSecretBinding,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{madisonSecretName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{madisonSecretNS},
+				},
+			},
+			// Synchronization is redundant because of OnBeforeHelm.
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			ExecuteHookOnEvents:          go_hook.Bool(false),
+			FilterFunc:                   filterMadisonSecret,
+		},
+		{
+			Name:       prometheusSecretBinding,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{prometheusSecretName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{prometheusSecretNS},
+				},
+			},
+			// Synchronization is redundant because of OnBeforeHelm.
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			ExecuteHookOnEvents:          go_hook.Bool(false),
+			FilterFunc:                   filterPrometheusSecret,
+		},
+	},
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, dependency.WithExternalDependencies(registrationHandler))
 
@@ -32,47 +70,95 @@ const (
 	registrationURL  = connectBaseURL + "/v1/madison_register"
 	connectStatusURL = connectBaseURL + "/v1/madison_status"
 
-	madisonKeyPath = "flantIntegration.madisonAuthKey"
-	licenseKeyPath = "flantIntegration.internal.licenseKey"
+	madisonKeyPath         = "flantIntegration.madisonAuthKey"
+	internalMadisonKeyPath = "flantIntegration.internal.madisonAuthKey"
+	internalLicenseKeyPath = "flantIntegration.internal.licenseKey"
+
+	prometheusSecretNS      = "d8-monitoring"
+	prometheusSecretName    = "prometheus-https-mode"
+	prometheusSecretField   = "https_mode"
+	prometheusSecretBinding = prometheusSecretName
+
+	madisonSecretNS      = "d8-monitoring"
+	madisonSecretName    = "madison-proxy"
+	madisonSecretField   = "auth-key"
+	madisonSecretBinding = madisonSecretName
 )
 
+func filterMadisonSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
+	}
+
+	return string(secret.Data[madisonSecretField]), nil
+}
+
+func filterPrometheusSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
+	}
+
+	return string(secret.Data[prometheusSecretField]), nil
+}
+
 func registrationHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	_, ok := input.Values.GetOk(madisonKeyPath)
+	// Remove madisonAuthKey if license is not set.
+	licenseKey, ok := input.Values.GetOk(internalLicenseKeyPath)
+	if !ok {
+		input.Values.Remove(internalMadisonKeyPath)
+		return nil
+	}
+
+	// Support existing clusters: restore auth key from configuration.
+	madisonKey, ok := input.ConfigValues.GetOk(madisonKeyPath)
+	if ok {
+		input.Values.Set(internalMadisonKeyPath, madisonKey.String())
+		return nil
+	}
+
+	// Restore auth key from the Secret. (e.g. after restart).
+	if len(input.Snapshots[madisonSecretBinding]) > 0 {
+		storedAuthKey := input.Snapshots[madisonSecretBinding][0].(string)
+		input.Values.Set(internalMadisonKeyPath, storedAuthKey)
+		return nil
+	}
+
+	// Return if auth key is already in values.
+	_, ok = input.Values.GetOk(internalMadisonKeyPath)
 	if ok {
 		return nil
 	}
 
-	licenseKey, ok := input.Values.GetOk(licenseKeyPath)
-	if !ok {
-		return nil
-	}
+	// No auth key set in configuration, no auth key stored in the Secret — register in madison.
+	domainTemplate := input.Values.Get("global.modules.publicDomainTemplate").String()
+	prometheusHTTPSMode := getPrometheusHTTPSMode(input)
 
-	var (
-		domainTemplate  = input.Values.Get("global.modules.publicDomainTemplate").String()
-		globalHTTPSMode = input.Values.Get("global.modules.https.mode").String()
-	)
-	data, err := createMadisonPayload(domainTemplate, getPrometheusURLSchema(dc, globalHTTPSMode))
-	if err != nil {
-		return err
-	}
-	data.Type = "prometheus"
+	// Create payload for Madison with Prometheus and Grafana URLs.
+	// Use https mode calculated in 300-prometheus module.
+	payload := createMadisonPayload(domainTemplate, prometheusHTTPSMode)
 
-	// form request to d8-connect proxy
-	req, err := newRegistrationRequest(registrationURL, data, licenseKey.String())
+	// Create http request to d8-connect proxy.
+	req, err := newRegistrationRequest(registrationURL, payload, licenseKey.String())
 	if err != nil {
 		input.LogEntry.Errorf("http request failed: %v", err)
 		return nil
 	}
 
-	// call
+	// Make request to madison API.
 	authKey, err := doMadisonRequest(req, dc, input.LogEntry)
 	if err != nil {
 		err := fmt.Errorf("cannot register in madison (%s %s): %v", req.Method, req.URL, err)
 		input.LogEntry.Errorf(err.Error())
 		return err
 	}
+
+	// Save new auth key to Secret and put it to values.
 	if authKey != "" {
-		input.ConfigValues.Set(madisonKeyPath, authKey)
+		input.Values.Set(internalMadisonKeyPath, authKey)
 	}
 
 	return nil
@@ -90,76 +176,30 @@ type extraData struct {
 	Labels map[string]string `json:"labels"`
 }
 
-func createMadisonPayload(domainTemplate string, getSchema func() (string, error)) (madisonRequestData, error) {
+func createMadisonPayload(domainTemplate string, schema string) madisonRequestData {
 	data := madisonRequestData{
 		PrometheusURL: "-",
 		GrafanaURL:    "-",
 	}
 	if domainTemplate == "" {
-		return data, nil
-	}
-
-	schema, err := getSchema()
-	if err != nil {
-		return data, err
+		return data
 	}
 
 	data.GrafanaURL = schema + "://" + fmt.Sprintf(domainTemplate, "grafana")
 	data.PrometheusURL = data.GrafanaURL + "/prometheus"
+	data.Type = "prometheus"
 
-	return data, nil
+	return data
 }
 
-// getPrometheusURLSchema wraps calling apiserver for configmap and HTTPS mode setting along with the schema calculation
-func getPrometheusURLSchema(dc dependency.Container, globalHTTPSMode string) func() (string, error) {
-	return func() (string, error) {
-		prometheusHTTPSMode, err := getPrometheusHTTPSMode(dc)
-		if err != nil {
-			return "", err
-		}
-		schema := calculatePromentheusURLSchema(globalHTTPSMode, prometheusHTTPSMode)
-		return schema, nil
-	}
-}
-
-func calculatePromentheusURLSchema(globalHTTPSMode, prometheusHTTPSMode string) string {
-	schema := "http"
-	if prometheusHTTPSMode == "" {
-		if globalHTTPSMode != "Disabled" {
-			schema = "https"
-		}
-	} else if prometheusHTTPSMode != "Disabled" {
-		schema = "https"
-	}
-	return schema
-}
-
-// getPrometheusHTTPSMode fetches prometheus HTTPS mode parameter from deckhouse configmap
-func getPrometheusHTTPSMode(dc dependency.Container) (string, error) {
-	kubeCl, err := dc.GetK8sClient()
-	if err != nil {
-		return "", fmt.Errorf("cannot init Kubernetes client: %v", err)
+// getPrometheusHTTPSMode returns https mode from Secret.
+func getPrometheusHTTPSMode(input *go_hook.HookInput) string {
+	snap := input.Snapshots[prometheusSecretBinding]
+	if len(snap) == 0 {
+		return ""
 	}
 
-	cm, err := kubeCl.CoreV1().
-		ConfigMaps("d8-system").
-		Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("cannot get configmap deckhouse")
-	}
-
-	prometheusData, ok := cm.Data["prometheus"]
-	if !ok {
-		return "", nil
-	}
-
-	var prometheus struct{ HTTPS struct{ Mode string } }
-	err = yaml.Unmarshal([]byte(prometheusData), &prometheus)
-	if err != nil {
-		// ignoring the error and falling back to undeclared value
-		return "", nil
-	}
-	return prometheus.HTTPS.Mode, nil
+	return snap[0].(string)
 }
 
 type madisonAuthKeyResp struct {

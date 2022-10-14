@@ -51,7 +51,13 @@ properties:
       - type: boolean
         enum: [false]
     description: |
-      Key to access Madison alertmanager, or `false` to disable integration.
+      Key to access Madison alertmanager, or `false` to disable integration. Leave empty to autogenerate upon registration.
+
+      Use kubectl to reveal generated key:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
+      ```
     x-examples: ["abc"]
   licenseKey:
     type: string

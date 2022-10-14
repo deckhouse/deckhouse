@@ -58,6 +58,8 @@ const istioValues = `
         key: mykey
         root: myroot
         chain: mychain
+      auth:
+        password: qqq
     auth:
       externalAuthentication: {}
       password: qqq

@@ -17,37 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-}, generatePassword)
+const (
+	moduleValuesKey = "ciliumHubble"
+	authSecretNS    = "d8-cni-cilium"
+	authSecretName  = "hubble-basic-auth"
+)
 
-func generatePassword(input *go_hook.HookInput) error {
-	if input.Values.Exists("ciliumHubble.auth.externalAuthentication") {
-		input.ConfigValues.Remove("ciliumHubble.auth.password")
-		if input.ConfigValues.Exists("ciliumHubble.auth") && len(input.ConfigValues.Get("ciliumHubble.auth").Map()) == 0 {
-			input.ConfigValues.Remove("ciliumHubble.auth")
-		}
-
-		return nil
-	}
-
-	if input.Values.Exists("ciliumHubble.auth.password") {
-		return nil
-	}
-
-	if !input.ConfigValues.Exists("ciliumHubble.auth") {
-		input.ConfigValues.Set("ciliumHubble.auth", json.RawMessage("{}"))
-	}
-
-	input.ConfigValues.Set("ciliumHubble.auth.password", pwgen.AlphaNum(20))
-
-	return nil
-}
+var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)

@@ -86,6 +86,8 @@ spec:
           value: /certs/ca.crt
         - name: ENABLED_MODULES
           value: "{{ $.Values.global.enabledModules | join " " }}"
+        - name: DECKHOUSE_CONFIG_MAP
+          value: "{{ $.Values.deckhouse.internal.configMapName }}"
         ports:
           - containerPort: 9680
             name: validating-http

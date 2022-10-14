@@ -3,6 +3,10 @@
 package library
 
 var DefaultImagesTags = map[string]map[string]string{
+	"admissionPolicyEngine": {
+		"constraintExporter": "imageHash-admissionPolicyEngine-constraintExporter",
+		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",
+	},
 	"basicAuth": {
 		"nginx": "imageHash-basicAuth-nginx",
 	},

@@ -26,7 +26,14 @@ properties:
       Параметры отправки метрик или `false` для отключения их отправки.
   madisonAuthKey:
     description: |
-      Ключ для доступа в алертменеджер Madison или `false` для отключения интеграции.
+      Ключ для доступа в алертменеджер Madison или `false` для отключения интеграции. Если пусто, то ключ будет сгенерирован во время регистрации.
+
+      Сгенерированный ключ можно получить командой:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
+      ```
+
   licenseKey:
     type: string
     description: |

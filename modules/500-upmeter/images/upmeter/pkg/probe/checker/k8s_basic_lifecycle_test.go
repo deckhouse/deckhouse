@@ -51,10 +51,10 @@ func doer404() *failDoer {
 
 func TestKubeObjectBasicLifecycle_Check(t *testing.T) {
 	type fields struct {
-		preflight doer
-		getter    doer
-		creator   doer
-		deleter   doer
+		preflight Doer
+		getter    Doer
+		creator   Doer
+		deleter   Doer
 	}
 	tests := []struct {
 		name   string

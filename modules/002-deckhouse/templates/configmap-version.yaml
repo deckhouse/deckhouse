@@ -1,0 +1,15 @@
+{{/* Release channel, edition and version for 810-deckhouse-web module.  */}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-deckhouse-version-info
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  data.json: >
+    {
+    "channel":"{{ .Values.deckhouse.releaseChannel | default "unknown" }}",
+    "version":"{{ .Values.global.deckhouseVersion }}",
+    "edition":"{{ .Values.global.deckhouseEdition }}"
+    }

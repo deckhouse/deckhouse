@@ -484,7 +484,7 @@ The annotation below adds the preStop hook to istio-proxy container in applicati
 ## Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
-  * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by `istio.globalVersion` mandatory argument in the `deckhouse` ConfigMap.
+  * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by `istio.globalVersion` argument in the `deckhouse` ConfigMap.
   * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x13` label for namespace or Pod). They are configured by `istio.additionalVersions` argument in the `deckhouse` ConfigMap.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)

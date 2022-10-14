@@ -92,7 +92,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -100,10 +100,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -202,7 +202,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -210,10 +210,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -239,7 +239,7 @@
           "yaxes": [
             {
               "format": "bps",
-              "label": "cores",
+              "label": "bits / second",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -312,7 +312,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"nginx-.*\", node=~\"$node\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n)",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -320,10 +320,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"nginx-.*\", node=~\"$node\"}\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by",
+              "expr": "sum(\n  container_memory_usage_bytes{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}\n) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -349,7 +349,7 @@
           "yaxes": [
             {
               "format": "decbytes",
-              "label": "",
+              "label": "bytes",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -422,7 +422,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -430,10 +430,10 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"nginx-.*\", node=~\"$node\"}[$__interval_sx4])\n  * on (pod) group_left (app) max by (pod, app) (\n    label_replace(kube_pod_labels{label_app=~\"$app\"}, \"app\", \"$1\", \"label_app\", \"(.*)\")\n  )\n  * on (namespace) group_left (controller) max by (namespace, controller) (\n    label_replace(kube_namespace_labels{label_controller=~\"$controller\"}, \"controller\", \"$1\", \"label_controller\", \"(.*)\")\n  )\n) $by * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$cadvisor_legend_format",
               "refId": "B",
               "step": 10
             }
@@ -459,7 +459,7 @@
           "yaxes": [
             {
               "format": "bps",
-              "label": "cores",
+              "label": "bits / second",
               "logBase": 1,
               "max": null,
               "min": "0",
@@ -549,7 +549,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
+              "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -557,10 +557,10 @@
               "step": 10
             },
             {
-              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+              "expr": "sum(nginx_ingress_controller_nginx_process_connections{state=\"active\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}) $protobuf_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$protobuf_legend_format",
               "refId": "A",
               "step": 10
             }
@@ -661,7 +661,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4]))",
+              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -669,10 +669,10 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
+              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__interval_sx4])) $protobuf_by",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "$legend_format",
+              "legendFormat": "$protobuf_legend_format",
               "refId": "A",
               "step": 10
             }
@@ -799,10 +799,10 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $protobuf_by",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$legend_format",
+          "legendFormat": "$protobuf_legend_format",
           "refId": "A",
           "step": 10
         }
@@ -911,10 +911,10 @@
           "step": 10
         },
         {
-          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
+          "expr": "sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $protobuf_by\n/ scalar(sum(nginx_ingress_controller_nginx_process_connections{job=\"nginx-ingress-controller\", state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "$legend_format",
+          "legendFormat": "$protobuf_legend_format",
           "refId": "A",
           "step": 10
         }
@@ -9920,6 +9920,34 @@
         "type": "constant"
       },
       {
+        "hide": 2,
+        "name": "protobuf_legend_format",
+        "query": "{{node}} ({{controller_pod}})",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "protobuf_by",
+        "query": "by (node, controller_pod)",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "cadvisor_legend_format",
+        "query": "{{node}} ({{pod}})",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
+        "hide": 2,
+        "name": "cadvisor_by",
+        "query": "by (node, pod)",
+        "skipUrlSync": false,
+        "type": "constant"
+      },
+      {
         "allValue": ".*",
         "current": {
           "selected": false,
@@ -9950,38 +9978,14 @@
         "useTags": false
       },
       {
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": "$ds_prometheus",
-        "definition": "",
         "description": null,
         "error": null,
-        "hide": 0,
-        "includeAll": true,
+        "hide": 2,
         "label": "App",
-        "multi": true,
         "name": "app",
-        "options": [],
-        "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\"}, app)",
-          "refId": "main-app-Variable-Query"
-        },
-        "refresh": 2,
-        "regex": "",
+        "query": ".*",
         "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
+        "type": "constant"
       },
       {
         "allValue": ".*",
@@ -10005,13 +10009,13 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\"}, node)",
+          "query": "label_values(kube_pod_info{namespace=\"d8-ingress-nginx\", pod=~\"controller-.*\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 5,
         "tagValuesQuery": "",
         "tagsQuery": "",
         "type": "query",

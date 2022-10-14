@@ -485,8 +485,8 @@ spec:
 ## Обновление control-plane Istio
 
 * Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
-  * Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается обязательным параметром `istio.globalVersion` в ConfigMap `deckhouse`.
-  * Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x13`). Настраиваются дополнительным параметром `istio.additionalVersions` в ConfigMap `deckhouse`.
+  * Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром `istio.globalVersion` в ConfigMap `deckhouse`.
+  * Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x13`). Настраиваются параметром `istio.additionalVersions` в ConfigMap `deckhouse`.
 * Istio заявляет обратную совместимость между data-plane и control-plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Алгоритм обновления (для примера, на версию `1.13`):

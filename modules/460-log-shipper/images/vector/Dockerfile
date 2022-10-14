@@ -8,7 +8,7 @@ RUN apt-get update \
       ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
 
 WORKDIR /vector
-RUN git clone --depth 1 --branch v0.24.1 https://github.com/vectordotdev/vector.git \
+RUN git clone --depth 1 --branch v0.24.2 https://github.com/vectordotdev/vector.git \
     && cd vector
 
 # Download and cache dependencies

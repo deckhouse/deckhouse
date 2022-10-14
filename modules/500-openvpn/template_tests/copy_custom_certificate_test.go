@@ -53,6 +53,7 @@ internal:
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  auth: {}
 `
 
 var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", func() {

@@ -1,0 +1,13 @@
+.who-already-use {
+  & .features__item.features__item_even {
+    padding: 100px 0;
+  }
+
+  & #clients {
+    padding-top: 0;
+
+    & .text_h1.features-group__title {
+      display: none;
+    }
+  }
+}
