@@ -48,7 +48,7 @@ func Test_NewProbeFilter(t *testing.T) {
 func TestLoader_Groups(t *testing.T) {
 	unfiltered := &Loader{
 		filter: NewProbeFilter([]string{}),
-		access: &kubernetes.Accessor{},
+		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
 	}
 
@@ -64,7 +64,7 @@ func TestLoader_Groups(t *testing.T) {
 
 	filtered := &Loader{
 		filter: NewProbeFilter([]string{"deckhouse", "extensions/"}),
-		access: &kubernetes.Accessor{},
+		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
 	}
 
@@ -80,7 +80,7 @@ func TestLoader_Groups(t *testing.T) {
 func TestLoader_Probes(t *testing.T) {
 	unfiltered := &Loader{
 		filter: NewProbeFilter([]string{}),
-		access: &kubernetes.Accessor{},
+		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
 	}
 
@@ -117,7 +117,7 @@ func TestLoader_Probes(t *testing.T) {
 
 	filtered := NewLoader(
 		NewProbeFilter([]string{"deckhouse", "extensions/", "load-balancing/metallb", "nodegroups/spot"}),
-		&kubernetes.Accessor{},
+		kubernetes.FakeAccessor(),
 		nil, // nodeLister
 		DynamicConfig{
 			IngressNginxControllers: []string{"main", "main-w-pp"},

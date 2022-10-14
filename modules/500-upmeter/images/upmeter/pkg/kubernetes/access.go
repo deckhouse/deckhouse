@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 
 	kube "github.com/flant/kube-client/client"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -108,7 +107,7 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
 	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
-	a.client.WithMetricStorage(metric_storage.NewMetricStorage())
+	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
 	if err != nil {
 		return fmt.Errorf("cannot init kuberbetes client: %v", err)
@@ -158,4 +157,10 @@ func (a *Accessor) CloudControllerManagerNamespace() string {
 
 func (a *Accessor) ClusterDomain() string {
 	return a.kubernetesDomain
+}
+
+func FakeAccessor() *Accessor {
+	return &Accessor{
+		client: kube.NewFake(nil),
+	}
 }

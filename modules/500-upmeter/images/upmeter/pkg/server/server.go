@@ -48,8 +48,9 @@ import (
 // - metrics storage
 // If everything is ok, it starts http server.
 
-type server struct {
-	config *Config
+type Server struct {
+	config     *Config
+	kubeConfig *kubernetes.Config
 
 	logger *log.Logger
 
@@ -82,17 +83,18 @@ func NewConfig() *Config {
 	}
 }
 
-func New(config *Config, logger *log.Logger) *server {
-	return &server{
-		config: config,
-		logger: logger,
+func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Server {
+	return &Server{
+		config:     config,
+		kubeConfig: kubeConfig,
+		logger:     logger,
 	}
 }
 
-func (s *server) Start(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) error {
 	var err error
 
-	kubeClient, err := kubernetes.InitKubeClient()
+	kubeClient, err := kubernetes.InitKubeClient(s.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("init kubernetes client: %v", err)
 	}
@@ -134,7 +136,7 @@ func (s *server) Start(ctx context.Context) error {
 	return err
 }
 
-func (s *server) Stop() error {
+func (s *Server) Stop() error {
 	err := s.server.Shutdown(context.Background())
 	if err != nil && err != http.ErrServerClosed {
 		return err
@@ -220,7 +222,7 @@ func initDowntimeMonitor(ctx context.Context, kubeClient kube.Client, logger *lo
 func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.RegistryProbeLister {
 	noLogger := newDummyLogger()
 	noFilter := probe.NewProbeFilter(disabled)
-	noAccess := &kubernetes.Accessor{}
+	noAccess := kubernetes.FakeAccessor()
 	dynamicConfig := probe.DynamicConfig{
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
