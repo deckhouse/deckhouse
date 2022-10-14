@@ -9,7 +9,10 @@ data:
   openvpnEnabled: "true"
 ```
 
-**Caution!** The admin panel always uses tunnelNetwork. Static addresses must be issued from it. If UDP openvpn server is enabled, tunnelNetwork and udpTunnelNetwork must be the same size.
+**Caution!** The admin panel always uses `tunnelNetwork`, static addresses must be issued from it. If UDP is in use, the addresses will be converted for using in `udpTunnelNetwork` subnet. Also, `tunnelNetwork` and `udpTunnelNetwork` must be the same size. Example:
+* `tunnelNetwork`: 10.5.5.0/24
+* `udpTunnelNetwork`: 10.5.6.0/24
+* address for user 10.5.5.8 (from `tunnelNetwork` CIDR) will be converted to 10.5.6.8 (from `udpTunnelNetwork` CIDR)
 
 ## Authentication
 
