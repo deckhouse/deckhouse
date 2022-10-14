@@ -54,6 +54,14 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	flag, ok := input.Values.GetOk("admissionPolicyEngine.internal.bootstrapped")
+	if ok {
+		if flag.Bool() {
+			// to prevent flapping
+			return nil
+		}
+	}
+
 	deploymentReady := snap[0].(bool)
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", deploymentReady)
 
