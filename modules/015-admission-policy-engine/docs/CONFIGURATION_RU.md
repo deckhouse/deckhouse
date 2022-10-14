@@ -4,7 +4,7 @@ title: "Модуль admission-policy-engine: настройки"
 
 Модуль по умолчанию **включен**.
 
-Для выключения, добавьте в ConfigMap `deckhouse`:
+Чтобы выключить его, добавьте в ConfigMap `deckhouse` следующую строку:
 
 ```yaml
 admissionPolicyEngineEnabled: "false"
