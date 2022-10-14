@@ -175,7 +175,7 @@ spec:
       v2:
         enabled: true
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
-    defaultTemplates: ["sidecar", "d8-check-kernel"]
+    defaultTemplates: ["sidecar", "d8-check-kernel-version"]
 {{- end }}
     sidecarInjectorWebhook:
       injectedAnnotations:
