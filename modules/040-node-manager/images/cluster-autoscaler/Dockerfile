@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE as artifact
+ARG  BASE_GOLANG_18_ALPINE
+FROM $BASE_GOLANG_18_ALPINE as artifact
 WORKDIR /go/src/github.com/gardener/autoscaler
 COPY "patches/do-not-violate-minsize-when-fixing-nodegroup.patch" /
 COPY "patches/daemonset-eviction.patch" /
