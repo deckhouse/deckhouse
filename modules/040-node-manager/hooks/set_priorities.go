@@ -22,7 +22,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -31,11 +30,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/set_priorities",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "ngs",
-			ApiVersion:             "deckhouse.io/v1",
-			Kind:                   "NodeGroup",
-			WaitForSynchronization: pointer.BoolPtr(false),
-			FilterFunc:             setPriorityFilterNG,
+			Name:       "ngs",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: setPriorityFilterNG,
 		},
 	},
 }, handleSetPriorities)
