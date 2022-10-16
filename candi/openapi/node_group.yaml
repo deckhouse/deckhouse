@@ -576,7 +576,7 @@ spec:
                         > **WARNING!** This parameter does nothing if CRI type is `Docker`.
     - name: v1alpha2
       served: true
-      storage: true
+      storage: false
       additionalPrinterColumns: *additionalPrinterColumns
       subresources:
         status: {}
@@ -646,7 +646,7 @@ spec:
                 kubelet: *kubelet
     - name: v1
       served: true
-      storage: false
+      storage: true
       additionalPrinterColumns: *additionalPrinterColumns
       subresources:
         status: {}
