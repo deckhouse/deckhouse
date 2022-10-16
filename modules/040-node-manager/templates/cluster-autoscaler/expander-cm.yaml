@@ -1,3 +1,5 @@
+{{- if hasKey $.Values.nodeManager.internal "clusterAutoscalerPriorities" }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,8 +8,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 data:
   priorities: |-
-    10:
-      - .*t2\.large.*
-      - .*t3\.large.*
-    50:
-      - .*m4\.4xlarge.*
+    {{- range $k, $v := $.Values.nodeManager.internal.clusterAutoscalerPriorities }}
+    {{ $k | atoi }}:
+    {{ $v | toYaml }}
+    {{- end }}
+{{- end }}

@@ -735,6 +735,12 @@ spec:
                       pattern: "^[1-9][0-9]*%?$"
                       description: |
                         Maximum number of concurrently updating nodes. Can be set as absolute count or as a percent of total nodes.
+                priority:
+                  type: integer
+                  description: |
+                    An expansion option based on priorities assigned by a user to scaling groups. This could be useful, for example, to prefer NodeGroup with cheap spot instances over more expensive.
+                    The highest value wins.
+                    If there are multiple node groups matching any of the regular expressions with the highest priority, one group to expand the cluster is selected each time at random.
               oneOf:
               - properties:
                   nodeType:

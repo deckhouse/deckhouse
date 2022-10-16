@@ -85,6 +85,9 @@ type NodeGroupSpec struct {
 	// Update settings for NodeGroups. Optional
 	Update Update `json:"update,omitempty"`
 
+	// Priority setting for autoscaler expander
+	Priority *int `json:"priority,omitempty"`
+
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
 }
