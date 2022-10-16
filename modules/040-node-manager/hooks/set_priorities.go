@@ -70,7 +70,7 @@ func handleSetPriorities(input *go_hook.HookInput) error {
 	for _, sn := range snap {
 		ng := sn.(setPriorityNodeGroup)
 		if ng.Priority != nil {
-			key := fmt.Sprintf("%s-%s-.*", prefix, ng.Name)
+			key := fmt.Sprintf("^%s-%s-.*", prefix, ng.Name)
 			priorities[*ng.Priority] = append(priorities[*ng.Priority], key)
 		}
 	}
