@@ -104,7 +104,9 @@ spec:
         - --scale-down-delay-after-add=15m
         - --address=127.0.0.1:8085
         - --balance-similar-node-groups=true
+        - --balancing-ignore-label=node-group
         - --expander=priority,least-waste
+        - --max-node-provision-time=2m # TMP remove it, default 15m
         - --v=2
         env:
         - name: CONTROL_NAMESPACE
