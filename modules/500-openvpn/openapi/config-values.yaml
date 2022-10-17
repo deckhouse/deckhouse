@@ -77,7 +77,7 @@ properties:
       A list of routes to send to clients upon their connection.
 
       By default, this list is generated automatically using the local cluster network, service subnet, and Pod subnet.
-    x-examples: ["172.25.176.0/24", "172.25.178.0/255.255.255.0"]
+    x-examples: [["172.25.176.0/24", "172.25.178.0/255.255.255.0"]]
   pushToClientDNS:
     type: string
     description: |
