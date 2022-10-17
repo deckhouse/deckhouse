@@ -240,6 +240,12 @@ spec:
                         This value is used as the upper bound in cluster-autoscaler.
                       type: integer
                       minimum: 0
+                    priority:
+                      type: integer
+                      description: |
+                        An expansion option based on priorities assigned by a user to scaling groups. This could be useful, for example, to prefer NodeGroup with cheap spot instances over more expensive.
+                        The highest value wins.
+                        If there are multiple node groups matching any of the regular expressions with the highest priority, one group to expand the cluster is selected each time at random.
                     maxUnavailablePerZone:
                       description: |
                         The maximum number of unavailable instances (during rollout) in the group in each zone.
@@ -735,12 +741,6 @@ spec:
                       pattern: "^[1-9][0-9]*%?$"
                       description: |
                         Maximum number of concurrently updating nodes. Can be set as absolute count or as a percent of total nodes.
-                priority:
-                  type: integer
-                  description: |
-                    An expansion option based on priorities assigned by a user to scaling groups. This could be useful, for example, to prefer NodeGroup with cheap spot instances over more expensive.
-                    The highest value wins.
-                    If there are multiple node groups matching any of the regular expressions with the highest priority, one group to expand the cluster is selected each time at random.
               oneOf:
               - properties:
                   nodeType:

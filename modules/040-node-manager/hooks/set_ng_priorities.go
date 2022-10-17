@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type setPriorityNodeGroup struct {
 	Name     string
-	Priority *int
+	Priority *int32
 }
 
 func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -51,14 +51,18 @@ func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		return nil, err
 	}
 
+	if ng.Spec.CloudInstances.Priority == nil {
+		return nil, nil
+	}
+
 	return setPriorityNodeGroup{
 		Name:     ng.Name,
-		Priority: ng.Spec.Priority,
+		Priority: ng.Spec.CloudInstances.Priority,
 	}, nil
 }
 
 func handleSetPriorities(input *go_hook.HookInput) error {
-	priorities := make(map[int][]string)
+	priorities := make(map[int32][]string)
 	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
 	if !exists {
 		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
@@ -66,9 +70,12 @@ func handleSetPriorities(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["ngs"]
 	for _, sn := range snap {
+		if sn == nil {
+			continue
+		}
 		ng := sn.(setPriorityNodeGroup)
 		if ng.Priority != nil {
-			key := fmt.Sprintf("^%s-%s-.*", prefix, ng.Name)
+			key := fmt.Sprintf("^%s-%s-[0-9a-zA-Z]+$", prefix, ng.Name)
 			priorities[*ng.Priority] = append(priorities[*ng.Priority], key)
 		}
 	}

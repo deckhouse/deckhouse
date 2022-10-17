@@ -85,9 +85,6 @@ type NodeGroupSpec struct {
 	// Update settings for NodeGroups. Optional
 	Update Update `json:"update,omitempty"`
 
-	// Priority setting for autoscaler expander
-	Priority *int `json:"priority,omitempty"`
-
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
 }
@@ -153,6 +150,9 @@ type CloudInstances struct {
 
 	// Reference to a ClassInstance resource. Required.
 	ClassReference ClassReference `json:"classReference"`
+
+	// Priority setting for autoscaler expander
+	Priority *int32 `json:"priority,omitempty"`
 }
 
 func (c CloudInstances) IsEmpty() bool {
