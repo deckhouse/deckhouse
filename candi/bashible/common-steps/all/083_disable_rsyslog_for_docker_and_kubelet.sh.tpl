@@ -19,6 +19,10 @@ _on_rsyslog_config_changed() {
 }
 {{- end }}
 
+if [ systemctl -q is-enabled rsyslog >/dev/null 2>&1 ]; then
+  exit 0
+fi
+
 bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
 :programname,isequal, "kubelet" ~
 END
