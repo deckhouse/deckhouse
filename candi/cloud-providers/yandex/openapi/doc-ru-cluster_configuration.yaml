@@ -107,12 +107,8 @@ apiVersions:
       existingZoneToSubnetIDMap:
         description: |
           Одна или несколько ранее существовавших подсетей, сопоставленных с соответствующей зоной.
-          ```yaml
-          ru-central1-a: e2lu8r1tbbtryhdpa9ro
-          ru-central1-b: e2lu8r1tbbtryhdpa9ro
-          ru-central1-c: e2lu8r1tbbtryhdpa9ro
-          ```
-          !!!Внимание!!! Deckhouse создаст таблицу маршрутизации, которую необходимо вручную привязать к указанными подсетям!
+
+          > **Внимание!** Deckhouse создаст таблицу маршрутизации, которую необходимо вручную привязать к указанными подсетям.
       labels:
         description: |
           Лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
@@ -142,10 +138,11 @@ apiVersions:
           exporterAPIKey:
             description: |
               API-ключ для экспортера метрик Яндекс Облака.
-              Если значение равно пустой строке, то экспортер не будет задеплоен в кластер.
-              Если значение равно `Auto`, то Deckhouse создаст сервис-аккаунт c ролью `monitoring.viewer` и API-ключ для него. Для основного сервис-аккаунта требуется роль `admin`.
-              Любое другое значение считается валидным API-ключем. Используйте [эту инструкцию](https://cloud.yandex.ru/docs/iam/operations/api-key/create) для создания API-ключа.
-              Сервисный аккаунту для которого будет создан ключ необходимо назначить роль `monitoring.viewer`.
+
+              - Если значение ключа — пустая строка, то экспортер не будет развернут в кластере.
+              - Если значение ключа — `Auto`, то Deckhouse создаст service account c ролью `monitoring.viewer` и API-ключ для него. Для основного service account'а требуется роль `admin`.
+              - Любое другое значение ключа считается допустимым API-ключем. Используйте [инструкцию](https://cloud.yandex.ru/docs/iam/operations/api-key/create) для создания API-ключа.
+                Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
               Внешний [зарезервированный IP-адрес](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
@@ -173,4 +170,4 @@ apiVersions:
               Ключ к Service Account'у в JSON-формате, выдаваемый [yc iam key create](environment.html).
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+          Глобальное ограничение набора зон, с которыми работает данный cloud provider.
