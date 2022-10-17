@@ -6,8 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"sort"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -20,20 +23,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(ensureCRDs))
 
 func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-	var theNewestVersion string
+	// collect all istio versions global + additional
+	istioVersions := make([]string, 0)
 
-	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
-	var additionalVersions = make([]string, 0)
-	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {
-		additionalVersions = append(additionalVersions, versionResult.String())
+	if !input.Values.Get("istio.internal.globalVersion").Exists() {
+		return fmt.Errorf("istio.internal.globalVersion value isn't discovered by discovery_versions.go yet")
 	}
+	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
+	istioVersions = append(istioVersions, globalVersion)
 
-	for versionResult := range input.Values.Get("istio.internal.versionMap").Map() {
-		version := versionResult
-		if version == globalVersion || internal.Contains(additionalVersions, version) {
-			theNewestVersion = version
+	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {
+		if !internal.Contains(istioVersions, versionResult.String()) {
+			istioVersions = append(istioVersions, versionResult.String())
 		}
 	}
 
-	return ensure_crds.EnsureCRDsHandler("/deckhouse/modules/110-istio/crds/istio/"+theNewestVersion+"/*.yaml")(input, dc)
+	// semvers is a slice for sorting semver
+	semvers := make([]*semver.Version, len(istioVersions))
+	for i, version := range istioVersions {
+		v, err := semver.NewVersion(version)
+		if err != nil {
+			return err
+		}
+		semvers[i] = v
+	}
+
+	sort.Sort(semver.Collection(semvers))
+
+	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
+	return ensure_crds.EnsureCRDsHandler("/deckhouse/modules/110-istio/crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
 }
