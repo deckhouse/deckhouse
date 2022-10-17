@@ -1,0 +1,94 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        New module `admission-policy-engine` with realized [Pod Security
+        Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/). 
+
+        Security profiles could be activated by setting a label `security.deckhouse.io/pod-policy:
+        restricted` or `security.deckhouse.io/pod-policy: baseline` to the desired Namespace. 
+
+        Added Grafana dashboard `Application/Admission Policy Engine` and the
+        `PodSecurityStandardsViolation` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2425
+ci:
+  features:
+    - summary: Make executing a single e2e test mandatory to accept the PR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2431
+cilium-hubble:
+  fixes:
+    - summary: >-
+        No more saving generated password in ConfigMap, add command to reveal generated password
+        from internal values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+cni-cilium:
+  fixes:
+    - summary: Fixed alert templating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2749
+cni-flannel:
+  fixes:
+    - summary: Delete the `migrate-network_mode` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+dashboard:
+  fixes:
+    - summary: Rewrite the `generate_password` hook in Go and use the common hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+deckhouse-web:
+  fixes:
+    - summary: >-
+        No more saving generated password in ConfigMap, add command to reveal generated password
+        from internal values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+docs:
+  fixes:
+    - summary: Update getting started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2721
+global-hooks:
+  fixes:
+    - summary: Validating for the `publicDomainTemplate` global parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2415
+    - summary: Prevent updating ConfigMap/deckhouse from hooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+    - summary: Refactoring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+ingress-nginx:
+  fixes:
+    - summary: Fixed Kubernetes / Ingress Nginx Controllers Grafana dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2597
+istio:
+  fixes:
+    - summary: Fixed filter and hook logic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2677
+    - summary: >-
+        Do not save calculated `globalVersion` (restore it from Service on every startup). Use the
+        common hook in the `generate_passwords` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+node-manager:
+  fixes:
+    - summary: >-
+        Use ADDON_OPERATOR_CONFIG_MAP in the `webhooks/validating/node_group` hook. Save HTTPS mode
+        into the `d8-monitoring/prometheus-https-mode` Secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+openvpn:
+  features:
+    - summary: >-
+        Added the ability to use bitmasks in `pushToClientRoutes`. Fixed the feature of assigning
+        static addresses for VPN clients.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2366
+  fixes:
+    - summary: Minor fixer in the openvpn module documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2747
+    - summary: >-
+        No more saving generated password in ConfigMap, add command to reveal generated password
+        from internal values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+upmeter:
+  fixes:
+    - summary: >-
+        No more saving generated password in ConfigMap, add command to reveal generated password
+        from internal values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2133
+user-authn:
+  fixes:
+    - summary: Do not use `connectorData` field of refresh token objects to refresh tokens.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2685
+
