@@ -20,6 +20,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix Yandex NAT Instance netplan config. [#2730](https://github.com/deckhouse/deckhouse/pull/2730)
+    No impact for existing cluster. Only fixes cluster bootstap of `WithNATInstance` layot in Yandex Cloud.
  - **[candi]** Fix routes for multi-zonal clusters when using `WithNATInstance` layout. [#2544](https://github.com/deckhouse/deckhouse/pull/2544)
  - **[cloud-provider-yandex]** Reverted changes in the YandexClusterConfiguration (removed `additionalProperties: false`). [#2649](https://github.com/deckhouse/deckhouse/pull/2649)
  - **[cloud-provider-yandex]** Fix allowing additional properties for `nodeGroups[*]` and `nodeGroups[*].instanceClass`. [#2504](https://github.com/deckhouse/deckhouse/pull/2504)
