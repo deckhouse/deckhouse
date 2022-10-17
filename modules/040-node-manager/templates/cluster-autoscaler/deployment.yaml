@@ -95,7 +95,6 @@ spec:
         - --skip-nodes-with-system-pods=false
         - --skip-nodes-with-local-storage=false
         - --min-replica-count=1
-        - --expander=least-waste
         - --expendable-pods-priority-cutoff=-10
         - --scale-down-unneeded-time=5m
         - --scale-down-unready-time=4m
