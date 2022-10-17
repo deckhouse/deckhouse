@@ -42,9 +42,15 @@ properties:
         my-asn:
           description: |
             Номер автономной системы для кластера.
+        peer-port:
+          description: |
+            Порт, к которому устанавливать сессию.
         source-address:
           description: |
             IP-адрес для исходящих соединений.
+        router-id:
+          description: |
+            ID BGP-роутера для анонса.
         hold-time:
           description: |
             Таймаут, после которого партнёрский BGP-пир считается утерянным. Это значение делится на 3 и получается интервал для keep-alive.
@@ -57,6 +63,9 @@ properties:
 
             Опциональный параметр.
             Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+        password:
+          description: |
+            Пароль для аутентификациии для роутеров, требующих TCP MD5 авторизованных сессий.
   addressPools:
     description: |
       Список диапазонов IP, которые будут выдаваться сервисам.
@@ -73,3 +82,30 @@ properties:
         addresses:
           description: |
             Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон значений с "-" в качестве разделителя.
+        auto-assign:
+          description: |
+            Флаг auto-assign используется для предотвращения автоматического выделения IP из пула.
+        avoid-buggy-ips:
+          description: |
+            Avoid-buggy-ips запрещает использование адресов из пула, заканчивающихся на .0 и .255.
+        bgp-advertisements:
+          description: |
+            Определяет BGP advertisements.
+          items:
+            aggregation-length:
+              description: |
+                Опция aggregation-length позволяет "свернуть" /32 в более крупный префикс. По умолчанию - 32. Работает для адресов IPv4.
+            localPref:
+              description: |
+                Атрибут BGP LOCAL_PREF используется алгоритмом BGP best path. Путь с более высоким localpref предпочтительнее пути с более низким localpref.
+            communities:
+              description: |
+                BGP communities связанные с анонсом. Каждый элемент это ключ из конфига `bgpCommunities`.
+  bgpCommunities:
+    description: |
+      Список BGP communities
+    items:
+      type: object
+      additionalProperties:
+        description: |
+          пары ключ-значение
