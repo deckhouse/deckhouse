@@ -241,12 +241,12 @@ apiVersions:
         type: object
         description: |
           One or more pre-existing subnets mapped to respective zone.
-          ```yaml
-          ru-central1-a: e2lu8r1tbbtryhdpa9ro
-          ru-central1-b: e2lu8r1tbbtryhdpa9ro
-          ru-central1-c: e2lu8r1tbbtryhdpa9ro
-          ```
-          !!!Warning!!! Deckhouse will create route table that must be manually attached to these subnets!
+
+          > **Warning!** Deckhouse will create a route table that must be manually attached to these subnets.
+        x-examples:
+          - ru-central1-a: e2lu8r1tbbtryhdpa9ro
+            ru-central1-b: e2lu8r1tbbtryhdpa9ro
+            ru-central1-c: e2lu8r1tbbtryhdpa9ro
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -292,10 +292,11 @@ apiVersions:
           exporterAPIKey:
             description: |
               API-key for cloud metrics exporter.
-              If parameter is empty cloud metrics exporter will not be deployed in the cluster.
-              If parameter is `Auto`, Deckhouse will create service account with role `monitoring.viewer` and create API-key manually. Provider service account should have `admin` role.
-              Any other value is considered a valid API-key. See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
-              Service account should have `monitoring.viewer` role.
+
+              - If parameter is empty, cloud metrics exporter will not be deployed in the cluster.
+              - If parameter is `Auto`, Deckhouse will create service account with the `monitoring.viewer` role and create API-key manually. Provider service account should have the `admin` role.
+              - Any other value is considered a valid API-key. See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
+                Service account should have `monitoring.viewer` role.
             type: string
             default: ""
           natInstanceExternalAddress:
@@ -355,7 +356,7 @@ apiVersions:
       zones:
         type: array
         description: |
-          The globally restricted set of zones that this Cloud Provider works with.
+          The globally restricted set of zones that this cloud provider works with.
         items:
           enum:
             - ru-central1-a
