@@ -61,14 +61,14 @@ properties:
       Tunnel network for TCP OpenVPN server.
     x-doc-default: '172.25.175.0/24'
     default: '172.25.175.0/24'
-    x-examples: ["172.25.175.0/24"]
+    x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
   udpTunnelNetwork:
     type: string
     description: |
       Tunnel network for UDP OpenVPN server.
     x-doc-default: '172.25.176.0/24'
     default: '172.25.176.0/24'
-    x-examples: ["172.25.176.0/24"]
+    x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
   pushToClientRoutes:
     type: array
     items:
@@ -77,6 +77,7 @@ properties:
       A list of routes to send to clients upon their connection.
 
       By default, this list is generated automatically using the local cluster network, service subnet, and Pod subnet.
+    x-examples: ["172.25.176.0/24", "172.25.178.0/255.255.255.0"]
   pushToClientDNS:
     type: string
     description: |
