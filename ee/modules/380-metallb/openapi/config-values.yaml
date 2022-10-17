@@ -197,35 +197,34 @@ properties:
           description: |
             Defines BGP advertisements.
           items:
-            aggregation-length:
-              type: integer
-              default: 32
-              description: |
-                The aggregation-length advertisement option lets you “roll up” the /32s into a larger prefix. Defaults to 32. Works for IPv4 addresses.
-              minimum: 1
-            localPref:
-              type: integer
-              description: |
-                The BGP LOCAL_PREF attribute which is used by BGP best path algorithm, Path with higher localpref is preferred over one with lower localpref.
-            communities:
-              type: array
-              description: |
-                keys from bgpCommunities config to be associated with the announcement.
-              items:
-                type: string
-              x-doc-example: "[no-advertise]"
+            type: object
+            properties:
+              aggregation-length:
+                type: integer
+                default: 32
+                description: |
+                  The aggregation-length advertisement option lets you “roll up” the /32s into a larger prefix. Defaults to 32. Works for IPv4 addresses.
+                minimum: 1
+              localpref:
+                type: integer
+                description: |
+                  The BGP LOCAL_PREF attribute which is used by BGP best path algorithm, Path with higher localpref is preferred over one with lower localpref.
+              communities:
+                type: array
+                description: |
+                  keys from bgpCommunities config to be associated with the announcement.
+                items:
+                  type: string
+                x-doc-example: "[no-advertise]"
   bgpCommunities:
-    type: array
+    type: object
     description: |
       The BGP communities list
-    items:
-      type: object
-      additionalProperties:
-        type: string
-        description: |
-          map of {key,value} pairs
-        x-doc-example: "no-advertise: 65535:65282"
-
+    additionalProperties:
+      type: string
+      description: |
+        map of {key,value} pairs
+      x-doc-example: "no-advertise: 65535:65282"
 x-examples:
 - bgpPeers:
   - peer-address: 192.168.1.1
@@ -247,7 +246,7 @@ x-examples:
       localpref: 100
       communities:
       - no-advertise
-  bgp-communities:
+  bgpCommunities:
     no-advertise: 65535:65282
   speaker:
     nodeSelector:
