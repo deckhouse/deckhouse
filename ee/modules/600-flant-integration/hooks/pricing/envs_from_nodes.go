@@ -51,7 +51,7 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		n.Type = t
 	}
 
-	if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/control-plane"]; !ok {
+	if _, ok := node.ObjectMeta.Labels["node.deckhouse.io/group: master"]; !ok {
 		return n, err
 	}
 
