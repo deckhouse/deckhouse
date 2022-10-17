@@ -23,6 +23,8 @@ if [ systemctl -q is-enabled rsyslog >/dev/null 2>&1 ]; then
   exit 0
 fi
 
+if [ -d /etc/rsyslog.d ]; then
+
 bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
 :programname,isequal, "kubelet" ~
 END
@@ -30,3 +32,5 @@ END
 bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
 :programname,isequal, "dockerd" ~
 END
+
+fi
