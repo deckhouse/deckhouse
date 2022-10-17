@@ -7,10 +7,11 @@ package hooks
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"sort"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
