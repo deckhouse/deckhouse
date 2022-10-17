@@ -90,7 +90,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 		return fmt.Errorf("unsupported versions: [%s]", strings.Join(unsupportedVersions, ","))
 	}
 
-	sort.Strings(versionsToInstall)
+	sort.Strings(versionsToInstall) // to guarantee same order
 
 	input.Values.Set("istio.internal.globalVersion", globalVersion)
 	input.Values.Set("istio.internal.versionsToInstall", versionsToInstall)

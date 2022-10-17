@@ -23,7 +23,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(ensureCRDs))
 
 func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-	// collect all istio versions global + additional
+	// collect all istio versions (global + additional | uniq)
 	istioVersions := make([]string, 0)
 
 	if !input.Values.Get("istio.internal.globalVersion").Exists() {
@@ -38,7 +38,7 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 	}
 
-	// semvers is a slice for sorting semver
+	// semvers is a slice for sorting by semver
 	semvers := make([]*semver.Version, len(istioVersions))
 	for i, version := range istioVersions {
 		v, err := semver.NewVersion(version)

@@ -28,7 +28,7 @@ var _ = Describe("Istio hooks :: discovery_versions ::", func() {
 		})
 	})
 
-	Context("Some istio images exists", func() {
+	Context("Some istio images exist", func() {
 		BeforeEach(func() {
 			values := `
 operatorV1x22x3: "operator-img"

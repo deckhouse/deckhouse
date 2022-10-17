@@ -7,7 +7,7 @@ package istio_versions
 
 import "encoding/json"
 
-type IstioVersionsMapType map[string]IstioVersionInfo
+type IstioVersionsMap map[string]IstioVersionInfo
 
 type IstioVersionInfo struct {
 	FullVersion string `json:"fullVersion"`
@@ -15,7 +15,7 @@ type IstioVersionInfo struct {
 	ImageSuffix string `json:"imageSuffix"`
 }
 
-func (vm IstioVersionsMapType) GetVersionByRevision(rev string) string {
+func (vm IstioVersionsMap) GetVersionByRevision(rev string) string {
 	for ver, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
 			return ver
@@ -24,7 +24,7 @@ func (vm IstioVersionsMapType) GetVersionByRevision(rev string) string {
 	return ""
 }
 
-func (vm IstioVersionsMapType) GetFullVersionByRevision(rev string) string {
+func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
 			return istioVerInfo.FullVersion
@@ -33,7 +33,7 @@ func (vm IstioVersionsMapType) GetFullVersionByRevision(rev string) string {
 	return ""
 }
 
-func (vm IstioVersionsMapType) GetAllVersions() []string {
+func (vm IstioVersionsMap) GetAllVersions() []string {
 	versions := make([]string, len(vm))
 	for ver := range vm {
 		versions = append(versions, ver)
@@ -41,8 +41,8 @@ func (vm IstioVersionsMapType) GetAllVersions() []string {
 	return versions
 }
 
-func VersionMapStrToVersionMapType(versionMapRaw string) IstioVersionsMapType {
-	versionMap := make(IstioVersionsMapType)
+func VersionMapStrToVersionMap(versionMapRaw string) IstioVersionsMap {
+	versionMap := make(IstioVersionsMap)
 	_ = json.Unmarshal([]byte(versionMapRaw), &versionMap)
 	return versionMap
 }

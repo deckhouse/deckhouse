@@ -10,7 +10,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x33" } }
+          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x33" } } # must be real
         additionalProperties:
           type: object
           properties:

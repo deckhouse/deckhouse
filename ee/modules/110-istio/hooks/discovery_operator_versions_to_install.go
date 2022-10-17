@@ -55,7 +55,7 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	var operatorVersionsToInstall = make([]string, 0)
 	var unsupportedRevisions = make([]string, 0)
 
-	versionMap := istio_versions.VersionMapStrToVersionMapType(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapStrToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, revisionResult := range versionsToInstallResult {
