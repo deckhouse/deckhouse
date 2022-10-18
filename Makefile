@@ -48,8 +48,10 @@ else ifeq ($(PLATFORM_NAME), arm64)
 endif
 
 # Set host arch & OS for golang-based programs, e.g. Prometheus
+ifneq (, $(shell which go))
 GOHOSTARCH := $(shell go env GOHOSTARCH)
 GOHOSTOS := $(shell go env GOHOSTOS)
+endif
 
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
