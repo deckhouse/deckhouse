@@ -3,7 +3,7 @@
   - alert: D8IstioActualVersionIsNotInstalled
     annotations:
       description: |
-        There are pods with injected sidecar with version `{{$labels.version}}` and revision `{{$labels.revision}}` in namespace `{{$labels.namespace}}`, but the control-plane version isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        There are pods with injected sidecar with version `{{$labels.version}}` (revision `{{$labels.revision}}`) in namespace `{{$labels.namespace}}`, but the control-plane version isn't installed. Consider installing it or change the Namespace or Pod configuration.
         Impact — Pods have lost their sync with k8s state.
         Getting orphaned pods:
         ```
@@ -13,7 +13,7 @@
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: Desired control-plane version isn't installed
+      summary: control-plane version for Pod with already injected sidecar isn't installed
     expr: |
       max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
       (
@@ -34,7 +34,7 @@
   - alert: D8IstioDesiredVersionIsNotInstalled
     annotations:
       description: |
-        There is desired istio control plane version `{{$labels.desired_version}}` and revision `{{$labels.revision}}` configured for pods in namespace `{{$labels.namespace}}`, but the version isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        There is desired istio control plane version `{{$labels.desired_version}}` (revision `{{$labels.revision}}`) configured for pods in namespace `{{$labels.namespace}}`, but the version isn't installed. Consider installing it or change the Namespace or Pod configuration.
         Impact — Pods won't be able to re-create in the `{{$labels.namespace}}` Namespace.
         Cheat sheet:
         ```
@@ -94,7 +94,7 @@
   - alert: D8IstioPodsWithoutIstioSidecar
     annotations:
       description: |
-        There are pods `{{$labels.dataplane_pod}}` in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
+        There is a Pod `{{$labels.dataplane_pod}}` in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
         Getting affected Pods:
         ```
         kubectl -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
@@ -117,7 +117,7 @@
     annotations:
       description: |
         There are Pods in Namespace `{{$labels.namespace}}` with istio data-plane version `{{$labels.version}}`, but the desired one is `{{$labels.desired_version}}`.
-        Impact — revision is to change after Pod restarting.
+        Impact — istio version is to change after Pod restarting.
         Cheat sheet:
         ```
         ### namespace-wide configuration
