@@ -175,7 +175,7 @@ bin/trivy-${TRIVY_VERSION}/trivy:
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	rm -f bin/trivy
-	ln -s /deckhouse/bin/trivy-$(TRIVY_VERSION)/trivy bin/trivy
+	ln -s trivy-${TRIVY_VERSION}/trivy bin/trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
@@ -215,7 +215,7 @@ bin/jq-$(JQ_VERSION)/jq:
 .PHONY: bin/jq
 bin/jq: bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
 	rm -f bin/jq
-	ln -s /deckhouse/bin/jq-$(JQ_VERSION)/jq bin/jq
+	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
