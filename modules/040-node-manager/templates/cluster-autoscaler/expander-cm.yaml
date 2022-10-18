@@ -12,4 +12,6 @@ data:
     {{ $k | atoi }}:
       {{ $v | toYaml }}
     {{- end }}
+    {{- else }}
+    {}
     {{- end }}
