@@ -248,17 +248,12 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 		}
 
 		message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
-		notReadyNodes := make([]string, 0, 0)
 		for _, node := range nodesList.Items {
 			condition := "NotReady"
 			if _, ok := readyNodes[node.Name]; ok {
 				condition = "Ready"
 			}
 			message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
-		}
-
-		for _, n := range notReadyNodes {
-			delete(readyNodes, n)
 		}
 
 		if len(readyNodes) >= desiredReadyNodes {

@@ -55,7 +55,7 @@ func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm fun
 If you lose connection to node, converge may not be finished.
 Also, SSH connectivity to another nodes will not check before converge node.
 
-AAnd be attentive when you create new control-plane nodes and change another control-plane instances both.
+And be attentive when you create new control-plane nodes and change another control-plane instances both.
 dhctl can not add new master IP's for connection.
 
 Do you want to continue?
