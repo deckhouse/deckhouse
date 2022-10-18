@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -57,14 +58,10 @@ func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modul
 }
 
 // ValidateValues is an adapter between JSONRepr and Values
-func ValidateValues(validator *validation.ValuesValidator, moduleName, values string) error {
-	var obj map[string]interface{}
-	err := yaml.Unmarshal([]byte(values), &obj)
-	if err != nil {
-		return err
-	}
+func ValidateValues(validator *validation.ValuesValidator, moduleName string, values chartutil.Values) error {
+	obj := values["Values"].(map[string]interface{})
 
-	err = validator.ValidateGlobalValues(obj)
+	err := validator.ValidateGlobalValues(obj)
 	if err != nil {
 		return err
 	}

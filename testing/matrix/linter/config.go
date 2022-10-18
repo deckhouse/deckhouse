@@ -26,6 +26,7 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/mohae/deepcopy"
 	"gopkg.in/yaml.v2"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
 const (
@@ -207,14 +208,10 @@ func (f *FileController) SaveValues() error {
 	return nil
 }
 
-func (f *FileController) ReturnValues() ([]string, error) {
-	valuesFiles := make([]string, 0, f.Queue.Len())
+func (f *FileController) ReturnValues() ([]chartutil.Values, error) {
+	valuesFiles := make([]chartutil.Values, 0, f.Queue.Len())
 	for f.Queue.Len() > 0 {
-		out, err := yaml.Marshal(f.Queue.PopFront())
-		if err != nil {
-			return nil, fmt.Errorf("rendering values failed: %v", err)
-		}
-		valuesFiles = append(valuesFiles, string(out))
+		valuesFiles = append(valuesFiles, f.Queue.PopFront().(map[string]interface{}))
 	}
 	return valuesFiles, nil
 }

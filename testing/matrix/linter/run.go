@@ -25,13 +25,14 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 // applyTags if ugly because values now are strongly untyped. We have to rewrite this after adding proper global schema
-func applyTags(tags map[string]map[string]string, values interface{}) {
+func applyTags(tags map[string]interface{}, values interface{}) {
 	values.(map[string]interface{})["global"].(map[string]interface{})["modulesImages"].(map[string]interface{})["tags"] = tags
 }
 
@@ -52,7 +53,7 @@ func Run(tmpDir string, m utils.Module) error {
 	log.SetOutput(ioutil.Discard)      // helm
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator
 
-	var values []string
+	var values []chartutil.Values
 	if err != nil {
 		return err
 	}
