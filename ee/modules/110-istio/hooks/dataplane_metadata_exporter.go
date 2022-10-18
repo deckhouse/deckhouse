@@ -181,7 +181,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	versionMap := istio_versions.VersionMapStrToVersionMap(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 	globalRevision := versionMap[input.Values.Get("istio.internal.globalVersion").String()].Revision
 
 	input.MetricsCollector.Expire(metadataExporterMetricsGroup)

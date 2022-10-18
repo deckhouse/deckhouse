@@ -70,7 +70,7 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	versionMap := istio_versions.VersionMapStrToVersionMap(input.Values.Get("istio.internal.versionMap").String())
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
 	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	for _, podRaw := range input.Snapshots["istiod_pods"] {
