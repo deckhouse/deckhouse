@@ -27,6 +27,7 @@ else ifeq ($(OS_NAME), Darwin)
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
 endif
+JQ_VERSION = 1.6
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
@@ -38,7 +39,6 @@ else ifeq ($(PLATFORM_NAME), arm64)
 	CRANE_ARCH = arm64
 	TRDL_ARCH = arm64
 endif
-
 
 # Set arch for crane
 ifeq ($(PLATFORM_NAME), x86_64)
@@ -202,8 +202,14 @@ docs-down: ## Stop all the documentation containers.
 
 ##@ Update kubernetes control-plane patchversions
 
-bin/jq: bin ## Install jq deps for update-patchversion script.
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o bin/jq && chmod +x bin/jq
+bin/jq-$(JQ_VERSION)/jq:
+	mkdir -p bin/jq-$(JQ_VERSION)
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
+
+.PHONY: bin/jq
+bin/jq: bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
+	rm -f bin/jq
+	ln -s /deckhouse/bin/jq-$(JQ_VERSION)/jq bin/jq
 
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
