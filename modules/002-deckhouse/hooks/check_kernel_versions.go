@@ -84,9 +84,15 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func handleNodes(input *go_hook.HookInput) error {
-	var res bool
-
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
+
+	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
+
+	// check kernel requirements for cilium module
+	if !enabledModules.Has("cni-cilium") {
+		return nil
+	}
+
 	snap := input.Snapshots["nodes"]
 	for _, n := range snap {
 		node := n.(nodeKernelVersion)
@@ -94,35 +100,29 @@ func handleNodes(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot parse kernel version %s for node %s: %v", node.KernelVersion, node.Name, err)
 		}
-		enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
-		// check kernel requirements for cilium module
-		if enabledModules.Has("cni-cilium") {
-			c, err := semver.NewConstraint(ciliumConstraint)
-			if err != nil {
-				return err
-			}
-			if !c.Check(v) {
-				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium", "constraint": ciliumConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-				input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
-				res = true
-			}
+		c, err := semver.NewConstraint(ciliumConstraint)
+		if err != nil {
+			return err
+		}
+		if !c.Check(v) {
+			input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium", "constraint": ciliumConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+			input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
+		}
 
-			// check kernel requirements for cilium and istio
-			if enabledModules.Has("istio") {
-				c, err := semver.NewConstraint(ciliumAndIstioConstraint)
-				if err != nil {
-					return err
-				}
-				if !c.Check(v) {
-					input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium,istio", "constraint": ciliumAndIstioConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-					input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
-					res = true
-				}
-			}
+		// check kernel requirements for cilium and istio
+		if !enabledModules.Has("istio") {
+			continue
+		}
+
+		c, err = semver.NewConstraint(ciliumAndIstioConstraint)
+		if err != nil {
+			return err
+		}
+		if !c.Check(v) {
+			input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium,istio", "constraint": ciliumAndIstioConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+			input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
 		}
 	}
-
-	input.Values.Set("deckhouse.internal.stopMainQueue", res)
 	return nil
 }

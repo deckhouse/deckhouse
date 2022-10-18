@@ -89,7 +89,6 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeFalse())
 		})
 
 		Context("Cilium module enabled, added node with improper kernel", func() {
@@ -109,7 +108,6 @@ status:
 					"node":            "node-2",
 					"kernel_version":  "3.10.0-1127.el7.x86_64",
 				}))
-				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())
 			})
 		})
 	})
@@ -150,8 +148,6 @@ status:
 					"node":            "node-2",
 					"kernel_version":  "3.10.0-1127.el7.x86_64",
 				}))
-
-				Expect(f.ValuesGet("deckhouse.internal.stopMainQueue").Bool()).To(BeTrue())
 			})
 		})
 	})

@@ -8,9 +8,6 @@ properties:
     x-required-for-helm:
     - currentReleaseImageName
     properties:
-      stopMainQueue:
-        type: boolean
-        default: false
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:
