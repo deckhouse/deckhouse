@@ -17,6 +17,8 @@
 set -Eeo pipefail
 shopt -s failglob
 
+source tools/cve/trivy-error-handling.sh
+
 # This script generates the report that contains all known CVEs for base images.
 # Base images are used to deploy binaries.
 # Thus, every CVE found by this script will be present in the full release report multiple times.
@@ -58,8 +60,11 @@ function __main__() {
     echo "👾 Image: $image"
     echo ""
 
-    trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$image"
+    trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$image" || ret=$?
+    check_trivy_rc $ret
   done
+
+  handle_trivy_error
 }
 
 __main__

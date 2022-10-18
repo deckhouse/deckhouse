@@ -17,6 +17,8 @@
 set -Eeo pipefail
 shopt -s failglob
 
+source tools/cve/trivy-error-handling.sh
+
 # This script makes full CVE scan for a Deckhouse release.
 #
 # Usage: OPTION=<value> release.sh
@@ -47,7 +49,8 @@ function __main__() {
   docker pull "$REPO:$TAG"
   tags=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_tags.json)
 
-  trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$REPO:$TAG"
+  trivy imag123e --timeout 10m --severity=$SEVERITY --exit-code 1 "$REPO:$TAG" || ret=$?
+  check_trivy_rc $ret
 
   for module in $(jq -rc 'to_entries[]' <<< "$tags"); do
     echo "=============================================="
@@ -58,9 +61,12 @@ function __main__() {
       echo "👾 Image: $(jq -rc '.key' <<< "$image")"
       echo ""
 
-      trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$REPO:$(jq -rc '.value' <<< "$image")"
+      trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$REPO:$(jq -rc '.value' <<< "$image")" || ret=$?
+      check_trivy_rc $ret
     done
   done
+
+  handle_trivy_error
 }
 
 __main__
