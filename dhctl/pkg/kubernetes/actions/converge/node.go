@@ -228,7 +228,20 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 			for _, c := range node.Status.Conditions {
 				if c.Type == apiv1.NodeReady {
 					if c.Status == apiv1.ConditionTrue {
-						readyNodes[node.Name] = struct{}{}
+						ready := true
+						if checker != nil {
+							var err error
+							ready, err = checker.IsReady(node.Name)
+							if err != nil {
+								log.WarnF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+							} else if !ready {
+								log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
+							}
+						}
+
+						if ready {
+							readyNodes[node.Name] = struct{}{}
+						}
 					}
 				}
 			}
@@ -240,19 +253,6 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 			condition := "NotReady"
 			if _, ok := readyNodes[node.Name]; ok {
 				condition = "Ready"
-
-				if checker != nil {
-					ready, err := checker.IsReady(node.Name)
-					if err != nil {
-						log.ErrorF("Error while check '%s' node %s is ready: %v", checker.Name(), node.Name, err)
-					}
-
-					if !ready {
-						notReadyNodes = append(notReadyNodes, node.Name)
-						condition = fmt.Sprintf("Node Ready but %s not ready", checker.Name())
-					}
-				}
-
 			}
 			message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
 		}
