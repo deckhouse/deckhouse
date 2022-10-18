@@ -1,3 +1,17 @@
+.substitution-intro {
+  & .intro__wrap {
+    display: flex;
+  }
+
+  & .intro__row > div {
+    width: 65%;
+  }
+
+  & .intro__pic {
+    width: 45%;
+  }
+}
+
 .who-already-use {
   & .features__item.features__item_even {
     padding: 100px 0;
