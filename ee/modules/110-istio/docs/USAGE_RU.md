@@ -467,7 +467,7 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью CR IstioFederation
 
-сluster A:
+cluster A:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -479,7 +479,7 @@ spec:
   trustDomain: cluster-b.local
 ```
 
-сluster B:
+cluster B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

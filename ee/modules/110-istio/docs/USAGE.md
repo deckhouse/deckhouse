@@ -466,7 +466,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-сluster A:
+cluster A:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -478,7 +478,7 @@ spec:
   trustDomain: cluster-b.local
 ```
 
-сluster B:
+cluster B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
