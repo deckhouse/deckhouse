@@ -182,12 +182,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					InjectionLabel:      true,
 					InjectionLabelValue: true,
 					CurrentRevision:     "v1x00",
-					Version:             "",
+					Version:             "", // annotation is absent
 				}),
 			}, &wantedMetric{
 				Revision:        "v1x00",
 				DesiredRevision: "v1x00",
-				Version:         "absent",
+				Version:         "unknown",
 				DesiredVersion:  "unknown",
 			}),
 		Entry("NS without any revisions, pod with inject=true label",

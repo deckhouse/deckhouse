@@ -58,15 +58,16 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	versionMap := istio_versions.VersionMapStrToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
-	for _, revisionResult := range versionsToInstallResult {
-		operatorVersionsToInstall = append(operatorVersionsToInstall, revisionResult.String())
+	for _, versionResult := range versionsToInstallResult {
+		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
 	}
 
 	for _, iop := range input.Snapshots["istiooperators"] {
 		iopInfo := iop.(IstioOperatorCrdInfo)
 		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
-		if iopVer == "" {
+		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
 			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+			continue
 		}
 		if !internal.Contains(operatorVersionsToInstall, iopVer) {
 			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)

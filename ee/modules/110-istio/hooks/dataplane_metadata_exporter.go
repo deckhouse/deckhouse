@@ -93,7 +93,7 @@ type IstioPodStatus struct {
 type IstioPodInfo struct {
 	Name             string
 	Namespace        string
-	Version          string // istio dataplane version (i.e. "1.15.6")
+	FullVersion      string // istio dataplane version (i.e. "1.15.6")
 	Revision         string // istio dataplane revision (i.e. "v1x15")
 	SpecificRevision string // istio.io/rev: vXxYZ label if it is
 	InjectAnnotation bool   // sidecar.istio.io/inject annotation if it is
@@ -147,12 +147,11 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	return ""
 }
 
-func (p *IstioDrivenPod) getIstioVersion() string {
+func (p *IstioDrivenPod) getIstioFullVersion() string {
 	if istioVersion, ok := p.Annotations["istio.deckhouse.io/version"]; ok {
-		if istioVersion == "" {
-			return istioVersionAbsent
-		}
 		return istioVersion
+	} else if _, ok := p.Annotations["sidecar.istio.io/status"]; ok {
+		return istioVersionUnknown
 	}
 	return istioVersionAbsent
 }
@@ -167,7 +166,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	result := IstioPodInfo{
 		Name:             istioPod.Name,
 		Namespace:        istioPod.Namespace,
-		Version:          istioPod.getIstioVersion(),
+		FullVersion:      istioPod.getIstioFullVersion(),
 		Revision:         istioPod.getIstioCurrentRevision(),
 		SpecificRevision: istioPod.getIstioSpecificRevision(),
 		InjectAnnotation: istioPod.injectAnnotation(),
@@ -235,7 +234,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"dataplane_pod":    istioPodInfo.Name,
 			"desired_revision": desiredRevision,
 			"revision":         istioPodInfo.Revision,
-			"version":          istioPodInfo.Version,
+			"version":          istioPodInfo.FullVersion,
 			"desired_version":  desiredFullVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))

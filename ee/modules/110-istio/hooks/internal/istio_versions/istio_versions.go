@@ -24,6 +24,15 @@ func (vm IstioVersionsMap) GetVersionByRevision(rev string) string {
 	return ""
 }
 
+func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
+	for _, istioVerInfo := range vm {
+		if istioVerInfo.Revision == rev {
+			return true
+		}
+	}
+	return false
+}
+
 func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
