@@ -228,14 +228,29 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		if desiredFullVersion == "" {
 			desiredFullVersion = istioVersionUnknown
 		}
+		desiredVersion := versionMap.GetVersionByRevision(desiredRevision)
+		if desiredVersion == "" {
+			desiredVersion = istioVersionUnknown
+		}
+		var podVersion string
+		if istioPodInfo.FullVersion == istioVersionAbsent {
+			podVersion = istioVersionAbsent
+		} else {
+			podVersion = versionMap.GetVersionByFullVersion(istioPodInfo.FullVersion)
+			if podVersion == "" {
+				podVersion = istioVersionUnknown
+			}
+		}
 
 		labels := map[string]string{
-			"namespace":        istioPodInfo.Namespace,
-			"dataplane_pod":    istioPodInfo.Name,
-			"desired_revision": desiredRevision,
-			"revision":         istioPodInfo.Revision,
-			"version":          istioPodInfo.FullVersion,
-			"desired_version":  desiredFullVersion,
+			"namespace":            istioPodInfo.Namespace,
+			"dataplane_pod":        istioPodInfo.Name,
+			"desired_revision":     desiredRevision,
+			"revision":             istioPodInfo.Revision,
+			"full_version":         istioPodInfo.FullVersion,
+			"desired_full_version": desiredFullVersion,
+			"version":              podVersion,
+			"desired_version":      desiredVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
 	}

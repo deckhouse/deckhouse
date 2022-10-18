@@ -73,10 +73,12 @@ type podParams struct {
 }
 
 type wantedMetric struct {
-	Revision        string
-	DesiredRevision string
-	Version         string
-	DesiredVersion  string
+	Revision           string
+	DesiredRevision    string
+	Version            string
+	DesiredVersion     string
+	FullVersion        string
+	DesiredFullVersion string
 }
 
 func istioNsYAML(ns nsParams) string {
@@ -99,6 +101,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
       {
          "1.15": { revision: "v1x15", fullVersion: "1.15.15" },
          "1.42": { revision: "v1x42", fullVersion: "1.42.42" },
+         "1.71": { revision: "v1x71", fullVersion: "1.71.71" },
          "1.77": { revision: "v1x77", fullVersion: "1.77.77" },
          "1.155": { revision: "v1x155", fullVersion: "1.155.155" }
       }
@@ -151,12 +154,14 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 			Action: "set",
 			Value:  pointer.Float64Ptr(1.0),
 			Labels: map[string]string{
-				"namespace":        nsName,
-				"dataplane_pod":    podName,
-				"desired_revision": want.DesiredRevision,
-				"revision":         want.Revision,
-				"version":          want.Version,
-				"desired_version":  want.DesiredVersion,
+				"namespace":            nsName,
+				"dataplane_pod":        podName,
+				"desired_revision":     want.DesiredRevision,
+				"revision":             want.Revision,
+				"version":              want.Version,
+				"desired_version":      want.DesiredVersion,
+				"full_version":         want.FullVersion,
+				"desired_full_version": want.DesiredFullVersion,
 			},
 		}))
 	},
@@ -185,10 +190,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:             "", // annotation is absent
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x00",
-				DesiredRevision: "v1x00",
-				Version:         "unknown",
-				DesiredVersion:  "unknown",
+				Revision:           "v1x00",
+				DesiredRevision:    "v1x00",
+				Version:            "unknown",
+				DesiredVersion:     "unknown",
+				FullVersion:        "unknown",
+				DesiredFullVersion: "unknown",
 			}),
 		Entry("NS without any revisions, pod with inject=true label",
 			[]string{
@@ -202,10 +209,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:             "1.42.42",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x42",
-				DesiredRevision: "v1x42",
-				Version:         "1.42.42",
-				DesiredVersion:  "1.42.42",
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("NS with global revision, pod with inject=true label",
 			[]string{
@@ -219,10 +228,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:             "1.42.42",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x42",
-				DesiredRevision: "v1x42",
-				Version:         "1.42.42",
-				DesiredVersion:  "1.42.42",
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("NS with definite revision, pod with inject=true label",
 			[]string{
@@ -236,10 +247,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:             "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x15",
-				DesiredRevision: "v1x15",
-				Version:         "1.15.15",
-				DesiredVersion:  "1.15.15",
+				Revision:           "v1x15",
+				DesiredRevision:    "v1x15",
+				Version:            "1.15",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("NS without any revisions, pod with istio.io/rev label",
 			[]string{
@@ -252,10 +265,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x15",
-				DesiredRevision: "v1x15",
-				Version:         "1.15.15",
-				DesiredVersion:  "1.15.15",
+				Revision:           "v1x15",
+				DesiredRevision:    "v1x15",
+				Version:            "1.15",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("NS with global revision, pod with istio.io/rev label",
 			[]string{
@@ -268,10 +283,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x15",
-				DesiredRevision: "v1x15",
-				Version:         "1.15.15",
-				DesiredVersion:  "1.15.15",
+				Revision:           "v1x15",
+				DesiredRevision:    "v1x15",
+				Version:            "1.15",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("NS with definite revision, pod with inject=true label",
 			[]string{
@@ -284,10 +301,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.155.155",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x155",
-				DesiredRevision: "v1x155",
-				Version:         "1.155.155",
-				DesiredVersion:  "1.155.155",
+				Revision:           "v1x155",
+				DesiredRevision:    "v1x155",
+				Version:            "1.155",
+				DesiredVersion:     "1.155",
+				FullVersion:        "1.155.155",
+				DesiredFullVersion: "1.155.155",
 			}),
 		Entry("NS with global revision, Pod to ignore with inject=false annotation",
 			[]string{
@@ -317,10 +336,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:         "1.42.42",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x42",
-				DesiredRevision: "v1x42",
-				Version:         "1.42.42",
-				DesiredVersion:  "1.42.42",
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("Namespace with definite revision, pod revision is actual",
 			[]string{
@@ -332,10 +353,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:         "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x15",
-				DesiredRevision: "v1x15",
-				Version:         "1.15.15",
-				DesiredVersion:  "1.15.15",
+				Revision:           "v1x15",
+				DesiredRevision:    "v1x15",
+				Version:            "1.15",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "1.15.15",
 			}),
 
 		// Checks for revision inconsistencies
@@ -349,10 +372,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:         "1.77.77",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x77",
-				DesiredRevision: "v1x42",
-				Version:         "1.77.77",
-				DesiredVersion:  "1.42.42",
+				Revision:           "v1x77",
+				DesiredRevision:    "v1x42",
+				Version:            "1.77",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.77.77",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("NS global revision, pod revision is absent (no sidecar)",
 			[]string{
@@ -361,10 +386,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				}),
 				istioPodYAML(podParams{}),
 			}, &wantedMetric{
-				Revision:        "absent",
-				DesiredRevision: "v1x42",
-				Version:         "absent",
-				DesiredVersion:  "1.42.42",
+				Revision:           "absent",
+				DesiredRevision:    "v1x42",
+				Version:            "absent",
+				DesiredVersion:     "1.42",
+				FullVersion:        "absent",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("Namespace with definite revision, pod revision is not actual",
 			[]string{
@@ -376,10 +403,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:         "1.77.77",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x77",
-				DesiredRevision: "v1x15",
-				Version:         "1.77.77",
-				DesiredVersion:  "1.15.15",
+				Revision:           "v1x77",
+				DesiredRevision:    "v1x15",
+				Version:            "1.77",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.77.77",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
 			[]string{
@@ -388,10 +417,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				}),
 				istioPodYAML(podParams{}),
 			}, &wantedMetric{
-				Revision:        "absent",
-				DesiredRevision: "v1x15",
-				Version:         "absent",
-				DesiredVersion:  "1.15.15",
+				Revision:           "absent",
+				DesiredRevision:    "v1x15",
+				Version:            "absent",
+				DesiredVersion:     "1.15",
+				FullVersion:        "absent",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is actual",
 			[]string{
@@ -404,10 +435,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.77.77",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x77",
-				DesiredRevision: "v1x77",
-				Version:         "1.77.77",
-				DesiredVersion:  "1.77.77",
+				Revision:           "v1x77",
+				DesiredRevision:    "v1x77",
+				Version:            "1.77",
+				DesiredVersion:     "1.77",
+				FullVersion:        "1.77.77",
+				DesiredFullVersion: "1.77.77",
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is not actual",
 			[]string{
@@ -420,10 +453,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.71.71",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x71",
-				DesiredRevision: "v1x77",
-				Version:         "1.71.71",
-				DesiredVersion:  "1.77.77",
+				Revision:           "v1x71",
+				DesiredRevision:    "v1x77",
+				Version:            "1.71",
+				DesiredVersion:     "1.77",
+				FullVersion:        "1.71.71",
+				DesiredFullVersion: "1.77.77",
 			}),
 		Entry("Namespace without labels and pod with definite revision",
 			[]string{
@@ -434,10 +469,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:          "1.77.77",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x77",
-				DesiredRevision: "v1x77",
-				Version:         "1.77.77",
-				DesiredVersion:  "1.77.77",
+				Revision:           "v1x77",
+				DesiredRevision:    "v1x77",
+				Version:            "1.77",
+				DesiredVersion:     "1.77",
+				FullVersion:        "1.77.77",
+				DesiredFullVersion: "1.77.77",
 			}),
 		Entry("Namespace without labels and pod with definite revision but sidecar absent",
 			[]string{
@@ -446,10 +483,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					DefiniteRevision: "v1x77",
 				}),
 			}, &wantedMetric{
-				Revision:        "absent",
-				DesiredRevision: "v1x77",
-				Version:         "absent",
-				DesiredVersion:  "1.77.77",
+				Revision:           "absent",
+				DesiredRevision:    "v1x77",
+				Version:            "absent",
+				DesiredVersion:     "1.77",
+				FullVersion:        "absent",
+				DesiredFullVersion: "1.77.77",
 			}),
 		Entry("Pod orphan",
 			[]string{
@@ -459,10 +498,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					Version:         "1.77.77",
 				}),
 			}, &wantedMetric{
-				Revision:        "v1x77",
-				DesiredRevision: "absent",
-				Version:         "1.77.77",
-				DesiredVersion:  "unknown",
+				Revision:           "v1x77",
+				DesiredRevision:    "absent",
+				Version:            "1.77",
+				DesiredVersion:     "unknown",
+				FullVersion:        "1.77.77",
+				DesiredFullVersion: "unknown",
 			}),
 		Entry("Pod without current and desired revisions",
 			[]string{
