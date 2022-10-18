@@ -420,8 +420,9 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
+			var output *terraform.PipelineOutputs
 			if nodeGroup.Name == MasterNodeGroupName {
-				_, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
+				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
 			} else {
 				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
 			}
@@ -429,12 +430,19 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 				return err
 			}
 			count++
+			if output != nil {
+				nodeGroup.State[candidateName] = output.TerraformState
+			}
 			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
 	}
 
-	return WaitForNodesListBecomeReady(c.client, nodesToWait)
+	if nodeGroup.Name == MasterNodeGroupName {
+		return WaitForNodesListBecomeReady(c.client, nodesToWait, controlplane.NewManagerReadinessChecker(c.client))
+	}
+
+	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
 func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {

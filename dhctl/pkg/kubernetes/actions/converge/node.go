@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -208,7 +209,7 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 	})
 }
 
-func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string) error {
+func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).Run(func() error {
 		desiredReadyNodes := len(nodes)
 		var nodesList apiv1.NodeList
@@ -234,12 +235,30 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 		}
 
 		message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+		notReadyNodes := make([]string, 0, 0)
 		for _, node := range nodesList.Items {
 			condition := "NotReady"
 			if _, ok := readyNodes[node.Name]; ok {
 				condition = "Ready"
+
+				if checker != nil {
+					ready, err := checker.IsReady(node.Name)
+					if err != nil {
+						log.ErrorF("Error while check '%s' node %s is ready: %v", checker.Name(), node.Name, err)
+					}
+
+					if !ready {
+						notReadyNodes = append(notReadyNodes, node.Name)
+						condition = fmt.Sprintf("Node Ready but %s not ready", checker.Name())
+					}
+				}
+
 			}
 			message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+		}
+
+		for _, n := range notReadyNodes {
+			delete(readyNodes, n)
 		}
 
 		if len(readyNodes) >= desiredReadyNodes {
