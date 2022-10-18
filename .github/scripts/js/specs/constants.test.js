@@ -16,7 +16,7 @@ test('knownCRINames', () => {
 })
 
 test('knownKubernetesVersions', () => {
-  expect(knownKubernetesVersions).toContain('1.19')
+  expect(knownKubernetesVersions).toContain('1.20')
   expect(knownKubernetesVersions).toContain('1.23')
 })
 

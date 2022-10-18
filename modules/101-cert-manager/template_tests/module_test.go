@@ -35,7 +35,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -64,7 +64,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -94,7 +94,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -123,7 +123,7 @@ modules:
   placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -184,9 +184,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -197,6 +198,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -237,9 +241,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -250,6 +255,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -313,9 +321,10 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -326,6 +335,9 @@ podAntiAffinity:
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -366,9 +378,10 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -379,6 +392,9 @@ podAntiAffinity:
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`

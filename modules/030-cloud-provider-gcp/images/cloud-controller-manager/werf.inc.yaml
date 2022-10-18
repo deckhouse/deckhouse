@@ -35,9 +35,7 @@ shell:
     - mkdir /src
     - wget https://github.com/kubernetes/cloud-provider-gcp/archive/{{ $value.ccm.gcp }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
     - cd /src
-      {{- if semverCompare "<1.20" $version }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/controller-manager.go
-      {{- else if semverCompare "<=1.22" $version }}
+      {{- if semverCompare "<=1.22" $version }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go
       {{- else }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go

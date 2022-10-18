@@ -47,8 +47,8 @@ function config_highlight() {
 
 function config_update() {
   update_parameter('dhctl-prefix', 'prefix', 'cloud-demo', null, '[config-yml]');
-  update_parameter('dhctl-sshkey', 'sshPublicKey', 'ssh-rsa <SSH_PUBLIC_KEY>', null, '[config-yml]');
-  update_parameter('dhctl-sshkey', 'sshKey', 'ssh-rsa <SSH_PUBLIC_KEY>', null, '[config-yml]');
+  update_parameter('dhctl-sshkey', 'sshPublicKey', '<SSH_PUBLIC_KEY>', null, '[config-yml]');
+  update_parameter('dhctl-sshkey', 'sshKey', '<SSH_PUBLIC_KEY>', null, '[config-yml]');
   update_parameter('dhctl-layout', 'layout', '<layout>', null, '[config-yml]');
   let preset = sessionStorage.getItem('dhctl-preset');
   if (preset && preset.length > 0) {

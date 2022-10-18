@@ -186,6 +186,16 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				}
 			}
 
+			if nodeGroup.Name == "master" {
+				// We have global hook which takes care of these labels. Along with
+				// that, we apply this code as an additional safety measure.
+
+				// Enforce 'control-plane' node role to prepare for k8s 1.25.
+				nodeObj.Labels["node-role.kubernetes.io/control-plane"] = ""
+				// Preseve 'master' node role for backward compatibility with user software.
+				nodeObj.Labels["node-role.kubernetes.io/master"] = ""
+			}
+
 			nodeObj.Status = v1.NodeStatus{}
 			return sdk.ToUnstructured(nodeObj)
 		}, "v1", "Node", "", node.Name)
@@ -214,7 +224,7 @@ func fixCloudNodeTaints(nodeObj *v1.Node, nodeGroup NodeSettings) {
 	}
 }
 
-func applyNodeTemplate(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettings) error {
+func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 	// 1. Labels
 	// 1.1. Merge node.labels with nodeTemplate.labels and remove excess keys.
 	var lastLabels map[string]string

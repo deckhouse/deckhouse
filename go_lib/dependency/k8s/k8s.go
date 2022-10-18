@@ -34,8 +34,8 @@ const (
 	V120 FakeClusterVersion = fake.ClusterVersionV120
 	V121 FakeClusterVersion = fake.ClusterVersionV121
 
-	// Default value, used in hook config - 1.19 now
-	DefaultFakeClusterVersion = fake.ClusterVersionV119
+	// Default value, used in hook config - 1.21 now
+	DefaultFakeClusterVersion = fake.ClusterVersionV121
 )
 
 type Client interface {

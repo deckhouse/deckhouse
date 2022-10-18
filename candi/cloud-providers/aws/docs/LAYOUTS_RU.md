@@ -49,14 +49,16 @@ nodeGroups:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```
 
 ## WithNAT
 
->**Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
+> **Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
+>
+> **Важно!** В этой схеме размещения NAT Gateway всегда создается в зоне `a`. Если узлы кластера будут заказаны в других зонах, то при проблемах в зоне `a` они также будут недоступны. Другими словами, при выборе схемы размещения `WithNat` доступность всего кластера будет зависеть от работоспособности зоны `a`.
 
 Виртуальные машины выходят в интернет через NAT Gateway с общим и единственным IP-адресом.
 
@@ -106,7 +108,7 @@ nodeGroups:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```

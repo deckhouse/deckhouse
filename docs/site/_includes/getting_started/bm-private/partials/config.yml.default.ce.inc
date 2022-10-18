@@ -17,7 +17,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install.
 # [<ru>] Устанавливаемая версия Kubernetes.
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"

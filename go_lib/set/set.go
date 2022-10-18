@@ -17,6 +17,7 @@ limitations under the License.
 package set
 
 import (
+	"encoding/json"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -65,6 +66,23 @@ func (s Set) AddSet(o Set) Set {
 	return s
 }
 
+func (s Set) Intersection(o Set) Set {
+	n := Set{}
+
+	iterate, check := o, s
+	if s.Size() > o.Size() {
+		iterate = s
+		check = o
+	}
+
+	for x := range iterate {
+		if check.Has(x) {
+			n.Add(x)
+		}
+	}
+	return n
+}
+
 func (s Set) Delete(x string) Set {
 	delete(s, x)
 	return s
@@ -86,4 +104,8 @@ func (s Set) Slice() []string {
 
 func (s Set) Size() int {
 	return len(s)
+}
+
+func (s Set) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Slice())
 }

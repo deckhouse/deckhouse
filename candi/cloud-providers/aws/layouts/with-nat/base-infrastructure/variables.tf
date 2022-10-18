@@ -35,11 +35,12 @@ variable "clusterUUID" {
 }
 
 locals {
-  with_nat         = lookup(var.providerClusterConfiguration, "withNAT", {})
-  bastion_instance = lookup(local.with_nat, "bastionInstance", {})
-  prefix           = var.clusterConfiguration.cloud.prefix
-  vpc_network_cidr = lookup(var.providerClusterConfiguration, "vpcNetworkCIDR", "")
-  existing_vpc_id  = lookup(var.providerClusterConfiguration, "existingVPCID", "")
-  tags             = lookup(var.providerClusterConfiguration, "tags", {})
-  ssh_allow_list   = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  with_nat                 = lookup(var.providerClusterConfiguration, "withNAT", {})
+  bastion_instance         = lookup(local.with_nat, "bastionInstance", {})
+  prefix                   = var.clusterConfiguration.cloud.prefix
+  vpc_network_cidr         = lookup(var.providerClusterConfiguration, "vpcNetworkCIDR", "")
+  existing_vpc_id          = lookup(var.providerClusterConfiguration, "existingVPCID", "")
+  tags                     = lookup(var.providerClusterConfiguration, "tags", {})
+  ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
 }

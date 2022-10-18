@@ -56,11 +56,6 @@ const cacheMessage = `Create cache %s:
 	If you want to continue, please delete the cache folder manually.
 `
 
-const (
-	versionMap     = "/deckhouse/candi/version_map.yml"
-	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
-)
-
 func printBanner() {
 	log.InfoLn(banner)
 }
@@ -107,33 +102,6 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 		return nil
 	})
 	return clusterUUID, err
-}
-
-func loadConfigFromFile(path string) (*config.MetaConfig, error) {
-	metaConfig, err := config.ParseConfig(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if metaConfig.ClusterConfig == nil {
-		return nil, fmt.Errorf("ClusterConfiguration must be provided")
-	}
-
-	err = metaConfig.LoadVersionMap(versionMap)
-	if err != nil {
-		return nil, err
-	}
-
-	err = metaConfig.LoadImagesTags(imagesTagsJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	if metaConfig.ClusterType == config.CloudClusterType && len(metaConfig.ProviderClusterConfig) == 0 {
-		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
-	}
-
-	return metaConfig, nil
 }
 
 func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
@@ -193,7 +161,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		// first, parse and check cluster config
-		metaConfig, err := loadConfigFromFile(app.ConfigPath)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
 		if err != nil {
 			return err
 		}

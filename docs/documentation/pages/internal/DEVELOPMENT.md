@@ -189,7 +189,7 @@ spec:
   {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | nindent 2 }}
 ```
 
-The helper gets the global context and the desired priorityClassName value as an input. If the `010-priority-class` module is enabled in Deckhouse, the template will look like this:
+The helper gets the global context and the desired priorityClassName value as an input. If the `001-priority-class` module is enabled in Deckhouse, the template will look like this:
 
 ```yaml
 spec:
@@ -204,7 +204,7 @@ spec:
 
 {% endraw %}
 
-For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/010-priority-class/).
+For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/001-priority-class/).
 
 #### Node Selector
 
@@ -229,8 +229,7 @@ There are four strategies in total:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
 3. `master` - this strategy uses the following logic:
-    * If nodes with the `node-role.kubernetes.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
-    * If nodes with the `node-role.deckhouse.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes in the cluster (e.g., in the managed cluster), then the components of such modules run on the nodes set as masters.
+    * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes and nodes with labels designating these nodes as masters in the cluster, then the components of such modules run on system nodes.
 
 If none of the above conditions for the strategy is met, the nodeSelector will not be set.
@@ -282,6 +281,7 @@ The helper gets the global context and the desired strategy as the input to set 
   ```yaml
   tolerations:
   - key: node-role.kubernetes.io/master
+  - key: node-role.kubernetes.io/control-plane
   - key: dedicated.deckhouse.io
   - key: dedicated
   - key: node.deckhouse.io/uninitialized
@@ -380,6 +380,35 @@ Usage:
 {{- end }}
 ```
 
+### Container images
+
+In controller templates (daemonsets, statefulsets, deployments) for container images please use helm helper `helm_lib_module_image`.
+For common images like `kube-rbac-proxy` use `helm_lib_module_common_image`.
+
+Usage:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: snapshot-controller
+  template:
+    metadata:
+      labels:
+        app: snapshot-controller
+    spec:
+      containers:
+      - name: snapshot-controller
+        image: {{ include "helm_lib_module_image" (list . "snapshotController") }}
+      - name: kube-rbac-proxy
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+```
+
 ### Hooks
 
 For more information about hooks, their structure, and binding to events, see the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/HOOKS.md).
@@ -430,11 +459,11 @@ enabled::run $@
 
 This webhook disables the module in all clusters in which the `global.modules.publicDomainTemplate` option is not set.
 
-Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.19.0:
+Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.21.0:
 
 ```bash
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.19.0
+  enabled::disable_module_in_kubernetes_versions_less_than 1.21.0
   echo "true" > $MODULE_ENABLED_RESULT
 }
 ```

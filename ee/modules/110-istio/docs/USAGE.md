@@ -248,7 +248,7 @@ spec:
 
 In other words, if you explicitly deny something, then only this restrictive rule will work. If you explicitly allow something, only explicitly authorized requests will be allowed (however, restrictions will stay in force and have precedence).
 
-**Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications, by default it is, due module configuration parameter `tlsMode: MutualPermissive`.
+**Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
 
 Examples:
 * Let's deny POST requests for the myapp application. Since a policy is defined, only POST requests to the application are denied (as per the algorithm above).
@@ -514,10 +514,18 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Control the data-plane behavior
+
+### [experimental feature] Prevent istio-proxy from terminating before the main application's connections are closed
+
+By default, during termination, all containers in a Pod, including istio-proxy one, receive SIGTERM signal simultanuesly. But some applications need time to properly handle the termination and sometimes they need to do some network requests. It isn't possible when the istio-proxy stops before the application do. The solution is to add a preStop hook which evaluates the application's activity via discovering application's network sockets and let the sidecar stop when they aren't in network namespace.
+The annotation below adds the preStop hook to istio-proxy container in application's Pod:
+`inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
+
 ## Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
-  * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by `istio.globalVersion` mandatory argument in the `deckhouse` ConfigMap.
+  * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by `istio.globalVersion` argument in the `deckhouse` ConfigMap.
   * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x13` label for namespace or Pod). They are configured by `istio.additionalVersions` argument in the `deckhouse` ConfigMap.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)

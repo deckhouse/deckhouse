@@ -1,4 +1,8 @@
-{{- range $revision := .Values.istio.internal.revisionsToInstall }}
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision"}}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -60,6 +64,13 @@ spec:
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+
+    # The rules below exclude upmeter-related namespaces from istiod's point of view.
+    # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
+    discoverySelectors:
+    - matchExpressions:
+      - {key: "heritage", operator: NotIn, values: [upmeter]}
+
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
@@ -70,6 +81,7 @@ spec:
       holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
+        sampling: {{ $.Values.istio.tracing.sampling }}
         zipkin:
           address: {{ $.Values.istio.tracing.collector.zipkin.address }}
   {{- end }}
@@ -115,7 +127,7 @@ spec:
       - d8-istio-sidecar-registry
 
       proxy:
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
         resources: {}
         logLevel: warning
@@ -126,7 +138,7 @@ spec:
         excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
 
       proxy_init:
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         resources:
           limits:
             cpu: 2000m
@@ -140,7 +152,8 @@ spec:
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
-      image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}"
+      rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+      image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
 {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 8 }}
@@ -162,6 +175,17 @@ spec:
         enabled: true
 
     sidecarInjectorWebhook:
+      injectedAnnotations:
+        istio.deckhouse.io/version: "{{ $fullVersion }}"
+      templates:
+        d8-hold-istio-proxy-termination-until-application-stops: |
+          spec:
+            containers:
+            - name: istio-proxy
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh", "-c", "curl -X POST localhost:15000/drain_listeners?inboundonly; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
       neverInjectSelector:
       - matchExpressions:
         - key: job-name

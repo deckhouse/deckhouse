@@ -42,7 +42,7 @@ kind: Node
 metadata:
   name: master-0
   labels:
-    node-role.kubernetes.io/master: ""`
+    node-role.kubernetes.io/control-plane: ""`
 
 		stateSecondMasterNode = `
 ---
@@ -51,7 +51,7 @@ kind: Node
 metadata:
   name: master-1
   labels:
-    node-role.kubernetes.io/master: ""`
+    node-role.kubernetes.io/control-plane: ""`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)

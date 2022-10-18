@@ -1,0 +1,33 @@
+properties:
+  storageClass:
+    properties:
+      exclude:
+        description: |
+          Список полных имен (или регулярных выражений имён) StorageClass, которые не будут созданы в кластере.
+      default:
+        description: |
+          Имя StorageClass, который будет использоваться в кластере по умолчанию.
+
+          Если параметр не задан, фактическим StorageClass по умолчанию будет один из следующих:
+          * Присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию [storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
+          * Лексикографически первый StorageClass из [создаваемых модулем](#storage).
+      provision:
+        description: |
+          Дополнительные StorageClass'ы для Azure ultra disks.
+        items:
+          properties:
+            name:
+              description: |
+                Имя будущего класса.
+            type:
+              description: |
+                Тип Azure диска. В [Azure документации](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts) больше информации.
+            cachingMode:
+              description: |
+                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`. Обратитесь к [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching) за дополнительной информацией.
+            diskIOPSReadWrite:
+              description: |
+                Количество IOPS (лимит 300 IOPS/GiB, и максимум 160 K IOPS на диск).
+            diskMBpsReadWrite:
+              description: |
+                Скорость обращения к диску в `MBps` (лимит 256 KiB/s на каждый IOPS).

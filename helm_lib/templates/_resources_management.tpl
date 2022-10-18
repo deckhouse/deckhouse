@@ -137,3 +137,21 @@ updatePolicy:
     {{- cat "ERROR: unknown memory format:" $units | fail -}}
   {{- end }}
 {{- end }}
+
+{{- /* Usage: {{ include "helm_lib_vpa_kube_rbac_proxy_resources" . }} */ -}}
+{{- /* helper for VPA resources for kube_rbac_proxy */ -}}
+{{- define "helm_lib_vpa_kube_rbac_proxy_resources" }}
+- containerName: kube-rbac-proxy
+  minAllowed:
+    {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 4 }}
+  maxAllowed:
+    cpu: 20m
+    memory: 25Mi
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_container_kube_rbac_proxy_resources" . }} */ -}}
+{{- /* helper for container resources for kube_rbac_proxy */ -}}
+{{- define "helm_lib_container_kube_rbac_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}

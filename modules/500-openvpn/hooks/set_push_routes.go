@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant CJSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,24 +19,45 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, setPushToClientRoutes)
 
+const (
+	globalPodSubnetPath            = "global.discovery.podSubnet"
+	globalServiceSubnetPath        = "global.discovery.serviceSubnet"
+	clientRoutesValuesPath         = "openvpn.pushToClientRoutes"
+	clientRoutesInternalValuesPath = "openvpn.internal.pushToClientRoutes"
+)
+
+// setPushToClientRoutes create routes list for client
+// from module config values and global discovery.
+// Routes in list are unique.
 func setPushToClientRoutes(input *go_hook.HookInput) error {
-	var routeList []string
+	routes := set.New()
+
+	userDefinedSubnets, ok := input.ConfigValues.GetOk(clientRoutesValuesPath)
+	if ok {
+		for _, subnet := range userDefinedSubnets.Array() {
+			routes.Add(subnet.String())
+		}
+	}
 
 	podSubnet := input.Values.Get("global.discovery.podSubnet").String()
-	serviceSubnet := input.Values.Get("global.discovery.serviceSubnet").String()
-
-	routeList = append(routeList, podSubnet)
-	routeList = append(routeList, serviceSubnet)
-
-	if !input.ConfigValues.Exists("openvpn.pushToClientRoutes") {
-		input.ConfigValues.Set("openvpn.pushToClientRoutes", routeList)
+	if podSubnet != "" {
+		routes.Add(podSubnet)
 	}
+
+	serviceSubnet := input.Values.Get("global.discovery.serviceSubnet").String()
+	if serviceSubnet != "" {
+		routes.Add(serviceSubnet)
+	}
+
+	input.Values.Set(clientRoutesInternalValuesPath, routes.Slice())
 
 	return nil
 }

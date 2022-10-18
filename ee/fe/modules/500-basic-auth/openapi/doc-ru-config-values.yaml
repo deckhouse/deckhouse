@@ -2,7 +2,20 @@ type: object
 properties:
   locations:
     description: |
-      Если нам необходимо создать несколько location'ов для разных приложений с разной авторизацией, то добавляем данный параметр.
+      Список location'ов, для которых будет включён доступ по паролям (basic auth). Если параметр не указан, то добавляется `/` с автогенерированным паролем.
+
+      Посмотреть список location'ов и увидеть сгенерированный пароль можно командой:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values basic-auth -o json | jq '.basicAuth.internal.locations'
+      ```
+
+      Для генерации нового пароля нужно удалить секрет:
+
+      ```shell
+      kubectl -n kube-basic-auth delete secret/htpasswd
+      ```
+
     items:
       properties:
         location:

@@ -67,13 +67,12 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 		IsUpgrade: true,
 	}
 
-	// TODO is it needed here for tests?
-	cvals, err := chartutil.CoalesceValues(c, vals.AsMap())
-	if err != nil {
-		return nil, fmt.Errorf("helm chart coalesce values: %v", err)
-	}
+	caps := chartutil.DefaultCapabilities
+	vers := []string(caps.APIVersions)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	caps.APIVersions = vers
 
-	valuesToRender, err := chartutil.ToRenderValues(c, cvals, releaseOptions, nil)
+	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart prepare render values: %v", err)
 	}

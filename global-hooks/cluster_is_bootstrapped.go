@@ -74,7 +74,7 @@ func applyReadyNotMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	}
 
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == "node-role.kubernetes.io/master" {
+		if taint.Key == "node-role.kubernetes.io/control-plane" || taint.Key == "node-role.kubernetes.io/master" {
 			// it is master node
 			return false, nil
 		}

@@ -22,8 +22,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
@@ -59,7 +59,7 @@ type LokiAuth struct {
 	User     string `json:"user,omitempty"`
 }
 
-func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 	spec := cspec.Loki
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
@@ -101,10 +101,26 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDest
 		}
 	}
 
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.TLS.CAFile),
+		CertFile:          decodeB64(spec.TLS.CertFile),
+		KeyFile:           decodeB64(spec.TLS.KeyFile),
+		KeyPass:           decodeB64(spec.TLS.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.TLS.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
+	}
+	if spec.TLS.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.TLS.VerifyHostname
+	}
+
 	return &Loki{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
-			Type: "loki",
+			Name:   ComposeName(name),
+			Type:   "loki",
+			Inputs: set.New(),
 		},
 		Auth: LokiAuth{
 			User:     spec.Auth.User,
@@ -112,13 +128,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDest
 			Strategy: strings.ToLower(spec.Auth.Strategy),
 			Password: decodeB64(spec.Auth.Password),
 		},
-		TLS: CommonTLS{
-			CAFile:         decodeB64(spec.TLS.CAFile),
-			CertFile:       decodeB64(spec.TLS.CertFile),
-			KeyFile:        decodeB64(spec.TLS.KeyFile),
-			KeyPass:        decodeB64(spec.TLS.KeyPass),
-			VerifyHostname: spec.TLS.VerifyHostname,
-		},
+		TLS:      tls,
 		Labels:   labels,
 		Endpoint: spec.Endpoint,
 		Encoding: LokiEncoding{

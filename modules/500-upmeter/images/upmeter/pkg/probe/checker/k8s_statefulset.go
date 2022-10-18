@@ -32,6 +32,7 @@ import (
 // StatefulSetPodLifecycle is a checker constructor and configurator
 type StatefulSetPodLifecycle struct {
 	Access    kubernetes.Access
+	Preflight Doer
 	Namespace string
 
 	AgentID string
@@ -43,8 +44,6 @@ type StatefulSetPodLifecycle struct {
 }
 
 func (c StatefulSetPodLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	stsName, podName := c.Name, c.Name+"-0"
 	sts := createStatefulSetObject(stsName, c.AgentID)
 
@@ -72,7 +71,7 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 	}
 
 	checker := &KubeControllerObjectLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 
 		parentGetter:  stsGetter,
 		parentCreator: stsCreator,
@@ -95,7 +94,7 @@ type statefulSetGetter struct {
 
 func (s statefulSetGetter) Do(ctx context.Context) error {
 	client := s.access.Kubernetes()
-	_, err := client.AppsV1().StatefulSets(s.namespace).Get(s.name, metav1.GetOptions{})
+	_, err := client.AppsV1().StatefulSets(s.namespace).Get(ctx, s.name, metav1.GetOptions{})
 	return err
 }
 
@@ -107,7 +106,7 @@ type statefulSetCreator struct {
 
 func (s statefulSetCreator) Do(ctx context.Context) error {
 	client := s.access.Kubernetes()
-	_, err := client.AppsV1().StatefulSets(s.namespace).Create(s.sts)
+	_, err := client.AppsV1().StatefulSets(s.namespace).Create(ctx, s.sts, metav1.CreateOptions{})
 	return err
 }
 
@@ -119,7 +118,7 @@ type statefulSetDeleter struct {
 
 func (s statefulSetDeleter) Do(ctx context.Context) error {
 	client := s.access.Kubernetes()
-	err := client.AppsV1().StatefulSets(s.namespace).Delete(s.name, &metav1.DeleteOptions{})
+	err := client.AppsV1().StatefulSets(s.namespace).Delete(ctx, s.name, metav1.DeleteOptions{})
 	return err
 }
 

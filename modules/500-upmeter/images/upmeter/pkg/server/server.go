@@ -24,7 +24,7 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
@@ -35,6 +35,7 @@ import (
 	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/probe/checker"
 	"d8.io/upmeter/pkg/registry"
 	"d8.io/upmeter/pkg/server/api"
 	"d8.io/upmeter/pkg/server/remotewrite"
@@ -195,7 +196,7 @@ func writeOk(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }
 
-func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.KubernetesClient, originsCount int, logger *log.Logger, userAgent string) (*remotewrite.Controller, error) {
+func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.Client, originsCount int, logger *log.Logger, userAgent string) (*remotewrite.Controller, error) {
 	config := &remotewrite.ControllerConfig{
 		// collecting/exporting episodes as metrics
 		Period: 2 * time.Second,
@@ -211,7 +212,7 @@ func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, 
 	return controller, controller.Start(ctx)
 }
 
-func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient, logger *log.Logger) (*downtime.Monitor, error) {
+func initDowntimeMonitor(ctx context.Context, kubeClient kube.Client, logger *log.Logger) (*downtime.Monitor, error) {
 	m := downtime.NewMonitor(kubeClient, log.NewEntry(logger))
 	return m, m.Start(ctx)
 }
@@ -224,7 +225,8 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 	}
-	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, noLogger)
+	dummyDoer := checker.NoopDoer{}
+	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, dummyDoer, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
 	return registry.NewProbeLister(runLoader, calcLoader)

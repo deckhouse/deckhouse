@@ -111,7 +111,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 	}
 
 	if params.MasterNodeSelector {
-		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
+		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
 	if params.IsSecureRegistry {
@@ -276,6 +276,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name: "DECKHOUSE_POD",
 			ValueFrom: &apiv1.EnvVarSource{
 				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"},
+			},
+		},
+		{
+			Name: "DECKHOUSE_NODE_NAME",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.nodeName"},
 			},
 		},
 		{

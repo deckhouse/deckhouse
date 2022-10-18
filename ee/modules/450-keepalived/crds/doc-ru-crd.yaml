@@ -14,12 +14,12 @@ spec:
               properties:
                 nodeSelector:
                   description: |
-                    Определяет `nodeSelector` для подов с keepalived.
+                    Определяет `nodeSelector` для Pod'ов с keepalived.
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
-                    Определяет `tolerations` для подов с keepalived.
+                    Определяет `tolerations` для Pod'ов с keepalived.
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
@@ -36,7 +36,7 @@ spec:
                         description: |
                           Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению, или допустимо существование ключа с любым значением.
 
-                          Указание `Exists` равносильно допуску любого значения (для value), чтобы под с указанным toleration удовлетворял соответствующему taint.
+                          Указание `Exists` равносильно допуску любого значения (для value), чтобы Pod с указанным toleration удовлетворял соответствующему taint.
                       tolerationSeconds:
                         description: |
                           Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем выгнать (evict) Pod с узла, если
@@ -56,7 +56,7 @@ spec:
 
                     Не нужно путать `vrrpInstance` и `KeepalivedInstance`. `vrrpInstance` — это составная часть `KeepalivedInstance`.
 
-                    Модуль `keepalived` настраивает VRRP-инстансы таким образом, чтобы все адреса (все группы) не собирались одновременно на одной ноде, а распределялись равномерно по всем серверам.
+                    Модуль `keepalived` настраивает VRRP-инстансы таким образом, чтобы все адреса (все группы) не собирались одновременно на одном узле, а распределялись равномерно по всем серверам.
                   items:
                     properties:
                       id:

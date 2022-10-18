@@ -15,13 +15,13 @@ kubectl -n d8-system get cm deckhouse -o yaml
 
 ## How do I find the documentation for the version installed?
 
-> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/020-deckhouse/configuration.html#parameters-bundle)).
+> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle)).
 
 The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
 
 ## How do I set the desired release channel?
 
-Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel.
+Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel.
 
 It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
@@ -34,7 +34,7 @@ deckhouse: |
 
 ## How do I disable automatic updates?
 
-To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel).
+To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
 
 In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
@@ -46,7 +46,7 @@ Every minute Deckhouse checks a new release appeared in the release channel spec
 
 When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource `DeckhouseRelease`.
 
-After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/020-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
+After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
 To get list and status of all releases use the following command:
 
@@ -63,11 +63,11 @@ kubectl get deckhousereleases
   * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).
 * When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
   * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
-  * Then Deckhouse performs the update according to the [update parameters](modules/020-deckhouse/configuration.html#parameters-update).
+  * Then Deckhouse performs the update according to the [update parameters](modules/002-deckhouse/configuration.html#parameters-update).
 
 ## How do I run Deckhouse on a particular node?
 
-Set the `nodeSelector` [parameter](modules/020-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
+Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
 
 You should also avoid using **CloudEphemeral** nodes. Otherwise, a situation may occur when the target node is not in the cluster and node ordering for some reason is impossible.
 
@@ -114,7 +114,7 @@ Use the following `registryDockerCfg` if authentication is required to access De
 The `InitConfiguration` resource provides two more parameters for non-standard third-party registry configurations:
 
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
-* `registryScheme` - registry scheme (`http` or `https`). The default value is `https`.
+* `registryScheme` - registry scheme (`HTTP` or `HTTPS`). The default value is `HTTPS`.
 
 ### Tips for configuring the third-party registry
 
@@ -199,12 +199,16 @@ For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Edit the `d8-system/deckhouse-registry` secret (note that all parameters are Base64-encoded):
-  * Insert third-party registry credentials into `.dockerconfigjson`.
-  * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`).
-  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/ee`).
-  * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
-  * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
+* Download script to the master node and run it with parameters for a new registry.
+  * Example:
+
+  ```shell
+  curl -fsSL -o change-registry.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh
+  chmod 700 change-registry.sh
+  ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
+  ```
+  
+  * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` near the script and add the `--ca-file ca.crt` option to the script.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `d8-system/deckhouse` ConfigMap.
@@ -221,7 +225,7 @@ The general cluster parameters are stored in the `ClusterConfiguration` structur
 - cluster domain: `clusterDomain`;
 - CRI used in the cluster: `defaultCRI`;
 - Kubernetes control plane version: `kubernetesVersion`;
-- cluster type (Static, Cloud, Hybrid): `clusterType`;
+- cluster type (Static, Cloud): `clusterType`;
 - address space of the cluster's Pods: `podSubnetCIDR`;
 - address space of the cluster's services: `serviceSubnetCIDR` etc.
 

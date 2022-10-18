@@ -23,3 +23,19 @@ properties:
         oneOf:
           - type: string
           - type: boolean
+        x-examples: [false, "test"]
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
+      pushToClientRoutes:
+        type: array
+        items:
+          type: string
+      pushToClientSearchDomains:
+        type: array
+        items:
+          type: string

@@ -42,21 +42,20 @@ type D8ClusterConfiguration struct {
 
 	CustomResourceName string
 	Monitor            *hookprobe.Monitor
+	Preflight          Doer
 
-	Access kubernetes.Access
-	Logger *logrus.Entry
+	Access           kubernetes.Access
+	Logger           *logrus.Entry
+	PreflightChecker check.Checker
 
-	ControlPlaneAccessTimeout time.Duration
-	PodAccessTimeout          time.Duration
-	ObjectChangeTimeout       time.Duration
+	PodAccessTimeout    time.Duration
+	ObjectChangeTimeout time.Duration
 }
 
 // Verify deckhouse pod is up, and running, and ready
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
-
 	checkDeckhouse := withTimeout(
 		&podRunningOrReadyChecker{
 			namespace:        c.DeckhouseNamespace,
@@ -96,7 +95,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 	)
 
 	return sequence(
-		pingControlPlane,
+		c.PreflightChecker,
 		checkDeckhouse,
 		setInitedValue,
 		checkMirrorValue,
@@ -192,7 +191,7 @@ type setInitedValueChecker struct {
 func (c *setInitedValueChecker) Check() check.Error {
 	newValue := string(uuid.NewUUID())
 
-	obj, err := c.dynamicClient.Get(c.name, metav1.GetOptions{})
+	obj, err := c.dynamicClient.Get(context.TODO(), c.name, metav1.GetOptions{})
 	if err != nil || obj == nil {
 		c.logger.Debugf("creating object with value %s", newValue)
 
@@ -210,7 +209,7 @@ func (c *setInitedValueChecker) update(obj *unstructured.Unstructured, value str
 	}
 
 	opts := metav1.UpdateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Update(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Update(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot update UpmeterHookProbe object %q with new inited value: %v", c.name, err)
 	}
 
@@ -229,7 +228,7 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	}
 
 	opts := metav1.CreateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Create(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Create(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot create UpmeterHookProbe object in cluster: %v", err)
 	}
 

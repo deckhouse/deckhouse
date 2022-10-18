@@ -27,7 +27,7 @@ case "$kubernetes_version" in
   1.19.* | 1.20.* | 1.21.*)
     kubectl_version="1.20"
     ;;
-  1.22.* | 1.23.*)
+  1.22.* | 1.23.* | 1.24.*)
     kubectl_version="1.23"
     ;;
   *)

@@ -18,19 +18,19 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 
-	pio "github.com/gogo/protobuf/io"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/common/log"
-
 	mproto "github.com/flant/protobuf_exporter/pkg/proto"
 	"github.com/flant/protobuf_exporter/pkg/stats"
 	"github.com/flant/protobuf_exporter/pkg/vault"
+	pio "github.com/gogo/protobuf/io"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/common/log"
 )
 
 // Markers are used as first byte of message to detect metric type because lua-protobuf doesn't support oneof streaming
@@ -41,15 +41,30 @@ const (
 )
 
 type TelemetryServer struct {
+	ctx      context.Context
+	stopFunc context.CancelFunc
 	vault    *vault.MetricsVault
-	stopChan chan struct{}
+
+	messageProcessor *telemetryMessageProcessor
 }
 
 func NewTelemetryServer(vault *vault.MetricsVault) *TelemetryServer {
-	return &TelemetryServer{vault: vault, stopChan: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &TelemetryServer{
+		ctx:              ctx,
+		stopFunc:         cancel,
+		vault:            vault,
+		messageProcessor: newTelemetryMessageProcessor(),
+	}
 }
 
 func (s *TelemetryServer) Start(address string, errorCh chan error) {
+	err := s.messageProcessor.LoadConfig(s.ctx)
+	if err != nil {
+		errorCh <- fmt.Errorf("unable to Load config: %v", err)
+		return
+	}
+
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		errorCh <- fmt.Errorf("unable to create TCP listener: %v", err)
@@ -57,7 +72,7 @@ func (s *TelemetryServer) Start(address string, errorCh chan error) {
 	}
 
 	go func() {
-		<-s.stopChan
+		<-s.ctx.Done()
 		_ = ln.Close()
 	}()
 	log.Infof("Start listening telemetry on %q", address)
@@ -75,7 +90,7 @@ func (s *TelemetryServer) Start(address string, errorCh chan error) {
 }
 
 func (s *TelemetryServer) Close() {
-	s.stopChan <- struct{}{}
+	s.stopFunc()
 }
 
 func (s *TelemetryServer) handleConn(c *net.TCPConn) {
@@ -99,6 +114,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.CounterMessage
 			readMessage(readerCloser, &message)
 
+			if s.isMessagedDiscarded(message.Annotations) {
+				continue
+			}
+
 			err := s.vault.StoreCounter(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
 				stats.Errors.WithLabelValues("wrong-mapping").Inc()
@@ -109,6 +128,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.GaugeMessage
 			readMessage(readerCloser, &message)
 
+			if s.isMessagedDiscarded(message.Annotations) {
+				continue
+			}
+
 			err := s.vault.StoreGauge(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
 				stats.Errors.WithLabelValues("wrong-mapping").Inc()
@@ -118,6 +141,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 		case HistogramMarker:
 			var message mproto.HistogramMessage
 			readMessage(readerCloser, &message)
+
+			if s.isMessagedDiscarded(message.Annotations) {
+				continue
+			}
 
 			buckets := make(map[float64]uint64, len(message.Buckets))
 			for key, value := range message.Buckets {
@@ -142,6 +169,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			return
 		}
 	}
+}
+
+func (s *TelemetryServer) isMessagedDiscarded(annotation map[string]string) bool {
+	return s.messageProcessor.discardProcessor.IsDiscarded(annotation)
 }
 
 func readMessage(closer pio.Reader, message proto.Message) {

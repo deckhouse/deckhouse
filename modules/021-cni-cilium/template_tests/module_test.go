@@ -70,8 +70,9 @@ modules:
 `
 	cniCiliumValues = `
 bpfLBMode: "DSR"
-tunnelMode: "Disabled"
 internal:
+  mode: "Direct"
+  masqueradeMode: "BPF"
   hubble:
     certs:
       ca:

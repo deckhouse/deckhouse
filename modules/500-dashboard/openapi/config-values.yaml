@@ -1,0 +1,129 @@
+type: object
+properties:
+  ingressClass:
+    type: string
+    description: |
+      The class of the Ingress controller used for the dashboard.
+
+      By default, the `modules.ingressClass` global value is used.
+  auth:
+    type: object
+    description: |
+      Options related to authentication or authorization in the application.
+    default: {}
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            description: |
+              The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            description: |
+              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          useBearerTokens:
+            type: boolean
+            description: |
+              The dashboard must use the user ID to work with the Kubernetes API (the authentication service must return the Authorization HTTP header that contains the bearer-token – the dashboard will use this token to make requests to the Kubernetes API server).
+
+              Default value is false.
+
+              > **Caution!** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`;
+      password:
+        type: string
+        description: |
+          Deprecated.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        description: |
+          The CIDR range for which authentication to access the dashboard is allowed.
+      allowScale:
+        type: boolean
+        description: |
+          Activate ability to scale Deployment and StatefulSet from the web interface.
+
+          This parameter has no effect if the `externalAuthentication` is enabled.
+  https:
+    type: object
+    description: |
+      What certificate type to use with the dashboard.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        enum:
+          - Disabled
+          - CertManager
+          - CustomCertificate
+          - OnlyInURI
+        description: |
+          The HTTPS usage mode:
+          * `CertManager` — the dashboard will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
+          * `CustomCertificate` — the dashboard will use the certificate from the `d8-system` namespace for HTTPS.
+          * `Disabled` — in this mode, the dashboard works over HTTP only.
+          * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme.
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            description: |
+              What ClusterIssuer to use for the dashboard. Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own.
+
+            x-doc-default: "letsencrypt"
+      customCertificate:
+        type: object
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the Secret in the `d8-system` namespace to use with the dashboard (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
+
+            x-doc-default: 'false'
+  nodeSelector:
+    type: object
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    additionalProperties:
+      type: string
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  accessLevel:
+    type: string
+    enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+    default: 'User'
+    description: |
+      The level of access to the dashboard if the `user-authn` module is disabled and no `externalAuthentication` is configured. See supported values in the [user-authz](../../modules/140-user-authz/) documentation.
+
+      By default, `User` level is used.
+
+      Use `user-authz` module settings to configure access if the `user-authn` module is enabled or `externalAuthentication` is configured.

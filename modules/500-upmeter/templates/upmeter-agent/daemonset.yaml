@@ -1,3 +1,8 @@
+{{- define "agent_resources" }}
+cpu: 20m
+memory: 20Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: upmeter-agent
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: agent
+      minAllowed:
+        {{- include "agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 40Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -38,17 +51,20 @@ spec:
       serviceAccountName: upmeter-agent
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       volumes:
       - name: data
         hostPath:
           type: DirectoryOrCreate
           path: /var/lib/upmeter/agent
+      - name: tmp
+        emptyDir:
+          medium: Memory
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
       - name: migrator
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+        image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
         command:
           - /migrate
           - -verbose
@@ -62,7 +78,7 @@ spec:
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+          image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
           command:
             - /upmeter
             - agent
@@ -85,13 +101,16 @@ spec:
           - mountPath: /db
             name: data
             readOnly: false
+          - mountPath: /tmp
+            name: tmp
+            readOnly: false
           env:
           - name: NODE_NAME
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
-            value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
+            value: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS
@@ -120,9 +139,17 @@ spec:
             value: "json"
           - name: UPMETER_EXPORT_TIMEOUT
             value: "15s"
+          # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables
+          - name: KUBE_CLIENT_QPS
+            value: "5"
+          - name: KUBE_CLIENT_BURST
+            value: "10"
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "agent_resources" . | nindent 14 }}
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       enableServiceLinks: false

@@ -50,7 +50,8 @@ kubectl create -f user.yml
             href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add A or CNAME records containing the public IP, you've discovered previously, for the following Deckhouse service DNS names:
           <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -67,6 +68,7 @@ upmeter.example.com</code>
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP api.example.com
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
 $PUBLIC_IP dex.example.com

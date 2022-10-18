@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
@@ -33,7 +33,7 @@ type Monitor struct {
 	logger  *log.Entry
 }
 
-func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
+func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
 
@@ -75,6 +75,7 @@ func (m *Monitor) Start(ctx context.Context) error {
 		return fmt.Errorf("creating informer: %v", err)
 	}
 
+	m.monitor.EnableKubeEventCb()
 	m.monitor.Start(ctx)
 	return nil
 }
@@ -89,6 +90,7 @@ func (m *Monitor) getLogger() *log.Entry {
 
 func (m *Monitor) Subscribe(handler Handler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
+		m.logger.Debugf("event received: %v", ev)
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
@@ -112,7 +114,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 
 func (m *Monitor) List() ([]*HookProbe, error) {
 	res := make([]*HookProbe, 0)
-	for _, obj := range m.monitor.GetExistedObjects() {
+	for _, obj := range m.monitor.Snapshot() {
 		hp, err := convert(obj.Object)
 		if err != nil {
 			return nil, err

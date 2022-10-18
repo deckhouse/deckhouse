@@ -20,6 +20,9 @@ fi
 if bb-is-centos-version? 8; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils libcgroup"
 fi
+if bb-is-centos-version? 9; then
+  SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils"
+fi
 # yum-plugin-versionlock is needed for bb-yum-install
 if yum --version | grep -q dnf; then
   bb-yum-install python3-dnf-plugin-versionlock
@@ -33,5 +36,8 @@ bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registry
 
 if bb-is-centos-version? 8; then
   bb-rp-install "inotify-tools:{{ .images.registrypackages.inotifyToolsCentos831419 }}"
+fi
+if bb-is-centos-version? 9; then
+  bb-rp-install "inotify-tools:{{ .images.registrypackages.inotifyToolsCentos9322101 }}"
 fi
 bb-yum-remove yum-cron

@@ -319,7 +319,14 @@ function node_os_image_metrics() {
         "os_image": (
           .metric.os_image | ascii_downcase |
           [
-            match("(?:(r)ed (h)at (e)nterprise (l)inux.*(7))|(?:(centos).*(7))|(?:(ubuntu).*(16.04|18.04|20.04))").captures // [{string: "unknown"}] |
+            match(
+              [
+                "(?:(r)ed (h)at (e)nterprise (l)inux.*(7|8))",
+                "(?:(centos).*(7|8))",
+                "(?:(debian).*(9|10|11))",
+                "(?:(ubuntu).*(16.04|18.04|20.04|22.04))"
+              ] | join("|")
+            ).captures // [{string: "unknown"}] |
             .[] | select(.string) | .string
           ] | join("-") | .= sub("r-h-e-l"; "rhel")
         )

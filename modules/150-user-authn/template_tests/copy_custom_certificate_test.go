@@ -27,7 +27,7 @@ var _ = Describe("Module :: userAuthn :: helm template :: custom-certificate", f
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "user-authn", "cert-manager"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

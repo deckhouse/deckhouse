@@ -1,5 +1,5 @@
 type: object
-required: [apiKey, image]
+required: [apiKey]
 properties:
   apiKey:
     type: string

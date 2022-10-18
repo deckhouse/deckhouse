@@ -1,3 +1,33 @@
+{{- define "attacher_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "provisioner_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "resizer_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "snapshotter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "livenessprobe_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_csi_controller_manifests" (list . $config) }} */ -}}
 {{- define "helm_lib_csi_controller_manifests" }}
   {{- $context := index . 0 }}
@@ -32,23 +62,19 @@
 
   {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $provisionerImageTag := index $context.Values.global.modulesImages.tags.common $provisionerImageName }}
-  {{- $provisionerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $provisionerImageTag }}
+  {{- $provisionerImage := include "helm_lib_module_common_image" (list $context $provisionerImageName) }}
 
   {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $attacherImageTag := index $context.Values.global.modulesImages.tags.common $attacherImageName }}
-  {{- $attacherImage := printf "%s:%s" $context.Values.global.modulesImages.registry $attacherImageTag }}
+  {{- $attacherImage := include "helm_lib_module_common_image" (list $context $attacherImageName) }}
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common $resizerImageName }}
-  {{- $resizerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
+  {{- $resizerImage := include "helm_lib_module_common_image" (list $context $resizerImageName) }}
 
   {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $snapshotterImageTag := index $context.Values.global.modulesImages.tags.common $snapshotterImageName }}
-  {{- $snapshotterImage := printf "%s:%s" $context.Values.global.modulesImages.registry $snapshotterImageTag }}
+  {{- $snapshotterImage := include "helm_lib_module_common_image" (list $context $snapshotterImageName) }}
 
   {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $livenessprobeImageTag := index $context.Values.global.modulesImages.tags.common $livenessprobeImageName }}
-  {{- $livenessprobeImage := printf "%s:%s" $context.Values.global.modulesImages.registry $livenessprobeImageTag }}
+  {{- $livenessprobeImage := include "helm_lib_module_common_image" (list $context $livenessprobeImageName) }}
 
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -66,6 +92,46 @@ spec:
     name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "provisioner"
+      minAllowed:
+        {{- include "provisioner_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "attacher"
+      minAllowed:
+        {{- include "attacher_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "resizer"
+      minAllowed:
+        {{- include "resizer_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- if $snapshotterEnabled }}
+    - containerName: "snapshotter"
+      minAllowed:
+        {{- include "snapshotter_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- end }}
+    - containerName: "livenessprobe"
+      minAllowed:
+        {{- include "livenessprobe_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "controller"
+      minAllowed:
+        {{- include "controller_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 100Mi
     {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -126,9 +192,7 @@ spec:
   {{- else }}
         - "--feature-gates=Topology=false"
   {{- end }}
-  {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
         - "--default-fstype=ext4"
-  {{- end }}
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
   {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
@@ -155,6 +219,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "provisioner_resources" $context | nindent 12 }}
+  {{- end }}
       - name: attacher
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $attacherImage | quote }}
@@ -179,6 +246,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "attacher_resources" $context | nindent 12 }}
+  {{- end }}
       - name: resizer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $resizerImage | quote }}
@@ -203,6 +273,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "resizer_resources" $context | nindent 12 }}
+  {{- end }}
             {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -228,6 +301,9 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "snapshotter_resources" $context | nindent 12 }}
+  {{- end }}
             {{- end }}
       - name: livenessprobe
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -243,6 +319,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "livenessprobe_resources" $context | nindent 12 }}
+  {{- end }}
       - name: controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $controllerImage | quote }}
@@ -272,6 +351,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "controller_resources" $context | nindent 12 }}
+  {{- end }}
     {{- if $additionalContainers }}
       {{- $additionalContainers | toYaml | nindent 6 }}
     {{- end }}

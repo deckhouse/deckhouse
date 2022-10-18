@@ -30,7 +30,8 @@ import (
 
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
-	Access kubernetes.Access
+	Access    kubernetes.Access
+	Preflight Doer
 
 	AgentID string
 	Name    string
@@ -40,8 +41,6 @@ type NamespaceLifecycle struct {
 }
 
 func (c NamespaceLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	getter := &namespaceGetter{access: c.Access, name: c.Name}
 
 	ns := createNamespaceObject(c.Name, c.AgentID)
@@ -58,7 +57,7 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 	)
 
 	checker := &KubeObjectBasicLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 		creator:   creator,
 		getter:    getter,
 		deleter:   deleter,
@@ -68,14 +67,13 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 }
 
 type namespaceCreator struct {
-	access  kubernetes.Access
-	ns      *v1.Namespace
-	timeout time.Duration
+	access kubernetes.Access
+	ns     *v1.Namespace
 }
 
-func (c *namespaceCreator) Do(_ context.Context) error {
+func (c *namespaceCreator) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Namespaces().Create(c.ns)
+	_, err := client.CoreV1().Namespaces().Create(ctx, c.ns, metav1.CreateOptions{})
 	return err
 }
 
@@ -84,9 +82,9 @@ type namespaceGetter struct {
 	name   string
 }
 
-func (c *namespaceGetter) Do(_ context.Context) error {
+func (c *namespaceGetter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Namespaces().Get(c.name, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -96,9 +94,9 @@ type namespaceDeleter struct {
 	timeout time.Duration
 }
 
-func (c *namespaceDeleter) Do(_ context.Context) error {
+func (c *namespaceDeleter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	err := client.CoreV1().Namespaces().Delete(c.name, &metav1.DeleteOptions{})
+	err := client.CoreV1().Namespaces().Delete(ctx, c.name, metav1.DeleteOptions{})
 	return err
 }
 

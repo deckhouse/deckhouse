@@ -5,4 +5,4 @@ lang: ru
 toc: false
 ---
 
-{% include SUPPORTED_VERSIONS.md %}
+{% include SUPPORTED_VERSIONS.liquid %}

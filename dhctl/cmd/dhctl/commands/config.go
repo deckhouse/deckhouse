@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
@@ -30,17 +29,22 @@ import (
 )
 
 const (
-	bashibleTemplateOpenAPI = "/deckhouse/candi/bashible/openapi.yaml"
-	kubeadmTemplateOpenAPI  = "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
+	kubeadmTemplateOpenAPI = "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
 )
 
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("bashible-bundle", "Render bashible bundle.")
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
+	app.DefineRenderBundleFlags(cmd)
 
 	runFunc := func() error {
-		templateData, err := config.ParseBashibleConfig(app.ConfigPath, bashibleTemplateOpenAPI)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(app.BundleName, "$MY_IP")
 		if err != nil {
 			return err
 		}
@@ -51,10 +55,35 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		return template.PrepareBashibleBundle(
 			templateController,
 			templateData,
-			strings.ToLower(templateData["provider"].(string)),
-			templateData["bundle"].(string),
+			metaConfig.ProviderName,
+			app.BundleName,
 			"",
 		)
+	}
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
+
+	return cmd
+}
+
+func DefineRenderMasterBootstrap(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("master-bootstrap-scripts", "Render master bootstrap scripts.")
+	app.DefineConfigFlags(cmd)
+	app.DefineRenderConfigFlags(cmd)
+	app.DefineRenderBundleFlags(cmd)
+
+	runFunc := func() error {
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+
+		return template.PrepareBootstrap(templateController, "127.0.0.1", app.BundleName, metaConfig)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

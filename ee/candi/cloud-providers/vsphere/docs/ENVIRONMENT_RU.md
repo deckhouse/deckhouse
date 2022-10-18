@@ -78,6 +78,7 @@ govc role.create kubernetes Datastore.AllocateSpace Datastore.Browse Datastore.F
   Global.SystemTag InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
   InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
   InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \
+  InventoryService.Tagging.ObjectAttachable \
   Network.Assign Resource.AssignVMToPool Resource.ColdMigrate Resource.HotMigrate Resource.CreatePool Resource.DeletePool \
   Resource.RenamePool Resource.EditPool Resource.MovePool StorageProfile.View System.Anonymous System.Read System.View \
   VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice VirtualMachine.Config.AdvancedConfig \
@@ -105,7 +106,8 @@ govc role.create kubernetes Datastore.AllocateSpace Datastore.Browse Datastore.F
   VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM \
   VirtualMachine.Provisioning.ModifyCustSpecs VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles \
   VirtualMachine.Provisioning.ReadCustSpecs VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot \
-  VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
+  VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot \
+  Cns.Searchable StorageProfile.View
 
 govc permissions.set  -principal имя_пользователя -role kubernetes /datacenter
 ```

@@ -27,7 +27,7 @@ var _ = Describe("Module :: dashboard :: helm template :: custom-certificate", f
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "dashboard"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -53,6 +53,10 @@ internal:
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  auth: {}
+# defaults from config-values.yaml
+auth: {}
+accessLevel: User
 `
 	f := SetupHelmConfig(``)
 

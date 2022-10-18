@@ -15,7 +15,7 @@ spec:
     gpus: {{ .nodeGroup.instanceClass.gpus | default 0 }}
   bootDiskSpec:
     autoDelete: true
-    typeID: {{ .nodeGroup.instanceClass.diskType }}
+    typeID: {{ .nodeGroup.instanceClass.diskType | default "network-hdd" }}
     size: {{ mul (.nodeGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
     imageID: {{ .nodeGroup.instanceClass.imageID | default .Values.nodeManager.internal.cloudProvider.yandex.instanceClassDefaults.imageID }}
   networkInterfaceSpecs:

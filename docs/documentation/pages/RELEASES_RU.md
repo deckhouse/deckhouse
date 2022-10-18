@@ -43,4 +43,4 @@ lang: ru
 </div>
 {::options parse_block_html="true" /}
 
-Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/020-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/020-deckhouse/configuration.html#parameters-releasechannel).
+Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel).

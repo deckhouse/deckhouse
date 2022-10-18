@@ -54,7 +54,8 @@ kubectl create -f user.yml
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -72,6 +73,7 @@ upmeter.example.com</code>
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP api.example.com
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
 $PUBLIC_IP dex.example.com

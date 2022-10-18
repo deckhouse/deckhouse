@@ -25,6 +25,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func Test_NewProbeFilter(t *testing.T) {
@@ -122,6 +123,7 @@ func TestLoader_Probes(t *testing.T) {
 			IngressNginxControllers: []string{"main", "main-w-pp"},
 			NodeGroups:              []string{"system", "frontend", "worker", "spot"},
 		},
+		checker.NoopDoer{},
 		newDummyLogger().Logger,
 	)
 

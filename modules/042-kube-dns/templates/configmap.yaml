@@ -25,7 +25,9 @@ data:
           ttl 30
         }
         prometheus 127.0.0.1:9153
-        forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }}
+        forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }} {
+          prefer_udp
+        }
         cache 30
         loop
         reload

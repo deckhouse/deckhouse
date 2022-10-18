@@ -11,7 +11,7 @@ spec:
   alertmanagerConfiguration:
     name: {{ .name }}
   replicas: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
-  image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheus.alertmanager }}"
+  image: {{ include "helm_lib_module_image" (list $ "alertmanager") }}
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -19,7 +19,7 @@ spec:
   containers:
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 4 }}
-    image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+    image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9093"
     - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -50,6 +50,9 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 8 }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+  {{- end }}
   {{- if (include "helm_lib_ha_enabled" $) }}
   affinity:
     podAntiAffinity:
@@ -67,5 +70,8 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 6 }}
+    {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "alertmanager_resources" . | nindent 6 }}
+    {{- end }}
   {{- end }}
 {{- end }}

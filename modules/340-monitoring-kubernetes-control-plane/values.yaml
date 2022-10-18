@@ -28,7 +28,7 @@ monitoringKubernetesControlPlane:
       accessType: DefaultService
       throughNode:
         nodeSelector:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
         proxyListenPort: 10361
       pod:
         podSelector: {}
@@ -39,7 +39,7 @@ monitoringKubernetesControlPlane:
       accessType: ThroughNode
       throughNode:
         nodeSelector:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
         localPort: 10257
         scheme: https
         authenticationMethod: ProxyServiceAccount
@@ -52,7 +52,7 @@ monitoringKubernetesControlPlane:
       accessType: ThroughNode
       throughNode:
         nodeSelector:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
         localPort: 10259
         scheme: https
         authenticationMethod: ProxyServiceAccount
@@ -65,7 +65,7 @@ monitoringKubernetesControlPlane:
       accessType: ThroughNode
       throughNode:
         nodeSelector:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
         localPort: 2379
         scheme: https
         authenticationMethod: HostPathCertificate

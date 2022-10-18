@@ -3,17 +3,30 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Parameters of a static (bare metal) cluster.
     additionalProperties: false
     required: [apiVersion, kind]
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: StaticClusterConfiguration
+      internalNetworkCIDRs:
+      - 10.244.0.0/16
+      - 10.50.0.0/16
     properties:
       apiVersion:
         type: string
+        description: Version of the Deckhouse API.
         enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
         enum: [StaticClusterConfiguration]
       internalNetworkCIDRs:
         type: array
+        description: |
+          List of internal cluster networks.
+
+          Internal cluster networks connect Kubernetes components (kube-apiserver, kubelet, etc.).
         items:
           type: string
           example: '192.168.42.0/24'

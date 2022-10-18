@@ -17,6 +17,7 @@ limitations under the License.
 package linter
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -40,6 +41,7 @@ func isExist(baseDir, filename string) bool {
 }
 
 func Run(tmpDir string, m utils.Module) error {
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("panic on linter run occurred: %v\n", r)
@@ -51,7 +53,14 @@ func Run(tmpDir string, m utils.Module) error {
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator
 
 	var values []string
-	var err error
+	if err != nil {
+		return err
+	}
+
+	if isExist(m.Path, filepath.Join("monitoring", "prometheus-rules")) && !modules.PromtoolAvailable() {
+		return errors.New("promtool is not available, execute `make bin/promtool` prior to starting matrix tests")
+	}
+
 	if isExist(m.Path, "openapi") && !isExist(m.Path, "values_matrix_test.yaml") {
 		values, err = ComposeValuesFromSchemas(m)
 		if err != nil {

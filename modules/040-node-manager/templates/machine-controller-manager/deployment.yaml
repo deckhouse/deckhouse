@@ -1,3 +1,8 @@
+{{- define "controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
     {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -15,6 +20,15 @@ spec:
     name: machine-controller-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "controller"
+      minAllowed:
+        {{- include "controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 70Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
 ---
 apiVersion: apps/v1
@@ -45,7 +59,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-        - image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeManager.machineControllerManager }}"
+        - image: {{ include "helm_lib_module_image" (list . "machineControllerManager") }}
           name: controller
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           command:
@@ -78,6 +92,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "controller_resources" . | nindent 14 }}
+    {{- end }}
           env:
           - name: LEADER_ELECTION_NAMESPACE
             valueFrom:
@@ -86,7 +103,7 @@ spec:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
           args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
           - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -130,5 +147,8 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+    {{- end }}
   {{- end }}
 {{- end }}

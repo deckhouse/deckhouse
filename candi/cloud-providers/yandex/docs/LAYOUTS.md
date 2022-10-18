@@ -57,7 +57,7 @@ nodeGroups:
       toy: example
 labels:
   billing: prod
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
@@ -120,7 +120,7 @@ nodeGroups:
     externalSubnetID: tewt243tewsdf
     zones:
     - ru-central1-a
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
@@ -185,7 +185,7 @@ nodeGroups:
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:

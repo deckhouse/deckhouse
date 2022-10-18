@@ -1,0 +1,165 @@
+candi:
+  fixes:
+    - summary: >-
+        Fixed `cloudNATAddresses` discovery when bootstrapping cluster in GCP with the `standard`
+        layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2157
+    - summary: fix discover node ip bashible step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2139
+    - summary: Tolerate CA `DeletionCandidateOfClusterAutoscaler` taint for some system Pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2125
+      impact: >-
+        Some system Pods will be restarted: `kube-dns`, `chrony`, Pods of cni-* modules and
+        cloud-provider-* modules.
+ci:
+  features:
+    - summary: Automatically backport labeled PRs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2194
+    - summary: E2e test daily run
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2014
+  fixes:
+    - summary: Fix indent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2235
+    - summary: Fix daily e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2145
+    - summary: Fix restart e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1974
+    - summary: Validation for private repos, disable auto-restart for validation, massive small fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1886
+cloud-provider-yandex:
+  fixes:
+    - summary: Fix defaults for `diskType` and `platformID`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2179
+deckhouse:
+  features:
+    - summary: Show release status message in a releases list view.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2029
+    - summary: Added the ability to control disruptive releases manually.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2025
+  fixes:
+    - summary: Move section about collecting debug information to the FAQ
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2190
+    - summary: Fix webhook handler TLS certificate expiration time.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2146
+      impact: >-
+        Webhook handler will restart. During the handler restart, Deckhouse controller could
+        generate a few error messages when it will not be able to access the webhook. It should be
+        resolved in the next 15 seconds.
+dhctl:
+  fixes:
+    - summary: >-
+        Fixed `config render bashible-bundle` command and added `config render
+        master-bootstrap-scripts` command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2212
+    - summary: >-
+        Fixed output `Request failed. Probably pod was restarted during installation` multiple times
+        during the bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2167
+docs:
+  features:
+    - summary: License form updates on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2035
+    - summary: Described how to backup linstor volume to S3 storage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1966
+  fixes:
+    - summary: Update instruction for accessing vSphere cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2213
+    - summary: Minor fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2156
+    - summary: Fix VSphere and Yandex.Cloud resources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2101
+    - summary: Highlights outdated fields in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1939
+extended-monitoring:
+  features:
+    - summary: Added events logging to stdout in `events_exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2203
+ingress-nginx:
+  features:
+    - summary: >-
+        Adds the ability to exclude ingress metrics via adding the label
+        `ingress.deckhouse.io/discard-metrics: "true"` to a namespace or an Ingress resource. 
+        Ingress controllers will restart once to enable this feature handling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2206
+      impact: Ingress controllers will restart.
+    - summary: Validate Ingress controllers compatibility with Kubernetes version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2183
+istio:
+  features:
+    - summary: Exclude d8-related namespaces from istiod discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2188
+      impact: >-
+        Deckhouse services won't be accessible from applications (except `d8-user-authn` and
+        `d8-ingress-nginx`).
+    - summary: Data plane versions monitoring refactoring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2181
+  fixes:
+    - summary: >-
+        Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and
+        federations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2055
+linstor:
+  features:
+    - summary: Added local spatch-as-a-service to generate and cache DRBD compatibility patches.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2056
+      impact: >-
+        This change reduces the size of the kernel-module-injector container by removing spatch
+        dependencies and introduces centralized server for DRBD compatibility patches which makes
+        possible to build DRBD without spatch in isolated environments.
+    - summary: Add linstor-affinity-controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2056
+      impact: >-
+        New `linstor-affinity-controller` allows to keep nodeAffinity rules updated for PVs with
+        provisioned with `allowRemoteVolumeAccess=false`.
+    - summary: Added the ability to specify a master passphrase.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2054
+      impact: >-
+        A master password enables some features like backup shipping and volume encryption using
+        LUKS.
+  fixes:
+    - summary: fix timestamp on linstor dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2147
+node-local-dns:
+  features:
+    - summary: Returned serve_stale cache option
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2028
+prometheus:
+  fixes:
+    - summary: Changes Grafana version in `patches/build_go.patch.tpl` automatically from docker arguments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2214
+    - summary: Always use ServiceMonitors from the prometheus module for Promethues, Grafana and Trickster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2130
+    - summary: Do not restart Trickster if Prometheus is unavailable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1972
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fix panic in prometheus-reverse-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2059
+    - summary: >-
+        Use scrape interval x2 as a resync interval to fix missing metrics flapping and added more
+        logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1970
+testing:
+  features:
+    - summary: >-
+        Not run code tests in only documentation changes. Run documentation-related validations if
+        documentation changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2142
+  fixes:
+    - summary: support focusing for matrix tests linter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2165
+    - summary: Use public images when building documentation locally.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1993
+upmeter:
+  fixes:
+    - summary: Tweak HTTP sending timeouts to reduce cancellation logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2159
+user-authn:
+  fixes:
+    - summary: Fixed LDAP `insecureNoSSL` support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2065
+user-authn-crd:
+  fixes:
+    - summary: Remove migration hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2126
+

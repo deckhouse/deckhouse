@@ -10,4 +10,5 @@ data:
   {{- .Values.cloudProviderVsphere.internal.cniSecretData | b64dec | nindent 2 }}
 {{- else }}
   cni: {{ b64enc "cilium" | quote }}
+  cilium: {{ b64enc "{\"mode\": \"DirectWithNodeRoutes\"}" | quote }}
 {{- end }}

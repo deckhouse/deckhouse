@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -43,8 +44,9 @@ type NodegroupHasDesiredAmountOfNodes struct {
 
 	// RequestTimeout is common for api operations
 	RequestTimeout time.Duration
-	// ControlPlaneAccessTimeout is the timeout to verify apiserver availability
-	ControlPlaneAccessTimeout time.Duration
+
+	// PreflightChecker verifies preconditions before running the check
+	PreflightChecker check.Checker
 }
 
 func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
@@ -62,7 +64,7 @@ func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
 	}
 
 	return sequence(
-		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		c.PreflightChecker,
 		withTimeout(ngChecker, c.RequestTimeout),
 	)
 }
@@ -140,7 +142,7 @@ var nodeGroupGVR = schema.GroupVersionResource{
 func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	var props nodeGroupProps
 
-	rawNG, err := f.access.Kubernetes().Dynamic().Resource(nodeGroupGVR).Get(name, metav1.GetOptions{})
+	rawNG, err := f.access.Kubernetes().Dynamic().Resource(nodeGroupGVR).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return props, err
 	}

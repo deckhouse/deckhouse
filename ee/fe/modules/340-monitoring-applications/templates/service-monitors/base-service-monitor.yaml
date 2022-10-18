@@ -1,0 +1,25 @@
+{{- if ne (len .Values.monitoringApplications.internal.enabledApplicationsSummary) 0 }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: monitoring-applications
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  sampleLimit: 5000
+  endpoints:
+  - relabelings:
+    {{- include "basic_relabeling_for_schema" (list . "http") | nindent 4 }}
+
+  - scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    {{- include "basic_relabeling_for_schema" (list . "https") | nindent 4 }}
+
+  selector: {}
+  namespaceSelector:
+    any: true
+{{- end }}

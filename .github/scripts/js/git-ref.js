@@ -16,9 +16,11 @@ const parseGitRef = (ref) => {
   let majorMinor = '';
   let description = '';
   let isDeveloperTag = false;
+  let refSlug = '';
 
   if (ref.startsWith('refs/heads')) {
-    branchName = ref.replace('refs/heads/', '');
+    branchName = ref.replace('refs/heads/', '')
+    refSlug = branchName
     if (branchName === 'main') {
       description = 'default branch';
     }
@@ -29,7 +31,8 @@ const parseGitRef = (ref) => {
       majorMinor = 'v'+matches[1]; // vX.Y
     }
   } else if (ref.startsWith('refs/tags/')) {
-    tagName = ref.replace('refs/tags/', '');
+    tagName = ref.replace('refs/tags/', '')
+    refSlug = tagName
 
     let matches = fullMatchReleaseTag(tagName)
     if (matches) {
@@ -65,6 +68,8 @@ const parseGitRef = (ref) => {
     tagMajorMinor: tagName ? majorMinor : '',
     isTag: !!tagName,
     isDeveloperTag,
+    ref,
+    refSlug,
   };
 };
 module.exports.parseGitRef = parseGitRef;

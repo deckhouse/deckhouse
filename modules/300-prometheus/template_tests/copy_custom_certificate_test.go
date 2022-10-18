@@ -26,7 +26,7 @@ import (
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -64,9 +64,13 @@ internal:
   prometheusAPIClientTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY
+  prometheusScraperIstioMTLS:
+    certificate: CRTCRTCRT
+    key: KEYKEYKEY
   prometheusScraperTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY
+  auth: {}
 `
 
 var _ = Describe("Module :: prometheus :: helm template :: custom-certificate", func() {

@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -39,7 +40,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
-		hec.ValuesSet("global.modulesImages.registry", "registry.example.com")
+		hec.ValuesSet("global.modulesImages.registry", "registry.deckhouse.io/deckhouse/fe")
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
@@ -48,6 +49,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
+		hec.ValuesSet("ingressNginx.internal.discardMetricResources.namespaces", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.discardMetricResources.ingresses", json.RawMessage("[]"))
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
@@ -59,6 +62,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
   data:
     certificate: teststring
     key: teststring
+    certificate_updated: true
 `, ingressName)
 			}
 			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", certificates)
@@ -110,6 +114,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       - 2.2.2.2
     maxReplicas: 6
     minReplicas: 2
+    additionalHeaders:
+      X-Foo: bar
 - name: test-without-hpa
   spec:
     inlet: LoadBalancer
@@ -161,12 +167,21 @@ ephemeral-storage: 150Mi
 memory: 200Mi`))
 			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
 			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--default-ssl-certificate=")))
+			// publish service for LB
+			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement(ContainSubstring("--publish-service=d8-ingress-nginx/test-load-balancer")))
 
 			cm := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config")
 			Expect(cm.Exists()).To(BeTrue())
 			Expect(cm.Field("data.log-format-upstream").String()).To(ContainSubstring(`"my-cookie": "$cookie_MY_COOKIE"`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
+
+			fakeIng := hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-custom-headers-reload")
+			Expect(fakeIng.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+
+			fakeIng = hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-cert-update-reload")
+			Expect(fakeIng.Exists()).To(BeTrue())
+			Expect(fakeIng.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/fake-path"))
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-admission").Exists()).To(BeTrue())
@@ -185,6 +200,8 @@ memory: 200Mi`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			// publish service for LB
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement(ContainSubstring("--publish-service=d8-ingress-nginx/test-lbwpp-load-balancer")))
 			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
 
@@ -203,7 +220,8 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Field("spec.loadBalancerSourceRanges")).To(MatchJSON(`["1.1.1.1","2.2.2.2"]`))
 
 			configMapData = hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Field("data")
-
+			fakeIng = hec.KubernetesResource("Ingress", "d8-ingress-nginx", "test-lbwpp-custom-headers-reload")
+			Expect(fakeIng.Field("spec.rules.0.http.paths.0.path").String()).To(Equal("/d18475119d75d3c873bd30e53f4615ef66bf84d9ae1508df173dcc114cfecbb4"))
 			// Use the Raw property to check is value quoted correctly
 			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
@@ -215,6 +233,8 @@ memory: 200Mi`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`0.33`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
 			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"60"}`)))
+			// should not have --publish-service, inlet: HostPort
+			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--publish-service=")))
 
 			var testNextArgs []string
 			for _, result := range testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array() {

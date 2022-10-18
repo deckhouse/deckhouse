@@ -40,24 +40,43 @@ func CommonOptions() logboek.LogProcessOptions {
 }
 
 func boldStyle() *logboek.Style {
-	return &logboek.Style{Attributes: []color.Attribute{color.FgHiWhite, color.Bold}}
+	return &logboek.Style{
+		Attributes: []color.Attribute{color.Bold},
+	}
 }
 
 func BoldOptions() logboek.LogProcessOptions {
-	return logboek.LogProcessOptions{LevelLogProcessOptions: logboek.LevelLogProcessOptions{Style: boldStyle()}}
+	return logboek.LogProcessOptions{
+		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
+			Style: boldStyle(),
+		},
+	}
 }
 
-// TODO: cook loogboek
 func BoldStartOptions() logboek.LogProcessStartOptions {
-	return logboek.LogProcessStartOptions{LevelLogProcessStartOptions: logboek.LevelLogProcessStartOptions{Style: boldStyle()}}
+	return logboek.LogProcessStartOptions{
+		LevelLogProcessStartOptions: logboek.LevelLogProcessStartOptions{
+			Style: boldStyle(),
+		},
+	}
 }
 
 func BoldEndOptions() logboek.LogProcessEndOptions {
-	return logboek.LogProcessEndOptions{LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{Style: boldStyle()}}
+	return logboek.LogProcessEndOptions{
+		LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{
+			Style: boldStyle(),
+		},
+	}
 }
 
 func BoldFailOptions() logboek.LogProcessFailOptions {
-	return logboek.LogProcessFailOptions{LevelLogProcessFailOptions: logboek.LevelLogProcessFailOptions{LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{Style: boldStyle()}}}
+	return logboek.LogProcessFailOptions{
+		LevelLogProcessFailOptions: logboek.LevelLogProcessFailOptions{
+			LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{
+				Style: boldStyle(),
+			},
+		},
+	}
 }
 
 func TerraformOptions() logboek.LogProcessOptions {

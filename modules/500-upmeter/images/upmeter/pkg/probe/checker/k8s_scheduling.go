@@ -33,6 +33,7 @@ import (
 type PodScheduling struct {
 	Access    kubernetes.Access
 	Namespace string
+	Preflight Doer
 
 	Node  string
 	Image *kubernetes.ProbeImage
@@ -46,8 +47,6 @@ type PodScheduling struct {
 }
 
 func (c PodScheduling) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	pod := createPodObject(c.Name, c.Node, c.AgentID, c.Image)
 
 	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
@@ -71,7 +70,7 @@ func (c PodScheduling) Checker() check.Checker {
 	}
 
 	checker := &podSchedulingChecker{
-		preflight:   preflight,
+		preflight:   c.Preflight,
 		creator:     creator,
 		getter:      getter,
 		deleter:     deleter,
@@ -84,10 +83,10 @@ func (c PodScheduling) Checker() check.Checker {
 
 // podSchedulingChecker checks pod node. All apiserver related errors result in undetermined status.
 type podSchedulingChecker struct {
-	preflight doer
-	getter    doer
-	creator   doer
-	deleter   doer
+	preflight Doer
+	getter    Doer
+	creator   Doer
+	deleter   Doer
 
 	nodeFetcher nodeNameFetcher
 	node        string
@@ -137,9 +136,9 @@ type podCreator struct {
 	pod       *v1.Pod
 }
 
-func (c *podCreator) Do(_ context.Context) error {
+func (c *podCreator) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Pods(c.namespace).Create(c.pod)
+	_, err := client.CoreV1().Pods(c.namespace).Create(ctx, c.pod, metav1.CreateOptions{})
 	return err
 }
 
@@ -149,9 +148,9 @@ type podGetter struct {
 	name      string
 }
 
-func (c *podGetter) Do(_ context.Context) error {
+func (c *podGetter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
+	_, err := client.CoreV1().Pods(c.namespace).Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -161,9 +160,9 @@ type podDeleter struct {
 	name      string
 }
 
-func (c *podDeleter) Do(_ context.Context) error {
+func (c *podDeleter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	err := client.CoreV1().Pods(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	err := client.CoreV1().Pods(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
 	return err
 }
 
@@ -177,9 +176,9 @@ type podNodeNameFetcher struct {
 	name      string
 }
 
-func (c *podNodeNameFetcher) Node(_ context.Context) (string, error) {
+func (c *podNodeNameFetcher) Node(ctx context.Context) (string, error) {
 	client := c.access.Kubernetes()
-	pod, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
+	pod, err := client.CoreV1().Pods(c.namespace).Get(ctx, c.name, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}

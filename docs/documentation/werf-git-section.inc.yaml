@@ -19,7 +19,14 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['config-values.yaml','doc-ru-config-values.yaml']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+- add: /candi/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
 {{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /src/ee/modules

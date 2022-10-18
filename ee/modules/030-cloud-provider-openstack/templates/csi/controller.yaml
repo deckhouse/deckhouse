@@ -53,7 +53,7 @@
 {{- $csiImageName := join "" (list "cinderCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- if hasKey .Values.global.modulesImages.tags.cloudProviderOpenstack $csiImageName }}
 
-  {{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry (index .Values.global.modulesImages.tags.cloudProviderOpenstack $csiImageName)) }}
+  {{- $csiControllerImage := include "helm_lib_module_image" (list . $csiImageName) }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

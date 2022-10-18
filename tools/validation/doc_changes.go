@@ -23,7 +23,7 @@ import (
 	"strings"
 )
 
-var resourceFileRe = regexp.MustCompile(`openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$`)
+var resourceFileRe = regexp.MustCompile(`openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$|openapi/cluster_configuration.y[a]?ml$|openapi/instance_class.y[a]?ml$|openapi/node_group.y[a]?ml$`)
 var docFileRe = regexp.MustCompile(`\.md$`)
 
 func RunDocChangesValidation(info *DiffInfo) (exitCode int) {

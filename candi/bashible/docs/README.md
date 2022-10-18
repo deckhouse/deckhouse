@@ -105,7 +105,7 @@ nodeGroup:
   zones:
   - nova
 k8s:
-  '1.19':
+  '1.21':
     patch: 10
     bashible:
       ubuntu:

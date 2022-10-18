@@ -1,3 +1,8 @@
+{{- define "psi_monitor_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
 {{- if .Values.nodeManager.earlyOomEnabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,15 @@ spec:
     name: early-oom
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "psi-monitor"
+      minAllowed:
+        {{- include "psi_monitor_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -39,31 +53,10 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      serviceAccountName: early-oom
       containers:
-      - name: oom-killer
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.alpine }}"
-        # based on https://gist.github.com/stewartpark/14a5690afbf717be04857d2cda1d8620
-        args:
-          - 'sh'
-          - '-c'
-          - |
-            MIN_MEMORY_BY_PERCENT_KiB="$(grep 'MemTotal' /proc/meminfo | awk -v percent=$MIN_MEMORY_PERCENT '{ printf("%d", $2*percent/100) }')"
-            if [ "$MIN_MEMORY_BY_PERCENT_KiB" -lt "$MIN_MEMORY_KiB" ]; then
-              MIN_MEMORY_KiB="$MIN_MEMORY_BY_PERCENT_KiB"
-            fi
-            while true; do
-              if [ "$(grep 'MemAvailable' /proc/meminfo | awk '{ print $2 }')" -lt "$MIN_MEMORY_KiB" ]; then
-                echo f > /host_proc/sysrq-trigger
-                echo "Kernel OOM killer invoked."
-              fi
-
-              sleep 10
-            done
-        env:
-          - name: 'MIN_MEMORY_KiB'
-            value: '524288'
-          - name: 'MIN_MEMORY_PERCENT'
-            value: '5'
+      - name: psi-monitor
+        image: {{ include "helm_lib_module_image" (list . "earlyOom") }}
         securityContext:
           privileged: true
         volumeMounts:
@@ -72,6 +65,58 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "psi_monitor_resources" . | nindent 12 }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-cloud-instance-manager
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: early-oom
+        ports:
+        - containerPort: 8443
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
       volumes:
         - name: proc
           hostPath:

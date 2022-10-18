@@ -17,8 +17,8 @@ limitations under the License.
 package destination
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 type Logstash struct {
@@ -30,15 +30,9 @@ type Logstash struct {
 
 	Mode string `json:"mode"`
 
-	TLS LogstashTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls,omitempty"`
 
 	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
-}
-
-type LogstashTLS struct {
-	CommonTLS         `json:",inline"`
-	VerifyCertificate bool `json:"verify_certificate"`
-	Enabled           bool `json:"enabled"`
 }
 
 type LogstashEncoding struct {
@@ -52,7 +46,7 @@ type LogstashKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
@@ -62,31 +56,32 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.Log
 	//	Type: "disk",
 	// }
 
-	var enabledTLS bool
-	if spec.TLS.KeyFile != "" || spec.TLS.CertFile != "" || spec.TLS.CAFile != "" {
-		enabledTLS = true
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.TLS.CAFile),
+		CertFile:          decodeB64(spec.TLS.CertFile),
+		KeyFile:           decodeB64(spec.TLS.KeyFile),
+		KeyPass:           decodeB64(spec.TLS.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.TLS.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
+	}
+	if spec.TLS.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
 	return &Logstash{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
-			Type: "socket",
+			Name:   ComposeName(name),
+			Type:   "socket",
+			Inputs: set.New(),
 		},
 		Encoding: LogstashEncoding{
 			Codec:           "json",
 			TimestampFormat: "rfc3339",
 		},
-		TLS: LogstashTLS{
-			CommonTLS: CommonTLS{
-				CAFile:         decodeB64(spec.TLS.CAFile),
-				CertFile:       decodeB64(spec.TLS.CertFile),
-				KeyFile:        decodeB64(spec.TLS.KeyFile),
-				KeyPass:        decodeB64(spec.TLS.KeyPass),
-				VerifyHostname: spec.TLS.VerifyHostname,
-			},
-			VerifyCertificate: spec.TLS.VerifyCertificate,
-			Enabled:           enabledTLS,
-		},
+		TLS:     tls,
 		Mode:    "tcp",
 		Address: spec.Endpoint,
 		Keepalive: LogstashKeepalive{

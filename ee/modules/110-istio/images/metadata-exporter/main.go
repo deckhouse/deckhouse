@@ -305,87 +305,6 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-// TODO: delete after refactoring in favour of httpHandlerPrivate
-func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
-	err := checkAuthn(r.Header, "federation-services")
-	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	data, err := ioutil.ReadFile("/metadata/services.json")
-	if err != nil {
-		http.Error(w, "Error reading services.json", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, string(data))
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-// TODO: delete after refactoring in favour of httpHandlerPrivate
-func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request) {
-	err := checkAuthn(r.Header, "federation-ingressgateways")
-	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
-	}
-
-	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
-	if err != nil {
-		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, string(data))
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-// TODO: delete after refactoring in favour of httpHandlerPrivate
-func httpHandlerAllianceIngressgateways(w http.ResponseWriter, r *http.Request) {
-	err := checkAuthn(r.Header, "alliance-ingressgateways")
-	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
-	}
-
-	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
-	if err != nil {
-		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, string(data))
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-// TODO: delete after refactoring in favour of httpHandlerPrivate
-func httpHandlerMulticlusterNetworkName(w http.ResponseWriter, r *http.Request) {
-	err := checkAuthn(r.Header, "multicluster-network-name")
-	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
-	}
-
-	networkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
-	if len(networkName) == 0 {
-		http.Error(w, "Error reading network name", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, networkName)
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-// TODO: delete after refactoring in favour of httpHandlerPrivate
-func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
-	err := checkAuthn(r.Header, "multicluster-api-host")
-	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
-	}
-
-	apiHost := os.Getenv("MULTICLUSTER_API_HOST")
-	if len(apiHost) == 0 {
-		http.Error(w, "Error reading api host", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, apiHost)
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
 func renderScheduler() {
 	time.Sleep(1 * time.Minute)
 	renderSpiffeBundleJSON()
@@ -407,16 +326,11 @@ func main() {
 	router.Handle("/metadata/public/public.json", http.HandlerFunc(httpHandlerPubilcJSON))
 
 	if os.Getenv("FEDERATION_ENABLED") == "true" {
-		router.Handle("/metadata/private/federation-services", http.HandlerFunc(httpHandlerFederationServices))
-		router.Handle("/metadata/private/federation-ingressgateways", http.HandlerFunc(httpHandlerFederationIngressgateways))
 		router.Handle("/metadata/private/federation.json", http.HandlerFunc(httpHandlerFederationPrivateJSON))
 	}
 	if os.Getenv("MULTICLUSTER_ENABLED") == "true" {
-		router.Handle("/metadata/private/multicluster-api-host", http.HandlerFunc(httpHandlerMulticlusterAPIHost))
-		router.Handle("/metadata/private/multicluster-network-name", http.HandlerFunc(httpHandlerMulticlusterNetworkName))
 		router.Handle("/metadata/private/multicluster.json", http.HandlerFunc(httpHandlerMulticlusterPrivateJSON))
 	}
-	router.Handle("/metadata/private/alliance-ingressgateways", http.HandlerFunc(httpHandlerAllianceIngressgateways))
 
 	server := &http.Server{
 		Addr:         listenAddr,

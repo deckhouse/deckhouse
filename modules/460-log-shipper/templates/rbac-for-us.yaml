@@ -33,6 +33,7 @@ rules:
     resources:
       - namespaces
       - pods
+      - nodes
     verbs:
       - watch
       - get

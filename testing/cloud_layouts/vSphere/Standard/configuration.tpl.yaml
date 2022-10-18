@@ -26,15 +26,13 @@ deckhouse:
     networkGatewayEnabled: true
     networkGateway:
       nodeSelector:
-        node-role.kubernetes.io/master: ""
+        node-role.kubernetes.io/control-plane: ""
       tolerations:
       - operator: Exists
       publicAddress: 10.220.203.240
       subnet: 172.16.25.0/24
       dns:
         servers:
-        - 10.220.50.1
-        - 10.220.50.2
         - 10.80.44.235
         - 10.220.8.235
         search:

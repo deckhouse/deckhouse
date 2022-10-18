@@ -12,37 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if yum-config-manager --version >/dev/null 2>/dev/null; then
-  config_manager="yum-config-manager"
-elif dnf config-manager --version >/dev/null 2>/dev/null; then
-  config_manager="dnf config-manager"
-else
-  bb-log-warning "yum-config-manager or dnf config-manager must be installed to manage yum proxy configuration!!!"
-  exit 1
+# If yum-utils is not installed, we will try to install it. In closed environments yum-utils should be preinstalled in distro image
+# We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
+# which will be installed later in 001_install_mandatory_packages.sh step.
+if ! rpm -q --quiet yum-utils; then
+  yum install -y yum-utils
 fi
 
-proxy="--setopt=proxy="
 if bb-is-centos-version? 7; then
-  proxy="--setopt=proxy=_none_"
+  proxy="_none_"
 fi
 
 if yum --version | grep -q dnf; then
-  proxy="--setopt=proxy="
+  proxy=""
 fi
 
 {{- if .packagesProxy.uri }}
-proxy="--setopt=proxy={{ .packagesProxy.uri }} main"
+proxy="{{ .packagesProxy.uri }} main"
 {{- end }}
-
-${config_manager} --save ${proxy}
 
 {{- if .packagesProxy.username }}
-${config_manager} --save --setopt=proxy_username={{ .packagesProxy.username }} main
-{{- else }}
-${config_manager} --save --setopt=proxy_username=
+proxy_username="{{ .packagesProxy.username }} main"
 {{- end }}
+
 {{- if .packagesProxy.password }}
-${config_manager} --save --setopt=proxy_password={{ .packagesProxy.password }} main
-{{- else }}
-${config_manager} --save --setopt=proxy_password=
+proxy_password="{{ .packagesProxy.password }} main"
 {{- end }}
+
+yum-config-manager --save --setopt=proxy=${proxy}
+yum-config-manager --save --setopt=proxy_username=${proxy_username}
+yum-config-manager --save --setopt=proxy_password=${proxy_password}

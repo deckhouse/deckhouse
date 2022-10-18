@@ -17,7 +17,7 @@ spec:
   path: "/opt/local-path-provisioner"
 ```
 
-- `spec.nodeGroups` must match node group where prometheus pods run.
+- `spec.nodeGroups` must match NodeGroup where prometheus Pods run.
 - `spec.path` - node data path.
 
 Add to the Deckhouse configuration (configMap `d8-system/deckhouse`):

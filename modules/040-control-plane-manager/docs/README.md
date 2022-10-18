@@ -2,7 +2,7 @@
 title: Managing control plane
 ---
 
-The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/master: ""` label).
+The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/control-plane: ""` label).
 
 The control-plane-manager:
 - **Manages certificates** required for the operation of the control plane (renews certificates and re-issues them in response to configuration changes, among other things). This feature allows the CPM to automatically maintain a secure control plane configuration and quickly add additional SANs for organizing secure access to the Kubernetes API.
@@ -46,9 +46,9 @@ In the *multi-master* mode, `control plane` components are automatically deploye
 
 ### Scaling master nodes
 
-The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/master=””` label:
-- Attaching the `node-role.kubernetes.io/master=””` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
-- Removing the `node-role.kubernetes.io/master=””` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.
+The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/control-plane=””` label:
+- Attaching the `node-role.kubernetes.io/control-plane=””` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
+- Removing the `node-role.kubernetes.io/control-plane=””` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.
 
 > **Note** that **manual `etcd` actions** are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically.
 

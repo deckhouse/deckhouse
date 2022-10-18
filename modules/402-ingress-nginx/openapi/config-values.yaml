@@ -1,7 +1,7 @@
 type: object
 properties:
   defaultControllerVersion:
-    default: "0.33"
+    default: "1.1"
     oneOf:
       - type: string
         enum: ["0.33", "0.46", "0.48", "0.49", "1.1"]

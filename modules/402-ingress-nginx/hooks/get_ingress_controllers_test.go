@@ -92,6 +92,29 @@ spec:
 		})
 	})
 
+	Context("IngressNginxContorller without explicitly controllerVersion", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: testd
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+`))
+			f.RunHook()
+		})
+
+		It("Shouldn't fill controller version with default value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.controllerVersion").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("With Ingress Nginx Controller resource", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -145,7 +168,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "nginx",
-"controllerVersion": "0.33",
 "inlet": "LoadBalancer",
 "hstsOptions": {},
 "geoIP2": {},
@@ -165,7 +187,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.33",
 "inlet": "HostPortWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},
@@ -185,7 +206,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.33",
 "inlet": "LoadBalancerWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},

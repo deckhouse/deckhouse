@@ -276,6 +276,10 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the configured remote host name against the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host. Specifically the issuer is checked but not CRLs (Certificate Revocation Lists).
                 logstash:
                   type: object
                   required:

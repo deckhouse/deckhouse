@@ -1,0 +1,67 @@
+kind: ClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Общие параметры кластера.
+
+      Определяют, например, сетевые параметры, параметры CRI, версию control plane и т.д.. Некоторые параметры можно изменять после развертывания кластера, во время его работы.
+
+      Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+      ```
+    properties:
+      apiVersion:
+        description: Используемая версия API Deckhouse.
+      clusterType:
+        description: |
+          Тип инфраструктуры кластера:
+          - `Static` — кластер bare metal (физические серверы);
+          - `Cloud` — кластер, развернутый на ресурсах облачного провайдера.
+      cloud:
+        description: |
+          Параметры облачного провайдера (если используется [clusterType](#parameters-clustertype) `Cloud`).
+        properties:
+          provider:
+            description: Облачный провайдер.
+          prefix:
+            description: |
+              Префикс объектов создаваемых в облаке.
+
+              Используется например для того, чтобы отличать объекты создаваемые для разных кластеров, для настройки маршрутизации и т.д.
+      podSubnetCIDR:
+        description: |
+          Адресное пространство Pod'ов кластера.
+      podSubnetNodeCIDRPrefix:
+        description: |
+          Префикс сети Pod'ов на узле.
+      serviceSubnetCIDR:
+        description: |
+          Адресное пространство для service'ов кластера.
+      clusterDomain:
+        description: Домен кластера (используется для маршрутизации внутри кластера).
+      defaultCRI:
+        description: |
+          Тип container runtime, используемый на узлах уластера (в NodeGroup'ах) по умолчанию.
+
+          Если используется значение `NotManaged`, то Deckhouse не будет управлять (устанавливать и настраивать) container runtime.
+          В этом случае образы, используемые в NodeGroup'ах, должны содержать уже установленный container runtime.
+      kubernetesVersion:
+        description: |
+          Версия control plane кластера Kubernetes.
+
+          Изменение параметра в работающем кластере, приведет к [автоматическому обновлению](https://deckhouse.io/ru/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
+
+          Если указано `Automatic`, то используется версия control plane, которая считается стабильной на данный момент. Изменение этой версии может произойти при смене минорной версии релиза Deckhouse (см. список изменений к релизу).
+      packagesProxy:
+        description: |
+          Параметры прокси-сервера для загрузки пакетов ОС (например .deb или .rpm-пакетов).
+        properties:
+          uri:
+            description: Адрес прокси-сервера.
+          username:
+            description: Имя пользователя для аутентификации на прокси-сервере.
+          password:
+            description: Пароль пользователя для аутентификации на прокси-сервере.

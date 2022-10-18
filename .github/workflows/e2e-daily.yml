@@ -201,6 +201,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -250,7 +251,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -276,9 +283,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: AWS/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -289,26 +299,29 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -330,6 +343,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -340,26 +354,29 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -544,6 +561,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -593,7 +611,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -619,9 +643,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -632,7 +659,8 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
@@ -641,19 +669,21 @@ jobs:
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -677,6 +707,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -687,7 +718,8 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
@@ -696,19 +728,21 @@ jobs:
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -895,6 +929,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -944,7 +979,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -970,9 +1011,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -983,25 +1027,28 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1022,6 +1069,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -1032,25 +1080,28 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1234,6 +1285,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -1283,7 +1335,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1309,9 +1367,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -1322,7 +1383,8 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1330,19 +1392,21 @@ jobs:
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1365,6 +1429,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -1375,7 +1440,8 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1383,19 +1449,21 @@ jobs:
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1501,7 +1569,7 @@ jobs:
     env:
       PROVIDER: OpenStack
       CRI: Containerd
-      LAYOUT: WithoutNAT
+      LAYOUT: Standard
       KUBERNETES_VERSION: "1.21"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -1581,6 +1649,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -1630,7 +1699,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1656,38 +1731,44 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: OpenStack
           CRI: Containerd
-          LAYOUT: WithoutNAT
+          LAYOUT: Standard
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1708,35 +1789,39 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: OpenStack
           CRI: Containerd
-          LAYOUT: WithoutNAT
+          LAYOUT: Standard
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1797,7 +1882,7 @@ jobs:
             "labels": {
               "cri": "Containerd",
               "kube_version": "1.21",
-              "layout": "WithoutNAT",
+              "layout": "Standard",
               "provider": "OpenStack",
               "trigger": "CloudLayoutTestFailed",
 
@@ -1920,6 +2005,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -1969,7 +2055,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1995,9 +2087,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: vSphere/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2008,26 +2103,29 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2049,6 +2147,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2059,26 +2158,29 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2263,6 +2365,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
         run: |
           # Calculate unique prefix for e2e test.
@@ -2312,7 +2415,13 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -2338,9 +2447,12 @@ jobs:
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
           echo '::echo::off'
 
       - name: "Run e2e test: Static/Containerd/1.21"
+        timeout-minutes: 60
         env:
           PROVIDER: Static
           CRI: Containerd
@@ -2351,25 +2463,28 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2390,6 +2505,7 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
+        timeout-minutes: 60
         env:
           PROVIDER: Static
           CRI: Containerd
@@ -2400,25 +2516,28 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
             PREFIX=${PREFIX}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \

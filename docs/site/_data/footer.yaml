@@ -33,6 +33,10 @@ columns:
         url: '/privacy-policy.html'
       - title: Terms of Service
         url: '/terms-of-service.html'
+      - title: Technical support regulations
+        url: '/regulations.html'
+      - title: Blog
+        external_url: 'https://blog.deckhouse.io/'
   ru:
   - items:
       - title: Быстрый старт
@@ -59,9 +63,17 @@ columns:
         url: '/services/training.html'
   - title: Информация
     items:
+      - title: Импортозамещение
+        url: '/substitution.html'
       - title: Безопасность Deckhouse
         url: '/security.html'
       - title: Сравнение с KaaS
         url: '/deckhouse_vs_kaas.html'
       - title: Политика конфиденциальности
         url: '/security-policy.html'
+      - title: Регламент технической поддержки
+        url: '/regulations.html'
+      - title: Лицензионное соглашение
+        url: '/license.html'
+      - title: Блог
+        external_url: 'https://blog.deckhouse.io/'

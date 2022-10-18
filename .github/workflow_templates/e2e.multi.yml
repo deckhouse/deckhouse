@@ -20,7 +20,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
 {!{- $criNames := slice "Docker" "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.19" "1.20" "1.21" "1.22" "1.23" -}!}
+{!{- $kubernetesVersions := slice "1.20" "1.21" "1.22" "1.23" "1.24" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -65,7 +65,10 @@ on:
         description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.19 to 1.23.'
+        description: 'A comma-separated list of versions to test. Available: from 1.20 to 1.24.'
+        required: false
+      initial_ref_slug:
+        description: 'An image tag to install first and then switch to workflow context ref'
         required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -87,7 +90,7 @@ jobs:
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
-{!{- $lastCommentNeeds := slice "started_at" -}!}
+{!{- $lastCommentNeeds := slice "started_at" "git_info" -}!}
 {!{- $jobNames := dict -}!}
 {!{- range $criName := $ctx.criNames -}!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
@@ -115,6 +118,7 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "workflow,final,no-skipped,restore-separate" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 6 }!}
 # </template: e2e_workflow_template>
 {!{ end -}!}
 

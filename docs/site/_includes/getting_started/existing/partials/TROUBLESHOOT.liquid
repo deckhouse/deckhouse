@@ -10,7 +10,7 @@ Here are some common problems and ways to solve them. Should you run into diffic
   │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
   ```
 
-  Probably, there is no node in the cluster with the `node-role.kubernetes.io/master: ""` label which is originally used in the `nodeSelector` of the `deckhouse` deployment manifest.
+  Probably, there is no node in the cluster with the `node-role.kubernetes.io/control-plane: ""` label which is originally used in the `nodeSelector` of the `deckhouse` deployment manifest.
 
   Ways to fix the error:
   - Insert the proper `nodeSelector` into the `deckhouse` deployment:

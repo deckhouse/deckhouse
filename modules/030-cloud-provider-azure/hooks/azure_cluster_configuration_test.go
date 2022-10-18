@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -35,52 +34,28 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
   "layout": "Standard",
   "sshPublicKey": "ssh-rsa AAA",
   "vNetCIDR": "10.50.0.0/16",
-	"subnetCIDR": "10.50.0.0/24",
-	"standard": {
-		"natGatewayPublicIpCount": 1
-	},
-	"masterNodeGroup": {
-	  "replicas": 1,
-	  "zones": ["1","2","3"],
-	  "instanceClass": {
-	    "machineSize": "Standard_F2",
-	    "urn": "Canonical:UbuntuServer:18.04-LTS:18.04.202010140",
-	    "diskSizeGb": 50,
-			"diskType": "StandardSSD_LRS",
-	    "additionalTags": {
-	      "node": "master"
-	    }
-	  }
-	},
-  "nodeGroups": [
-    {
-      "name": "static",
-      "replicas": 1,
-      "zones": ["1","2","3"],
-      "instanceClass": {
-		    "machineSize": "Standard_F2",
-		    "urn": "Canonical:UbuntuServer:18.04-LTS:18.04.202010140",
-		    "diskSizeGb": 50,
-				"diskType": "StandardSSD_LRS",
-		    "additionalTags": {
-		      "node": "static"
-		    }
-      }
+  "subnetCIDR": "10.50.0.0/24",
+  "masterNodeGroup": {
+    "replicas": 1,
+    "zones": [
+      "1",
+      "2",
+      "3"
+    ],
+    "instanceClass": {
+      "machineSize": "test",
+      "urn": "test",
+      "diskSizeGb": 50,
+      "diskType": "test"
     }
-  ],
-  "provider": {
-    "subscriptionId": "aaa",
-		"clientId": "bbb",
-		"clientSecret": "ccc",
-		"tenantId": "ddd",
-		"location": "eee"
   },
-	"peeredVNets": [
-	  {
-			"resourceGroupName": "kube-bastion",
-			"vnetName": "kube-bastion-vnet"
-		}
-	]
+  "provider": {
+    "subscriptionId": "test",
+    "clientId": "test",
+    "clientSecret": "test",
+    "tenantId": "test",
+    "location": "test"
+  }
 }
 `
 
@@ -96,13 +71,13 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
 {
   "apiVersion": "deckhouse.io/v1",
   "kind": "AzureCloudDiscoveryData",
-  "resourceGroupName": "example",
-  "vnetName": "example",
-	"subnetName": "example",
+  "resourceGroupName": "test",
+  "vnetName": "test",
+  "subnetName": "test",
   "zones": ["1", "2", "3"],
   "instances": {
-    "urn": "Canonical:UbuntuServer:18.04-LTS:18.04.202010140",
-    "diskType": "example",
+    "urn": "test:test:test",
+    "diskType": "test",
     "additionalTags": {}
   }
 }
@@ -159,44 +134,22 @@ data:
 			f.RunHook()
 		})
 
-		It("All values should be gathered from discovered data", func() {
+		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.layout").String()).To(Equal("Standard"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.vnetName").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.subnetName").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.resourceGroupName").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.urn").String()).To(Equal("test:test:test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.diskType").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerDiscoveryData.instances.additionalTags").String()).To(Equal("{}"))
+
 			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.sshPublicKey").String()).To(Equal("ssh-rsa AAA"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.vNetCIDR").String()).To(Equal("10.50.0.0/16"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.subnetCIDR").String()).To(Equal("10.50.0.0/24"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.standard.natGatewayPublicIpCount").String()).To(Equal("1"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.replicas").String()).To(Equal("1"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.zones").String()).To(MatchJSON(`["1","2","3"]`))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.machineSize").String()).To(Equal("Standard_F2"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.urn").String()).To(Equal("Canonical:UbuntuServer:18.04-LTS:18.04.202010140"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.diskSizeGb").String()).To(Equal("50"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.diskType").String()).To(Equal("StandardSSD_LRS"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.additionalTags.node").String()).To(Equal("master"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.name").String()).To(Equal("static"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.replicas").String()).To(Equal("1"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.zones").String()).To(MatchJSON(`["1","2","3"]`))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.instanceClass.machineSize").String()).To(Equal("Standard_F2"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.instanceClass.urn").String()).To(Equal("Canonical:UbuntuServer:18.04-LTS:18.04.202010140"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.instanceClass.diskSizeGb").String()).To(Equal("50"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.instanceClass.diskType").String()).To(Equal("StandardSSD_LRS"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.nodeGroups.0.instanceClass.additionalTags.node").String()).To(Equal("static"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.subscriptionId").String()).To(Equal("aaa"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.clientId").String()).To(Equal("bbb"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.clientSecret").String()).To(Equal("ccc"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.tenantId").String()).To(Equal("ddd"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.location").String()).To(Equal("eee"))
-
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.peeredVNets.0.resourceGroupName").String()).To(Equal("kube-bastion"))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.peeredVNets.0.vnetName").String()).To(Equal("kube-bastion-vnet"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.subscriptionId").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.clientId").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.clientSecret").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.tenantId").String()).To(Equal("test"))
+			Expect(f.ValuesGet("cloudProviderAzure.internal.providerClusterConfiguration.provider.location").String()).To(Equal("test"))
 		})
 	})
 
@@ -209,11 +162,11 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`.provider is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.vNetCIDR is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.subnetCIDR is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.masterNodeGroup is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.sshPublicKey is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.vNetCIDR is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetCIDR is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.sshPublicKey is required`))
 		})
 	})
 
@@ -226,10 +179,10 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`.resourceGroupName is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.vnetName is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.subnetName is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.zones is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.resourceGroupName is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.vnetName is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetName is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.zones is required`))
 		})
 	})
 })

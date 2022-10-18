@@ -30,13 +30,6 @@ EOF
 
 function __main__() {
   context::jq '
-    {
-      "publicServices": [
-        .snapshots.public_services[].filterResult
-      ]
-    }' > /metadata/services.json
-
-  context::jq '
     [
       .snapshots.public_services[].filterResult
     ]' > /metadata/services-array.json

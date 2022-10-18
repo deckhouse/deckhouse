@@ -1,7 +1,7 @@
 # CE Bundle "Default"
 certManagerEnabled: true
 chronyEnabled: true
-ciliumHubbleEnabled: true
+ciliumHubbleEnabled: false
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
@@ -16,6 +16,7 @@ localPathProvisionerEnabled: true
 logShipperEnabled: true
 monitoringCustomEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
+monitoringDeckhouseEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 namespaceConfiguratorEnabled: true
@@ -38,3 +39,4 @@ userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
+admissionPolicyEngineEnabled: true

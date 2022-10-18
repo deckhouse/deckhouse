@@ -1,12 +1,12 @@
-{{- $featureGates := "" }}
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true" }}
-{{- end }}
+{{- $featureGates := "EndpointSliceTerminatingCondition=true" }}
 {{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "EndpointSliceTerminatingCondition=true,TTLAfterFinished=true" }}
+    {{- $featureGates = list $featureGates "TTLAfterFinished=true" | join "," }}
 {{- end }}
-{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "TTLAfterFinished=true" }}
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
 {{- end }}
 
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
@@ -135,7 +135,9 @@ controllerManager:
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -160,13 +162,11 @@ scheduler:
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
 {{- end }}
     profiling: "false"
-{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "DefaultPodTopologySpread=true"
-{{- else }}
     feature-gates: {{ $featureGates | quote }}
-{{- end }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}
@@ -178,6 +178,7 @@ etcd:
       experimental-initial-corrupt-check: "true"
       {{- if hasKey .etcd "quotaBackendBytes" }}
       quota-backend-bytes: {{ .etcd.quotaBackendBytes | quote }}
+      metrics: extensive
       {{- end }}
     {{- end }}
   {{- end }}

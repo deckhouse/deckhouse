@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: check_etcd_peer_urls ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: check_etcd_peer_urls ::", func() {
 	var (
 		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	)

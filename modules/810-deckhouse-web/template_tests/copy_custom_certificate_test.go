@@ -34,7 +34,7 @@ const globalValues = `
 clusterIsBootstrapped: false
 enabledModules: ["vertical-pod-autoscaler-crd", "deckhouse-web"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

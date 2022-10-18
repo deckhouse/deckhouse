@@ -15,7 +15,6 @@
 # limitations under the License.
 
 set -Eeuo pipefail
-shopt -s failglob
 
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
@@ -34,18 +33,8 @@ function __config__() {
 EOF
 }
 
-function clear_data() {
-  find /etc/grafana/dashboards/ -mindepth 1 -exec rm -rf {} \;
-}
-
 function __main__() {
-  rm -rf /tmp/dashboards || true
-  mkdir -p /tmp/dashboards/
-
-  if ! context::has snapshots.dashboard_resources.0; then
-    clear_data
-    return 0
-  fi
+  tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
@@ -67,17 +56,16 @@ function __main__() {
       file="${title}.json"
     fi
 
-    mkdir -p "/tmp/dashboards/${folder}"
-    jq -rc '.definition' <<<${dashboard} >"/tmp/dashboards/${file}"
+    mkdir -p "${tmpDir}/${folder}"
+    jq -rc '.definition' <<<${dashboard} > "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
-    echo "Some dashboards are malformed: ${malformed_dashboards}"
-    exit 1
+    echo "Skipping malformed dashboards: ${malformed_dashboards}"
   fi
 
-  clear_data
-  cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
+  rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
+  rm -rf ${tmpDir}
 
   echo -n "ok" >/tmp/ready
 }

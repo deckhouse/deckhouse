@@ -37,5 +37,9 @@ This module is responsible for providing a network between multiple nodes in a c
         - kube-apiserver
       nodeSelector:
         matchLabels:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
     ```
+
+## A note about Cilium work mode change
+
+If you change the Cilium operating mode (parameter `tunnelMode`) from `Disabled` to `VXLAN` or vice versa, you must restart all nodes, otherwise there may be problems with the availability of Pods.

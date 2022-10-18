@@ -1,0 +1,9 @@
+linstor:
+  fixes:
+    - summary: Improve kernel-headers detection for СentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2641
+monitoring-kubernetes:
+  fixes:
+    - summary: Add deployments to kube-state-metrics's allowlist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2636
+

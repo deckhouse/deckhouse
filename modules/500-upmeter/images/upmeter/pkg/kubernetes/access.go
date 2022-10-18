@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "k8s.io/api/core/v1"
 )
@@ -29,7 +29,7 @@ const DefaultAlpineImage = "alpine:3.12"
 
 // Access provides Kubernetes access
 type Access interface {
-	Kubernetes() kube.KubernetesClient
+	Kubernetes() kube.Client
 	ServiceAccountToken() string
 	UserAgent() string
 
@@ -90,7 +90,7 @@ type Config struct {
 
 // Accessor provides Kubernetes access in pod
 type Accessor struct {
-	client    kube.KubernetesClient
+	client    kube.Client
 	saToken   string
 	userAgent string
 
@@ -104,7 +104,7 @@ type Accessor struct {
 
 func (a *Accessor) Init(config *Config, userAgent string) error {
 	// Kubernetes client
-	a.client = kube.NewKubernetesClient()
+	a.client = kube.New()
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
 	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
@@ -132,7 +132,7 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	return nil
 }
 
-func (a *Accessor) Kubernetes() kube.KubernetesClient {
+func (a *Accessor) Kubernetes() kube.Client {
 	return a.client
 }
 

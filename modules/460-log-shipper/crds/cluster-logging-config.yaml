@@ -60,6 +60,7 @@ spec:
                       oneOf:
                       - required: [matchNames]
                       - required: [excludeNames]
+                      - required: [labelSelector]
                       type: object
                       description: Specifies the Namespace selector to filter Pods with.
                       properties:
@@ -73,6 +74,53 @@ spec:
                           description: "Include all namespaces except a particular set."
                           items:
                             type: string
+                        labelSelector:
+                          type: object
+                          description: |
+                            Specifies the label selector to filter namespaces.
+
+                            You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          anyOf:
+                          - required: [matchLabels]
+                          - required: [matchExpressions]
+                          properties:
+                            matchLabels:
+                              type: object
+                              description: List of labels which a namespace should have.
+                              example: { "foo": "bar", "baz": "who" }
+                              additionalProperties:
+                                type: string
+                            matchExpressions:
+                              type: array
+                              description: List of label expressions for namespaces.
+                              example: |
+                                ```yaml
+                                matchExpressions:
+                                - key: tier
+                                  operator: In
+                                  values:
+                                  - production
+                                  - staging
+                                ```
+                              items:
+                                type: object
+                                required:
+                                  - key
+                                  - operator
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                    enum:
+                                      - In
+                                      - NotIn
+                                      - Exists
+                                      - DoesNotExist
+                                  values:
+                                    type: array
+                                    items:
+                                      type: string
                     labelSelector:
                       type: object
                       description: |

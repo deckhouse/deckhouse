@@ -24,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -101,6 +102,8 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
 	}
 
+	approver.deckhouseNodeName = os.Getenv("DECKHOUSE_NODE_NAME")
+
 	err := approver.processUpdatedNodes(input)
 	if err != nil {
 		return err
@@ -128,9 +131,10 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 type updateApprover struct {
 	finished bool
 
-	ngChecksums shared.ConfigurationChecksum
-	nodes       map[string]updateApprovalNode
-	nodeGroups  map[string]updateNodeGroup
+	ngChecksums       shared.ConfigurationChecksum
+	nodes             map[string]updateApprovalNode
+	nodeGroups        map[string]updateNodeGroup
+	deckhouseNodeName string
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
@@ -258,6 +262,24 @@ var (
 	}
 )
 
+func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
+	// we can not drain single control-plane node because deckhouse webhook will evict
+	// and deckhouse will malfunction and drain single node does not matter we always reboot
+	// single control plane node without problem
+	if nodeNg.Name == "master" && nodeNg.Status.Nodes == 1 {
+		input.LogEntry.Warn("Skip drain single control-plane node")
+		return false
+	}
+
+	// we can not drain single node with deckhouse
+	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Ready < 2 {
+		input.LogEntry.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
+		return false
+	}
+
+	return *nodeNg.Disruptions.Automatic.DrainBeforeApproval
+}
+
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
 // We don't limit number of Nodes here, because it's already limited
 func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
@@ -276,23 +298,39 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		ng := ar.nodeGroups[ngName]
 
+		switch ng.Disruptions.ApprovalMode {
 		// Skip nodes in NodeGroup not allowing disruptive updates
-		if !(ng.Disruptions.ApprovalMode == "Automatic") {
+		case "Manual":
 			continue
-		}
 
 		// Skip node if update is not permitted in the current time window
-		if !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
-			continue
+		case "Automatic":
+			if !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
+				continue
+			}
+
+		case "RollingUpdate":
+			if !ng.Disruptions.RollingUpdate.Windows.IsAllowed(now) {
+				continue
+			}
 		}
 
 		ar.finished = true
 
+		// If approvalMode == RollingUpdate simply delete machine
+		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
+			input.LogEntry.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
+			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name, object_patch.InBackground())
+			continue
+		}
+
 		var patch map[string]interface{}
 		var metricStatus string
 
+		drainBeforeApproval := ar.needDrainNode(input, &node, &ng)
+
 		switch {
-		case !*ng.Disruptions.Automatic.DrainBeforeApproval:
+		case !drainBeforeApproval:
 			// Skip draining if it's disabled in the NodeGroup
 			patch = map[string]interface{}{
 				"metadata": map[string]interface{}{
@@ -433,6 +471,10 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 
 	if len(ng.Spec.Disruptions.Automatic.Windows) > 0 {
 		ung.Disruptions.Automatic.Windows = ng.Spec.Disruptions.Automatic.Windows
+	}
+
+	if len(ng.Spec.Disruptions.RollingUpdate.Windows) > 0 {
+		ung.Disruptions.RollingUpdate.Windows = ng.Spec.Disruptions.RollingUpdate.Windows
 	}
 
 	if ng.Spec.Disruptions.ApprovalMode != "" {

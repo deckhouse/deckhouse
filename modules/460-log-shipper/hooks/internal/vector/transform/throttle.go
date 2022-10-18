@@ -17,15 +17,17 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 // ThrottleTransform adds throttling to event's flow.
 func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
 	throttleTransform := DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "ratelimit",
-			Type: "throttle",
+			Name:   "ratelimit",
+			Type:   "throttle",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"exclude":     "null",

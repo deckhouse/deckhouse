@@ -1,0 +1,14 @@
+kind: StaticClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Параметры статического (bare metal) кластера.
+    properties:
+      apiVersion:
+        description: Используемая версия API Deckhouse.
+      internalNetworkCIDRs:
+        description: |
+          Список внутренних сетей узлов кластера.
+
+          Внутренние сети используются для связи компонентов Kubernetes (kube-apiserver, kubelet и т.д.) между собой.

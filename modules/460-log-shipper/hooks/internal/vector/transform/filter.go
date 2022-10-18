@@ -19,27 +19,49 @@ package transform
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-type mutateFilter func(*v1alpha1.Filter)
+func CreateParseDataTransforms() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "parse_json",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.ParseJSONRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
 
-func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]impl.LogTransform, error) {
-	return createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter) {
+type mutateFilter func(*v1alpha1.Filter, *vrl.Rule)
+
+func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
+	transforms, err := createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, rule *vrl.Rule) {
 		// parsed_data is a key for parsed json data from a message, we use it to quickly filter inputs
 		// "filter_field" -> "parsed_data.filter_field", "" -> "parsed_data"
 		filter.Field = strings.Join([]string{"parsed_data", filter.Field}, ".")
 	})
+	if err != nil {
+		return nil, err
+	}
+	if len(transforms) > 0 {
+		transforms = append([]apis.LogTransform{CreateParseDataTransforms()}, transforms...)
+	}
+	return transforms, nil
 }
 
-func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]impl.LogTransform, error) {
+func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
 	return createFilterTransform("label_filter", filters, nil)
 }
 
-func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutateFilter) ([]impl.LogTransform, error) {
-	transforms := make([]impl.LogTransform, 0)
+func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutateFilter) ([]apis.LogTransform, error) {
+	transforms := make([]apis.LogTransform, 0)
 
 	for _, filter := range filters {
 		rule := getRuleOutOfFilter(&filter)
@@ -48,7 +70,7 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 		}
 
 		if mutate != nil {
-			mutate(&filter)
+			mutate(&filter, &rule)
 		}
 
 		condition, err := rule.Render(vrl.Args{"filter": filter})
@@ -58,8 +80,9 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 
 		transforms = append(transforms, &DynamicTransform{
 			CommonTransform: CommonTransform{
-				Name: name,
-				Type: "filter",
+				Name:   name,
+				Type:   "filter",
+				Inputs: set.New(),
 			},
 			DynamicArgsMap: map[string]interface{}{
 				"condition": condition,

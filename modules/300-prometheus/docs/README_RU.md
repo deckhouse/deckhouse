@@ -5,11 +5,11 @@ type:
 search: prometheus
 ---
 
-Устанавливает и полностью настраивает [Prometheus](https://prometheus.io/), настраивает сбор метрик со многих распространенных приложений, а также предоставляет необходимый минимальный набор alert'ов для Prometheus и dasboard для Grafana.
+Устанавливает и полностью настраивает [Prometheus](https://prometheus.io/), настраивает сбор метрик со многих распространенных приложений, а также предоставляет необходимый минимальный набор alert'ов для Prometheus и dashboard Grafana.
 
 Если используется storage class с поддержкой автоматического расширения (`allowVolumeExpansion: true`), то при нехватке места на диске для данных Prometheus его ёмкость будет увеличена.
 
-Ресурсы cpu и memory автоматически выставляются при пересоздании Pod'а на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/). Также, благодаря кешированию запросов к Prometheus с помощью trickster, потребление памяти Prometheus сильно сокращается.
+Ресурсы CPU и memory автоматически выставляются при пересоздании Pod'а на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/). Также, благодаря кешированию запросов к Prometheus с помощью [Trickster](https://github.com/trickstercache/trickster), потребление памяти Prometheus сильно сокращается.
 
 Поддерживается как pull, так и push-модель получения метрик.
 
@@ -24,7 +24,7 @@ search: prometheus
 Графики доступны с агрегацией в разрезе по:
 - Pod'ам,
 - контроллерам,
-- namespace'ам,
+- пространствам имен,
 - узлам.
 
 ## Мониторинг Kubernetes

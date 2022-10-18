@@ -1,0 +1,11 @@
+deckhouse-web:
+  fixes:
+    - summary: Added link to the license page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2533
+node-manager:
+  fixes:
+    - summary: >-
+        Updated govmomi to the latest version so that VMs with Networks under Distributed Virtual
+        Switch can be created.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2444
+

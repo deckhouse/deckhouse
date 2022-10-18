@@ -9,8 +9,11 @@ const {
   knownCRINames,
   knownKubernetesVersions,
   knownEditions,
-  e2eDefaults
+  e2eDefaults,
+  skipE2eLabel
 } = require('./constants');
+
+const e2eStatus = require('./e2e-commit-status');
 
 const {
   parseGitRef,
@@ -557,12 +560,37 @@ module.exports.checkValidationLabels = ({ core, labels }) => {
 };
 
 /**
+ *
+ *
+ * @param cmdArg - String with possible git ref. Support main and release branches, and tags.
+ * @returns {object}
+ */
+const parseCommandArgumentAsRef = (cmdArg) => {
+  let ref = '';
+  // Allow branches main and release-X.Y.
+  if (cmdArg === 'main' || fullMatchReleaseBranch(cmdArg)) {
+    ref = 'refs/heads/' + cmdArg;
+  }
+  // Allow vX.Y.Z and test-vX.Y.Z* tags
+  if (fullMatchReleaseTag(cmdArg)) {
+    ref = 'refs/tags/' + cmdArg;
+  }
+  if (fullMatchTestTag(cmdArg)) {
+    ref = 'refs/tags/' + cmdArg;
+  }
+
+  if (ref) {
+    return parseGitRef(ref);
+  }
+  return {notFoundMsg: `git_ref ${cmdArg} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
+};
+
+/**
  * Detect slash command in the comment.
  * Commands are similar to labels:
  *   /build release-1.30
  *   /e2e/run/aws v1.31.0-alpha.0
  *   /e2e/use/k8s/1.22
- *   /e2e/use/k8s/1.19
  *   /e2e/use/cri/docker
  *   /e2e/use/cri/containerd
  *   /deploy/web/stage v1.3.2
@@ -590,27 +618,24 @@ const detectSlashCommand = ({ comment }) => {
   }
 
   const command = parts[0];
-  let gitRefInfo = null;
-  let workflow_ref = '';
 
-  if (parts[1]) {
-    // Allow branches main and release-X.Y.
-    if (parts[1] === 'main' || fullMatchReleaseBranch(parts[1])) {
-      workflow_ref = 'refs/heads/' + parts[1];
-    }
-    // Allow vX.Y.Z and test-vX.Y.Z* tags
-    if (fullMatchReleaseTag(parts[1])) {
-      workflow_ref = 'refs/tags/' + parts[1];
-    }
-    if (fullMatchTestTag(parts[1])) {
-      workflow_ref = 'refs/tags/' + parts[1];
-    }
+  // Initial ref for e2e/run with 2 args.
+  let initialRef = null
+  // A ref for workflow and a target ref for e2e release update test.
+  let targetRef = null
 
-    if (workflow_ref) {
-      gitRefInfo = parseGitRef(workflow_ref);
-    } else {
-      return {notFoundMsg: `git_ref ${parts[1]} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
-    }
+  if (parts[1] && parts[2]) {
+    initialRef = parseCommandArgumentAsRef(parts[1])
+    targetRef = parseCommandArgumentAsRef(parts[2])
+  } else if (parts[1]) {
+    targetRef = parseCommandArgumentAsRef(parts[1])
+  }
+
+  if (initialRef && initialRef.notFoundMsg) {
+    return initialRef
+  }
+  if (targetRef && targetRef.notFoundMsg) {
+    return targetRef
   }
 
   let workflow_id = '';
@@ -647,6 +672,11 @@ const detectSlashCommand = ({ comment }) => {
       inputs = {
         cri: cri.join(','),
         ver: ver.join(','),
+      }
+
+      // Add initial_ref_slug input when e2e command has two args.
+      if (initialRef) {
+        inputs.initial_ref_slug = initialRef.refSlug
       }
     }
   }
@@ -691,8 +721,7 @@ const detectSlashCommand = ({ comment }) => {
 
   return {
     command,
-    gitRefInfo,
-    workflow_ref,
+    targetRef,
     workflow_id,
     inputs,
     isSuspend,
@@ -744,29 +773,33 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
   core.info(`Command detected: ${JSON.stringify(slashCommand)}`);
 
   let failedMsg = '';
+  let workflow_ref = '';
 
   if (slashCommand.isE2E || slashCommand.isBuild) {
     // Check if Git ref is allowed.
-    if (!slashCommand.gitRefInfo) {
+    if (!slashCommand.targetRef) {
       failedMsg = `Command '${slashCommand.command}' requires an argument with a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y'.`
-    } else if (slashCommand.gitRefInfo.tagVersion) {
-      // Version in Git tag should relate to the milestone.
-      if (!milestoneTitle.includes(slashCommand.gitRefInfo.tagVersion)) {
-        failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${slashCommand.workflow_ref}.`
+    } else {
+      workflow_ref = slashCommand.targetRef.ref
+      if (slashCommand.targetRef.tagVersion) {
+        // Version in Git tag should relate to the milestone.
+        if (!milestoneTitle.includes(slashCommand.targetRef.tagVersion)) {
+          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`
+        }
+      } else if (slashCommand.targetRef.isReleaseBranch) {
+        // Major.Minor in release branch should relate to the milestone.
+        if (!milestoneTitle.includes(slashCommand.targetRef.branchMajorMinor)) {
+          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`
+        }
+      } else if (!slashCommand.targetRef.isMain) {
+        failedMsg = `Command '${slashCommand.command}' requires a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y', got ${workflow_ref}.`
       }
-    } else if (slashCommand.gitRefInfo.isReleaseBranch) {
-      // Major.Minor in release branch should relate to the milestone.
-      if (!milestoneTitle.includes(slashCommand.gitRefInfo.branchMajorMinor)) {
-        failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${slashCommand.workflow_ref}.`
-      }
-    } else if (!slashCommand.gitRefInfo.isMain) {
-      failedMsg = `Command '${slashCommand.command}' requires a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y', got ${slashCommand.workflow_ref}.`
     }
   } else if (slashCommand.isDeploy || slashCommand.isSuspend) {
     // Extract tag name from milestone title for deploy and suspend commands.
     const matches = matchReleaseTag(milestoneTitle);
     if (matches) {
-      slashCommand.workflow_ref = `refs/tags/${matches[0]}`;
+      workflow_ref = `refs/tags/${matches[0]}`;
     } else {
       failedMsg = `Command '${slashCommand.command}' requires issue to relate to milestone with version in title. Got milestone '${event.issue.milestone.title}'.`
     }
@@ -778,9 +811,9 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
     return await reactToComment({github, context, comment_id, content: 'confused'});
   }
 
-  core.info(`Use ref '${slashCommand.workflow_ref}' for workflow.`);
+  core.info(`Use ref '${workflow_ref}' for workflow.`);
 
-  // React with rocket!
+  // React with rocket emoji!
   await reactToComment({github, context, comment_id, content: 'rocket'});
 
   // Add new issue comment and start the requested workflow.
@@ -804,7 +837,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
 
   return await startWorkflow({github, context, core,
     workflow_id: slashCommand.workflow_id,
-    ref: slashCommand.workflow_ref,
+    ref: workflow_ref,
     inputs: {
       ...commentInfo,
       ...slashCommand.inputs
@@ -846,6 +879,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   // Note: no more auto rerun for validation.yml.
 
   let command = {
+    // null - do nothing
+    // true - pr labeled
+    // false- pr unlabeled
+    setE2eShouldSkipped: null,
     rerunWorkflow: false,
     triggerWorkflowDispatch: false,
     workflows: []
@@ -854,6 +891,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   try {
     const labelInfo = knownLabels[label];
     const labelType = labelInfo ? labelInfo.type : '';
+    if (label === skipE2eLabel) {
+      // set commit status
+      command.setE2eShouldSkipped = event.action === 'labeled';
+    }
     if (labelType === 'e2e-run' && event.action === 'labeled') {
       // Workflow will remove label from PR, ignore 'unlabeled' action.
       command.workflows = [`e2e-${labelInfo.provider}.yml`];
@@ -895,6 +936,16 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     }
   } finally {
     core.endGroup();
+  }
+
+  if (command.setE2eShouldSkipped !== null) {
+    return e2eStatus.onLabeledForSkip({
+      github,
+      context,
+      core,
+      labeled: command.setE2eShouldSkipped,
+      commitSha: context.payload.pull_request.head.sha,
+    });
   }
 
   if (command.workflows.length === 0) {
@@ -1071,6 +1122,10 @@ You can trigger release related actions by commenting on this issue:
 - \`/e2e/run/<provider> git_ref\` will run e2e using provider and an \`install\` image built from git_ref.
   - \`provider\` is one of \`${availableProviders}\`
   - \`git_ref\` is ${possibleGitRefs}
+- \`/e2e/run/<provider> git_ref_1 git_ref_2\` will run e2e using provider and git_ref_1 and then switch to git_ref_2.
+  - \`provider\` is one of \`${availableProviders}\`
+  - \`git_ref_1\` is a release-* or main branch
+  - \`git_ref_2\` is a release-* or main branch
 - \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
   - \`cri_name\` is one of \`${availableCRI}\`
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
@@ -1087,11 +1142,21 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 /e2e/run/aws main
 /e2e/use/cri/docker
 /e2e/use/cri/containerd
-/e2e/use/k8s/1.19
-/e2e/use/k8s/1.21
+/e2e/use/k8s/1.20
+/e2e/use/k8s/1.23
 
 This comment will run 4 e2e jobs on AWS with Docker and containerd
-and with Kubernetes version 1.19 and 1.21 using image built from main branch.
+and with Kubernetes version 1.20 and 1.23 using image built from main branch.
+\`\`\`
+
+\`\`\`
+/e2e/run/aws release-1.35 release-1.36
+/e2e/use/cri/containerd
+/e2e/use/k8s/1.23
+
+This comment will create cluster in AWS using Deckhouse built from release-1.35 branch
+and then switch to images built from release-1.36 branch.
+'use' options are supported, cluster will use containerd and Kubernetes version 1.23.
 \`\`\`
 
 **Note 2:**

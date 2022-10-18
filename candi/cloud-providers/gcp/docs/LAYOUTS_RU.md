@@ -33,7 +33,7 @@ subnetworkCIDR: 10.0.0.0/24         # Обязательный параметр.
 # Network будет соединяться через пиринговое соединение.
 peeredVPCs:
 - default
-sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"  # Обязательный параметр.
+sshKey: "<SSH_PUBLIC_KEY>"  # Обязательный параметр.
 labels:
   kube: example
 masterNodeGroup:

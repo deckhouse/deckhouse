@@ -422,7 +422,7 @@ spec:
                           pagerdutyConfigs:
                             description: List of PagerDuty configurations.
                             items:
-                              description: PagerDutyConfig configures notifications via PagerDuty. [Details...](See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
+                              description: PagerDutyConfig configures notifications via PagerDuty. [Details…](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
                               properties:
                                 class:
                                   description: The class/type of the event.

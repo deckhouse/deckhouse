@@ -30,6 +30,7 @@ import (
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
 	Access    kubernetes.Access
+	Preflight Doer
 	Namespace string
 
 	AgentID string
@@ -39,15 +40,13 @@ type ConfigMapLifecycle struct {
 }
 
 func (c ConfigMapLifecycle) Checker() check.Checker {
-	preflight := newK8sVersionGetter(c.Access)
-
 	cm := createConfigMapObject(c.Name, c.AgentID)
 	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, cm: cm}
 	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	checker := &KubeObjectBasicLifecycle{
-		preflight: preflight,
+		preflight: c.Preflight,
 		creator:   creator,
 		getter:    getter,
 		deleter:   deleter,
@@ -62,9 +61,9 @@ type configmapCreator struct {
 	cm        *v1.ConfigMap
 }
 
-func (c *configmapCreator) Do(_ context.Context) error {
+func (c *configmapCreator) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.cm)
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(ctx, c.cm, metav1.CreateOptions{})
 	return err
 }
 
@@ -74,9 +73,9 @@ type configmapGetter struct {
 	name      string
 }
 
-func (c *configmapGetter) Do(_ context.Context) error {
+func (c *configmapGetter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Get(c.name, metav1.GetOptions{})
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -86,9 +85,9 @@ type configmapDeleter struct {
 	name      string
 }
 
-func (c *configmapDeleter) Do(_ context.Context) error {
+func (c *configmapDeleter) Do(ctx context.Context) error {
 	client := c.access.Kubernetes()
-	err := client.CoreV1().ConfigMaps(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	err := client.CoreV1().ConfigMaps(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
 	return err
 }
 

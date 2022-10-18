@@ -109,6 +109,8 @@ spec:
                               description: Закодированный в Base64 пароль для ключа.
                         verifyHostname:
                           description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
+                        verifyCertificate:
+                          description: Проверка TLS-сертификата удаленного хоста. Сертификат не будет проверен на наличие в списках отозванных сертификатов (Certificate Revocation Lists).
                 logstash:
                   properties:
                     endpoint:

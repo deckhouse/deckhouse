@@ -92,7 +92,7 @@ nodeGroups:
   zones:
   - ru-1a
   - ru-1b
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   project: cms
   owner: default
@@ -170,7 +170,7 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...
 ```
@@ -244,7 +244,7 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...
 ```
@@ -324,7 +324,7 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...
 ```

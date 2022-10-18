@@ -53,16 +53,16 @@ echo "$BALANCER_IP"
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
         DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте
         {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
-        {%- else %} соответствующую wildcard A-запись со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика (<code>BALANCER_IP</code>){% endif %}{%-
-        endif -%}, который вы получили выше.
+        {%- else %} соответствующую wildcard A-запись со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла, который вы получили выше (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла){% else %}балансировщика (<code>BALANCER_IP</code>), который вы получили выше{% endif %}{%- endif -%}.
       </li>
       <li>
         Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
               href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
-        то добавьте А или CNAME-записи со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика (<code>BALANCER_IP</code>){% endif %}, который вы получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
+        то добавьте А или CNAME-записи со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла, который вы получили выше (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла){% else %}балансировщика (<code>BALANCER_IP</code>), который вы получили выше{% endif %}, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -94,15 +94,15 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 <li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес балансировщика:</p>
 {% snippetcut %}
 ```bash
-export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
+export BALANCER_IP="<BALANCER_IP>"
 ```
 {% endsnippetcut %}
 </li>
 {%- else %}
-<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес <strong>master-узла</strong>:</p>
+<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес <strong>master-узла</strong> (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла):</p>
 {% snippetcut %}
 ```bash
-export BALANCER_IP="<MASTER_IP>"
+export BALANCER_IP="<MASTER_OR_FRONT_IP>"
 ```
 {% endsnippetcut %}
 </li>
@@ -111,6 +111,7 @@ export BALANCER_IP="<MASTER_IP>"
 {% snippetcut selector="example-hosts" %}
 ```bash
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$BALANCER_IP api.example.com
 $BALANCER_IP dashboard.example.com
 $BALANCER_IP deckhouse.example.com
 $BALANCER_IP dex.example.com

@@ -1,3 +1,8 @@
+{{- define "node_termination_handler_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: node-termination-handler
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "node-termination-handler"
+      minAllowed:
+        {{- include "node_termination_handler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
 {{- end }}
 ---
 kind: DaemonSet
@@ -49,7 +62,7 @@ spec:
       containers:
       - name: node-termination-handler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.cloudProviderAws.nodeTerminationHandler }}"
+        image: {{ include "helm_lib_module_image" (list . "nodeTerminationHandler") }}
         env:
         - name: NODE_NAME
           valueFrom:
@@ -58,3 +71,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "node_termination_handler_resources" . | nindent 12 }}
+{{- end }}
+

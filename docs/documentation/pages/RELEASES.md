@@ -42,4 +42,4 @@ We use <b>five release channels</b>.
 </div>
 {::options parse_block_html="true" /}
 
-Deckhouse can "soft" switch between release channels using the [deckhouse](modules/020-deckhouse/) module: it is enough to specify the desired release channel in the [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel).
+Deckhouse can "soft" switch between release channels using the [deckhouse](modules/002-deckhouse/) module: it is enough to specify the desired release channel in the [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).

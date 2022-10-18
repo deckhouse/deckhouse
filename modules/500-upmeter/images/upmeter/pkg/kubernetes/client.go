@@ -17,13 +17,13 @@ limitations under the License.
 package kubernetes
 
 import (
+	kube "github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 )
 
-func InitKubeClient() (kube.KubernetesClient, error) {
-	client := kube.NewKubernetesClient()
+func InitKubeClient() (kube.Client, error) {
+	client := kube.New()
 
 	client.WithContextName(shapp.KubeContext)
 	client.WithConfigPath(shapp.KubeConfig)

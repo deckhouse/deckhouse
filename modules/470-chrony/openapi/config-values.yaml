@@ -1,43 +1,5 @@
 type: object
 properties:
-  vpa:
-    type: object
-    x-examples:
-      - {updateMode: "Initial", maxCPU: "30m", maxMemory: "30Mi"}
-      - {updateMode: "Off", maxCPU: "10m", maxMemory: "10Mi"}
-    default: {updateMode: "Auto",maxCPU: "10m", maxMemory: "10Mi"}
-    properties:
-      maxCPU:
-        oneOf:
-          - type: string
-            pattern: "^[0-9]+m?$"
-          - type: number
-        x-examples: ["100m"]
-        default: "10m"
-        description: |
-          The maximum CPU requests set by the VPA controller for the main Pod.
-
-          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
-      maxMemory:
-        oneOf:
-          - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
-          - type: number
-        x-examples: ["3Mi"]
-        default: "10Mi"
-        description: |
-          The maximum Memory requests set by the VPA controller for the main Pod.
-
-          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
-      updateMode:
-        type: string
-        description: |
-          The Pod update mode.
-        default: "Initial"
-        enum:
-          - "Initial"
-          - "Auto"
-          - "Off"
   ntpServers:
     type: array
     items:

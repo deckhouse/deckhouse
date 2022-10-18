@@ -185,9 +185,14 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
+		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
+		if err != nil {
+			return err
+		}
+
 		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
 			// run detect bundle type
-			detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
+			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
 				if ee, ok := err.(*exec.ExitError); ok {

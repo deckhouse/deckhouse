@@ -8,8 +8,8 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 
 ## Особенности работы descheduler
 
-* При вытеснении Pod'ов с нагруженного узла учитывается `priorityClass` (ознакомьтесь с модулем [priority-class](../010-priority-class/));
-* Pod'ы с [priorityClassName](../010-priority-class/configuration.html) `system-cluster-critical` или `system-node-critical` (*критичные* Pod'ы) не вытесняются;
+* При вытеснении Pod'ов с нагруженного узла учитывается `priorityClass` (ознакомьтесь с модулем [priority-class](../001-priority-class/));
+* Pod'ы с [priorityClassName](../001-priority-class/configuration.html) `system-cluster-critical` или `system-node-critical` (*критичные* Pod'ы) не вытесняются;
 * Pod'ы без контроллера или с контроллером DaemonSet не вытесняются;
 * Pod'ы с local storage не вытесняются;
 * Best-effort Pod'ы вытесняются раньше, чем Burstable и Guaranteed;
@@ -29,7 +29,7 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 
 Пороги, по которым узел определяется как малонагруженный в настоящий момент предопределены и их нельзя изменять:
 * Параметры определения малонагруженных узлов:
-  * cpu — 50%
+  * CPU — 50%
   * memory — 50%
 
 ### LowNodeUtilization
@@ -38,11 +38,11 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 
 Пороги, по которым узел определяется как малонагруженный или перегруженный, в настоящий момент предопределены и их нельзя изменять:
 * Параметры определения малонагруженных узлов:
-  * cpu — 40%
+  * CPU — 40%
   * memory — 50%
   * Pod'ы — 40%
 * Параметры определения перегруженных узлов:
-  * cpu — 80%
+  * CPU — 80%
   * memory — 90%
   * Pod'ы — 80%
 

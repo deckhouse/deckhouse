@@ -70,20 +70,18 @@ EOF
         jqFilter: |
           {
             "name": .metadata.name,
-            "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // (.status.addresses[] | select(.type == "InternalIP") | .address))
+            "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // (.status.addresses[] | select(.type == "InternalIP") | .address)),
+            "isActive": (
+              all((.spec.taints // [])[] ; .key != "node.kubernetes.io/unschedulable")
+              and
+              ((.status.conditions // [])[] | select(.type == "Ready") | .status == "True")
+            )
           }
 EOF
   fi
 }
 
 function __on_group::main-lb() {
-  context::jq '
-    {
-      "ingressGateways": [
-        .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
-      ]
-    }' > /metadata/ingressgateways.json
-
   context::jq '
     [
       .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
@@ -94,18 +92,9 @@ function __on_group::main-lb() {
 function __on_group::main-np() {
   context::jq '
     .snapshots.ingressgateway_service[0].filterResult.port as $port |
-    [.snapshots.pods[].filterResult.nodeName] as $nodes |
-    {
-      "ingressGateways": [
-        .snapshots.nodes[].filterResult | .name as $name | select($nodes | index($name)) | {"address": .address, "port": $port}
-      ]
-    }' > /metadata/ingressgateways.json
-
-  context::jq '
-    .snapshots.ingressgateway_service[0].filterResult.port as $port |
-    [.snapshots.pods[].filterResult.nodeName] as $nodes |
+    [.snapshots.pods[].filterResult.nodeName] as $pod_nodes |
     [
-        .snapshots.nodes[].filterResult | .name as $name | select($nodes | index($name)) | {"address": .address, "port": $port}
+        .snapshots.nodes[].filterResult | select(.isActive) | .name as $name | select($pod_nodes | index($name)) | {"address": .address, "port": $port}
     ]' > /metadata/ingressgateways-array.json
 }
 

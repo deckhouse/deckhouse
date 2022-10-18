@@ -1,5 +1,5 @@
 {{- define "terraform_manager_image" }}
 {{- $cloudProvider := (.Values.global.clusterConfiguration.cloud.provider | lower ) -}}
-{{- $imageTag := (pluck (printf "terraformManager%s" ($cloudProvider | title)) .Values.global.modulesImages.tags.terraformManager | first ) -}}
-{{ $imageTag }}
+{{- $image := include "helm_lib_module_image" (list . (printf "terraformManager%s" ($cloudProvider | title))) -}}
+{{ $image }}
 {{- end }}

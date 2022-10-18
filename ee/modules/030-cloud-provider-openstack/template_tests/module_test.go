@@ -46,7 +46,7 @@ const globalValues = `
   modules:
     placement: {}
   modulesImages:
-    registry: registry.deckhouse.io
+    registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
     tags:
       common:

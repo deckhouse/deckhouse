@@ -2,6 +2,7 @@
 package hooks
 
 var auditPolicyBasicNamespaces = []string{
+	"d8-admission-policy-engine",
 	"d8-ceph-csi",
 	"d8-cert-manager",
 	"d8-chrony",
@@ -64,6 +65,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"deckhouse",
 	"descheduler",
 	"dex",
+	"early-oom",
 	"ebpf-exporter",
 	"events-exporter",
 	"extended-monitoring-exporter",
@@ -74,6 +76,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"kube-state-metrics",
 	"legacy-cert-manager",
 	"legacy-webhook",
+	"linstor-affinity-controller",
 	"linstor-controller",
 	"linstor-ha-controller",
 	"linstor-node",
@@ -87,7 +90,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"network-policy-engine",
 	"node-exporter",
 	"node-group",
-	"node-local-dns",
 	"node-termination-handler",
 	"okmeter",
 	"openvpn",

@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM stakater/reloader:v0.0.99@sha256:c2b2873c0b9aeaced969630eabc3a7d1f9bd92652687d853cf886db77bc482b7 AS reloader
+FROM stakater/reloader:v0.0.118@sha256:2d423cab8d0e83d1428ebc70c5c5cafc44bd92a597bff94007f93cddaa607b02 AS reloader
 
 FROM $BASE_ALPINE
 COPY --from=reloader /manager /usr/local/bin/manager

@@ -1,3 +1,8 @@
+{{- define "descheduler_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: descheduler
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "descheduler"
+      minAllowed:
+        {{- include "descheduler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -56,7 +69,7 @@ spec:
       containers:
       - name: descheduler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.descheduler.descheduler }}"
+        image: {{ include "helm_lib_module_image" (list . "descheduler") }}
         volumeMounts:
         - mountPath: /policy
           name: policy-volume
@@ -74,6 +87,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "descheduler_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: policy-volume
         configMap:

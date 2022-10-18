@@ -1,3 +1,8 @@
+{{- define "webhook_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if .Values.userAuthz.enableMultiTenancy }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,14 @@ spec:
     name: user-authz-webhook
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: webhook
+      minAllowed:
+        {{- include "webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -43,7 +56,7 @@ spec:
       containers:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.userAuthz.webhook }}"
+        image: {{ include "helm_lib_module_image" (list $ "webhook") }}
         volumeMounts:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config
@@ -70,6 +83,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: user-authz-webhook-secret
         secret:

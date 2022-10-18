@@ -17,53 +17,163 @@ limitations under the License.
 package generate_password
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
-func RegisterHook(moduleValuesPath string) bool {
-	return sdk.RegisterFunc(&go_hook.HookConfig{
-		Queue:        fmt.Sprintf("/modules/%s/generate_password", moduleValuesPath),
-		OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	}, generatePassword(moduleValuesPath))
+const (
+	secretBindingName          = "password_secret"
+	defaultBasicAuthPlainField = "auth"
+	defaultBeforeHelmOrder     = 10
+	generatedPasswdLength      = 20
+)
+
+func NewBasicAuthPlainHook(moduleValuesPath string, ns string, secretName string) *Hook {
+	// Ensure camelCase for moduleValuesPath
+	valuesKey := addonutils.ModuleNameToValuesKey(moduleValuesPath)
+	return &Hook{
+		Secret: Secret{
+			Namespace: ns,
+			Name:      secretName,
+		},
+		ValuesKey: valuesKey,
+	}
 }
 
-func generatePasswordWithArgs(input *go_hook.HookInput, moduleValuesPath string) error {
-	if input.Values.Exists(fmt.Sprintf("%s.auth.externalAuthentication", moduleValuesPath)) {
-		input.ConfigValues.Remove(fmt.Sprintf("%s.auth.password", moduleValuesPath))
-		if input.ConfigValues.Exists(fmt.Sprintf("%s.auth", moduleValuesPath)) && len(input.ConfigValues.Get(fmt.Sprintf("%s.auth", moduleValuesPath)).Map()) == 0 {
-			input.ConfigValues.Remove(fmt.Sprintf("%s.auth", moduleValuesPath))
-		}
+// RegisterHook returns func to register common hook that generates
+// and stores a password in the Secret.
+func RegisterHook(moduleValuesPath string, ns string, secretName string) bool {
+	hook := NewBasicAuthPlainHook(moduleValuesPath, ns, secretName)
+	return sdk.RegisterFunc(&go_hook.HookConfig{
+		Queue: fmt.Sprintf("/modules/%s/generate_password", hook.ValuesKey),
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       secretBindingName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{hook.Secret.Name},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{
+						MatchNames: []string{hook.Secret.Namespace},
+					},
+				},
+				// Synchronization is redundant because of OnBeforeHelm.
+				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				FilterFunc:                   hook.Filter,
+			},
+		},
+		OnBeforeHelm: &go_hook.OrderedConfig{Order: float64(defaultBeforeHelmOrder)},
+	}, hook.Handle)
+}
 
+type Hook struct {
+	Secret    Secret
+	ValuesKey string
+}
+
+type Secret struct {
+	Namespace string
+	Name      string
+}
+
+// Filter extracts password from the Secret. Password can be stored as a raw string or as
+// a basic auth plain format (user:{PLAIN}password). Custom FilterFunc is called for custom
+// password extraction.
+func (h *Hook) Filter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
+	}
+
+	return secret.Data, nil
+}
+
+// Handle restores password from the configuration or from the Secret and
+// puts it to internal values.
+// It generates new password if there is no password in the configuration
+// and no Secret found.
+func (h *Hook) Handle(input *go_hook.HookInput) error {
+	externalAuthKey := h.ExternalAuthKey()
+	passwordInternalKey := h.PasswordInternalKey()
+
+	// Clear password from internal values if an external authentication is enabled.
+	if input.Values.Exists(externalAuthKey) {
+		input.Values.Remove(passwordInternalKey)
 		return nil
 	}
 
-	if input.Values.Exists(fmt.Sprintf("%s.auth.password", moduleValuesPath)) {
-		return nil
+	// Try to restore generated password from the Secret, or generate a new one.
+	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
+	if err != nil {
+		input.LogEntry.Infof("No password in Secret, generate new one: %s", err)
+		pass = GeneratePassword()
 	}
 
-	if !input.ConfigValues.Exists(fmt.Sprintf("%s.auth", moduleValuesPath)) {
-		input.ConfigValues.Set(fmt.Sprintf("%s.auth", moduleValuesPath), json.RawMessage("{}"))
-	}
-
-	generatedPass := pwgen.AlphaNum(20)
-
-	input.ConfigValues.Set(fmt.Sprintf("%s.auth.password", moduleValuesPath), generatedPass)
-
+	input.Values.Set(passwordInternalKey, pass)
 	return nil
 }
 
-func generatePassword(moduleValuesPath string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		err := generatePasswordWithArgs(input, moduleValuesPath)
-		if err != nil {
-			return err
-		}
-		return nil
+const (
+	externalAuthKeyTmpl     = "%s.auth.externalAuthentication"
+	passwordKeyTmpl         = "%s.auth.password"
+	passwordInternalKeyTmpl = "%s.internal.auth.password"
+)
+
+func (h *Hook) ExternalAuthKey() string {
+	return fmt.Sprintf(externalAuthKeyTmpl, h.ValuesKey)
+}
+
+func (h *Hook) PasswordKey() string {
+	return fmt.Sprintf(passwordKeyTmpl, h.ValuesKey)
+}
+
+func (h *Hook) PasswordInternalKey() string {
+	return fmt.Sprintf(passwordInternalKeyTmpl, h.ValuesKey)
+}
+
+// restoreGeneratedPasswordFromSnapshot extracts password from the plain basic auth string:
+// username:{PLAIN}password
+func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
+	if len(snapshot) != 1 {
+		return "", fmt.Errorf("secret/%s not found", h.Secret.Name)
 	}
+
+	// Expect one field with basic auth.
+	secretData, ok := snapshot[0].(map[string][]byte)
+	if !ok {
+		return "", fmt.Errorf("secret/%s has empty data", h.Secret.Name)
+	}
+	if len(secretData) != 1 {
+		return "", fmt.Errorf("secret/%s has more than one field", h.Secret.Name)
+	}
+	authBytes, ok := secretData[defaultBasicAuthPlainField]
+	if !ok {
+		return "", fmt.Errorf("secret/%s has no %s field", h.Secret.Name, defaultBasicAuthPlainField)
+	}
+
+	// Extract password from basic auth.
+	auth := strings.TrimSpace(string(authBytes))
+	parts := strings.SplitN(auth, "{PLAIN}", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", h.Secret.Name, defaultBasicAuthPlainField)
+	}
+	pass := strings.TrimSpace(parts[1])
+
+	return pass, nil
+}
+
+func GeneratePassword() string {
+	return pwgen.AlphaNum(generatedPasswdLength)
 }

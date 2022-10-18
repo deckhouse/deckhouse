@@ -3,6 +3,16 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: AzureCloudDiscoveryData
+      resourceGroupName: test
+      vnetName: test
+      subnetName: test
+      zones: ["1"]
+      instances:
+        urn: test
+        diskType: test
     additionalProperties: false
     required: [apiVersion, kind, resourceGroupName, vnetName, subnetName, zones]
     properties:

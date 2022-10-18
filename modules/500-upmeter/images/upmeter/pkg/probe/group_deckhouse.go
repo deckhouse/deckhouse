@@ -27,14 +27,15 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
+func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *logrus.Logger) []runnerConfig {
 	const (
-		groupDeckhouse = "deckhouse"
-		cpTimeout      = 5 * time.Second
+		groupDeckhouse      = "deckhouse"
+		controlPlaneTimeout = 5 * time.Second
 	)
 
 	logEntry := logrus.NewEntry(logger).WithField("group", groupDeckhouse)
 	monitor := hookprobe.NewMonitor(access.Kubernetes(), logEntry)
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
 		{
@@ -51,9 +52,9 @@ func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				CustomResourceName: run.ID(),
 				Monitor:            monitor,
 
-				Access: access,
+				Access:           access,
+				PreflightChecker: controlPlanePinger,
 
-				ControlPlaneAccessTimeout: cpTimeout,
 				DeckhouseReadinessTimeout: 20 * time.Minute,
 				PodAccessTimeout:          5 * time.Second,
 				ObjectChangeTimeout:       5 * time.Second,

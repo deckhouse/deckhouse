@@ -25,7 +25,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controlPlaneManager :: hooks :: update_approval ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: update_approval ::", func() {
 	f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal":{}}}`, `{}`)
 
 	Context("Empty cluster", func() {
@@ -110,7 +110,7 @@ metadata:
   annotations:
     %s
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready
@@ -123,7 +123,7 @@ metadata:
   annotations:
     control-plane-manger.deckhouse.io/waiting-for-approval: ""
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready
@@ -136,7 +136,7 @@ metadata:
   annotations:
     control-plane-manger.deckhouse.io/waiting-for-approval: ""
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready

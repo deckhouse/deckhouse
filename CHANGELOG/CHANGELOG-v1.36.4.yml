@@ -1,0 +1,45 @@
+candi:
+  fixes:
+    - summary: fix discover node ip on debian-based distros
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2493
+deckhouse:
+  fixes:
+    - summary: Fix test with inner context
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2502
+docs:
+  features:
+    - summary: Added the `How to install?` section on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2367
+istio:
+  fixes:
+    - summary: Fix default `tlsMode` behavior.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2479
+linstor:
+  fixes:
+    - summary: Fix linstor-affinity-controller leader election.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2489
+log-shipper:
+  fixes:
+    - summary: Ignore pipelines without destinations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2480
+monitoring-kubernetes:
+  fixes:
+    - summary: Check current `node_memory_SUnreclaim_bytes` in the `NodeSUnreclaimBytesUsageHigh` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2510
+    - summary: Better way to ignore kubelet mounts for node-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2427
+node-manager:
+  fixes:
+    - summary: >-
+        Fail early-oom gracefully with a helpful log message and a low-severity alert if PSI
+        subsystem is unavailable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2451
+    - summary: >-
+        Fixed a bug with spot Machine deletion in Yandex.Cloud. It now correctly deletes machines in
+        15 minute intervals.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2394
+upmeter:
+  fixes:
+    - summary: Fix non-working statuspage by removing hardcoded localhost in backend URL
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2499
+

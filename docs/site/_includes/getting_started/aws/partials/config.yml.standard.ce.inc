@@ -26,7 +26,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install
 # [<ru>] устанавливаемая версия Kubernetes
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера
 clusterDomain: "cluster.local"
@@ -75,12 +75,6 @@ provider:
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   region: eu-central-1
-# [<en>] the "standard" layout parameters
-# [<ru>] параметры архитектуры "standard"
-standard:
-  # [<en>] associate public IP to master nodes
-  # [<ru>] назначать публичные IP master-узлам
-  associatePublicIPToMasters: false
 # [<en>] parameters of the master node group
 # [<ru>] параметры группы master-узлов
 masterNodeGroup:
@@ -120,4 +114,4 @@ vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
 # [<en>] public SSH key for accessing cloud nodes
 # [<ru>] публичная часть SSH-ключа для доступа к узлам облака
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>

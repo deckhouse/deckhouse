@@ -71,7 +71,7 @@ At the same time, the proxy listens on 0.0.0.0 and intercepts all external traff
 
 The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using the kube-apiserver.
 
-Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
+Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
 You don't need to create it yourself! Just attach it to the ServiceAccount of your Deployment.
 {% raw %}
 
@@ -203,16 +203,19 @@ spec:
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
 > **Note!** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+> **Note!** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-`hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
+The IngressNginxController is deployed using Daemonset. Daemonset does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
 
-If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
+`hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
-`hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
+Notes:
+* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
+* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
 
-## How to use IngressClass with IngressClassParameters
+## How to use IngressClass with IngressClassParameters?
 
 Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
 with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
@@ -233,3 +236,22 @@ spec:
 ```
 
 In this case Deckhouse will not create an IngressClass object and will use your own.
+
+## How to disable the collection of detailed Ingress resources statistics?
+
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
+high load on the monitoring system.
+
+To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
+
+Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
+
+```shell
+kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+```
+
+Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
+
+```shell
+kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+```

@@ -118,8 +118,8 @@ sections:
         revision: ee
         url: /documentation/v1/modules/350-node-local-dns/
       - description:
-          en: <a href="/en/documentation/v1/modules/020-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
-          ru: <a href="/ru/documentation/v1/modules/020-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
+          en: <a href="/en/documentation/v1/modules/002-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
+          ru: <a href="/ru/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
         revision:
           ce: true
           ee: true

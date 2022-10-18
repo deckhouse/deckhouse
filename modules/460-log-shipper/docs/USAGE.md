@@ -183,7 +183,6 @@ For Elasticsearch < 6.0 doc_type indexing should be set.
 Config should look like this:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
@@ -199,12 +198,42 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Simple Logstash example
+
+To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side, and its codec should be set to `json`.
+
+An example of the minimal Logstash configuration:
+
+```hcl
+input {
+  tcp {
+    port => 12345
+    codec => json
+  }
+}
+output {
+  stdout { codec => json }
+}
+```
+
+An example of the `ClusterLogDestination` manifest:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: logstash
+spec:
+  type: Logstash
+  logstash:
+    endpoint: logstash.default:12345
+```
+
 ## Logs filters
 
 Only Nginx container logs:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -222,7 +251,6 @@ spec:
 Non-debug non-JSON logs:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -257,3 +285,47 @@ spec:
 ```
 
 > NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
+
+## Collect logs from production namespaces using the namespace label selector option
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: production-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchNames:
+          environment: production
+  destinationRefs:
+  - loki-storage
+```
+
+## Exclude Pods or namespaces with a label
+
+There is a preconfigured label to exclude particular namespaces or Pods: `log-shipper.deckhouse.io/exclude=true`.
+It can help to stop collecting logs from a namespace or Pod without changing global configurations.
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-namespace
+  labels:
+    log-shipper.deckhouse.io/exclude: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+spec:
+  ...
+  template:
+    metadata:
+      labels:
+        log-shipper.deckhouse.io/exclude: "true"
+```

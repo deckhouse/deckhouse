@@ -35,6 +35,9 @@ on:
       editions:
         description: 'Comma separated editions to deploy. Example: ee,fe,ce'
         required: false
+      cooldown:
+        description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
+        required: false
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -117,6 +120,30 @@ Jobs for visual control allowed editions when approving deploy to environments.
           if [[ ${SKIP_PUSH_FOR_DEPLOY} != "true" ]]; then
             echo "::set-output name=enable::true"
           fi
+
+      {!{ range $werfEnv := slice "CE" "EE" "FE" }!}
+      - name: Set cooldown for release ({!{ $werfEnv }!})
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: {!{ $werfEnv }!}
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label cooldown="${COOLDOWN}" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      {!{- end }!}
 
 {!{/*
 Add 'publish' step for each edition to repuplish semver tag images to channel tag:

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.21.12@sha256:05eefdedfcb6113402ac631782adfa3d9f8b75c38eac783e3da4f44f6404dae0
+KIND_IMAGE=kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -29,7 +29,7 @@ KIND_VERSION=v0.14.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.21.12
+KUBECTL_VERSION=v1.23.6
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -417,6 +417,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: HostPort
+  controllerVersion: "1.1"
   hostPort:
     httpPort: 80
     httpsPort: 443

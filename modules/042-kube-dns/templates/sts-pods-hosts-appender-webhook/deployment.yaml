@@ -1,3 +1,8 @@
+{{- define "webhook_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if .Values.kubeDns.clusterDomainAliases }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,14 @@ spec:
     name: d8-kube-dns-sts-pods-hosts-appender-webhook
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "webhook"
+      minAllowed:
+        {{- include "webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -42,7 +55,7 @@ spec:
       - name: deckhouse-registry
       containers:
         - name: webhook
-          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderWebhook }}"
+          image: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderWebhook") }}
           command:
           - /sts-pods-hosts-appender-webhook
           - -tls-cert-file=/etc/webhook/certs/tls.crt
@@ -53,7 +66,7 @@ spec:
           - name: CLUSTER_DOMAIN_ALIASES
             value: {{ .Values.kubeDns.clusterDomainAliases | join " " | quote }}
           - name: INIT_CONTAINER_IMAGE
-            value: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderInitContainer }}
+            value: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderInitContainer") }}
           ports:
           - containerPort: 4443
           readinessProbe:
@@ -75,6 +88,12 @@ spec:
             - name: webhook-certs
               mountPath: /etc/webhook/certs
               readOnly: true
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "webhook_resources" . | nindent 14 }}
+  {{- end }}
       volumes:
         - name: webhook-certs
           secret:

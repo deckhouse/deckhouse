@@ -34,12 +34,17 @@ const (
 	preemtibleVMDeletionDuration = 24 * time.Hour
 )
 
-type Machine struct {
+type Node struct {
 	Name              string
 	CreationTimestamp metav1.Time
-	Terminating       bool
-	MachineClassKind  string
-	MachineClassName  string
+}
+
+type Machine struct {
+	Name                  string
+	NodeCreationTimestamp metav1.Time
+	Terminating           bool
+	MachineClassKind      string
+	MachineClassName      string
 }
 
 type YandexMachineClass struct {
@@ -69,11 +74,17 @@ func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}
 
 	return &Machine{
+		Name:             obj.GetName(),
+		Terminating:      terminating,
+		MachineClassKind: classKind,
+		MachineClassName: className,
+	}, nil
+}
+
+func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return &Node{
 		Name:              obj.GetName(),
 		CreationTimestamp: obj.GetCreationTimestamp(),
-		Terminating:       terminating,
-		MachineClassKind:  classKind,
-		MachineClassName:  className,
 	}, nil
 }
 
@@ -93,7 +104,8 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
+	AllowFailure: true,
+	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "every-15",
@@ -125,6 +137,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyMachineFilter,
 		},
+		{
+			Name:                "nodes",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "v1",
+			Kind:                "Node",
+			FilterFunc:          applyNodeFilter,
+		},
 	},
 }, deleteMachines)
 
@@ -132,6 +151,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 	var (
 		timeNow                      = time.Now().UTC()
 		preemptibleMachineClassesSet = set.Set{}
+		nodeCreationTimestampSet     = make(map[string]metav1.Time)
 		machines                     []*Machine
 	)
 
@@ -152,6 +172,19 @@ func deleteMachines(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	for _, nodeRaw := range input.Snapshots["nodes"] {
+		if nodeRaw == nil {
+			continue
+		}
+
+		node, ok := nodeRaw.(*Node)
+		if !ok {
+			return fmt.Errorf("failed to assert to *Node")
+		}
+
+		nodeCreationTimestampSet[node.Name] = node.CreationTimestamp
+	}
+
 	for _, machineRaw := range input.Snapshots["machines"] {
 		machine, ok := machineRaw.(*Machine)
 		if !ok {
@@ -167,6 +200,12 @@ func deleteMachines(input *go_hook.HookInput) error {
 		}
 
 		if !preemptibleMachineClassesSet.Has(machine.MachineClassName) {
+			continue
+		}
+
+		if creationTimestamp, ok := nodeCreationTimestampSet[machine.Name]; ok {
+			machine.NodeCreationTimestamp = creationTimestamp
+		} else {
 			continue
 		}
 
@@ -197,7 +236,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	)
 
 	sort.Slice(machines, func(i, j int) bool {
-		return machines[i].CreationTimestamp.Before(&machines[j].CreationTimestamp)
+		return machines[i].NodeCreationTimestamp.Before(&machines[j].NodeCreationTimestamp)
 	})
 
 	batch := len(machines) / durationIterations
@@ -209,9 +248,9 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 		cursor int
 	)
 
-	// short-circuit if there are Machines older than 23 hours
+	// short-circuit if there are Nodes older than 23 hours
 	for _, m := range machines {
-		if expires(timeNow, m.CreationTimestamp.Time, currentSlidingDuration) {
+		if expires(timeNow, m.NodeCreationTimestamp.Time, currentSlidingDuration) {
 			machinesToDelete = append(machinesToDelete, m.Name)
 			cursor++
 		}
@@ -228,7 +267,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 				break
 			}
 
-			if expires(timeNow, machines[cursor].CreationTimestamp.Time, currentSlidingDuration) {
+			if expires(timeNow, machines[cursor].NodeCreationTimestamp.Time, currentSlidingDuration) {
 				machinesToDelete = append(machinesToDelete, machines[cursor].Name)
 				cursor++
 			} else {

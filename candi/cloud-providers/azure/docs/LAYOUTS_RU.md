@@ -19,7 +19,7 @@ title: "Cloud provider — Azure: схемы размещения"
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Обязательный параметр.
+sshPublicKey: "<SSH_PUBLIC_KEY>" # Обязательный параметр.
 vNetCIDR: 10.50.0.0/16 # Обязательный параметр.
 subnetCIDR: 10.50.0.0/24 # Обязательный параметр.
 standard:
@@ -33,10 +33,10 @@ masterNodeGroup:
     urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140  # Обязательный параметр.
     enableExternalIP: false # Необязательный параметр, по умолчанию true.
 provider:
-  subscriptionId: "" # Обязательный параметр.
-  clientId: "" # Обязательный параметр.
-  clientSecret: "" # Обязательный параметр.
-  tenantId: "" # Обязательный параметр.
+  subscriptionId: "<SUBSCRIPTION_ID>" # Обязательный параметр.
+  clientId: "<CLIENT_ID>" # Обязательный параметр.
+  clientSecret: "<CLIENT_SECRET>" # Обязательный параметр.
+  tenantId: "<TENANT_ID>" # Обязательный параметр.
   location: "westeurope" # Обязательный параметр.
 # Необязательный параметр, список Azure VNets, с которыми Kubernetes VNet будет
 # соединяться через пиринговое соединение.

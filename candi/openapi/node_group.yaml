@@ -172,13 +172,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  example: '1.19'
+                  example: '1.21'
                   enum:
-                    - "1.19"
                     - "1.20"
                     - "1.21"
                     - "1.22"
                     - "1.23"
+                    - "1.24"
                 cri:
                   type: object
                   description: |
@@ -387,7 +387,7 @@ spec:
                     Chaos monkey settings.
                   x-doc-example: |
                     ```yaml
-                    mode: DrainAndReboot
+                    mode: DrainAndDelete
                     period: 24h
                     ```
                   type: object
@@ -422,18 +422,28 @@ spec:
                   type: object
                   description: |
                     Disruptions settings for nodes.
-                  required:
-                    - approvalMode
+                  x-examples:
+                    - approvalMode: Automatic
+                      automatic:
+                        drainBeforeApproval: false
+                        windows:
+                          - from: '06:00'
+                            to: '08:00'
+                            days:
+                              - Tue
+                              - Sun
                   properties:
                     approvalMode:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
                         - `Automatic` —  automatically approve disruption-involving updates (the default value).
+                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
                       enum:
                         - Manual
                         - Automatic
+                        - RollingUpdate
                     automatic:
                       type: object
                       description: |
@@ -443,8 +453,12 @@ spec:
                           type: boolean
                           x-doc-default: true
                           description: |
-                            Drain pods from the nodes before approving disruption.
-                        windows:
+                            Drain Pods from the nodes before approving disruption.
+
+                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            - for the nodeGroup `master` with a single node;
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                        windows: &windows
                           type: array
                           description: |
                             Time windows for node disruptive updates.
@@ -470,8 +484,10 @@ spec:
                                 type: array
                                 description: |
                                   Days of the week when node could be updated.
+                                example: ["Mon", "Wed"]
                                 items:
                                   type: string
+                                  description: Day of the week.
                                   enum:
                                     - Mon
                                     - Tue
@@ -480,6 +496,35 @@ spec:
                                     - Fri
                                     - Sat
                                     - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows: *windows
+                  oneOf:
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Automatic]
+                      automatic: {}
+                    not:
+                      required: [rollingUpdate]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [RollingUpdate]
+                      rollingUpdate: {}
+                    not:
+                      required: [automatic]
+                  - required: [approvalMode]
+                    properties:
+                      approvalMode:
+                        enum: [Manual]
+                    not:
+                      anyOf:
+                      - required: [rollingUpdate]
+                      - required: [automatic]
                 docker:
                   description: |
                     Docker settings for nodes.

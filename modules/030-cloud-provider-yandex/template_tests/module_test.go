@@ -50,14 +50,14 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
   modulesImages:
-    registry: registry.deckhouse.io
+    registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
     tags:
       common:
@@ -65,14 +65,14 @@ const globalValues = `
         csiExternalAttacher116: imagehash
         csiExternalResizer116: imagehash
         csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
+        csiExternalProvisioner121: imagehash
+        csiExternalAttacher121: imagehash
+        csiExternalResizer121: imagehash
+        csiNodeDriverRegistrar121: imagehash
         resolvWatcher: imagehash
       cloudProviderYandex:
         cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
+        cloudControllerManager121: imagehash
         yandexCsiPlugin: imagehash
         exporter: exporter_image
   discovery:

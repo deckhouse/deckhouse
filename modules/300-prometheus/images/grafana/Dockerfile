@@ -2,7 +2,7 @@ ARG BASE_ALPINE
 ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
 ARG BASE_DEBIAN
-ARG GRAFANA_VERSION="8.5.9"
+ARG GRAFANA_VERSION="8.5.13"
 ARG STATUSMAP_VERSION="0.5.1"
 ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
 
@@ -27,7 +27,7 @@ RUN patch -p1 < ./feat_prometheus_extra_vars.patch
 COPY ./patches/fix_heatmap_thin_bars_on_ff.patch .
 RUN patch -p1 < ./fix_heatmap_thin_bars_on_ff.patch
 # Set more useful version than 'dev'. There are tabs in patch, so -l is used.
-COPY ./patches/build_go.patch .
+COPY patches/build_go.patch .
 RUN patch -p1 -l < ./build_go.patch
 # Patch to copy bundled plugins at start from ro directory to rw.
 COPY ./patches/run_sh.patch .
@@ -57,6 +57,8 @@ RUN yarn build
 # - Add 'make gen-go' to fix 'cli.go:163:12: undefined: server.Initialize'
 # - Use debian: see step 4 for details.
 FROM $BASE_GOLANG_17_BUSTER as go-builder
+ARG GRAFANA_VERSION
+ENV GRAFANA_VERSION=${GRAFANA_VERSION}
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
 RUN make gen-go

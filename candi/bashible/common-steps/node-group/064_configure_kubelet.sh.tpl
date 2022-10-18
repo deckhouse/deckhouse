@@ -221,6 +221,9 @@ featureGates:
 {{- if semverCompare "=1.20" .kubernetesVersion }}
   GracefulNodeShutdown: true
 {{- end }}
+{{- if semverCompare "<1.23" .kubernetesVersion }}
+  EphemeralContainers: true
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
