@@ -161,11 +161,10 @@
         There are Pods with data-plane version different from control-plane
         one.
     expr: |
-      # An empty version label is needed for backward compatibility for those pods without a version annotation, so as not to cause a false alert.
         max by (dataplane_pod, namespace, version, desired_version)
         (
           (
-            d8_istio_dataplane_metadata{version!~"(|absent)", desired_version!="absent"}
+            d8_istio_dataplane_metadata{version!~"(unknown|absent)", desired_version!="absent"}
             * on (namespace, dataplane_pod, version, desired_version, revision) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
           )
           unless on (version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "version", "$1", "desired_version", "(.+)")
