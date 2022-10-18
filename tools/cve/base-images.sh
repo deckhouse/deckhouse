@@ -58,7 +58,7 @@ function __main__() {
     echo "👾 Image: $image"
     echo ""
 
-    trivy image --timeout 10m --severity=$SEVERITY "$image"
+    trivy image --timeout 10m --severity=$SEVERITY --exit-code 1 "$image"
   done
 }
 
