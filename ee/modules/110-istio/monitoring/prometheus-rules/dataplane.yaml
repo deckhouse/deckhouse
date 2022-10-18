@@ -3,7 +3,7 @@
   - alert: D8IstioActualVersionIsNotInstalled
     annotations:
       description: |
-        There are pods with injected sidecar with version `{{$labels.version}}` in namespace `{{$labels.namespace}}`, but the control-plane version isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        There are pods with injected sidecar with version `{{$labels.version}}` and revision `{{$labels.revision}}` in namespace `{{$labels.namespace}}`, but the control-plane version isn't installed. Consider installing it or change the Namespace or Pod configuration.
         Impact — Pods have lost their sync with k8s state.
         Getting orphaned pods:
         ```
@@ -34,7 +34,7 @@
   - alert: D8IstioDesiredVersionIsNotInstalled
     annotations:
       description: |
-        There is desired istio control plane version `{{$labels.version}}` configured for pods in namespace `{{$labels.namespace}}`, but the version isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        There is desired istio control plane version `{{$labels.desired_version}}` and revision `{{$labels.revision}}` configured for pods in namespace `{{$labels.namespace}}`, but the version isn't installed. Consider installing it or change the Namespace or Pod configuration.
         Impact — Pods won't be able to re-create in the `{{$labels.namespace}}` Namespace.
         Cheat sheet:
         ```
@@ -52,7 +52,7 @@
       plk_protocol_version: "1"
       summary: Desired control-plane version isn't installed
     expr: |
-      max by (dataplane_pod, namespace, revision, version)
+      max by (dataplane_pod, namespace, revision, version, desired_version)
       (
         label_replace(d8_istio_dataplane_metadata{desired_revision!="absent"}, "revision", "$1", "desired_revision", "(.+)")
         unless on (revision)
@@ -161,14 +161,15 @@
         There are Pods with data-plane version different from control-plane
         one.
     expr: |
-        max by (dataplane_pod, namespace, full_version, desired_full_version)
+      max by (dataplane_pod, namespace, full_version, desired_full_version)
+      (
         (
-          (
-            d8_istio_dataplane_metadata{full_version!~"(unknown|absent)", desired_full_version!="absent"}
-            * on (namespace, dataplane_pod, full_version, desired_full_version, version) label_replace(d8_istio_dataplane_metadata{}, "version", "$1", "desired_version", "(.+)")
-          )
-          unless on (full_version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "full_version", "$1", "desired_full_version", "(.+)")
+          d8_istio_dataplane_metadata{full_version!~"(unknown|absent)", desired_full_version!="absent"}
+          # ignore pods with different revisions
+          * on (namespace, dataplane_pod, full_version, desired_full_version, revision) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
         )
+        unless on (full_version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "full_version", "$1", "desired_full_version", "(.+)")
+      )
     for: 5m
     labels:
       severity_level: "8"
