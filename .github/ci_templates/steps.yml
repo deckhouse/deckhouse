@@ -161,6 +161,7 @@
 # <template: unlink_bin_step>
 - name: Unlink binary cache
   id: unlink_bin_step
+  if: always()
   run: |
     rm bin
 # </template: unlink_bin_step>
