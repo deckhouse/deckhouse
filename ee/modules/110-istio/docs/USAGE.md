@@ -61,7 +61,7 @@ Istio allows you to configure a priority-based locality (geographic location) fa
 * `topology.kubernetes.io/zone`
 * `topology.kubernetes.io/region`
 
-This comes in handy for inter-cluster failover when used together with a [multicluster](readme.html#multicluster).
+This comes in handy for inter-cluster failover when used together with a [multicluster](#setting-up-multicluster-for-two-clusters-using-the-istiomulticluster-cr).
 
 **Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
 
@@ -205,8 +205,12 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
-    nginx.ingress.kubernetes.io/service-upstream: "true" # Nginx proxies traffic to the ClusterIP instead of pods' own IPs.
-    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc # In Istio, all routing is carried out based on the `Host:` headers. Instead of letting Istio know about the `productpage.example.com` external domain, we use the internal domain of which Istio is aware.
+    # Nginx proxies traffic to the ClusterIP instead of pods' own IPs.
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    # In Istio, all routing is carried out based on the `Host:` headers.
+    # Instead of letting Istio know about the `productpage.example.com` external domain, 
+    # we use the internal domain of which Istio is aware.
+    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:
     - host: productpage.example.com
@@ -466,7 +470,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-cluster A:
+Cluster A:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -478,7 +482,7 @@ spec:
   trustDomain: cluster-b.local
 ```
 
-cluster B:
+Cluster B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -492,7 +496,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-cluster A:
+Cluster A:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -503,7 +507,7 @@ spec:
   metadataEndpoint: https://istio.k8s-b.example.com/metadata/
 ```
 
-cluster B:
+Cluster B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
