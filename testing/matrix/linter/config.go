@@ -23,9 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 	"github.com/gammazero/deque"
 	"github.com/mohae/deepcopy"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -39,6 +40,7 @@ const (
 )
 
 type FileController struct {
+	Module utils.Module
 	Prefix string
 	TmpDir string
 	Queue  *deque.Deque
@@ -53,7 +55,7 @@ func NewNode(item interface{}) Node {
 	return Node{Item: item}
 }
 
-func LoadConfiguration(path, prefix, dir string) (FileController, error) {
+func LoadConfiguration(m utils.Module, path, prefix, dir string) (FileController, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return FileController{}, fmt.Errorf("formatting path failed: %v", err)
@@ -64,7 +66,7 @@ func LoadConfiguration(path, prefix, dir string) (FileController, error) {
 		return FileController{}, fmt.Errorf("read matrix tests configuration file failed: %v", err)
 	}
 
-	result := make(map[interface{}]interface{})
+	result := make(map[string]interface{})
 
 	err = yaml.Unmarshal(configurationFile, result)
 	if err != nil {
@@ -93,7 +95,7 @@ func LoadConfiguration(path, prefix, dir string) (FileController, error) {
 	if err != nil {
 		return FileController{}, fmt.Errorf("tmp directory error: %v", err)
 	}
-	return FileController{Queue: &filesQueue, Prefix: prefix, TmpDir: tmpDir}, nil
+	return FileController{Module: m, Queue: &filesQueue, Prefix: prefix, TmpDir: tmpDir}, nil
 }
 
 func findVariations(nodeData interface{}) ([]interface{}, []interface{}) {
@@ -104,10 +106,8 @@ func findVariations(nodeData interface{}) ([]interface{}, []interface{}) {
 		tempNode := queue.PopFront().(Node)
 
 		switch data := tempNode.Item.(type) {
-		case map[interface{}]interface{}:
+		case map[string]interface{}:
 			for key, value := range data {
-				key := key.(string)
-
 				if key == ConstantVariation || key == RangeVariation {
 					return tempNode.Keys, value.([]interface{})
 				}
@@ -150,17 +150,18 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 	key := keys[counter]
 
 	switch f := file.(type) {
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
+		strKey := key.(string)
 		if len(keys)-1 == counter {
 			if resultItem == EmptyItem {
-				delete(f, key)
+				delete(f, strKey)
 			} else {
-				f[key] = resultItem
+				f[strKey] = resultItem
 			}
 		} else {
 			// Recursive call, need to be fixed
 			counter++
-			f[key] = formatFile(f[key], keys, resultItem, counter)
+			f[strKey] = formatFile(f[strKey], keys, resultItem, counter)
 		}
 
 		return f
@@ -189,29 +190,23 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 	return file
 }
 
-func (f *FileController) SaveValues() error {
-	counter := 1
-	for f.Queue.Len() > 0 {
-		filename := fmt.Sprintf("%s%s%s%v.yaml", f.TmpDir, string(os.PathSeparator), f.Prefix, counter)
-		out, err := yaml.Marshal(f.Queue.PopFront())
-
-		if err != nil {
-			return fmt.Errorf("saving values file %s failed: %v", filename, err)
-		}
-
-		err = ioutil.WriteFile(filename, out, 0755)
-		if err != nil {
-			return fmt.Errorf("saving values file %s failed: %v", filename, err)
-		}
-		counter++
-	}
-	return nil
-}
-
 func (f *FileController) ReturnValues() ([]chartutil.Values, error) {
 	valuesFiles := make([]chartutil.Values, 0, f.Queue.Len())
 	for f.Queue.Len() > 0 {
-		valuesFiles = append(valuesFiles, f.Queue.PopFront().(map[string]interface{}))
+		top := map[string]interface{}{
+			"Chart": f.Module.Chart.Metadata,
+			"Release": map[string]interface{}{
+				"Name":      f.Module.Name,
+				"Namespace": f.Module.Namespace,
+				"IsUpgrade": true,
+				"IsInstall": true,
+				"Revision":  0,
+				"Service":   "Helm",
+			},
+			"Values": f.Queue.PopFront().(map[string]interface{}),
+		}
+
+		valuesFiles = append(valuesFiles, top)
 	}
 	return valuesFiles, nil
 }

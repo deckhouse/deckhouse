@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -41,11 +42,10 @@ func isExist(baseDir, filename string) bool {
 	return err == nil
 }
 
-func Run(tmpDir string, m utils.Module) error {
-	var err error
+func Run(tmpDir string, m utils.Module) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("panic on linter run occurred: %v\n", r)
+			err = fmt.Errorf("panic on linter run occurred:\n\n%v\n", string(debug.Stack()))
 		}
 	}()
 
@@ -68,7 +68,7 @@ func Run(tmpDir string, m utils.Module) error {
 			return fmt.Errorf("saving values from openapi: %v", err)
 		}
 	} else {
-		f, err := LoadConfiguration(filepath.Join(m.Path, modules.ValuesConfigFilename), "", tmpDir)
+		f, err := LoadConfiguration(m, filepath.Join(m.Path, modules.ValuesConfigFilename), "", tmpDir)
 		if err != nil {
 			return fmt.Errorf("configuration loading error: %v", err)
 		}
@@ -82,5 +82,6 @@ func Run(tmpDir string, m utils.Module) error {
 		}
 	}
 
-	return NewModuleController(m, values).Run()
+	err = NewModuleController(m, values).Run()
+	return
 }

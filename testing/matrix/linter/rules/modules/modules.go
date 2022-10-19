@@ -23,10 +23,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chart/loader"
+
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 const (

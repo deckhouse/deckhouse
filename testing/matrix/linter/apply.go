@@ -17,8 +17,9 @@ limitations under the License.
 package linter
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"helm.sh/helm/v3/pkg/chartutil"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"

@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 )
