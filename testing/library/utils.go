@@ -51,7 +51,7 @@ func init() {
 			}
 
 			parts := strings.SplitN(info.Name(), "-", 2)
-			tags[strcase.ToLowerCamel(parts[1])] = make(map[string]string)
+			tags[strcase.ToLowerCamel(parts[1])] = make(map[string]interface{})
 		}
 	}
 }

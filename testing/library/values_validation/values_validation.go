@@ -17,6 +17,7 @@ limitations under the License.
 package values_validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -89,6 +90,26 @@ func ValidateHelmValues(validator *validation.ValuesValidator, moduleName, value
 
 	valuesKey := utils.ModuleNameToValuesKey(moduleName)
 	err = validator.ValidateModuleHelmValues(valuesKey, obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateJSONValues(validator *validation.ValuesValidator, moduleName string, values []byte) error {
+	obj := map[string]interface{}{}
+	err := json.Unmarshal(values, &obj)
+	if err != nil {
+		return err
+	}
+
+	err = validator.ValidateGlobalValues(obj)
+	if err != nil {
+		return err
+	}
+
+	valuesKey := utils.ModuleNameToValuesKey(moduleName)
+	err = validator.ValidateModuleValues(valuesKey, obj)
 	if err != nil {
 		return err
 	}
