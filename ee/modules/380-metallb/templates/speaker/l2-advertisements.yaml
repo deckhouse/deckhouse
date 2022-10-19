@@ -7,5 +7,8 @@ metadata:
   name: {{ $ipaddressPool.name }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
+spec:
+  ipAddressPools:
+  - {{ $ipaddressPool.name }}
   {{- end }}
 {{- end }}

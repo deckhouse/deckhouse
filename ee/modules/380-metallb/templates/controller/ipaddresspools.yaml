@@ -9,4 +9,6 @@ metadata:
 spec:
   addresses:
   {{- $ipaddressPool.addresses | toYaml | nindent 4 }}
+  autoAssign: {{ index $ipaddressPool "auto-assign" }}
+  avoidBuggyIPs: {{ index $ipaddressPool "avoid-buggy-ips" }}
 {{- end }}
