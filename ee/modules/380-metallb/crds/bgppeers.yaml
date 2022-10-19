@@ -1,4 +1,4 @@
-# https://raw.githubusercontent.com/metallb/metallb/v0.13.5/config/crd/bases/metallb.io_bgppeers.yaml
+# https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/crd/bases/metallb.io_bgppeers.yaml
 # original crd contains two versions - v1beta1 and v1beta2. Because of the indirect use of this CRD in our helm templates,
 # we remove v1beta1. Thus, we no longer need to use the conversion webhook.
 ---
@@ -18,7 +18,20 @@ spec:
     singular: bgppeer
   scope: Namespaced
   versions:
-  - name: v1beta2
+  - additionalPrinterColumns:
+    - jsonPath: .spec.peerAddress
+      name: Address
+      type: string
+    - jsonPath: .spec.peerASN
+      name: ASN
+      type: string
+    - jsonPath: .spec.bfdProfile
+      name: BFD Profile
+      type: string
+    - jsonPath: .spec.ebgpMultiHop
+      name: Multi Hops
+      type: string
+    name: v1beta2
     schema:
       openAPIV3Schema:
         description: BGPPeer is the Schema for the peers API.

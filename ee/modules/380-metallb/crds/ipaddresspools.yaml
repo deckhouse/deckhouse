@@ -1,4 +1,4 @@
-# https://raw.githubusercontent.com/metallb/metallb/v0.13.5/config/crd/bases/metallb.io_ipaddresspools.yaml
+# https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/crd/bases/metallb.io_ipaddresspools.yaml
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -16,7 +16,17 @@ spec:
     singular: ipaddresspool
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.autoAssign
+      name: Auto Assign
+      type: boolean
+    - jsonPath: .spec.avoidBuggyIPs
+      name: Avoid Buggy IPs
+      type: boolean
+    - jsonPath: .spec.addresses
+      name: Addresses
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: IPAddressPool represents a pool of IP addresses that can be allocated
