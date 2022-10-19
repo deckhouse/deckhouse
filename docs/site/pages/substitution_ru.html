@@ -21,6 +21,7 @@ anchors_disabled: true
             исходным кодом. Платформа зарегистрирована в&nbsp;едином реестре российского ПО. Подходит для замены
             OpenShift, Rancher, Tanzu и&nbsp;других K8s-платформ зарубежных вендоров.
           </p>
+          <a id="anchor" href="#russian-k8s" class="button button_alt">Подробнее</a>
         </div>
       </div>
     </div>
@@ -32,7 +33,7 @@ anchors_disabled: true
 
 <section class="supported-os block">
   <div class="container">
-    <h2 class="text text_lead">
+    <h2 class="text text_lead" id="russian-k8s">
       Российский Kubernetes
     </h2>
     <div class="block__columns block__columns_top">
@@ -212,3 +213,21 @@ anchors_disabled: true
   </div>
 </section>
 
+<script>
+  $(document).ready(function () {
+    $('#anchor').click(function(e) {
+      e.preventDefault();
+      const headerHeight = $('.header').outerHeight();
+
+      $("html, body").animate({
+        scrollTop: $($(this).attr("href")).offset().top - headerHeight + "px"
+      }, {
+        duration: 500,
+        easing: "swing"
+      });
+      return false;
+    })
+
+
+  });
+</script>
