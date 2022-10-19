@@ -20,7 +20,7 @@
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_init_container_check_linux_kernel" (list . ">= 4.9.17") }} */ -}}
-{{- /* returns initContainer which checks kernel version on node for compliance to semver constraint */ -}}
+{{- /* returns initContainer which checks the kernel version on the node for compliance to semver constraint */ -}}
 {{- define "helm_lib_module_init_container_check_linux_kernel"  }}
   {{- $context := index . 0 -}}
   {{- $semver_constraint := index . 1  -}}
