@@ -34,7 +34,7 @@ metadata:
 spec:
   cloudInstances:
     maxPerZone: 4
-    minPerZone: 3 # "$replicas" == "null"
+    minPerZone: 3
     priority: 20
 ---
 apiVersion: deckhouse.io/v1
@@ -44,7 +44,7 @@ metadata:
 spec:
   cloudInstances:
     maxPerZone: 4
-    minPerZone: 3 # $replicas -eq 0
+    minPerZone: 3
     priority: 50
 ---
 apiVersion: deckhouse.io/v1
@@ -54,7 +54,7 @@ metadata:
 spec:
   cloudInstances:
     maxPerZone: 10
-    minPerZone: 6 # $replicas -le $ng_min_instances
+    minPerZone: 6
 `
 	)
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}, "instancePrefix": "test"}}`, `{}`)
