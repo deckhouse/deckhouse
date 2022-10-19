@@ -19,7 +19,7 @@ _on_rsyslog_config_changed() {
 }
 {{- end }}
 
-if [ systemctl -q is-enabled rsyslog >/dev/null 2>&1 ]; then
+if systemctl -q is-enabled rsyslog 2>/dev/null; then
   exit 0
 fi
 
