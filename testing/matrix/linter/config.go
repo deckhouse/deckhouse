@@ -23,11 +23,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 	"github.com/gammazero/deque"
 	"github.com/mohae/deepcopy"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chartutil"
+
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 const (

@@ -20,7 +20,6 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
