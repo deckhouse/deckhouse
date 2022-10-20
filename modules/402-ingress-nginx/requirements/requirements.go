@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package requirements
 
 import (
 	"errors"
 
 	"github.com/Masterminds/semver/v3"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
