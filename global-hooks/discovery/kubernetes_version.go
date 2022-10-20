@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -31,6 +30,8 @@ import (
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/module"
