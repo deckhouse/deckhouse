@@ -585,7 +585,7 @@ func (du *DeckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult)
 
 func (du *DeckhouseUpdater) checkReleaseRequirements(rl *DeckhouseRelease) bool {
 	for key, value := range rl.Requirements {
-		passed, err := requirements.CheckRequirement(key, value, du.input.Values)
+		passed, err := requirements.CheckRequirement(key, value)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.Version, err)
 			if errors.Is(err, requirements.ErrNotRegistered) {

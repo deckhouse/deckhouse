@@ -30,8 +30,11 @@ func init() {
 		if err != nil {
 			return false, err
 		}
-		currentVersionStr := getter.Get("global.discovery.kubernetesVersion").String()
-		currentVersion, err := semver.NewVersion(currentVersionStr)
+		currentVersionStr, exists := getter.Get("global.discovery.kubernetesVersion")
+		if !exists {
+			return true, nil
+		}
+		currentVersion, err := semver.NewVersion(currentVersionStr.(string))
 		if err != nil {
 			return false, err
 		}
