@@ -18,13 +18,11 @@ package requirements
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/pkg/errors"
 )
 
 var (
-	once             sync.Once
 	defaultRegistry  requirementsResolver
 	memoryStorage    *MemoryValuesStore
 	ErrNotRegistered = errors.New("Not registered")

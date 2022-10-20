@@ -19,11 +19,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Global hooks :: discovery :: minimal_ingress_version ", func() {
+var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func() {
 	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "0.33", "internal": {}}}`
 	globalValuesString := `{}`
 	f := HookExecutionConfigInit(initValuesString, globalValuesString)
