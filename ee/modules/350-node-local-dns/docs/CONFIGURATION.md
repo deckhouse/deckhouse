@@ -2,7 +2,9 @@
 title: "The node-local-dns module: configuration"
 ---
 
-The module is **enabled** by default and does not require any configuration (it works right out-of-the-box).
+{% include module-bundle.liquid %}
+
+The module does not require any configuration (it works right out-of-the-box).
 
 **Pay attention to the following:**
 - The module supports the iptables `kube-proxy` mode only (the ipvs mode is not supported and not tested).

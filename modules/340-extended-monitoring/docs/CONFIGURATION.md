@@ -2,6 +2,8 @@
 title: "The extended-monitoring module: configuration"
 ---
 
+{% include module-bundle.liquid %}
+
 ## Parameters
 
 <!-- SCHEMA -->

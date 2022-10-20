@@ -2,7 +2,7 @@
 title: "The monitoring-kubernetes module: configuration"
 ---
 
-This module is **enabled** by default.
+{% include module-bundle.liquid %}
 
 ## Parameters
 

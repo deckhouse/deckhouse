@@ -2,7 +2,7 @@
 title: "The upmeter module: configuration"
 ---
 
-This module is **enabled** by default.
+{% include module-bundle.liquid %}
 
 ## Authentication
 

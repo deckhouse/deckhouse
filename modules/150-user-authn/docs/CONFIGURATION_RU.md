@@ -2,12 +2,7 @@
 title: "Модуль user-authn: настройки"
 ---
 
-Модуль по умолчанию **включен**. Для выключения добавьте в ConfigMap `deckhouse`:
-
-```yaml
-data:
-  userAuthnEnabled: "false"
-```
+{% include module-bundle.liquid %}
 
 ## Параметры
 

@@ -2,7 +2,9 @@
 title: "The dashboard module: configuration"
 ---
 
-The module does not have any mandatory settings.
+{% include module-bundle.liquid %}
+
+The module does not have any mandatory parameters.
 
 ## Authentication
 

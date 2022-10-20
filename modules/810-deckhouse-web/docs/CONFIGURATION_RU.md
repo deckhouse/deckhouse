@@ -2,6 +2,8 @@
 title: "Модуль deckhouse-web: настройки"
 ---
 
+{% include module-bundle.liquid %}
+
 У модуля нет обязательных настроек.
 
 ## Аутентификация
