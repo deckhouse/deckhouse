@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -297,6 +298,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	}
 	input.Values.Set("global.discovery.kubernetesVersions", versions)
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
+	requirements.SaveValue("global.discovery.kubernetesVersion", minVerStr)
 
 	input.LogEntry.Infof("k8s version was discovered: %s, all %v", minVerStr, versions)
 	return nil

@@ -30,20 +30,24 @@ var (
 
 func init() {
 	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		hasIncompatibleCtrls := getter.Get(incompatibleVersionsKey).Bool()
-		if hasIncompatibleCtrls {
-			return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
+		hasIncompatibleCtrlsRaw, exists := getter.Get(incompatibleVersionsKey)
+		if exists {
+			hasIncompatibleCtrls := hasIncompatibleCtrlsRaw.(bool)
+			if hasIncompatibleCtrls {
+				return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
+			}
 		}
 
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
-		currentVersionStr := getter.Get(minVersionValuesKey).String()
-		if currentVersionStr == "" {
+		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
+		if !exists {
 			// no IngressNginxController CRs exist
 			return true, nil
 		}
+		currentVersionStr := currentVersionRaw.(string)
 		currentVersion, err := semver.NewVersion(currentVersionStr)
 		if err != nil {
 			return false, err

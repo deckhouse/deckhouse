@@ -24,6 +24,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -102,15 +104,15 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set(incompatibleVersionsKey, isIncompatible)
+	requirements.SaveValue(incompatibleVersionsKey, isIncompatible)
 	hasDisruptionVersionUpdate = isDisruptionUpdate
 
 	if minVersion == nil {
-		input.Values.Remove(minVersionValuesKey)
+		requirements.RemoveValue(minVersionValuesKey)
 		return nil
 	}
 
-	input.Values.Set(minVersionValuesKey, minVersion.String())
+	requirements.SaveValue(minVersionValuesKey, minVersion.String())
 
 	return nil
 }
