@@ -26,6 +26,8 @@ import (
 )
 
 func TestIngressNginxVersionRequirement(t *testing.T) {
+	requirements.RemoveValue(minVersionValuesKey)
+	requirements.RemoveValue(incompatibleVersionsKey)
 	t.Run("requirement met", func(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "0.33.0")
 		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
