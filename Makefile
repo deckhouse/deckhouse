@@ -215,7 +215,7 @@ bin/trdl: bin
 
 bin/werf: bin bin/trdl ## Install werf for images-tags generator.
 	trdl --home-dir $(PWD)/bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
-	trdl --home-dir $(PWD)/bin/.trdl update werf 1.2 stable
+	trdl --home-dir $(PWD)/bin/.trdl --no-self-update=true update werf 1.2 stable
 	ln -sf $$(trdl --home-dir $(PWD)/bin/.trdl bin-path werf 1.2 stable | sed 's|^$(PWD)/bin/||')/werf $(PWD)/bin/werf
 
 .PHONY: update-k8s-patch-versions

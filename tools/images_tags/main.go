@@ -67,7 +67,7 @@ func main() {
 
 	tags := make(map[string]map[string]string)
 
-	cmd := exec.Command("werf", "config", "render")
+	cmd := exec.Command("werf", "config", "render", "--dev")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
 	cmd.Dir = path.Join("..")
