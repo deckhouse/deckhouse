@@ -18,15 +18,18 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: discovery_revisions ::", func() {
+var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 
 	Context("Empty cluster and no settings", func() {
 		BeforeEach(func() {
 			values := `
 internal:
-  supportedVersions: ["1.1","1.2.3-beta.45"]
-globalVersion: 1.2.3-beta.45 # default version "from openapi/values.yaml"
+  versionMap: {
+    "1.1": {},
+    "1.2": {}
+  }
+globalVersion: "1.2" # default version "from openapi/values.yaml"
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 
@@ -38,9 +41,8 @@ globalVersion: 1.2.3-beta.45 # default version "from openapi/values.yaml"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").String()).To(MatchJSON(`["v1x2x3beta45"]`))
-			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x2x3beta45"))
-			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2.3-beta.45"))
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.2"]`))
+			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
 		})
 	})
 
@@ -50,7 +52,12 @@ globalVersion: 1.2.3-beta.45 # default version "from openapi/values.yaml"
 
 			values := `
 internal:
-  supportedVersions: ["1.10.1", "1.3", "1.4"]
+  versionMap: {
+    "1.10": {},
+    "1.3": {},
+    "1.4": {},
+    "1.42": {}
+  }
   globalVersion: "1.42"
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
@@ -59,8 +66,7 @@ globalVersion: "1.4" # default version "from openapi/values.yaml"
 		})
 		It("Previously discovered value 1.42 must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x42"}))
-			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x42"))
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.42"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.42"))
 		})
 	})
@@ -71,7 +77,11 @@ globalVersion: "1.4" # default version "from openapi/values.yaml"
 
 			values := `
 internal:
-  supportedVersions: ["1.10.1", "1.3", "1.4"]
+  versionMap: {
+    "1.10": {},
+    "1.3": {},
+    "1.4": {}
+  }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -110,7 +120,11 @@ spec: {}
 
 			values := `
 internal:
-  supportedVersions: ["1.10.1", "1.3", "1.4"]
+  versionMap: {
+    "1.10": {},
+    "1.3": {},
+    "1.4": {}
+  }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -140,8 +154,7 @@ spec: {}
 		})
 		It("globalVersion should be gathered from the Service", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x3"}))
-			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x3"))
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.3"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.3"))
 		})
 	})
@@ -152,7 +165,12 @@ spec: {}
 
 			values := `
 internal:
-  supportedVersions: ["1.10.1", "1.2", "1.3", "1.4"]
+  versionMap: {
+    "1.10": {},
+    "1.2": {},
+    "1.3": {},
+    "1.4": {}
+  }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -183,8 +201,7 @@ spec: {}
 		})
 		It("globalVersion should be gathered from CM", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x2"}))
-			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x2"))
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.2"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
 		})
 	})
@@ -195,18 +212,22 @@ spec: {}
 
 			values := `
 internal:
-  supportedVersions: ["1.1.0","1.2.3-beta.45","1.3.1"]
-globalVersion: "1.3.1" # default version "from openapi/values.yaml"
+  versionMap: {
+    "1.1": {},
+    "1.2": {},
+    "1.3": {},
+  }
+globalVersion: "1.3" # default version "from openapi/values.yaml"
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
-			f.ConfigValuesSet("istio.globalVersion", "1.0")
-			f.ConfigValuesSet("istio.additionalVersions", []string{"1.7.4", "1.1.0", "1.8.0-alpha.2", "1.3.1", "1.9.0"})
+			f.ConfigValuesSet("istio.globalVersion", "2.0")
+			f.ConfigValuesSet("istio.additionalVersions", []string{"1.1", "1.3", "2.7", "2.8", "2.9"})
 			f.RunHook()
 		})
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 
-			Expect(f.GoHookError).To(MatchError("unsupported versions: [1.0,1.7.4,1.8.0-alpha.2,1.9.0]"))
+			Expect(f.GoHookError).To(MatchError("unsupported versions: [2.0,2.7,2.8,2.9]"))
 		})
 	})
 })

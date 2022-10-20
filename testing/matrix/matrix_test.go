@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 )
@@ -44,14 +45,14 @@ func (s *TestMatrixSuite) TearDownSuite() {
 }
 
 func (s *TestMatrixSuite) TestMatrix() {
-	// Use environment variable to focus on specific module, e.g. D8_TEST_MATRIX_FOCUS=user-authn,user-authz
+	// Use environment variable to focus on specific modules, e.g. FOCUS=user-authn,user-authz
 	focus := os.Getenv("FOCUS")
 
-	focusNames := make(map[string]struct{})
+	focusNames := set.New()
 	if focus != "" {
 		parts := strings.Split(focus, ",")
 		for _, part := range parts {
-			focusNames[part] = struct{}{}
+			focusNames.Add(part)
 		}
 	}
 
@@ -59,8 +60,7 @@ func (s *TestMatrixSuite) TestMatrix() {
 	s.Require().NoError(err)
 
 	for _, module := range discoveredModules {
-		_, ok := focusNames[module.Name]
-		if len(focusNames) == 0 || ok {
+		if focusNames.Size() == 0 || focusNames.Has(module.Name) {
 			s.Run(module.Name, func() {
 				s.Assert().NoError(linter.Run("", module))
 			})
