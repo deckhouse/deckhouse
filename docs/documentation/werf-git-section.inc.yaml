@@ -7,7 +7,7 @@
   excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager/crds/mcm.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 - add: /modules
-  to: /srv/jekyll-data/documentation/_data/bundles
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
   owner: jekyll
   group: jekyll
   stageDependencies:
@@ -28,6 +28,13 @@
     setup: ['**/*']
   includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
 {{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+- add: /ee/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
 - add: /ee/modules
   to: /src/ee/modules
   owner: jekyll
@@ -73,6 +80,13 @@
     setup: ['**/*']
 {{- end }}
 {{- if or (eq .Env "FE") (eq .Env "development")  }}
+- add: /ee/fe/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
 - add: /ee/fe/modules
   to: /src/fe/modules
   owner: jekyll
