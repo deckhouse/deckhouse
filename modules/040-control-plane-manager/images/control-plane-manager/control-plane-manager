@@ -540,7 +540,7 @@ rm -rf "$TMP_ROOTFS_DIR"
 
 # Remove backup
 echo "Remove backups older than 5"
-for i in $(find . -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -r -n -k 1,1 | tail -n +6 | awk '{print $2}')
+for i in $(find $ROOT_BACKUP_DIR -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -r -n -k 1,1 | tail -n +6 | awk '{print $2}')
   do rm -rf "$i"
 done
 echo " * Done!"
