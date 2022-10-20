@@ -145,7 +145,7 @@ spec:
         - name: ISTIO_META_HTTP10
           value: "1"
   {{- end }}
-        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyV2%s" $imageSuffix )) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 15021
