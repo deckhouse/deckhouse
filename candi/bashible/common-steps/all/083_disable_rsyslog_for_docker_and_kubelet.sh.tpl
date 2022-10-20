@@ -19,10 +19,16 @@ _on_rsyslog_config_changed() {
 }
 {{- end }}
 
-bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
+if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
+  exit 0
+fi
+
+if [ -d /etc/rsyslog.d ]; then
+  bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
 :programname,isequal, "kubelet" ~
 END
 
-bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
+  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
 :programname,isequal, "dockerd" ~
 END
+fi
