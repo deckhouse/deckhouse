@@ -45,9 +45,18 @@ discovery:
 const istioValues = `
     internal:
       applicationNamespaces: []
-      globalRevision: v1x13
-      operatorRevisionsToInstall:  []
-      revisionsToInstall: []
+      globalVersion: "1.13"
+      versionMap:
+        "1.13":
+          revision: "v1x13"
+          fullVersion: "1.13.0"
+          imageSuffix: "V13x0"
+        "1.12":
+          revision: "v1x12"
+          fullVersion: "1.12.1"
+          imageSuffix: "V12x1"
+      operatorVersionsToInstall:  []
+      versionsToInstall: []
       federations: []
       multiclusters: []
       remoteAuthnKeypair:
@@ -140,8 +149,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13,v1x12]`)
-			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x13,v1x12]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13","1.12"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.13","1.12"]`)
 			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `[foo,bar]`)
 			f.HelmRender()
 		})
@@ -156,8 +165,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			iopV13 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x13")
 			iopV12 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x12")
 
-			deploymentOperatorv181 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x13")
-			deploymentOperatorv180alpha1 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x12")
+			deploymentOperatorV13 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x13")
+			deploymentOperatorV12 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x12")
 
 			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
 			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
@@ -168,8 +177,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			Expect(iopV13.Exists()).To(BeTrue())
 			Expect(iopV12.Exists()).To(BeTrue())
-			Expect(deploymentOperatorv181.Exists()).To(BeTrue())
-			Expect(deploymentOperatorv180alpha1.Exists()).To(BeTrue())
+			Expect(deploymentOperatorV13.Exists()).To(BeTrue())
+			Expect(deploymentOperatorV12.Exists()).To(BeTrue())
 			Expect(secretCacerts.Exists()).To(BeTrue())
 
 			Expect(secretD8RegistryFoo.Exists()).To(BeTrue())
@@ -184,8 +193,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV13.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(iopV12.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
-			Expect(deploymentOperatorv181.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x13`))
-			Expect(deploymentOperatorv180alpha1.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x12`))
+			Expect(deploymentOperatorV13.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x13`))
+			Expect(deploymentOperatorV12.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x12`))
 
 			Expect(iopV13.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x13`))
 			Expect(iopV12.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x12`))
@@ -233,8 +242,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
-			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.13"]`)
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: neighbour-0
@@ -309,8 +318,8 @@ neighbour-0:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
-			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.13"]`)
 			f.ValuesSet("istio.multicluster.enabled", true)
 			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
 			f.ValuesSetFromYaml("istio.internal.multiclusters", `
@@ -406,7 +415,7 @@ a-b-c-1-2-3:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
 			f.HelmRender()
 		})
 
@@ -448,7 +457,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: Static
 static:
@@ -492,7 +501,7 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: VPA
 vpa:
@@ -549,7 +558,7 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x13]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: VPA
 vpa:
