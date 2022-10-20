@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
@@ -87,13 +88,7 @@ type ObjectLinter struct {
 	ObjectStore    *storage.UnstructuredObjectStore
 	ErrorsList     *errors.LintRuleErrorsList
 	Module         utils.Module
-	Values         string
-	EnabledModules map[string]struct{}
-}
-
-func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
-	_, ok := l.EnabledModules[name]
-	return ok
+	EnabledModules set.Set
 }
 
 func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
@@ -295,7 +290,7 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(objectRecommendedLabels(object))
 	l.ErrorsList.Add(objectAPIVersion(object))
-	if l.CheckModuleEnabled("priority-class") {
+	if l.EnabledModules.Has("priority-class") {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
 	l.ErrorsList.Add(objectDNSPolicy(object))

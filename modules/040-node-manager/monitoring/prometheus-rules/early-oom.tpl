@@ -18,7 +18,8 @@
       summary: >
         The {{`{{$labels.pod}}`}} Pod has detected unavailable PSI subsystem.
         Check logs for additional information: `kubectl -n d8-cloud-instance-manager logs {{`{{$labels.pod}}`}}`
-        To fix it you can:
-        - upgrade kernel to version 4.20 or higher
-        - [disable](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
+        Possible actions to resolve the problem:
+        * Upgrade kernel to version 4.20 or higher.
+        * Enable [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
+        * [Disable](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
 {{- end }}

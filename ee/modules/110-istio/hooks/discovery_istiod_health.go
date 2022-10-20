@@ -14,9 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 )
 
-const isGlobalRevisionIstiodReadyPath = "istio.internal.isGlobalRevisionIstiodReady"
+const isGlobalVersionIstiodReadyPath = "istio.internal.isGlobalVersionIstiodReady"
 
 type istiodPod struct {
 	Name     string
@@ -64,19 +65,22 @@ func applyIstiodPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
-	var isGlobalRevisionIstiodReady bool
-	if !input.Values.Get("istio.internal.globalRevision").Exists() {
+	var isGlobalVersionIstiodReady bool
+	if !input.Values.Get("istio.internal.globalVersion").Exists() {
 		return nil
 	}
-	globalRevision := input.Values.Get("istio.internal.globalRevision").String()
+
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
+
+	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	for _, podRaw := range input.Snapshots["istiod_pods"] {
 		pod := podRaw.(istiodPod)
-		if pod.Revision == globalRevision && pod.Phase == v1.PodRunning {
-			isGlobalRevisionIstiodReady = true
+		if versionMap.GetVersionByRevision(pod.Revision) == globalVersion && pod.Phase == v1.PodRunning {
+			isGlobalVersionIstiodReady = true
 		}
 	}
-	input.Values.Set(isGlobalRevisionIstiodReadyPath, isGlobalRevisionIstiodReady)
-	if !isGlobalRevisionIstiodReady {
+	input.Values.Set(isGlobalVersionIstiodReadyPath, isGlobalVersionIstiodReady)
+	if !isGlobalVersionIstiodReady {
 		// There is a problem deleting the webhook configuration from helm. It must be deleted in the first place.
 		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global", object_patch.InForeground())
 	}

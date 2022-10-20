@@ -17,10 +17,9 @@ limitations under the License.
 package linter
 
 import (
-	"fmt"
+	"helm.sh/helm/v3/pkg/chartutil"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
@@ -28,26 +27,16 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
-func ApplyLintRules(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
-	var v struct {
-		Global struct {
-			EnabledModules []string `yaml:"enabledModules"`
-		} `yaml:"global"`
-	}
-	err := yaml.Unmarshal([]byte(values), &v)
-	if err != nil {
-		return fmt.Errorf("unable to parse global.enabledModules values section")
-	}
+func ApplyLintRules(module utils.Module, values chartutil.Values, objectStore *storage.UnstructuredObjectStore) error {
+	globalValues := values["Values"].(map[string]interface{})["global"].(map[string]interface{})
 
-	// Use map for faster lookups
-	enabledModules := make(map[string]struct{}, len(v.Global.EnabledModules))
-	for _, value := range v.Global.EnabledModules {
-		enabledModules[value] = struct{}{}
+	enabledModules := set.New()
+	for _, value := range globalValues["enabledModules"].([]interface{}) {
+		enabledModules.Add(value.(string))
 	}
 
 	linter := rules.ObjectLinter{
 		ObjectStore:    objectStore,
-		Values:         values,
 		Module:         module,
 		EnabledModules: enabledModules,
 		ErrorsList:     &errors.LintRuleErrorsList{},

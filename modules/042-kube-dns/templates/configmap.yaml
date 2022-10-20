@@ -47,7 +47,9 @@ data:
         loop
         reload
         loadbalance
-        forward . {{ $zone.upstreamNameservers | join " " }}
+        forward . {{ $zone.upstreamNameservers | join " " }} {
+          prefer_udp
+        }
     }
   {{- end }}
 {{- end }}

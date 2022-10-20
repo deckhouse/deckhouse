@@ -17,12 +17,14 @@ limitations under the License.
 package values_validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -57,14 +59,10 @@ func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modul
 }
 
 // ValidateValues is an adapter between JSONRepr and Values
-func ValidateValues(validator *validation.ValuesValidator, moduleName, values string) error {
-	var obj map[string]interface{}
-	err := yaml.Unmarshal([]byte(values), &obj)
-	if err != nil {
-		return err
-	}
+func ValidateValues(validator *validation.ValuesValidator, moduleName string, values chartutil.Values) error {
+	obj := values["Values"].(map[string]interface{})
 
-	err = validator.ValidateGlobalValues(obj)
+	err := validator.ValidateGlobalValues(obj)
 	if err != nil {
 		return err
 	}
@@ -92,6 +90,26 @@ func ValidateHelmValues(validator *validation.ValuesValidator, moduleName, value
 
 	valuesKey := utils.ModuleNameToValuesKey(moduleName)
 	err = validator.ValidateModuleHelmValues(valuesKey, obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateJSONValues(validator *validation.ValuesValidator, moduleName string, values []byte) error {
+	obj := map[string]interface{}{}
+	err := json.Unmarshal(values, &obj)
+	if err != nil {
+		return err
+	}
+
+	err = validator.ValidateGlobalValues(obj)
+	if err != nil {
+		return err
+	}
+
+	valuesKey := utils.ModuleNameToValuesKey(moduleName)
+	err = validator.ValidateModuleValues(valuesKey, obj)
 	if err != nil {
 		return err
 	}

@@ -12,11 +12,11 @@
         plk_grouped_by__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: LINSTOR node is not ONLINE
         description: |
-          LINSTOR node {{ $labels.node }} is not ONLINE
+          LINSTOR node {{ $labels.exported_node }} is not ONLINE
 
           The recommended course of action:
-          1. Check the LINSTOR node status: `kubectl exec -n d8-linstor deploy/linstor-controller -- linstor node list -n {{ $labels.node }}`
-          2. Check the Pod status: `kubectl -n d8-linstor get pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node -o name`
+          1. Check the LINSTOR node status: `kubectl exec -n d8-linstor deploy/linstor-controller -- linstor node list -n {{ $labels.exported_node }}`
+          2. Check the Pod status: `kubectl -n d8-linstor get pod --field-selector=spec.nodeName={{ $labels.exported_node }} -l app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node -o name`
 
     - alert: D8LinstorSatelliteGrowingErrorReports
       expr: sum by (hostname) (increase(linstor_error_reports_count{module="SATELLITE"}[5m])) >= 20

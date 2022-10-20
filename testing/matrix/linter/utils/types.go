@@ -16,8 +16,11 @@ limitations under the License.
 
 package utils
 
+import "helm.sh/helm/v3/pkg/chart"
+
 type Module struct {
 	Name      string
 	Namespace string
 	Path      string
+	Chart     *chart.Chart
 }

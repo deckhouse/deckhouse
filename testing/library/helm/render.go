@@ -46,7 +46,6 @@ func (r Renderer) RenderChartFromDir(dir string, values string) (files map[strin
 }
 
 func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]string, err error) {
-	// prepare values
 	vals, err := chartutil.ReadValues([]byte(values))
 	if err != nil {
 		return nil, fmt.Errorf("helm chart read raw values: %v", err)
@@ -77,11 +76,15 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 		return nil, fmt.Errorf("helm chart prepare render values: %v", err)
 	}
 
+	return r.RenderChartFromRawValues(c, valuesToRender)
+}
+
+func (r Renderer) RenderChartFromRawValues(c *chart.Chart, values chartutil.Values) (files map[string]string, err error) {
 	// render chart with prepared values
 	var e engine.Engine
 	e.LintMode = r.LintMode
 
-	out, err := e.Render(c, valuesToRender)
+	out, err := e.Render(c, values)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart render: %v", err)
 	}

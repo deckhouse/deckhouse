@@ -1,3 +1,5 @@
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -24,7 +26,7 @@ data:
           enabled: false
         root_namespace: d8-{{ $.Chart.Name }}
         url_service_version: http://istiod.d8-istio:15014/version
-        config_map_name: istio-{{ .Values.istio.internal.globalRevision }}
+        config_map_name: istio-{{ $revision  }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:
