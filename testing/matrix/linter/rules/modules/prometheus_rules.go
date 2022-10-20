@@ -17,7 +17,6 @@ limitations under the License.
 package modules
 
 import (
-	"crypto/sha256"
 	"os"
 	"os/exec"
 	"sync"
@@ -46,17 +45,32 @@ var rulesCache = rulesCacheStruct{
 	mu:    sync.RWMutex{},
 }
 
+func (r *rulesCacheStruct) Put(hash string, value checkResult) {
+	rulesCache.mu.Lock()
+	defer rulesCache.mu.Unlock()
+
+	rulesCache.cache[hash] = value
+}
+
+func (r *rulesCacheStruct) Get(hash string) (checkResult, bool) {
+	rulesCache.mu.RLock()
+	defer rulesCache.mu.RUnlock()
+
+	res, ok := rulesCache.cache[hash]
+	return res, ok
+}
+
 func PromtoolAvailable() bool {
 	info, err := os.Stat(promtoolPath)
 	return err == nil && (info.Mode().Perm()&0111 != 0)
 }
 
-func marshalChartYaml(object storage.StoreObject) ([]byte, string, error) {
+func marshalChartYaml(object storage.StoreObject) ([]byte, error) {
 	marshal, err := yaml.Marshal(object.Unstructured.Object["spec"])
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return marshal, newSHA256(marshal), nil
+	return marshal, nil
 }
 
 func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path string, err error) {
@@ -82,11 +96,6 @@ func checkRuleFile(path string) error {
 	return err
 }
 
-func newSHA256(data []byte) string {
-	hash := sha256.Sum256(data)
-	return string(hash[:])
-}
-
 func createPromtoolError(m utils.Module, errMsg string) errors.LintRuleError {
 	return errors.NewLintRuleError(
 		"MODULE060",
@@ -102,7 +111,15 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 		return errors.EmptyRuleError
 	}
 
-	marshal, hash, err := marshalChartYaml(object)
+	res, ok := rulesCache.Get(object.Hash)
+	if ok {
+		if !res.success {
+			return createPromtoolError(m, res.errMsg)
+		}
+		return errors.EmptyRuleError
+	}
+
+	marshal, err := marshalChartYaml(object)
 	if err != nil {
 		return errors.NewLintRuleError(
 			"MODULE060",
@@ -112,20 +129,9 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 		)
 	}
 
-	rulesCache.mu.RLock()
-	res, ok := rulesCache.cache[hash]
-	rulesCache.mu.RUnlock()
-	if ok {
-		if !res.success {
-			return createPromtoolError(m, res.errMsg)
-		}
-		return errors.EmptyRuleError
-	}
-
 	path, err := writeTempRuleFileFromObject(m, marshal)
-	defer func(name string) {
-		_ = os.Remove(name)
-	}(path)
+	defer os.Remove(path)
+
 	if err != nil {
 		return errors.NewLintRuleError(
 			"MODULE060",
@@ -139,17 +145,13 @@ func PromtoolRuleCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 	err = checkRuleFile(path)
 	if err != nil {
 		errorMessage := string(err.(*exec.ExitError).Stderr)
-		rulesCache.mu.Lock()
-		rulesCache.cache[hash] = checkResult{
+		rulesCache.Put(object.Hash, checkResult{
 			success: false,
 			errMsg:  errorMessage,
-		}
-		rulesCache.mu.Unlock()
+		})
 		return createPromtoolError(m, errorMessage)
 	}
-	rulesCache.mu.Lock()
-	rulesCache.cache[hash] = checkResult{success: true}
-	rulesCache.mu.Unlock()
 
+	rulesCache.Put(object.Hash, checkResult{success: true})
 	return errors.EmptyRuleError
 }

@@ -33,7 +33,7 @@ import (
 
 // ControllerMustHaveVPA fills linting error regarding VPA
 func ControllerMustHaveVPA(linter *rules.ObjectLinter) {
-	if !linter.CheckModuleEnabled("vertical-pod-autoscaler-crd") {
+	if !linter.EnabledModules.Has("vertical-pod-autoscaler-crd") {
 		return
 	}
 

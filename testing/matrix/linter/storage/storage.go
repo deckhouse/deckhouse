@@ -17,6 +17,7 @@ limitations under the License.
 package storage
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"strings"
@@ -45,6 +46,7 @@ func (g *ResourceIndex) AsString() string {
 
 type StoreObject struct {
 	Path         string
+	Hash         string
 	Unstructured unstructured.Unstructured
 }
 
@@ -262,16 +264,15 @@ type UnstructuredObjectStore struct {
 	Storage map[ResourceIndex]StoreObject
 }
 
-func NewUnstructuredObjectStore() UnstructuredObjectStore {
-	return UnstructuredObjectStore{Storage: make(map[ResourceIndex]StoreObject)}
+func NewUnstructuredObjectStore() *UnstructuredObjectStore {
+	return &UnstructuredObjectStore{Storage: make(map[ResourceIndex]StoreObject)}
 }
 
-// Put object into unstructured store
-func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}) error {
+func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}, raw []byte) error {
 	var u unstructured.Unstructured
 	u.SetUnstructuredContent(object)
 
-	storeObject := StoreObject{Path: path, Unstructured: u}
+	storeObject := StoreObject{Path: path, Unstructured: u, Hash: NewSHA256(raw)}
 
 	index := GetResourceIndex(storeObject)
 	if _, ok := s.Storage[index]; ok {
@@ -287,7 +288,6 @@ func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}
 	return nil
 }
 
-// Get object from unstructured store
 func (s *UnstructuredObjectStore) Get(key ResourceIndex) StoreObject {
 	return s.Storage[key]
 }
@@ -298,5 +298,13 @@ func (s *UnstructuredObjectStore) Exists(key ResourceIndex) bool {
 }
 
 func (s *UnstructuredObjectStore) Close() {
-	s.Storage = nil
+	for k := range s.Storage {
+		delete(s.Storage, k)
+	}
+}
+
+func NewSHA256(data []byte) string {
+	h := sha256.New()
+	h.Write(data)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

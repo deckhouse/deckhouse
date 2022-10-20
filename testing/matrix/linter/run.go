@@ -23,15 +23,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 // applyTags if ugly because values now are strongly untyped. We have to rewrite this after adding proper global schema
-func applyTags(tags map[string]map[string]string, values interface{}) {
+func applyTags(tags map[string]interface{}, values interface{}) {
 	values.(map[string]interface{})["global"].(map[string]interface{})["modulesImages"].(map[string]interface{})["tags"] = tags
 }
 
@@ -40,11 +42,10 @@ func isExist(baseDir, filename string) bool {
 	return err == nil
 }
 
-func Run(tmpDir string, m utils.Module) error {
-	var err error
+func Run(tmpDir string, m utils.Module) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("panic on linter run occurred: %v\n", r)
+			err = fmt.Errorf("panic on linter run occurred:\n\n%v", string(debug.Stack()))
 		}
 	}()
 
@@ -52,7 +53,7 @@ func Run(tmpDir string, m utils.Module) error {
 	log.SetOutput(ioutil.Discard)      // helm
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator
 
-	var values []string
+	var values []chartutil.Values
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func Run(tmpDir string, m utils.Module) error {
 			return fmt.Errorf("saving values from openapi: %v", err)
 		}
 	} else {
-		f, err := LoadConfiguration(filepath.Join(m.Path, modules.ValuesConfigFilename), "", tmpDir)
+		f, err := LoadConfiguration(m, filepath.Join(m.Path, modules.ValuesConfigFilename), "", tmpDir)
 		if err != nil {
 			return fmt.Errorf("configuration loading error: %v", err)
 		}
@@ -81,5 +82,6 @@ func Run(tmpDir string, m utils.Module) error {
 		}
 	}
 
-	return NewModuleController(m, values).Run()
+	err = NewModuleController(m, values).Run()
+	return
 }

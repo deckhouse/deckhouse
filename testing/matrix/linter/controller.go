@@ -17,6 +17,7 @@ limitations under the License.
 package linter
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
@@ -28,9 +29,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/kyokomi/emoji"
+	"github.com/mitchellh/hashstructure/v2"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
@@ -39,23 +40,18 @@ import (
 )
 
 var (
-	workersQuantity = runtime.NumCPU() * 8
+	workersQuantity = runtime.NumCPU() * 32
+
+	renderedTemplatesHash = sync.Map{}
 )
 
 type ModuleController struct {
 	Module          utils.Module
-	Values          []string
-	Chart           *chart.Chart
+	Values          []chartutil.Values
 	ValuesValidator *validation.ValuesValidator
 }
 
-func NewModuleController(m utils.Module, values []string) *ModuleController {
-	// Check chart requirements to make sure all dependencies are present in /charts
-	hc, err := loader.Load(m.Path)
-	if err != nil {
-		panic(fmt.Errorf("chart load: %v", err))
-	}
-
+func NewModuleController(m utils.Module, values []chartutil.Values) *ModuleController {
 	validator := validation.NewValuesValidator()
 	if err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path); err != nil {
 		panic(fmt.Errorf("schemas load: %v", err))
@@ -64,17 +60,16 @@ func NewModuleController(m utils.Module, values []string) *ModuleController {
 	return &ModuleController{
 		Module:          m,
 		Values:          values,
-		Chart:           hc,
 		ValuesValidator: validator,
 	}
 }
 
 type Task struct {
 	index  int
-	values string
+	values chartutil.Values
 }
 
-func NewTask(index int, values string) *Task {
+func NewTask(index int, values chartutil.Values) *Task {
 	return &Task{index: index, values: values}
 }
 
@@ -138,39 +133,50 @@ func (c *ModuleController) Run() error {
 	}
 }
 
-func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) (lintError error) {
+func (c *ModuleController) RunRender(values chartutil.Values, objectStore *storage.UnstructuredObjectStore) (lintError error) {
 	var renderer helm.Renderer
 	renderer.Name = c.Module.Name
 	renderer.Namespace = c.Module.Namespace
 	renderer.LintMode = true
 
-	files, err := renderer.RenderChart(c.Chart, values)
+	files, err := renderer.RenderChartFromRawValues(c.Module.Chart, values)
 	if err != nil {
 		lintError = fmt.Errorf("helm chart render: %v", err)
 		return
 	}
+
+	hash, err := hashstructure.Hash(files, hashstructure.FormatV2, nil)
+	if err != nil {
+		lintError = fmt.Errorf("helm chart render: %v", err)
+		return
+	}
+
+	if _, ok := renderedTemplatesHash.Load(hash); ok {
+		return // the same files were already checked
+	}
+
+	defer renderedTemplatesHash.Store(hash, struct{}{})
+
+	var docBytes []byte
+
 	for path, bigFile := range files {
-		bigFileTmp := strings.TrimSpace(bigFile)
+		scanner := bufio.NewScanner(strings.NewReader(bigFile))
+		scanner.Split(SplitAt("---"))
 
-		// Naive implementation to avoid using regex here
-		docs := strings.Split(bigFileTmp, "---")
-		for _, d := range docs {
-			if d == "" {
-				continue
-			}
-			d = strings.TrimSpace(d)
-
+		for scanner.Scan() {
 			var node map[string]interface{}
-			err := yaml.Unmarshal([]byte(d), &node)
+			docBytes = scanner.Bytes()
+
+			err := yaml.Unmarshal(docBytes, &node)
 			if err != nil {
-				return fmt.Errorf(manifestErrorMessage, err, numerateManifestLines(d))
+				return fmt.Errorf(manifestErrorMessage, err, numerateManifestLines(string(docBytes)))
 			}
 
-			if node == nil {
+			if len(node) == 0 {
 				continue
 			}
 
-			err = objectStore.Put(path, node)
+			err = objectStore.Put(path, node, docBytes)
 			if err != nil {
 				return fmt.Errorf("helm chart object already exists: %v", err)
 			}
@@ -186,12 +192,12 @@ func lint(c *ModuleController, task *Task) error {
 	}
 
 	objectStore := storage.NewUnstructuredObjectStore()
-	err = c.RunRender(task.values, &objectStore)
+	err = c.RunRender(task.values, objectStore)
 	if err != nil {
 		return testsError(task.index, err, task.values)
 	}
 
-	err = ApplyLintRules(c.Module, task.values, &objectStore)
+	err = ApplyLintRules(c.Module, task.values, objectStore)
 	if err != nil {
 		return err
 	}
@@ -207,8 +213,12 @@ func testsSuccessful(moduleName string, testCasesQuantity int) string {
 	)
 }
 
-func testsError(index int, errorHeader error, generatedValues string) error {
-	return fmt.Errorf(testsErrorMessage, index, errorHeader, generatedValues)
+func testsError(index int, errorHeader error, generatedValues chartutil.Values) error {
+	data, err := yaml.Marshal(generatedValues)
+	if err != nil {
+		panic(err.Error()) // generated values are always valid YAML-formatted documents
+	}
+	return fmt.Errorf(testsErrorMessage, index, errorHeader, data)
 }
 
 func numerateManifestLines(manifest string) string {
@@ -241,3 +251,24 @@ const (
 
 `
 )
+
+func SplitAt(substring string) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		// Return nothing if at end of file and no data passed
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+
+		// Find the index of the input of the separator substring
+		if i := strings.Index(string(data), substring); i >= 0 {
+			return i + len(substring), data[0:i], nil
+		}
+
+		// If at end of file with data return the data
+		if atEOF {
+			return len(data), data, nil
+		}
+
+		return
+	}
+}
