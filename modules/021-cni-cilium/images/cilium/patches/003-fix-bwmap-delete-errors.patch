@@ -22,8 +22,8 @@ index 1ed031108ee..4c26c1ffa9c 100644
 -	<-ch
 +
 +	updateRes := <-ch
-+	regenResult := updateRes.(*EndpointRegenerationResult)
-+	if regenResult.err != nil {
++	regenResult, ok := updateRes.(*EndpointRegenerationResult)
++	if ok && regenResult.err != nil {
 +		e.getLogger().WithError(regenResult.err).Error("EndpointNoTrackEvent event failed")
 +	}
  }
@@ -36,8 +36,8 @@ index 1ed031108ee..4c26c1ffa9c 100644
 -	<-ch
 +
 +	updateRes := <-ch
-+	regenResult := updateRes.(*EndpointRegenerationResult)
-+	if regenResult.err != nil {
++	regenResult, ok := updateRes.(*EndpointRegenerationResult)
++	if ok && regenResult.err != nil {
 +		e.getLogger().WithError(regenResult.err).Error("EndpointPolicyVisibilityEvent event failed")
 +	}
  }
@@ -50,8 +50,8 @@ index 1ed031108ee..4c26c1ffa9c 100644
 -	<-ch
 +
 +	updateRes := <-ch
-+	regenResult := updateRes.(*EndpointRegenerationResult)
-+	if regenResult.err != nil {
++	regenResult, ok:= updateRes.(*EndpointRegenerationResult)
++	if ok && regenResult.err != nil {
 +		e.getLogger().WithError(regenResult.err).Error("EndpointPolicyBandwidthEvent event failed")
 +	}
  }
