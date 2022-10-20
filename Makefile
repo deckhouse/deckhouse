@@ -83,7 +83,7 @@ deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promto
 
 bin/promtool-${PROMTOOL_VERSION}/promtool:
 	mkdir -p bin/promtool-${PROMTOOL_VERSION}
-	curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
+	curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
 
 .PHONY: bin/promtool
 bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
@@ -92,7 +92,7 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 
 bin/gator-${GATOR_VERSION}/gator:
 	mkdir -p bin/gator-${GATOR_VERSION}
-	curl -sSfL https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz | tar zxf - -C bin/gator-${GATOR_VERSION} --strip=1 gator
+	curl -sSfL https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/gator-${GATOR_VERSION} gator
 
 .PHONY: bin/gator
 bin/gator: bin/gator-${GATOR_VERSION}/gator
