@@ -100,7 +100,7 @@ properties:
                 Атрибут BGP LOCAL_PREF используется алгоритмом BGP best path. Путь с более высоким localpref предпочтительнее пути с более низким localpref.
             communities:
               description: |
-                BGP communities связанные с анонсом. Каждый элемент это ключ из конфига `bgpCommunities`.
+                BGP communities связанные с анонсом. Каждый элемент это ключ из параметра [bgpCommunities](#parameters-bgpcommunities).
   bgpCommunities:
     description: |
       Список BGP communities
