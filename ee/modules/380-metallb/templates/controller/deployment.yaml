@@ -54,7 +54,12 @@ spec:
       containers:
         - args:
             - --port=7472
-            - --config=config
+            - --webhook-mode=disabled
+          env:
+          - name: METALLB_ML_SECRET_NAME
+            value: memberlist
+          - name: METALLB_DEPLOYMENT
+            value: controller
           image: {{ include "helm_lib_module_image" (list . "controller") }}
           imagePullPolicy: IfNotPresent
           name: controller
