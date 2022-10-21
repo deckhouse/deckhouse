@@ -112,6 +112,7 @@ jobs:
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
+          SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
