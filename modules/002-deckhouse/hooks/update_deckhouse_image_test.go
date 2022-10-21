@@ -442,7 +442,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 
-			var df requirements.DisruptionFunc = func() (bool, string) {
+			var df requirements.DisruptionFunc = func(getter requirements.ValueGetter) (bool, string) {
 				return true, "some test reason"
 			}
 			requirements.RegisterDisruption("testme", df)
