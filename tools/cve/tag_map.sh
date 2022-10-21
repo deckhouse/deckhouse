@@ -36,5 +36,5 @@ for tag in "${!tag_map[@]}"; do
   matrix_array+=("$tag => { $tag_channels }")
 done
 
-printf -v matrix ',%s' "${matrix_array[@]}"
+printf -v matrix ', "%s"' "${matrix_array[@]}"
 echo "[${matrix:2}]"
