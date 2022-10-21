@@ -109,7 +109,8 @@
         "index": "logs-%F"
       },
       "pipeline": "testpipe",
-      "mode": "bulk"
+      "mode": "bulk",
+      "suppress_type_name": true
     }
   }
 }
