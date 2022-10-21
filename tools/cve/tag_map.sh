@@ -15,22 +15,26 @@
 # limitations under the License.
 #
 
+set -Eeo pipefail
+shopt -s failglob
+
 channels=("alpha" "beta" "early-access" "stable" "rock-solid")
 declare -A tag_map
 
 for channel in "${channels[@]}"; do
   tag=$(git describe --tags --abbrev=0 "origin/$channel")
   if [[ -n "${tag_map[$tag]}" ]]; then
-    tag_map[$tag]+=",\"$channel\""
+    tag_map[$tag]+=", $channel"
   else
-    tag_map[$tag]="\"$channel\""
+    tag_map[$tag]="$channel"
   fi
 done
 
-declare -a json_array
+declare -a matrix_array
 for tag in "${!tag_map[@]}"; do
   tag_channels="${tag_map[$tag]}"
-  json_array+=("$(jq -n --arg tag "$tag" --argjson channels "[$tag_channels]" '{tag: $tag, channels: $channels}')")
+  matrix_array+=("$tag => { $tag_channels }")
 done
 
-echo "${json_array[@]}" | jq -s '.'
+printf -v matrix ',%s' "${matrix_array[@]}"
+echo "[${matrix:2}]"
