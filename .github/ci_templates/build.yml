@@ -9,7 +9,7 @@ steps:
   - name: Run go generate
     run: |
       TESTS_IMAGE_NAME={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
-      docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c 'make generate && rm -rf .git/worktrees'
+      docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c 'rm -rf .git/worktrees && make generate && rm -rf .git/worktrees'
       docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${TESTS_IMAGE_NAME} go generate .
 
   - name: Check generated code
