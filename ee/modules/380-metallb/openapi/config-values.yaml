@@ -126,6 +126,7 @@ properties:
             The additional pseudo-selector implemented by the speaker application. It selects nodes that are allowed to connect to external BGP routers. Do not confuse it with `speaker.nodeSelector` and  `nodeSelector`.
 
             An optional parameter.
+
             The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
           properties:
             matchExpressions:
@@ -191,7 +192,7 @@ properties:
           type: boolean
           default: false
           description: |
-            Avoid-buggy-ips prevents addresses ending with .0 and .255 to be used by a pool.
+            Prevents addresses ending with `.0` and `.255` to be used by a pool.
         bgp-advertisements:
           type: array
           description: |
@@ -203,28 +204,33 @@ properties:
                 type: integer
                 default: 32
                 description: |
-                  The aggregation-length advertisement option lets you “roll up” the /32s into a larger prefix. Defaults to 32. Works for IPv4 addresses.
+                  The aggregation-length advertisement option lets you “roll up” prefix into a larger one.
+
+                  Works for IPv4 addresses.
                 minimum: 1
               localpref:
                 type: integer
                 description: |
-                  The BGP LOCAL_PREF attribute which is used by BGP best path algorithm, Path with higher localpref is preferred over one with lower localpref.
+                  The `BGP LOCAL_PREF` attribute which is used by BGP best path algorithm.
+
+                  Path with higher localpref is preferred over one with lower localpref.
               communities:
                 type: array
                 description: |
                   Keys from the [bgpCommunities](#parameters-bgpcommunities) parameter to be associated with the announcement.
                 items:
                   type: string
-                x-doc-example: "[no-advertise]"
+                x-doc-example: [["no-advertise"]]
   bgpCommunities:
     type: object
     description: |
-      The BGP communities list
+      The BGP communities list.
+    x-doc-example:
+      no-advertise: "65535:65282"
     additionalProperties:
       type: string
       description: |
-        map of {key,value} pairs
-      x-doc-example: "no-advertise: 65535:65282"
+        Map of `key: value` pairs.
 x-examples:
 - bgpPeers:
   - peer-address: 192.168.1.1
