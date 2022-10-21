@@ -146,6 +146,14 @@ var (
 			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 		},
+		"modules/380-metallb/openapi/config-values.yaml": {
+			// ignore enum values
+			"properties.addressPools.items.properties.protocol",
+		},
+		"ee/modules/380-metallb/openapi/config-values.yaml": {
+			// ignore enum values
+			"properties.addressPools.items.properties.protocol",
+		},
 	}
 
 	arrayPathRegex = regexp.MustCompile(`\[\d+\]`)

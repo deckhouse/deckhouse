@@ -41,3 +41,10 @@ git push test-1 HEAD:main --force
 6. Push for deploy and suspend can be skipped with SKIP_PUSH_FOR_SUSPEND and SKIP_PUSH_FOR_DEPLOY variables.
 7. No registry cleanup.
 8. Autoclose for Dependabot PRs (can be enabled with secret ENABLE_DEPENDABOT_IN_FORKS=true).
+
+
+## Workflows schema 
+
+Trigger -> workflow -> result.
+
+![Workflows schema](ci-schema.png)
