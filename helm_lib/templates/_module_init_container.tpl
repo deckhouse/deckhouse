@@ -26,11 +26,8 @@
   {{- $semver_constraint := index . 1  -}}
 - name: check-linux-kernel
   image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
+  {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 2 }}
   env:
   - name: KERNEL_CONSTRAINT
     value: {{ $semver_constraint | quote }}
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
 {{- end }}
