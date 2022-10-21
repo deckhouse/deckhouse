@@ -1054,8 +1054,3 @@ status:
   reason: Shutdown
 `
 )
-
-const (
-	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
-	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
-)
