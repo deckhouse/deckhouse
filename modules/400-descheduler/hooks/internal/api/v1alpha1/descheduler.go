@@ -22,11 +22,11 @@ import (
 )
 
 // Descheduler is a description of a single descheduler instance
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:storageversion
-// +kubebuilder:resource:scope=Cluster
-// +kubebuilder:printcolumn:JSONPath=.status.ready,name=Ready,type=boolean
+
+
+
+
+
 type Descheduler struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -63,7 +63,7 @@ type DeschedulerPolicy struct {
 	// List of strategies with corresponding parameters for a given Descheduler instances
 	// To enable a strategy with default parameters, specify it like this:
 	// removePodsViolatingNodeAffinity: {}
-	// +kubebuilder:default={removePodsViolatingInterPodAntiAffinity: {}, removePodsViolatingNodeAffinity: {}}
+
 	Strategies DeschedulerStrategies `json:"strategies,omitempty"`
 }
 
@@ -126,7 +126,7 @@ type RemoveDuplicatesParams struct {
 }
 
 type LowNodeUtilization struct {
-	// +kubebuilder:default={nodeResourceUtilizationThresholds: {thresholds: {cpu: 20, memory: 20, pods: 20}, targetThresholds: {cpu: 50, memory: 50, pods: 50}}}
+
 	Params *LowNodeUtilizationParams `json:"params,omitempty"`
 }
 
@@ -137,7 +137,7 @@ type LowNodeUtilizationParams struct {
 }
 
 type HighNodeUtilization struct {
-	// +kubebuilder:default={nodeResourceUtilizationThresholds: {thresholds: {cpu: 50, memory: 50}}}
+
 	Params *HighNodeUtilizationParams `json:"params,omitempty"`
 }
 
@@ -159,7 +159,7 @@ type RemovePodsViolatingInterPodAntiAffinityParams struct {
 }
 
 type RemovePodsViolatingNodeAffinity struct {
-	// +kubebuilder:default={nodeAffinityType: {"requiredDuringSchedulingIgnoredDuringExecution",}}
+
 	Params *RemovePodsViolatingNodeAffinityParams `json:"params,omitempty"`
 }
 
@@ -199,7 +199,7 @@ type RemovePodsViolatingTopologySpreadConstraintParams struct {
 }
 
 type RemovePodsHavingTooManyRestarts struct {
-	// +kubebuilder:default={podsHavingTooManyRestarts: {podRestartThreshold: 100, includingInitContainers: true}}
+
 	Params *RemovePodsHavingTooManyRestartsParams `json:"params,omitempty"`
 }
 
@@ -213,7 +213,7 @@ type RemovePodsHavingTooManyRestartsParams struct {
 }
 
 type PodLifeTime struct {
-	// +kubebuilder:default={podLifeTime: {maxPodLifeTimeSeconds: 86400, podStatusPhases: {"Pending",}}}
+
 	Params *PodLifeTimeParams `json:"params,omitempty"`
 }
 

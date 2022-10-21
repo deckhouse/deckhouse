@@ -1,5 +1,3 @@
-//go:generate controller-gen object:headerFile=boilerplate.go.txt crd:allowDangerousTypes=true output:artifacts:config=../../../../crds
-
 /*
 Copyright 2022 Flant JSC
 
@@ -17,6 +15,3 @@ limitations under the License.
 */
 
 package v1alpha1
-
-// +kubebuilder:object:generate=true
-// +groupName=deckhouse.io

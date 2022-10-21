@@ -1,18 +1,4 @@
-# How to generate
-
-```shell
-go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0
-```
-
-```shell
-cd /deckhouse/modules/400-descheduler/hooks/internal/api/v1alpha1 && \
-go generate .
-```
-
-```shell
-cat /deckhouse/modules/400-descheduler/crds/deckhouse.io_deschedulers.yaml | yq '.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.deschedulerPolicy.properties.strategies.default.removePodsViolatingInterPodAntiAffinity = {} | .spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.deschedulerPolicy.properties.strategies.default.removePodsViolatingNodeAffinity = {} | del(.. | select(has("nodeSelector")).nodeSelector.description) | del(.. | select(has("tolerations")).tolerations | .. | select(has("description")).description) | del(.. | select(has("labelSelector")) | .. | .description?)' > /deckhouse/modules/400-descheduler/crds/deschedulers.yaml && \
-rm /deckhouse/modules/400-descheduler/crds/deckhouse.io_deschedulers.yaml
-```
+# How to generate module values
 
 ```shell
 cat /deckhouse/modules/400-descheduler/crds/deschedulers.yaml | \
