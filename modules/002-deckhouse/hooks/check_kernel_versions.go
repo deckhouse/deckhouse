@@ -40,11 +40,30 @@ import (
 type nodeKernelVersion struct {
 	Name          string
 	KernelVersion string
+	SemverVersion *semver.Version
+}
+
+type nodeConstraint struct {
+	KernelVersionConstraint string
+	ModulesListInUse        []string
+}
+
+var constraints = []nodeConstraint{
+	{
+		KernelVersionConstraint: ">= 4.9.17",
+		ModulesListInUse:        []string{"cni-cilium"},
+	},
+	{
+		KernelVersionConstraint: ">= 5.7",
+		ModulesListInUse:        []string{"cni-cilium", "istio"},
+	},
+	{
+		KernelVersionConstraint: ">= 5.7",
+		ModulesListInUse:        []string{"cni-cilium", "openvpn"},
+	},
 }
 
 const (
-	ciliumConstraint            = ">= 4.9.17"
-	ciliumAndIstioConstraint    = ">= 5.7"
 	nodeKernelCheckMetricsGroup = "node_kernel_check"
 	nodeKernelCheckMetricName   = "d8_node_kernel_does_not_satisfy_requirements"
 )
@@ -76,51 +95,55 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
+	v, err := semver.NewVersion(strings.Split(node.Status.NodeInfo.KernelVersion, "-")[0])
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse kernel version %s for node %s: %v", node.Status.NodeInfo.KernelVersion, node.Name, err)
+	}
+
 	return nodeKernelVersion{
 		Name:          node.Name,
 		KernelVersion: node.Status.NodeInfo.KernelVersion,
+		SemverVersion: v,
 	}, nil
 }
 
 func handleNodes(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
-	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
-
-	// check kernel requirements for cilium module
-	if !enabledModules.Has("cni-cilium") {
+	snap := input.Snapshots["nodes"]
+	if len(snap) == 0 {
 		return nil
 	}
 
-	snap := input.Snapshots["nodes"]
-	for _, n := range snap {
-		node := n.(nodeKernelVersion)
-		v, err := semver.NewVersion(strings.Split(node.KernelVersion, "-")[0])
-		if err != nil {
-			return fmt.Errorf("cannot parse kernel version %s for node %s: %v", node.KernelVersion, node.Name, err)
-		}
+	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
-		c, err := semver.NewConstraint(ciliumConstraint)
-		if err != nil {
-			return err
+	for _, constrant := range constraints {
+		// check modules in use
+		check := true
+		for _, m := range constrant.ModulesListInUse {
+			if !enabledModules.Has(m) {
+				check = false
+				break
+			}
 		}
-		if !c.Check(v) {
-			input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium", "constraint": ciliumConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-			input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium kernel constraint %s", node.KernelVersion, node.Name, ciliumConstraint)
-		}
-
-		// check kernel requirements for cilium and istio
-		if !enabledModules.Has("istio") {
+		if !check {
 			continue
 		}
 
-		c, err = semver.NewConstraint(ciliumAndIstioConstraint)
+		c, err := semver.NewConstraint(constrant.KernelVersionConstraint)
 		if err != nil {
 			return err
 		}
-		if !c.Check(v) {
-			input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": "cni-cilium,istio", "constraint": ciliumAndIstioConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-			input.LogEntry.Errorf("kernel %s on node %s does not satisfy cilium+istio kernel constraint %s", node.KernelVersion, node.Name, ciliumAndIstioConstraint)
+
+		for _, n := range snap {
+			if n == nil {
+				continue
+			}
+			node := n.(nodeKernelVersion)
+			if !c.Check(node.SemverVersion) {
+				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": strings.Join(constrant.ModulesListInUse, ","), "constraint": constrant.KernelVersionConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+				input.LogEntry.Errorf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, strings.Join(constrant.ModulesListInUse, ","))
+			}
 		}
 	}
 	return nil
