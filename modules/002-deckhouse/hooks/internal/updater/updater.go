@@ -17,6 +17,7 @@ limitations under the License.
 package updater
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
