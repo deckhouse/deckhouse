@@ -39,6 +39,7 @@
     Added control plane alerts: 
     - `D8IstioGlobalControlplaneDoesntWork`
     - `D8IstioAdditionalControlplaneDoesntWork` [#2410](https://github.com/deckhouse/deckhouse/pull/2410)
+ - **[kube-dns]** Added "prefer_udp" to stub zones. [#2800](https://github.com/deckhouse/deckhouse/pull/2800)
  - **[kube-dns]** kube-dns ExternalName Service fix — clusterDomain is taken into account. [#2430](https://github.com/deckhouse/deckhouse/pull/2430)
  - **[linstor]** Improve kernel-headers detection for СentOS. [#2641](https://github.com/deckhouse/deckhouse/pull/2641)
  - **[linstor]** Fix scheduling CNI Pods on tainted nodes. [#2551](https://github.com/deckhouse/deckhouse/pull/2551)
