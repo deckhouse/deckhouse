@@ -212,7 +212,7 @@ properties:
               communities:
                 type: array
                 description: |
-                  keys from bgpCommunities config to be associated with the announcement.
+                  Keys from the [bgpCommunities](#parameters-bgpcommunities) parameter to be associated with the announcement.
                 items:
                   type: string
                 x-doc-example: "[no-advertise]"
