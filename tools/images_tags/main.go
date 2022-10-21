@@ -47,6 +47,10 @@ var	DefaultImagesTags = map[string]interface{}{
 }
 `
 
+// This script is used for generating map of all modules and their images in deckhouse
+// The dummy tags are assigned to all of them.
+// This is used to execute templates and matrix tests.
+
 func main() {
 	var (
 		output string
@@ -55,6 +59,7 @@ func main() {
 	flag.StringVar(&output, "output", "", "output file for generated code")
 	flag.Parse()
 
+	// If output defined write a file
 	if output != "" {
 		var err error
 		stream, err = os.Create(output)
@@ -67,6 +72,7 @@ func main() {
 
 	tags := make(map[string]map[string]string)
 
+	// Run werf config render to get config file from which  we calculate images names
 	cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
@@ -77,6 +83,7 @@ func main() {
 		panic(err)
 	}
 
+	// Parse werf config and take images tags from it
 	a := strings.NewReader(string(out))
 	d := yaml.NewDecoder(a)
 	for {
@@ -100,6 +107,7 @@ func main() {
 					if tags[module] == nil {
 						tags[module] = make(map[string]string)
 					}
+					// Set dummy tag imageHash-<moduleName>-<ImageName> for every image
 					tags[module][tag] = fmt.Sprintf("imageHash-%s-%s", module, tag)
 				}
 			}
@@ -107,6 +115,7 @@ func main() {
 		}
 	}
 
+	// Create template and execute it
 	var buf bytes.Buffer
 	t := template.New("imagesTags")
 	t, err = t.Parse(imagesTagsTemplate)
@@ -117,12 +126,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// Run go fmt for generated code
 	p, err := format.Source(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}
 	stream.Write(p)
-
 }
 
 type Spec struct {
