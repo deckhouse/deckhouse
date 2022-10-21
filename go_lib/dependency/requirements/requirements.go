@@ -68,7 +68,7 @@ func HasDisruption(key string) (bool, string) {
 		return false, ""
 	}
 
-	return f()
+	return f(memoryStorage)
 }
 
 // SaveValue could be used in the modules, to store their internal values for updater
@@ -91,7 +91,7 @@ func GetValue(key string) (interface{}, bool) {
 type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
 
 // DisruptionFunc implements inner logic to warn users about potentially dangerous changes
-type DisruptionFunc func() (bool, string)
+type DisruptionFunc func(getter ValueGetter) (bool, string)
 
 type ValueGetter interface {
 	Get(path string) (interface{}, bool)

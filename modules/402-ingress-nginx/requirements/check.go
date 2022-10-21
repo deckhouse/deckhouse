@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ import (
 	"errors"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-var (
-	hasDisruptionVersionUpdate bool
+const (
+	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
 )
 
 func init() {
@@ -59,14 +61,5 @@ func init() {
 		return true, nil
 	}
 
-	disruptionCheckFunc := func() (bool, string) {
-		reason := ""
-		if hasDisruptionVersionUpdate {
-			reason = "Default IngressNginxController version 0.33 will be automatically changed to 1.1, this action will restart all controllers with non-specified version"
-		}
-		return hasDisruptionVersionUpdate, reason
-	}
-
 	requirements.RegisterCheck("ingressNginx", checkRequirementFunc)
-	requirements.RegisterDisruption("ingressNginx", disruptionCheckFunc)
 }
