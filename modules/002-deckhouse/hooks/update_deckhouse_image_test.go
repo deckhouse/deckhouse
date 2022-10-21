@@ -434,6 +434,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
 			})
 		})
+
 	})
 
 	Context("Disruption release", func() {
@@ -1052,4 +1053,9 @@ status:
   phase: Failed
   reason: Shutdown
 `
+)
+
+const (
+	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
 )
