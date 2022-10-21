@@ -50,11 +50,11 @@ const istioValues = `
         "1.13.7":
           revision: "v1x13x7"
           fullVersion: "1.13.7.0"
-          imageSuffix: "V13x0"
+          imageSuffix: "V1x13x7"
         "1.12.6":
           revision: "v1x12x6"
           fullVersion: "1.12.6.1"
-          imageSuffix: "V12x1"
+          imageSuffix: "V1x12x6"
       operatorVersionsToInstall:  []
       versionsToInstall: []
       federations: []
