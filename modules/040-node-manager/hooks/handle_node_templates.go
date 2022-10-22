@@ -194,6 +194,10 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				nodeObj.Labels["node-role.kubernetes.io/control-plane"] = ""
 				// Preseve 'master' node role for backward compatibility with user software.
 				nodeObj.Labels["node-role.kubernetes.io/master"] = ""
+
+				if len(nodeObj.Spec.Taints) > 0 {
+					nodeObj.Spec.Taints = fixMasterTaints(nodeObj.Spec.Taints)
+				}
 			}
 
 			nodeObj.Status = v1.NodeStatus{}
@@ -202,6 +206,37 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
+	if len(sourceTaints) == 0 {
+		return sourceTaints
+	}
+
+	tmp := make(map[string]*v1.Taint, len(sourceTaints))
+	for _, sourceTaint := range sourceTaints {
+		tmp[sourceTaint.Key] = &sourceTaint
+	}
+
+	// master nodes with k8s < 1.24 will have both taints
+	// >= 1.24 - only control-plane taint
+	// we should remove both taints explicitly if we are removing taints from master node
+	// because our NG: master is tracking only for control-plane taint and ignore "node-role.kubernetes.io/master"
+	// this could be removed after 1.25 becoming the minimal version
+	if _, ok := tmp["node-role.kubernetes.io/control-plane"]; !ok {
+		// control-plane taint was removed: single node installation
+		// also remove master taint is exists
+		if _, ok = tmp["node-role.kubernetes.io/master"]; ok {
+			delete(tmp, "node-role.kubernetes.io/master")
+			newTaints := make([]v1.Taint, 0, len(tmp))
+			for _, v := range tmp {
+				newTaints = append(newTaints, *v)
+			}
+			return newTaints
+		}
+	}
+
+	return sourceTaints
 }
 
 // fixCloudNodeTaints removes "node.deckhouse.io/uninitialized" taint when
