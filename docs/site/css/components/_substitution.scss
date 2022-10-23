@@ -1,10 +1,18 @@
 .substitution-intro {
+  &.intro {
+    padding-bottom: 0;
+  }
+
   & .intro__wrap {
     display: flex;
   }
 
   & .intro__row > div {
-    width: 65%;
+    width: 75%;
+  }
+
+  & .button_default {
+    margin-left: 30px;
   }
 
   & .intro__pic {
