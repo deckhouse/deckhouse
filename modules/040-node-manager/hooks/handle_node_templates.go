@@ -218,11 +218,13 @@ func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
 		tmp[sourceTaint.Key] = &sourceTaint
 	}
 
-	// master nodes with k8s < 1.24 will have both taints
-	// >= 1.24 - only control-plane taint
-	// we should remove both taints explicitly if we are removing taints from master node
-	// because our NG: master is tracking only for control-plane taint and ignore "node-role.kubernetes.io/master"
-	// this could be removed after 1.25 becoming the minimal version
+	// Deckhouse installation as a single node cluster requires
+	// removing taints from the NodeGroup/master.
+	// This operation will not remove 'master' taint from nodes
+	// when installing a cluster with Kubernetes <1.24. 
+	// This fix removes the 'master' taint from the master node when
+	// the 'control-plane' taint is not present.
+	// TODO(future): rethink this fix when Kubernetes 1.25 becomes the minimal version.
 	if _, ok := tmp["node-role.kubernetes.io/control-plane"]; !ok {
 		// control-plane taint was removed: single node installation
 		// also remove master taint if exists
