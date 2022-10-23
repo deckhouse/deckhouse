@@ -225,7 +225,7 @@ func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
 	// this could be removed after 1.25 becoming the minimal version
 	if _, ok := tmp["node-role.kubernetes.io/control-plane"]; !ok {
 		// control-plane taint was removed: single node installation
-		// also remove master taint is exists
+		// also remove master taint if exists
 		if _, ok = tmp["node-role.kubernetes.io/master"]; ok {
 			delete(tmp, "node-role.kubernetes.io/master")
 			newTaints := make([]v1.Taint, 0, len(tmp))
