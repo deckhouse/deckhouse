@@ -221,7 +221,7 @@ func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
 	// Deckhouse installation as a single node cluster requires
 	// removing taints from the NodeGroup/master.
 	// This operation will not remove 'master' taint from nodes
-	// when installing a cluster with Kubernetes <1.24. 
+	// when installing a cluster with Kubernetes <1.24.
 	// This fix removes the 'master' taint from the master node when
 	// the 'control-plane' taint is not present.
 	// TODO(future): rethink this fix when Kubernetes 1.25 becomes the minimal version.
