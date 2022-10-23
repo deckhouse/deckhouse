@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -208,7 +209,7 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 	})
 }
 
-func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string) error {
+func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).Run(func() error {
 		desiredReadyNodes := len(nodes)
 		var nodesList apiv1.NodeList
@@ -227,7 +228,20 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 			for _, c := range node.Status.Conditions {
 				if c.Type == apiv1.NodeReady {
 					if c.Status == apiv1.ConditionTrue {
-						readyNodes[node.Name] = struct{}{}
+						ready := true
+						if checker != nil {
+							var err error
+							ready, err = checker.IsReady(node.Name)
+							if err != nil {
+								log.WarnF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+							} else if !ready {
+								log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
+							}
+						}
+
+						if ready {
+							readyNodes[node.Name] = struct{}{}
+						}
 					}
 				}
 			}
