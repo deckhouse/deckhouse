@@ -77,10 +77,6 @@ func (m *Monitor) Stop() {
 	close(m.stopCh)
 }
 
-func (m *Monitor) getLogger() *log.Entry {
-	return m.logger
-}
-
 func (m *Monitor) Subscribe(handler Handler) {
 	m.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
