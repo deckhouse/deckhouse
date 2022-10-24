@@ -40,6 +40,7 @@ const (
 	NodeGroupNameLabel                = "node.deckhouse.io/group"
 	LastAppliedNodeTemplateAnnotation = "node-manager.deckhouse.io/last-applied-node-template"
 	NodeUnininitalizedTaintKey        = "node.deckhouse.io/uninitialized"
+	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
 )
 
 type NodeSettings struct {
@@ -196,7 +197,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				nodeObj.Labels["node-role.kubernetes.io/master"] = ""
 
 				if len(nodeObj.Spec.Taints) > 0 {
-					nodeObj.Spec.Taints = fixMasterTaints(nodeObj.Spec.Taints)
+					nodeObj.Spec.Taints = fixMasterTaints(nodeObj.Spec.Taints, nodeGroup.Taints)
 				}
 			}
 
@@ -208,14 +209,19 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
-	if len(sourceTaints) == 0 {
-		return sourceTaints
+func fixMasterTaints(nodeTaints []v1.Taint, ngTaints []v1.Taint) []v1.Taint {
+	if len(nodeTaints) == 0 {
+		return nodeTaints
 	}
 
-	tmp := make(map[string]*v1.Taint, len(sourceTaints))
-	for _, sourceTaint := range sourceTaints {
-		tmp[sourceTaint.Key] = &sourceTaint
+	ngTaintsMap := make(map[string]struct{}, len(ngTaints))
+	for _, ngTaint := range ngTaints {
+		ngTaintsMap[ngTaint.Key] = struct{}{}
+	}
+
+	nodeTaintsMap := make(map[string]*v1.Taint, len(nodeTaints))
+	for _, sourceTaint := range nodeTaints {
+		nodeTaintsMap[sourceTaint.Key] = &sourceTaint
 	}
 
 	// Deckhouse installation as a single node cluster requires
@@ -225,20 +231,23 @@ func fixMasterTaints(sourceTaints []v1.Taint) []v1.Taint {
 	// This fix removes the 'master' taint from the master node when
 	// the 'control-plane' taint is not present.
 	// TODO(future): rethink this fix when Kubernetes 1.25 becomes the minimal version.
-	if _, ok := tmp["node-role.kubernetes.io/control-plane"]; !ok {
+	if _, ok := nodeTaintsMap["node-role.kubernetes.io/control-plane"]; !ok {
 		// control-plane taint was removed: single node installation
-		// also remove master taint if exists
-		if _, ok = tmp["node-role.kubernetes.io/master"]; ok {
-			delete(tmp, "node-role.kubernetes.io/master")
-			newTaints := make([]v1.Taint, 0, len(tmp))
-			for _, v := range tmp {
+		// also remove master taint if exists only in node spec.
+		// If master taint is set directly in the NG - keep it as is
+		_, existsInNG := ngTaintsMap[masterNodeRoleKey]
+		_, existsInNodeSpec := nodeTaintsMap[masterNodeRoleKey]
+		if existsInNodeSpec && !existsInNG {
+			delete(nodeTaintsMap, "node-role.kubernetes.io/master")
+			newTaints := make([]v1.Taint, 0, len(nodeTaintsMap))
+			for _, v := range nodeTaintsMap {
 				newTaints = append(newTaints, *v)
 			}
 			return newTaints
 		}
 	}
 
-	return sourceTaints
+	return nodeTaints
 }
 
 // fixCloudNodeTaints removes "node.deckhouse.io/uninitialized" taint when
