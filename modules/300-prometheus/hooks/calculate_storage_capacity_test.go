@@ -181,7 +181,7 @@ spec:
 		})
 	})
 
-	FContext("Cluster with Small PVC", func() {
+	Context("Cluster with Small PVC", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(pvcSmall))
 			f.RunHook()
