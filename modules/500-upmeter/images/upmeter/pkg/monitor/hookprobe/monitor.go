@@ -71,6 +71,7 @@ func (m *Monitor) Stop() {
 func (m *Monitor) getLogger() *log.Entry {
 	return m.logger
 }
+
 func (m *Monitor) Subscribe(handler Handler) {
 	m.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -81,7 +82,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 			}
 			handler.OnAdd(hp)
 		},
-		UpdateFunc: func(_ interface{}, newObj interface{}) {
+		UpdateFunc: func(_, newObj interface{}) {
 			hp, err := convert(newObj)
 			if err != nil {
 				m.logger.Errorf(err.Error())

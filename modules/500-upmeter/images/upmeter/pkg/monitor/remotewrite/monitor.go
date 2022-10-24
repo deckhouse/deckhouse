@@ -82,7 +82,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 			}
 			handler.OnAdd(rw)
 		},
-		UpdateFunc: func(_ interface{}, newObj interface{}) {
+		UpdateFunc: func(_, newObj interface{}) {
 			rw, err := convert(newObj)
 			if err != nil {
 				m.logger.Errorf(err.Error())
