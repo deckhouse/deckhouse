@@ -15,9 +15,6 @@
 # limitations under the License.
 #
 
-set -Eeo pipefail
-shopt -s failglob
-
 TRIVY_ERROR=false
 
 function check_trivy_rc() {
@@ -30,8 +27,6 @@ function check_trivy_rc() {
 function handle_trivy_error() {
   if [[ $TRIVY_ERROR ]]; then
     echo '🤯 There was some failed Trivy runs, please check job log.'
-    if [[ $FAIL_ON_TRIVY_ERROR ]]; then
-      exit 1
-    fi
+    exit 1
   fi
 }
