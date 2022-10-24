@@ -134,6 +134,8 @@ func main() {
 	}
 	moduleDirs = append(moduleDirs, additionalModuleDirs...)
 
+	moduleDirs = append(moduleDirs, requirementCheckDirs(workDir)...)
+
 	for _, dir := range moduleDirs {
 		if err := searchHooks(&hookModules, dir, workDir); err != nil {
 			panic(err)
@@ -152,4 +154,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func requirementCheckDirs(workDir string) []string {
+	moduleDirs, err := filepath.Glob(filepath.Join(workDir, "modules/*/requirements"))
+	if err != nil {
+		panic(err)
+	}
+
+	additionalModuleDirs, err := filepath.Glob(filepath.Join(workDir, "ee/modules/*/requirements"))
+	if err != nil {
+		panic(err)
+	}
+	moduleDirs = append(moduleDirs, additionalModuleDirs...)
+
+	additionalModuleDirs, err = filepath.Glob(filepath.Join(workDir, "ee/fe/modules/*/requirements"))
+	if err != nil {
+		panic(err)
+	}
+	moduleDirs = append(moduleDirs, additionalModuleDirs...)
+
+	return moduleDirs
 }

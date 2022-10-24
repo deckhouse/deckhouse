@@ -32,6 +32,7 @@ import (
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
 
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
@@ -297,6 +298,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	}
 	input.Values.Set("global.discovery.kubernetesVersions", versions)
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
+	requirements.SaveValue("global.discovery.kubernetesVersion", minVerStr)
 
 	input.LogEntry.Infof("k8s version was discovered: %s, all %v", minVerStr, versions)
 	return nil

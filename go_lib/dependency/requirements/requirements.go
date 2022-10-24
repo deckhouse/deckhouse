@@ -18,42 +18,33 @@ package requirements
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/tidwall/gjson"
 )
 
 var (
-	once             sync.Once
 	defaultRegistry  requirementsResolver
+	memoryStorage    *MemoryValuesStore
 	ErrNotRegistered = errors.New("Not registered")
 )
 
+func init() {
+	defaultRegistry = newRegistry()
+	memoryStorage = newMemoryValuesStore()
+}
+
 // RegisterCheck add CheckFunc for some component
 func RegisterCheck(key string, f CheckFunc) {
-	once.Do(
-		func() {
-			defaultRegistry = newRegistry()
-		},
-	)
-
 	defaultRegistry.RegisterCheck(key, f)
 }
 
 // RegisterDisruption add DisruptionFunc for some component
 func RegisterDisruption(key string, f DisruptionFunc) {
-	once.Do(
-		func() {
-			defaultRegistry = newRegistry()
-		},
-	)
-
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
 // CheckRequirement run check function for `key` requirement. Returns true if check is passed, false otherwise
-func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
+func CheckRequirement(key, value string) (bool, error) {
 	if defaultRegistry == nil {
 		return true, nil
 	}
@@ -63,7 +54,7 @@ func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
 		return false, err
 	}
 
-	return f(value, getter)
+	return f(value, memoryStorage)
 }
 
 // HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
@@ -77,17 +68,33 @@ func HasDisruption(key string) (bool, string) {
 		return false, ""
 	}
 
-	return f()
+	return f(memoryStorage)
+}
+
+// SaveValue could be used in the modules, to store their internal values for updater
+// One module does not have access to the other's module values, so we can do it through this interface
+func SaveValue(key string, value interface{}) {
+	memoryStorage.Set(key, value)
+}
+
+// RemoveValue remove previously stored value
+func RemoveValue(key string) {
+	memoryStorage.Remove(key)
+}
+
+// GetValue returns saved value. !Attention: Please don't use it in hooks, only for tests
+func GetValue(key string) (interface{}, bool) {
+	return memoryStorage.Get(key)
 }
 
 // CheckFunc check come precondition, comparing desired value (requirementValue) with current value (getter)
 type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
 
 // DisruptionFunc implements inner logic to warn users about potentially dangerous changes
-type DisruptionFunc func() (bool, string)
+type DisruptionFunc func(getter ValueGetter) (bool, string)
 
 type ValueGetter interface {
-	Get(path string) gjson.Result
+	Get(path string) (interface{}, bool)
 }
 
 type requirementsResolver interface {

@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -35,8 +36,10 @@ var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func()
 
 		It("Should have no minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(minVersionValuesKey).Exists()).To(BeFalse())
-			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+			_, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeFalse())
+			v, _ := requirements.GetValue(incompatibleVersionsKey)
+			Expect(v).To(BeFalse())
 		})
 	})
 
@@ -56,8 +59,11 @@ spec:
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("1.1.0"))
-			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.1.0"))
+			v, _ := requirements.GetValue(incompatibleVersionsKey)
+			Expect(v).To(BeFalse())
 		})
 	})
 
@@ -76,8 +82,11 @@ spec:
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
-			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("0.33.0"))
+			v, _ := requirements.GetValue(incompatibleVersionsKey)
+			Expect(v).To(BeFalse())
 		})
 	})
 
@@ -113,8 +122,11 @@ spec:
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
-			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("0.33.0"))
+			v, _ := requirements.GetValue(incompatibleVersionsKey)
+			Expect(v).To(BeFalse())
 		})
 	})
 
@@ -142,8 +154,11 @@ spec:
 
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
-			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeTrue())
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("0.33.0"))
+			v, _ := requirements.GetValue(incompatibleVersionsKey)
+			Expect(v).To(BeTrue())
 		})
 	})
 })
