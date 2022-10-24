@@ -131,7 +131,7 @@ func convert(o interface{}) (*RemoteWrite, error) {
 	var rw RemoteWrite
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &rw)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to RemoteWrite: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to UpmeterRemoteWrite: %v", err)
 	}
 	return &rw, nil
 }

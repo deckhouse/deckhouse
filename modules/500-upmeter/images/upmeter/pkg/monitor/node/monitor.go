@@ -99,7 +99,7 @@ func convert(o interface{}) (*corev1.Node, error) {
 
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &node)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to corev1.Node: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to core/v1 Node: %v", err)
 	}
 	return &node, nil
 }

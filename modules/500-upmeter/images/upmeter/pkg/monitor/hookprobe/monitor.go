@@ -131,7 +131,7 @@ func convert(o interface{}) (*HookProbe, error) {
 	}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &hp)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to HookProbe: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to UpmeterHookProbe: %v", err)
 	}
 	return &hp, nil
 }
