@@ -171,7 +171,8 @@
         "action": "index",
         "index": "logs-%F"
       },
-      "mode": "bulk"
+      "mode": "bulk",
+      "suppress_type_name": true
     }
   }
 }

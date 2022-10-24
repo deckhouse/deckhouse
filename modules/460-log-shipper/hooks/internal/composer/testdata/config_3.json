@@ -38,7 +38,8 @@
         "index": "{{ kubernetes.namespace }}-%F"
       },
       "pipeline": "test-pipe",
-      "mode": "bulk"
+      "mode": "bulk",
+      "suppress_type_name": true
     }
   }
 }

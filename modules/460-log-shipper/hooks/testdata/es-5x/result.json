@@ -146,7 +146,8 @@
       },
       "pipeline": "testpipe",
       "mode": "bulk",
-      "doc_type": "_doc"
+      "doc_type": "_doc",
+      "suppress_type_name": false
     }
   }
 }

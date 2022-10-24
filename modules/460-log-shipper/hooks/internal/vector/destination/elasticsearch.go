@@ -46,7 +46,8 @@ type Elasticsearch struct {
 
 	Mode string `json:"mode,omitempty"`
 
-	DocType string `json:"doc_type,omitempty"`
+	DocType          string `json:"doc_type,omitempty"`
+	SuppressTypeName bool   `json:"suppress_type_name"`
 }
 
 type ElasticsearchEncoding struct {
@@ -140,10 +141,11 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 			Action: bulkAction,
 			Index:  spec.Index,
 		},
-		Endpoint:    spec.Endpoint,
-		Pipeline:    spec.Pipeline,
-		Compression: "gzip",
-		DocType:     spec.DocType,
-		Mode:        mode,
+		Endpoint:         spec.Endpoint,
+		Pipeline:         spec.Pipeline,
+		Compression:      "gzip",
+		DocType:          spec.DocType,
+		SuppressTypeName: spec.DocType == "",
+		Mode:             mode,
 	}
 }
