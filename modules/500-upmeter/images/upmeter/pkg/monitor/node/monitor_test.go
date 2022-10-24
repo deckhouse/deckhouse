@@ -78,13 +78,14 @@ func TestNodesMonitor(t *testing.T) {
 		t.Fatalf("cannot create a node: %v", err)
 	}
 
-	err = wait.PollUntil(time.Millisecond, func() (bool, error) {
+	// The inifinity will be capped by test timeout
+	err = wait.PollInfinite(time.Millisecond, func() (bool, error) {
 		nodes, err = monitor.List()
 		if err != nil {
 			return false, err
 		}
 		return len(nodes) == 2, nil
-	}, wait.NeverStop)
+	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -97,13 +98,14 @@ func TestNodesMonitor(t *testing.T) {
 		t.Fatalf("cannot create a node: %v", err)
 	}
 
-	err = wait.PollUntil(time.Millisecond, func() (bool, error) {
+	// The inifinity will be capped by test timeout
+	err = wait.PollInfinite(time.Millisecond, func() (bool, error) {
 		nodes, err = monitor.List()
 		if err != nil {
 			return false, err
 		}
 		return len(nodes) == 1, nil
-	}, wait.NeverStop)
+	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
