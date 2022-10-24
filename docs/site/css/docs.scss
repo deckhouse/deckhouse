@@ -1093,54 +1093,6 @@ ul .resources__prop_title {
 
 .license-form {
   &__wrap {
-    display: flex;
-    margin-bottom: 30px;
-  }
-
-  &-enter {
-    & .form--inline {
-      display: flex;
-      align-items: flex-end;
-    }
-
-    & .form__row {
-      margin-bottom: 0;
-      flex: 1;
-    }
-
-    & a.button {
-      margin-left: 20px;
-    }
-  }
-
-  &-request {
-    margin-left: 50px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-
-    & .button-group {
-      align-items: flex-end;
-
-      & .button {
-        margin-bottom: 0;
-      }
-    }
-  }
-}
-
-.custom-disabled-block {
-  &.disabled {
-    display: block;
-    opacity: .3;
-    pointer-events: none;
-    user-select: none;
-    filter: blur(4px);
-  }
-}
-
-.license-form {
-  &__wrap {
     margin-bottom: 30px;
   }
 
