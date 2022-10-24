@@ -20,6 +20,7 @@
 ## Fixes
 
 
+ - **[candi]** Remove `master` taint if `control-plane` taint was removed in a single node installation. [#2809](https://github.com/deckhouse/deckhouse/pull/2809)
  - **[candi]** Fix Yandex NAT Instance netplan config. [#2730](https://github.com/deckhouse/deckhouse/pull/2730)
     No impact for existing cluster. Only fixes cluster bootstap of `WithNATInstance` layot in Yandex Cloud.
  - **[candi]** Fix routes for multi-zonal clusters when using `WithNATInstance` layout. [#2544](https://github.com/deckhouse/deckhouse/pull/2544)
@@ -31,6 +32,7 @@
  - **[global-hooks]** Reduce static requests for control plane Pods. [#2588](https://github.com/deckhouse/deckhouse/pull/2588)
     Control plane components will restart.
  - **[go_lib]** Changed certificate re-issue time to 15 days before expiration to avoid useless `CertificateSecretExpiredSoon` alerts. [#2582](https://github.com/deckhouse/deckhouse/pull/2582)
+ - **[ingress-nginx]** Increase Ingress validation webhook timeout. [#2812](https://github.com/deckhouse/deckhouse/pull/2812)
  - **[ingress-nginx]** Reload ingress controller configuration on `additionalHeaders` field change. This will automatically add configured custom headers to the nginx.conf file without restarting the controller. [#2545](https://github.com/deckhouse/deckhouse/pull/2545)
  - **[istio]** Fix the `D8IstioGlobalControlplaneDoesntWork` alert. [#2714](https://github.com/deckhouse/deckhouse/pull/2714)
  - **[istio]** Fix `D8IstioAdditionalControlplaneDoesntWork` alert. [#2665](https://github.com/deckhouse/deckhouse/pull/2665)
