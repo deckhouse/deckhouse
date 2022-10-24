@@ -1141,7 +1141,6 @@ ul .resources__prop_title {
 
 .license-form {
   &__wrap {
-    display: flex;
     margin-bottom: 30px;
   }
 
@@ -1161,8 +1160,25 @@ ul .resources__prop_title {
     }
   }
 
+  &__message {
+    display: flex;
+    align-items: center;
+    height: 43px;
+    color: #198754;
+    margin-left: 30px;
+    margin-bottom: 3px;
+  }
+
+  &__warn {
+    display: flex;
+    align-items: center;
+    color: #dc3545;
+    height: 43px;
+    margin-left: 30px;
+    max-width: 160px;
+  }
+
   &-request {
-    margin-left: 50px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -1174,6 +1190,16 @@ ul .resources__prop_title {
         margin-bottom: 0;
       }
     }
+  }
+}
+
+.license-token-input {
+  &--success {
+    border-color: #198754 !important;
+  }
+
+  &--error {
+    border-color: #dc3545 !important;
   }
 }
 

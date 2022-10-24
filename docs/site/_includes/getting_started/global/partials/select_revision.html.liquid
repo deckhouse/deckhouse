@@ -1,3 +1,4 @@
+<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 {% if page.platform_code == "bm-private" %}
   <script type="text/javascript" src='{{ assets["getting-started-private.js"].digest_path }}'></script>
@@ -19,7 +20,7 @@
         <a id='tab_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', '{{ revision }}' === 'ce' );" >
+                 toggleDisabled('tab_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}', '[license-token]');" >
         {{ site.data.i18n[revision] }}
         </a>
     {% endfor %}
@@ -84,26 +85,17 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 
 <script>
 $(document).ready(function() {
-
   $('#enter-license-key').click((e)=> {
-      e.preventDefault();
-      triggerBlockOnItemContent('[license-token]', '.dimmer-block-content');
-      const licenseToken = $('[license-token]').val()
-      if (licenseToken == '') {
-          $.removeCookie('license-token', {path: '/'})
-      }
-      update_license_parameters(licenseToken);
+    e.preventDefault();
+    let licenseToken = $('[license-token]').val()
+    getLicenseToken(licenseToken)
   });
 
   $('[license-token]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
-      const licenseToken = $('[license-token]').val()
+      let licenseToken = $('[license-token]').val()
       if (keycode == '13') {
-        triggerBlockOnItemContent('[license-token]', '.dimmer-block-content');
-        if (licenseToken == '') {
-            $.removeCookie('license-token', {path: '/'})
-        }
-        update_license_parameters(licenseToken);
+        getLicenseToken(licenseToken)
       }
   });
 

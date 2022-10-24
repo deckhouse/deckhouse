@@ -1,0 +1,9 @@
+response:
+  en:
+    resolve: 'Key valid until<br/>'
+    reject: 'Invalid key or&nbsp;license has expired'
+    empty_input: 'Enter license key'
+  ru:
+    resolve: 'Ключ действителен<br/>до'
+    reject: 'Неверный ключ или&nbsp;лицензия истекла'
+    empty_input: 'Введите лицензионный ключ'

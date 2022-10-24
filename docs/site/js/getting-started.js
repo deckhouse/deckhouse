@@ -195,6 +195,72 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   }
 }
 
+function toggleDisabled(tab, inputDataAttr) {
+  if (tab === 'tab_withoutnat_ce') {
+    $('.dimmer-block-content.common').removeClass('disabled');
+  } else if (tab === 'tab_withoutnat_ee') {
+    const licenseToken = $(inputDataAttr).val();
+    getLicenseToken(licenseToken)
+  }
+}
+
+async function getLicenseToken(token) {
+  try {
+    if (token === '') {
+      throw new Error(responseFromLicense[pageLang]['empty_input']);
+    }
+    const span = $($('#enter-license-key').next('span'));
+    const input = $('[license-token]');
+    const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
+    if(response.ok) {
+      const data = await response.json();
+      handlerResolveData(data, token, span, input);
+    } else {
+      handlerRejectData(token, span, input);
+    }
+  } catch (e) {
+    const span = $($('#enter-license-key').next('span'));
+    const input = $('[license-token]');
+    handlerRejectData(token, span, input, e.message);
+  }
+}
+
+function handlerResolveData(data, licenseToken, messageElement, inputField) {
+  const date = new Date(data.expires_at * 1000);
+  let locales = 'en-GB';
+  if (pageLang === 'ru') {
+    locales = 'ru-RU'
+  }
+  const formattedDate = date.toLocaleDateString(locales, {dateStyle: "medium"});
+
+  messageElement.html(`${responseFromLicense[pageLang]['resolve']} ${formattedDate}`);
+  messageElement.removeAttr('class').addClass('license-form__message');
+
+  $('.dimmer-block-content').removeClass('disabled');
+  inputField.removeClass('license-token-input--error');
+  inputField.addClass('license-token-input--success');
+
+  update_license_parameters(licenseToken);
+}
+
+function handlerRejectData(licenseToken, messageElement, inputField, message = null) {
+  if (message) {
+    messageElement.html(message);
+  } else {
+    messageElement.html(responseFromLicense[pageLang]['reject']);
+  }
+  messageElement.removeAttr('class').addClass('license-form__warn');
+
+  licenseToken = '';
+  $.removeCookie('license-token', {path: '/'});
+
+  update_license_parameters(licenseToken);
+  $('.dimmer-block-content').addClass('disabled');
+  $('.dimmer-block-content.common').addClass('disabled');
+  inputField.removeClass('license-token-input--success');
+  inputField.addClass('license-token-input--error');
+}
+
 // Update license token and docker config
 function update_license_parameters(newtoken = '') {
 

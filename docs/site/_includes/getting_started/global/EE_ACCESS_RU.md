@@ -4,8 +4,8 @@
   Введите лицензионный ключ
 </h3>
 
-<div class="form form--inline" style="width: 500px;">
-  <div class="form__row">
+<div class="form form--inline">
+  <div class="form__row" style="max-width: 383px;">
     <label class="label">
       Лицензионный ключ
     </label>
@@ -14,6 +14,7 @@
       autocomplete="off" />
   </div>
   <a href="#" id="enter-license-key" class="button button_alt">Ввести</a>
+  <span></span>
 </div>
 </div>
 
@@ -30,7 +31,7 @@ $(document).ready(function() {
 
 <div class="license-form-request">
 <h3 class="text text_h3">
-  Или запросить лицензионный ключ
+  Нет ключа?
 </h3>
 <div class="button-group">
   <a href="javascript:raOpen()" class="button button_alt">Запросить бесплатный 30-дневный доступ!</a>
