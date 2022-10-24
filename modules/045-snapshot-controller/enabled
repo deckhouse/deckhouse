@@ -25,7 +25,6 @@ function __main__() {
       cloud-provider-azure \
       cloud-provider-gcp \
       cloud-provider-openstack \
-      cloud-provider-yandex \
       cloud-provider-vsphere \
       linstor \
     ; do
