@@ -89,9 +89,6 @@ func prometheusDisk(input *go_hook.HookInput) error {
 	var main storage
 	var longterm storage
 
-	main.VolumeSizeGiB = defaultDiskSizeGiB
-	longterm.VolumeSizeGiB = defaultDiskSizeGiB
-
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
 		switch pvc.PrometheusName {
@@ -106,6 +103,14 @@ func prometheusDisk(input *go_hook.HookInput) error {
 		default:
 			continue
 		}
+	}
+
+	if main.VolumeSizeGiB == 0 {
+		main.VolumeSizeGiB = defaultDiskSizeGiB
+	}
+
+	if longterm.VolumeSizeGiB == 0 {
+		longterm.VolumeSizeGiB = defaultDiskSizeGiB
 	}
 
 	main.RetentionSizeGiB = int(math.Round(float64(main.VolumeSizeGiB) * float64(retentionPercent) / 100.0))

@@ -114,6 +114,23 @@ spec:
       storage: 300Gi
   storageClassName: test
 `
+
+		pvcSmall = `
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: prometheus
+    prometheus: main
+  name: prometheus-main-db-prometheus-main-0
+  namespace: d8-monitoring
+spec:
+  resources:
+    requests:
+      storage: 15Gi
+  storageClassName: test
+    `
 	)
 
 	f := HookExecutionConfigInit(`{"prometheus": {"internal":{"prometheusMain":{}, "prometheusLongterm":{} }}}`, `{}`)
@@ -161,6 +178,19 @@ spec:
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("250"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("300"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("250"))
+		})
+	})
+
+	FContext("Cluster with Small PVC", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(pvcSmall))
+			f.RunHook()
+		})
+
+		It("must be executed successfully; main disk size must be 15, retention must be 12", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("15"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("12"))
 		})
 	})
 })
