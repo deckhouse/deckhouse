@@ -6,12 +6,21 @@
 <script>
 var documents=[
 {%- assign searchedpages = site.pages | where: "searchable", true | where: "lang", page.lang %}
+{%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 {%- for page in searchedpages %}
 {
-{%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 "title": "{{ page.title | escape }}",
 "url": "{{ page.url | remove_first: removed_prefix }}",
-"content": {{ page.content | strip_html | strip | regex_replace: "\n", ' ' | regex_replace: '\s\s+', ' ' | jsonify }}
+"content": {{ page.content | normalizeSearchContent | jsonify }}
+}
+{%- unless forloop.last %},{% endunless %}
+{%- endfor -%}
+{%- if site.data.search.searchItems[page.lang].size > 0 %},{% endif %}
+{%- for item in site.data.search.searchItems[page.lang] %}
+{
+"title": "{{ item.title | escape }}",
+"url": "{{ item.url | remove_first: removed_prefix }}",
+"content": {{ item.content | default: '' | normalizeSearchContent | jsonify }}
 }
 {%- unless forloop.last %},{% endunless %}
 {%- endfor -%}
