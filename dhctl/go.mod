@@ -22,18 +22,18 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.6.1
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+	github.com/stretchr/testify v1.8.0
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
-	gopkg.in/yaml.v2 v2.3.0
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
-	k8s.io/api v0.19.11
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/api v0.25.3
 	k8s.io/apiextensions-apiserver v0.19.11
-	k8s.io/apimachinery v0.19.11
-	k8s.io/client-go v0.19.11
+	k8s.io/apimachinery v0.25.3
+	k8s.io/client-go v0.25.3
 	k8s.io/klog v1.0.0
-	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
+	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	sigs.k8s.io/yaml v1.2.0
 )
 
