@@ -39,11 +39,16 @@ type Monitor struct {
 }
 
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
-	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "upmeterremotewrites"}
-	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+	var (
+		gvr          = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "upmeterremotewrites"}
+		indexers     = cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+		resyncPeriod = 5 * time.Minute
+
+		tweakListOptions dynamicinformer.TweakListOptionsFunc = nil
+	)
 
 	informer := dynamicinformer.NewFilteredDynamicInformer(
-		kubeClient.Dynamic(), gvr, corev1.NamespaceAll, 300*time.Second, indexers, nil)
+		kubeClient.Dynamic(), gvr, corev1.NamespaceAll, resyncPeriod, indexers, tweakListOptions)
 
 	return &Monitor{
 		informer: informer.Informer(),
