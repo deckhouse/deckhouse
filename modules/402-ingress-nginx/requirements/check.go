@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package requirements
 
 import (
 	"errors"
@@ -24,26 +24,31 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-var (
-	hasDisruptionVersionUpdate bool
+const (
+	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
 )
 
 func init() {
 	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		hasIncompatibleCtrls := getter.Get(incompatibleVersionsKey).Bool()
-		if hasIncompatibleCtrls {
-			return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
+		hasIncompatibleCtrlsRaw, exists := getter.Get(incompatibleVersionsKey)
+		if exists {
+			hasIncompatibleCtrls := hasIncompatibleCtrlsRaw.(bool)
+			if hasIncompatibleCtrls {
+				return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
+			}
 		}
 
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
-		currentVersionStr := getter.Get(minVersionValuesKey).String()
-		if currentVersionStr == "" {
+		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
+		if !exists {
 			// no IngressNginxController CRs exist
 			return true, nil
 		}
+		currentVersionStr := currentVersionRaw.(string)
 		currentVersion, err := semver.NewVersion(currentVersionStr)
 		if err != nil {
 			return false, err
@@ -56,14 +61,5 @@ func init() {
 		return true, nil
 	}
 
-	disruptionCheckFunc := func() (bool, string) {
-		reason := ""
-		if hasDisruptionVersionUpdate {
-			reason = "Default IngressNginxController version 0.33 will be automatically changed to 1.1, this action will restart all controllers with non-specified version"
-		}
-		return hasDisruptionVersionUpdate, reason
-	}
-
 	requirements.RegisterCheck("ingressNginx", checkRequirementFunc)
-	requirements.RegisterDisruption("ingressNginx", disruptionCheckFunc)
 }

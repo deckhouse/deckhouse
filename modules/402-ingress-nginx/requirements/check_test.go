@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,61 +14,45 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package requirements
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 func TestIngressNginxVersionRequirement(t *testing.T) {
+	requirements.RemoveValue(minVersionValuesKey)
+	requirements.RemoveValue(incompatibleVersionsKey)
 	t.Run("requirement met", func(t *testing.T) {
-		getter := mockGetter{
-			Value: "0.33.0",
-		}
-		ok, err := requirements.CheckRequirement("ingressNginx", "0.33", getter)
+		requirements.SaveValue(minVersionValuesKey, "0.33.0")
+		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
-		getter := mockGetter{
-			Value: "0.26",
-		}
-		ok, err := requirements.CheckRequirement("ingressNginx", "0.33", getter)
+		requirements.SaveValue(minVersionValuesKey, "0.26")
+		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("no CRs", func(t *testing.T) {
-		getter := mockGetter{
-			Value: "",
-		}
-		ok, err := requirements.CheckRequirement("ingressNginx", "0.33", getter)
+		requirements.RemoveValue(minVersionValuesKey)
+		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
-}
 
-type mockGetter struct {
-	Value string
-}
-
-func (mg mockGetter) Get(s string) gjson.Result {
-	if s == incompatibleVersionsKey {
-		return gjson.Result{
-			Type: gjson.False,
-			Raw:  "false",
-		}
-	}
-	return gjson.Result{
-		Type: gjson.String,
-		Str:  mg.Value,
-		Raw:  mg.Value,
-	}
+	t.Run("Incompatible version", func(t *testing.T) {
+		requirements.SaveValue(incompatibleVersionsKey, true)
+		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
 }

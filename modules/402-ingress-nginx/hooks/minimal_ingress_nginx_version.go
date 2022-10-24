@@ -24,6 +24,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -41,8 +43,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverMinimalNginxVersion)
 
 const (
-	minVersionValuesKey     = "ingressNginx.internal.minimalControllerVersion"
-	incompatibleVersionsKey = "ingressNginx.internal.hasIncompatibleIngressClass"
+	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
+	disruptionKey           = "ingressNginx:hasDisruption"
 )
 
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -102,15 +105,19 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set(incompatibleVersionsKey, isIncompatible)
-	hasDisruptionVersionUpdate = isDisruptionUpdate
+	requirements.SaveValue(incompatibleVersionsKey, isIncompatible)
+	if isDisruptionUpdate {
+		requirements.SaveValue(disruptionKey, isIncompatible)
+	} else {
+		requirements.RemoveValue(disruptionKey)
+	}
 
 	if minVersion == nil {
-		input.Values.Remove(minVersionValuesKey)
+		requirements.RemoveValue(minVersionValuesKey)
 		return nil
 	}
 
-	input.Values.Set(minVersionValuesKey, minVersion.String())
+	requirements.SaveValue(minVersionValuesKey, minVersion.String())
 
 	return nil
 }
