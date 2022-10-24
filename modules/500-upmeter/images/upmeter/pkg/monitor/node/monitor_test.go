@@ -67,7 +67,7 @@ func TestNodesMonitor(t *testing.T) {
 		t.Fatalf("failed to get nodes: %v", err)
 	}
 	if len(nodes) != 1 {
-		t.Fatalf("there should be only one nodes on the start: actual quantity %d", len(nodes))
+		t.Fatalf("there should be a single node on the start, got %d", len(nodes))
 	}
 
 	// #2 Add node
