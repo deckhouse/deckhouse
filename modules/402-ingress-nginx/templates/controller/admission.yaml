@@ -36,7 +36,7 @@ webhooks:
         scope: Namespaced
     failurePolicy: Fail
     sideEffects: None
-    timeoutSeconds: 15
+    timeoutSeconds: 30
     admissionReviewVersions:
       - v1
     {{- if semverCompare "<1.22" $kubernetesVersion}}
