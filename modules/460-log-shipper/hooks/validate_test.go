@@ -34,8 +34,8 @@ func TestValidateConfigWithVector(t *testing.T) {
 
 	path="/deckhouse/modules/460-log-shipper/hooks/testdata"
 
-	for file in $(find ${path}/*); do
-	  vector validate --config-json $file --config-json "${path}/default-config.json";
+	for file in $(find ${path}/**/*\.json -type f); do
+	  vector validate --config-json $file --config-json "${path}/__default-config.json";
 	done`
 
 	cmd := exec.Command(

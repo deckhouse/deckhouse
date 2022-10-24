@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-es-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-es-dest
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    index: "logs-%F"
+    pipeline: "testpipe"
+    endpoint: "http://192.168.1.1:9200"
+    tls:
+      verifyCertificate: false
