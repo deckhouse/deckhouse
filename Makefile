@@ -213,7 +213,7 @@ bin/jq-$(JQ_VERSION)/jq:
 	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
 
 .PHONY: bin/jq
-bin/jq: bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
+bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
 	rm -f bin/jq
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
