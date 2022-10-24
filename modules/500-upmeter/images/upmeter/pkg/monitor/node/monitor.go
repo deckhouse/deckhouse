@@ -19,126 +19,97 @@ package node
 import (
 	"context"
 	"fmt"
+	"time"
 
 	kube "github.com/flant/kube-client/client"
-	"github.com/flant/shell-operator/pkg/kube_events_manager"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 )
 
 type Monitor struct {
-	monitor kube_events_manager.Monitor
-	logger  *log.Entry
+	informer cache.SharedInformer
+	stopCh   chan struct{}
+
+	logger *log.Entry
 }
 
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
-	monitor := kube_events_manager.NewMonitor()
-	monitor.WithKubeClient(kubeClient)
+	var (
+		gvr          = schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
+		indexers     = cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+		resyncPeriod = 5 * time.Minute
+
+		tweakListOptions dynamicinformer.TweakListOptionsFunc = nil
+	)
+
+	informer := dynamicinformer.NewFilteredDynamicInformer(
+		kubeClient.Dynamic(), gvr, corev1.NamespaceAll, resyncPeriod, indexers, tweakListOptions)
 
 	return &Monitor{
-		monitor: monitor,
-		logger:  logger,
+		informer: informer.Informer(),
+		stopCh:   make(chan struct{}),
+		logger:   logger.WithField("component", "node-monitor"),
 	}
 }
 
 func (m *Monitor) Start(ctx context.Context) error {
-	config := &kube_events_manager.MonitorConfig{
-		Metadata: struct {
-			MonitorId    string
-			DebugName    string
-			LogLabels    map[string]string
-			MetricLabels map[string]string
-		}{
-			"node-monitor",
-			"node-monitor",
-			map[string]string{},
-			map[string]string{},
-		},
-		EventTypes: []types.WatchEventType{
-			types.WatchEventAdded,
-			types.WatchEventModified,
-			types.WatchEventDeleted,
-		},
-		ApiVersion:              "v1",
-		Kind:                    "Node",
-		LogEntry:                m.logger.WithField("component", "node-monitor"),
-		KeepFullObjectsInMemory: true,
+	if err := m.informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler); err != nil {
+		return fmt.Errorf("unable to set watch error handler: %w", err)
 	}
 
-	m.monitor.WithContext(ctx)
-	m.monitor.WithConfig(config)
-
-	err := m.monitor.CreateInformers()
-	if err != nil {
-		return fmt.Errorf("creating informer: %v", err)
+	go m.informer.Run(m.stopCh)
+	if !cache.WaitForCacheSync(ctx.Done(), m.informer.HasSynced) {
+		return fmt.Errorf("unable to sync caches: %v", ctx.Err())
 	}
-
-	m.monitor.EnableKubeEventCb()
-	m.monitor.Start(ctx)
 	return nil
 }
 
 func (m *Monitor) Stop() {
-	m.monitor.Stop()
+	close(m.stopCh)
 }
 
 func (m *Monitor) getLogger() *log.Entry {
-	return m.monitor.GetConfig().LogEntry
+	return m.logger
 }
 
-func (m *Monitor) Subscribe(handler Handler) {
-	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
-		// One event and one object per change, we always have single item in these lists.
-		evType := ev.WatchEvents[0]
-		raw := ev.Objects[0].Object
-
-		obj, err := convert(raw)
-		if err != nil {
-			m.getLogger().Errorf("cannot convert Node object: %v", err)
-			return
-		}
-
-		switch evType {
-		case types.WatchEventAdded:
-			handler.OnAdd(obj)
-		case types.WatchEventModified:
-			handler.OnModify(obj)
-		case types.WatchEventDeleted:
-			handler.OnDelete(obj)
-		}
-	})
-}
-
-func (m *Monitor) List() ([]*v1.Node, error) {
-	list := make([]*v1.Node, 0)
-	for _, obj := range m.monitor.Snapshot() {
-		node, err := convert(obj.Object)
+func (m *Monitor) List() ([]*corev1.Node, error) {
+	list := make([]*corev1.Node, 0)
+	for _, obj := range m.informer.GetStore().List() {
+		node, err := convert(obj)
 		if err != nil {
 			return nil, err
 		}
+
 		list = append(list, node)
 	}
 	return list, nil
 }
 
-func convert(o *unstructured.Unstructured) (*v1.Node, error) {
-	var node v1.Node
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &node)
+func convert(o interface{}) (*corev1.Node, error) {
+	var node corev1.Node
+	unstrObj, ok := o.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert object to *unstructured.Unstructured: %v", o)
+	}
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &node)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.Node: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to core/v1 Node: %v", err)
 	}
 	return &node, nil
 }
 
 type Handler interface {
-	OnAdd(*v1.Node)
-	OnModify(*v1.Node)
-	OnDelete(*v1.Node)
+	OnAdd(*corev1.Node)
+	OnModify(*corev1.Node)
+	OnDelete(*corev1.Node)
 }
 
 type Lister interface {
-	List() ([]*v1.Node, error)
+	List() ([]*corev1.Node, error)
 }

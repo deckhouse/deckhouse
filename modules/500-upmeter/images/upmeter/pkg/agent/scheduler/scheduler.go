@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
@@ -30,7 +29,6 @@ import (
 
 type Scheduler struct {
 	registry *registry.Registry
-	metrics  *metric_storage.MetricStorage
 
 	// to receive results from runners
 	recv    chan check.Result
@@ -144,12 +142,6 @@ func (e *Scheduler) run() {
 		runner := runner // avoid closure capturing
 		go func() {
 			e.recv <- runner.Run(now)
-
-			e.metrics.CounterAdd(
-				"upmeter_agent_probe_run_total",
-				1.0,
-				map[string]string{"probe": runner.ProbeRef().Id()},
-			)
 		}()
 	}
 }

@@ -19,86 +19,88 @@ package downtime
 import (
 	"context"
 	"fmt"
+	"time"
 
 	kube "github.com/flant/kube-client/client"
-	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 
 	"d8.io/upmeter/pkg/check"
 )
 
 type Monitor struct {
-	monitor kube_events_manager.Monitor
-	logger  *log.Entry
+	informer cache.SharedInformer
+	stopCh   chan struct{}
+
+	logger *log.Entry
 }
 
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
-	monitor := kube_events_manager.NewMonitor()
-	monitor.WithKubeClient(kubeClient)
+	var (
+		gvr = schema.GroupVersionResource{
+			Group:    "deckhouse.io",
+			Version:  "v1alpha1",
+			Resource: "downtimes",
+		}
+		indexers     = cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+		resyncPeriod = 5 * time.Minute
+
+		tweakListOptions dynamicinformer.TweakListOptionsFunc = nil
+	)
+
+	informer := dynamicinformer.NewFilteredDynamicInformer(
+		kubeClient.Dynamic(), gvr, corev1.NamespaceAll, resyncPeriod, indexers, tweakListOptions)
 
 	return &Monitor{
-		monitor: monitor,
-		logger:  logger,
+		informer: informer.Informer(),
+		stopCh:   make(chan struct{}),
+		logger:   logger.WithField("component", "downtime-monitor"),
 	}
 }
 
 func (m *Monitor) Start(ctx context.Context) error {
-	config := &kube_events_manager.MonitorConfig{
-		Metadata: struct {
-			MonitorId    string
-			DebugName    string
-			LogLabels    map[string]string
-			MetricLabels map[string]string
-		}{
-			"downtime-monitor",
-			"downtime-monitor",
-			map[string]string{},
-			map[string]string{},
-		},
-		EventTypes:              nil,
-		ApiVersion:              "deckhouse.io/v1alpha1",
-		Kind:                    "Downtime",
-		NamespaceSelector:       nil,
-		LogEntry:                log.WithField("component", "downtime-monitor"),
-		KeepFullObjectsInMemory: true,
+	if err := m.informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler); err != nil {
+		return fmt.Errorf("unable to set watch error handler: %w", err)
 	}
 
-	m.monitor.WithContext(ctx)
-	m.monitor.WithConfig(config)
-
-	err := m.monitor.CreateInformers()
-	if err != nil {
-		return fmt.Errorf("creating informer: %v", err)
+	go m.informer.Run(m.stopCh)
+	if !cache.WaitForCacheSync(ctx.Done(), m.informer.HasSynced) {
+		return fmt.Errorf("unable to sync caches: %v", ctx.Err())
 	}
-
-	m.monitor.EnableKubeEventCb()
-	m.monitor.Start(ctx)
 	return nil
 }
 
 func (m *Monitor) Stop() {
-	m.monitor.Stop()
+	close(m.stopCh)
 }
 
 func (m *Monitor) List() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
-	for _, obj := range m.monitor.Snapshot() {
-		incs, err := convert(obj.Object)
+	for _, obj := range m.informer.GetStore().List() {
+		incs, err := convert(obj)
 		if err != nil {
 			return nil, err
 		}
+
 		res = append(res, incs...)
 	}
 	return res, nil
 }
 
-func convert(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
+func convert(o interface{}) ([]check.DowntimeIncident, error) {
+	unstrObj, ok := o.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert object to *unstructured.Unstructured: %v", o)
+	}
 	var incidentObj Downtime
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &incidentObj)
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &incidentObj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot convert unstructured to Downtime: %v", err)
 	}
 	return incidentObj.GetDowntimeIncidents(), nil
 }
