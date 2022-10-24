@@ -238,7 +238,7 @@ func fixMasterTaints(nodeTaints []v1.Taint, ngTaints []v1.Taint) []v1.Taint {
 		_, existsInNG := ngTaintsMap[masterNodeRoleKey]
 		_, existsInNodeSpec := nodeTaintsMap[masterNodeRoleKey]
 		if existsInNodeSpec && !existsInNG {
-			delete(nodeTaintsMap, "node-role.kubernetes.io/master")
+			delete(nodeTaintsMap, masterNodeRoleKey)
 			newTaints := make([]v1.Taint, 0, len(nodeTaintsMap))
 			for _, v := range nodeTaintsMap {
 				newTaints = append(newTaints, *v)
