@@ -42,7 +42,11 @@ type Monitor struct {
 
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
 	var (
-		gvr          = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "downtimes"}
+		gvr = schema.GroupVersionResource{
+			Group:    "deckhouse.io",
+			Version:  "v1alpha1",
+			Resource: "downtimes",
+		}
 		indexers     = cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 		resyncPeriod = 5 * time.Minute
 
