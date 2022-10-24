@@ -6,7 +6,7 @@ title: "The metallb module: usage"
 
 Metallb can be used in Static (Bare Metal) clusters when you can't order a load balancer from a cloud provider. Metallb can work in L2 or BGP modes. Below is an example of Metallb usage in L2 mode.
 We will create Ingress Controller with `LoadBalancer` inlet. And we will also expose standalone nginx using service with `LoadBalancer` type.
-First, you have to decide, which NodeGroups will be used to deploy applications that have to be exposed by LoadBalancer service. 
+First, you have to decide, which NodeGroups will be used to deploy applications that have to be exposed by LoadBalancer service.
 Ingress controllers run on frontend nodes and nginx runs on worker node in this example. They have common label `node-role/metallb=""`.
 
 ```yaml
