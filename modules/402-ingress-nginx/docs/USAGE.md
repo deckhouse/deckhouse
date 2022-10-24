@@ -4,29 +4,6 @@ title: "The ingress-nginx module: usage"
 
 {% raw %}
 
-## A general example
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: nginx
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-  resourcesRequests:
-    mode: VPA
-    vpa:
-      mode: Auto
-      cpu:
-        max: 100m
-      memory:
-        max: 200Mi
-```
-
 ## An example for AWS (Network Load Balancer)
 
 When creating a balancer, all zones available in the cluster will be used.
@@ -50,7 +27,7 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-## An example for GCP
+## An example for GCP / Yandex Cloud / Azure
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -78,7 +55,7 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
-## An example for bare metal (Host Ports)
+## An example for Bare metal
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -96,7 +73,25 @@ spec:
     value: frontend
 ```
 
-## An example for bare metal (MetalLB Load Balancer)
+## An example for Bare metal (Behind external load balancer, e.g. Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp, etc.)
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    behindL7Proxy: true
+```
+
+## An example for Bare metal (MetalLB Load Balancer)
+
+MetalLB is currently available only in EE version.
 
 ```yaml
 apiVersion: deckhouse.io/v1
