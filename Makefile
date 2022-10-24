@@ -11,36 +11,39 @@ MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
-PLATFORM_NAME := $(shell uname -p)
+PLATFORM_NAME := $(shell uname -m)
 OS_NAME := $(shell uname)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
 endif
 
-# Set platform for jq
+# Set platform for deps
 ifeq ($(OS_NAME), Linux)
 	JQ_PLATFORM = linux64
+	YQ_PLATFORM = linux
+	TRDL_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
 	JQ_PLATFORM = osx-amd64
+	YQ_PLATFORM = darwin
+	TRDL_PLATFORM = darwin
 endif
 
-# Set platform for yq
-ifeq ($(OS_NAME), Linux)
-	YQ_PLATFORM = linux
-else ifeq ($(OS_NAME), Darwin)
-	YQ_PLATFORM = darwin
-endif
-# Set arch for yq
+# Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
 	YQ_ARCH = amd64
-else ifeq ($(PLATFORM_NAME), arm)
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
+	CRANE_ARCH = arm64
+	TRDL_ARCH = arm64
 endif
+
 
 # Set arch for crane
 ifeq ($(PLATFORM_NAME), x86_64)
 	CRANE_ARCH = x86_64
-else ifeq ($(PLATFORM_NAME), arm)
+else ifeq ($(PLATFORM_NAME), arm64)
 	CRANE_ARCH = arm64
 endif
 
@@ -77,7 +80,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
 
 ##@ Tests
 
@@ -88,7 +91,7 @@ bin/promtool-${PROMTOOL_VERSION}/promtool:
 .PHONY: bin/promtool
 bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 	rm -f bin/promtool
-	ln -s /deckhouse/bin/promtool-${PROMTOOL_VERSION}/promtool bin/promtool
+	ln -s promtool-${PROMTOOL_VERSION}/promtool bin/promtool
 
 bin/gator-${GATOR_VERSION}/gator:
 	mkdir -p bin/gator-${GATOR_VERSION}
@@ -150,19 +153,20 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 ##@ Generate
 
 .PHONY: generate render-workflow
-generate: ## Run all generate-* jobs in bulk.
+generate: bin/werf ## Run all generate-* jobs in bulk.
 	cd tools; go generate
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
 
 ##@ Security
-
-bin/regcopy: ## App to copy docker images to the Deckhouse registry
+bin:
 	mkdir -p bin
-	cd tools/regcopy; go build -o $(PWD)/bin/regcopy
 
-bin/trivy:
+bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
+	cd tools/regcopy; go build -o bin/regcopy
+
+bin/trivy: bin
 	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
 
 .PHONY: cve-report cve-base-images
@@ -196,14 +200,23 @@ docs-down: ## Stop all the documentation containers.
 
 ##@ Update kubernetes control-plane patchversions
 
-bin/jq: ## Install jq deps for update-patchversion script.
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
+bin/jq: bin ## Install jq deps for update-patchversion script.
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o bin/jq && chmod +x bin/jq
 
-bin/yq: ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq && chmod +x $(PWD)/bin/yq
+bin/yq: bin ## Install yq deps for update-patchversion script.
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
-bin/crane: ## Install crane deps for update-patchversion script.
-	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane
+bin/crane: bin ## Install crane deps for update-patchversion script.
+	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
+
+bin/trdl: bin
+	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
+	chmod +x bin/trdl
+
+bin/werf: bin bin/trdl ## Install werf for images-tags generator.
+	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
+	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
+	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.

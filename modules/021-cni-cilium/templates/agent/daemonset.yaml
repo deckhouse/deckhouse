@@ -208,6 +208,9 @@ spec:
           mountPath: /hostbin
         securityContext:
           privileged: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: clean-cilium-state
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
         command:
@@ -239,6 +242,9 @@ spec:
           mountPropagation: HostToContainer
         - name: cilium-run
           mountPath: /var/run/cilium
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       restartPolicy: Always
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1

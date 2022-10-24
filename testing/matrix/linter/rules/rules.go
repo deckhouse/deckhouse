@@ -96,6 +96,11 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		panic(err)
+	}
+	containers = append(initContainers, containers...)
 	if len(containers) == 0 {
 		return
 	}
@@ -196,7 +201,6 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 		}
 		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
 		tag := t.TagStr()
-
 		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
@@ -204,12 +208,11 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 				"All images must be deployed from the same default registry - "+defaultRegistry,
 			)
 		}
-
-		if tag != "imageHash" {
+		if !strings.HasPrefix(tag, "imageHash-") {
 			return errors.NewLintRuleError("CONTAINER004",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag should be `imageHash`",
+				"Image tag should start from `imageHash-`",
 			)
 		}
 	}
@@ -572,6 +575,7 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+
 	for _, c := range containers {
 		for _, p := range c.Ports {
 			if hostNetworkUsed && p.ContainerPort >= 10500 {

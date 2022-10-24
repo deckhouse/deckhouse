@@ -57,32 +57,13 @@ const globalValues = `
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
-        resolvWatcher: imagehash
-      cloudProviderAws:
-        ebsCsiPlugin: imagehash
-        cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
-        nodeTerminationHandler: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.21.0
 `
 
 const moduleValues = `
@@ -123,6 +104,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 	Context("AWS", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 			fmt.Println(f.ValuesGet(""))
 			f.HelmRender()
@@ -212,6 +194,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("AWS with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
 			f.HelmRender()
@@ -239,6 +222,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()

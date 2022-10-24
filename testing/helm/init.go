@@ -126,6 +126,18 @@ func SetupHelmConfig(values string) *Config {
 	return config
 }
 
+func GetModulesImages() map[string]interface{} {
+	return map[string]interface{}{
+		"registry":          "registry.example.com",
+		"registryDockercfg": "Y2ZnCg==",
+		"registryAddress":   "registry.deckhouse.io",
+		"registryPath":      "/deckhouse/fe",
+		"registryCA":        "CACACA",
+		"registryScheme":    "https",
+		"tags":              library.DefaultImagesTags,
+	}
+}
+
 func (hec *Config) HelmRender(options ...Option) {
 	opts := &configOptions{}
 

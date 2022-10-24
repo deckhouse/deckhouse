@@ -10,7 +10,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x33" } } # must be real
+          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x7" } } # must be real
         additionalProperties:
           type: object
           properties:
@@ -22,7 +22,7 @@ properties:
               x-examples: ["v1x13"]
             imageSuffix:
               type: string
-              x-examples: ["V1x13x33"]
+              x-examples: ["V1x13x7"]
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]

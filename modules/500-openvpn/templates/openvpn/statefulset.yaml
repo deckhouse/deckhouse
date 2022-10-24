@@ -14,6 +14,10 @@ memory: 50Mi
 cpu: 10m
 memory: 10Mi
 {{- end }}
+{{- define "openvpn_migration_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -97,11 +101,19 @@ spec:
 {{- if not .Values.openvpn.internal.migrated }}
       initContainers:
       - name: migration
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "easyrsaMigrator") }}
         command: [ '/app/easyrsa-migrator' ]
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_migration_resources" . | nindent 12 }}
+  {{- end }}
+
 {{- end }}
       containers:
 # sync-ccd

@@ -34,20 +34,6 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterMasterCount: 1
@@ -63,20 +49,6 @@ const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterMasterCount: 5
@@ -93,20 +65,6 @@ const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -122,20 +80,6 @@ highAvailability: true
 modules:
   placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -167,6 +111,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -225,6 +170,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 	Context("DefaultHA", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -305,6 +251,7 @@ podAntiAffinity:
 	Context("Managed", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManaged)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -362,6 +309,7 @@ podAntiAffinity:
 	Context("ManagedHa", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -442,6 +390,7 @@ podAntiAffinity:
 	Context("CloudDNS", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager+cloudDNS)
 			f.HelmRender()
 		})

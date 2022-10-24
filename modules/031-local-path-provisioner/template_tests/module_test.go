@@ -35,13 +35,6 @@ const (
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      localPathProvisioner:
-        localPathProvisioner: imagehash
-        helper: imagehash
   discovery:
     kubernetesVersion: 1.20.5
     d8SpecificNodeCountByRole:
@@ -74,6 +67,7 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
 	Context("Two local path provisioner instances", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("localPathProvisioner", moduleValues)
 			f.HelmRender()
 		})

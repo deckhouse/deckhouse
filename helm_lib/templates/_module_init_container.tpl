@@ -14,4 +14,7 @@
   volumeMounts:
   - name: {{ $volume_name }}
     mountPath: /tmp/{{ $volume_name }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
 {{- end }}

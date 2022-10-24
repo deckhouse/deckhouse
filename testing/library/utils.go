@@ -25,36 +25,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 )
-
-var tags map[string]interface{}
-
-func init() {
-	tags = make(map[string]interface{})
-	for _, pattern := range []string{"/deckhouse/modules/*", "/deckhouse/ee/modules/*", "/deckhouse/ee/fe/modules/*"} {
-		paths, err := filepath.Glob(pattern)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, path := range paths {
-			info, err := os.Stat(path)
-			if err != nil {
-				panic(err)
-			}
-			if !info.IsDir() {
-				continue
-			}
-
-			parts := strings.SplitN(info.Name(), "-", 2)
-			tags[strcase.ToLowerCamel(parts[1])] = make(map[string]interface{})
-		}
-	}
-}
 
 func GetModulesImagesTags(modulePath string) (map[string]interface{}, error) {
 	var (
@@ -66,11 +40,10 @@ func GetModulesImagesTags(modulePath string) (map[string]interface{}, error) {
 		search = true
 	}
 
+	var err error
 	if search {
-		modulesTags = tags
+		modulesTags = DefaultImagesTags
 	} else {
-		var err error
-
 		modulesTags, err = getModulesImagesTagsFromLocalPath(modulePath)
 		if err != nil {
 			return nil, err

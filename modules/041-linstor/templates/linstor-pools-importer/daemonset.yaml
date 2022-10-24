@@ -116,9 +116,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "linstor_pools_importer_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
       volumes:
         - name: device-dir
           hostPath:
