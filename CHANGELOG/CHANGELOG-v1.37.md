@@ -49,6 +49,7 @@
  - **[log-shipper]** Stop generating pointless 'parse_json' transform, which improves performance. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[log-shipper]** Fix the bug when the many sources point to the same input and only the last is working. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[monitoring-kubernetes]** Add deployments to kube-state-metrics's allowlist. [#2636](https://github.com/deckhouse/deckhouse/pull/2636)
+ - **[node-manager]** Avoid "node-role.kubernetes.io/master" taint removal when it is explicitly set in the master NG [#2831](https://github.com/deckhouse/deckhouse/pull/2831)
  - **[node-manager]** Added VPA for early-oom daemonset. [#2695](https://github.com/deckhouse/deckhouse/pull/2695)
  - **[node-manager]** Fixed failing on not existing control-plane node labels. [#2670](https://github.com/deckhouse/deckhouse/pull/2670)
  - **[node-manager]** Fixed the `D8EarlyOOMPodIsNotReady` alert description. [#2541](https://github.com/deckhouse/deckhouse/pull/2541)
