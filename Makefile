@@ -40,6 +40,7 @@ else ifeq ($(PLATFORM_NAME), arm64)
 	TRDL_ARCH = arm64
 endif
 
+
 # Set arch for crane
 ifeq ($(PLATFORM_NAME), x86_64)
 	CRANE_ARCH = x86_64
