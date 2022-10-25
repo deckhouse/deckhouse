@@ -67,6 +67,14 @@
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
+    "transform/destination/test-loki-dest/00_parse_json": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/14_log_filter"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "type": "remap"
+    },
     "transform/source/test-source/00_owner_ref": {
       "drop_on_abort": false,
       "inputs": [
@@ -241,7 +249,7 @@
     "destination/cluster/test-loki-dest": {
       "type": "loki",
       "inputs": [
-        "transform/source/test-source/14_log_filter"
+        "transform/destination/test-loki-dest/00_parse_json"
       ],
       "healthcheck": {
         "enabled": false
