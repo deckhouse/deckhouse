@@ -37,7 +37,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
- name: main
+ name: nginx
 spec:
   ingressClass: nginx
   inlet: HostPort
