@@ -51,6 +51,9 @@ spec:
     taints:
     - effect: NoExecute
       key: dedicated.deckhouse.io
+      value: system
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
       value: frontend
   chaos:
     mode: Disabled
