@@ -19,6 +19,7 @@ deckhouse:
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   configOverrides:
     flantIntegrationEnabled: false
+    istioEnabled: true
     global:
       modules:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"

@@ -34,3 +34,11 @@ spec:
   diskSizeGB: 20
   diskType: network-ssd
   memory: 8192
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+ name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer

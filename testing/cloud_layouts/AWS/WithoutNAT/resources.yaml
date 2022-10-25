@@ -19,10 +19,14 @@ spec:
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
+      node-role.deckhouse.io/frontend: ""
     taints:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: system
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
@@ -33,3 +37,14 @@ spec:
   diskSizeGb: 30
   diskType: gp2
   instanceType: m5.xlarge
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+ name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
