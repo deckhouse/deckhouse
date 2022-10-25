@@ -95,7 +95,6 @@ spec:
         - --skip-nodes-with-system-pods=false
         - --skip-nodes-with-local-storage=false
         - --min-replica-count=1
-        - --expander=least-waste
         - --expendable-pods-priority-cutoff=-10
         - --scale-down-unneeded-time=5m
         - --scale-down-unready-time=4m
@@ -104,6 +103,8 @@ spec:
         - --unremovable-node-recheck-timeout=30s
         - --scale-down-delay-after-add=15m
         - --address=127.0.0.1:8085
+        - --balance-similar-node-groups=true
+        - --expander=priority,least-waste
         - --v=2
         env:
         - name: CONTROL_NAMESPACE

@@ -7,7 +7,7 @@ title: "Managing nodes"
 The `node-manager` module is responsible for managing nodes and has the following primary functions:
 1. Managing multiple nodes as a related group (**NodeGroup**):
     * The ability to define metadata that are inherited by all nodes in the group.
-    * (*Soon — TBA*) Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
+    * Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
 2. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 3. Installing, updating, and configuring the node software (docker, kubelet, etc.), connecting the node to the cluster:
     * Support for `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` regardless of the infrastructure used (any cloud/any hardware).
@@ -93,7 +93,7 @@ Creating, starting, and connecting virtual machines to the cluster are performed
 
 There are two ways for setting the number of nodes in a group when nodes are provisioned as part of a group:
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
-- The minimum/maximum number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the pods are pending.
+- The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
 
 ## Chaos monkey
 

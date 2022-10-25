@@ -174,7 +174,12 @@ properties:
                   zoneb: mysubnetidb
               tags:
                 aaa: aaa
-
+      clusterAutoscalerPriorities:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
       nodeGroups:
         type: array
         description: |
