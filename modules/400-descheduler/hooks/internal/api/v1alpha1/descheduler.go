@@ -22,11 +22,6 @@ import (
 )
 
 // Descheduler is a description of a single descheduler instance
-
-
-
-
-
 type Descheduler struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -126,7 +121,6 @@ type RemoveDuplicatesParams struct {
 }
 
 type LowNodeUtilization struct {
-
 	Params *LowNodeUtilizationParams `json:"params,omitempty"`
 }
 
@@ -137,7 +131,6 @@ type LowNodeUtilizationParams struct {
 }
 
 type HighNodeUtilization struct {
-
 	Params *HighNodeUtilizationParams `json:"params,omitempty"`
 }
 
@@ -159,7 +152,6 @@ type RemovePodsViolatingInterPodAntiAffinityParams struct {
 }
 
 type RemovePodsViolatingNodeAffinity struct {
-
 	Params *RemovePodsViolatingNodeAffinityParams `json:"params,omitempty"`
 }
 
@@ -199,7 +191,6 @@ type RemovePodsViolatingTopologySpreadConstraintParams struct {
 }
 
 type RemovePodsHavingTooManyRestarts struct {
-
 	Params *RemovePodsHavingTooManyRestartsParams `json:"params,omitempty"`
 }
 
@@ -213,7 +204,6 @@ type RemovePodsHavingTooManyRestartsParams struct {
 }
 
 type PodLifeTime struct {
-
 	Params *PodLifeTimeParams `json:"params,omitempty"`
 }
 
