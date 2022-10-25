@@ -59,7 +59,7 @@ spec:
       labels:
         app: descheduler-{{ $d.metadata.name }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }} # TODO, don't roll every single one
+        checksum/config: {{ $deschedulerSpec | toJson | sha256sum }}
     spec:
       serviceAccountName: descheduler
       imagePullSecrets:

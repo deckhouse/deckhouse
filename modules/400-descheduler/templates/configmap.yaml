@@ -21,8 +21,7 @@ data:
       "RemoveDuplicates":
         enabled: true
     {{- if $strategies.removeDuplicates.params }}
-        params:
-          {{- $strategies.removeDuplicates.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removeDuplicates.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemoveDuplicates":
@@ -33,8 +32,7 @@ data:
       "RemovePodsViolatingNodeAffinity":
         enabled: true
     {{- if $strategies.removePodsViolatingNodeAffinity.params  }}
-        params:
-          {{- $strategies.removePodsViolatingNodeAffinity.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removePodsViolatingNodeAffinity.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemovePodsViolatingNodeAffinity":
@@ -45,8 +43,7 @@ data:
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: true
     {{- if $strategies.removePodsViolatingInterPodAntiAffinity.params  }}
-        params:
-          {{- $strategies.removePodsViolatingInterPodAntiAffinity.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removePodsViolatingInterPodAntiAffinity.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemovePodsViolatingInterPodAntiAffinity":
@@ -58,8 +55,7 @@ data:
       "LowNodeUtilization":
         enabled: true
     {{- if $strategies.lowNodeUtilization.params  }}
-        params:
-          {{- $strategies.lowNodeUtilization.params | toYaml | nindent 10 }}
+        params: {{- $strategies.lowNodeUtilization.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "LowNodeUtilization":
@@ -70,8 +66,7 @@ data:
       "HighNodeUtilization":
         enabled: true
     {{- if $strategies.highNodeUtilization.params  }}
-        params:
-          {{- $strategies.highNodeUtilization.params | toYaml | nindent 10 }}
+        params: {{- $strategies.highNodeUtilization.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "HighNodeUtilization":
@@ -82,8 +77,7 @@ data:
       "RemovePodsViolatingNodeTaints":
         enabled: true
     {{- if $strategies.removePodsViolatingNodeTaints.params  }}
-        params:
-          {{- $strategies.removePodsViolatingNodeTaints.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removePodsViolatingNodeTaints.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemovePodsViolatingNodeTaints":
@@ -94,8 +88,7 @@ data:
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: true
     {{- if $strategies.removePodsViolatingTopologySpreadConstraint.params  }}
-        params:
-          {{- $strategies.removePodsViolatingTopologySpreadConstraint.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removePodsViolatingTopologySpreadConstraint.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemovePodsViolatingTopologySpreadConstraint":
@@ -106,8 +99,7 @@ data:
       "RemovePodsHavingTooManyRestarts":
         enabled: true
     {{- if $strategies.removePodsHavingTooManyRestarts.params  }}
-        params:
-          {{- $strategies.removePodsHavingTooManyRestarts.params | toYaml | nindent 10 }}
+        params: {{- $strategies.removePodsHavingTooManyRestarts.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "RemovePodsHavingTooManyRestarts":
@@ -118,8 +110,7 @@ data:
       "PodLifeTime":
         enabled: true
     {{- if $strategies.podLifeTime.params  }}
-        params:
-          {{- $strategies.podLifeTime.params | toYaml | nindent 10 }}
+        params: {{- $strategies.podLifeTime.params | toYaml | nindent 10 }}
     {{- end }}
   {{- else }}
       "PodLifeTime":
