@@ -17,30 +17,28 @@ limitations under the License.
 package destination
 
 import (
+	"strings"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-type Logstash struct {
+type Kafka struct {
 	CommonSettings
 
-	Address string `json:"address"`
+	BootstrapServers string `json:"bootstrap_servers,omitempty"`
 
 	Encoding Encoding `json:"encoding,omitempty"`
 
-	Mode string `json:"mode"`
+	Topic string `json:"topic"`
+
+	Compression string `json:"compression,omitempty"`
 
 	TLS CommonTLS `json:"tls,omitempty"`
-
-	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
 }
 
-type LogstashKeepalive struct {
-	TimeSecs int `json:"time_secs"`
-}
-
-func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
-	spec := cspec.Logstash
+func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
+	spec := cspec.Kafka
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
 	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
@@ -57,6 +55,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 		VerifyCertificate: true,
 		VerifyHostname:    true,
 	}
+
 	if spec.TLS.VerifyCertificate != nil {
 		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
 	}
@@ -64,21 +63,20 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
-	return &Logstash{
+	return &Kafka{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
-			Type:   "socket",
+			Type:   "kafka",
 			Inputs: set.New(),
 		},
+		TLS:   tls,
+		Topic: spec.Topic,
 		Encoding: Encoding{
-			Codec:           "json",
+			Codec:           "text",
 			TimestampFormat: "rfc3339",
+			OnlyFields:      []string{"message"},
 		},
-		TLS:     tls,
-		Mode:    "tcp",
-		Address: spec.Endpoint,
-		Keepalive: LogstashKeepalive{
-			TimeSecs: 7200,
-		},
+		Compression:      "gzip",
+		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
 	}
 }

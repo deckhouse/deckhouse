@@ -29,7 +29,8 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	switch dest.Spec.Type {
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
 		transforms = append(transforms, DeDotTransform())
-
+		fallthrough
+	case v1alpha1.DestVector, v1alpha1.DestKafka:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}

@@ -36,6 +36,12 @@ type CommonSettings struct {
 type Healthcheck struct {
 	Enabled bool `json:"enabled"`
 }
+type Encoding struct {
+	ExceptFields    []string `json:"except_fields,omitempty"`
+	OnlyFields      []string `json:"only_fields,omitempty"`
+	Codec           string   `json:"codec,omitempty"`
+	TimestampFormat string   `json:"timestamp_format,omitempty"`
+}
 
 type CommonTLS struct {
 	CAFile            string `json:"ca_file,omitempty"`

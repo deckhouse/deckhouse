@@ -49,6 +49,9 @@ type ClusterLogDestinationSpec struct {
 	// Logstash spec for the Logstash endpoint
 	Logstash LogstashSpec `json:"logstash"`
 
+	// Kafka spec for the Kafka endpoint
+	Kafka KafkaSpec `json:"kafka"`
+
 	// Vector spec for the Vector endpoint
 	Vector VectorSpec `json:"vector"`
 
@@ -101,6 +104,14 @@ type LokiSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
 	Auth LokiAuthSpec `json:"auth,omitempty"`
+
+	TLS CommonTLSSpec `json:"tls,omitempty"`
+}
+
+type KafkaSpec struct {
+	BootstrapServers []string `json:"bootstrapServers,omitempty"`
+
+	Topic string `json:"topic,omitempty"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }

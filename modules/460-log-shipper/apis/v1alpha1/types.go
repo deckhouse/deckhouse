@@ -21,6 +21,7 @@ const (
 	DestLogstash      = "Logstash"
 	DestLoki          = "Loki"
 	DestVector        = "Vector"
+	DestKafka         = "Kafka"
 )
 
 const (
