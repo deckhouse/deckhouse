@@ -20,6 +20,7 @@
  - **[global-hooks]** Refactoring. [#2133](https://github.com/deckhouse/deckhouse/pull/2133)
  - **[ingress-nginx]** Increase Ingress validation webhook timeout. [#2818](https://github.com/deckhouse/deckhouse/pull/2818)
  - **[ingress-nginx]** Fixed Kubernetes / Ingress Nginx Controllers Grafana dashboard. [#2597](https://github.com/deckhouse/deckhouse/pull/2597)
+ - **[istio]** Exclude the `d8-upmeter` namespace from the istio discovery process. [#2858](https://github.com/deckhouse/deckhouse/pull/2858)
  - **[istio]** Do not save calculated `globalVersion` (restore it from Service on every startup). Use the common hook in the `generate_passwords` hook. [#2133](https://github.com/deckhouse/deckhouse/pull/2133)
  - **[kube-dns]** Added "prefer_udp" to stub zones. [#2774](https://github.com/deckhouse/deckhouse/pull/2774)
  - **[log-shipper]** Loki fix extra labels. [#2852](https://github.com/deckhouse/deckhouse/pull/2852)
