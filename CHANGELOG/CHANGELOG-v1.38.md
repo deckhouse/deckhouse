@@ -22,6 +22,7 @@
  - **[ingress-nginx]** Fixed Kubernetes / Ingress Nginx Controllers Grafana dashboard. [#2597](https://github.com/deckhouse/deckhouse/pull/2597)
  - **[istio]** Do not save calculated `globalVersion` (restore it from Service on every startup). Use the common hook in the `generate_passwords` hook. [#2133](https://github.com/deckhouse/deckhouse/pull/2133)
  - **[kube-dns]** Added "prefer_udp" to stub zones. [#2774](https://github.com/deckhouse/deckhouse/pull/2774)
+ - **[node-manager]** Avoid "node-role.kubernetes.io/master" taint removal when it is explicitly set in the master NG. [#2837](https://github.com/deckhouse/deckhouse/pull/2837)
  - **[prometheus]** Fixed disk retention size calculation for small disks. [#2825](https://github.com/deckhouse/deckhouse/pull/2825)
  - **[user-authn]** Do not use `connectorData` field of refresh token objects to refresh tokens. [#2685](https://github.com/deckhouse/deckhouse/pull/2685)
 
