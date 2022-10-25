@@ -76,5 +76,7 @@ topnav:
             url: /regulations.html
           - title: Лицензионное соглашение
             url: /license.html
+          - title: Правила лицензирования
+            url: /license_rules.html
           - title: Блог
             external_url: 'https://blog.deckhouse.io/'
