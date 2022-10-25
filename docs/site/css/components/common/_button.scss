@@ -75,8 +75,8 @@
         }
     }
     div.icon {
-        position: relative;
-        display: inline-block;
+        display: flex;
+        align-items: center;
         margin-right: 10px;
         width: 40px;
         height: 40px;
