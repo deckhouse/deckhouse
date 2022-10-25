@@ -794,4 +794,51 @@ spec:
 			Expect(taints.Array()).To(HaveLen(0))
 		})
 	})
+
+	Context("NG has master taint but does not have control-plane", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+  nodeType: CloudPermanent
+---
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    node.deckhouse.io/configuration-checksum: 3ef180a2b2cce73299012a049437bfef447b031ccfbb6c7d26913124a9ac1c1e
+  labels:
+    kubernetes.io/hostname: kube-master-0
+    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
+    node.deckhouse.io/group: master
+    node.deckhouse.io/type: CloudPermanent
+  name: kube-master-0
+spec:
+  podCIDR: 10.111.0.0/24
+  podCIDRs:
+  - 10.111.0.0/24
+  providerID: aws:///eu-central-1a/i-05724e80e8b61b339
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Node should have master taint", func() {
+			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
+			Expect(taints.Array()).To(HaveLen(1))
+			Expect(taints.Array()[0].String()).To(Equal(`{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}`))
+		})
+	})
 })
