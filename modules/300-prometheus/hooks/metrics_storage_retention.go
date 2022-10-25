@@ -31,7 +31,6 @@ func storageRetentionMetricHandler(input *go_hook.HookInput) error {
 	retentionDaysMain := input.Values.Get("prometheus.retentionDays")
 	retentionDaysLongterm := input.Values.Get("prometheus.longtermRetentionDays")
 
-
 	input.MetricsCollector.Set(
 		"d8_prometheus_main_storage_retention_days",
 		retentionDaysMain.Float(),
