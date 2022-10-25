@@ -70,6 +70,7 @@ spec:
     discoverySelectors:
     - matchExpressions:
       - {key: "heritage", operator: NotIn, values: [upmeter]}
+      - {key: "module", operator: NotIn, values: [upmeter]}
 
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
