@@ -74,7 +74,7 @@
           height: $font-size-h2*1.5;
         }
     }
-    span.icon {
+    div.icon {
         position: relative;
         display: inline-block;
         margin-right: 10px;
@@ -84,17 +84,6 @@
     span.name {
         width: 9em;
         margin: 5px 0px 0px 0px;
-    }
-    span.icon img {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%,-50%);
-        display: block;
-        max-width: 35px;
-        max-height: 35px;
-        vertical-align: middle;
-        pointer-events: none;
     }
 }
 
