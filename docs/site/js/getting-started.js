@@ -226,14 +226,7 @@ async function getLicenseToken(token) {
 }
 
 function handlerResolveData(data, licenseToken, messageElement, inputField) {
-  const date = new Date(data.expires_at * 1000);
-  let locales = 'en-GB';
-  if (pageLang === 'ru') {
-    locales = 'ru-RU'
-  }
-  const formattedDate = date.toLocaleDateString(locales, {dateStyle: "medium"});
-
-  messageElement.html(`${responseFromLicense[pageLang]['resolve']} ${formattedDate}`);
+  messageElement.html(`${responseFromLicense[pageLang]['resolve']}`);
   messageElement.removeAttr('class').addClass('license-form__message');
 
   $('.dimmer-block-content').removeClass('disabled');
