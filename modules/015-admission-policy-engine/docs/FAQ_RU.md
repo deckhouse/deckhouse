@@ -2,14 +2,16 @@
 title: "Модуль admission-policy-engine: FAQ"
 ---
 
-## Как расширить политики Pod Security Standards
+## Как расширить политики Pod Security Standards?
 
-Pod Security Standards реагируют на label `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`
+> Pod Security Standards реагируют на label `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`.
 
-Если вы хотите добавить к существующим проверкам свои собственные, вы можете расширить существующие стандарты следующим образом:
+Чтобы расширить политику Pod Security Standards, добавив к существующим проверкам политики свои собственные, необходимо:
+- Описать параметры проверки.
+- Привязать её к политике `restricted` или `baseline`.
 
-- Создать шаблон для новой политики. Подробнее о шаблонах и языке политик есть [здесь](https://open-policy-agent.github.io/gatekeeper/website/docs/howto)
-Например, шаблон для ограничения списка репозиториев:
+Пример описания параметров проверки адреса репозитория образа контейнера:
+
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
@@ -48,7 +50,8 @@ spec:
         }
 ```
 
-- Инициализировать эту политику:
+Пример привязки проверки к политике `restricted`:
+
 ```yaml
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sAllowedRepos
@@ -65,7 +68,10 @@ spec:
   parameters:
     repos:
       - "mycompany.registry.com"
-```
+ ```
 
-Данная политика будет проверять `image` у всех Pod, создающихся в namespace с label `security.deckhouse.io/pod-policy: restricted`
-и если `image` начинается не с `mycompany.registry.com` - отклонять создание Pod'а.
+Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех Pod'ов, создающихся в пространстве имен, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого Pod'а начинается не с `mycompany.registry.com`, Pod создан не будет.
+
+Подробнее о шаблонах и языке политик можно узнать в [документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
+
+Больше примеров описания проверок для расширения политики можно найти в [библиотеке](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general) Gatekeeper.

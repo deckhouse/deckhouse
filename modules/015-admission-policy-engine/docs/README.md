@@ -18,3 +18,5 @@ Example of the command to set the `Restricted` policy for all Pods in the `my-na
 ```bash
 kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
+
+The policies define by the module can be expanded. Examples of policy extensions can be found in the [FAQ](faq.html).

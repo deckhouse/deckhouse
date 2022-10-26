@@ -4,12 +4,14 @@ title: "The admission-policy-engine module: FAQ"
 
 ## How to extend Pod Security Standards policies
 
-Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label
+> Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
 
-If you want to add your own checks to the existing ones, you can extend the existing standards as follows:
+To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
+- Describe the parameters of the check.
+- Bind it to the `restricted` or `baseline` policy.
 
-- Create a template for the new policy. More about templates and policy language could be found [here](https://open-policy-agent.github.io/gatekeeper/website/docs/howto)
-For example, a template for restricting the list of repositories:
+Example of the description of the parameters for checking the URL of the container image repository:
+
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
@@ -48,7 +50,8 @@ spec:
         }
 ```
 
-- Initialize this policy:
+Example of binding a check to the `restricted` policy:
+
 ```yaml
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sAllowedRepos
@@ -67,5 +70,8 @@ spec:
       - "mycompany.registry.com"
 ```
 
-This policy will check the `image` of all Pods created in the namespace with the label `security.deckhouse.io/pod-policy: restricted`
-and if `image` does not start with `mycompany.registry.com` - reject the creation of Pod.
+The example demonstrates the configuration of checking the repository address in the `image` field for all Pods created in the namespace having the `security.deckhouse.io/pod-policy : restricted`  label. A Pod will not be created if the address in the `image` field of the Pod does not start with `mycompany.registry.com`.
+
+The [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/howto) may find more info about templates and policy language. 
+
+Find more examples of checks for policy extension in the [Gatekeeper Library](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
