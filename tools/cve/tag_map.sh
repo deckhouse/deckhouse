@@ -18,6 +18,18 @@
 set -Eeo pipefail
 shopt -s failglob
 
+# This script generates matrix array for workflow in .github/workflow_templates/cve-daily.yml.
+# Elements of generated array contains strings that map release tag to one or more corresponding
+# release channels in human-readable form, e.g.:
+#   ["v1.37.9 => { rock-solid }", "v1.38.4 => { alpha, beta, early-access, stable }"]
+# This script requires remote branch corresponding to release channels to be populated, as well as
+# release tags.
+# This script doesn't take any arguments or env variables.
+#
+# Usage: tag-map.sh
+#
+# $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
+
 channels=("alpha" "beta" "early-access" "stable" "rock-solid")
 declare -A tag_map
 
