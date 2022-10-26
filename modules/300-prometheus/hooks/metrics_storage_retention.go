@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func storageRetentionMetricHandler(input *go_hook.HookInput) error {
 	retentionDaysLongterm := input.Values.Get("prometheus.longtermRetentionDays")
 
 	input.MetricsCollector.Set(
-		"d8_prometheus_main_storage_retention_days",
+		"d8_prometheus_storage_retention_days",
 		retentionDaysMain.Float(),
 		map[string]string{
 			"prometheus": "main",
@@ -41,7 +41,7 @@ func storageRetentionMetricHandler(input *go_hook.HookInput) error {
 	)
 
 	input.MetricsCollector.Set(
-		"d8_prometheus_longterm_storage_retention_days",
+		"d8_prometheus_storage_retention_days",
 		retentionDaysLongterm.Float(),
 		map[string]string{
 			"prometheus": "longterm",

@@ -22,7 +22,7 @@
     expr: |
       group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus"}[24h]) > 0)
       and
-      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus"}) / 60 / 60 / 24 < d8_prometheus_main_storage_retention_days)
+      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus"}) / 60 / 60 / 24 < d8_prometheus_storage_retention_days{prometheus="main"})
       and
       group by (service) (delta(prometheus_tsdb_retention_limit_bytes{service="prometheus"}[24h]) == 0)
     labels:
@@ -32,14 +32,14 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus-main data is retained for less than retention days
+      summary: Prometheus-main data is being rotated earlier than configured retention days
       description: |
-        You need to increase the disk size or reduce the number of metrics
+        You need to increase the disk size, reduce the number of metrics or decrease `retentionDays` module parameter.
   - alert: PrometheusLongtermRetainLessThanRequiredDays
     expr: |
       group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus-longterm"}[24h]) > 0)
       and
-      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus-longterm"}) / 60 / 60 / 24 < d8_prometheus_longterm_storage_retention_days)
+      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus-longterm"}) / 60 / 60 / 24 < d8_prometheus_longterm_storage_retention_days{prometheus="longterm"})
       and
       group by (service) (delta(prometheus_tsdb_retention_limit_bytes{service="prometheus-longterm"}[24h]) == 0)
     labels:
@@ -49,6 +49,6 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus-longterm data is retained for less than retention days
+      summary: Prometheus-longterm data is being rotated earlier than configured retention days
       description: |
-        You need to increase the disk size or reduce the number of metrics
+        You need to increase the disk size, reduce the number of metrics or decrease `longtermRetentionDays` module parameter.
