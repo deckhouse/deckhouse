@@ -2,7 +2,7 @@
 title: "The admission-policy-engine module: FAQ"
 ---
 
-## How to extend Pod Security Standards policies
+## How to extend Pod Security Standards policies?
 
 > Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
 
