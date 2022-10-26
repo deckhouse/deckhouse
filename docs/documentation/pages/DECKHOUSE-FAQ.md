@@ -232,7 +232,7 @@ The general cluster parameters are stored in the `ClusterConfiguration` structur
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 ## How do I change the configuration of a cloud provider in a cluster?
@@ -242,7 +242,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the command:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ## How do I change the configuration of a static cluster?
@@ -252,7 +252,7 @@ Settings of a static cluster are stored in the `StaticClusterConfiguration` stru
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ## How do I upgrade the Kubernetes version in a cluster?
@@ -261,7 +261,7 @@ To upgrade the Kubernetes version in a cluster change the `kubernetesVersion` pa
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

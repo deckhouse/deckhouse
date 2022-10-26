@@ -236,7 +236,7 @@ chmod 700 d8-push.sh
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 ## Как изменить конфигурацию облачного провайдера в кластере?
@@ -246,7 +246,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-
 Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ## Как изменить конфигурацию статического кластера?
@@ -256,7 +256,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ## Как обновить версию Kubernetes в кластере?
@@ -265,7 +265,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-c
 1. Выполните команду:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion`.
