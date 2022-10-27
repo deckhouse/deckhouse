@@ -78,7 +78,8 @@ done
 
 # Configuration checksum
 CONFIGURATION_CHECKSUM=$(cat "${BASH_SOURCE[0]}" $CONFIG_DIR/* | sha256sum | cut -d" " -f1)
-BACKUP_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse/backup/$CONFIGURATION_CHECKSUM
+ROOT_BACKUP_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse/backup
+BACKUP_DIR=$ROOT_BACKUP_DIR/$CONFIGURATION_CHECKSUM
 TMP_ROOTFS_DIR="/tmp/${CONFIGURATION_CHECKSUM}"
 
 # Last applied configuration checksum
@@ -538,10 +539,10 @@ echo "$CONFIGURATION_CHECKSUM" > $ROOTFS_DIR/etc/kubernetes/deckhouse/last_appli
 rm -rf "$TMP_ROOTFS_DIR"
 
 # Remove backup
-echo "Remove backup"
-if [[ -d "$BACKUP_DIR" ]] ; then
-  rm -rf "$BACKUP_DIR"
-fi
+echo "Remove backups older than 5"
+for i in $(find $ROOT_BACKUP_DIR -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -r -n -k 1,1 | tail -n +6 | awk '{print $2}')
+  do rm -rf "$i"
+done
 echo " * Done!"
 echo
 
