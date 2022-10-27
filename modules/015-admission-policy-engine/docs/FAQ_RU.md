@@ -7,10 +7,10 @@ title: "Модуль admission-policy-engine: FAQ"
 > Pod Security Standards реагируют на label `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`.
 
 Чтобы расширить политику Pod Security Standards, добавив к существующим проверкам политики свои собственные, необходимо:
-- Создать шаблон проверки.
+- Создать шаблон проверки (ресурс `ConstraintTemplate`).
 - Привязать его к политике `restricted` или `baseline`.
 
-Пример описания параметров проверки адреса репозитория образа контейнера:
+Пример шаблона для проверки адреса репозитория образа контейнера:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1

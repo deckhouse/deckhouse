@@ -7,10 +7,10 @@ title: "The admission-policy-engine module: FAQ"
 > Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
-- Describe the parameters of the check.
+- Create a constraint template for the check (a `ConstraintTemplate` resource).
 - Bind it to the `restricted` or `baseline` policy.
 
-Example of the description of the parameters for checking the URL of the container image repository:
+Example of the `ConstraintTemplate` for checking a  repository URL of a container image:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
