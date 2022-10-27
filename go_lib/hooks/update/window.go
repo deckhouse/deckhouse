@@ -45,6 +45,11 @@ func FromJSON(data []byte) (Windows, error) {
 	return w, err
 }
 
+// ToJSON returns update Windows as json
+func (ws Windows) ToJSON() ([]byte, error) {
+	return json.Marshal(ws)
+}
+
 // IsAllowed returns if specified time get into windows
 func (ws Windows) IsAllowed(t time.Time) bool {
 	if len(ws) == 0 {
@@ -61,15 +66,27 @@ func (ws Windows) IsAllowed(t time.Time) bool {
 }
 
 // IsAllowed check if specified window is allowed at the moment or not
-func (uw Window) IsAllowed(now time.Time) bool {
+func (uw Window) FromTime(now time.Time) time.Time {
 	now = now.UTC()
 	// input is validated through the openapi spec
 	// we must have only a valid time here
 	fromInput, _ := time.Parse(hh_mm, uw.From)
+	return time.Date(now.Year(), now.Month(), now.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
+}
+
+func (uw Window) ToTime(now time.Time) time.Time {
+	now = now.UTC()
+	// input is validated through the openapi spec
+	// we must have only a valid time here
 	toInput, _ := time.Parse(hh_mm, uw.To)
 
-	fromTime := time.Date(now.Year(), now.Month(), now.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
-	toTime := time.Date(now.Year(), now.Month(), now.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+	return time.Date(now.Year(), now.Month(), now.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+}
+
+// IsAllowed check if specified window is allowed at the moment or not
+func (uw Window) IsAllowed(now time.Time) bool {
+	fromTime := uw.FromTime(now)
+	toTime := uw.ToTime(now)
 
 	updateToday := uw.isTodayAllowed(now, uw.Days)
 
@@ -86,14 +103,15 @@ func (uw Window) IsAllowed(now time.Time) bool {
 
 // NextAllowedTime calculates next update window with respect on minimalTime
 // if minimal time is out of window - this function checks next days to find the nearest one
-func (ws Windows) NextAllowedTime(min time.Time) time.Time {
+func (ws Windows) NextAllowedTime(min time.Time) (time.Time, time.Time) {
 	min = min.UTC()
 
 	if len(ws) == 0 {
-		return min
+		return min, min
 	}
 
 	var minTime time.Time
+	var toTime time.Time
 
 	for _, window := range ws {
 		var windowMinTime time.Time
@@ -102,7 +120,7 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		toInput, _ := time.Parse(hh_mm, window.To)
 
 		fromTime := time.Date(min.Year(), min.Month(), min.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
-		toTime := time.Date(min.Year(), min.Month(), min.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
+		toTime = time.Date(min.Year(), min.Month(), min.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
 		if window.isTodayAllowed(min, window.Days) {
 			if (min.After(fromTime) || min.Equal(fromTime)) && min.Before(toTime) {
@@ -145,7 +163,7 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 		}
 	}
 
-	return minTime.Round(time.Minute)
+	return minTime.Round(time.Minute), toTime.Round(time.Minute)
 }
 
 func (uw Window) isDayEqual(today time.Time, dayString string) bool {

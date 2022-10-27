@@ -35,7 +35,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// wedndesday 16:35
 		min := time.Date(2021, 10, 13, 16, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		assert.Equal(t, min, res)
 	})
 
@@ -50,7 +50,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// tuesday 16:35
 		min := time.Date(2021, 10, 12, 16, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: wednesday 16:00
 		assert.Equal(t, time.Date(2021, 10, 13, 16, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Wednesday, res.Weekday())
@@ -73,7 +73,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// wednesday 19:35
 		min := time.Date(2021, 10, 13, 19, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: saturday 20:00
 		assert.Equal(t, time.Date(2021, 10, 16, 20, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Saturday, res.Weekday())
@@ -90,7 +90,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// wednesday 18:01
 		min := time.Date(2021, 10, 13, 18, 01, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// move to the one week: wednesday 16:00
 		assert.Equal(t, time.Date(2021, 10, 20, 16, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Wednesday, res.Weekday())
@@ -112,7 +112,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// sunday 19:35
 		min := time.Date(2021, 10, 17, 19, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: wednesday 16:00
 		assert.Equal(t, time.Date(2021, 10, 20, 16, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Wednesday, res.Weekday())
@@ -128,7 +128,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// sunday 19:35
 		min := time.Date(2021, 10, 17, 19, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: sunday 20:00
 		assert.Equal(t, time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Sunday, res.Weekday())
@@ -144,7 +144,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// sunday 19:35
 		min := time.Date(2021, 10, 17, 22, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: monday 20:00
 		assert.Equal(t, time.Date(2021, 10, 18, 20, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Monday, res.Weekday())
@@ -160,7 +160,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// sunday 19:35
 		min := time.Date(2021, 10, 17, 21, 35, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: sunday 21:35
 		assert.Equal(t, time.Date(2021, 10, 17, 21, 35, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Sunday, res.Weekday())
@@ -176,7 +176,7 @@ func TestNextAllowedWindow(t *testing.T) {
 		// sunday 20:00
 		min := time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC)
 
-		res := ws.NextAllowedTime(min)
+		res, _ := ws.NextAllowedTime(min)
 		// beginning of the window: sunday 20:00
 		assert.Equal(t, time.Date(2021, 10, 17, 20, 00, 00, 0, time.UTC), res)
 		assert.Equal(t, time.Sunday, res.Weekday())

@@ -119,7 +119,7 @@ func (du *DeckhouseUpdater) checkReleaseNotification(predictedRelease *Deckhouse
 			applyTimeChanged = true
 		}
 	}
-	releaseApplyTime := updateWindows.NextAllowedTime(predictedReleaseApplyTime)
+	releaseApplyTime, _ := updateWindows.NextAllowedTime(predictedReleaseApplyTime)
 
 	version := fmt.Sprintf("%d.%d", predictedRelease.Version.Major(), predictedRelease.Version.Minor())
 	msg := fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
@@ -220,7 +220,7 @@ func (du *DeckhouseUpdater) checkMinorReleaseConditions(predictedRelease *Deckho
 		if len(updateWindows) > 0 {
 			updatePermitted := updateWindows.IsAllowed(du.now)
 			if !updatePermitted {
-				applyTime := updateWindows.NextAllowedTime(du.now)
+				applyTime, _ := updateWindows.NextAllowedTime(du.now)
 				du.input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
 				du.updateStatus(predictedRelease, fmt.Sprintf("Release is waiting for the update window: %s", applyTime.Format(time.RFC822)), v1alpha1.PhasePending)
 				return false
