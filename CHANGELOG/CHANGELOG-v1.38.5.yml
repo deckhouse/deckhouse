@@ -1,0 +1,5 @@
+prometheus:
+  fixes:
+    - summary: Improve Prometheus Retain alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2841
+
