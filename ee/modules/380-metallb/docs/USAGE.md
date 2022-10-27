@@ -40,7 +40,7 @@ spec:
   nodeType: Static
 ```
 
-Check that nodes have correct labels.
+Check that nodes have the correct labels.
 
 ```bash
 kubectl get nodes -l node-role/metallb
@@ -50,7 +50,7 @@ demo-frontend-1   Ready    frontend   61d   v1.21.14
 demo-worker-0     Ready    worker     61d   v1.21.14
 ```
 
-Module `metallb` is disabled by default, so you have to explicitly enable it. You also have to set correct `nodeSelector` and `tolerations` for Metallb speakers.
+Module `metallb` is disabled by default, so you have to explicitly enable it. You also have to set the correct `nodeSelector` and `tolerations` for Metallb speakers.
 
 ```yaml
 metallb: |
@@ -88,7 +88,7 @@ spec:
     value: frontend
 ```
 
-Check that service with type `LoadBalancer` is created in namespace `d8-ingress-nginx`.
+Check that service with the type `LoadBalancer` is created in the namespace `d8-ingress-nginx`.
 
 ```shell
 kubectl -n d8-ingress-nginx get svc main-load-balancer 
@@ -96,14 +96,14 @@ NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)  
 main-load-balancer   LoadBalancer   10.222.255.194   192.168.199.100   80:30236/TCP,443:32292/TCP   30s
 ```
 
-Your ingress controller is accessible on external ip address.
+Your Ingress controller is accessible on an external IP address.
 
 ```shell
 curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
 404
 ```
 
-Expose our standalone nginx on `8080` port.
+Expose your standalone Nginx on `8080` port.
 
 ```shell
 kubectl create deploy nginx --image=nginx
@@ -118,7 +118,7 @@ NAME    TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)          AGE
 nginx   LoadBalancer   10.222.9.190   192.168.199.101   8080:31689/TCP   3m11s
 ```
 
-Now you can access application using curl.
+Now you can access the application using curl.
 
 ```shell
 curl -s -o /dev/null -w "%{http_code}" 192.168.199.101:8080

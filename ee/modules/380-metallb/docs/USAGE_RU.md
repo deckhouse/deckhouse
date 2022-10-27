@@ -4,10 +4,13 @@ title: "The metallb module: пример конфигурации"
 
 {% raw %}
 
-Metallb можно использовать в статических (Bare Metal) кластерах, когда вы не можете заказать load balancer у облачного провайдера. Metallb может работать в L2 или BGP режиме. Ниже представлен пример использования Metallb в L2 режиме.
-Мы создадим Ingress Controller с инлетом `LoadBalancer`. А также дадим доступ к отдельно запущенному nginx, используя сервис с типом `LoadBalancer`.
+Metallb можно использовать в статических (Bare Metal) кластерах, когда вы не можете заказать load balancer у облачного провайдера. Metallb может работать в L2 или BGP режиме.
+
+Ниже представлен пример использования Metallb в L2 режиме.
+Мы создадим Ingress Controller с inlet `LoadBalancer`. А также дадим доступ к отдельно запущенному Nginx, используя сервис с типом `LoadBalancer`.
+
 Во-первых, необходимо определить, какие NodeGroup'ы будут использоваться для запуска приложений, к которым будет предоставлен доступ.
-В этом примере ingress контроллеры запускаются на frontend узлах, а nginx на worker узле. У всех узлов есть общий лейбл `node-role/metallb=""`.
+В этом примере Ingress-контроллеры запускаются на frontend-узлах, а Nginx — на worker-узле. У всех узлов есть общий лейбл `node-role/metallb=""`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -40,7 +43,7 @@ spec:
   nodeType: Static
 ```
 
-Проверьте, что на нодах проставлен корректный лейбл
+Проверьте, что на узлах проставлен корректный лейбл.
 
 ```bash
 kubectl get nodes -l node-role/metallb
@@ -96,14 +99,14 @@ NAME                 TYPE           CLUSTER-IP       EXTERNAL-IP       PORT(S)  
 main-load-balancer   LoadBalancer   10.222.255.194   192.168.199.100   80:30236/TCP,443:32292/TCP   30s
 ```
 
-Ваш ingress контроллер доступен по внешнему ip адресу.
+Ваш Ingress-контроллер доступен по внешнему IP-адресу.
 
 ```shell
 curl -s -o /dev/null -w "%{http_code}" 192.168.199.100
 404
 ```
 
-Теперь предоставим доступ к nginx на порту `8080`.
+Теперь предоставим доступ к Nginx на порту `8080`.
 
 ```shell
 kubectl create deploy nginx --image=nginx

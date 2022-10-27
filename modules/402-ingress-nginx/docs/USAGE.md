@@ -91,7 +91,7 @@ spec:
 
 ## An example for Bare metal (MetalLB Load Balancer)
 
-MetalLB is currently available only in EE version.
+The `metallb` module is currently available only in the Enterprise Edition version.
 
 ```yaml
 apiVersion: deckhouse.io/v1
