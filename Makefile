@@ -27,6 +27,7 @@ else ifeq ($(OS_NAME), Darwin)
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
 endif
+JQ_VERSION = 1.6
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
@@ -168,15 +169,21 @@ bin:
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
 
-bin/trivy: bin
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
+bin/trivy-${TRIVY_VERSION}/trivy:
+	mkdir -p bin/trivy-${TRIVY_VERSION}
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
+
+.PHONY: trivy
+bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
+	rm -f bin/trivy
+	ln -s trivy-${TRIVY_VERSION}/trivy bin/trivy
 
 .PHONY: cve-report cve-base-images
-cve-report: ## Generate CVE report for a Deckhouse release.
+cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/release.sh
 
-cve-base-images: ## Check CVE in our base images.
+cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
 
@@ -202,8 +209,14 @@ docs-down: ## Stop all the documentation containers.
 
 ##@ Update kubernetes control-plane patchversions
 
-bin/jq: bin ## Install jq deps for update-patchversion script.
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o bin/jq && chmod +x bin/jq
+bin/jq-$(JQ_VERSION)/jq:
+	mkdir -p bin/jq-$(JQ_VERSION)
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
+
+.PHONY: bin/jq
+bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
+	rm -f bin/jq
+	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq

@@ -147,3 +147,22 @@
     echo "::set-output name=started_at::${unixTimestamp}"
 # </template: started_at_output>
 {!{- end -}!}
+
+{!{ define "link_bin_step" }!}
+# <template: link_bin_step>
+- name: Link binary cache
+  id: link_bin_step
+  run: |
+    ln -s ~/deckhouse-bin-cache bin
+# </template: link_bin_step>
+{!{- end -}!}
+
+{!{ define "unlink_bin_step" }!}
+# <template: unlink_bin_step>
+- name: Unlink binary cache
+  id: unlink_bin_step
+  if: always()
+  run: |
+    rm bin
+# </template: unlink_bin_step>
+{!{- end -}!}
