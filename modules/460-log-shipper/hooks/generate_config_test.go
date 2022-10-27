@@ -133,6 +133,7 @@ spec:
 		Entry("Throttle Transform", "throttle"),
 		Entry("File to Elasticsearch", "file-to-elastic"),
 		Entry("File to Vector", "file-to-vector"),
+		Entry("File to Kafka", "file-to-kafka"),
 		Entry("Two sources to single destination", "many-to-one"),
 	)
 })

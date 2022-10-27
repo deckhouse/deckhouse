@@ -28,7 +28,7 @@ type Elasticsearch struct {
 
 	Endpoint string `json:"endpoint"`
 
-	Encoding ElasticsearchEncoding `json:"encoding,omitempty"`
+	Encoding Encoding `json:"encoding,omitempty"`
 
 	Batch ElasticsearchBatch `json:"batch,omitempty"`
 
@@ -48,12 +48,6 @@ type Elasticsearch struct {
 
 	DocType          string `json:"doc_type,omitempty"`
 	SuppressTypeName bool   `json:"suppress_type_name"`
-}
-
-type ElasticsearchEncoding struct {
-	ExceptFields    []string `json:"except_fields,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type ElasticsearchAuth struct {
@@ -126,7 +120,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 			Password:      decodeB64(spec.Auth.Password),
 			Strategy:      strings.ToLower(spec.Auth.Strategy),
 		},
-		Encoding: ElasticsearchEncoding{
+		Encoding: Encoding{
 			TimestampFormat: "rfc3339",
 		},
 		TLS: tls,

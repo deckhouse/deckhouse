@@ -31,7 +31,7 @@ var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\
 type Loki struct {
 	CommonSettings
 
-	Encoding LokiEncoding `json:"encoding,omitempty"`
+	Encoding Encoding `json:"encoding,omitempty"`
 
 	Endpoint string `json:"endpoint"`
 
@@ -44,12 +44,6 @@ type Loki struct {
 	RemoveLabelFields bool `json:"remove_label_fields"`
 
 	OutOfOrderAction string `json:"out_of_order_action"`
-}
-
-type LokiEncoding struct {
-	Codec           string   `json:"codec,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type LokiAuth struct {
@@ -131,7 +125,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		TLS:      tls,
 		Labels:   labels,
 		Endpoint: spec.Endpoint,
-		Encoding: LokiEncoding{
+		Encoding: Encoding{
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
 			OnlyFields:      []string{"message"},

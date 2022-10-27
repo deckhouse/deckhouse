@@ -255,10 +255,10 @@
         "enabled": false
       },
       "encoding": {
-        "codec": "text",
         "only_fields": [
           "message"
         ],
+        "codec": "text",
         "timestamp_format": "rfc3339"
       },
       "endpoint": "http://192.168.1.1:9000",

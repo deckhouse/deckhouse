@@ -147,6 +147,8 @@ func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) apis.
 		return destination.NewLogstash(name, spec)
 	case v1alpha1.DestVector:
 		return destination.NewVector(name, spec)
+	case v1alpha1.DestKafka:
+		return destination.NewKafka(name, spec)
 	}
 	return nil
 }

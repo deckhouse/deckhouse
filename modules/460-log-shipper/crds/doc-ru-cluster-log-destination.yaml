@@ -139,6 +139,41 @@ spec:
                           description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
                         verifyCertificate:
                           description: Проверка действия TLS-сертификата удаленного хоста.
+                kafka:
+                  properties:
+                    topic:
+                      type: string
+                      description: |
+                        Имя топика в Kafka для записи событий.
+                        Этот параметр поддерживает синтаксис шаблонов, что дает возможность динамического создания топиков.
+                    bootstrapServers:
+                      type: array
+                      description: |
+                        Список пар адресов (хост:порт) Kafka брокеров в кластере Kafka, к которым должны подключиться клиенты для получения метаданных (топиков и партиций).
+                    tls:
+                      description: Настройки защищённого TLS-соединения.
+                      properties:
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также, необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также, необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
                 vector:
                   properties:
                     endpoint:
