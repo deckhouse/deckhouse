@@ -20,9 +20,8 @@ spec:
     relabelings:
     - targetLabel: tier
       replacement: cluster
-    - action: replace
-      target_label: job
-      replacement: "cilium-agent"
+    - targetLabel: job
+      replacement: "cilium-operator"
   selector:
     matchLabels:
       app: agent
