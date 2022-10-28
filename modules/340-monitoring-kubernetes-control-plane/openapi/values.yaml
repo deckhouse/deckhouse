@@ -1,0 +1,21 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      etcdClientSecret:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: string
+            x-examples: ["test-string"]
+          key:
+            type: string
+            x-examples: ["test-string"]
+          ca:
+            type: string
+            x-examples: ["test-string"]

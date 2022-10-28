@@ -252,9 +252,6 @@ var DefaultImagesTags = map[string]interface{}{
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
 	},
-	"monitoringKubernetesControlPlane": map[string]interface{}{
-		"proxy": "imageHash-monitoringKubernetesControlPlane-proxy",
-	},
 	"monitoringPing": map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
 	},

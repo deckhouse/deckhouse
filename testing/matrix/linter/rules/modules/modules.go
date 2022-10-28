@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chart/loader"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
@@ -143,7 +144,7 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
-func GetDeckhouseModulesWithValuesMatrixTests(focusNames map[string]struct{}) (modules []utils.Module, err error) {
+func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []utils.Module, err error) {
 	var possibleModulesPaths []string
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
@@ -166,14 +167,13 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames map[string]struct{}) (m
 		modulesPaths = append(modulesPaths, result...)
 	}
 
-	hasFocusNames := len(focusNames) > 0
 	var lintRuleErrorsList errors.LintRuleErrorsList
 	for _, modulePath := range modulesPaths {
-		if hasFocusNames {
+		if focusNames.Size() > 0 {
 			moduleName := filepath.Base(modulePath)
 			moduleName = strings.TrimLeft(moduleName, "1234567890-")
-			_, focused := focusNames[moduleName]
-			if !focused {
+
+			if !focusNames.Has(moduleName) {
 				continue
 			}
 		}
