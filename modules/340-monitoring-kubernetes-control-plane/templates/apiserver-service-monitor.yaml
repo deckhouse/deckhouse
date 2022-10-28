@@ -15,6 +15,8 @@ spec:
   - scheme: https
     port: https
     path: /metrics
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     bearerTokenSecret:
       name: "prometheus-token"
       key: "token"

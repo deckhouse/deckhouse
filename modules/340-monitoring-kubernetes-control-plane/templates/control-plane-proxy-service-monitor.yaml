@@ -7,13 +7,14 @@ metadata:
 spec:
   selector:
     matchLabels:
-      component: apiserver
+      app: control-plane-proxy
+      heritage: deckhouse
   namespaceSelector:
     matchNames:
     - default
   endpoints:
   - scheme: https
-    port: https
+    port: https-metrics
     path: /etcd/metrics
     tlsConfig:
       insecureSkipVerify: true
@@ -38,7 +39,7 @@ spec:
       regex: "true"
       action: keep
   - scheme: https
-    port: https
+    port: https-metrics
     path: /scheduler/metrics
     tlsConfig:
       insecureSkipVerify: true
@@ -56,7 +57,7 @@ spec:
       regex: "true"
       action: keep
   - scheme: https
-    port: https
+    port: https-metrics
     path: /controller-manager/metrics
     tlsConfig:
       insecureSkipVerify: true

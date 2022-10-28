@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+spec:
+  selector:
+    app: control-plane-proxy
+  ports:
+  - name: https-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: https-metrics
