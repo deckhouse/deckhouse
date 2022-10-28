@@ -4,7 +4,9 @@ FROM $BASE_UBUNTU as builder
 
 WORKDIR /
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential fakeroot pbuilder aptitude git ca-certificates libelf1 software-properties-common
+RUN apt-get update &&  \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends  \
+      build-essential fakeroot pbuilder aptitude git ca-certificates libelf1 software-properties-common
 
 RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc && \
     git -C /root/bcc submodule update --init --recursive
