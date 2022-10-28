@@ -189,7 +189,7 @@ properties:
                 - ingressGatewayClass
                 - inlet
               properties:
-                ingressClass:
+                ingressGatewayClass:
                   type: string
                   x-examples: ["istio"]
                 inlet:
@@ -250,3 +250,43 @@ properties:
                       type: integer
                     httpsPort:
                       type: integer
+                resourcesRequests:
+                  type: object
+                  default: {}
+                  properties:
+                    mode:
+                      type: string
+                      x-examples: ["VPA", "Static"]
+                    vpa:
+                      type: object
+                      default: {}
+                      properties:
+                        mode:
+                          type: string
+                        cpu:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                              x-examples: ["200m"]
+                            min:
+                              type: string
+                        memory:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                            min:
+                              type: string
+                              x-examples: ["100Mi"]
+                    static:
+                      type: object
+                      default: {}
+                      properties:
+                        cpu:
+                          type: string
+                          x-examples: ["100m"]
+                        memory:
+                          type: string

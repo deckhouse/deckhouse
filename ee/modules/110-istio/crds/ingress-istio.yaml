@@ -158,6 +158,74 @@ spec:
 
                         This parameter is mandatory if `httpPort` is not set.
                       example: '30443'
+                resourcesRequests:
+                  required: ['mode']
+                  type: object
+                  description: |
+                    Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        The mode for managing resource requests.
+                      enum: ['VPA', 'Static']
+                      default: 'VPA'
+                    vpa:
+                      type: object
+                      description: |
+                        Parameters of the vpa mode.
+                      properties:
+                        mode:
+                          type: string
+                          description: |
+                            The VPA usage mode.
+                          enum: ['Initial', 'Auto']
+                          default: 'Initial'
+                        cpu:
+                          type: object
+                          description: |
+                            CPU-related parameters.
+                          properties:
+                            max:
+                              description: |
+                                Maximum allowed CPU requests.
+                              default: '50m'
+                              type: string
+                            min:
+                              description: |
+                                Minimum allowed CPU requests.
+                              default: '10m'
+                              type: string
+                        memory:
+                          type: object
+                          description: |
+                            The amount of memory requested.
+                          properties:
+                            max:
+                              description: |
+                                Maximum allowed memory requests.
+                              default: '200Mi'
+                              type: string
+                            min:
+                              description: |
+                                Minimum allowed memory requests.
+                              default: '50Mi'
+                              type: string
+                    static:
+                      type: object
+                      description: |
+                        Static mode settings.
+                      properties:
+                        cpu:
+                          type: string
+                          description: |
+                            CPU requests.
+                          default: '350m'
+                        memory:
+                          type: string
+                          description: |
+                            Memory requests.
+                          default: '500Mi'
               oneOf:
                 - properties:
                     inlet:
