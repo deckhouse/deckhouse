@@ -1,0 +1,33 @@
+{{- range $controller := .Values.istio.internal.ingressControllers }}
+    {{- $ingressGatewayClass := .spec.ingressGatewayClass -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ingress_gateway_name" .name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway" "instance" .name)) | nindent 2 }}
+  {{- if .spec.serviceAnnotations }}
+  annotations:
+    {{- .spec.serviceAnnotations | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  externalTrafficPolicy: Local
+  ports:
+    - name: tls
+      port: 15443
+      protocol: TCP
+  {{- if and (eq .spec.inlet "NodePort") .spec.nodePort.port }}
+      nodePort: {{ .spec.nodePort.port }}
+  {{- end }}
+  selector:
+    app: "ingress-gateway"
+    instance: "{{ .name }}"
+    istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
+  sessionAffinity: None
+  {{- if eq .spec.inlet "NodePort" }}
+  type: NodePort
+  {{- else }}
+  type: LoadBalancer
+  {{- end }}
+{{- end }}
