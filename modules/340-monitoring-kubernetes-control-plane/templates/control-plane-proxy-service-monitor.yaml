@@ -11,20 +11,13 @@ spec:
       heritage: deckhouse
   namespaceSelector:
     matchNames:
-    - default
+    - d8-monitoring
   endpoints:
   - scheme: https
     port: https-metrics
     path: /etcd/metrics
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: etcd-client-tls
-          key: tls.crt
-      keySecret:
-        name: etcd-client-tls
-        key: tls.key
     bearerTokenSecret:
       name: "prometheus-token"
       key: "token"
