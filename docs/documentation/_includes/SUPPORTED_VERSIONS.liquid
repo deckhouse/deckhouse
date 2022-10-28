@@ -23,7 +23,12 @@
 {%- assign firstItemData = osItem[1] | first %}
 {%- if firstItemData[1][langSupportKey] and firstItemData[1][langSupportKey] != "true" %}{% continue %}{% endif %}
 <tr>
-  <td class="name"><span {% if firstItemData[1]['ru_support'] and firstItemData[1]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>{{ osName }}</span></td>
+  <td class="name">
+    <span {% if firstItemData[1]['ru_support'] and firstItemData[1]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}<a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif%}
+    </span></td>
   <td class="versions">
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0] %}
