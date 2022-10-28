@@ -1,0 +1,87 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                ingressGatewayClass:
+                  description: |
+                    Имя Ingress-gateway класса для обслуживания Istio ingress gateway controller.
+
+                inlet:
+                  description: |
+                    Способ поступления трафика из внешнего мира:
+                    * `LoadBalancer` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`.
+                    * `NodePort` — устанавливается Ingress controller, который доступен на портах узлов через `nostPort`.
+                    * `HostPort` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort`.
+
+                      **Внимание!** При использовании этого inlet вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
+
+                      **Внимание!** Необходимо, чтобы на узле были свободные порты: 80, 443.
+                nodeSelector:
+                  description: |
+                    Как в `spec.nodeSelector` у Pod'ов.
+
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
+                tolerations:
+                  description: |
+                    Как в `spec.tolerations` у Pod'ов.
+
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
+                loadBalancer:
+                  description: |
+                    Секция настроек для inlet'а `LoadBalancer`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список CIDR, которым разрешен доступ на балансировщик.
+
+                        Облачный провайдер может не поддерживать данную опцию и игнорировать её.
+                    annotations:
+                      description: |
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+
+                        **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках.
+                        Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
+                hostPort:
+                  description: |
+                    Секция настроек для inlet `HostPort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан – возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан – возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.
+                nodePort:
+                  description: |
+                    Секция настроек для inlet `NodePort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан – возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан – возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.

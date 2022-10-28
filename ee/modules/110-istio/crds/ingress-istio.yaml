@@ -1,0 +1,185 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressistiocontrollers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: istio
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: ingressistiocontrollers
+    singular: ingressistiocontroller
+    kind: IngressIstioController
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              required: ['ingressGatewayClass', 'inlet']
+              properties:
+                ingressGatewayClass:
+                  type: string
+                  description: |
+                    The name of the Ingress gateway class to use with the Ingress nginx controller.
+
+                  example: 'istio'
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                inlet:
+                  type: string
+                  description: |
+                    The way traffic goes to cluster from the outer network.
+                    * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
+                    * `NodePort` — Ingress controller is deployed and available through nodes' ports via `nodePort`.
+                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
+
+                      **Caution!** There can be only one controller with this inlet type on a host.
+
+                      **Caution!** The following ports must be available on the node: 80, 443.
+                  enum: ["LoadBalancer","HostPort","NodePort"]
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                tolerations:
+                  type: array
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: ["NoSchedule","PreferNoSchedule","NoExecute"]
+                      operator:
+                        type: string
+                        default: "Equal"
+                        enum: ["Exists","Equal"]
+                      key:
+                        type: string
+                      tolerationSeconds:
+                        format: int64
+                        type: integer
+                      value:
+                        type: string
+                loadBalancer:
+                  type: object
+                  x-doc-required: false
+                  description: |
+                    A section of parameters of the `LoadBalancer` inlet.
+                  properties:
+                    sourceRanges:
+                      type: array
+                      description: |
+                        IP ranges (CIDR) that are allowed to access the load balancer.
+
+                        The cloud provider may not support this option or ignore it.                       .
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    annotations:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Annotations to assign to the service for flexible configuration of the load balancer.
+
+                        **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
+                      additionalProperties:
+                        type: string
+                hostPort:
+                  type: object
+                  description: |
+                    `HostPort` inlet settings.
+                  anyOf:
+                  - {required: ["httpPort"]}
+                  - {required: ["httpsPort"]}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Port for insecure HTTP connections.
+
+                        If the parameter is not set, the connection over HTTP cannot be established.
+
+                        This parameter is mandatory if `httpsPort` is not set.
+                      example: '80'
+                    httpsPort:
+                      type: integer
+                      description: |
+                        Port for secure HTTPS connections.
+
+                        If the parameter is not set, the connection over HTTPS cannot be established.
+
+                        This parameter is mandatory if `httpPort` is not set.
+                      example: '443'
+                nodePort:
+                  type: object
+                  description: |
+                    `HostPort` inlet settings.
+                  anyOf:
+                    - {required: ["httpPort"]}
+                    - {required: ["httpsPort"]}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Port for insecure HTTP connections.
+
+                        If the parameter is not set, the connection over HTTP cannot be established.
+
+                        This parameter is mandatory if `httpsPort` is not set.
+                      example: '30080'
+                    httpsPort:
+                      type: integer
+                      description: |
+                        Port for secure HTTPS connections.
+
+                        If the parameter is not set, the connection over HTTPS cannot be established.
+
+                        This parameter is mandatory if `httpPort` is not set.
+                      example: '30443'
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['LoadBalancer']
+                    loadBalancer: {}
+                - properties:
+                    inlet:
+                      enum: ['HostPort']
+                    hostPort: {}
+                  required: ['hostPort']
+                - properties:
+                    inlet:
+                      enum: ['NodePort']
+                    nodePort: {}
+                  required: ['nodePort']
+      additionalPrinterColumns:
+        - jsonPath: .spec.ingressGatewayClass
+          name: Ingress_Gateway_Class
+          description: 'Name of served istio ingress gateway class.'
+          type: string
+        - jsonPath: .spec.inlet
+          name: Inlet
+          description: 'The way traffic goes to current Ingress Controller from the outer network.'
+          type: string
+
