@@ -24,6 +24,12 @@ properties:
       - `AllowAny` — allow.
       - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry CR or to organize egressgateway.
     default: AllowAny
+  enableIngressGatewayController:
+    type: boolean
+    default: false
+    x-examples: [true]
+    description: |
+      Turn on ability to create istio ingress controlers with ingressistiocontrollers.deckhouse.io resource.
   enableHTTP10:
     type: boolean
     default: false
