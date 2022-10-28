@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -133,10 +132,20 @@ func (h *windowTelemetryHook) setWindowMetrics() {
 		fromTime, toTime = h.windows.NextAllowedTime(now)
 	}
 
-	const group = "deckhouse_update_window_next_window"
+	const group = "update_window_next"
 	h.collector.Expire(group)
-	h.collector.Set(group, 1.0, map[string]string{
-		"from": fmt.Sprintf("%d", fromTime.UnixNano()),
-		"to":   fmt.Sprintf("%d", toTime.UnixNano()),
-	}, telemetry.NewOptions().WithGroup(group))
+
+	h.collector.Set(
+		"update_window_next_from",
+		float64(fromTime.UnixNano()),
+		map[string]string{},
+		telemetry.NewOptions().WithGroup(group),
+	)
+
+	h.collector.Set(
+		"update_window_next_to",
+		float64(toTime.UnixNano()),
+		map[string]string{},
+		telemetry.NewOptions().WithGroup(group),
+	)
 }

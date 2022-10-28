@@ -55,20 +55,87 @@ var _ = FDescribe("Modules :: deckhouse :: hooks :: update deckhouse image ::", 
 		Expect(metricIndex >= 0).To(BeTrue())
 		Expect(metricIndex > expireIndex).To(BeTrue())
 	}
+	assertOnlyModeMetric := func(f *HookExecutionConfig) {
+		metrics := f.MetricsCollector.CollectedMetrics()
+		Expect(metrics).ToNot(BeEmpty())
+
+		notExpireMetrics := 0
+		for _, m := range metrics {
+			if m.Action != "expire" {
+				notExpireMetrics += 1
+			}
+		}
+
+		Expect(notExpireMetrics).To(Equal(1))
+	}
 
 	Context("Approval mode is 'Manual'", func() {
-		BeforeEach(func() {
-			f.ValuesSet("deckhouse.update.mode", "Manual")
-			f.ValuesSet("deckhouse.update.windows", []string{})
+		Context("Update window is not set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("deckhouse.update.mode", "Manual")
+				f.ValuesSet("deckhouse.update.windows", []string{})
 
-			f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
-			f.RunHook()
+				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
+				f.RunHook()
+			})
+
+			It("Sets mode metric Manual", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertModeMetric(f, "Manual")
+			})
+
+			It("Sets only one mode metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertOnlyModeMetric(f)
+			})
 		})
 
-		It("Sets mode metrics only", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		Context("Update window is set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("deckhouse.update.mode", "Manual")
+				f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:00"}]`))
 
-			assertModeMetric(f, "Manual")
+				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
+				f.RunHook()
+			})
+
+			It("Sets mode metric Manual", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertModeMetric(f, "Manual")
+			})
+
+			It("Sets only one mode metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertOnlyModeMetric(f)
+			})
+		})
+	})
+
+	Context("Approval mode is 'Auto'", func() {
+		Context("Update window is not set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("deckhouse.update.mode", "Auto")
+				f.ValuesSet("deckhouse.update.windows", []string{})
+
+				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
+				f.RunHook()
+			})
+
+			It("Sets mode metric Manual", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertModeMetric(f, "Manual")
+			})
+
+			It("Sets only one mode metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertOnlyModeMetric(f)
+			})
 		})
 	})
 })
