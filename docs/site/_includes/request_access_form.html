@@ -1,4 +1,4 @@
-<div id="request_access_intro">
+<div id="request_access_intro" data-header-form>
   {%- if page.lang == "ru" %}
     <h3 class="text text_h3">Запросить лицензионный ключ</h3>
     <p class="text">Заполните форму и мы отправим данные для доступа вам на почту.</p>
@@ -6,8 +6,9 @@
     <h3 class="text text_h3">Request access</h3>
     <p class="text">Fill out this form and we will send you access credentials via email.</p>
   {%- endif %}
-  <form class="form" id="request_access_form">
-    <input id="h0n3y" class="form__h0n3y" autocomplete="off" type="text" name="comment" placeholder="Comment">
+<!--  <form class="form" action="https://license.deckhouse.io/api/license/request" id="request_access_form" data-form>-->
+  <form class="form" action="https://license-deckhouse.stage.flant.com/api/license/request" id="request_access_form" data-form>
+    <input id="h0n3y" class="form__h0n3y" data-h0n3y autocomplete="off" type="text" name="comment" placeholder="Comment">
     {%- if page.lang == "ru" %}
     <input type="hidden" id="language_ru" name="language" value="ru">
     <div class="form__row">
@@ -95,7 +96,7 @@
     {%- endif %}
   </form>
 </div>
-<div id="request_access_success" style="display: none;">
+<div id="request_access_success" data-success-message style="display: none;">
   {%- if page.lang == "ru" %}
     <h3 class="text text_h3 text_alt">
       Запрос получен
@@ -112,7 +113,7 @@
     </p>
   {%- endif %}
 </div>
-<div id="request_access_error" style="display: none;">
+<div id="request_access_error" data-error-message style="display: none;">
   {%- if page.lang == "ru" %}
     <h3 class="text text_h3 text_alt">
       Ошибка

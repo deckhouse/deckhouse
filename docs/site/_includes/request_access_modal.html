@@ -1,7 +1,7 @@
-<div class="request-access" id="request_access" style="display: none;">
-  <div class="request-access__backdrop" onclick="raClose()"></div>
+<div id="request_access" class="request-access" data-modal-window="request-access" style="display: none;">
+  <div class="request-access__backdrop" data-close-bg></div>
   <div class="request-access__modal" style="width: 350px;">
-    <a href="javascript:raClose()" class="request-access__close">✕</a>
+    <a href="" class="request-access__close" data-close-btn>✕</a>
     {% include request_access_form.html %}
   </div>
 </div>

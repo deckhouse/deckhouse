@@ -1,7 +1,6 @@
 @import "components/common/_variables.scss";
 
-.request-access,
-.request-callback {
+.modal-window {
     position: fixed;
     top: 0;
     left: 0;
@@ -21,7 +20,7 @@
         background: rgba(0,0,0,0.75);
         z-index: 1001;
     }
-    &__modal {
+    &__wrap {
         padding: 50px;
         background: $color-inverse;
         z-index: 1002;
@@ -30,7 +29,7 @@
             margin-top: 0;
         }
     }
-    &__close {
+    &__close-btn {
         position: absolute;
         top: 20px;
         right: 20px;
