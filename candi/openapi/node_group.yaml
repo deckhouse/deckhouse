@@ -232,6 +232,8 @@ spec:
                         The minimum number of instances for the group in each zone.
 
                         This value is used in the MachineDeployment object and as a lower bound in cluster-autoscaler.
+
+                        > **Caution!** `minPerZone` != 0 and `minPerZone` <= `maxPerZone` or `minPerZone` == `maxPerZone` == 0.
                       type: integer
                       minimum: 0
                     maxPerZone:
@@ -239,6 +241,8 @@ spec:
                         The maximum number of instances for the group in each zone.
 
                         This value is used as the upper bound in cluster-autoscaler.
+
+                        > **Caution!** `minPerZone` != 0 and `minPerZone` <= `maxPerZone` or `minPerZone` == `maxPerZone` == 0.
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:
