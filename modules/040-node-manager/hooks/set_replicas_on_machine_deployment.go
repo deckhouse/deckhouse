@@ -40,7 +40,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cloud-instance-manager"},
 				},
 			},
-			FilterFunc: setReplicasFilterMD,
+			ExecuteHookOnEvents: pointer.Bool(false),
+			FilterFunc:          setReplicasFilterMD,
 		},
 		{
 			Name:                   "ngs",

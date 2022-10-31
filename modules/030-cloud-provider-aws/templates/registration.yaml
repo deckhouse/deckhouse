@@ -9,6 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "aws" | quote }}
+  region: {{ .Values.cloudProviderAws.internal.region | b64enc | quote }}
   zones: {{ .Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
   machineClassKind: {{ b64enc "AWSMachineClass" | quote }}

@@ -147,6 +147,8 @@ properties:
         properties:
           type:
             type: string
+          region:
+            type: string
           zones:
             type: array
             items:
@@ -230,6 +232,9 @@ properties:
               additionalProperties: true
             cloudInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            nodeCapacity:
               type: object
               additionalProperties: true
             nodeTemplate:

@@ -9,6 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "openstack" | quote }}
+  region: {{ .Values.cloudProviderOpenstack.internal.connection.region | b64enc | quote }}
   zones: {{ .Values.cloudProviderOpenstack.internal.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
   machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}

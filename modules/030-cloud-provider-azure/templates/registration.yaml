@@ -9,6 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "azure" | quote }}
+  region: {{ .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.location | b64enc | quote }}
   zones: {{ .Values.cloudProviderAzure.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "AzureInstanceClass" | quote }}
   machineClassKind: {{ b64enc "AzureMachineClass" | quote }}

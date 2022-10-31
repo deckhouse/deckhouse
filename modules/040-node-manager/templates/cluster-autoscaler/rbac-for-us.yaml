@@ -67,6 +67,13 @@ rules:
   - ""
   resources:
   - configmaps
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
   resourceNames:
   - cluster-autoscaler-priority-expander
   verbs:

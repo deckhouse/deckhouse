@@ -146,6 +146,11 @@ func (in *CloudInstances) DeepCopyInto(out *CloudInstances) {
 	}
 	out.StandbyHolder = in.StandbyHolder
 	out.ClassReference = in.ClassReference
+	if in.Priority != nil {
+		in, out := &in.Priority, &out.Priority
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

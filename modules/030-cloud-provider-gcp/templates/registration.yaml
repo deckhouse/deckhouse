@@ -9,6 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "gcp" | quote }}
+  region: {{ .Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.region | b64enc | quote }}
   zones: {{ .Values.cloudProviderGcp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "GCPInstanceClass" | quote }}
   machineClassKind: {{ b64enc "GCPMachineClass" | quote }}
