@@ -1,0 +1,136 @@
+ci:
+  features:
+    - summary: Add automated periodic Trivy tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2763
+  fixes:
+    - summary: Fix PR title and body generation when backport runs from comment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2804
+cni-cilium:
+  features:
+    - summary: Fix validation for InitContainers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+      impact: The `cni-cilium` module will be restarted.
+  fixes:
+    - summary: Fix panic in the cilium-agent code.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2781
+      impact: Cillium agent Pods will be restarted.
+control-plane-manager:
+  features:
+    - summary: Save the latest 5 backups of control-plane configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2783
+dashboard:
+  fixes:
+    - summary: Fix regression - add per-module `highAvailability` field to the OpenAPI schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2902
+deckhouse-controller:
+  fixes:
+    - summary: Update shell-operator and addon-operator dependencies to reduce memory usage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2864
+dhctl:
+  fixes:
+    - summary: >-
+        Wait for the control plane manager Pod readiness while creating a new control-plane node.
+        Fix no control new nodes in the internal state.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2764
+docs:
+  fixes:
+    - summary: Added links to supported OS versions on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2895
+    - summary: >-
+        Fixed command parameters for editing configuration (added `-ti` to the kubectl exec
+        command).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2877
+    - summary: Fix broken site link to the blog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2830
+    - summary: Update button style on step 2 of the getting started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2718
+istio:
+  features:
+    - summary: >-
+        Got rid of 1.10.1 version. Metric `d8_istio_pod_revision` renamed to
+        `d8_istio_dataplane_metadata` and enriched with `version`, `full_version`, `desired_version`
+        and `desired_full_version` labels. Alerts were refactored using the new metric. Also, a
+        great refactoring for using term `version` instead of `revision`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2707
+      impact: >-
+        Istio version `1.10` has been removed. Use any other supported version (recommended version
+        is `1.13`).
+kube-proxy:
+  features:
+    - summary: Fix validation for InitContainers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+      impact: The `kube-proxy` module will be restarted.
+linstor:
+  features:
+    - summary: Fix validation for InitContainers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+      impact: The `linstor` module will be restarted.
+log-shipper:
+  features:
+    - summary: Add Kafka destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2871
+  fixes:
+    - summary: Fix Elasticsearch 8.X and Opensearch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2798
+    - summary: Expire metrics more frequently.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2795
+    - summary: >-
+        Add `FlowSchema` and `PriorityLevelConfiguration` to limit concurrent requests to Kubernetes
+        API for the log-shipper ServiceAccount.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2794
+    - summary: Check namespace before creating config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2793
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix render for the `K8SKubeletTooManyPods` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2843
+    - summary: Fixed Grafana "Controller" Dashboard's many-to-many matching
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2719
+node-local-dns:
+  fixes:
+    - summary: node-local-dns now works correcly with nftables on host system
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2780
+node-manager:
+  features:
+    - summary: >-
+        Cluster-autoscaler: smart balancing between zones in a NodeGroup.
+
+        CA will try to align the number of nodes between zones during scaling.
+
+        New priority field in the NodeGroup OpenAPI spec, which can set the order of scaling up
+        nodes between different NodeGroups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2735
+  fixes:
+    - summary: '`minPerZone` and `maxPerZone` relations clarification in NodeGroup CR documentation.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2909
+    - summary: Clarify the description for the `RollingUpdate` mode of the `NodeGroup` CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2908
+openvpn:
+  features:
+    - summary: Fix validation for InitContainers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+      impact: The `openvpn` module will be restarted.
+prometheus:
+  fixes:
+    - summary: Improve Prometheus Retain alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2841
+testing:
+  features:
+    - summary: Bunch of matrix tests optimizations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2767
+    - summary: Validate images tags in matrix tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+  fixes:
+    - summary: Fix matrix tests duplication in global_hooks/openapi/config_values.yaml
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2787
+    - summary: Fix the Makefile gator error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2786
+upmeter:
+  features:
+    - summary: Fix validation for InitContainers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2512
+      impact: The `upmeter` module will be restarted.
+  fixes:
+    - summary: Get rid of shell-operator dependency.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2736
+
