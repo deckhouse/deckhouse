@@ -25,7 +25,7 @@
  - **[kube-dns]** Added "prefer_udp" to stub zones. [#2774](https://github.com/deckhouse/deckhouse/pull/2774)
  - **[log-shipper]** Loki fix extra labels. [#2852](https://github.com/deckhouse/deckhouse/pull/2852)
  - **[node-manager]** Avoid "node-role.kubernetes.io/master" taint removal when it is explicitly set in the master NG. [#2837](https://github.com/deckhouse/deckhouse/pull/2837)
- - **[prometheus]** Improve Prometheus Retain alerts. [#2841](https://github.com/deckhouse/deckhouse/pull/2841)
+ - **[prometheus]** Fixed calculation of PVC size and retention size. [#2918](https://github.com/deckhouse/deckhouse/pull/2918)
  - **[prometheus]** Fixed disk retention size calculation for small disks. [#2825](https://github.com/deckhouse/deckhouse/pull/2825)
  - **[user-authn]** Do not use `connectorData` field of refresh token objects to refresh tokens. [#2685](https://github.com/deckhouse/deckhouse/pull/2685)
 

@@ -1,5 +1,5 @@
 prometheus:
   fixes:
-    - summary: Improve Prometheus Retain alerts.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/2841
+    - summary: Fixed calculation of PVC size and retention size.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2918
 
