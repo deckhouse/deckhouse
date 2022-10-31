@@ -35,6 +35,8 @@
     Cillium agent Pods will be restarted.
  - **[deckhouse-controller]** Update shell-operator and addon-operator dependencies to reduce memory usage. [#2864](https://github.com/deckhouse/deckhouse/pull/2864)
  - **[dhctl]** Wait for the control plane manager Pod readiness while creating a new control-plane node. Fix no control new nodes in the internal state. [#2764](https://github.com/deckhouse/deckhouse/pull/2764)
+ - **[kube-proxy]** Fix insufficient privileges for the init container. [#2923](https://github.com/deckhouse/deckhouse/pull/2923)
+    The `kube-proxy` DaemonSet will be restarted.
  - **[log-shipper]** Fix Elasticsearch 8.X and Opensearch. [#2798](https://github.com/deckhouse/deckhouse/pull/2798)
  - **[log-shipper]** Expire metrics more frequently. [#2795](https://github.com/deckhouse/deckhouse/pull/2795)
  - **[log-shipper]** Add `FlowSchema` and `PriorityLevelConfiguration` to limit concurrent requests to Kubernetes API for the log-shipper ServiceAccount. [#2794](https://github.com/deckhouse/deckhouse/pull/2794)
