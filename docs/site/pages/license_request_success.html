@@ -20,19 +20,6 @@ sitemap_include: false
     const licenseTokenContent = document.getElementById('license-token');
     const token = window.location.search.split('=');
 
-    setCookie(token[0].substring(1), token[1]);
-
-    licenseTokenContent.innerText = getCookie(token[0].substring(1));
+    licenseTokenContent.innerText = token[1];
   });
-
-  function setCookie(name, value) {
-    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
-  }
-
-  function getCookie(name) {
-    let matches = document.cookie.match(new RegExp(
-      "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-    ));
-    return matches ? decodeURIComponent(matches[1]) : undefined;
-  }
 </script>
