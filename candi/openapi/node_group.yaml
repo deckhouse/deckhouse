@@ -428,8 +428,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
@@ -439,8 +439,9 @@ spec:
                       description: |
                         The approval mode for disruptive updates:
                         - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
-                        - `Automatic` —  automatically approve disruption-involving updates (the default value).
-                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
+                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+                      x-doc-default: Automatic
                       enum:
                         - Manual
                         - Automatic
@@ -1037,8 +1038,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
@@ -1048,8 +1049,9 @@ spec:
                       description: |
                         The approval mode for disruptive updates:
                         - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
-                        - `Automatic` —  automatically approve disruption-involving updates (the default value).
-                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
+                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+                      x-doc-default: Automatic
                       enum:
                         - Manual
                         - Automatic
@@ -1639,8 +1641,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
@@ -1650,8 +1652,9 @@ spec:
                       description: |
                         The approval mode for disruptive updates:
                         - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
-                        - `Automatic` —  automatically approve disruption-involving updates (the default value).
-                        - `RollingUpdate` — recreate cloud node with new settings. Available only for cloud nodes.
+                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+                      x-doc-default: Automatic
                       enum:
                         - Manual
                         - Automatic
