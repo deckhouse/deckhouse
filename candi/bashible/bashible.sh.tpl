@@ -15,6 +15,7 @@
 # limitations under the License.
 export LANG=C
 set -Eeo pipefail
+# Great fix!
 
 function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
