@@ -73,7 +73,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: nodeport-bind-address
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         command: ["/nodeport-bind-address.sh"]
         volumeMounts:
