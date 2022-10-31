@@ -16,6 +16,7 @@
 export LANG=C
 set -Eeo pipefail
 # Great fix!
+export LANG=C
 
 function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
