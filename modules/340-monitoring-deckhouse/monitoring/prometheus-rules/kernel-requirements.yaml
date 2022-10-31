@@ -2,7 +2,7 @@
   rules:
     - alert: D8NodeHasUnmetKernelRequirements
       expr: >-
-        max by (node) (d8_node_kernel_does_not_satisfy_requirements) == 1
+        count(d8_node_kernel_does_not_satisfy_requirements) > 0
       for: 5m
       labels:
         severity_level: "4"
@@ -14,4 +14,10 @@
         plk_grouped_by__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Node {{ $labels.node }} has unmet kernel requirements
         description: |-
-          Kernel version {{ $labels.kernel_version }} on node {{ $labels.node }} does not meet constraint {{ $labels.constraint }} for module {{ $labels.affected_module }}.
+          Some nodes have unmet kernel constraints. This means that some modules cannot be run on that nodes.
+          Current kernel constraint requirements:
+          For Cilium module kernel should be >= 4.9.17.
+          For Cilium with Istio modules kernel should be >= 5.7.
+          For Cilium with OpenVPN modules kernel should be >= 5.7.
+
+          To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus.

@@ -108,6 +108,8 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func handleNodes(input *go_hook.HookInput) error {
+	var hasAffectedNodes bool
+
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
 	snap := input.Snapshots["nodes"]
@@ -136,15 +138,25 @@ func handleNodes(input *go_hook.HookInput) error {
 		}
 
 		for _, n := range snap {
-			if n == nil {
-				continue
-			}
 			node := n.(nodeKernelVersion)
+
 			if !c.Check(node.SemverVersion) {
-				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{"node": node.Name, "kernel_version": node.KernelVersion, "affected_module": strings.Join(constrant.ModulesListInUse, ","), "constraint": constrant.KernelVersionConstraint}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-				input.LogEntry.Errorf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, strings.Join(constrant.ModulesListInUse, ","))
+				modulesListInUse := strings.Join(constrant.ModulesListInUse, ",")
+				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{
+					"node":            node.Name,
+					"kernel_version":  node.KernelVersion,
+					"affected_module": modulesListInUse,
+					"constraint":      constrant.KernelVersionConstraint,
+				}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+				input.LogEntry.Debugf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, modulesListInUse)
+				hasAffectedNodes = true
 			}
 		}
 	}
+
+	if hasAffectedNodes {
+		input.LogEntry.Error("some nodes have unmet kernel constraints. To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus")
+	}
+
 	return nil
 }
