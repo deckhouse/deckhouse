@@ -184,10 +184,6 @@ var DefaultImagesTags = map[string]interface{}{
 		"madisonProxy": "imageHash-flantIntegration-madisonProxy",
 	},
 	"ingressNginx": map[string]interface{}{
-		"controller033":         "imageHash-ingressNginx-controller033",
-		"controller046":         "imageHash-ingressNginx-controller046",
-		"controller048":         "imageHash-ingressNginx-controller048",
-		"controller049":         "imageHash-ingressNginx-controller049",
 		"controller11":          "imageHash-ingressNginx-controller11",
 		"nginxExporter":         "imageHash-ingressNginx-nginxExporter",
 		"protobufExporter":      "imageHash-ingressNginx-protobufExporter",
