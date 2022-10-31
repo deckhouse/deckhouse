@@ -1,6 +1,6 @@
 - name: d8.kernel-requirements
   rules:
-    - alert: D8HasUnmetKernelRequirements
+    - alert: D8NodeHasUnmetKernelRequirements
       expr: >-
         d8_node_kernel_does_not_satisfy_requirements == 1
       for: 5m
