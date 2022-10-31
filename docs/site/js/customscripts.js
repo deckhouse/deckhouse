@@ -108,8 +108,7 @@ $(document).ready(function() {
 
 /* Request access */
 var ra = {};
-// ra.api_url = 'https://license.deckhouse.io/api/license/request';
-ra.api_url = 'https://license-deckhouse.stage.flant.com/api/license/request';
+ra.api_url = 'https://license.deckhouse.io/api/license/request';
 
 function raSend(e) {
     e.preventDefault();
