@@ -123,10 +123,8 @@ data:
   use-proxy-protocol: "true"
   {{- end }}
 
-  {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- if $geoIP2.maxmindLicenseKey }}
+  {{- if $geoIP2.maxmindLicenseKey }}
   use-geoip2: "true"
-    {{- end }}
   {{- end }}
 
   log-format-escape-json: "true"

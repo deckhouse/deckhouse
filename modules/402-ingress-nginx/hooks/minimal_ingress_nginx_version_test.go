@@ -23,7 +23,7 @@ import (
 )
 
 var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func() {
-	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "0.33", "internal": {}}}`
+	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`
 	globalValuesString := `{}`
 	f := HookExecutionConfigInit(initValuesString, globalValuesString)
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
@@ -84,7 +84,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("0.33.0"))
+			Expect(value).To(BeEquivalentTo("1.1.0"))
 			v, _ := requirements.GetValue(incompatibleVersionsKey)
 			Expect(v).To(BeFalse())
 		})

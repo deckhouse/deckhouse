@@ -16,7 +16,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -58,7 +58,7 @@ spec:
                     One of the supported NGINX Ingress Controller versions.
 
                     **By default**: the version in the module settings is used.
-                  enum: ['0.33', '0.46', '0.48', '0.49', '1.1']
+                  enum: ['1.1']
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -88,8 +88,6 @@ spec:
                   default: true
                   description: |
                     Enable ingress validation admission.
-
-                    **Attention!**: This feature doesn't work for controllers of <0.33 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -294,7 +292,7 @@ spec:
                       default: false
                 geoIP2:
                   type: object
-                  description: 'Enable GeoIP2 databases (version `"0.33"` or later of the controller is required).'
+                  description: 'Enable GeoIP2 databases.'
                   properties:
                     maxmindLicenseKey:
                       type: string
@@ -534,6 +532,6 @@ spec:
           type: string
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema
       additionalPrinterColumns: *additionalPrinterColumns

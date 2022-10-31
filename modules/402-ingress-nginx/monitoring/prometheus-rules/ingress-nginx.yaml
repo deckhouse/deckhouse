@@ -61,26 +61,3 @@
         Please, check Ingress controller's logs:
         `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
       summary: The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
-  - alert: D8IngressNginxControllerVersionDeprecated
-    expr: sum by (controller_name, controller_version) (d8_ingress_nginx_controller{controller_version=~"0.33|0.46|0.48|0.49"})
-    labels:
-      tier: cluster
-      severity_level: "6"
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      description: |-
-        Found deprecated Ingress Nginx controller version: {{ $labels.controller_version }} (the `{{ $labels.controller_name }}` IngressNginxController).
-
-        Ingress Nginx controller versions below 1.1 are deprecated and wouldn't work in a cluster with Kubernetes >= 1.22.
-        Support for Ingress Nginx controller versions below 1.1 (0.33, 0.46, 0.48, 0.49) will be removed in the Deckhouse 1.40 release. The default Ingress version will be changed to `1.1` in the Deckhouse 1.36 release.
-
-        You can choose one of the following options:
-        - If the default Ingress version is used, you can leave everything as it is. The Ingress version will be updated to 1.1 automatically when updating Deckhouse to version 1.36.
-        - Specify the [default controller version](https://deckhouse.io/en/documentation/v1/modules/402-ingress-nginx/configuration.html#parameters-defaultcontrollerversion) via `deckhouse` ConfigMap.
-        - Explicitly specify Ingress version 1.1 in the `{{ $labels.controller_name }}` IngressNginxController. The Ingress version will be updated to 1.1 immediately, and you won't have to wait for the Deckhouse 1.36 release.
-        - If you are using an explicitly specified Ingress version `{{ $labels.controller_version }}` in the `{{ $labels.controller_name }}` IngressNginxController, and won't change it, updating Deckhouse to the 1.40 release will not be possible.
-
-        Ingress Nginx controller versions version 1.1 consumes fewer resources and contains fixes for many bugs, so it is recommended to upgrade to it ASAP.
-      summary: >
-        Deprecated version of `IngressNginxController` {{ $labels.controller_version }} found.

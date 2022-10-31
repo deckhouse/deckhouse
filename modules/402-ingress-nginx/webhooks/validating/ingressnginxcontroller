@@ -64,43 +64,6 @@ function __main__() {
     fi
   fi
 
-  # Check controller versions
-  # we can't mix controllers with the same ingress class with versions >1.0.0 and <1.0.0
-  ctrlClass=$(context::jq -r '.review.request.object.spec.ingressClass')
-  ctrlVersion=$(context::jq -r '.review.request.object.spec.controllerVersion // 1.1')
-  ctrlName=$(context::jq -r '.review.request.object.metadata.name')
-
-  compareOp="le"
-  if semver::lt "$ctrlVersion" "1.0.0"; then
-    compareOp="gt"
-  fi
-
-  while read -r controllerVersion; do
-    if [[ "$compareOp" == "gt" ]]; then
-      if semver::gt "$controllerVersion" "1.0.0"; then
-        forbid "controllers with the same ingressClass but different versions (<1.0.0 and >1.0.0) are forbidden"
-        exit 0
-      fi
-    else
-      if semver::lt "$controllerVersion" "1.0.0"; then
-        forbid "controllers with the same ingressClass but different versions (<1.0.0 and >1.0.0) are forbidden"
-        exit 0
-      fi
-    fi
-  done < <(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq --arg class $ctrlClass --arg name $ctrlName -cr '.items[] | select(.spec.ingressClass == $class and .metadata.name != $name) | .spec.controllerVersion // 1.1')
-  # // End check controller versions
-
-  # Only ingress controller >= 1.1 is allowed for kubernetes >= 1.22
-  if context::jq -e -r '.review.request.operation == "CREATE"' >/dev/null 2>&1; then
-    if semver::lt "$ctrlVersion" "1.0.0"; then
-        k8sVersion=$(kubectl version --short -o json | jq -r '.serverVersion.gitVersion' | sed 's/v//')
-        if semver::ge "$k8sVersion" "1.22.0"; then
-          forbid "only IngressNginxController 1.1 is allowed for k8s >= 1.22"
-          exit 0
-        fi
-    fi
-  fi
-
   # Allowed response.
   jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }

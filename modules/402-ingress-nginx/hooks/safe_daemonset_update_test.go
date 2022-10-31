@@ -32,7 +32,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: safe_daemonset_update ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "0.33", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	dsControllerMainInitialYAML := `
