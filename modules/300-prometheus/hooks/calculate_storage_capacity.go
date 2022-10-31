@@ -86,10 +86,10 @@ func prometheusDisk(input *go_hook.HookInput) error {
 	highAvailability := false
 
 	if input.Values.Exists("global.highAvailability") {
-		highAvailability = input.Values.Get("global.highAvailability")
+		highAvailability = input.Values.Get("global.highAvailability").Bool()
 	}
 	if input.Values.Exists("prometheus.highAvailability") {
-		highAvailability = input.Values.Get("prometheus.highAvailability")
+		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
 	}
 
 	for _, obj := range input.Snapshots["pvcs"] {
