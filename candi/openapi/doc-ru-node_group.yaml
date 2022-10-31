@@ -147,12 +147,12 @@ spec:
                       description: |
                         Минимальное количество инстансов в зоне. Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
 
-                        > **Внимание!** `minPerZone` != 0 и `minPerZone` <= `maxPerZone` или `minPerZone` == `maxPerZone` == 0.
+                        > **Внимание!** Минимальное количество инстансов (`minPerZone`) может принимать значение от единицы до `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), либо `minPerZone` и `maxPerZone` могут быть оба равны нулю (`minPerZone` == `maxPerZone` == 0).
                     maxPerZone:
                       description: |
                         Максимальное количество инстансов в зоне. Проставляется как верхняя граница в cluster-autoscaler.
 
-                        > **Внимание!** `minPerZone` != 0 и `minPerZone` <= `maxPerZone` или `minPerZone` == `maxPerZone` == 0.
+                        > **Внимание!** Минимальное количество инстансов (`minPerZone`) может принимать значение от единицы до `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), либо `minPerZone` и `maxPerZone` могут быть оба равны нулю (`minPerZone` == `maxPerZone` == 0).
                     priority:
                       description: |
                         Приоритет группы узлов.
