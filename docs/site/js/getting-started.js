@@ -186,6 +186,8 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   if (input.val() !== '') {
     update_license_parameters(input.val());
     wrapper.removeClass('disabled');
+  } else if(input.val() === '' && !turnCommonElement) {
+    getLicenseToken(input.val());
   } else {
     wrapper.addClass('disabled');
     if (turnCommonElement) {
