@@ -34,6 +34,25 @@ spec:
                     **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
                   example: t3.large
                   type: string
+                capacity:
+                  type: object
+                  description: |
+                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Deckhouse will try to fetch built-in EC2 instance types and determine it's capacity, so
+                    you have to fill this field only if your instance type is not found.
+                    Presented values don't affect real node ordering, just capacity planning.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      type: integer
+                      description: Node vCPU count
+                      x-examples: [ 2 ]
+                    memory:
+                      type: integer
+                      description: Node memory in MiB
+                      x-examples: [ 4096 ]
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.

@@ -19,6 +19,17 @@ spec:
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
 
                     GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                capacity:
+                  description: |
+                    Параметры емкости для планирования cluster-autoscaler. Имеет смысл, только если minPerZone == 0.
+                    Deckhouse будет пытаться найти встроенные GCP machine type поэтому
+                    вы должны заполнить это поле, только если ваш machine type не найден.
+                    Заданные значения не влияют на реальный заказ узлов, а только на планирование мощностей.
+                  properties:
+                    cpu:
+                      description: количество vCPU узла
+                    memory:
+                      description: количество памяти узла в Мб
                 image:
                   description: |
                     Образ, который будет использоваться в заказанных инстансах. Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).

@@ -12,6 +12,12 @@ type OpenstackInstanceClass struct {
 	AdditionalSecurityGroups []string          `json:"additionalSecurityGroups,omitempty" yaml:"additionalSecurityGroups,omitempty"`
 	AdditionalTags           map[string]string `json:"additionalTags,omitempty" yaml:"additionalTags,omitempty"`
 	FlavorName               string            `json:"flavorName,omitempty" yaml:"flavorName,omitempty"`
+	Capacity                 *Capacity         `json:"capacity,omitempty"`
 	ImageName                string            `json:"imageName,omitempty" yaml:"imageName,omitempty"`
 	RootDiskSize             int32             `json:"rootDiskSize,omitempty" yaml:"rootDiskSize,omitempty"`
+}
+
+type Capacity struct {
+	CPU    int `json:"cpu,omitempty"`
+	Memory int `json:"memory,omitempty"`
 }

@@ -36,6 +36,25 @@ spec:
                     GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
                   example: n1-standard-4
                   type: string
+                capacity:
+                  type: object
+                  description: |
+                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Deckhouse will try to fetch built-in GCP machine types and determine it's capacity, so
+                    you have to fill this field only if your machine type is not found.
+                    Presented values don't affect real node ordering, just capacity planning.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      type: integer
+                      description: Node vCPU count
+                      x-examples: [ 2 ]
+                    memory:
+                      type: integer
+                      description: Node memory in MiB
+                      x-examples: [ 4096 ]
                 image:
                   description: |
                     Image to use while provisioning GCP servers.

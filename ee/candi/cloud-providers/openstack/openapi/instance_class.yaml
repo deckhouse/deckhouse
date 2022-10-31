@@ -39,6 +39,26 @@ spec:
 
                   example: m1.medium
                   type: string
+                capacity:
+                  type: object
+                  description: |
+                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Deckhouse will try to fetch built-in OpenStack flavor and determine it's capacity, so
+                    you have to fill this field only if your flavor is not found or you use
+                    some custom flavor.
+                    Presented values don't affect real node ordering, just capacity planning.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      type: integer
+                      description: Node vCPU count
+                      x-examples: [ 2 ]
+                    memory:
+                      type: integer
+                      description: Node memory in MiB
+                      x-examples: [ 4096 ]
                 imageName:
                   description: |
                     Image to use while provisioning OpenStack servers.

@@ -36,6 +36,25 @@ spec:
                     az vm list-sizes --location westeurope -o table
                     ```
                   example: Standard_F4
+                capacity:
+                  type: object
+                  description: |
+                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Deckhouse will try to fetch built-in Azure machine sizes and determine it's capacity, so
+                    you have to fill this field only if your machine size is not found.
+                    Presented values don't affect real node ordering, just capacity planning.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      type: integer
+                      description: Node vCPU count
+                      x-examples: [ 2 ]
+                    memory:
+                      type: integer
+                      description: Node memory in MiB
+                      x-examples: [ 4096 ]
                 urn:
                   type: string
                   description: |
