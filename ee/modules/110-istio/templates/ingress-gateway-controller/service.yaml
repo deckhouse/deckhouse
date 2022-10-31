@@ -1,17 +1,17 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
-  {{- $ingressGatewayClass := .spec.ingressGatewayClass -}}
-  {{- $nodePort := .spec.nodePort | default dict -}}
-  {{- if or (eq .spec.inlet "NodePort") (eq .spec.inlet "LoadBalancer") -}}
+  {{- if or (eq $controller.spec.inlet "NodePort") (eq $controller.spec.inlet "LoadBalancer") -}}
+    {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
+    {{- $nodePort := $controller.spec.nodePort | default dict -}}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "ingress_gateway_name" .name }}
+  name: {{ include "ingress_gateway_name" $controller.name }}
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" .name)) | nindent 2 }}
-  {{- if .spec.serviceAnnotations }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name)) | nindent 2 }}
+  {{- if $controller.spec.serviceAnnotations }}
   annotations:
-    {{- .spec.serviceAnnotations | toYaml | nindent 4 }}
+    {{- $controller.spec.serviceAnnotations | toYaml | nindent 4 }}
   {{- end }}
 spec:
   externalTrafficPolicy: Local
@@ -20,22 +20,22 @@ spec:
     port: 80
     targetPort: 80
     protocol: TCP
-  {{- if and (eq .spec.inlet "NodePort") $nodePort.httpPort }}
+  {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpPort }}
     nodePort: {{ $nodePort.httpPort }}
   {{- end }}
   - name: https
     port: 443
     targetPort: 443
     protocol: TCP
-  {{- if and (eq .spec.inlet "NodePort") $nodePort.httpsPort }}
+  {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpsPort }}
     nodePort: {{ $nodePort.httpsPort }}
   {{- end }}
   selector:
     app: ingress-gateway-controller
-    instance: {{ .name }}
+    instance: {{ $controller.name }}
     istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   sessionAffinity: None
-  {{- if eq .spec.inlet "NodePort" }}
+  {{- if eq $controller.spec.inlet "NodePort" }}
   type: NodePort
   {{- else }}
   type: LoadBalancer

@@ -7,6 +7,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -638,6 +639,36 @@ updatePolicy:
 			Expect(ingressVpa.Exists()).To(BeTrue())
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"test","istio.deckhouse.io/ingress-gateway-class":"test-class","module":"istio"}`))
+		})
+	})
+	FContext("ingress gateway controller with inlet LoadBalancer is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: test
+  spec:
+    ingressGatewayClass: test-class
+    inlet: LoadBalancer
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeTrue())
+			fmt.Println(ingressSvc)
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"test","istio.deckhouse.io/ingress-gateway-class":"test-class","module":"istio"}`))
 		})
 	})
