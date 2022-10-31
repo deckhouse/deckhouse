@@ -18,14 +18,13 @@ package hooks
 
 import (
 	"fmt"
-	"math"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"math"
+	"strings"
 )
 
 const defaultDiskSizeGiB = 40
@@ -43,11 +42,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-monitoring"},
-				},
-			},
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "prometheus",
 				},
 			},
 			FilterFunc: persistentVolumeClaimFilter,
@@ -89,8 +83,22 @@ func prometheusDisk(input *go_hook.HookInput) error {
 	var main storage
 	var longterm storage
 
+	highAvailability := false
+
+	if input.Values.Exists("global.highAvailability") {
+		highAvailability = input.Values.Get("global.highAvailability")
+	}
+	if input.Values.Exists("prometheus.highAvailability") {
+		highAvailability = input.Values.Get("prometheus.highAvailability")
+	}
+
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
+
+		if !highAvailability && !strings.HasSuffix(pvc.Name, "-0") {
+			continue
+		}
+
 		switch pvc.PrometheusName {
 		case "main":
 			if main.VolumeSizeGiB < pvc.RequestsStorage {
