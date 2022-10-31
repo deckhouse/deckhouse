@@ -9,8 +9,7 @@ RUN apt-get update &&  \
       bison build-essential cmake flex git libedit-dev \
       libllvm14 llvm-14-dev libclang-14-dev python3 zlib1g-dev libelf-dev libfl-dev python3-distutils
 
-RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc && \
-    git -C /root/bcc submodule update --init --recursive
+RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc
 
 RUN cd /root/bcc && \
     /usr/lib/pbuilder/pbuilder-satisfydepends && \
