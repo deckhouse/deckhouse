@@ -1,5 +1,7 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
-    {{- $ingressGatewayClass := .spec.ingressGatewayClass -}}
+  {{- $ingressGatewayClass := .spec.ingressGatewayClass -}}
+  {{- $nodePort := .spec.nodePort | default dict -}}
+  {{- if or (eq .spec.inlet "NodePort") (eq .spec.inlet "LoadBalancer") -}}
 ---
 apiVersion: v1
 kind: Service
@@ -14,11 +16,19 @@ metadata:
 spec:
   externalTrafficPolicy: Local
   ports:
-    - name: tls
-      port: 15443
+    - name: http
+      port: 80
+      targetPort: 80
       protocol: TCP
-  {{- if and (eq .spec.inlet "NodePort") .spec.nodePort.port }}
-      nodePort: {{ .spec.nodePort.port }}
+  {{- if and (eq .spec.inlet "NodePort") $nodePort.httpPort }}
+      nodePort: {{ $nodePort.httpPort }}
+  {{- end }}
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+  {{- if and (eq .spec.inlet "NodePort") $nodePort.httpsPort }}
+      nodePort: {{ $nodePort.httpsPort }}
   {{- end }}
   selector:
     app: "ingress-gateway"
@@ -29,5 +39,6 @@ spec:
   type: NodePort
   {{- else }}
   type: LoadBalancer
+  {{- end }}
   {{- end }}
 {{- end }}

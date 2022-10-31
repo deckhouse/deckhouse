@@ -160,10 +160,22 @@ spec:
           image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 80
               protocol: TCP
-            - containerPort: 443
+  {{- if eq .spec.inlet "HostPort"}}
+    {{- if $hostPort.httpPort }}
+              hostPort: {{ $hostPort.httpPort }}
+    {{- end }}
+  {{- end }}
+            - name: https
+              containerPort: 443
               protocol: TCP
+  {{- if eq .spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+              hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
             - containerPort: 15090
               name: http-envoy-prom
               protocol: TCP
