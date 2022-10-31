@@ -428,8 +428,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
@@ -1038,8 +1038,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
@@ -1641,8 +1641,8 @@ spec:
                       automatic:
                         drainBeforeApproval: false
                         windows:
-                          - from: 06:00
-                            to: 08:00
+                          - from: "06:00"
+                            to: "08:00"
                             days:
                               - Tue
                               - Sun
