@@ -608,4 +608,69 @@ updatePolicy:
 `))
 		})
 	})
+
+	FContext("ingress gateway controller with inlet NodePort is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: test
+  spec:
+    ingressGatewayClass: test-class
+    inlet: NodePort
+    nodePort:
+      httpPort: 30080
+      httpsPort: 30443
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"test","istio.deckhouse.io/ingress-gateway-class":"test-class","module":"istio"}`))
+		})
+	})
+	FContext("ingress gateway controller with inlet HostPort is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: test
+  spec:
+    ingressGatewayClass: test-class
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeFalse())
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"test","istio.deckhouse.io/ingress-gateway-class":"test-class","module":"istio"}`))
+		})
+	})
 })

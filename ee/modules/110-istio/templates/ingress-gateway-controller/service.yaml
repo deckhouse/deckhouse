@@ -8,7 +8,7 @@ kind: Service
 metadata:
   name: {{ include "ingress_gateway_name" .name }}
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway" "instance" .name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" .name)) | nindent 2 }}
   {{- if .spec.serviceAnnotations }}
   annotations:
     {{- .spec.serviceAnnotations | toYaml | nindent 4 }}
@@ -16,23 +16,23 @@ metadata:
 spec:
   externalTrafficPolicy: Local
   ports:
-    - name: http
-      port: 80
-      targetPort: 80
-      protocol: TCP
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
   {{- if and (eq .spec.inlet "NodePort") $nodePort.httpPort }}
-      nodePort: {{ $nodePort.httpPort }}
+    nodePort: {{ $nodePort.httpPort }}
   {{- end }}
-    - name: https
-      port: 443
-      targetPort: 443
-      protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
   {{- if and (eq .spec.inlet "NodePort") $nodePort.httpsPort }}
-      nodePort: {{ $nodePort.httpsPort }}
+    nodePort: {{ $nodePort.httpsPort }}
   {{- end }}
   selector:
-    app: "ingress-gateway"
-    instance: "{{ .name }}"
+    app: ingress-gateway-controller
+    instance: {{ .name }}
     istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   sessionAffinity: None
   {{- if eq .spec.inlet "NodePort" }}

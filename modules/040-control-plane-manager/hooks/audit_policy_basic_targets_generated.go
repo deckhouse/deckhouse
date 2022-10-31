@@ -72,7 +72,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"extended-monitoring-exporter",
 	"grafana",
 	"image-availability-exporter",
-	"ingress-gateway",
+	"ingress-gateway-controller",
 	"ingress-nginx",
 	"kiali",
 	"kube-state-metrics",
