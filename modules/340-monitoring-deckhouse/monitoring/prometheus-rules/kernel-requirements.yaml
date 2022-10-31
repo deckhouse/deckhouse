@@ -5,7 +5,7 @@
         d8_node_kernel_does_not_satisfy_requirements == 1
       for: 5m
       labels:
-        severity_level: "9"
+        severity_level: "4"
         tier: cluster
       annotations:
         plk_markup_format: markdown
