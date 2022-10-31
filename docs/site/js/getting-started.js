@@ -186,6 +186,8 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   if (input.val() !== '') {
     update_license_parameters(input.val());
     wrapper.removeClass('disabled');
+  } else if(input.val() === '' && !turnCommonElement) {
+    getLicenseToken(input.val());
   } else {
     wrapper.addClass('disabled');
     if (turnCommonElement) {
@@ -196,9 +198,9 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
 }
 
 function toggleDisabled(tab, inputDataAttr) {
-  if (tab === 'tab_withoutnat_ce') {
+  if (tab === 'tab_withoutnat_ce' || tab === 'tab_standard_ce') {
     $('.dimmer-block-content.common').removeClass('disabled');
-  } else if (tab === 'tab_withoutnat_ee') {
+  } else if (tab === 'tab_withoutnat_ee' || tab === 'tab_standard_ee') {
     const licenseToken = $(inputDataAttr).val();
     getLicenseToken(licenseToken)
   }
