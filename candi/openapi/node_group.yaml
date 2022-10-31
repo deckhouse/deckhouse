@@ -233,7 +233,7 @@ spec:
 
                         This value is used in the MachineDeployment object and as a lower bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     maxPerZone:
@@ -242,7 +242,7 @@ spec:
 
                         This value is used as the upper bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:
@@ -857,7 +857,7 @@ spec:
 
                         This value is used in the MachineDeployment object and as a lower bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     maxPerZone:
@@ -866,7 +866,7 @@ spec:
 
                         This value is used as the upper bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:
@@ -1456,7 +1456,7 @@ spec:
 
                         This value is used in the MachineDeployment object and as a lower bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     maxPerZone:
@@ -1465,7 +1465,7 @@ spec:
 
                         This value is used as the upper bound in cluster-autoscaler.
 
-                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (`minPerZone` !=0 and `minPerZone` <= `maxPerZone`), or it may be equal to zero, in which case the maximum number of instances in the zone must also be equal to zero (`minPerZone` == `maxPerZone` == 0).
+                        > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` = `maxPerZone` = 0).
                       type: integer
                       minimum: 0
                     priority:
