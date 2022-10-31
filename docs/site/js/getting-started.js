@@ -211,7 +211,7 @@ async function getLicenseToken(token) {
     }
     const span = $($('#enter-license-key').next('span'));
     const input = $('[license-token]');
-    const response = await fetch(`https://license-deckhouse.stage.flant.com/api/license/check?token=${token}`);
+    const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
       handlerResolveData(data, token, span, input);
