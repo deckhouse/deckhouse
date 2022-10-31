@@ -133,7 +133,7 @@ spec:
     `
 	)
 
-	f := HookExecutionConfigInit(`{"prometheus": {"internal":{"prometheusMain":{}, "prometheusLongterm":{} }}}`, `{}`)
+	f := HookExecutionConfigInit(`{"prometheus": {"highAvailability": true, "internal":{"prometheusMain":{}, "prometheusLongterm":{} }}}`, `{}`)
 	f.RegisterCRD("monitoring.coreos.com", "v1", "Prometheus", true)
 
 	Context("Empty cluster", func() {
