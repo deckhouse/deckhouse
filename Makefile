@@ -48,6 +48,13 @@ else ifeq ($(PLATFORM_NAME), arm64)
 	CRANE_ARCH = arm64
 endif
 
+# Set testing path for tests-modules
+ifeq ($(FOCUS),"")
+       TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+else
+       TESTS_PATH = $(wildcard ./modules/*-${FOCUS} ./ee/modules/*-${FOCUS} ./ee/fe/modules/*-${FOCUS})/...
+endif
+
 # Set host arch & OS for golang-based programs, e.g. Prometheus
 ifneq (, $(shell which go))
 	GOHOSTARCH := $(shell go env GOHOSTARCH)
@@ -107,7 +114,8 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+  ##~ Options: FOCUS=module-name
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
