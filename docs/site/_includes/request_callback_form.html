@@ -1,13 +1,8 @@
-<div id="request_callback_intro">
-  {%- if page.lang == "ru" %}
-  <h3 class="text text_h3">Запросить обратный звонок</h3>
-  <p class="text">Оставьте ваши данные, и мы свяжемся с вами.</p>
-  {%- else %}
-  <h3 class="text text_h3">Request callback</h3>
-  <p class="text">Fill out this form and we will contact you soon.</p>
-  {%- endif %}
-  <form class="form" id="request_callback_form">
-    <input id="h0n3y" class="form__h0n3y" autocomplete="off" type="text" name="comment" placeholder="Comment">
+<div id="request_callback_intro" data-header-form>
+  <h3 class="text text_h3">{{ site.data.modal['request-callback']['header'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-callback']['header'][page.lang]['text']}}</p>
+  <form class="form" action="https://submit-form.com/T1D8NgqF" id="request_callback_form" data-form>
+    <input id="h0n3y" class="form__h0n3y" data-h0n3y autocomplete="off" type="text" name="comment" placeholder="Comment">
     {%- if page.lang == "ru" %}
     <input type="hidden" id="language_ru" name="language" value="ru">
     <div class="form__row">
@@ -95,37 +90,11 @@
     {%- endif %}
   </form>
 </div>
-<div id="request_callback_success" style="display: none;">
-  {%- if page.lang == "ru" %}
-  <h3 class="text text_h3 text_alt">
-    Заявка отправлена
-  </h3>
-  <p class="text">
-    Мы свяжемся с вами в течении рабочего дня
-  </p>
-  {%- else %}
-  <h3 class="text text_h3 text_alt">
-    Thank you
-  </h3>
-  <p class="text">
-    We will contact you on this or the next business day
-  </p>
-  {%- endif %}
+<div id="request_callback_success" data-success-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['success-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-callback']['success-message'][page.lang]['text']}}</p>
 </div>
-<div id="request_callback_error" style="display: none;">
-  {%- if page.lang == "ru" %}
-  <h3 class="text text_h3 text_alt">
-    Возникла ошибка отправки формы
-  </h3>
-  <p class="text">
-    Попробуйте еще раз
-  </p>
-  {%- else %}
-  <h3 class="text text_h3 text_alt">
-    Something went wrong
-  </h3>
-  <p class="text">
-    Please try again later
-  </p>
-  {%- endif %}
+<div id="request_callback_error" data-error-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['error-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-callback']['error-message'][page.lang]['text']}}</p>
 </div>

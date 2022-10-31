@@ -1,7 +1,7 @@
-<div id="request_access_intro" data-header-form>
-  <h3 class="text text_h3">{{ site.data.modal['request-access']['header'][page.lang]['title']}}</h3>
-  <p class="text">{{ site.data.modal['request-access']['header'][page.lang]['text']}}</p>
-  <form class="form" action="https://license.deckhouse.io/api/license/request" id="request_access_form" data-form>
+<div id="request_education_intro" data-header-form>
+  <h3 class="text text_h3">{{ site.data.modal['request-education']['header'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-education']['header'][page.lang]['text']}}</p>
+  <form class="form" action="https://submit-form.com/AkDE26RX" id="request_education_form" data-form>
     <input id="h0n3y" class="form__h0n3y" data-h0n3y autocomplete="off" type="text" name="comment" placeholder="Comment">
     {%- if page.lang == "ru" %}
     <input type="hidden" id="language_ru" name="language" value="ru">
@@ -90,11 +90,11 @@
     {%- endif %}
   </form>
 </div>
-<div id="request_access_success" data-success-message style="display: none;">
-  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-access']['success-message'][page.lang]['title']}}</h3>
-  <p class="text">{{ site.data.modal['request-access']['success-message'][page.lang]['text']}}</p>
+<div id="request_education_success" data-success-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-education']['success-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-education']['success-message'][page.lang]['text']}}</p>
 </div>
-<div id="request_access_error" data-error-message style="display: none;">
-  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-access']['error-message'][page.lang]['title']}}</h3>
-  <p class="text">{{ site.data.modal['request-access']['error-message'][page.lang]['text']}}</p>
+<div id="request_education_error" data-error-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-education']['error-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-education']['error-message'][page.lang]['text']}}</p>
 </div>
