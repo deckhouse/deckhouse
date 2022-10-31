@@ -65,6 +65,11 @@ properties:
             description: |
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для dashboard (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
             x-doc-default: 'false'
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
       Аналогично параметру Kubernetes `spec.nodeSelector` у Pod'ов.
