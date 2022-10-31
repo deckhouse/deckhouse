@@ -245,14 +245,6 @@ spec:
                         > **Caution!** The minimum number of instances may range from one to `maxPerZone` (0 < `minPerZone` <= `maxPerZone`), or `minPerZone` and `maxPerZone` may both be equal to zero (`minPerZone` == `maxPerZone` == 0).
                       type: integer
                       minimum: 0
-                    priority:
-                      type: integer
-                      description: |
-                        Priority of the node group.
-
-                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them.
-
-                        Using priorities can be convenient to prefer ordering cheaper nodes (for example, spot instances) over more expensive ones.
                     maxUnavailablePerZone:
                       description: |
                         The maximum number of unavailable instances (during rollout) in the group in each zone.
