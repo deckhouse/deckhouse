@@ -7,7 +7,9 @@ package hooks
 
 import (
 	"fmt"
+	"sort"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -17,29 +19,38 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_revisions.go
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_revisions.go
+	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
 }, dependency.WithExternalDependencies(ensureCRDs))
 
 func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
-	var theNewestVersion string
+	// collect all istio versions (global + additional | uniq)
+	istioVersions := make([]string, 0)
 
-	var globalVersion string
-	if !input.ConfigValues.Get("istio.globalVersion").Exists() {
-		return fmt.Errorf("istio.globalVersion config value is mandatory (isn't discovered by revisions_discovery.go yet?)")
+	if !input.Values.Get("istio.internal.globalVersion").Exists() {
+		return fmt.Errorf("istio.internal.globalVersion value isn't discovered by discovery_versions.go yet")
 	}
-	globalVersion = input.ConfigValues.Get("istio.globalVersion").String()
-	var additionalVersions = make([]string, 0)
+	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
+	istioVersions = append(istioVersions, globalVersion)
+
 	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {
-		additionalVersions = append(additionalVersions, versionResult.String())
-	}
-
-	for _, versionResult := range input.Values.Get("istio.internal.supportedVersions").Array() {
-		version := versionResult.String()
-		if version == globalVersion || internal.Contains(additionalVersions, version) {
-			theNewestVersion = version
+		if !internal.Contains(istioVersions, versionResult.String()) {
+			istioVersions = append(istioVersions, versionResult.String())
 		}
 	}
 
-	return ensure_crds.EnsureCRDsHandler("/deckhouse/modules/110-istio/crds/istio/"+theNewestVersion+"/*.yaml")(input, dc)
+	// semvers is a slice for sorting by semver
+	semvers := make([]*semver.Version, len(istioVersions))
+	for i, version := range istioVersions {
+		v, err := semver.NewVersion(version)
+		if err != nil {
+			return err
+		}
+		semvers[i] = v
+	}
+
+	sort.Sort(semver.Collection(semvers))
+
+	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
+	return ensure_crds.EnsureCRDsHandler("/deckhouse/modules/110-istio/crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
 }

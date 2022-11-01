@@ -20,4 +20,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = generate_password.RegisterHook("deckhouseWeb")
+const (
+	moduleValuesKey = "deckhouseWeb"
+	authSecretNS    = "d8-system"
+	authSecretName  = "deckhouse-web-basic-auth"
+)
+
+var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)

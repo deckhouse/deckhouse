@@ -19,115 +19,115 @@ package remotewrite
 import (
 	"context"
 	"fmt"
+	"time"
 
 	kube "github.com/flant/kube-client/client"
-	"github.com/flant/shell-operator/pkg/kube_events_manager"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 )
 
 type Monitor struct {
-	monitor kube_events_manager.Monitor
-	logger  *log.Entry
+	informer cache.SharedInformer
+	stopCh   chan struct{}
+
+	logger *log.Entry
 }
 
 func NewMonitor(kubeClient kube.Client, logger *log.Entry) *Monitor {
-	monitor := kube_events_manager.NewMonitor()
-	monitor.WithKubeClient(kubeClient)
+	var (
+		gvr = schema.GroupVersionResource{
+			Group:    "deckhouse.io",
+			Version:  "v1",
+			Resource: "upmeterremotewrites",
+		}
+		indexers     = cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
+		resyncPeriod = 5 * time.Minute
+
+		tweakListOptions dynamicinformer.TweakListOptionsFunc = nil
+	)
+
+	informer := dynamicinformer.NewFilteredDynamicInformer(
+		kubeClient.Dynamic(), gvr, corev1.NamespaceAll, resyncPeriod, indexers, tweakListOptions)
 
 	return &Monitor{
-		monitor: monitor,
-		logger:  logger,
+		informer: informer.Informer(),
+		stopCh:   make(chan struct{}),
+		logger:   logger.WithField("component", "upmeterremotewrite-monitor"),
 	}
 }
 
 func (m *Monitor) Start(ctx context.Context) error {
-	config := &kube_events_manager.MonitorConfig{
-		Metadata: struct {
-			MonitorId    string
-			DebugName    string
-			LogLabels    map[string]string
-			MetricLabels map[string]string
-		}{
-			"upmeterremotewrite-monitor",
-			"upmeterremotewrite-monitor",
-			map[string]string{},
-			map[string]string{},
-		},
-		EventTypes: []types.WatchEventType{
-			types.WatchEventAdded,
-			types.WatchEventModified,
-			types.WatchEventDeleted,
-		},
-		ApiVersion:              "deckhouse.io/v1",
-		Kind:                    "UpmeterRemoteWrite",
-		LogEntry:                m.logger.WithField("component", "upmeterremotewrite-monitor"),
-		KeepFullObjectsInMemory: true,
+	if err := m.informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler); err != nil {
+		return fmt.Errorf("unable to set watch error handler: %w", err)
 	}
 
-	m.monitor.WithContext(ctx)
-	m.monitor.WithConfig(config)
-
-	err := m.monitor.CreateInformers()
-	if err != nil {
-		return fmt.Errorf("creating informer: %v", err)
+	go m.informer.Run(m.stopCh)
+	if !cache.WaitForCacheSync(ctx.Done(), m.informer.HasSynced) {
+		return fmt.Errorf("unable to sync caches: %v", ctx.Err())
 	}
-
-	m.monitor.EnableKubeEventCb()
-	m.monitor.Start(ctx)
 	return nil
 }
 
 func (m *Monitor) Stop() {
-	m.monitor.Stop()
-}
-
-func (m *Monitor) getLogger() *log.Entry {
-	return m.monitor.GetConfig().LogEntry
+	close(m.stopCh)
 }
 
 func (m *Monitor) Subscribe(handler Handler) {
-	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
-		// One event and one object per change, we always have single item in these lists.
-		evType := ev.WatchEvents[0]
-		raw := ev.Objects[0].Object
-
-		obj, err := convert(raw)
-		if err != nil {
-			m.getLogger().Errorf("cannot convert UpmeterRemoteWrite object: %v", err)
-			return
-		}
-
-		switch evType {
-		case types.WatchEventAdded:
-			handler.OnAdd(obj)
-		case types.WatchEventModified:
-			handler.OnModify(obj)
-		case types.WatchEventDeleted:
-			handler.OnDelete(obj)
-		}
+	m.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			rw, err := convert(obj)
+			if err != nil {
+				m.logger.Errorf(err.Error())
+				return
+			}
+			handler.OnAdd(rw)
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			rw, err := convert(newObj)
+			if err != nil {
+				m.logger.Errorf(err.Error())
+				return
+			}
+			handler.OnModify(rw)
+		},
+		DeleteFunc: func(obj interface{}) {
+			rw, err := convert(obj)
+			if err != nil {
+				m.logger.Errorf(err.Error())
+				return
+			}
+			handler.OnDelete(rw)
+		},
 	})
 }
 
 func (m *Monitor) List() ([]*RemoteWrite, error) {
-	res := make([]*RemoteWrite, 0)
-	for _, obj := range m.monitor.Snapshot() {
-		rw, err := convert(obj.Object)
+	list := make([]*RemoteWrite, 0)
+	for _, obj := range m.informer.GetStore().List() {
+		rw, err := convert(obj)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, rw)
+
+		list = append(list, rw)
 	}
-	return res, nil
+	return list, nil
 }
 
-func convert(o *unstructured.Unstructured) (*RemoteWrite, error) {
+func convert(o interface{}) (*RemoteWrite, error) {
+	unstrObj, ok := o.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert object to *unstructured.Unstructured: %v", o)
+	}
 	var rw RemoteWrite
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &rw)
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrObj.UnstructuredContent(), &rw)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.RemoteWrite: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to UpmeterRemoteWrite: %v", err)
 	}
 	return &rw, nil
 }

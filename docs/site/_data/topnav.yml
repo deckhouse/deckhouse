@@ -34,6 +34,8 @@ topnav:
             url: /deckhouse_vs_kaas.html
           - title: Technical support regulations
             url: /regulations.html
+          - title: Blog
+            external_url: 'https://blog.deckhouse.io/'
   ru:
     - title: Topnav
       items:
@@ -64,6 +66,8 @@ topnav:
       - title: Информация
         url: '#'
         items:
+          - title: Импортозамещение
+            url: /substitution.html
           - title: Безопасность Deckhouse
             url: /security.html
           - title: Сравнение с KaaS
@@ -72,3 +76,7 @@ topnav:
             url: /regulations.html
           - title: Лицензионное соглашение
             url: /license.html
+          - title: Правила лицензирования
+            url: /license_rules.html
+          - title: Блог
+            external_url: 'https://blog.deckhouse.io/'

@@ -133,17 +133,15 @@ spec:
   template:
     metadata:
       labels:
+      {{- if $crd.spec.enableIstioSidecar }}
+        sidecar.istio.io/inject: "true"
+      {{- end }}
         app: controller
         name: {{ $name }}
-      {{- if include "is_istio_in_use" $context }}
+      {{- if $crd.spec.enableIstioSidecar }}
       annotations:
-        {{- if $crd.spec.enableIstioSidecar }}
-        sidecar.istio.io/inject: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
-        {{- else }}
-        sidecar.istio.io/inject: "false"
-        {{- end }}
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}

@@ -18,19 +18,29 @@ package destination
 
 import (
 	"encoding/base64"
-	"sort"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
+
+var _ apis.LogDestination = (*CommonSettings)(nil)
 
 type CommonSettings struct {
 	Name        string      `json:"-"`
 	Type        string      `json:"type"`
-	Inputs      []string    `json:"inputs,omitempty"`
+	Inputs      set.Set     `json:"inputs,omitempty"`
 	Healthcheck Healthcheck `json:"healthcheck"`
 	Buffer      Buffer      `json:"buffer,omitempty"`
 }
 
 type Healthcheck struct {
 	Enabled bool `json:"enabled"`
+}
+type Encoding struct {
+	ExceptFields    []string `json:"except_fields,omitempty"`
+	OnlyFields      []string `json:"only_fields,omitempty"`
+	Codec           string   `json:"codec,omitempty"`
+	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type CommonTLS struct {
@@ -48,8 +58,7 @@ type Buffer struct {
 }
 
 func (cs *CommonSettings) SetInputs(inp []string) {
-	sort.Strings(inp)
-	cs.Inputs = inp
+	cs.Inputs.Add(inp...)
 }
 
 func (cs *CommonSettings) GetName() string {

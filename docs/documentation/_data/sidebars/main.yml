@@ -855,6 +855,18 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
+          - title: admission-policy-engine
+            folders:
+              - title:
+                  en: Description
+                  ru: Описание
+                url: /modules/015-admission-policy-engine/
+              - title:
+                  en: Configuration
+                  ru: Настройки
+                url: /modules/015-admission-policy-engine/configuration.html
+              - title: FAQ
+                url: /modules/015-admission-policy-engine/faq.html
           - title: network-policy-engine
             folders:
               - title:

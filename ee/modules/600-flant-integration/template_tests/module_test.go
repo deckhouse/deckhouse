@@ -23,17 +23,6 @@ func Test(t *testing.T) {
 const globalValues = `
 deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    flantIntegration:
-      flantPricing: tagstring
-      grafanaAgent: tagstring
-      madisonProxy: tagstring
-    common:
-      alpine: tagstring
-      kubeRbacProxy: imagehash
 discovery:
   prometheusScrapeInterval: 30
   clusterControlPlaneIsHighlyAvailable: true
@@ -126,6 +115,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 	Context("Cluster", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("flantIntegration", moduleValues)
 			f.HelmRender()
 		})
@@ -217,6 +207,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 	Context("Cluster", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("flantIntegration", moduleValuesNoLogs)
 			f.HelmRender()
 		})

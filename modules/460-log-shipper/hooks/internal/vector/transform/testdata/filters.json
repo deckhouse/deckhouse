@@ -1,9 +1,7 @@
 [
 	{
 		"drop_on_abort": false,
-		"inputs": [
-			"testit"
-		],
+		"inputs": [],
 		"source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
 		"type": "remap"
 	},

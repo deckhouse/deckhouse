@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
 	var (
 		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	)

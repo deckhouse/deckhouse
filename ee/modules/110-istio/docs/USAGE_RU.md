@@ -2,140 +2,174 @@
 title: "Модуль istio: примеры конфигурации"
 ---
 
-## Примеры ресурсов
-
-### IstioFederation
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: example-cluster
-spec:
-  metadataEndpoint: https://istio.k8s.example.com/metadata/
-  trustDomain: example.local
-```
-
-### IstioMulticluster
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioMulticluster
-metadata:
-  name: example-cluster
-spec:
-  metadataEndpoint: https://istio.k8s.example.com/metadata/
-```
-
-## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`
-
-Был обыкновенный сервис `myservice`, который балансился через iptables, а мы включили умную балансировку.
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-lb
-  namespace: prod
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy:
-    loadBalancer:
-      simple: LEAST_CONN
-```
-
-## Добавить к сервису myservice.prod.svc дополнительные, вторичные subset-ы со своими правилами
-
-Эти subset-ы работают при использовании [VirtualService](istio-cr.html#virtualservice):
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-extra-subsets
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy: # Срабатывает, если определён лишь классический Service.
-    loadBalancer:
-      simple: LEAST_CONN
-  subsets: # subset-ы необходимо определить через VirtualService, где эти subset-ы указаны в маршрутах.
-  - name: testv1
-    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
-      version: v1
-  - name: testv3
-    labels:
-      version: v3
-    trafficPolicy:
-      loadBalancer:
-        simple: ROUND_ROBIN
-```
-
 ## Circuit Breaker
 
-Для единственного сервиса потребуется единственный custom resource [DestinationRule](istio-cr.html#destinationrule).
+Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](istio-cr.html#destinationrule).
+Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
+
+Пример:
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: myservice-circuit-breaker
+  name: reviews-cb-policy
 spec:
-  host: myservice.prod.svc.cluster.local # либо полный FQDN, либо локальный для namespace домен.
+  host: reviews.prod.svc.cluster.local
   trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов
+      http:
+        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться
     outlierDetection:
-      consecutiveErrors: 7 # можно допустить не более семи ошибок
-      interval: 5m # в течение пяти минут,
-      baseEjectionTime: 15m # при этом проблемный эндпоинт будет исключён из работы на 15 минут.
+      consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
+      interval: 5m            # В течение пяти минут
+      baseEjectionTime: 15m   # После которых эндпоинт будет исключён из балансировки на 15 минут.
+```
+
+А также, для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчёте статистики ошибок на эндпоинтах.
+
+Пример:
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-productpage-rule
+  namespace: myns
+spec:
+  hosts:
+  - productpage
+  http:
+  - timeout: 5s
+    route:
+    - destination:
+        host: productpage
+```
+
+## Балансировка gRPC
+
+**Важно!** Для того, чтобы балансировка gRPC-сервисов заработала автоматически, присвойте name с префиксом или значением `grpc` для порта в соответствующем Service.
+
+## Locality Failover
+
+> При необходимости ознакомьтесь с [основной документацией](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+
+Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
+
+* `topology.istio.io/subzone`
+* `topology.kubernetes.io/zone`
+* `topology.kubernetes.io/region`
+
+Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](#устройство-мультикластера-из-двух-кластеров-с-помощью-ресурса-istiomulticluster).
+
+**Важно!** Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить outlierDetection.
+
+Пример:
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: helloworld
+spec:
+  host: helloworld
+  trafficPolicy:
+    loadBalancer:
+      localityLbSetting:
+        enabled: true # включили LF
+    outlierDetection: # outlierDetection включить обязательно
+      consecutive5xxErrors: 1
+      interval: 1s
+      baseEjectionTime: 1m
 ```
 
 ## Retry
 
-Для единственного сервиса потребуется единственный custom resource[VirtualService](istio-cr.html#virtualservice).
+С помощью ресурса [VirtualService](istio-cr.html#virtualservice) можно настроить Retry для запросов.
+
+**Внимание!** По умолчанию при возникновении ошибок все запросы (включая POST-запросы) выполняются повторно до трех раз.
+
+Пример:
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: productpage-retry
+  name: ratings-route
 spec:
   hosts:
-    - productpage # Либо полный FQDN, либо локальный для namespace домен.
+  - ratings.prod.svc.cluster.local
   http:
   - route:
     - destination:
-        host: productpage # Хотя бы один destination или rewrite необходим. В данном примере не меняем направление.
-    timeout: 8s
+        host: ratings.prod.svc.cluster.local
     retries:
       attempts: 3
-      perTryTimeout: 3s
+      perTryTimeout: 2s
+      retryOn: gateway-error,connect-failure,refused-stream
 ```
 
 ## Canary
 
+**Важно!** Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спец-заголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и "переключение" между канареечными версиями отвечает CI/CD система.
+
 Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У Pod'ов разных версий разные лейблы (`version: v1` и `version: v2`).
 
 Требуется настроить два custom resource:
-* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения.
+* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset-ы).
 * [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
+Пример:
+
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: productpage-canary
 spec:
   host: productpage
-  subsets: # subset-ы работают только если к хосту обращаются через VirtualService, в котором эти subset-ы указаны в маршрутах.
+  # subset-ы доступны только при обращении к хосту через через VirtualService из Pod'а под управлением Istio.
+  # Эти subset-ы должны быть указаны в маршрутах.
+  subsets:
   - name: v1
-    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
+    labels:
       version: v1
   - name: v2
     labels:
       version: v2
 ```
 
+### Распределение по наличию cookie
+
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: productpage-canary
+spec:
+  hosts:
+  - productpage
+  http:
+  - match:
+    - headers:
+       cookie:
+         regex: "^(.*;?)?(canary=yes)(;.*)?"
+    route:
+    - destination:
+        host: productpage
+        subset: v2 # Ссылка на subset из DestinationRule.
+  - route:
+    - destination:
+        host: productpage
+        subset: v1
+```
+
+### Распределение по вероятности
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: productpage-canary
@@ -155,59 +189,15 @@ spec:
       weight: 10
 ```
 
-### Распределение нагрузки между сервисами с разными версиями для Canary Deployment
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: reviews-route
-spec:
-  hosts:
-  - reviews.prod.svc.cluster.local
-  http:
-  - route:
-    - destination:
-        host: reviews.prod.svc.cluster.local
-        subset: testv1 # Ссылка на subset из DestinationRule.
-      weight: 25
-    - destination:
-        host: reviews.prod.svc.cluster.local
-        subset: testv3
-      weight: 75
-```
-
-#### Перенаправление location /uploads в другой сервис
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: uploads-route
-spec:
-  hosts:
-  - gallery.prod.svc.cluster.local
-  http:
-  - match:
-    - uri:
-        prefix: "/uploads" # Если обратились на gallery.prod.svc.cluster.local/uploads/a.jpg,
-    rewrite:
-      uri: "/data" # ... то меняем uri на /data/a.jpg,
-    route:
-    - destination:
-        host: share.prod.svc.cluster.local # ... и обращаемся к share.prod.svc.cluster.local/data/a.jpg,
-  - route:
-    - destination:
-        host: gallery.prod.svc.cluster.local # ...остальные запросы оставляем как есть.
-```
-
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/402-ingress-nginx/).
-* Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в Pod'ы приложения. Сайдкар `istio-proxy` перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
+* Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в Pod'ы приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
+
+Примеры:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -216,8 +206,12 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
-    nginx.ingress.kubernetes.io/service-upstream: "true" # Просим nginx проксировать трафик на ClusterIP вместо собственных IP Pod'ов.
-    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`, мы просто используем внутренний домен, о котором Istio осведомлён.
+    # Просим nginx проксировать трафик на ClusterIP вместо собственных IP Pod'ов.
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. 
+    # Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`, 
+    # мы просто используем внутренний домен, о котором Istio осведомлён.
+    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:
     - host: productpage.example.com
@@ -257,9 +251,9 @@ spec:
 * Если запрос попадает под политику ALLOW — разрешить запрос.
 * Все остальные запросы — запретить.
 
-Иными словами, если вы явно что-то запретили, то работает только ваш запрет. Если же вы что-то явно разрешили, то теперь разрешены только явно одобренные запросы (запреты никуда не деваются и имеют приоритет).
+Иными словами, если вы явно что-то запретили, то работает только ваш запрет. Если же вы что-то явно разрешили, то теперь разрешены только явно одобренные запросы (запреты никуда не исчезают и имеют приоритет).
 
-**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлечённые сервисы работали под управлением Istio. Также, между приложениями должен быть организован Mutual TLS, по умолчанию он организован, благодаря параметру модуля `tlsMode: MutualPermissive`.
+**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлечённые сервисы работали под управлением Istio. Также, между приложениями должен быть организован Mutual TLS.
 
 Примеры:
 * Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, то согласно алгоритму выше будут запрещены только POST-запросы к приложению.
@@ -444,7 +438,9 @@ spec:
 
 ### Разрешить из любого кластера (по mtls)
 
-**Важно!** Если есть запрещающие правила, то у них будет приоритет. См. [алгоритм](#алгоритм-принятия-решения).
+**Важно!** Если есть запрещающие правила, то у них будет приоритет. Смотри [алгоритм](#алгоритм-принятия-решения).
+
+Пример:
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -473,6 +469,56 @@ spec:
  rules: [{}]
 ```
 
+## Устройство федерации из двух кластеров с помощью CR IstioFederation
+
+Cluster A:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+  trustDomain: cluster-b.local
+```
+
+Cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
+  trustDomain: cluster-a.local
+```
+
+## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
+
+Cluster A:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+```
+
+Cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
+```
+
 ## Управление поведением data-plane
 
 ### [экспериментальная функция] Предотвратить завершение работы istio-proxy до завершения соединений основного приложения
@@ -485,8 +531,8 @@ spec:
 ## Обновление control-plane Istio
 
 * Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
-  * Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается обязательным параметром `istio.globalVersion` в ConfigMap `deckhouse`.
-  * Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x13`). Настраиваются дополнительным параметром `istio.additionalVersions` в ConfigMap `deckhouse`.
+  * Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром `istio.globalVersion` в ConfigMap `deckhouse`.
+  * Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x13`). Настраиваются параметром `istio.additionalVersions` в ConfigMap `deckhouse`.
 * Istio заявляет обратную совместимость между data-plane и control-plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Алгоритм обновления (для примера, на версию `1.13`):
@@ -498,3 +544,11 @@ spec:
   * Поменять настройку `istio.globalVersion` на `1.13` и удалить `additionalVersions`.
   * Убедиться, что старый Pod `istiod` удалился.
   * Поменять лейблы прикладных namespace на `istio-injection: enabled`.
+
+Чтобы найти все Pod'ы под управлением старой ревизии Istio, выполните:
+
+```shell
+kubectl get pods -A -o json | jq --arg revision "v1x12" \
+  '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
+   .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
+```

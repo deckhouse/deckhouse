@@ -30,14 +30,14 @@ import (
 // creation of parent object leads to the creation of a child one, and the same
 // with deletion.
 type KubeControllerObjectLifecycle struct {
-	preflight doer
+	preflight Doer
 
-	parentGetter  doer
-	parentCreator doer
-	parentDeleter doer
+	parentGetter  Doer
+	parentCreator Doer
+	parentDeleter Doer
 
-	childGetter          doer
-	childDeleter         doer
+	childGetter          Doer
+	childDeleter         Doer
 	childPollingInterval time.Duration
 	childPollingTimeout  time.Duration
 }
@@ -85,7 +85,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	return nil
 }
 
-func (c *KubeControllerObjectLifecycle) cleanGarbage(ctx context.Context, getter, deleter doer) error {
+func (c *KubeControllerObjectLifecycle) cleanGarbage(ctx context.Context, getter, deleter Doer) error {
 	if getErr := getter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
 		return fmt.Errorf("getting garbage: %v", getErr)
 	} else if getErr == nil {
@@ -98,7 +98,7 @@ func (c *KubeControllerObjectLifecycle) cleanGarbage(ctx context.Context, getter
 	return nil
 }
 
-func (c *KubeControllerObjectLifecycle) childGetterUntilPresent() doer {
+func (c *KubeControllerObjectLifecycle) childGetterUntilPresent() Doer {
 	return &pollingDoer{
 		doer:     c.childGetter,
 		catch:    isNil,
@@ -107,7 +107,7 @@ func (c *KubeControllerObjectLifecycle) childGetterUntilPresent() doer {
 	}
 }
 
-func (c *KubeControllerObjectLifecycle) childGetterUntilAbsent() doer {
+func (c *KubeControllerObjectLifecycle) childGetterUntilAbsent() Doer {
 	return &pollingDoer{
 		doer:     c.childGetter,
 		catch:    apierrors.IsNotFound,
@@ -119,7 +119,7 @@ func (c *KubeControllerObjectLifecycle) childGetterUntilAbsent() doer {
 func isNil(err error) bool { return err == nil }
 
 type pollingDoer struct {
-	doer     doer
+	doer     Doer
 	catch    func(error) bool
 	timeout  time.Duration
 	interval time.Duration

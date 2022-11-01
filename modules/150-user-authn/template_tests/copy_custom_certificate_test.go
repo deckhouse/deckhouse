@@ -26,20 +26,6 @@ import (
 var _ = Describe("Module :: userAuthn :: helm template :: custom-certificate", func() {
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "user-authn", "cert-manager"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    userAuthn:
-      cfssl: tagstring
-      crowdBasicAuthProxy: tagstring
-      dex: tagstring
-      dexAuthenticator: tagstring
-      dexAuthenticatorRedis: tagstring
-      kubeconfigGenerator: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -57,6 +43,7 @@ discovery:
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"certificate":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
@@ -78,6 +65,7 @@ discovery:
 	Context("Default with PublishAPI", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"certificate":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)

@@ -21,10 +21,10 @@ import (
 
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/gammazero/deque"
-	"github.com/ghodss/yaml"
 	"github.com/go-openapi/spec"
 	"github.com/iancoleman/strcase"
 	"github.com/mohae/deepcopy"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
@@ -37,27 +37,41 @@ const (
 	ObjectKey   = "object"
 )
 
-func addTagsToValues(path string, rawValues []interface{}) ([]string, error) {
-	tags, err := library.GetModulesImagesTags(path)
+func helmFormatModuleImages(m utils.Module, rawValues []interface{}) ([]chartutil.Values, error) {
+	caps := chartutil.DefaultCapabilities
+	vers := []string(caps.APIVersions)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	caps.APIVersions = vers
+
+	tags, err := library.GetModulesImagesTags(m.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	values := make([]string, 0, len(rawValues))
+	values := make([]chartutil.Values, 0, len(rawValues))
 	for _, singleValue := range rawValues {
 		applyTags(tags, singleValue)
 
-		data, err := yaml.Marshal(singleValue)
-		if err != nil {
-			return nil, err
+		top := map[string]interface{}{
+			"Chart":        m.Chart.Metadata,
+			"Capabilities": caps,
+			"Release": map[string]interface{}{
+				"Name":      m.Name,
+				"Namespace": m.Namespace,
+				"IsUpgrade": true,
+				"IsInstall": true,
+				"Revision":  0,
+				"Service":   "Helm",
+			},
+			"Values": singleValue,
 		}
 
-		values = append(values, string(data))
+		values = append(values, top)
 	}
 	return values, nil
 }
 
-func ComposeValuesFromSchemas(m utils.Module) ([]string, error) {
+func ComposeValuesFromSchemas(m utils.Module) ([]chartutil.Values, error) {
 	// TODO(maksim.nabokikh): Move the code from below after migrating from values matrix to load schemas only once.
 	validator := validation.NewValuesValidator()
 	err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path)
@@ -67,7 +81,12 @@ func ComposeValuesFromSchemas(m utils.Module) ([]string, error) {
 
 	camelizedModuleName := strcase.ToLowerCamel(m.Name)
 
-	moduleSchema := *validator.SchemaStorage.ModuleSchemas[camelizedModuleName]["values"]
+	values := validator.SchemaStorage.ModuleSchemas[camelizedModuleName]["values"]
+	if values == nil {
+		return nil, fmt.Errorf("cannot find openapi values schema for module %s", m.Name)
+	}
+
+	moduleSchema := *values
 	moduleSchema.Default = make(map[string]interface{})
 
 	globalSchema := *validator.SchemaStorage.GlobalSchemas["values"]
@@ -81,7 +100,7 @@ func ComposeValuesFromSchemas(m utils.Module) ([]string, error) {
 		return nil, fmt.Errorf("generate vlues: %v", err)
 	}
 
-	return addTagsToValues(m.Path, rawValues)
+	return helmFormatModuleImages(m, rawValues)
 }
 
 func mergeSchemas(rootSchema spec.Schema, schemas ...spec.Schema) spec.Schema {

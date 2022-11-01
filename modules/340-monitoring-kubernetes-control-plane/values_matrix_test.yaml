@@ -7,7 +7,8 @@ global:
     registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
-      monitoringKubernetesControlPlane: {}
+      monitoringKubernetesControlPlane:
+        proxy: "imageHash-monitoringKubernetesControlPlane-proxy"
       common: {}
   discovery:
     kubernetesVersion:
@@ -188,6 +189,7 @@ monitoringKubernetesControlPlane:
         clientCertificate:
           clientCrt: mycert
           clientKey: mykey
+      proxy: {}
     - kubeApiserver: # accessType "ThroughNode" and authenticationMethod "ProxyServiceAccount" for all components
         accessType: ThroughNode
         throughNode:
@@ -204,6 +206,7 @@ monitoringKubernetesControlPlane:
           authenticationMethod: ProxyServiceAccount
         metricsPath: /metrics
       kubeEtcd: []
+      proxy: {}
     - kubeApiserver: # accessType "Pod" and authenticationMethod "Certificate" for all components
         accessType: Pod
         pod:
@@ -241,6 +244,7 @@ monitoringKubernetesControlPlane:
           clientCrt: mycert
           clientKey: mykey
       kubeEtcd: []
+      proxy: {}
     - kubeApiserver: # accessType "Pod" and authenticationMethod "PrometheusCertificate" for all components
         accessType: Pod
         pod:
@@ -269,6 +273,7 @@ monitoringKubernetesControlPlane:
           port: 321
         metricsPath: /metrics
       kubeEtcd: []
+      proxy: {}
     - kubeApiserver: # special for KubeApiserver accessType "DefaultService"
         accessType: DefaultService
       kubeControllerManager:
@@ -276,3 +281,4 @@ monitoringKubernetesControlPlane:
       kubeScheduler:
         accessType: Extra
       kubeEtcd: []
+      proxy: {}

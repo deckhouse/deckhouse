@@ -1,10 +1,22 @@
 osDistributions:
   ubuntu:
     name: Ubuntu
+    url: https://ubuntu.com/download/server
   centos:
     name: CentOS
+    url: https://www.centos.org/download/
   debian:
     name: Debian
+    url: https://www.debian.org/download
+  astra:
+    name: Astra Linux Special Edition
+    url: https://astralinux.ru/products/astra-linux-special-edition/
+  alteros:
+    name: AlterOS
+    url: https://alter-os.ru/
+  '_redos':
+    name: 'РЕД ОС'
+    url: https://redos.red-soft.ru/product/server/
 
 k8s_statuses:
   end-of-life:

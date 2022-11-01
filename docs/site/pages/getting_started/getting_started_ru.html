@@ -27,10 +27,10 @@ toc: false
         {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].wip == true %}
         <a
-          class="button button_default button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
-        <a class="button button_default"
-          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{{ provider[1].name[page.lang] }}</a>
+        <a class="button button_default button_card"
+          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
       </div>
@@ -49,10 +49,10 @@ toc: false
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].wip == true %}
         <a
-          class="button button_default button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
-        <a class="button button_default"
-          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{{ provider[1].name[page.lang] }}</a>
+        <a class="button button_default button_card"
+          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
       </div>

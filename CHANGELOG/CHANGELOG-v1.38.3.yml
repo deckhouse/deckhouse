@@ -1,0 +1,5 @@
+log-shipper:
+  fixes:
+    - summary: Loki fix extra labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2852
+

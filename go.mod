@@ -11,9 +11,9 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.7-0.20220907111408-26890e1b0322 // branch: main
+	github.com/flant/addon-operator v1.0.7-0.20221018124000-7002084b9640 // branch: main
 	github.com/flant/kube-client v0.0.6
-	github.com/flant/shell-operator v1.0.11 // branch: main
+	github.com/flant/shell-operator v1.0.13-0.20221018121846-032ccd06522c // branch: main
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -29,6 +29,7 @@ require (
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.11
 	github.com/kyokomi/emoji v2.1.0+incompatible
+	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0

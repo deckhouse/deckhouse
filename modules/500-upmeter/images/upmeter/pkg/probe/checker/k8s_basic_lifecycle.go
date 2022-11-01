@@ -28,10 +28,10 @@ import (
 // kube-apiserver. Hence, all errors in kube-apiserver calls result in probe
 // fails.
 type KubeObjectBasicLifecycle struct {
-	preflight doer
-	getter    doer
-	creator   doer
-	deleter   doer
+	preflight Doer
+	getter    Doer
+	creator   Doer
+	deleter   Doer
 }
 
 func (c *KubeObjectBasicLifecycle) Check() check.Error {

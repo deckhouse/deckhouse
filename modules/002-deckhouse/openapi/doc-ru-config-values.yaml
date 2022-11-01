@@ -47,6 +47,8 @@ properties:
                 Должно быть больше времени начала окна обновления.
             days:
               description: Дни недели, в которые применяется окно обновлений.
+              items:
+                description: День недели.
       notification:
         type: object
         description: |

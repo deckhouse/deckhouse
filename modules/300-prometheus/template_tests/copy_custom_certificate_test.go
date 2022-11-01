@@ -25,18 +25,6 @@ import (
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    prometheus:
-      grafana: tagstring
-      grafanaDashboardProvisioner: tagstring
-      prometheus: tagstring
-      trickster: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -70,6 +58,7 @@ internal:
   prometheusScraperTLS:
     certificate: CRTCRTCRT
     key: KEYKEYKEY
+  auth: {}
 `
 
 var _ = Describe("Module :: prometheus :: helm template :: custom-certificate", func() {
@@ -78,6 +67,7 @@ var _ = Describe("Module :: prometheus :: helm template :: custom-certificate", 
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", customCertificatePresent)
 			f.HelmRender()
 		})

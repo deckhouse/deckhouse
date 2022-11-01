@@ -16,6 +16,13 @@ properties:
             type: string
           key:
             type: string
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
       ui:
         type: object
         default: {}

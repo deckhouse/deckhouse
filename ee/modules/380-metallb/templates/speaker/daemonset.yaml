@@ -3,10 +3,6 @@ cpu: 10m
 memory: 30Mi
 {{- end }}
 
-{{- if not .Values.metallb.speaker.nodeSelector }}
-  {{ fail "`metallb.speaker.nodeSelector` parameter is mandatory" }}
-{{- end }}
-
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -62,7 +58,6 @@ spec:
         - args:
             - --host=127.0.0.1
             - --port=7472
-            - --config=config
           env:
             - name: METALLB_NODE_NAME
               valueFrom:
@@ -72,10 +67,27 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: METALLB_ML_BIND_ADDR
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: METALLB_ML_LABELS
+              value: app=metallb,component=speaker
+            - name: METALLB_ML_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: secretkey
+                  name: memberlist
           image: {{ include "helm_lib_module_image" (list $ "speaker") }}
           imagePullPolicy: IfNotPresent
           name: speaker
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "SYS_ADMIN")) | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 10 }}
+          ports:
+            - containerPort: 7946
+              name: memberlist-tcp
+            - containerPort: 7946
+              name: memberlist-udp
+              protocol: UDP
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}

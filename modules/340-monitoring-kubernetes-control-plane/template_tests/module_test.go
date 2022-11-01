@@ -34,13 +34,6 @@ const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      monitoringKubernetesControlPlane:
-        proxy: tagstring
-        kubeSchedulerFaceSlapper: tagstring
   discovery:
     kubernetesVersion: 1.16.15
     d8SpecificNodeCountByRole:
@@ -158,6 +151,7 @@ internal:
 `
 
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("monitoringKubernetesControlPlane", moduleValues)
 			f.HelmRender()
 		})

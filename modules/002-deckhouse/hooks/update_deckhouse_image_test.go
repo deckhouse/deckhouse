@@ -394,14 +394,14 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 	Context("Release with not met requirements", func() {
 		BeforeEach(func() {
 			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-				v := getter.Get("global.discovery.kubernetesVersion").String()
+				v, _ := getter.Get("global.discovery.kubernetesVersion")
 				if v != requirementValue {
 					return false, errors.New("min k8s version failed")
 				}
 
 				return true, nil
 			})
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
+			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -420,7 +420,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		Context("Release requirements passed", func() {
 			BeforeEach(func() {
-				f.ValuesSet("global.discovery.kubernetesVersion", "1.19.0")
+				requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
 				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
 			})
@@ -434,6 +434,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
 			})
 		})
+
 	})
 
 	Context("Disruption release", func() {
@@ -442,7 +443,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 
-			var df requirements.DisruptionFunc = func() (bool, string) {
+			var df requirements.DisruptionFunc = func(getter requirements.ValueGetter) (bool, string) {
 				return true, "some test reason"
 			}
 			requirements.RegisterDisruption("testme", df)

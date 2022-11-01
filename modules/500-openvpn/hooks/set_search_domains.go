@@ -25,12 +25,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, setSearchDomain)
 
-func setSearchDomain(input *go_hook.HookInput) error {
-	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
+const (
+	clusterDomainGlobalPath          = "global.discovery.clusterDomain"
+	clusterDomainsValuesPath         = "openvpn.pushToClientSearchDomains"
+	clusterDomainsInternalValuesPath = "openvpn.internal.pushToClientSearchDomains"
+)
 
-	if !input.ConfigValues.Exists("openvpn.pushToClientSearchDomains") {
-		input.ConfigValues.Set("openvpn.pushToClientSearchDomains", []string{clusterDomain})
+func setSearchDomain(input *go_hook.HookInput) error {
+	userDefinedDomains, ok := input.ConfigValues.GetOk(clusterDomainsValuesPath)
+	if ok {
+		domains := make([]string, 0)
+		for _, domain := range userDefinedDomains.Array() {
+			domains = append(domains, domain.String())
+		}
+		input.Values.Set(clusterDomainsInternalValuesPath, domains)
+		return nil
 	}
+
+	// Fallback to global discovery.
+	clusterDomain := input.Values.Get(clusterDomainGlobalPath).String()
+	input.Values.Set(clusterDomainsInternalValuesPath, []string{clusterDomain})
 
 	return nil
 }

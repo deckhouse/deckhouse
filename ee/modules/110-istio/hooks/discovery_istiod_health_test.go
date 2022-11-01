@@ -47,7 +47,21 @@ func podIstiodYaml(podParams PodIstiodTemplateParams) string {
 }
 
 var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
+	f := HookExecutionConfigInit(`
+{"istio":
+  {"internal":
+    { "versionMap":
+     {
+        "1.33": {
+          "revision": "v1x33"
+       },
+       "1.88": {
+          "revision": "v1x88"
+        }
+      }
+    }
+  }
+}`, "")
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -60,34 +74,34 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 
 	Context("Without istiod pods", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 
 	Context("Without istiod pods but webhook exists", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(validationWebHook))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-global").Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Istiod pods with `Failed` phase", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Failed",
@@ -96,14 +110,14 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 
 	Context("Istiod pods with `Running` phase", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
@@ -112,14 +126,14 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 		})
 	})
 
 	Context("Istiod pods with `Running` phase and validation webhook exists", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x88")
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(validationWebHook + podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
@@ -128,15 +142,15 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-global").Exists()).To(BeTrue())
 		})
 	})
 
 	Context("Istiod pods with `Running` phase but with different revision", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalRevision", "v1x33")
+			f.ValuesSet("istio.internal.globalVersion", "1.33")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
 				Revision: "v1x88",
 				Phase:    "Running",
@@ -145,8 +159,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Exists()).To(BeTrue())
-			Expect(f.ValuesGet(isGlobalRevisionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
 		})
 	})
 

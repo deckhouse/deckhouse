@@ -31,8 +31,7 @@ properties:
         x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
-        # only check that is containing %s
-        pattern: '.*%s.*'
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The template with the `%s` key as the dynamic string parameter.
 
@@ -43,7 +42,7 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           If this parameter is omitted, no Ingress resources will be created.
-        x-doc-example: '%s.kube.company.my'
+        x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:
         description: |

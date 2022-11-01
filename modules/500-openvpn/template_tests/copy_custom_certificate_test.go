@@ -32,16 +32,6 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "openvpn"]
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeCaAuthProxy: tagstring
-      kubeRbacProxy: tagstring
-    openvpn:
-      openvpn: tagstring
-      ovpnAdmin: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -54,6 +44,8 @@ discovery:
   clusterDomain: cluster.local
 `
 const customCertificatePresent = `
+tunnelNetwork: 172.25.175.0/24
+udpTunnelNetwork: 172.25.176.0/24
 https:
   mode: CustomCertificate
 auth:
@@ -63,6 +55,7 @@ internal:
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  auth: {}
 `
 
 var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", func() {
@@ -71,6 +64,7 @@ var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", fun
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("openvpn", customCertificatePresent)
 			f.HelmRender()
 		})

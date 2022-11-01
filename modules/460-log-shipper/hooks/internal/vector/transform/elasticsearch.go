@@ -17,14 +17,16 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 func DeDotTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "elastic_dedot",
-			Type: "remap",
+			Name:   "elastic_dedot",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.DeDotRule.String(),
@@ -36,8 +38,9 @@ func DeDotTransform() *DynamicTransform {
 func DataStreamTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "elastic_stream",
-			Type: "remap",
+			Name:   "elastic_stream",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.StreamRule.String(),
@@ -49,8 +52,9 @@ func DataStreamTransform() *DynamicTransform {
 func CleanUpParsedDataTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "del_parsed_data",
-			Type: "remap",
+			Name:   "del_parsed_data",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.ParsedDataCleanUpRule.String(),

@@ -42,21 +42,20 @@ type D8ClusterConfiguration struct {
 
 	CustomResourceName string
 	Monitor            *hookprobe.Monitor
+	Preflight          Doer
 
-	Access kubernetes.Access
-	Logger *logrus.Entry
+	Access           kubernetes.Access
+	Logger           *logrus.Entry
+	PreflightChecker check.Checker
 
-	ControlPlaneAccessTimeout time.Duration
-	PodAccessTimeout          time.Duration
-	ObjectChangeTimeout       time.Duration
+	PodAccessTimeout    time.Duration
+	ObjectChangeTimeout time.Duration
 }
 
 // Verify deckhouse pod is up, and running, and ready
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
-
 	checkDeckhouse := withTimeout(
 		&podRunningOrReadyChecker{
 			namespace:        c.DeckhouseNamespace,
@@ -96,7 +95,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 	)
 
 	return sequence(
-		pingControlPlane,
+		c.PreflightChecker,
 		checkDeckhouse,
 		setInitedValue,
 		checkMirrorValue,

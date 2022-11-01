@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/chart/loader"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
@@ -142,9 +143,7 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
-func GetDeckhouseModulesWithValuesMatrixTests(focusNames map[string]struct{}) ([]utils.Module, error) {
-	var modules []utils.Module
-
+func GetDeckhouseModulesWithValuesMatrixTests(focusNames map[string]struct{}) (modules []utils.Module, err error) {
 	var possibleModulesPaths []string
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
@@ -183,8 +182,15 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames map[string]struct{}) ([
 		if !ok {
 			continue
 		}
+
+		module.Chart, err = loader.Load(modulePath)
+		if err != nil {
+			return modules, fmt.Errorf("chart load %q: %v", ChartConfigFilename, err)
+		}
+
 		modules = append(modules, module)
 	}
+
 	return modules, lintRuleErrorsList.ConvertToError()
 }
 

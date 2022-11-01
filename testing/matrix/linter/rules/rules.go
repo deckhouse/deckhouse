@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
@@ -87,13 +88,7 @@ type ObjectLinter struct {
 	ObjectStore    *storage.UnstructuredObjectStore
 	ErrorsList     *errors.LintRuleErrorsList
 	Module         utils.Module
-	Values         string
-	EnabledModules map[string]struct{}
-}
-
-func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
-	_, ok := l.EnabledModules[name]
-	return ok
+	EnabledModules set.Set
 }
 
 func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
@@ -101,6 +96,11 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		panic(err)
+	}
+	containers = append(initContainers, containers...)
 	if len(containers) == 0 {
 		return
 	}
@@ -201,7 +201,6 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 		}
 		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
 		tag := t.TagStr()
-
 		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
@@ -209,12 +208,11 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 				"All images must be deployed from the same default registry - "+defaultRegistry,
 			)
 		}
-
-		if tag != "imageHash" {
+		if !strings.HasPrefix(tag, "imageHash-") {
 			return errors.NewLintRuleError("CONTAINER004",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag should be `imageHash`",
+				"Image tag should start from `imageHash-`",
 			)
 		}
 	}
@@ -292,7 +290,7 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(objectRecommendedLabels(object))
 	l.ErrorsList.Add(objectAPIVersion(object))
-	if l.CheckModuleEnabled("priority-class") {
+	if l.EnabledModules.Has("priority-class") {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
 	l.ErrorsList.Add(objectDNSPolicy(object))
@@ -577,6 +575,7 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+
 	for _, c := range containers {
 		for _, p := range c.Ports {
 			if hostNetworkUsed && p.ContainerPort >= 10500 {

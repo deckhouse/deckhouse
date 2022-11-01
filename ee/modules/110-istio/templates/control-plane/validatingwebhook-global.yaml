@@ -1,7 +1,9 @@
-# Helm cannot deploy the DestinationRule and PeerAuthentication manifests for tlsMode parameter because it stumbles on this webhook.
-# isGlobalRevisionIstiodReady is under discovery_istiod_health.go hook control.
+# Helm cannot deploy the kube-apiserver DestinationRule because it stumbles on this webhook.
+# isGlobalVersionIstiodReady is under discovery_istiod_health.go hook control.
 
-{{- if .Values.istio.internal.isGlobalRevisionIstiodReady }}
+{{- if .Values.istio.internal.isGlobalVersionIstiodReady }}
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -15,7 +17,7 @@ webhooks:
     clientConfig:
       caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
       service:
-        name: istiod-{{ .Values.istio.internal.globalRevision }}
+        name: istiod-{{ $revision }}
         namespace: d8-istio
         path: /validate
         port: 443

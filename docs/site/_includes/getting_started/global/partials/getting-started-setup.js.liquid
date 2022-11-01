@@ -45,7 +45,7 @@ function restoreData() {
 }
 
 $(document).ready(function () {
-  let publicDomainTemplatePattern = /^([a-zA-Z0-9][a-zA-Z0-9-.]+)?%s([a-zA-Z0-9-]+)?\.[a-zA-Z0-9-.]+/;
+  let publicDomainTemplatePattern = /^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
   $('#clusterdomain').change(function () {
     if (!$(this).val().match(publicDomainTemplatePattern)) {
       $(this).addClass('invalid');

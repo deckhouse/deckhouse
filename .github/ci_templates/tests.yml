@@ -1,42 +1,36 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
-args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
-docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+args: 'make tests-modules'
 # <template: unit_run_args>
 {!{- end -}!}
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
 args: 'make tests-matrix'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DOCKERIZED=0" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin'
 # </template: matrix_run_args>
 {!{- end -}!}
 
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
-args: 'make ci'
-docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
+args: 'make ci -C dhctl'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
-args: 'sh -c "go generate tools/register.go && golangci-lint run"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+args: 'make lint'
 # </template: golangci_lint_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
 # <template: openapi_test_cases_run_args>
-args: 'ginkgo -vet=off ./testing/openapi_cases/'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+args: 'make tests-openapi'
 # </template: openapi_test_cases_run_args>
 {!{- end -}!}
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
-args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
-docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+args: 'make validate'
 # </template: validators_run_args>
 {!{- end -}!}
 
@@ -55,23 +49,8 @@ steps:
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
-    env:
-      TESTS_IMAGE_NAME: ${{needs.{!{$build_job}!}.outputs.tests_image_name}}
     run: |
-      if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
-        echo "TESTS_IMAGE_NAME is empty"
-        exit 1
-      fi
-
-      # Decode image name from gzip+base64.
-      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
-
-      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
-      docker pull ${TESTS_IMAGE_NAME}
-      echo "⚓️ 🏎 [$(date -u)] Run tests..."
-      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
+      {!{ $run.args }!}
 # </template: tests_template>
 {!{- end -}!}
 
@@ -90,14 +69,7 @@ steps:
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
-    env:
-      TESTS_IMAGE_NAME: {!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
     run: |
-      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
-      docker pull ${TESTS_IMAGE_NAME}
-      echo "⚓️ 🏎 [$(date -u)] Run tests..."
-      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
+      {!{ $run.args }!}
 # </template: tests_before_build_template>
 {!{- end -}!}

@@ -213,8 +213,8 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
       {{- include "csi_attacher_resources" . | nindent 6 }}
-  {{- end }}
+      {{- end }}
   kubeletPath: /var/lib/kubelet
   logLevel: info

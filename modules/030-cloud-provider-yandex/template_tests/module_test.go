@@ -50,37 +50,18 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner121: imagehash
-        csiExternalAttacher121: imagehash
-        csiExternalResizer121: imagehash
-        csiNodeDriverRegistrar121: imagehash
-        resolvWatcher: imagehash
-      cloudProviderYandex:
-        cloudControllerManager116: imagehash
-        cloudControllerManager121: imagehash
-        yandexCsiPlugin: imagehash
-        exporter: exporter_image
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.23.0
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
@@ -135,6 +116,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 	})
 
@@ -345,6 +327,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()
@@ -361,6 +344,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Yabdex with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderYandex.internal.defaultStorageClass", `network-ssd`)
 			f.HelmRender()

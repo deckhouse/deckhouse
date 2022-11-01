@@ -46,10 +46,10 @@
         "enabled": false
       },
       "encoding": {
-        "codec": "text",
         "only_fields": [
           "message"
         ],
+        "codec": "text",
         "timestamp_format": "rfc3339"
       },
       "endpoint": "http://testmeip:9000",

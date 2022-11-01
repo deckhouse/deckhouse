@@ -18,6 +18,8 @@ package checker
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
@@ -26,29 +28,60 @@ import (
 
 // ControlPlaneAvailable is a checker constructor and configurator
 type ControlPlaneAvailable struct {
-	Access  kubernetes.Access
-	Timeout time.Duration
+	VersionGetter Doer
+	Timeout       time.Duration
 }
 
 func (c ControlPlaneAvailable) Checker() check.Checker {
-	return doOrFail(c.Timeout, &k8sVersionGetter{access: c.Access})
-}
-
-// newControlPlaneChecker returns common preflight checker
-func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
-	return doOrUnknown(timeout, newK8sVersionGetter(access))
+	return doOrFail(c.Timeout, c.VersionGetter)
 }
 
 // k8sVersionGetter returns non-nil err of API server version request fails
 type k8sVersionGetter struct {
-	access kubernetes.Access
+	access   kubernetes.Access
+	err      error
+	mu       sync.RWMutex
+	interval time.Duration
 }
 
-func newK8sVersionGetter(access kubernetes.Access) *k8sVersionGetter {
-	return &k8sVersionGetter{access: access}
+func NewK8sVersionGetter(access kubernetes.Access, interval time.Duration) *k8sVersionGetter {
+	return &k8sVersionGetter{
+		access:   access,
+		interval: interval,
+	}
 }
 
 func (c *k8sVersionGetter) Do(_ context.Context) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.err
+}
+
+func (c *k8sVersionGetter) Start() {
+	ticker := time.NewTicker(c.interval)
+
+	go func() {
+		c.fetch() // force initiall call
+
+		for range ticker.C {
+			c.fetch()
+		}
+	}()
+}
+
+func (c *k8sVersionGetter) fetch() {
 	_, err := c.access.Kubernetes().Discovery().ServerVersion()
-	return err
+
+	c.mu.RLock()
+	prevErr := c.err
+	c.mu.RUnlock()
+
+	if errors.Is(prevErr, err) {
+		// The error did not change, no need to block
+		return
+	}
+
+	c.mu.Lock()
+	c.err = err
+	c.mu.Unlock()
 }

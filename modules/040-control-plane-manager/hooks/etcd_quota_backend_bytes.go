@@ -223,7 +223,12 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 
 	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
 
-	node := getNodeWithMinimalMemory(input.Snapshots["master_nodes"])
+	snaps := input.Snapshots["master_nodes"]
+	node := getNodeWithMinimalMemory(snaps)
+	if node == nil {
+		input.LogEntry.Warnf("Cannot get node with minimal memory")
+		return currentQuotaBytes
+	}
 
 	newQuotaBytes := currentQuotaBytes
 

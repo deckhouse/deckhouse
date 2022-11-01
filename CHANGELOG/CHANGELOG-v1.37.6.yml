@@ -1,0 +1,16 @@
+candi:
+  fixes:
+    - summary: Fix Yandex NAT Instance netplan config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2730
+      impact: >-
+        No impact for existing cluster. Only fixes cluster bootstap of `WithNATInstance` layot in
+        Yandex Cloud.
+cloud-provider-yandex:
+  fixes:
+    - summary: Update docs about the `existingZoneToSubnetIDMap` and `exporterAPIKey` parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2741
+docs:
+  fixes:
+    - summary: Add site redirects according to modules reordering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2696
+

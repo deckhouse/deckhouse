@@ -19,6 +19,7 @@ package destination
 import (
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
@@ -27,7 +28,7 @@ type Elasticsearch struct {
 
 	Endpoint string `json:"endpoint"`
 
-	Encoding ElasticsearchEncoding `json:"encoding,omitempty"`
+	Encoding Encoding `json:"encoding,omitempty"`
 
 	Batch ElasticsearchBatch `json:"batch,omitempty"`
 
@@ -45,13 +46,8 @@ type Elasticsearch struct {
 
 	Mode string `json:"mode,omitempty"`
 
-	DocType string `json:"doc_type,omitempty"`
-}
-
-type ElasticsearchEncoding struct {
-	ExceptFields    []string `json:"except_fields,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
+	DocType          string `json:"doc_type,omitempty"`
+	SuppressTypeName bool   `json:"suppress_type_name"`
 }
 
 type ElasticsearchAuth struct {
@@ -112,8 +108,9 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 
 	return &Elasticsearch{
 		CommonSettings: CommonSettings{
-			Name: ComposeName(name),
-			Type: "elasticsearch",
+			Name:   ComposeName(name),
+			Type:   "elasticsearch",
+			Inputs: set.New(),
 		},
 		Auth: ElasticsearchAuth{
 			AwsAccessKey:  decodeB64(spec.Auth.AwsAccessKey),
@@ -123,7 +120,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 			Password:      decodeB64(spec.Auth.Password),
 			Strategy:      strings.ToLower(spec.Auth.Strategy),
 		},
-		Encoding: ElasticsearchEncoding{
+		Encoding: Encoding{
 			TimestampFormat: "rfc3339",
 		},
 		TLS: tls,
@@ -138,10 +135,11 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 			Action: bulkAction,
 			Index:  spec.Index,
 		},
-		Endpoint:    spec.Endpoint,
-		Pipeline:    spec.Pipeline,
-		Compression: "gzip",
-		DocType:     spec.DocType,
-		Mode:        mode,
+		Endpoint:         spec.Endpoint,
+		Pipeline:         spec.Pipeline,
+		Compression:      "gzip",
+		DocType:          spec.DocType,
+		SuppressTypeName: spec.DocType == "",
+		Mode:             mode,
 	}
 }

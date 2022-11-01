@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksum ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum ::", func() {
 	const (
 		stateSecret = `
 ---

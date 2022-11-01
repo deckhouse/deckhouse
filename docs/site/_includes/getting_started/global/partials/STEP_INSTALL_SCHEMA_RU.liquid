@@ -10,7 +10,7 @@
 После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/{{ page.lang }}/documentation/), чтобы получить об этом необходимую информацию. Также, при возникновении вопросов, вы можете попросить помощи [сообщества](/ru/community/about.html).
 
 {% elsif page.platform_code == "bm-private" %}
-Данное руководство предлагает развертывание кластера Kubernetes с помощью Deckhouse в закрытом окружении, когда нет прямого доступа к хранилищу образов контейнеров или репозиториям deb/rpm пакетов.
+Данное руководство предлагает развертывание кластера Kubernetes с помощью Deckhouse в закрытом окружении, из которого нет прямого доступа к внешнему хранилищу образов контейнеров (registry.deckhouse.io) или внешним репозиториям deb/rpm-пакетов.
 
 Установка в закрытом окружении в целом аналогична установке [на bare metal](../bm/step2.html). Отличие только в некоторых дополнительных параметрах настройки.
 
@@ -112,10 +112,5 @@
 
 Обратите внимание, что в презентации представлен упрощённый, примерный план действий, а точные действия и команды, которые необходимо выполнить, будут указаны в следующих шагах.
 
-<iframe src="{{ include.presentation }}" frameborder="0" width="{{ include.width }}" height="{{ include.height }}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Управляйте презентацией
-</p>
+<div data-presentation="{{ include.presentation }}"></div>
 {%- endif %}

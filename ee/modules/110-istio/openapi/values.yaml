@@ -6,6 +6,23 @@ properties:
     type: object
     default: {}
     properties:
+      versionMap:
+        type: object
+        default: {}
+        x-examples:
+          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x7" } } # must be real
+        additionalProperties:
+          type: object
+          properties:
+            fullVersion:
+              type: string
+              x-examples: ["1.13.33"]
+            revision:
+              type: string
+              x-examples: ["v1x13"]
+            imageSuffix:
+              type: string
+              x-examples: ["V1x13x7"]
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
@@ -83,16 +100,6 @@ properties:
           priv:
             type: string
             x-examples: ["---PRIV KEY---"]
-      supportedVersions:
-        type: array
-        items:
-          type: string
-        default:
-        - "1.10.1"
-        - "1.12"
-        - "1.13"
-        x-examples:
-        - ["1.12", "1.13"]
       deprecatedVersions:
         type: array
         items:
@@ -112,27 +119,27 @@ properties:
             alertSeverity: 4
         x-examples:
           - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
-      globalRevision:
+      globalVersion:
         type: string
-        x-examples: [v1x10x1] # must be real
-      isGlobalRevisionIstiodReady:
+        x-examples: ["1.13"] # must be real
+      isGlobalVersionIstiodReady:
         type: boolean
         default: false
         x-examples: [true]
-      revisionsToInstall:
+      versionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - [v1x10x1] # must be real
-      operatorRevisionsToInstall:
+        - ["1.13"] # must be real
+      operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - [v1x10x1] # must be real
+        - ["1.13"] # must be real
       applicationNamespaces:
         type: array
         items:
@@ -159,3 +166,10 @@ properties:
             type: string
             x-examples:
               - plainstring
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]

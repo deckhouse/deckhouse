@@ -48,21 +48,6 @@ discovery:
   prometheusScrapeInterval: 30
   d8SpecificNodeCountByRole:
     system: 1
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/fe
-  registryDockercfg: Y2ZnCg==
-  registryAddress: registry.deckhouse.io
-  registryPath: /deckhouse/fe
-  registryCA: CACACA
-  registryScheme: https
-  tags:
-    common:
-      kubeRbacProxy: hash
-    ciliumHubble:
-      relay: hash
-      uiFrontend: hash
-      uiBackend: hash
-      uiProxy: hash
 modules:
   https:
     mode: CertManager
@@ -79,6 +64,7 @@ var _ = Describe("Module :: ciliumHubble :: helm template ::", func() {
 	Context("Cluster with ciliumHubble", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.HelmRender()
 		})
 

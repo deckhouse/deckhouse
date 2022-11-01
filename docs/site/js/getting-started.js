@@ -177,8 +177,88 @@ function getDockerConfigFromToken(registry, username, password) {
   return btoa('{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + getDockerAuthFromToken(username, password) + '"}}}');
 }
 
+//
+// Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
+//
+function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonElement = false) {
+  const input = $(itemSelector);
+  const wrapper = $(targetSelector);
+  if (input.val() !== '') {
+    update_license_parameters(input.val());
+    wrapper.removeClass('disabled');
+  } else if(input.val() === '' && !turnCommonElement) {
+    getLicenseToken(input.val());
+  } else {
+    wrapper.addClass('disabled');
+    if (turnCommonElement) {
+      $(targetSelector + '.common').removeClass('disabled');
+      console.log('Turn common element');
+    }
+  }
+}
+
+function toggleDisabled(tab, inputDataAttr) {
+  if (tab === 'tab_withoutnat_ce' || tab === 'tab_standard_ce') {
+    $('.dimmer-block-content.common').removeClass('disabled');
+  } else if (tab === 'tab_withoutnat_ee' || tab === 'tab_standard_ee') {
+    const licenseToken = $(inputDataAttr).val();
+    getLicenseToken(licenseToken)
+  }
+}
+
+async function getLicenseToken(token) {
+  try {
+    if (token === '') {
+      throw new Error(responseFromLicense[pageLang]['empty_input']);
+    }
+    const span = $($('#enter-license-key').next('span'));
+    const input = $('[license-token]');
+    const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
+    if(response.ok) {
+      const data = await response.json();
+      handlerResolveData(data, token, span, input);
+    } else {
+      handlerRejectData(token, span, input);
+    }
+  } catch (e) {
+    const span = $($('#enter-license-key').next('span'));
+    const input = $('[license-token]');
+    handlerRejectData(token, span, input, e.message);
+  }
+}
+
+function handlerResolveData(data, licenseToken, messageElement, inputField) {
+  messageElement.html(`${responseFromLicense[pageLang]['resolve']}`);
+  messageElement.removeAttr('class').addClass('license-form__message');
+
+  $('.dimmer-block-content').removeClass('disabled');
+  inputField.removeClass('license-token-input--error');
+  inputField.addClass('license-token-input--success');
+
+  update_license_parameters(licenseToken);
+}
+
+function handlerRejectData(licenseToken, messageElement, inputField, message = null) {
+  if (message) {
+    messageElement.html(message);
+  } else {
+    messageElement.html(responseFromLicense[pageLang]['reject']);
+  }
+  messageElement.removeAttr('class').addClass('license-form__warn');
+
+  licenseToken = '';
+  $.removeCookie('license-token', {path: '/'});
+
+  update_license_parameters(licenseToken);
+  $('.dimmer-block-content').addClass('disabled');
+  $('.dimmer-block-content.common').addClass('disabled');
+  inputField.removeClass('license-token-input--success');
+  inputField.addClass('license-token-input--error');
+}
+
 // Update license token and docker config
 function update_license_parameters(newtoken = '') {
+
   if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
     let registry = 'registry.deckhouse.io';
     let username = 'license-token';
@@ -194,7 +274,8 @@ function update_license_parameters(newtoken = '') {
       }
       password = newtoken;
       passwordHash = btoa(password);
-      $.cookie('license-token', newtoken, {path: '/', expires: 365})
+      $.cookie('license-token', newtoken, {path: '/', expires: 1})
+
     }
 
     let config = getDockerConfigFromToken(registry, username, password);

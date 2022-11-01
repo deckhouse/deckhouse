@@ -25,40 +25,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 )
 
-var tags map[string]map[string]string
-
-func init() {
-	tags = make(map[string]map[string]string)
-	for _, pattern := range []string{"/deckhouse/modules/*", "/deckhouse/ee/modules/*", "/deckhouse/ee/fe/modules/*"} {
-		paths, err := filepath.Glob(pattern)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, path := range paths {
-			info, err := os.Stat(path)
-			if err != nil {
-				panic(err)
-			}
-			if !info.IsDir() {
-				continue
-			}
-
-			parts := strings.SplitN(info.Name(), "-", 2)
-			tags[strcase.ToLowerCamel(parts[1])] = make(map[string]string)
-		}
-	}
-}
-
-func GetModulesImagesTags(modulePath string) (map[string]map[string]string, error) {
+func GetModulesImagesTags(modulePath string) (map[string]interface{}, error) {
 	var (
-		modulesTags map[string]map[string]string
+		modulesTags map[string]interface{}
 		search      bool
 	)
 
@@ -66,11 +40,10 @@ func GetModulesImagesTags(modulePath string) (map[string]map[string]string, erro
 		search = true
 	}
 
+	var err error
 	if search {
-		modulesTags = tags
+		modulesTags = DefaultImagesTags
 	} else {
-		var err error
-
 		modulesTags, err = getModulesImagesTagsFromLocalPath(modulePath)
 		if err != nil {
 			return nil, err
@@ -80,8 +53,8 @@ func GetModulesImagesTags(modulePath string) (map[string]map[string]string, erro
 	return modulesTags, nil
 }
 
-func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]map[string]string, error) {
-	var tags map[string]map[string]string
+func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]interface{}, error) {
+	var tags map[string]interface{}
 
 	imageTagsRaw, err := ioutil.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
 	if err != nil {
@@ -102,7 +75,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 		testsValues        map[string]interface{}
 		moduleValues       map[string]interface{}
 		globalValues       map[string]interface{}
-		moduleImagesValues map[string]map[string]map[string]map[string]map[string]string
+		moduleImagesValues map[string]interface{}
 		userDefinedValues  map[string]interface{}
 		finalValues        = new(map[string]interface{})
 	)
@@ -145,9 +118,9 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	if err != nil {
 		return nil, err
 	}
-	moduleImagesValues = map[string]map[string]map[string]map[string]map[string]string{
-		"global": {
-			"modulesImages": {
+	moduleImagesValues = map[string]interface{}{
+		"global": map[string]interface{}{
+			"modulesImages": map[string]interface{}{
 				"tags": tags,
 			},
 		},

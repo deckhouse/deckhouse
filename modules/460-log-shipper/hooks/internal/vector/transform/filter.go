@@ -19,6 +19,7 @@ package transform
 import (
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
@@ -27,8 +28,9 @@ import (
 func CreateParseDataTransforms() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "parse_json",
-			Type: "remap",
+			Name:   "parse_json",
+			Type:   "remap",
+			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.ParseJSONRule.String(),
@@ -48,7 +50,10 @@ func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, 
 	if err != nil {
 		return nil, err
 	}
-	return append([]apis.LogTransform{CreateParseDataTransforms()}, transforms...), nil
+	if len(transforms) > 0 {
+		transforms = append([]apis.LogTransform{CreateParseDataTransforms()}, transforms...)
+	}
+	return transforms, nil
 }
 
 func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
@@ -75,8 +80,9 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 
 		transforms = append(transforms, &DynamicTransform{
 			CommonTransform: CommonTransform{
-				Name: name,
-				Type: "filter",
+				Name:   name,
+				Type:   "filter",
+				Inputs: set.New(),
 			},
 			DynamicArgsMap: map[string]interface{}{
 				"condition": condition,

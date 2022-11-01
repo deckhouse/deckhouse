@@ -22,7 +22,7 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):hover {
+    &:not(.button_disabled):not(.button_card):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;
@@ -55,12 +55,39 @@
     }
     &_disabled {
         opacity: 0.3;
+        cursor: not-allowed;
     }
     &_big {
         font-size: $font-size-h2;
         img {
           height: $font-size-h2*1.5;
         }
+    }
+
+    &_card {
+        display: flex;
+        transition: all .25s ease;
+        flex-direction: column;
+        flex-wrap: wrap;
+        border-radius: 0.5em;
+        height: 8em;
+
+        &:not(.button_disabled):hover {
+            transform: scale(1.1);
+        }
+
+        & div.icon {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            width: 40px;
+            height: 40px;
+        }
+        & span.name {
+            width: 9em;
+            margin: 5px 0px 0px 0px;
+        }
+
     }
 }
 

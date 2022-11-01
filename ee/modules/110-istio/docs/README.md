@@ -18,10 +18,11 @@ Among other things, Istio solves the following tasks in a transparent for applic
   * Circuit Breaker:
     * Temporarily excluding endpoints from balancing if the error limit is exceeded.
     * Setting limits on the number of TCP connections and the number of requests per endpoint.
-    * Detecting abnormal requests and terminating them with an error code.
+    * Detecting abnormal requests and terminating them with an error code (HTTP request timeout).
   * Sticky Sessions:
     * Binding requests from end users to the service endpoint.
   * Locality Failover — prioritizing endpoints in the local availability zone.
+  * gRPC services load-balancing.
 * [Improving Observability](#observability):
   * Collecting and visualizing data for tracing service requests using Jaeger.
   * Exporting metrics about traffic between services to Prometheus and visualizing them using Grafana.
@@ -34,11 +35,6 @@ Among other things, Istio solves the following tasks in a transparent for applic
 Mutual TLS is the main method of mutual service authentication. It is based on the fact that all outgoing requests are verified using the server certificate, and all incoming requests are verified using the client certificate. After the verification is complete, the sidecar-proxy can identify the remote node and use these data for authorization or auxiliary purposes.
 
 Each service gets its own identifier of the following format: `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>` where `TrustDomain` is the cluster domain in our case. You can assign your own ServiceAccount to each service or use the regular “default” one. The service ID can be used for authorization and other purposes. This is the identifier used as a name to validate against in TLS certificates.
-
-Each cluster has a [global configuration of Mutual TLS](configuration.html#parameters-tlsmode) that includes several operating modes:
-* `Off` — Mutual TLS is disabled.
-* `MutualPermissive` — A service can accept both plain text and mutual TLS traffic. Outgoing service connections managed by Istio are encrypted.
-* `Mutual` — Both incoming and outgoing connections are established in encrypted form only.
 
 You can redefine this settings at the Namespace level.
 
@@ -158,21 +154,13 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned off
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vTA4frEamcw7yPAFdva8odR0jRy6anKr_0YnWf3KZzfBT4buiTA6KvfQBmuqg5pnhqYTyNHKPxlKMNQ/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_disabled_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/ --->
 
 #### Application with Istio turned on
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vTPTIYcf3hOwyWzp-d08QWCiKYm81oZuWJkiEzVQG24QDv0syrZ8fxzJxPRp27E_B_JdPdhaaYlhONM/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_enabled_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/ --->
 
 ## Activating Istio to work with the application
 
@@ -183,6 +171,8 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
   * `istio-injection=enabled` — use the latest installed version of Istio;
   * `istio.io/rev=v1x13` — use the specific Istio version for a given namespace.
 * The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
+
+It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
 **Note that** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
 * Each request is DNAT'ed to envoy that processes it and creates another one. The same thing happens on the receiving side.
@@ -215,12 +205,8 @@ Below are their fundamental differences:
 * Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
 * You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQ4QHMLIfVQD_2PGrxxFHQ-mxxdQ3n4BQACTKDi6PrKRBfSazVps2regkjgnBnwGsBpzXcABg3E5zDL/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/federation_common_principles_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
 
 #### Enabling the federation
 
@@ -233,12 +219,8 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 #### Managing the federation
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSOHsRtmDiyKJqNx1MrUOmF8iSzHtbBhdKbffBvNW6Ed9fmvmyhoByh1TOiQt_CF-UVHp4Xmp1ZfNuW/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/federation_istio_federation_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/ --->
 
 To establish a federation, you must:
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
@@ -248,12 +230,8 @@ To establish a federation, you must:
 
 #### General principles
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSNzIJYjN0svO5NJklrF3KpB0zEGTiGNZRXmajTr2wQSU9Do_O198FYfrRQpT5fTp6tx7XBs193233C/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/multicluster_common_principles_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 * Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
 * Istio connects directly to the API server of the neighboring cluster to gather information about its services. This Deckhouse module takes care of the corresponding communication channel.
@@ -272,12 +250,8 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 #### Managing the multicluster
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQcCeARUNzFIgCSuJBBABM4zNb6EzCYk7GPRWKKiE78aLZ94_dtad0eqKXZOuRkeHBNvUiTCcJgbCHR/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/edit --->
-<p class="text text_alt" style="color: #2A5EFF">
-  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
-  Control presentation
-</p>
+<div data-presentation="../../presentations/110-istio/multicluster_istio_multicluster_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.
 

@@ -57,8 +57,6 @@ There are two authentication methods:
 
 Allows you to define the mTLS strategy for an individual NS. Defines how traffic will be tunneled (or not) to the sidecar. Each mTLS request can automatically identify the source and allows you to use it in the authorization rules.
 
-You can enable mTLS globally using the `tlsMode` [parameter](configuration.html#parameters).
-
 ### RequestAuthentication
 
 [Reference](https://istio.io/latest/docs/reference/config/security/request_authentication/).

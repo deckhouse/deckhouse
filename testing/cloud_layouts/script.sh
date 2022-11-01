@@ -228,14 +228,22 @@ function prepare_environment() {
 
   case "$PROVIDER" in
   "Yandex.Cloud")
+    if [[ $CRI == "Containerd" ]]; then
+      ssh_user="cloud-user"
+      # RedOS 7.3
+      IMAGE_ID="fd8q0kjl4l1iovds9f29"
+    else
+      ssh_user="ubuntu"
+      # Ubuntu 20.04
+      IMAGE_ID="fd8kdq6d0p8sij7h5qe3"
+    fi
+
     # shellcheck disable=SC2016
     env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" IMAGE_ID="$IMAGE_ID" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${IMAGE_ID}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
-    ssh_user="ubuntu" # was "cloud-user" for redos
     ;;
 
   "GCP")
@@ -481,7 +489,7 @@ kubectl -n d8-system get pods -l app=deckhouse
 END_SCRIPT
 )
 
-  testRunAttempts=5
+  testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
     >&2 echo "Check Deckhouse pod readiness."
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
@@ -505,6 +513,11 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  if [[ "$PROVIDER" == "Static" ]]; then
+    run_linstor_tests || return $?
+  fi
+  echo "Linstor test suite: success"
+
   test_failed=
 
   testScript=$(cat <<"END_SCRIPT"
@@ -619,6 +632,44 @@ ENDSSH
     return 1
   fi
 }
+
+# run_linstor_tests executes helm test for linstor module
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+#
+# TODO: replace with testing framework: https://github.com/deckhouse/deckhouse/issues/2380
+function run_linstor_tests() {
+  test_failed=
+
+  testScript=$(cat <<"END_SCRIPT"
+set -Eeuo pipefail
+>&2 echo "Running linstor test suite ..."
+set -x
+>&2 kubectl -n d8-system exec deploy/deckhouse -- helm test -n d8-system linstor
+END_SCRIPT
+)
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+}
+
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."

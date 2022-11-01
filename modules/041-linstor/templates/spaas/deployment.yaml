@@ -104,9 +104,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "spaas_resources" . | nindent 12 }}
-{{- end }}
+            {{- end }}
         volumeMounts:
         - name: patches-dir
           mountPath: /var/cache/spaas/patches

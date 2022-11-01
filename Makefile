@@ -1,5 +1,4 @@
-export DOCKERIZED ?= 1
-export PATH := $(abspath bin/):${PATH}
+export DOCKERIZED := 1
 
 FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
@@ -8,57 +7,13 @@ FORMATTING_END = \033[0m
 TESTS_TIMEOUT="15m"
 FOCUS=""
 
-PROMTOOL_VERSION = 2.37.0
-GOLANGCI_VERSION = 1.46.2
-TRIVY_VERSION= 0.28.1
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-
-# Owerride system paraeters for docker
-ifeq ($(DOCKERIZED), 1)
-	OS_NAME := Linux
-	PLATFORM_NAME := x86_64
-else
-	PLATFORM_NAME := $(shell uname -m)
-	OS_NAME := $(shell uname)
-endif
-
-# Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
-# besides linux/amd64 (e.g. relevant for mac m1).
-ifneq ($(filter arm%,$(PLATFORM_NAME)),)
-	export WERF_PLATFORM=linux/amd64
-endif
-
-# Set platform for deps
-ifeq ($(OS_NAME), Linux)
-	JQ_PLATFORM = linux64
-	YQ_PLATFORM = linux
-	TRDL_PLATFORM = linux
-	GOHOSTOS = linux
-else ifeq ($(OS_NAME), Darwin)
-	JQ_PLATFORM = osx-amd64
-	YQ_PLATFORM = darwin
-	TRDL_PLATFORM = darwin
-	GOHOSTOS = darwin
-endif
-
-# Set arch for deps
-ifeq ($(PLATFORM_NAME), x86_64)
-	YQ_ARCH = amd64
-	CRANE_ARCH = x86_64
-	TRDL_ARCH = amd64
-	GOHOSTARCH = amd64
-else ifeq ($(PLATFORM_NAME), arm64)
-	YQ_ARCH = arm64
-	CRANE_ARCH = arm64
-	TRDL_ARCH = arm64
-	GOHOSTARCH = amd64
-endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),"")
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+       TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 else
-	TESTS_PATH = $(wildcard ./modules/*-${FOCUS} ./ee/modules/*-${FOCUS} ./ee/fe/modules/*-${FOCUS})/...
+       TESTS_PATH = $(wildcard ./modules/*-${FOCUS} ./ee/modules/*-${FOCUS} ./ee/fe/modules/*-${FOCUS})/...
 endif
 
 help:
@@ -82,25 +37,9 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-##@ General
-
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/werf ## Install dev dependencies.
-
-clean: ## Clean up working directory and remove dev image
-	rm -rf ./bin
-	docker ps -aqf label=deckhouse-dev | xargs docker rm -f
-	docker images -qf label=deckhouse-dev | xargs docker rmi -rf
+TESTS_TIMEOUT="15m"
 
 ##@ Tests
-
-bin/promtool-${PROMTOOL_VERSION}/promtool:
-	@./tools/dockerized.sh \
-		"mkdir -p bin/promtool-${PROMTOOL_VERSION}" \
-		"curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool"
-
-.PHONY: bin/promtool
-bin/promtool: bin bin/promtool-${PROMTOOL_VERSION}/promtool
-	ln -sf promtool-${PROMTOOL_VERSION}/promtool bin/promtool
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
@@ -108,7 +47,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	@./tools/dockerized.sh \
 		"go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}"
 
-tests-matrix: bin/promtool werf ## Test how helm templates are rendered with different input values generated from values examples.
+tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
 	@./tools/dockerized.sh \
 		"go test ./testing/matrix/ -v"
@@ -121,11 +60,6 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 validate: ## Check common patterns through all modules.
 	@./tools/dockerized.sh \
 		"go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/..."
-
-bin/golangci-lint:
-	@./tools/dockerized.sh \
-		"mkdir -p bin" \
-		"curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}"
 
 .PHONY: lint lint-fix
 lint: ## Run linter.
@@ -161,25 +95,18 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 ##@ Generate
 
 .PHONY: generate render-workflow
-generate: bin/werf ## Run all generate-* jobs in bulk.
+generate: ## Run all generate-* jobs in bulk.
 	@./tools/dockerized.sh \
-		"cd tools; go generate"
+		"cd tools; go generate" \
+    "cd /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot; go generate ."
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
 
 ##@ Security
-
-bin:
+bin/regcopy: ## App to copy docker images to the Deckhouse registry
 	mkdir -p bin
-
-bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
-	@./tools/dockerized.sh \
-		"cd tools/regcopy; go build -o $(PWD)/bin/regcopy"
-
-bin/trivy: bin
-	@./tools/dockerized.sh \
-		"curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}"
+	cd tools/regcopy; go build -o bin/regcopy
 
 .PHONY: cve-report cve-base-images
 cve-report: ## Generate CVE report for a Deckhouse release.
@@ -188,7 +115,8 @@ cve-report: ## Generate CVE report for a Deckhouse release.
 
 cve-base-images: ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
-	./tools/cve/base-images.sh
+	@./tools/dockerized.sh \
+		"./tools/cve/base-images.sh"
 
 ##@ Documentation
 
@@ -211,32 +139,6 @@ docs-down: ## Stop all the documentation containers.
 	docker rm -f site_site_1 site_front_1 documentation; docker network rm deckhouse
 
 ##@ Update kubernetes control-plane patchversions
-
-bin/jq: bin ## Install jq deps for update-patchversion script.
-	@./tools/dockerized.sh \
-		"curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq" \
-		"chmod +x $(PWD)/bin/jq"
-
-bin/yq: bin ## Install yq deps for update-patchversion script.
-	@./tools/dockerized.sh \
-		"curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq" \
-		"chmod +x $(PWD)/bin/yq"
-
-bin/crane: bin ## Install crane deps for update-patchversion script.
-	@./tools/dockerized.sh \
-		"curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane" \
-		"mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane"
-
-bin/trdl: bin
-	@./tools/dockerized.sh \
-		"curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o $(PWD)/bin/trdl" \
-		"chmod +x $(PWD)/bin/trdl"
-
-bin/werf: bin bin/trdl
-	@./tools/dockerized.sh \
-		"trdl --home-dir $(PWD)/bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2" \
-		"trdl --home-dir $(PWD)/bin/.trdl update werf 1.2 stable" \
-		"ln -sf $$(trdl --home-dir $(PWD)/bin/.trdl bin-path werf 1.2 stable | sed 's|^$(PWD)/bin/||')/werf $(PWD)/bin/werf"
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.

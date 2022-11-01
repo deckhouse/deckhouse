@@ -22,6 +22,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,9 +62,18 @@ func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.Filter
 	return dst, nil
 }
 
+func filterNamespaceName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var namespace corev1.Namespace
+
+	err := sdk.FromUnstructured(obj, &namespace)
+	if err != nil {
+		return nil, err
+	}
+	return namespace.GetName(), nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/log-shipper/generate_config",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue: "/modules/log-shipper/generate_config",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "namespaced_log_source",
@@ -83,10 +93,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ClusterLogDestination",
 			FilterFunc: filterClusterLogDestination,
 		},
+		{
+			Name:       "namespace",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-log-shipper"},
+			},
+			FilterFunc: filterNamespaceName,
+		},
 	},
 }, generateConfig)
 
 func generateConfig(input *go_hook.HookInput) error {
+	if len(input.Snapshots["namespace"]) < 1 {
+		// there is no namespace to manipulate the config map, the hook will create it later on afterHelm
+		input.Values.Set("logShipper.internal.activated", false)
+		return nil
+	}
+
 	configContent, err := composer.FromInput(input).Do()
 	if err != nil {
 		return err

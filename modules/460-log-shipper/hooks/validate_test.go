@@ -27,15 +27,15 @@ func TestValidateConfigWithVector(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	dockerImage := "timberio/vector:0.23.3-debian"
+	dockerImage := "timberio/vector:0.24.2-debian"
 
 	script := `
 	set -e
 
 	path="/deckhouse/modules/460-log-shipper/hooks/testdata"
 
-	for file in $(find ${path}/*); do
-	  vector validate --config-json $file --config-json "${path}/default-config.json";
+	for file in $(find ${path}/**/*\.json -type f); do
+	  vector validate --config-json $file --config-json "${path}/__default-config.json";
 	done`
 
 	cmd := exec.Command(

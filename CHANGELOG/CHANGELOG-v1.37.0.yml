@@ -1,0 +1,120 @@
+candi:
+  features:
+    - summary: Enabled `EphemeralContainers` feature gate for Kubernetes < 1.23.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2578
+      impact: control-plane components will be restarted.
+  fixes:
+    - summary: Fix routes for multi-zonal clusters when using `WithNATInstance` layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2544
+    - summary: >-
+        Got rid of unused `associatePublicIPToNodes` and `associatePublicIPToMasters` args in AWS
+        Standard layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2231
+ci:
+  features:
+    - summary: Add timeout for bootstrap and cleanup e2e cluster steps
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2594
+cloud-provider-yandex:
+  fixes:
+    - summary: Fix allowing additional properties for `nodeGroups[*]` and `nodeGroups[*].instanceClass`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2504
+cni-cilium:
+  features:
+    - summary: |-
+        1. All distributions are properly supported when using FQDN policies.
+        2. CNP and CCNP Status updates no longer clog the apiserver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2550
+deckhouse-web:
+  fixes:
+    - summary: Don't use external assets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2543
+docs:
+  fixes:
+    - summary: Add the example about using disruptions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2577
+    - summary: >-
+        Don't use assets from CDN on the site, because it works unpredictably and can lead to errors
+        in loading.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2543
+extended-monitoring:
+  fixes:
+    - summary: Remove the `D8CertExporterStuck` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2589
+global-hooks:
+  fixes:
+    - summary: Reduce static requests for control plane Pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2588
+      impact: Control plane components will restart.
+go_lib:
+  fixes:
+    - summary: >-
+        Changed certificate re-issue time to 15 days before expiration to avoid useless
+        `CertificateSecretExpiredSoon` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2582
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Reload ingress controller configuration on `additionalHeaders` field change. This will
+        automatically add configured custom headers to the nginx.conf file without restarting the
+        controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2545
+istio:
+  features:
+    - summary: Added global parameter for configuring tracing sample rate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2440
+  fixes:
+    - summary: Minor OpenAPI specification updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2615
+    - summary: >-
+        Added missing global validating webhook for istio. Global webhook is enabled when isiod pods
+        for global revision are ready to handle requests.
+
+        Added a hack to restart an istio operator that hangs in an error state.
+
+        Added control plane alerts: 
+
+        - `D8IstioGlobalControlplaneDoesntWork`
+
+        - `D8IstioAdditionalControlplaneDoesntWork`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2410
+kube-dns:
+  fixes:
+    - summary: kube-dns ExternalName Service fix — clusterDomain is taken into account.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2430
+linstor:
+  fixes:
+    - summary: Fix scheduling CNI Pods on tainted nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2551
+      impact: CNI plugin Pods and `kube-proxy` will be restarted.
+monitoring-applications:
+  features:
+    - summary: Reduce the number of generated service monitors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2527
+monitoring-kubernetes:
+  features:
+    - summary: Add underrequested Pods to the Capacity Planning dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2476
+node-manager:
+  features:
+    - summary: added RollingUpdate approval mode for cloud nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2456
+  fixes:
+    - summary: Fixed the `D8EarlyOOMPodIsNotReady` alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2541
+testing:
+  features:
+    - summary: Implement Prometheus rule checking
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2426
+    - summary: Added e2e tests to check Deckhouse version updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2283
+  fixes:
+    - summary: e2e upgrade test — deckhouse pod ready timeout fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2630
+      impact: low
+    - summary: Use another OpenStack cloud provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2514
+tools:
+  fixes:
+    - summary: Fix d8-pull.sh script for CE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2612
+

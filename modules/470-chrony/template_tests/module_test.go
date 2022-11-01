@@ -35,12 +35,6 @@ const (
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    tags:
-      chrony:
-        chrony: imagehash
   discovery:
     kubernetesVersion: 1.20.5
     d8SpecificNodeCountByRole:
@@ -58,6 +52,7 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 	Context("Render", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("chrony", moduleValues)
 			f.HelmRender()
 		})

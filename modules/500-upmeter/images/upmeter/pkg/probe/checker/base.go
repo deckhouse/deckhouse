@@ -155,14 +155,14 @@ func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
 	}
 }
 
-// doer is for wrapping k8s api calls and easier mocking them in tests
-type doer interface {
+// Doer is for wrapping k8s api calls and easier mocking them in tests
+type Doer interface {
 	Do(context.Context) error
 }
 
 // unknownCheckWrapper wraps any doer error with check.ErrUnknown
 type unknownCheckWrapper struct {
-	doer doer
+	doer Doer
 }
 
 func (c *unknownCheckWrapper) Check() check.Error {
@@ -174,7 +174,7 @@ func (c *unknownCheckWrapper) Check() check.Error {
 
 // failCheckWrapper wraps any doer error with check.ErrFail
 type failCheckWrapper struct {
-	doer doer
+	doer Doer
 }
 
 func (c *failCheckWrapper) Check() check.Error {
@@ -184,29 +184,29 @@ func (c *failCheckWrapper) Check() check.Error {
 	return nil
 }
 
-// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
+// doOrFail is a handy wrapper. It wraps timeout checker and Doer interface,
 // if time is out or doer returns error, the checker returns check.ErrFail
-func doOrFail(timeout time.Duration, doer doer) check.Checker {
+func doOrFail(timeout time.Duration, doer Doer) check.Checker {
 	return withTimeout(&failCheckWrapper{doer}, timeout)
 }
 
-// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
+// DoOrUnknown is a handy wrapper. It wraps timeout checker and Doer interface,
 // if time is out or doer returns error, the checker returns check.ErrUnknown
-func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
+func DoOrUnknown(timeout time.Duration, doer Doer) check.Checker {
 	return withTimeout(&unknownCheckWrapper{doer}, timeout)
 }
 
 // doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
-func doWithTimeout(d doer, timeout time.Duration, err error) doer {
+func doWithTimeout(doer Doer, timeout time.Duration, err error) Doer {
 	return &timeoutDoer{
-		doer:    d,
+		doer:    doer,
 		err:     err,
 		timeout: timeout,
 	}
 }
 
 type timeoutDoer struct {
-	doer    doer
+	doer    Doer
 	err     error
 	timeout time.Duration
 }
@@ -219,3 +219,7 @@ func (d *timeoutDoer) Do(ctx context.Context) error {
 		func() { err = d.err })
 	return err
 }
+
+type NoopDoer struct{}
+
+func (d NoopDoer) Do(_ context.Context) error { return nil }

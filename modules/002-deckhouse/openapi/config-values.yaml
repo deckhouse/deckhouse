@@ -28,6 +28,17 @@ properties:
   update:
     type: object
     description: Settings of the Deckhouse update mode and windows.
+    x-examples:
+      - windows:
+          - from: "8:00"
+            to: "15:00"
+            days:
+              - Tue
+              - Sat
+        disruptionApprovalMode: Manual
+        notification:
+          webhook: https://release-webhook.mydomain.com
+          minimalNotificationTime: 6h
     properties:
       mode:
         type: string
@@ -82,8 +93,10 @@ properties:
             days:
               type: array
               description: The days of the week on which the update window is applied.
+              example: ["Mon", "Wed"]
               items:
                 type: string
+                description: Day of the week.
                 x-examples: [Mon]
                 enum:
                   - Mon

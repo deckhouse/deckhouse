@@ -9,5 +9,9 @@ COPY start.sh /
 COPY readiness.sh /
 COPY liveness.sh /
 RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep
+
+COPY iptables-wrapper-installer.sh /
+RUN /iptables-wrapper-installer.sh
+
 RUN mkdir /etc/coredns
 ENTRYPOINT ["/coredns"]

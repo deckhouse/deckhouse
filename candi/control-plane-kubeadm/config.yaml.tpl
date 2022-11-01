@@ -1,9 +1,12 @@
-{{- $featureGates := "" }}
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true" }}
-{{- end }}
+{{- $featureGates := "EndpointSliceTerminatingCondition=true" }}
 {{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "EndpointSliceTerminatingCondition=true,TTLAfterFinished=true" }}
+    {{- $featureGates = list $featureGates "TTLAfterFinished=true" | join "," }}
+{{- end }}
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
 {{- end }}
 
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}

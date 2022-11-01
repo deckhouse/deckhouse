@@ -35,8 +35,8 @@ func main() {
 	var (
 		loggerConfig = &loggerConfig{}
 
-		agentKubeConfig = &kubernetes.Config{}
-		agentConfig     = agent.NewConfig()
+		kubeConfig  = &kubernetes.Config{}
+		agentConfig = agent.NewConfig()
 
 		serverConfig = server.NewConfig()
 	)
@@ -48,6 +48,7 @@ func main() {
 
 	serverCommand := app.Command("start", "Start upmeter server")
 	parseServerArgs(serverCommand, serverConfig)
+	parseKubeArgs(serverCommand, kubeConfig)
 	parseLoggerArgs(serverCommand, loggerConfig)
 	serverCommand.Action(func(c *kingpin.ParseContext) error {
 		setupLogger(logger, loggerConfig)
@@ -56,7 +57,7 @@ func main() {
 		logger.Debugf("Logger config: %v", loggerConfig)
 		logger.Debugf("Server config: %v", serverConfig)
 
-		srv := server.New(serverConfig, logger)
+		srv := server.New(serverConfig, kubeConfig, logger)
 		startCtx, cancelStart := context.WithCancel(context.Background())
 
 		go func() {
@@ -86,7 +87,7 @@ func main() {
 	// Agent
 
 	agentCommand := app.Command("agent", "Start upmeter agent")
-	parseKubeArgs(agentCommand, agentKubeConfig)
+	parseKubeArgs(agentCommand, kubeConfig)
 	parseAgentArgs(agentCommand, agentConfig)
 	parseLoggerArgs(agentCommand, loggerConfig)
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
@@ -94,9 +95,9 @@ func main() {
 		logger.Infof("Starting upmeter agent. ID=%s", run.ID())
 		logger.Debugf("Logger config: %v", loggerConfig)
 		logger.Debugf("Agent config: %v", agentConfig)
-		logger.Debugf("Kubernetes config: %v", agentKubeConfig)
+		logger.Debugf("Kubernetes config: %v", kubeConfig)
 
-		a := agent.New(agentConfig, agentKubeConfig, logger)
+		a := agent.New(agentConfig, kubeConfig, logger)
 
 		startCtx, cancelStart := context.WithCancel(context.Background())
 

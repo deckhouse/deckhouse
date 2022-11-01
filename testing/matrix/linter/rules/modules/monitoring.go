@@ -103,7 +103,12 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 
 	var res bool
 	for _, namespace := range []string{moduleNamespace, "d8-system", "d8-monitoring"} {
-		desiredContent := fmt.Sprintf(desiredContentBuilder.String(), namespace)
+		var desiredContent string
+		if rulesEx {
+			desiredContent = fmt.Sprintf(desiredContentBuilder.String(), namespace)
+		} else {
+			desiredContent = desiredContentBuilder.String()
+		}
 		res = res || desiredContent == string(content)
 	}
 

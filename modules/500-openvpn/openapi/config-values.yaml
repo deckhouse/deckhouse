@@ -59,12 +59,16 @@ properties:
     type: string
     description: |
       Tunnel network for TCP OpenVPN server.
-    x-doc-default: '172.25.175.0/255.255.255.0'
+    x-doc-default: '172.25.175.0/24'
+    default: '172.25.175.0/24'
+    x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
   udpTunnelNetwork:
     type: string
     description: |
       Tunnel network for UDP OpenVPN server.
-    x-doc-default: '172.25.176.0/255.255.255.0'
+    x-doc-default: '172.25.176.0/24'
+    default: '172.25.176.0/24'
+    x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
   pushToClientRoutes:
     type: array
     items:
@@ -73,6 +77,7 @@ properties:
       A list of routes to send to clients upon their connection.
 
       By default, this list is generated automatically using the local cluster network, service subnet, and Pod subnet.
+    x-examples: [["172.25.176.0/24", "172.25.178.0/255.255.255.0"]]
   pushToClientDNS:
     type: string
     description: |
@@ -96,9 +101,9 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module).
+          Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > **Note!** The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -111,9 +116,7 @@ properties:
       password:
         type: string
         description: |
-          The password for HTTP authorization of the `admin` user (it is generated automatically, but you can change it).
-
-          This parameter is used if the [externalAuthentication](#parameters-auth-externalauthentication) parameter is not enabled.
+          Deprecated.
       allowedUserGroups:
         type: array
         items:
@@ -136,6 +139,7 @@ properties:
       An IP address or a domain clients use to connect to the OpenVPN server.
 
       By default, data from an `openvpn-external` service are used.
+    x-examples: ["1.2.3.4"]
   ingressClass:
     type: string
     description: |

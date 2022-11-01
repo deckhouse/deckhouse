@@ -196,12 +196,6 @@ spec:
   # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
-  # [<en>] maximum replicas count for the controller
-  # [<ru>] максимальное количество реплик контроллера
-  maxReplicas: 6
-  # [<en>] minimum replicas count for the controller
-  # [<ru>] минимальное количество реплик контроллера
-  minReplicas: 6
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

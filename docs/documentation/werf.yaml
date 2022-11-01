@@ -132,6 +132,13 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Make the supported OS & K8S version array"
+      shell: |
+        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
         {{- if eq $.Env "development" }}
