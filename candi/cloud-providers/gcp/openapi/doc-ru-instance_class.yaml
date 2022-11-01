@@ -29,7 +29,7 @@ spec:
                     cpu:
                       description: Количество vCPU узла.
                     memory:
-                      description: Количество памяти узла в мегабайтах.
+                      description: Количество памяти узла.
                 image:
                   description: |
                     Образ, который будет использоваться в заказанных инстансах. Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).

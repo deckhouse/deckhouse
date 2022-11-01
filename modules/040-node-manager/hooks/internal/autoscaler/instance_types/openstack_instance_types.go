@@ -16,8 +16,8 @@ limitations under the License.
 
 package instance_types
 
-// OpenstackInstanceTypes generated from https://docs.openstack.org/nova/rocky/admin/flavors.html Default Flavors
-var OpenstackInstanceTypes = map[string]*InstanceType{
+// openstackInstanceTypes generated from https://docs.openstack.org/nova/rocky/admin/flavors.html Default Flavors
+var openstackInstanceTypes = map[string]*InstanceType{
 	"m1.tiny": {
 		InstanceType: "m1.tiny",
 		VCPU:         1,

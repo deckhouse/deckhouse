@@ -18,8 +18,8 @@ limitations under the License.
 
 package instance_types
 
-// GCPInstanceTypes is a map of gcp resources
-var GCPInstanceTypes = map[string]*InstanceType{
+// gcpInstanceTypes is a map of gcp resources
+var gcpInstanceTypes = map[string]*InstanceType{
 	"a2-highgpu-1g": {
 		InstanceType: "a2-highgpu-1g",
 		VCPU:         12,

@@ -18,8 +18,8 @@ limitations under the License.
 
 package instance_types
 
-// AzureInstanceTypes is a map of azure resources
-var AzureInstanceTypes = map[string]*InstanceType{
+// azureInstanceTypes is a map of azure resources
+var azureInstanceTypes = map[string]*InstanceType{
 	"Basic_A0": {
 		InstanceType: "Basic_A0",
 		VCPU:         1,

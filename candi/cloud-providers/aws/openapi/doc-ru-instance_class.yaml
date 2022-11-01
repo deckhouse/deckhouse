@@ -21,12 +21,12 @@ spec:
 
                     Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone == 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (cpu, memory) о мощности узла, и не использует данные параметра `capacity`.
 
-                    Параметр необходимо указывать только для *нестандартных* instansType. Параметры *стандартных* instansType заложены в Deckhouse.  
+                    Параметр необходимо указывать только для *нестандартных* instansType. Параметры *стандартных* instansType заложены в Deckhouse.
                   properties:
                     cpu:
                       description: Количество vCPU узла.
                     memory:
-                      description: Количество памяти узла в мегабайтах.
+                      description: Количество памяти узла.
                 ami:
                   description: |
                     Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.

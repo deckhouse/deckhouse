@@ -20,7 +20,7 @@ index c3deb5e64..2db8bd502 100644
 +
 +			instance = instanceType{
 +				VCPU:             resource.MustParse(cpu),
-+				Memory:           resource.MustParse(memory + "Mi"),
++				Memory:           resource.MustParse(memory),
 +				GPU:              resource.MustParse("0"),
 +				PodCount:         resource.MustParse("110"),
 +				EphemeralStorage: resource.MustParse("50378260Ki"),

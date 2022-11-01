@@ -32,8 +32,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/instance_types"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -368,14 +369,13 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
 				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity := calculateNodeCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
-					if nodeCapacity != nil {
-						ngForValues["nodeCapacity"] = nodeCapacity
-					} else {
-						input.LogEntry.Errorf("Predefined instance type not found for: %s with spec: %v", nodeGroupInstanceClassKind, instanceClassSpec)
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
+					if err != nil {
+						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
 						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types", nodeGroupInstanceClassKind))
 						continue
 					}
+					ngForValues["nodeCapacity"] = nodeCapacity
 				}
 			}
 
@@ -458,177 +458,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
-	return nil
-}
-
-type capacity struct {
-	CPU    int `json:"cpu,omitempty"`
-	Memory int `json:"memory,omitempty"`
-}
-
-func calculateNodeCapacity(instanceClass string, instanceSpec interface{}) *capacity {
-	switch instanceClass {
-	case "VsphereInstanceClass":
-		s := struct {
-			CPU    int `json:"numCPUs"`
-			Memory int `json:"memory"`
-		}{}
-
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		return &capacity{
-			CPU:    s.CPU,
-			Memory: s.Memory,
-		}
-
-	case "AWSInstanceClass":
-		s := struct {
-			Capacity     *capacity `json:"capacity,omitempty"`
-			InstanceType string    `json:"instanceType,omitempty"`
-		}{}
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		if s.Capacity != nil {
-			return &capacity{
-				CPU:    s.Capacity.CPU,
-				Memory: s.Capacity.Memory,
-			}
-		}
-
-		if s.InstanceType != "" {
-			inst, ok := instance_types.AWSInstanceTypes[s.InstanceType]
-			if !ok {
-				return nil
-			}
-			return &capacity{
-				CPU:    inst.VCPU,
-				Memory: inst.MemoryMb,
-			}
-		}
-
-		return nil
-
-	case "AzureInstanceClass":
-		s := struct {
-			Capacity    *capacity `json:"capacity,omitempty"`
-			MachineSize string    `json:"machineSize,omitempty"`
-		}{}
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		if s.Capacity != nil {
-			return &capacity{
-				CPU:    s.Capacity.CPU,
-				Memory: s.Capacity.Memory,
-			}
-		}
-
-		if s.MachineSize != "" {
-			inst, ok := instance_types.AzureInstanceTypes[s.MachineSize]
-			if !ok {
-				return nil
-			}
-			return &capacity{
-				CPU:    inst.VCPU,
-				Memory: inst.MemoryMb,
-			}
-		}
-
-		return nil
-
-	case "GCPInstanceClass":
-		s := struct {
-			Capacity    *capacity `json:"capacity,omitempty"`
-			MachineType string    `json:"machineType,omitempty"`
-		}{}
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		if s.Capacity != nil {
-			return &capacity{
-				CPU:    s.Capacity.CPU,
-				Memory: s.Capacity.Memory,
-			}
-		}
-
-		if s.MachineType != "" {
-			inst, ok := instance_types.GCPInstanceTypes[s.MachineType]
-			if !ok {
-				return nil
-			}
-			return &capacity{
-				CPU:    inst.VCPU,
-				Memory: inst.MemoryMb,
-			}
-		}
-
-		return nil
-
-	case "YandexInstanceClass":
-		s := struct {
-			ResourcesSpec struct {
-				Cores  int `json:"cores"`
-				Memory int `json:"memory"`
-			} `json:"resourcesSpec"`
-		}{}
-
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		return &capacity{
-			CPU:    s.ResourcesSpec.Cores,
-			Memory: s.ResourcesSpec.Memory,
-		}
-
-	case "OpenStackInstanceClass":
-		s := struct {
-			Capacity   *capacity `json:"capacity,omitempty"`
-			FlavorName string    `json:"flavorName,omitempty"`
-		}{}
-		data, _ := json.Marshal(instanceSpec)
-		err := json.Unmarshal(data, &s)
-		if err != nil {
-			return nil
-		}
-
-		if s.Capacity != nil {
-			return &capacity{
-				CPU:    s.Capacity.CPU,
-				Memory: s.Capacity.Memory,
-			}
-		}
-
-		if s.FlavorName != "" {
-			inst, ok := instance_types.OpenstackInstanceTypes[s.FlavorName]
-			if !ok {
-				return nil
-			}
-			return &capacity{
-				CPU:    inst.VCPU,
-				Memory: inst.MemoryMb,
-			}
-		}
-
-		return nil
-	}
-
 	return nil
 }
 

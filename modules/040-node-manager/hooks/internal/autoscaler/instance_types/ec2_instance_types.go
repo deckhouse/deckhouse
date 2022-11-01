@@ -15,14 +15,12 @@ limitations under the License.
 */
 
 // copy from https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/cloudprovider/aws/ec2_instance_types.go
+// last updated: "2022-02-16"
 
 package instance_types
 
-// StaticListLastUpdateTime is a string declaring the last time the static list was updated.
-var StaticListLastUpdateTime = "2022-02-16"
-
-// AWSInstanceTypes is a map of ec2 resources
-var AWSInstanceTypes = map[string]*InstanceType{
+// awsInstanceTypes is a map of ec2 resources
+var awsInstanceTypes = map[string]*InstanceType{
 	"a1.2xlarge": {
 		InstanceType: "a1.2xlarge",
 		VCPU:         8,

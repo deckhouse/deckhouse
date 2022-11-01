@@ -46,13 +46,19 @@ spec:
                     - memory
                   properties:
                     cpu:
-                      type: integer
-                      description: Node vCPU count
-                      x-examples: [2]
+                      oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      description: Node vCPU resources.
+                      x-examples: ["1000m"]
                     memory:
-                      type: integer
-                      description: Node memory in MiB
-                      x-examples: [4096]
+                      oneOf:
+                        - type: string
+                          pattern: "^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                        - type: number
+                      description: Node memory resources.
+                      x-examples: ["1500Mi"]
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.
