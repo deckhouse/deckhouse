@@ -214,6 +214,12 @@
   verbs:
   - delete
   - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators
+  verbs:
+  {{- include "user_authz_verbs" "rw" }}
 {{- end -}}
 
 {{- define "user_authz_cluster_editor_rules" }}
