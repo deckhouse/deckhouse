@@ -373,7 +373,8 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 						ngForValues["nodeCapacity"] = nodeCapacity
 					} else {
 						input.LogEntry.Errorf("Predefined instance type not found for: %s with spec: %v", nodeGroupInstanceClassKind, instanceClassSpec)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, "Capacity not set and instance type could not be found in the build-it types")
+						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity not set and instance type could not be found in the build-it types", nodeGroupInstanceClassKind))
+						continue
 					}
 				}
 			}
