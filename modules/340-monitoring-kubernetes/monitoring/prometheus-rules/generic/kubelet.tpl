@@ -1,7 +1,8 @@
 - name: coreos.kubelet
   rules:
   - alert: K8SNodeNotReady
-    expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0
+    expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0 and
+      min(kube_node_spec_unschedulable == 0) by (node)
     for: 10m
     labels:
       severity_level: "3"
