@@ -1,7 +1,6 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
-  {{- if or (eq $controller.spec.inlet "NodePort") (eq $controller.spec.inlet "LoadBalancer") -}}
-    {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
-    {{- $nodePort := $controller.spec.nodePort | default dict -}}
+  {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
+  {{- $nodePort := $controller.spec.nodePort | default dict -}}
 ---
 apiVersion: v1
 kind: Service
@@ -14,7 +13,9 @@ metadata:
     {{- $controller.spec.serviceAnnotations | toYaml | nindent 4 }}
   {{- end }}
 spec:
+  {{- if ne $controller.spec.inlet "HostPort" }}
   externalTrafficPolicy: Local
+  {{- end }}
   ports:
   - name: http
     port: 80
@@ -37,8 +38,9 @@ spec:
   sessionAffinity: None
   {{- if eq $controller.spec.inlet "NodePort" }}
   type: NodePort
+  {{- else if eq $controller.spec.inlet "HostPort" }}
+  type: ClusterIP
   {{- else }}
   type: LoadBalancer
-  {{- end }}
   {{- end }}
 {{- end }}
