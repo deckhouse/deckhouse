@@ -245,7 +245,7 @@ properties:
                 memory:
                   oneOf:
                     - type: string
-                      pattern: "^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
             nodeTemplate:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
