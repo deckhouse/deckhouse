@@ -20,7 +20,7 @@
         - If the certificate is manually managed, upload a newer one.
         - If certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
           1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
-          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -m {{$labels.namespace}} "$cert"`
+          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -n {{$labels.namespace}} "$cert"`
 
   - alert: CertificateSecretExpired
     expr: |
