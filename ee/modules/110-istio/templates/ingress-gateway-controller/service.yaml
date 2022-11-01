@@ -1,6 +1,6 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
   {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
-  {{- $nodePort := $controller.spec.nodePort | default dict -}}
+  {{- $nodePort := $controller.spec.nodePort | default dict }}
 ---
 apiVersion: v1
 kind: Service
