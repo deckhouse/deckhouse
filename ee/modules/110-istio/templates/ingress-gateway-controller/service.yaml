@@ -18,14 +18,14 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: http
     protocol: TCP
   {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpPort }}
     nodePort: {{ $nodePort.httpPort }}
   {{- end }}
   - name: https
     port: 443
-    targetPort: 443
+    targetPort: https
     protocol: TCP
   {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpsPort }}
     nodePort: {{ $nodePort.httpsPort }}

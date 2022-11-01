@@ -161,7 +161,7 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
-          containerPort: 80
+          containerPort: 8280
           protocol: TCP
   {{- if eq $controller.spec.inlet "HostPort"}}
     {{- if $hostPort.httpPort }}
@@ -169,15 +169,21 @@ spec:
     {{- end }}
   {{- end }}
         - name: https
-          containerPort: 443
+          containerPort: 8243
           protocol: TCP
   {{- if eq $controller.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
     {{- end }}
   {{- end }}
-        - containerPort: 15090
-          name: http-envoy-prom
+        - name: http-envoy-prom
+          containerPort: 15090
+          protocol: TCP
+        - name: status-port
+          containerPort: 15021
+          protocol: TCP
+        - name: tls-istiod
+          containerPort: 15012
           protocol: TCP
         readinessProbe:
           failureThreshold: 30
