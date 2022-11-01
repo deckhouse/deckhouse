@@ -23,7 +23,7 @@ spec:
                     Заданные значения не влияют на реальный заказ узлов, а только на планирование мощностей.
                   properties:
                     cpu:
-                      description: количество vCPU узла
+                      description: Количество vCPU узла.
                     memory:
                       description: количество памяти узла в Мб
                 ami:
