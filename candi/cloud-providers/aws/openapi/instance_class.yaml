@@ -48,7 +48,7 @@ spec:
                     cpu:
                       type: integer
                       description: Node vCPU count
-                      x-examples: [ 2 ]
+                      x-examples: [2]
                     memory:
                       type: integer
                       description: Node memory in MiB
