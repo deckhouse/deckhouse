@@ -5,9 +5,8 @@ FROM $BASE_UBUNTU as builder
 WORKDIR /
 
 RUN apt-get update &&  \
-    apt-get install -yq --no-install-recommends  \
-      bison build-essential cmake flex git libedit-dev \
-      libllvm14 llvm-14-dev libclang-14-dev python3 zlib1g-dev libelf-dev libfl-dev python3-distutils
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends  \
+      build-essential fakeroot pbuilder aptitude git ca-certificates libelf1 software-properties-common
 
 RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc
 
