@@ -42,7 +42,7 @@ spec:
                 capacity:
                   type: object
                   description: |
-                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Capacity settings for cluster-autoscaler planning. It only makes sense if minPerZone equals to 0.
                     Deckhouse will try to fetch built-in OpenStack flavor and determine it's capacity, so
                     you have to fill this field only if your flavor is not found or you use
                     some custom flavor.

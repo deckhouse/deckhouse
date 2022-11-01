@@ -39,7 +39,7 @@ spec:
                 capacity:
                   type: object
                   description: |
-                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone equals to 0.
                     Deckhouse will try to fetch built-in GCP machine types and determine it's capacity, so
                     you have to fill this field only if your machine type is not found.
                     Presented values don't affect real node ordering, just capacity planning.
@@ -52,14 +52,14 @@ spec:
                         - type: string
                           pattern: "^[0-9]+m?$"
                         - type: number
-                      description: Node vCPU resources.
+                      description: Node vCPU resources
                       x-examples: ["1000m"]
                     memory:
                       oneOf:
                         - type: string
                           pattern: "^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
                         - type: number
-                      description: Node memory resources.
+                      description: Node memory resources
                       x-examples: ["1500Mi"]
                 image:
                   description: |

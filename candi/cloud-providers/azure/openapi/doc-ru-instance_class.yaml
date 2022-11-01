@@ -20,15 +20,15 @@ spec:
                     ```
                 capacity:
                   description: |
-                    Параметры емкости для планирования cluster-autoscaler. Имеет смысл, только если minPerZone == 0.
+                    Параметры емкости для планирования cluster-autoscaler. Имеет смысл, только если minPerZone равен 0.
                     Deckhouse будет пытаться найти встроенные Azure machine size поэтому
                     вы должны заполнить это поле, только если ваш machine size не найден.
                     Заданные значения не влияют на реальный заказ узлов, а только на планирование мощностей.
                   properties:
                     cpu:
-                      description: Количество vCPU узла.
+                      description: количество vCPU узла
                     memory:
-                      description: Количество памяти узла.
+                      description: количество памяти узла
                 urn:
                   description: |
                     Образ виртуальной машины, который будет использоваться для инстанса.

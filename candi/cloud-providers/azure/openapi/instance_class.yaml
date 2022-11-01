@@ -39,7 +39,7 @@ spec:
                 capacity:
                   type: object
                   description: |
-                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone == 0.
+                    Capacity settings for cluster-autoscaler planning. It only makes sense if minPerZone equals to 0.
                     Deckhouse will try to fetch built-in Azure machine sizes and determine it's capacity, so
                     you have to fill this field only if your machine size is not found.
                     Presented values don't affect real node ordering, just capacity planning.
