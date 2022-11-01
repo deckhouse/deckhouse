@@ -69,6 +69,20 @@ sections:
                   как обычные bare metal-серверы. Не будет интеграции с облаками, т.е. виртуальные машины придется
                   создавать вручную, не будет автомасштабирования и т.д.
         url: /documentation/v1/modules/030-cloud-provider-vsphere/
+      - description:
+          ru: Отечественные дистрибутивы Linux
+        revision:
+          ce: partial
+          ee: true
+        hint:
+          ce:
+            ru: |
+              <p>Базовая поддержка доступна в редакции CE. Расширенная поддержка предоставляется только в редакции EE.</p>
+              <p style="text-align: left;">В расширенную поддержку входит:
+              <ul style="text-align: left;"><li>Гарантия совместимости Deckhouse с ОС.</li>
+              <li>Приоритетное исправление ошибок и выпуск обновлений.</li>
+              <li>Консультации по миграции на ОС.</li></ul></p>
+        url: /documentation/v1/supported_versions.html
   - id: features
     description:
       en: Supported features
