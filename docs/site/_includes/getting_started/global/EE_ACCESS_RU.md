@@ -34,7 +34,7 @@ $(document).ready(function() {
   Нет ключа?
 </h3>
 <div class="button-group">
-  <a href="javascript:raOpen()" class="button button_alt">Запросить бесплатный 30-дневный доступ!</a>
+  <a href="" data-open-modal="request_access" class="button button_alt">Запросить бесплатный 30-дневный доступ!</a>
 </div>
 </div>
 </div>
