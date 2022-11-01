@@ -1,5 +1,14 @@
 positive:
   configValues:
-    - {}
+    - controlPlane:
+        resourcesManagement:
+          vpa:
+            memory:
+              max: "2G"
+              min: "1G"
+    - controlPlane:
+        resourcesManagement:
+          static:
+            memory: "2G"
   values:
     - {}

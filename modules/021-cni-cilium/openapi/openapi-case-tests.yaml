@@ -21,6 +21,39 @@ positive:
             ca: CACACA
             cert: CERT
             key: KEY
+  - internal:
+      - resourcesManagement:
+          mode: "VPA"
+          vpa:
+            memory:
+              max: "512Mi"
+              min: "16Mi"
+            cpu:
+              max: "2000m"
+              min: "200m"
+      - resourcesManagement:
+          mode: "VPA"
+          vpa:
+            memory:
+              max: 512
+              min: 16
+            cpu:
+              max: 2
+              min: 0.2
+      - resourcesManagement:
+          mode: "VPA"
+          vpa:
+            memory:
+              max: 1.5Gi
+              min: 2.0Ki
+            cpu:
+              max: 2
+              min: 0.2
+      - resourcesManagement:
+          mode: "Static"
+          static:
+            memory: 1.5Gi
+            cpu: 0.2
 negative:
   values:
   - internal:

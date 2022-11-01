@@ -24,6 +24,12 @@ positive:
           controlPlane:
             cpu: 1.25
             memory: "1G"
+    # decimal CPU and memory with dot
+    - modules:
+        resourcesRequests:
+          controlPlane:
+            cpu: 1.25
+            memory: "1.5G"
     # modules.https.mode Disabled work properly
     - modules:
         https:
@@ -175,6 +181,12 @@ negative:
       resourcesRequests:
         controlPlane:
           memory: "0ne"
+
+  # incorrect resource request: memory with incorrect value
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          memory: "1.Gi"
 
   # incorrect resource request: cpu for master node
   - modules:

@@ -183,7 +183,7 @@ properties:
       maxMemory:
         oneOf:
           - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         x-examples: ["3Mi"]
         description: |
@@ -203,7 +203,7 @@ properties:
       longtermMaxMemory:
         oneOf:
           - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         x-examples: ["4Mi"]
         description: |
@@ -281,7 +281,7 @@ properties:
     description: |
       Deprecated and will be removed. Doesn't affect anything.
       The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
-    x-doc-deprecated: true      
+    x-doc-deprecated: true
   longtermMaxDiskSizeGigabytes:
     type: integer
     default: 300

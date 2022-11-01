@@ -24,7 +24,7 @@ properties:
           maxMemory:
             oneOf:
               - type: string
-                pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
               - type: number
             x-examples: ["1500Mi"]
           longtermMaxCPU:
@@ -36,7 +36,7 @@ properties:
           longtermMaxMemory:
             oneOf:
               - type: string
-                pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
               - type: number
             x-examples: ["1500Gi"]
       prometheusMain:

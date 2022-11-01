@@ -148,7 +148,7 @@ properties:
                 description: |
                   The combined memory requests for control-plane components on each master node.
                 type: string
-                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           everyNode:
             type: object
             default: {}
@@ -173,7 +173,7 @@ properties:
                   The combined memory requests for all the Deckhouse components on each node.
                 type: string
                 default: "512Mi"
-                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           masterNode:
             type: object
             additionalProperties: false
@@ -201,7 +201,7 @@ properties:
                     * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than `8Gi`) minus `everyNode.memory`.
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
-                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       proxy:
         additionalProperties: false
         description: |
