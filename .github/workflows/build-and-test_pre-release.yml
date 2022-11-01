@@ -777,7 +777,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         run: |
-          make ci -C dhctl
+          DOCKERIZED=1 tools/dockerized.sh "make ci -C dhctl"
     # </template: tests_template>
 
   golangci_lint:

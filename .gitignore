@@ -46,3 +46,6 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+
+# Dockerized lock file
+.dockerized_lock

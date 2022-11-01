@@ -8,7 +8,6 @@ ENV GOLANGCI_VERSION=1.46.2 \
     WERF_VERSION=1.2 \
     TRDL_VERSION=0.6.3
 
-
 RUN apk add --no-cache make go curl bash yq jq jq-dev oniguruma-dev git
 
 # Install crane deps for update-patchversion script.

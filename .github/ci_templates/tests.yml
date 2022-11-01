@@ -12,7 +12,7 @@ args: 'make tests-matrix'
 
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
-args: 'make ci -C dhctl'
+args: 'DOCKERIZED=1 tools/dockerized.sh "make ci -C dhctl"'
 # </template: dhctl_run_args>
 {!{- end -}!}
 

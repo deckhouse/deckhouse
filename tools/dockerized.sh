@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script is used to run make commands inside the cozy docker container
+# The toolbox image is built automatically before running any command
+
 set -e
 
 script=$(printf "%s\n" "$@")
@@ -62,45 +65,54 @@ case "$running" in
 esac
 
 # Set trap to shutdown container in the end
-trap "set -x; docker stop \"$container_name\" -t 0 >/dev/null 2>&1" EXIT
-
-# Handle git worktree
-if [ -f "$PWD/.git" ]; then
-  gitdir=$(awk '$1 == "gitdir:" {print $2}' .git)
-  commondir=$(cd "${gitdir}/$(cat $gitdir/commondir)"; pwd)
-  topcommondir=$(dirname "$commondir")
-  (
-    set -x
-    docker exec "${container_name}" rm -rf "$commondir"
-    docker exec "${container_name}" mkdir -p "$topcommondir"
-    docker cp "$commondir" "${container_name}:$topcommondir"
-  )
-fi
-
-toppwd=$(dirname "$PWD")
+# We use flock mechanism to make sure that no other commands running inside the container
+touch .dockerized_lock
 (
-  set -x
-  # Sync source code. We don't use docker volumes because they are too slow
-  docker exec "$container_name" rm -rf "$PWD" "/deckhouse"
-  docker exec "$container_name" mkdir -p "$toppwd"
-  docker cp "$PWD" "${container_name}:$toppwd"
+  trap "flock -x -n 9 && set -x && docker stop \"$container_name\" -t 0 >/dev/null 2>&1 && rm -f .dockerized_lock" EXIT
 
-  # Setup /deckhouse symlink
-  docker exec "$container_name" ln -sf "$PWD" "/deckhouse"
-)
+  toppwd=$(dirname "$PWD")
 
-# Run commands
-echo "$script" >&2
-docker exec -i "$container_name" sh -s <<EOT
+  # Upload source code into container
+  # We don't use docker volumes because they are too slow
+  # In case of parallel run, this block is executed only once
+  if flock -x -n 9; then
+    (
+      set -x
+      docker exec "$container_name" rm -rf "$PWD" "/deckhouse"
+      docker exec "$container_name" mkdir -p "$toppwd"
+      docker cp "$PWD" "${container_name}:$toppwd"
+    
+      # Setup /deckhouse symlink
+      docker exec "$container_name" ln -sf "$PWD" "/deckhouse"
+    )
+
+    # Handle git worktree as well (for werf)
+    if [ -f "$PWD/.git" ]; then
+      gitdir=$(awk '$1 == "gitdir:" {print $2}' .git)
+      commondir=$(cd "${gitdir}/$(cat "$gitdir/commondir")"; pwd)
+      topcommondir=$(dirname "$commondir")
+      (
+        set -x
+        docker exec "${container_name}" rm -rf "$commondir"
+        docker exec "${container_name}" mkdir -p "$topcommondir"
+        docker cp "$commondir" "${container_name}:$topcommondir"
+      )
+    fi
+  fi
+
+  # Wait for copy before running any command
+  flock -s 9
+
+  # Run commands
+  echo "$script" >&2
+  docker exec -i "$container_name" sh -s <<EOT
 cd "$PWD"
 export FOCUS=$FOCUS
 export TESTS_TIMEOUT=$TESTS_TIMEOUT
-export PATH=\$PATH:${PWD}/bin
 $script
 EOT
 
 # Download changes back
-(
-  set -x
-  docker cp -L "${container_name}:${PWD}" "$toppwd"
-)
+(set -x; docker cp -L "${container_name}:${PWD}" "$toppwd")
+
+) 9< .dockerized_lock
