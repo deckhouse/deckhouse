@@ -53,12 +53,12 @@ spec:
                   properties:
                     cpu:
                       type: integer
-                      description: Node vCPU count
-                      x-examples: [ 2 ]
+                      description: Node vCPU count.
+                      x-examples: [2]
                     memory:
                       type: integer
-                      description: Node memory in MiB
-                      x-examples: [ 4096 ]
+                      description: Node memory in MiB.
+                      x-examples: [4096]
                 imageName:
                   description: |
                     Image to use while provisioning OpenStack servers.
