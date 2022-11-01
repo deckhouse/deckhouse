@@ -52,7 +52,7 @@ spec:
                     memory:
                       type: integer
                       description: Node memory in MiB
-                      x-examples: [ 4096 ]
+                      x-examples: [4096]
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.
