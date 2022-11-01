@@ -23,9 +23,9 @@ spec:
                     Заданные значения не влияют на реальный заказ узлов, а только на планирование мощностей.
                   properties:
                     cpu:
-                      description: количество vCPU узла
+                      description: Количество vCPU узла.
                     memory:
-                      description: количество памяти узла
+                      description: Количество памяти узла.
                 ami:
                   description: |
                     Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.
