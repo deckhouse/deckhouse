@@ -46,21 +46,15 @@ spec:
                     - memory
                   properties:
                     cpu:
-                      oneOf:
-                        - type: string
-                          pattern: "^[0-9]+m?$"
-                        - type: number
+                      pattern: '^[0-9]+m?$'
                       description: Node vCPU resources.
                       x-kubernetes-int-or-string: true
-                      x-examples: ["1000m"]
+                      example: "1000m"
                     memory:
-                      oneOf:
-                        - type: string
-                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                        - type: number
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: Node memory resources.
                       x-kubernetes-int-or-string: true
-                      x-examples: ["1500Mi"]
+                      example: "1500Mi"
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.
