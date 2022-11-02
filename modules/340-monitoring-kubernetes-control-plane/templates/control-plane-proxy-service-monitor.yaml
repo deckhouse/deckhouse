@@ -25,7 +25,9 @@ spec:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
     - targetLabel: job
-      replacement: etcd
+      replacement: kube-etcd3
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpoint_ready]
