@@ -21,7 +21,7 @@ webhooks:
       {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
       port: 443
     {{- end }}
-    caBundle: {{ .Values.certManager.internal.webhookCACrt | b64enc }}
+    caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc }}
   rules:
   - operations: [ "CREATE", "UPDATE" ]
     apiGroups: ["*"]

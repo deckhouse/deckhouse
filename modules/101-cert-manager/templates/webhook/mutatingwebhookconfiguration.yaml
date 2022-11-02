@@ -26,7 +26,7 @@ webhooks:
     # Only include 'sideEffects' field in Kubernetes 1.12+
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.certManager.internal.webhookCACrt | b64enc }}
+      caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc }}
       service:
         name: cert-manager-webhook
         namespace: d8-cert-manager
