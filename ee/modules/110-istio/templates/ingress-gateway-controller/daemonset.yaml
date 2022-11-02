@@ -194,12 +194,12 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not $resourcesRequests }}
-            cpu: "50m" ### fix
-            memory: "100Mi"
+            cpu: "100m"
+            memory: "128Mi"
   {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
     {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "50m" | quote }}
-            memory: {{ $resourcesRequestsStatic.memory | default "100Mi" | quote }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "100m" | quote }}
+            memory: {{ $resourcesRequestsStatic.memory | default "128Mi" | quote }}
   {{- end }}
         volumeMounts:
         - mountPath: /etc/istio/proxy

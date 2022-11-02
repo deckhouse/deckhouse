@@ -189,12 +189,12 @@ spec:
                             max:
                               description: |
                                 Maximum allowed CPU requests.
-                              default: '50m'
+                              default: '100m'
                               type: string
                             min:
                               description: |
                                 Minimum allowed CPU requests.
-                              default: '10m'
+                              default: '50m'
                               type: string
                         memory:
                           type: object
@@ -209,7 +209,7 @@ spec:
                             min:
                               description: |
                                 Minimum allowed memory requests.
-                              default: '50Mi'
+                              default: '100Mi'
                               type: string
                     static:
                       type: object
