@@ -29,7 +29,7 @@ spec:
                 ingressGatewayClass:
                   type: string
                   description: |
-                    The name of the Ingress gateway class to use with the Ingress nginx controller.
+                    The name of the Ingress gateway class to use with the Ingress istio gateway controller.
 
                   example: 'istio'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
@@ -42,8 +42,6 @@ spec:
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
 
                       **Caution!** There can be only one controller with this inlet type on a host.
-
-                      **Caution!** The following ports must be available on the node: 80, 443.
                   enum: ["LoadBalancer","HostPort","NodePort"]
                 nodeSelector:
                   type: object
@@ -94,7 +92,6 @@ spec:
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
                         **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
-                        Note that you will need to recreate `IngressIstioController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
                 hostPort:
