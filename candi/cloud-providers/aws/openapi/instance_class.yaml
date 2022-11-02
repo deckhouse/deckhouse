@@ -37,10 +37,11 @@ spec:
                 capacity:
                   type: object
                   description: |
-                    Capacity settings for cluster-autoscaler planning. Only makes sense if minPerZone equals to 0.
-                    Deckhouse will try to fetch built-in EC2 instance types and determine it's capacity, so
-                    you have to fill this field only if your instance type is not found.
-                    Presented values don't affect real node ordering, just capacity planning.
+                    Instance capacity for *non-standard* instance types (the `instanceTypes` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`t2.micro`, `m6a.12xlarge`, etc.) is embedded in Deckhouse.
                   required:
                     - cpu
                     - memory
