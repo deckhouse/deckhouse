@@ -71,6 +71,58 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		Expect(metricIndex >= 0).To(BeTrue())
 		Expect(metricIndex > expireIndex).To(BeTrue())
 	}
+
+	assertWindowMetric := func(f *HookExecutionConfig, from, to, day, human string) {
+		metrics := f.MetricsCollector.CollectedMetrics()
+
+		Expect(metrics).ToNot(BeEmpty())
+
+		expireIndex := -1
+		for i, m := range metrics {
+			if m.Action == "expire" && m.Group == "deckhouse_telemetry_update_window" {
+				expireIndex = i
+				break
+			}
+		}
+
+		Expect(expireIndex >= 0).To(BeTrue())
+
+		metricIndex := -1
+		for i, m := range metrics {
+			if m.Name == "deckhouse_telemetry_update_window" {
+				Expect(m.Group).To(Equal("deckhouse_telemetry_update_window"))
+				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
+				Expect(m.Labels).To(HaveKey("from"))
+				Expect(m.Labels).To(HaveKey("to"))
+				Expect(m.Labels).To(HaveKey("human"))
+				if day != "" {
+					Expect(m.Labels).To(HaveKey("human"))
+					if day != m.Labels["day"] {
+						continue
+					}
+				}
+
+				if from != m.Labels["from"] {
+					continue
+				}
+
+				if to != m.Labels["to"] {
+					continue
+				}
+
+				if human != m.Labels["human"] {
+					continue
+				}
+
+				metricIndex = i
+				break
+			}
+		}
+
+		Expect(metricIndex >= 0).To(BeTrue())
+		Expect(metricIndex > expireIndex).To(BeTrue())
+	}
+
 	assertOnlyModeMetric := func(f *HookExecutionConfig) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 		Expect(metrics).ToNot(BeEmpty())
@@ -148,6 +200,33 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				Expect(f).To(ExecuteSuccessfully())
 
 				assertOnlyModeMetric(f)
+			})
+		})
+
+		Context("Update window is set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("deckhouse.update.mode", "Auto")
+				f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`
+[
+  {"from": "00:00", "to": "23:00"},
+  {"from": "01:00", "to": "02:00", "days":["Mon", "Fri"]}
+]`))
+
+				f.RunHook()
+			})
+
+			It("Sets mode metric Auto", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertModeMetric(f, "Auto")
+			})
+
+			It("Sets windows metric", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertWindowMetric(f, "00:00", "23:00", "", "00:00 - 23:00")
+				assertWindowMetric(f, "01:00", "02:00", "Mon", "Mon - 01:00 - 02:00")
+				assertWindowMetric(f, "01:00", "02:00", "Fri", "Fri - 01:00 - 02:00")
 			})
 		})
 	})
