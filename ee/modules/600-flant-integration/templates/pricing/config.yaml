@@ -16,7 +16,7 @@ prometheus:
         module: [http_2xx]  # Look for a HTTP 200 response.
       static_configs:
       - targets:
-        - https://deckhouse-telemetry.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080
+        - deckhouse-telemetry.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080
       metric_relabel_configs:
       - source_labels: [__name__]
         regex: '.*telemetry_.+'
