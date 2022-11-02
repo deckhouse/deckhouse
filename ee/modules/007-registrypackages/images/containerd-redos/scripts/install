@@ -1,0 +1,43 @@
+#!/bin/bash
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -Eeo pipefail
+packages_to_install=""
+package_container_selinux="container-selinux"
+package_file_container_selinux="${package_container_selinux}.x86_64.rpm"
+rpm_name_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Name | awk '{print $3}')"
+rpm_version_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Version | awk '{print $3}')"
+
+if ! rpm --quiet -q "${rpm_name_container_selinux}-${rpm_version_container_selinux}"; then
+  packages_to_install="${packages_to_install} ${package_file_container_selinux}"
+else
+  echo "RPM ${package_file_container_selinux} already installed."
+fi
+
+package_containerd_io="containerd.io"
+package_file_containerd_io="${package_containerd_io}.x86_64.rpm"
+rpm_name_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Name | awk '{print $3}')"
+rpm_version_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Version | awk '{print $3}')"
+
+if ! rpm --quiet -q "${rpm_name_containerd_io}-${rpm_version_containerd_io}"; then
+  packages_to_install="${packages_to_install} ${package_file_containerd_io}"
+else
+  echo "RPM ${package_file_containerd_io} already installed."
+fi
+
+if [[ -n "${packages_to_install}" ]]; then
+  rpm -U ${packages_to_install}
+fi
+yum versionlock add ${package_container_selinux} ${package_containerd_io}
