@@ -1,6 +1,7 @@
 {{- range $controller := .Values.istio.internal.ingressControllers }}
   {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
   {{- $nodePort := $controller.spec.nodePort | default dict }}
+  {{- $loadBalancer := $controller.spec.loadBalancer | default dict }}
 ---
 apiVersion: v1
 kind: Service
@@ -8,9 +9,9 @@ metadata:
   name: {{ include "ingress_gateway_name" $controller.name }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name)) | nindent 2 }}
-  {{- if $controller.spec.serviceAnnotations }}
+  {{- if $loadBalancer.annotations }}
   annotations:
-    {{- $controller.spec.serviceAnnotations | toYaml | nindent 4 }}
+    {{- $loadBalancer.annotations | toYaml | nindent 4 }}
   {{- end }}
 spec:
   {{- if ne $controller.spec.inlet "HostPort" }}

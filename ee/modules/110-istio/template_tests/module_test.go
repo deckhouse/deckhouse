@@ -649,7 +649,7 @@ updatePolicy:
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("NodePort"))
 		})
 	})
-	Context("ingress gateway controller with inlet LoadBalancer is enabled", func() {
+	FContext("ingress gateway controller with inlet LoadBalancer is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -659,6 +659,9 @@ updatePolicy:
   spec:
     ingressGatewayClass: lb
     inlet: LoadBalancer
+    loadBalancer:
+      annotations:
+        aaa: bbb
     resourcesRequests:
       mode: STATIC
 `)
@@ -682,6 +685,7 @@ updatePolicy:
 
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"loadbalancer-test","istio.deckhouse.io/ingress-gateway-class":"lb","module":"istio"}`))
 
+			Expect(ingressSvc.Field("metadata.annotations").String()).To(MatchJSON(`{ "aaa": "bbb" }`))
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
 		})
 	})
