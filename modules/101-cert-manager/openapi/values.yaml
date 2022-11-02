@@ -7,10 +7,7 @@ properties:
     default: {}
     x-required-for-helm:
     - selfSignedCA
-    - webhookCACrt
-    - webhookCAKey
-    - webhookCrt
-    - webhookKey
+    - webhookCert
     properties:
       selfSignedCA:
         type: object
