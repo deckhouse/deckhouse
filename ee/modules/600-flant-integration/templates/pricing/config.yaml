@@ -19,7 +19,7 @@ prometheus:
         - deckhouse-telemetry.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080
       metric_relabel_configs:
       - source_labels: [__name__]
-        regex: '.*telemetry_.+'
+        regex: '.*deckhouse_telemetry_.+'
         action: keep
       - source_labels: [job]
         target_label: cluster_uuid
@@ -27,6 +27,8 @@ prometheus:
       - source_labels: [instance]
         target_label: __replica__
         replacement: ${NODE_NAME}
+      - regex: hook|instance|module
+        action: labeldrop
     - job_name: 'flant-pricing'
       params:
         module: [http_2xx]  # Look for a HTTP 200 response.

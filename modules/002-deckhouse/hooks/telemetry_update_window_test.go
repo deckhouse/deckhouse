@@ -48,7 +48,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		expireIndex := -1
 		for i, m := range metrics {
-			if m.Action == "expire" && m.Group == "telemetry_deckhouse_update_window_approval_mode" {
+			if m.Action == "expire" && m.Group == "deckhouse_telemetry_update_window_approval_mode" {
 				expireIndex = i
 				break
 			}
@@ -58,8 +58,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		metricIndex := -1
 		for i, m := range metrics {
-			if m.Name == "telemetry_deckhouse_update_window_approval_mode" {
-				Expect(m.Group).To(Equal("telemetry_deckhouse_update_window_approval_mode"))
+			if m.Name == "deckhouse_telemetry_update_window_approval_mode" {
+				Expect(m.Group).To(Equal("deckhouse_telemetry_update_window_approval_mode"))
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("mode"))
 				Expect(m.Labels["mode"]).To(Equal(typeT))
@@ -91,7 +91,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.mode", "Manual")
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
-				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
 				f.RunHook()
 			})
 
@@ -113,7 +112,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.mode", "Manual")
 				f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:00"}]`))
 
-				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
 				f.RunHook()
 			})
 
@@ -137,7 +135,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.mode", "Auto")
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
-				f.BindingContexts.Set(f.GenerateScheduleContext("* */3 * * * *"))
 				f.RunHook()
 			})
 
