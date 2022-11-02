@@ -103,7 +103,14 @@ func (uw Window) IsAllowed(now time.Time) bool {
 
 // NextAllowedTime calculates next update window with respect on minimalTime
 // if minimal time is out of window - this function checks next days to find the nearest one
-func (ws Windows) NextAllowedTime(min time.Time) (time.Time, time.Time) {
+func (ws Windows) NextAllowedTime(min time.Time) time.Time {
+	from, _ := ws.NextAllowedWindow(min)
+	return from
+}
+
+// NextAllowedTime calculates next update window with respect on minimalTime
+// if minimal time is out of window - this function checks next days to find the nearest one
+func (ws Windows) NextAllowedWindow(min time.Time) (time.Time, time.Time) {
 	min = min.UTC()
 
 	if len(ws) == 0 {

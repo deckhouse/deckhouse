@@ -129,7 +129,7 @@ func (h *windowTelemetryHook) setWindowMetrics() {
 	}
 
 	if fromTime.IsZero() {
-		fromTime, toTime = h.windows.NextAllowedTime(now)
+		fromTime, toTime = h.windows.NextAllowedWindow(now)
 	}
 
 	const group = "update_window_next"
