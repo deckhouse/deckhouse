@@ -14,7 +14,7 @@ import (
 
 var config = go_hook.ScheduleConfig{
 	Name:    "Deckhouse telemetry schedule",
-	Crontab: "* */3 * * * *", // every 3 minutes
+	Crontab: "* * * * *", // every 1 minutes
 }
 
 func timeNow() time.Time {
