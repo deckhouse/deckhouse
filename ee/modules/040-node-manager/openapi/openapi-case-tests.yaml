@@ -10,11 +10,7 @@ positive:
   configValues:
     - {}
     - allowedKubernetesVersions: ["1.21"]
-    - allowedBundles: ["redos"]
-    - allowedBundles: []
-      allowedKubernetesVersions: ["1.21"]
-    - allowedBundles: ["redos"]
-      allowedKubernetesVersions: ["1.21"]
+    - allowedBundles: ["redos", "ubuntu-lts", "centos", "debian"]
   values:
     - { internal: {} }
     - internal:

@@ -35,7 +35,7 @@ properties:
       - ["ubuntu-lts"]
     items:
       type: string
-      enum: [ubuntu-lts, centos, debian]
+      enum: [ubuntu-lts, centos, debian, redos]
     description: |
       Names of available bashible OS bundles to reduce Helm release size.
 
