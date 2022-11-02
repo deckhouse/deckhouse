@@ -49,7 +49,7 @@ type windowTelemetryHook struct {
 }
 
 func newWindowTelemetryHook(input *go_hook.HookInput, telemetryCollector telemetry.MetricsCollector) (*windowTelemetryHook, error) {
-	windows, err := GetUpdateWindows(input)
+	windows, err := getUpdateWindows(input)
 	if err != nil {
 		return nil, err
 	}

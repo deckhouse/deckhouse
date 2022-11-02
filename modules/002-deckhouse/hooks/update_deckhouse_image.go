@@ -204,7 +204,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	var windows update.Windows
 	if !deckhouseUpdater.InManualMode() {
 		var err error
-		windows, err = GetUpdateWindows(input)
+		windows, err = getUpdateWindows(input)
 		if err != nil {
 			return fmt.Errorf("update windows configuration is not valid: %s", err)
 		}
@@ -214,8 +214,8 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-// GetUpdateWindows return set update windows
-func GetUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
+// getUpdateWindows return set update windows
+func getUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
 	windowsData, exists := input.Values.GetOk("deckhouse.update.windows")
 	if !exists {
 		return nil, nil
