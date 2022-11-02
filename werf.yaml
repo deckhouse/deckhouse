@@ -768,5 +768,5 @@ ansible:
   - name: "Add version map"
     copy:
       content: |
-{{ toString $.CandiVersionMap | nindent 8 }}
+{{ toJson $.CandiVersionMap | nindent 8 }}
       dest: /version_map.yml
