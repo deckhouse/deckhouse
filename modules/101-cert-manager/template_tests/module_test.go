@@ -95,7 +95,7 @@ internal:
   selfSignedCA:
     cert: string
     key: string
-  webhookCrt:
+  webhookCert:
     ca: string
     key: string
     crt: string
