@@ -12,12 +12,6 @@ properties:
       Как поступать с запросами в сторону внешних, то есть, не учтённых в mesh'е сервисов.
       - `AllowAny` — пропускать.
       - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
-  enableIngressGatewayController:
-    type: boolean
-    default: false
-    x-examples: [true]
-    description: |
-      Включить возможность создания Istio ingress gateway с использованием ресурсов ingressistiocontrollers.deckhouse.io resource.
   federation:
     description: Параметры федерации с другими кластерами.
     properties:
