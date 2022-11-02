@@ -188,7 +188,81 @@ spec:
       weight: 10
 ```
 
-## Ingress
+## Ingress to publish applications
+
+### Istio Ingress Gateway
+
+Exmaple:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+ name: main
+spec:
+  # ingressGatewayClass contains the label selector value used to create the Gateway resource
+  ingressGatewayClass: hp
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
+  resourcesRequests:
+    mode: VPA
+```
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway-app
+spec:
+  selector:
+    # label selector for using the Istio Ingress Gateway main-hp
+    istio.deckhouse.io/ingress-gateway-class: hp 
+  servers:
+    - port:
+        # standard template for using the HTTP protocol
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - app.example.com
+    - port:
+        # standard template for using the HTTPS protocol
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        # a secret with a certificate and a key, which must be created in the d8-istio namespace
+        # supported secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
+        credentialName: app-tls-secrets
+      hosts:
+        - app.example.com
+```
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-app
+spec:
+  gateways:
+    - gateway-app
+  hosts:
+    - app.example.com
+  http:
+    - route:
+        - destination:
+            host: app-svc
+```
+
+### Nginx ingress
 
 To use Ingress, you need to:
 * Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) custom resource.

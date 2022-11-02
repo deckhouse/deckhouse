@@ -193,11 +193,7 @@ spec:
 
 ### Istio Ingress Gateway
 
-Примеры:
-
-#### Создание Istio Ingress Gateway c inlet HostPort
-
-## Общий пример
+Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
