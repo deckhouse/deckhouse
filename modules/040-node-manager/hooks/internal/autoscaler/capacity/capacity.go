@@ -36,12 +36,12 @@ type Capacity struct {
 	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
-type VsphereInstanceClass struct {
+type vsphereInstanceClass struct {
 	CPU    int `json:"numCPUs"`
 	Memory int `json:"memory"`
 }
 
-func (vic VsphereInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (vic vsphereInstanceClass) ExtractCapacity() (*Capacity, error) {
 	cpuStr := strconv.FormatInt(int64(vic.CPU), 10)
 	memStr := strconv.FormatInt(int64(vic.Memory), 10)
 
@@ -60,12 +60,12 @@ func (vic VsphereInstanceClass) ExtractCapacity() (*Capacity, error) {
 	}, nil
 }
 
-type AWSInstanceClass struct {
+type awsInstanceClass struct {
 	Capacity     *Capacity `json:"capacity,omitempty"`
 	InstanceType string    `json:"instanceType,omitempty"`
 }
 
-func (aic AWSInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (aic awsInstanceClass) ExtractCapacity() (*Capacity, error) {
 	if aic.Capacity != nil {
 		return aic.Capacity, nil
 	}
@@ -85,12 +85,12 @@ func (aic AWSInstanceClass) ExtractCapacity() (*Capacity, error) {
 	}, nil
 }
 
-type AzureInstanceClass struct {
+type azureInstanceClass struct {
 	Capacity    *Capacity `json:"capacity,omitempty"`
 	MachineSize string    `json:"machineSize,omitempty"`
 }
 
-func (azic AzureInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (azic azureInstanceClass) ExtractCapacity() (*Capacity, error) {
 	if azic.Capacity != nil {
 		return azic.Capacity, nil
 	}
@@ -110,12 +110,12 @@ func (azic AzureInstanceClass) ExtractCapacity() (*Capacity, error) {
 	}, nil
 }
 
-type GCPInstanceClass struct {
+type gcpInstanceClass struct {
 	Capacity    *Capacity `json:"capacity,omitempty"`
 	MachineType string    `json:"machineType,omitempty"`
 }
 
-func (gic GCPInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (gic gcpInstanceClass) ExtractCapacity() (*Capacity, error) {
 	if gic.Capacity != nil {
 		return gic.Capacity, nil
 	}
@@ -135,12 +135,12 @@ func (gic GCPInstanceClass) ExtractCapacity() (*Capacity, error) {
 	}, nil
 }
 
-type YandexInstanceClass struct {
+type yandexInstanceClass struct {
 	Cores  int `json:"cores"`
 	Memory int `json:"memory"`
 }
 
-func (yic YandexInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (yic yandexInstanceClass) ExtractCapacity() (*Capacity, error) {
 	cpuStr := strconv.FormatInt(int64(yic.Cores), 10)
 	memStr := strconv.FormatInt(int64(yic.Memory), 10)
 
@@ -159,12 +159,12 @@ func (yic YandexInstanceClass) ExtractCapacity() (*Capacity, error) {
 	}, nil
 }
 
-type OpenStackInstanceClass struct {
+type openStackInstanceClass struct {
 	Capacity   *Capacity `json:"capacity,omitempty"`
 	FlavorName string    `json:"flavorName,omitempty"`
 }
 
-func (osic OpenStackInstanceClass) ExtractCapacity() (*Capacity, error) {
+func (osic openStackInstanceClass) ExtractCapacity() (*Capacity, error) {
 	if osic.Capacity != nil {
 		return osic.Capacity, nil
 	}
@@ -195,27 +195,27 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	switch instanceClassName {
 	case "VsphereInstanceClass":
-		var spec VsphereInstanceClass
+		var spec vsphereInstanceClass
 		extractor = &spec
 
 	case "AWSInstanceClass":
-		var spec AWSInstanceClass
+		var spec awsInstanceClass
 		extractor = &spec
 
 	case "AzureInstanceClass":
-		var spec AzureInstanceClass
+		var spec azureInstanceClass
 		extractor = &spec
 
 	case "GCPInstanceClass":
-		var spec GCPInstanceClass
+		var spec gcpInstanceClass
 		extractor = &spec
 
 	case "YandexInstanceClass":
-		var spec YandexInstanceClass
+		var spec yandexInstanceClass
 		extractor = &spec
 
 	case "OpenStackInstanceClass":
-		var spec OpenStackInstanceClass
+		var spec openStackInstanceClass
 		extractor = &spec
 
 	default:
