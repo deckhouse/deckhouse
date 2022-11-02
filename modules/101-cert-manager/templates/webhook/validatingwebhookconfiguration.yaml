@@ -39,39 +39,3 @@ webhooks:
         name: cert-manager-webhook
         namespace: d8-cert-manager
         path: /validate
-  # legacy hook
-{{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
-  - name: validate.webhook.certmanager.k8s.io
-    namespaceSelector:
-      matchExpressions:
-        - key: "certmanager.k8s.io/disable-validation"
-          operator: "NotIn"
-          values:
-            - "true"
-        - key: "name"
-          operator: "NotIn"
-          values:
-            - d8-cert-manager
-    rules:
-      - apiGroups:
-          - "certmanager.k8s.io"
-        apiVersions:
-          - v1alpha1
-        operations:
-          - CREATE
-          - UPDATE
-        resources:
-          - certificates
-          - issuers
-          - clusterissuers
-          - certificaterequests
-    failurePolicy: Fail
-    sideEffects: None
-    admissionReviewVersions: ["v1beta1"]
-    clientConfig:
-      caBundle: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | b64enc }}
-      service:
-        name: kubernetes
-        namespace: default
-        path: /apis/webhook.certmanager.k8s.io/v1beta1/validations
-{{- end }}

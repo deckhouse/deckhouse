@@ -21,6 +21,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 )
@@ -29,10 +30,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "annotated_ingress",
-			ApiVersion:                   "networking.k8s.io/v1",
-			Kind:                         "Ingress",
-			LabelSelector:                nonDeckhouseHeritageLabelSelector,
+			Name:       "annotated_ingress",
+			ApiVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "heritage",
+						Operator: metav1.LabelSelectorOpNotIn,
+						Values:   []string{"deckhouse"},
+					},
+				},
+			},
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			FilterFunc:                   applyLegacyAnnotatedIngressFilter,

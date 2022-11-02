@@ -63,40 +63,6 @@ spec:
 `, name, ns)
 }
 
-// todo remove with legacy cert-manager
-func genTestLegacyChallengeManifest(name, ns string) string {
-	return fmt.Sprintf(`
-apiVersion: certmanager.k8s.io/v1alpha1
-kind: Challenge
-metadata:
-  labels:
-    acme.cert-manager.io/order-name: candi-dashboard-308008487
-  name: "%s"
-  namespace: "%s"
-  ownerReferences:
-    - apiVersion: certmanager.k8s.io/v1alpha1
-      blockOwnerDeletion: true
-      controller: true
-      kind: Order
-      name: some_name
-      uid: 87233806-25b3-41b4-8c15-46b7212326b4
-spec:
-  authzURL: https://acme-v02.api.letsencrypt.org/acme/authz-v3/000000000
-  config:
-    http01:
-      ingressClass: nginx
-  dnsName: some.domain
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt
-  key: some_key
-  token: some_token
-  type: http-01
-  url: https://acme-v02.api.letsencrypt.org/acme/chall-v3/000000000/aaaaaa
-  wildcard: false
-`, name, ns)
-}
-
 func genD8RegistrySecret(secretContent string) string {
 	return genRegistrySecret(secretContent, "d8-system", "deckhouse-registry")
 }
@@ -158,8 +124,6 @@ func assertRegistrySecretAndSANotExists(f *HookExecutionConfig, nss ...string) {
 var _ = Describe("Cert Manager hooks :: generate registry secret for http challenge solver ::", func() {
 	f := HookExecutionConfigInit(`{"global":{}}`, "")
 	f.RegisterCRD("acme.cert-manager.io", "v1", "Challenge", true)
-	// todo remove with legacy cert-manager
-	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "Challenge", true)
 
 	const ns1 = "ns1"
 	const ns2 = "ns2"
@@ -184,7 +148,6 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 		title string
 	}{
 		{genTestChallengeManifest, "New cert-manager manifests"},
-		{genTestLegacyChallengeManifest, "Old cert-manager manifests"},
 	}
 
 	for _, tst := range genChallengeFunc {
@@ -429,134 +392,6 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			It("Should delete service account", func() {
 				assertRegistrySecretAndSANotExists(f, ns1)
-			})
-		})
-	})
-
-	// todo remove with legacy cert-manager
-	Context("Legacy cert-manager manifests and new cert manager manifests both", func() {
-		Context("Removing", func() {
-			BeforeEach(func() {
-				setState(f,
-					genD8RegistrySecret(testDockerCfgEncoded),
-
-					genTestChallengeManifest(chName, ns1),
-					genTestChallengeManifest(chName, ns2),
-					genTestChallengeManifest(chName, ns3),
-
-					genTestLegacyChallengeManifest(chNameAnother, ns1),
-					genTestLegacyChallengeManifest(chNameAnother, ns2),
-					genTestLegacyChallengeManifest(chNameAnother, ns3),
-				)
-				f.RunHook()
-
-				Expect(f).To(ExecuteSuccessfully())
-			})
-
-			It("create registry secret in all namespaces", func() {
-				assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
-			})
-
-			Context("remove legacy challenge in one namespace", func() {
-				BeforeEach(func() {
-					setState(f,
-						genD8RegistrySecret(testDockerCfgEncoded),
-
-						genTestChallengeManifest(chName, ns1),
-						genTestChallengeManifest(chName, ns2),
-						genTestChallengeManifest(chName, ns3),
-
-						genTestLegacyChallengeManifest(chNameAnother, ns1),
-						genTestLegacyChallengeManifest(chNameAnother, ns2),
-					)
-
-					f.RunHook()
-
-					Expect(f).To(ExecuteSuccessfully())
-				})
-
-				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
-				})
-
-				Context("remove new challenge in one namespace", func() {
-					BeforeEach(func() {
-						setState(f,
-							genD8RegistrySecret(testDockerCfgEncoded),
-
-							genTestChallengeManifest(chName, ns1),
-							genTestChallengeManifest(chName, ns2),
-
-							genTestLegacyChallengeManifest(chNameAnother, ns1),
-							genTestLegacyChallengeManifest(chNameAnother, ns2),
-						)
-
-						f.RunHook()
-
-						Expect(f).To(ExecuteSuccessfully())
-					})
-
-					It("removes registry secret from namespace", func() {
-						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2)
-						assertRegistrySecretAndSANotExists(f, ns3)
-					})
-				})
-			})
-
-			Context("remove legacy challenges in all namespace", func() {
-				BeforeEach(func() {
-					setState(f,
-						genD8RegistrySecret(testDockerCfgEncoded),
-
-						genTestChallengeManifest(chName, ns1),
-						genTestChallengeManifest(chName, ns2),
-						genTestChallengeManifest(chName, ns3),
-					)
-
-					f.RunHook()
-
-					Expect(f).To(ExecuteSuccessfully())
-				})
-
-				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
-				})
-			})
-
-			Context("remove new challenges in all namespaces", func() {
-				BeforeEach(func() {
-					setState(f,
-						genD8RegistrySecret(testDockerCfgEncoded),
-
-						genTestLegacyChallengeManifest(chNameAnother, ns1),
-						genTestLegacyChallengeManifest(chNameAnother, ns2),
-						genTestLegacyChallengeManifest(chNameAnother, ns3),
-					)
-
-					f.RunHook()
-
-					Expect(f).To(ExecuteSuccessfully())
-				})
-
-				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
-				})
-			})
-
-			Context("remove all challenges in all namespaces", func() {
-				BeforeEach(func() {
-					setState(f,
-						genD8RegistrySecret(testDockerCfgEncoded),
-					)
-
-					f.RunHook()
-
-					Expect(f).To(ExecuteSuccessfully())
-				})
-
-				It("removes secrets in all namespaces", func() {
-					assertRegistrySecretAndSANotExists(f, ns1, ns2, ns3)
-				})
 			})
 		})
 	})
