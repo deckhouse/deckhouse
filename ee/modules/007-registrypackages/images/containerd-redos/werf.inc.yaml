@@ -30,7 +30,7 @@ docker:
   LABEL:
     distro: redos
   {{- if contains "el7" $image_version }}
-    version: 7
+    version: 7.3
     containerd-selinux: "2.119.2-1.911c772"
   {{- end }}
     containerd: {{ $image_version }}
@@ -38,7 +38,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
 git:
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /ee/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
     stageDependencies:
       setup:
