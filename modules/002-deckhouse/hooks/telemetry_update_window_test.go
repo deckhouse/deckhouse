@@ -8,7 +8,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
+var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
           "modulesImages": {
@@ -125,10 +125,10 @@ var _ = FDescribe("Modules :: deckhouse :: hooks :: update deckhouse image ::", 
 				f.RunHook()
 			})
 
-			It("Sets mode metric Manual", func() {
+			It("Sets mode metric Auto", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				assertModeMetric(f, "Manual")
+				assertModeMetric(f, "Auto")
 			})
 
 			It("Sets only one mode metric", func() {
