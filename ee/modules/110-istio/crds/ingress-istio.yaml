@@ -103,7 +103,7 @@ spec:
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
                         **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
-                        Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
+                        Note that you will need to recreate `IngressIstioController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
                 hostPort:

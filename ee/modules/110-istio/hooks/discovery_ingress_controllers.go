@@ -21,18 +21,18 @@ type IstioIngressGatewayController struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        internal.Queue("istio-ingress-gateway"),
+	Queue:        internal.Queue("istio-ingress-gateway-controller"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "controller",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "IngressIstioController",
-			FilterFunc: applyDiscoveryIngressControllerFilter,
+			FilterFunc: applyDiscoveryIstioIngressControllerFilter,
 		},
 	},
-}, setInternalValues)
+}, setInternalIngressControllers)
 
-func applyDiscoveryIngressControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
@@ -44,7 +44,7 @@ func applyDiscoveryIngressControllerFilter(obj *unstructured.Unstructured) (go_h
 	return IstioIngressGatewayController{Name: name, Spec: spec}, nil
 }
 
-func setInternalValues(input *go_hook.HookInput) error {
+func setInternalIngressControllers(input *go_hook.HookInput) error {
 	controllersFilterResult := input.Snapshots["controller"]
 	var controllers []IstioIngressGatewayController
 
