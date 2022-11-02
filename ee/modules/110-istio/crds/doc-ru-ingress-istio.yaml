@@ -8,7 +8,8 @@ spec:
               properties:
                 ingressGatewayClass:
                   description: |
-                    Имя Ingress-gateway класса для обслуживания Istio ingress gateway controller.
+                    Имя Ingress-gateway класса для обслуживания Istio ingress gateway controller. Значение данного параметра используется в качестве селектора меток ресурса Gateway.
+                    Пример: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
 
                 inlet:
                   description: |
