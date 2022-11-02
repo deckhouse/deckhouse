@@ -1,40 +1,20 @@
-ARG BASE_UBUNTU
+ARG BASE_ALPINE_EDGE
 
-FROM $BASE_UBUNTU as builder
+FROM $BASE_ALPINE_EDGE as builder
 
 WORKDIR /
 
-RUN apt-get update && \
-    apt-get install -yq software-properties-common git wget && \
-    add-apt-repository ppa:longsleep/golang-backports && \
-    add-apt-repository ppa:hadret/bpfcc && \
-    apt-get update
-RUN apt-get install -yq --no-install-recommends golang-1.17-go patch libbpfcc
-ENV PATH="/usr/lib/go-1.17/bin:$PATH"
+RUN apk add go git build-base linux-headers \
+    libbpf-dev libelf-static zlib-static
 
-WORKDIR /ebpf-exporter
+RUN git clone --depth=1 --branch=v2.0.0 https://github.com/cloudflare/ebpf_exporter.git
+WORKDIR /ebpf_exporter
 
-RUN wget -O - https://github.com/cloudflare/ebpf_exporter/archive/refs/tags/v1.2.5.tar.gz | tar -xzv --strip-components=1
+#TODO Adapt 001-kernel-version-detection-and-individual-program-failure.patch & fix incorrect 'date' call
+RUN make build
 
-COPY patches/001-kernel-version-detection-and-individual-program-failure.patch /
-RUN patch -p1 < /001-kernel-version-detection-and-individual-program-failure.patch
+FROM $BASE_ALPINE_EDGE
 
-RUN GOPROXY="off" GOFLAGS="-mod=vendor" go build -o /ebpf_exporter -v -ldflags=" \
-    -X github.com/prometheus/common/version.Version=$(git describe) \
-    -X github.com/prometheus/common/version.Branch=$(git rev-parse --abbrev-ref HEAD) \
-    -X github.com/prometheus/common/version.Revision=$(git rev-parse --short HEAD) \
-    -X github.com/prometheus/common/version.BuildUser=docker@$(hostname) \
-    -X github.com/prometheus/common/version.BuildDate=$(date --iso-8601=seconds) \
-    " ./cmd/ebpf_exporter
-
-
-FROM $BASE_UBUNTU
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libelf1 && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /ebpf_exporter /usr/local/bin/
-
-RUN dpkg -i /tmp/libbcc.deb
+COPY --from=builder /ebpf_exporter/ebpf_exporter /usr/local/bin/
 
 ENTRYPOINT [ "/usr/local/bin/ebpf_exporter" ]
