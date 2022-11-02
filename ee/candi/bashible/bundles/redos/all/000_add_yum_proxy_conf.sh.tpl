@@ -5,12 +5,10 @@ if ! rpm -q --quiet yum-utils; then
   yum install -y yum-utils
 fi
 
-proxy=""
-repos=""
-
-{{- if .packagesProxy }}
 repos="base kernels updates"
-{{- end }}
+proxy=""
+proxy_username=""
+proxy_password=""
 
 {{- if .packagesProxy.uri }}
 proxy="{{ .packagesProxy.uri }}"
