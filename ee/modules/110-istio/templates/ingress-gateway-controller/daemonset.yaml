@@ -49,18 +49,18 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: ingress-gateway-controller  # !!?
-      instance: {{ $controller.name }} # !!?
+      app: ingress-gateway-controller
+      instance: {{ $controller.name }}
       istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   template:
     metadata:
       labels:
-        app: ingress-gateway-controller  # !!?
-        instance: {{ $controller.name }} # !!?
+        app: ingress-gateway-controller
+        instance: {{ $controller.name }}
         istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
         sidecar.istio.io/inject: "false"
     spec:
-      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }} # !!!!
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: ingress-gateway-controller
   {{- if $controller.spec.nodeSelector }}
@@ -85,8 +85,6 @@ spec:
         - --proxyLogLevel=warning
         - --proxyComponentLogLevel=misc:error
         - --log_output_level=default:info
-        - --serviceCluster
-        - {{ include "ingress_gateway_name" $controller.name }} ###
         env:
         - name: JWT_POLICY
           value: {{ include "istioJWTPolicy" $ }}
@@ -213,12 +211,6 @@ spec:
           name: istio-data
         - mountPath: /etc/istio/pod
           name: podinfo
-        - mountPath: /etc/istio/ingressgateway-certs
-          name: ingressgateway-certs
-          readOnly: true
-        - mountPath: /etc/istio/ingressgateway-ca-certs
-          name: ingressgateway-ca-certs
-          readOnly: true
   {{- if eq (include "istioJWTPolicy" $) "third-party-jwt" }}
         - name: istio-token
           mountPath: /var/run/secrets/tokens
@@ -259,16 +251,6 @@ spec:
           defaultMode: 420
           name: istio-{{ $revision }}
         name: config-volume
-      - name: ingressgateway-certs # ????
-        secret:
-          defaultMode: 420
-          optional: true
-          secretName: istio-ingressgateway-certs
-      - name: ingressgateway-ca-certs # ????
-        secret:
-          defaultMode: 420
-          optional: true
-          secretName: istio-ingressgateway-ca-certs
   {{- if eq (include "istioJWTPolicy" $) "third-party-jwt" }}
       - name: istio-token
         projected:

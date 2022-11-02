@@ -189,7 +189,13 @@ spec:
       weight: 10
 ```
 
-## Ingress
+## Ingress для публикации приложений
+
+### Istio Ingress Gateway
+
+//TODO
+
+### Nginx Ingress
 
 Для работы с Ingress требуется подготовить:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/402-ingress-nginx/).
