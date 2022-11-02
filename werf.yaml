@@ -5,7 +5,7 @@ gitWorktree:
   forceShallowClone: true
 ---
 # Base Images
-{{ $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
+{{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if ne $k "REGISTRY_PATH" }}
@@ -14,10 +14,14 @@ gitWorktree:
   {{- end }}
 ---
 # Version Map
-{{ $_ := set . "CandiVersionMap" (merge (.Files.Get "candi/version_map.yml" | fromYaml) (.Files.Get "ee/candi/version_map.yml" | fromYaml)) }}
+{{- if or (eq $.Env "EE") (eq $.Env "FE") }}
+  {{- $_ := set . "CandiVersionMap" (merge (.Files.Get "candi/version_map.yml" | fromYaml) (.Files.Get "ee/candi/version_map.yml" | fromYaml)) }}
+{{- else }}
+  {{- $_ := set . "CandiVersionMap" ( .Files.Get "candi/version_map.yml" | fromYaml ) }}
+{{- end }}
 ---
 # Terraform Versions
-{{ $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
+{{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
 ---
 {{- define "base components" }}
   - name: "Install jo"
@@ -215,6 +219,10 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
+- artifact: version-map-artifact
+  add: /version_map.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -263,7 +271,6 @@ docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-
 ---
 image: tests-prebuild
 fromImage: base-for-go
@@ -317,6 +324,10 @@ import:
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
+  after: setup
+- artifact: version-map-artifact
+  add: /version_map.yml
+  to: /deckhouse/candi/version_map.yml
   after: setup
 mount:
 - fromPath: ~/go-pkg-cache
@@ -558,6 +569,10 @@ import:
   add: /images_tags.json
   to: /deckhouse/candi/images_tags.json
   after: setup
+- artifact: version-map-artifact
+  add: /version_map.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
 docker:
   ENV:
     EDITOR: vim
@@ -745,3 +760,13 @@ import:
   add: /images_tags.json
   to: /deckhouse/modules/images_tags.json
   after: setup
+---
+artifact: version-map-artifact
+from: {{ .Images.BASE_SCRATCH }}
+ansible:
+  setup:
+  - name: "Add version map"
+    copy:
+      content: |
+{{ toString $.CandiVersionMap | nindent 8 }}
+      dest: /version_map.yml
