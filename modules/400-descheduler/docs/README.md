@@ -2,9 +2,9 @@
 title: "The descheduler module"
 ---
 
-The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with **predefined** [strategies](#strategies) in a cluster.
+The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with [strategies](#strategies) defined in a `Descheduler` CR.
 
-descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the [module configuration](configuration.html). This leads to forced run the scheduling process for evicted Pods.
+descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` CR. This leads to forced run the scheduling process for evicted Pods.
 
 ## Nuances of descheduler operation
 
@@ -17,9 +17,10 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 
 ## Strategies
 
-You can enable or disable a strategy in the [module configuration](configuration.html).
+You can enable, disable, and configure a strategy in the [`Descheduler` CR](CR_RU.md).
 
 The following strategies are **enabled** by default:
+
 * [RemovePodsViolatingInterPodAntiAffinity](#removepodsviolatinginterpodantiaffinity)
 * [RemovePodsViolatingNodeAffinity](#removepodsviolatingnodeaffinity)
 
@@ -28,24 +29,9 @@ The following strategies are **enabled** by default:
 This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled
 compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`.
 
-The thresholds for identifying underutilized nodes are currently preset and cannot be changed:
-* Criteria to identify underutilized nodes:
-  * CPU — 50%
-  * memory — 50%
-
 ### LowNodeUtilization
 
 The descheduler finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evict Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
-
-The thresholds for identifying underutilized or overutilized nodes are currently preset and cannot be changed:
-* Criteria to identify underutilized nodes:
-  * CPU — 40%
-  * memory — 50%
-  * Pods — 40%
-* Criteria to identify overutilized nodes:
-  * CPU — 80%
-  * memory — 90%
-  * Pods — 80%
 
 ### PodLifeTime
 
