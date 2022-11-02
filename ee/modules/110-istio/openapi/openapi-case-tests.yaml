@@ -4,8 +4,8 @@ positive:
         resourcesManagement:
           vpa:
             memory:
-              max: "2G"
-              min: "1G"
+              max: "2.000G"
+              min: "1.123G"
     - controlPlane:
         resourcesManagement:
           static:
