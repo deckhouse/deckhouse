@@ -119,6 +119,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 - name: test-without-hpa
   spec:
     inlet: LoadBalancer
+    ingressClass: nginx
     controllerVersion: "1.1"
     maxReplicas: 3
     minReplicas: 3
