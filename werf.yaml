@@ -220,7 +220,7 @@ import:
   to: /usr/bin/jq
   after: setup
 - artifact: version-map-artifact
-  add: /version_map.yml
+  add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
 mount:
@@ -326,7 +326,7 @@ import:
   to: /usr/bin/jq
   after: setup
 - artifact: version-map-artifact
-  add: /version_map.yml
+  add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
 mount:
@@ -570,7 +570,7 @@ import:
   to: /deckhouse/candi/images_tags.json
   after: setup
 - artifact: version-map-artifact
-  add: /version_map.yml
+  add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
 docker:
