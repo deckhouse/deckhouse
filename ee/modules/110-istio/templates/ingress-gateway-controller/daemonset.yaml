@@ -81,6 +81,7 @@ spec:
         - router
         - --domain
         - $(POD_NAMESPACE).svc.{{ $.Values.global.discovery.clusterDomain }}
+        - --log_as_json
         - --proxyLogLevel=warning
         - --proxyComponentLogLevel=misc:error
         - --log_output_level=default:info
