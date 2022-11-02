@@ -14,7 +14,7 @@ gitWorktree:
   {{- end }}
 ---
 # Version Map
-{{ $_ := set . "CandiVersionMap" (.Files.Get "candi/version_map.yml" | fromYaml) }}
+{{ $_ := set . "CandiVersionMap" (merge (.Files.Get "candi/version_map.yml" | fromYaml) (.Files.Get "ee/candi/version_map.yml" | fromYaml)) }}
 ---
 # Terraform Versions
 {{ $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
