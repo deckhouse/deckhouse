@@ -1,7 +1,7 @@
 {{- $containerd_versions := list }}
 {{- $selinux_version := dict "7.3" "http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- range $key, $versions := $value.bashible.centos }}
+  {{- range $key, $versions := $value.bashible.redos }}
     {{- if $versions.containerd.desiredVersion }}
       {{- $containerd_versions = $versions.containerd.desiredVersion | toString | append $containerd_versions }}
     {{- end}}
