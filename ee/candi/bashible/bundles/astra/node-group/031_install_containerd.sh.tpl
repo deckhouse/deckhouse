@@ -64,7 +64,7 @@ if [[ "$version_in_use" == "$desired_version" ]]; then
 fi
 
 if [[ "$should_install_containerd" == true ]]; then
-{{- $astraName := "1.7" "Buster" }}
+{{- $astraName := dict "1.7" "Buster" }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "astra" }}
   {{- $astraVersion := toString $key }}
   if bb-is-astra-version? {{ $astraVersion }} ; then
