@@ -20,3 +20,13 @@ bb-is-alteros-version?() {
     return 1
   fi
 }
+
+bb-is-astra-version?() {
+  local ASTRA_VERSION=$1
+  source /etc/os-release
+  if [[ "${VERSION_ID}" =~ ^${ASTRA_VERSION}.*$ ]] ; then
+    return 0
+  else
+    return 1
+  fi
+}
