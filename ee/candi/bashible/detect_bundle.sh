@@ -24,6 +24,13 @@ case "$ID" in
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
     exit 1
   ;;
+  alteros)
+    case "$VERSION_ID" in 7|7.*)
+      echo "alteros" && exit 0 ;;
+    esac
+    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
+    exit 1
+  ;;
   ubuntu)
     case "$VERSION_ID" in 16.04|18.04|20.04|22.04)
       echo "ubuntu-lts" && exit 0 ;;

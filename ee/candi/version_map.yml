@@ -14,24 +14,49 @@ bashible:
         generic:
           desiredVersion: "5.15.35-1.el7.3.x86_64"
           allowedPattern: "5.15"
+  alteros: &alteros
+    '7':
+      docker:
+        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
+          allowedPattern: "containerd.io-1.[1234]"
+      containerd:
+        desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
+        allowedPattern: ""
+      kernel:
+        generic:
+          desiredVersion: "5.0.3-1.el7.alteros.x86_64"
+          allowedPattern: "5.0"
 k8s:
   '1.20':
     bashible:
       redos:
         !!merge <<: *redos
+      alteros:
+        !!merge <<: *alteros
   '1.21':
     bashible:
       redos:
         !!merge <<: *redos
+      alteros:
+        !!merge <<: *alteros
   '1.22':
     bashible:
       redos:
         !!merge <<: *redos
+      alteros:
+        !!merge <<: *alteros
   '1.23':
     bashible:
       redos:
         !!merge <<: *redos
+      alteros:
+        !!merge <<: *alteros
   '1.24':
     bashible:
       redos:
         !!merge <<: *redos
+      alteros:
+        !!merge <<: *alteros

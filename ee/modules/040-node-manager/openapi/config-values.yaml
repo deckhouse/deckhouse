@@ -31,11 +31,12 @@ properties:
       - "centos"
       - "debian"
       - "redos"
+      - "alteros"
     x-examples:
       - ["ubuntu-lts"]
     items:
       type: string
-      enum: [ubuntu-lts, centos, debian, redos]
+      enum: [ubuntu-lts, centos, debian, redos, alteros]
     description: |
       Names of available bashible OS bundles to reduce Helm release size.
 
