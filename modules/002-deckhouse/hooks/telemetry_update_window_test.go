@@ -97,7 +97,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				Expect(m.Labels).To(HaveKey("to"))
 				Expect(m.Labels).To(HaveKey("human"))
 				if day != "" {
-					if day != m.Labels["day"] {
+					if day != m.Labels["weekday"] {
 						continue
 					} else {
 						dayFound = true

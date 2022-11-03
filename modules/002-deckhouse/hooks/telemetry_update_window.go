@@ -85,10 +85,10 @@ func (h *windowTelemetryHook) setFlattenWindowsMetrics() {
 		for _, day := range w.Days {
 			d := day
 			h.collector.Set(group, 1.0, map[string]string{
-				"from":  w.From,
-				"to":    w.To,
-				"day":   d,
-				"human": h.humanOut(w, d),
+				"from":    w.From,
+				"to":      w.To,
+				"weekday": d,
+				"human":   h.humanOut(w, d),
 			}, telemetry.NewOptions().WithGroup(group))
 		}
 
