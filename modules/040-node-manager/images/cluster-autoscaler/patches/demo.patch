@@ -1,11 +1,12 @@
 diff --git a/cluster-autoscaler/core/scale_up.go b/cluster-autoscaler/core/scale_up.go
-index 5ed3cb3e9..77f397dc1 100644
+index 5ed3cb3e9..610bd46f7 100644
 --- a/cluster-autoscaler/core/scale_up.go
 +++ b/cluster-autoscaler/core/scale_up.go
-@@ -291,6 +291,16 @@ func computeExpansionOption(context *context.AutoscalingContext, podEquivalenceG
+@@ -291,6 +291,17 @@ func computeExpansionOption(context *context.AutoscalingContext, podEquivalenceG
  
  	for _, eg := range podEquivalenceGroups {
  		samplePod := eg.pods[0]
++		samplePod.Annotations["fooooor"] = "baaar"
 +		fmt.Println("CHECKING NODE", nodeInfo.Node().Name)
 +		fmt.Println("SAMPLE POD", samplePod.Name)
 +		fmt.Println("ANNOTS", nodeInfo.Node().Annotations)
