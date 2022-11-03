@@ -37,7 +37,7 @@ func RegisterHook(action ActionFunc) bool {
 	}
 
 	return sdk.RegisterFunc(&go_hook.HookConfig{
-		OnAfterAll: &go_hook.OrderedConfig{Order: 100},
+		OnAfterHelm: &go_hook.OrderedConfig{Order: 1000},
 		// telemetry should not block Deckhouse
 		AllowFailure: true,
 	}, handler)
