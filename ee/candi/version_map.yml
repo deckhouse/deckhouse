@@ -27,8 +27,8 @@ bashible:
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.0.3-1.el7.alteros.x86_64"
-          allowedPattern: "5.0"
+          desiredVersion: "5.16.2-1.el7.alteros.x86_64"
+          allowedPattern: "5.16"
 k8s:
   '1.20':
     bashible:
