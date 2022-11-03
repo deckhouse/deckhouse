@@ -46,8 +46,11 @@ case "$ID" in
     exit 1
   ;;
   astra)
-    case "$VERSION_ID" in 1.7|1.7*)
-      echo "astra" && exit 0 ;;
+    case "$VERSION_ID" in
+      1.7|1.7*)
+        echo "astra" && exit 0 ;;
+      2.12|2.12.*)
+        echo "debian" && exit 0 ;;
     esac
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
     exit 1
