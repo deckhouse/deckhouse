@@ -513,14 +513,14 @@ generate_ee_access_string() {
 install_show_credentials() {
 
   local prometheus_password
-  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | awk '/password/{print $2}')
+  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
   if [ "$?" -ne "0" ] || [ -z "$prometheus_password" ]; then
     printf "
 Error getting Prometheus password.
 
 Try to run the following command to get Prometheus password:
 
-    %s --context %s -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
+    %s --context %s -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
 
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}"
   else
