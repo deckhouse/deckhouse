@@ -35,14 +35,10 @@ spec:
                   description: Время изменения статуса релиза
                 approved:
                   description: |
-                    Статус готовности релиза к обновлению. Всегда true для Автоматического обновления (`update.mode: Auto`).
+                    Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: approved
-          jsonPath: .status.approved
-          type: boolean
-          description: 'Готов ли релиз к установке.'
         - name: phase
           jsonPath: .status.phase
           type: string
