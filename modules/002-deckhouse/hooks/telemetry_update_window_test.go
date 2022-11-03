@@ -88,6 +88,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		Expect(expireIndex >= 0).To(BeTrue())
 
 		metricIndex := -1
+		dayFound := false
 		for i, m := range metrics {
 			if m.Name == "d8_telemetry_update_window" {
 				Expect(m.Group).To(Equal("d8_telemetry_update_window"))
@@ -96,9 +97,10 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				Expect(m.Labels).To(HaveKey("to"))
 				Expect(m.Labels).To(HaveKey("human"))
 				if day != "" {
-					Expect(m.Labels).To(HaveKey("human"))
 					if day != m.Labels["day"] {
 						continue
+					} else {
+						dayFound = true
 					}
 				}
 
@@ -119,6 +121,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			}
 		}
 
+		if day != "" {
+			Expect(dayFound).To(BeTrue())
+		}
 		Expect(metricIndex >= 0).To(BeTrue())
 		Expect(metricIndex > expireIndex).To(BeTrue())
 	}
