@@ -26,35 +26,9 @@ webhooks:
     # Only include 'sideEffects' field in Kubernetes 1.12+
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.certManager.internal.webhookCACrt | b64enc }}
+      caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc }}
       service:
         name: cert-manager-webhook
         namespace: d8-cert-manager
         path: /mutate
-{{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
-  - name: mutating.webhook.certmanager.k8s.io
-    rules:
-      - apiGroups:
-          - "certmanager.k8s.io"
-        apiVersions:
-          - v1alpha1
-        operations:
-          - CREATE
-          - UPDATE
-        resources:
-          - certificates
-          - issuers
-          - clusterissuers
-          - orders
-          - challenges
-          - certificaterequests
-    failurePolicy: Fail
-    sideEffects: None
-    admissionReviewVersions: ["v1beta1"]
-    clientConfig:
-      caBundle: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | b64enc }}
-      service:
-        name: kubernetes
-        namespace: default
-        path: /apis/webhook.certmanager.k8s.io/v1beta1/mutations
-{{- end }}
+

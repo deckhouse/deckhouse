@@ -95,10 +95,10 @@ internal:
   selfSignedCA:
     cert: string
     key: string
-  webhookCACrt: string
-  webhookCAKey: string
-  webhookCrt: string
-  webhookKey: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
 `
 
 const cloudDNS = `

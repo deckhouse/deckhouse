@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: orders.acme.cert-manager.io
   annotations:
-    cert-manager.io/inject-ca-from-secret: 'd8-cert-manager/cert-manager-webhook-ca'
+    cert-manager.io/inject-ca-from-secret: 'd8-cert-manager/cert-manager-webhook-tls'
   labels:
     heritage: deckhouse
     app: 'cert-manager'

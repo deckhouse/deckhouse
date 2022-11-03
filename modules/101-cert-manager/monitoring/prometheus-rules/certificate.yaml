@@ -45,5 +45,4 @@
         Cermanager receives responses with the code `{{ $labels.status }}` on requesting {{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}.
 
         It can affect certificates ordering and prolongation. Check certmanager logs for more info.
-        `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager` or
-        `kubectl -n d8-cert-manager logs -l app=legacy-cert-manager -c cert-manager`
+        `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager`
