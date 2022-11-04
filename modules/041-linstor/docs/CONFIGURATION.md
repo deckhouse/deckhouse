@@ -69,7 +69,7 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
 
      ```shell
      vgcreate data_project /dev/nvme0n1 /dev/nvme1n1
-     lvcreate -L 1.8T -T data_project/thindata --add-tag linstor-thindata
+     lvcreate -l 100%FREE -T data_project/thindata --add-tag linstor-thindata
      ```
 
      > Note, that the group itself should not have this tag configured.
