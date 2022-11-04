@@ -28,8 +28,9 @@ masterNodeGroup:
   instanceClass:
     # type of the instance
     instanceType: m5.xlarge
-    # Amazon Machine Image id
-    ami: ami-03818140b4ac9ae2b
+    # Amazon Machine Image ID
+    # AMI Catalog in the AWS console: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
     # master node VM disk size
     diskSizeGb: 30
     # master node VM disk type to use
@@ -42,7 +43,7 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
@@ -78,7 +79,7 @@ withNAT:
     zone: eu-central-1a
     instanceClass:
       instanceType: m5.large
-      ami: ami-09a4a23815cdb5e06
+      ami: ami-0caef02b518350c8b
       diskType: gp3
 masterNodeGroup:
   # Number of master nodes.
@@ -87,8 +88,9 @@ masterNodeGroup:
   instanceClass:
     # type of the instance
     instanceType: m5.xlarge
-    # Amazon Machine Image id
-    ami: ami-03818140b4ac9ae2b
+    # Amazon Machine Image ID
+    # AMI Catalog in the AWS console: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
     # master node VM disk size
     diskSizeGb: 30
     # master node VM disk type to use
@@ -101,7 +103,7 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
