@@ -90,11 +90,17 @@ withNAT:
       # [<en>] you might consider changing this
       # [<ru>] возможно, захотите изменить
       instanceType: m5.large
-      # [<en>] Amazon Machine Image id
-      # [<ru>] id образа виртуальной машины в Amazon
-      # [<en>] you might consider changing this
-      # [<ru>] возможно, захотите изменить
-      ami: ami-09a4a23815cdb5e06
+      # [<en>] Amazon Machine Image ID
+      # [<en>] The example uses the Ubuntu Server 22.04 image for the eu-central-1 region.
+      # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
+      # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
+      # [<ru>] ID образа виртуальной машины в Amazon.
+      # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона eu-central-1.
+      # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
+      # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+      # [<en>] You might consider changing this.
+      # [<ru>] Возможно, захотите изменить.
+      ami: ami-0caef02b518350c8b
       # [<en>] Disk type
       # [<ru>] Тип диска
       diskType: gp3
@@ -124,11 +130,17 @@ masterNodeGroup:
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     instanceType: c5.large
-    # [<en>] Amazon Machine Image id
-    # [<ru>] id образа виртуальной машины в Amazon
-    # [<en>] you might consider changing this
-    # [<ru>] возможно, захотите изменить
-    ami: ami-0fee04b212b7499e2
+    # [<en>] Amazon Machine Image ID
+    # [<en>] The example uses the Ubuntu Server 22.04 image for the eu-central-1 region.
+    # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
+    # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
+    # [<ru>] ID образа виртуальной машины в Amazon.
+    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона eu-central-1.
+    # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
+    # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
+    ami: ami-0caef02b518350c8b
 # [<en>] address space of the AWS cloud
 # [<ru>] адресное пространство облака внутри AWS
 vpcNetworkCIDR: "10.241.0.0/16"

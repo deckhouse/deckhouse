@@ -18,11 +18,11 @@ $(document).ready(function () {
 
 function config_highlight() {
   let matchMustChange = '!CHANGE_';
-  let matchMightChangeEN = "# you might consider changing this";
-  let matchMightChangeRU = "# возможно, захотите изменить";
+  let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
+  let matchMightChangeRU = /# [Вв]озможно, захотите изменить\.?/;
 
   $('code span.c1').filter(function () {
-    return (this.innerText === matchMightChangeEN) || (this.innerText === matchMightChangeRU);
+    return (matchMightChangeEN.test(this.innerText)) || (matchMightChangeRU.test(this.innerText));
   }).each(function (index) {
     try {
       if ($(this).next().next().next() && $(this).next().next().next().text() === '-') {
