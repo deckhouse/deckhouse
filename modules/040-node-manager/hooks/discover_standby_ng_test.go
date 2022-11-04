@@ -25,7 +25,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: discover_standby_ng ::", func() {
+var _ = FDescribe("Modules :: node-manager :: hooks :: discover_standby_ng ::", func() {
 	const (
 		nodeGroupWithoutStandby = `
 ---

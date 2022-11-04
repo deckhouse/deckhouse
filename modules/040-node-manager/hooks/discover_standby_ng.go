@@ -214,8 +214,8 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
 
 		readyNodesCount := 0
-		var ngTemplateAllocatableCPU *resource.Quantity
-		var ngTemplateAllocatableMemory *resource.Quantity
+		var ngTemplateAllocatableCPU = resource.MustParse("2000m")
+		var ngTemplateAllocatableMemory = resource.MustParse("4Gi")
 		// allocatableCPUList := make([]*resource.Quantity, 0)
 		// allocatableMemoryList := make([]*resource.Quantity, 0)
 		for _, node := range input.Snapshots["nodes"] {
@@ -233,8 +233,12 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			// 	allocatableMemoryList = append(allocatableMemoryList, standbyNode.AllocatableMemory)
 			// }
 
-			ngTemplateAllocatableCPU = standbyNode.AllocatableCPU
-			ngTemplateAllocatableMemory = standbyNode.AllocatableMemory
+			if standbyNode.AllocatableCPU != nil {
+				ngTemplateAllocatableCPU = *standbyNode.AllocatableCPU
+			}
+			if standbyNode.AllocatableMemory != nil {
+				ngTemplateAllocatableMemory = *standbyNode.AllocatableMemory
+			}
 		}
 
 		if ng.ZonesCount == 0 {
@@ -264,8 +268,9 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// 	return err
 		// }
 
-		standbyRequestCPU := resource.NewScaledQuantity(ngTemplateAllocatableCPU.Value()/100*85, 0)
-		standbyRequestMemory := resource.NewScaledQuantity(ngTemplateAllocatableMemory.Value()/100*85, 0)
+		standbyRequestCPU := resource.NewScaledQuantity(ngTemplateAllocatableCPU.ScaledValue(resource.Milli)/100*85, resource.Milli)
+		standbyRequestMemory := resource.NewScaledQuantity(ngTemplateAllocatableMemory.ScaledValue(resource.Milli)/100*85, resource.Milli)
+
 		// Calculate Mem amount.
 		// standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
 		// if err != nil {
