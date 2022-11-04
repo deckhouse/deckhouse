@@ -95,3 +95,7 @@ func (m *metricsCollector) opts(opts ...Options) []metrics.Option {
 func (m *metricsCollector) name(n string) string {
 	return fmt.Sprintf("d8_telemetry_%s", n)
 }
+
+func WrapName(n string) string {
+	return fmt.Sprintf("d8_telemetry_%s", n)
+}

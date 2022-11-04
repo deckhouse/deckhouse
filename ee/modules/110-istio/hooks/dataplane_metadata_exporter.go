@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -26,6 +28,7 @@ const (
 	istioVersionUnknown          = "unknown"
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
+	telemetryGroup               = "istio_telemetry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -196,11 +199,18 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		}
 	}
 
+	ignored := 0
+	withoutSidecar := 0
+	total := 0
+	worked := 0
+
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
+		total += 1
 		// sidecar.istio.io/inject=false annotation set -> ignore
 		if !istioPodInfo.InjectAnnotation {
+			ignored += 1
 			continue
 		}
 
@@ -221,6 +231,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPodInfo.Revision == istioRevsionAbsent {
+			withoutSidecar += 1
 			continue
 		}
 
@@ -253,6 +264,16 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"desired_version":      desiredVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
+		worked += 1
 	}
+
+	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
+	telemetryCollector.Expire(telemetryGroup)
+
+	telemetryCollector.Set("total_pods_used", float64(total), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_ignored", float64(ignored), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_without_sidecar", float64(withoutSidecar), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_worked", float64(worked), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+
 	return nil
 }

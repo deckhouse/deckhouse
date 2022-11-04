@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -81,6 +82,13 @@ type wantedMetric struct {
 	DesiredFullVersion string
 }
 
+type telemetryStatistic struct {
+	ignored        float64
+	withoutSidecar float64
+	total          float64
+	worked         float64
+}
+
 func istioNsYAML(ns nsParams) string {
 	ns.Name = nsName
 	return internal.TemplateToYAML(nsTemplate, ns)
@@ -126,48 +134,73 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 		})
 	})
 
-	DescribeTable("There are different desired and actual revisions", func(objectsYAMLs []string, want *wantedMetric) {
-		f.ValuesSet("istio.internal.globalVersion", "1.42")
-		yamlState := strings.Join(objectsYAMLs, "\n---\n")
-		f.BindingContexts.Set(f.KubeStateSet(yamlState))
+	DescribeTable("There are different desired and actual revisions",
+		func(objectsYAMLs []string, want *wantedMetric, stats telemetryStatistic) {
+			f.ValuesSet("istio.internal.globalVersion", "1.42")
+			yamlState := strings.Join(objectsYAMLs, "\n---\n")
+			f.BindingContexts.Set(f.KubeStateSet(yamlState))
 
-		f.RunHook()
-		Expect(f).To(ExecuteSuccessfully())
-		Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
-		m := f.MetricsCollector.CollectedMetrics()
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			m := f.MetricsCollector.CollectedMetrics()
 
-		// the first action should always be "expire"
-		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-			Group:  metadataExporterMetricsGroup,
-			Action: "expire",
-		}))
+			// the first action should always be "expire"
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  metadataExporterMetricsGroup,
+				Action: "expire",
+			}))
 
-		// there are no istio pods or ignored pods in the cluster, hense no metrics
-		if yamlState == "" || want == nil {
-			Expect(m).To(HaveLen(1))
-			return
-		}
-		Expect(m).To(HaveLen(2))
-		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-			Name:   istioPodMetadataMetricName,
-			Group:  metadataExporterMetricsGroup,
-			Action: "set",
-			Value:  pointer.Float64Ptr(1.0),
-			Labels: map[string]string{
-				"namespace":            nsName,
-				"dataplane_pod":        podName,
-				"desired_revision":     want.DesiredRevision,
-				"revision":             want.Revision,
-				"version":              want.Version,
-				"desired_version":      want.DesiredVersion,
-				"full_version":         want.FullVersion,
-				"desired_full_version": want.DesiredFullVersion,
-			},
-		}))
-	},
+			assertTelemetryStat := func(startIndex int) {
+				Expect(m[startIndex]).To(BeEquivalentTo(operation.MetricOperation{
+					Group:  telemetry.WrapName(telemetryGroup),
+					Action: "expire",
+				}))
+
+				Expect(m[startIndex+1].Name).To(Equal(telemetry.WrapName("total_pods_used")))
+				Expect(*m[startIndex+1].Value).To(Equal(stats.total))
+
+				Expect(m[startIndex+2].Name).To(Equal(telemetry.WrapName("pods_ignored")))
+				Expect(*m[startIndex+2].Value).To(Equal(stats.ignored))
+
+				Expect(m[startIndex+3].Name).To(Equal(telemetry.WrapName("pods_without_sidecar")))
+				Expect(*m[startIndex+3].Value).To(Equal(stats.withoutSidecar))
+
+				Expect(m[startIndex+4].Name).To(Equal(telemetry.WrapName("pods_worked")))
+				Expect(*m[startIndex+4].Value).To(Equal(stats.worked))
+
+			}
+
+			// there are no istio pods or ignored pods in the cluster, hense no metrics
+			if yamlState == "" || want == nil {
+				Expect(m).To(HaveLen(6))
+				assertTelemetryStat(1)
+				return
+			}
+
+			Expect(m).To(HaveLen(7))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   istioPodMetadataMetricName,
+				Group:  metadataExporterMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":            nsName,
+					"dataplane_pod":        podName,
+					"desired_revision":     want.DesiredRevision,
+					"revision":             want.Revision,
+					"version":              want.Version,
+					"desired_version":      want.DesiredVersion,
+					"full_version":         want.FullVersion,
+					"desired_full_version": want.DesiredFullVersion,
+				},
+			}))
+
+			assertTelemetryStat(2)
+		},
 
 		// Checks for normal behavior, everything with revision is ok!
-		Entry("Empty cluster", []string{}, nil),
+		Entry("Empty cluster", []string{}, nil, telemetryStatistic{}),
 		Entry("NS with global revision, Pod to ignore with inject=false label",
 			[]string{
 				istioNsYAML(nsParams{
@@ -177,7 +210,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					InjectionLabel:      true,
 					InjectionLabelValue: false,
 				}),
-			}, nil),
+			}, nil, telemetryStatistic{}),
 		Entry("NS with definite revision, but revision is absent in revisionFullVersionMap",
 			[]string{
 				istioNsYAML(nsParams{
@@ -196,6 +229,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "unknown",
 				FullVersion:        "unknown",
 				DesiredFullVersion: "unknown",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS without any revisions, pod with inject=true label",
 			[]string{
@@ -215,6 +251,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.42",
 				FullVersion:        "1.42.42",
 				DesiredFullVersion: "1.42.42",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS with global revision, pod with inject=true label",
 			[]string{
@@ -234,6 +273,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.42",
 				FullVersion:        "1.42.42",
 				DesiredFullVersion: "1.42.42",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS with definite revision, pod with inject=true label",
 			[]string{
@@ -253,6 +295,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS without any revisions, pod with istio.io/rev label",
 			[]string{
@@ -271,6 +316,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS with global revision, pod with istio.io/rev label",
 			[]string{
@@ -289,6 +337,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS with definite revision, pod with inject=true label",
 			[]string{
@@ -307,6 +358,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.155",
 				FullVersion:        "1.155.155",
 				DesiredFullVersion: "1.155.155",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS with global revision, Pod to ignore with inject=false annotation",
 			[]string{
@@ -316,7 +370,10 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				istioPodYAML(podParams{
 					DisableInjectionAnnotation: true,
 				}),
-			}, nil),
+			}, nil, telemetryStatistic{
+				total:   1,
+				ignored: 1,
+			}),
 		Entry("NS with definite revision, Pod to ignore with inject=false annotation",
 			[]string{
 				istioNsYAML(nsParams{
@@ -325,7 +382,10 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				istioPodYAML(podParams{
 					DisableInjectionAnnotation: true,
 				}),
-			}, nil),
+			}, nil, telemetryStatistic{
+				total:   1,
+				ignored: 1,
+			}),
 		Entry("NS with global revision, Pod revision is actual",
 			[]string{
 				istioNsYAML(nsParams{
@@ -342,6 +402,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.42",
 				FullVersion:        "1.42.42",
 				DesiredFullVersion: "1.42.42",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace with definite revision, pod revision is actual",
 			[]string{
@@ -359,6 +422,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 
 		// Checks for revision inconsistencies
@@ -378,6 +444,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.42",
 				FullVersion:        "1.77.77",
 				DesiredFullVersion: "1.42.42",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("NS global revision, pod revision is absent (no sidecar)",
 			[]string{
@@ -392,6 +461,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.42",
 				FullVersion:        "absent",
 				DesiredFullVersion: "1.42.42",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace with definite revision, pod revision is not actual",
 			[]string{
@@ -409,6 +481,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.77.77",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
 			[]string{
@@ -423,6 +498,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "absent",
 				DesiredFullVersion: "1.15.15",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is actual",
 			[]string{
@@ -441,6 +519,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.77",
 				FullVersion:        "1.77.77",
 				DesiredFullVersion: "1.77.77",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is not actual",
 			[]string{
@@ -459,6 +540,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.77",
 				FullVersion:        "1.71.71",
 				DesiredFullVersion: "1.77.77",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace without labels and pod with definite revision",
 			[]string{
@@ -475,6 +559,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.77",
 				FullVersion:        "1.77.77",
 				DesiredFullVersion: "1.77.77",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Namespace without labels and pod with definite revision but sidecar absent",
 			[]string{
@@ -489,6 +576,9 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "1.77",
 				FullVersion:        "absent",
 				DesiredFullVersion: "1.77.77",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Pod orphan",
 			[]string{
@@ -504,11 +594,17 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				DesiredVersion:     "unknown",
 				FullVersion:        "1.77.77",
 				DesiredFullVersion: "unknown",
+			}, telemetryStatistic{
+				total:  1,
+				worked: 1,
 			}),
 		Entry("Pod without current and desired revisions",
 			[]string{
 				istioNsYAML(nsParams{}),
 				istioPodYAML(podParams{}),
-			}, nil),
+			}, nil, telemetryStatistic{
+				total:          1,
+				withoutSidecar: 1,
+			}),
 	)
 })
