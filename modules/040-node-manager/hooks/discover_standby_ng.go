@@ -214,8 +214,10 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
 
 		readyNodesCount := 0
-		allocatableCPUList := make([]*resource.Quantity, 0)
-		allocatableMemoryList := make([]*resource.Quantity, 0)
+		var ngTemplateAllocatableCPU *resource.Quantity
+		var ngTemplateAllocatableMemory *resource.Quantity
+		// allocatableCPUList := make([]*resource.Quantity, 0)
+		// allocatableMemoryList := make([]*resource.Quantity, 0)
 		for _, node := range input.Snapshots["nodes"] {
 			standbyNode := node.(StandbyNodeInfo)
 			if standbyNode.Group != ng.Name {
@@ -224,12 +226,15 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			if standbyNode.IsReady && !standbyNode.IsUnschedulable {
 				readyNodesCount++
 			}
-			if standbyNode.AllocatableCPU != nil {
-				allocatableCPUList = append(allocatableCPUList, standbyNode.AllocatableCPU)
-			}
-			if standbyNode.AllocatableMemory != nil {
-				allocatableMemoryList = append(allocatableMemoryList, standbyNode.AllocatableMemory)
-			}
+			// if standbyNode.AllocatableCPU != nil {
+			// 	allocatableCPUList = append(allocatableCPUList, standbyNode.AllocatableCPU)
+			// }
+			// if standbyNode.AllocatableMemory != nil {
+			// 	allocatableMemoryList = append(allocatableMemoryList, standbyNode.AllocatableMemory)
+			// }
+
+			ngTemplateAllocatableCPU = standbyNode.AllocatableCPU
+			ngTemplateAllocatableMemory = standbyNode.AllocatableMemory
 		}
 
 		if ng.ZonesCount == 0 {
@@ -259,6 +264,8 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// 	return err
 		// }
 
+		standbyRequestCPU := resource.NewScaledQuantity(ngTemplateAllocatableCPU.Value()/100*85, 0)
+		standbyRequestMemory := resource.NewScaledQuantity(ngTemplateAllocatableMemory.Value()/100*85, 0)
 		// Calculate Mem amount.
 		// standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
 		// if err != nil {
@@ -266,11 +273,11 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// }
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
-			Name:       ng.Name,
-			Standby:    desiredStandby,
-			ReserveCPU: "3500m",
-			// ReserveMemory: standbyRequestMemory,
-			Taints: ng.Taints,
+			Name:          ng.Name,
+			Standby:       desiredStandby,
+			ReserveCPU:    standbyRequestCPU.String(),
+			ReserveMemory: standbyRequestMemory.String(),
+			Taints:        ng.Taints,
 		})
 	}
 
