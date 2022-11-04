@@ -268,7 +268,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:       ng.Name,
 			Standby:    desiredStandby,
-			ReserveCPU: "4",
+			ReserveCPU: "3500m",
 			// ReserveMemory: standbyRequestMemory,
 			Taints: ng.Taints,
 		})
