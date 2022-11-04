@@ -1,8 +1,22 @@
 diff --git a/cluster-autoscaler/core/scale_up.go b/cluster-autoscaler/core/scale_up.go
-index 5ed3cb3e9..1d975affb 100644
+index 5ed3cb3e9..8e96c7768 100644
 --- a/cluster-autoscaler/core/scale_up.go
 +++ b/cluster-autoscaler/core/scale_up.go
-@@ -291,6 +291,20 @@ func computeExpansionOption(context *context.AutoscalingContext, podEquivalenceG
+@@ -18,11 +18,13 @@ package core
+ 
+ import (
+ 	"bytes"
++	context2 "context"
+ 	"fmt"
+ 	"math"
+ 	"strings"
+ 	"time"
+ 
++	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/autoscaler/cluster-autoscaler/core/utils"
+ 	"k8s.io/autoscaler/cluster-autoscaler/utils/taints"
+ 
+@@ -291,6 +293,26 @@ func computeExpansionOption(context *context.AutoscalingContext, podEquivalenceG
  
  	for _, eg := range podEquivalenceGroups {
  		samplePod := eg.pods[0]
@@ -15,6 +29,12 @@ index 5ed3cb3e9..1d975affb 100644
 +		fmt.Println("ANNOTS", nodeInfo.Node().Annotations)
 +		fmt.Printf("ALLOC: %+v\n", nodeInfo.Allocatable)
 +		fmt.Printf("REQ: %+v\n", nodeInfo.Requested)
++		samplePod.Spec.Containers[0].Resources.Requests.Memory().Set(666666)
++		samplePod.Spec.Containers[0].Resources.Limits.Memory().Set(666666)
++		samplePod.Spec.Containers[0].Resources.Limits.Cpu().Set(666)
++		samplePod.Spec.Containers[0].Resources.Requests.Cpu().Set(666)
++		_, err := context.ClientSet.CoreV1().Pods("d8-cloud-instance-manager").Update(context2.Background(), samplePod, v1.UpdateOptions{})
++		fmt.Println("update err", err)
 +		for _, p := range nodeInfo.Pods {
 +			fmt.Println("POD", p.Pod.Name)
 +			fmt.Println("PCN", p.Pod.Spec.PriorityClassName)
