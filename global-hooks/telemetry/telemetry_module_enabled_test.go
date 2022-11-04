@@ -17,6 +17,8 @@ package telemetry
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -38,11 +40,11 @@ var _ = Describe("Global :: hooks :: telemetry :: enable module", func() {
 
 		Expect(len(metrics)).To(Equal(2))
 		Expect(metrics[0].Action).To(Equal("expire"))
-		Expect(metrics[0].Group).To(Equal("d8_telemetry_telemetry_modules_enable"))
+		Expect(metrics[0].Group).To(Equal(telemetry.WrapName("modules_enable")))
 
 		found := false
 		for i := 1; i < len(metrics); i++ {
-			if metrics[i].Name == fmt.Sprintf("d8_telemetry_%s_module_enabled", module) {
+			if metrics[i].Name == telemetry.WrapName(fmt.Sprintf("%s_module_enabled", module)) {
 				found = true
 				Expect(*metrics[i].Value).To(Equal(val))
 				break
@@ -64,7 +66,6 @@ var _ = Describe("Global :: hooks :: telemetry :: enable module", func() {
 
 			assertModuleMetric(f, "istio", 1.0)
 		})
-
 	})
 
 	Context("Istio module is disabled", func() {
@@ -79,6 +80,5 @@ var _ = Describe("Global :: hooks :: telemetry :: enable module", func() {
 
 			assertModuleMetric(f, "istio", 0.0)
 		})
-
 	})
 })

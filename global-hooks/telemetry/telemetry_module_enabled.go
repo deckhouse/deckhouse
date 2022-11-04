@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func setTelemetry(input *go_hook.HookInput) error {
 	collector := telemetry.NewTelemetryMetricCollector(input)
-	const group = "telemetry_modules_enable"
+	const group = "modules_enable"
 	collector.Expire(group)
 
 	modules := []string{"istio"}
