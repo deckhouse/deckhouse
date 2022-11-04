@@ -275,13 +275,13 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
 		// if err != nil {
 		// 	return err
-		// }
+		// }\
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:          ng.Name,
 			Standby:       desiredStandby,
 			ReserveCPU:    standbyRequestCPU.String(),
-			ReserveMemory: standbyRequestMemory.String(),
+			ReserveMemory: fmt.Sprintf("%dMi", standbyRequestMemory.ScaledValue(resource.Mega)),
 			Taints:        ng.Taints,
 		})
 	}
