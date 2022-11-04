@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -48,7 +49,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		expireIndex := -1
 		for i, m := range metrics {
-			if m.Action == "expire" && m.Group == "d8_telemetry_update_window_approval_mode" {
+			if m.Action == "expire" && m.Group == telemetry.WrapName("update_window_approval_mode") {
 				expireIndex = i
 				break
 			}
@@ -58,8 +59,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		metricIndex := -1
 		for i, m := range metrics {
-			if m.Name == "d8_telemetry_update_window_approval_mode" {
-				Expect(m.Group).To(Equal("d8_telemetry_update_window_approval_mode"))
+			if m.Name == telemetry.WrapName("update_window_approval_mode") {
+				Expect(m.Group).To(Equal(telemetry.WrapName("update_window_approval_mode")))
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("mode"))
 				Expect(m.Labels["mode"]).To(Equal(typeT))
@@ -79,7 +80,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		expireIndex := -1
 		for i, m := range metrics {
-			if m.Action == "expire" && m.Group == "d8_telemetry_update_window" {
+			if m.Action == "expire" && m.Group == telemetry.WrapName("update_window") {
 				expireIndex = i
 				break
 			}
@@ -90,8 +91,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		metricIndex := -1
 		dayFound := false
 		for i, m := range metrics {
-			if m.Name == "d8_telemetry_update_window" {
-				Expect(m.Group).To(Equal("d8_telemetry_update_window"))
+			if m.Name == telemetry.WrapName("update_window") {
+				Expect(m.Group).To(Equal(telemetry.WrapName("update_window")))
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("from"))
 				Expect(m.Labels).To(HaveKey("to"))

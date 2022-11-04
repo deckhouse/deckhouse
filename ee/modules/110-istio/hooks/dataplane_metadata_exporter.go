@@ -207,10 +207,10 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
-		total += 1
+		total++
 		// sidecar.istio.io/inject=false annotation set -> ignore
 		if !istioPodInfo.InjectAnnotation {
-			ignored += 1
+			ignored++
 			continue
 		}
 
@@ -231,7 +231,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPodInfo.Revision == istioRevsionAbsent {
-			withoutSidecar += 1
+			withoutSidecar++
 			continue
 		}
 
@@ -264,7 +264,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"desired_version":      desiredVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
-		worked += 1
+		worked++
 	}
 
 	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
