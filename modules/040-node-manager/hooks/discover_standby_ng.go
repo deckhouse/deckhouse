@@ -254,23 +254,23 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		}
 
 		// Calculate CPU amount.
-		standbyRequestCPU, err := calculateStandbyRequestCPU(input, allocatableCPUList, ng)
-		if err != nil {
-			return err
-		}
+		// standbyRequestCPU, err := calculateStandbyRequestCPU(input, allocatableCPUList, ng)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// Calculate Mem amount.
-		standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
-		if err != nil {
-			return err
-		}
+		// standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
+		// if err != nil {
+		// 	return err
+		// }
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
-			Name:          ng.Name,
-			Standby:       desiredStandby,
-			ReserveCPU:    standbyRequestCPU,
-			ReserveMemory: standbyRequestMemory,
-			Taints:        ng.Taints,
+			Name:       ng.Name,
+			Standby:    desiredStandby,
+			ReserveCPU: "4",
+			// ReserveMemory: standbyRequestMemory,
+			Taints: ng.Taints,
 		})
 	}
 

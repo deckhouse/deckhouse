@@ -44,5 +44,4 @@ spec:
         resources:
           requests:
             cpu: {{ $ng.reserveCPU | quote }}
-            memory: {{ $ng.reserveMemory | quote }}
 {{- end }}
