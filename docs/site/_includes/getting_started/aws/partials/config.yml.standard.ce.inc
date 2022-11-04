@@ -105,7 +105,7 @@ masterNodeGroup:
     # [<ru>] id образа виртуальной машины в Amazon
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
-    ami: ami-0fee04b212b7499e2
+    ami: ami-097a2df4ac947655f
 # [<en>] address space of the AWS cloud
 # [<ru>] адресное пространство облака внутри AWS
 vpcNetworkCIDR: "10.241.0.0/16"
