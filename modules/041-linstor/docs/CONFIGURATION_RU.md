@@ -69,7 +69,7 @@ stringData:
 
      ```shell
      vgcreate data_project /dev/nvme0n1 /dev/nvme1n1
-     lvcreate -L 1.8T -T data_project/thindata --add-tag linstor-thindata
+     lvcreate -l 100%FREE -T data_project/thindata --add-tag linstor-thindata
      ```
 
      > Обратите внимание, что сама группа томов не обязана содержать какой-либо тег.
