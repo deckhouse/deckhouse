@@ -7,7 +7,7 @@
   targetLabel: __meta_kubernetes_service_label_prometheus_deckhouse_io_target
 
 - sourceLabels: [__meta_kubernetes_service_label_prometheus_deckhouse_io_target]
-  regex: "^{{ $context.Values.monitoringApplications.internal.enabledApplicationsSummary | join "|" }}$"
+  regex: "^{{ $context.Values.monitoringApplications.internal.allowedApplications | join "|" }}$"
   action: keep
 
 - regex: endpoint
@@ -22,7 +22,7 @@
   replacement: $1
   targetLabel: endpoint
 
-# HTTP Scheme
+  # HTTP Scheme
   {{ if eq $schema "http" }}
 - sourceLabels: [__meta_kubernetes_endpoint_port_name]
   regex: "https-metrics"
@@ -34,7 +34,7 @@
   regex: "^true;;(.*)|;;http-metrics$"
   action: keep
 
-# HTTPS Scheme
+  # HTTPS Scheme
   {{ else }}
 - sourceLabels: [__meta_kubernetes_endpoint_port_name]
   regex: "http-metrics"
@@ -68,4 +68,30 @@
 - sourceLabels: [__meta_kubernetes_service_annotation_prometheus_deckhouse_io_sample_limit]
   regex: (.+)
   targetLabel: __sample_limit__
+{{- end }}
+
+{{- if ne (len .Values.monitoringApplications.internal.enabledApplicationsSummary) 0 }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: monitoring-applications
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  sampleLimit: 5000
+  endpoints:
+  - relabelings:
+    {{- include "basic_relabeling_for_schema" (list . "http") | nindent 4 }}
+
+  - scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    {{- include "basic_relabeling_for_schema" (list . "https") | nindent 4 }}
+
+  selector: {}
+  namespaceSelector:
+    any: true
 {{- end }}

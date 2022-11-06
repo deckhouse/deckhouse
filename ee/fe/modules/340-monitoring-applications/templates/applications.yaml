@@ -1,0 +1,19 @@
+{{- $context := . }}
+{{- range $application := .Values.monitoringApplications.internal.enabledApplicationsSummary }}
+  {{ $appfolder := printf "applications/%s" $application }}
+
+  {{ $dashboardsfolder := printf "%s/grafana-dashboards" $appfolder }}
+  {{- range $path, $_ := $context.Files.Glob (print $dashboardsfolder "/*.json") }}
+    {{- $resourceName := (regexReplaceAllLiteral "\\.json$" $path "") }}
+    {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
+    {{- $resourceName = (index ($resourceName | splitList "/") (len ($resourceName | splitList "/") | add -1)) }}
+    {{- $resourceName = (printf "applications-%s" $resourceName) }}
+
+    {{- $definition := ($context.Files.Get $path) }}
+
+    {{- include "helm_lib_single_dashboard" (list $context $resourceName "Applications" $definition) }}
+  {{- end }}
+
+  {{ $rulesfolder := printf "%s/prometheus-rules" $appfolder }}
+  {{- include "helm_lib_prometheus_rules_recursion" (list $context "d8-monitoring" $rulesfolder) }}
+{{- end }}

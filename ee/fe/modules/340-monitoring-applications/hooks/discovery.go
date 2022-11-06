@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -14,29 +15,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-// TODO(nabokihms): think about how to avoid hardcode there
-var allowedApplications = set.New(
-	"consul",
-	"elasticsearch",
-	"etcd3",
-	"fluentd",
-	"memcached",
-	"minio",
-	"mongodb",
-	"nats",
-	"nginx",
-	"php-fpm",
-	"prometheus",
-	"rabbitmq",
-	"redis",
-	"sidekiq",
-	"trickster",
-	"grafana",
-	"uwsgi",
-)
+func getAllowedApplications() (set.Set, error) {
+	res, err := filepath.Glob("../applications/*")
+	if err != nil {
+		return nil, err
+	}
+
+	apps := set.New()
+	for _, match := range res {
+		apps.Add(filepath.Base(match))
+	}
+
+	return apps, nil
+}
 
 func nameFromService(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
@@ -92,17 +87,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func discoverApps(input *go_hook.HookInput) error {
 	const (
+		allowedApplicationsPath        = "monitoringApplications.internal.allowedApplications"
 		enabledApplicationsSummaryPath = "monitoringApplications.internal.enabledApplicationsSummary"
 		enabledApplicationsPath        = "monitoringApplications.enabledApplications"
 	)
 
-	enabledApps := set.NewFromSnapshot(input.Snapshots["service-old"])
+	allowedApplications, err := getAllowedApplications()
+	if err != nil {
+		return err
+	}
+	input.Values.Set(allowedApplicationsPath, allowedApplications.Slice())
 
+	enabledApps := set.NewFromSnapshot(input.Snapshots["service-old"])
 	input.MetricsCollector.Set("d8_monitoring_applications_old_prometheus_target_total", float64(len(enabledApps)), nil)
 
 	enabledApps.
 		AddSet(set.NewFromSnapshot(input.Snapshots["service"])).
 		AddSet(set.NewFromValues(input.Values, enabledApplicationsPath))
+
+	// Add dashboards for default applications to the cluster
+	if module.IsEnabled("prometheus", input) {
+		enabledApps.Add("prometheus")
+	}
 
 	enabledApps = enabledApps.Intersection(allowedApplications)
 

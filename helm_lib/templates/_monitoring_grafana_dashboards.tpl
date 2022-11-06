@@ -4,8 +4,10 @@
 {{- define "helm_lib_grafana_dashboard_definitions_recursion" -}}
   {{- $context := index . 0 }}
   {{- $rootDir := index . 1 }}
+
   {{- $currentDir := "" }}
   {{- if gt (len .) 2 }} {{- $currentDir = index . 2 }} {{- else }} {{- $currentDir = $rootDir }} {{- end }}
+
   {{- $currentDirIndex := (sub ($currentDir | splitList "/" | len) 1) }}
   {{- $rootDirIndex := (sub ($rootDir | splitList "/" | len) 1) }}
   {{- $folderNamesIndex := (add1 $rootDirIndex) }}
@@ -19,17 +21,8 @@
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
     {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
----
-apiVersion: deckhouse.io/v1
-kind: GrafanaDashboardDefinition
-metadata:
-  name: d8-{{ $resourceName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | nindent 2 }}
-spec:
-  folder: "{{ $folder }}"
-  definition: |
-    {{- $definition | nindent 4 }}
 
+{{ include "helm_lib_single_dashboard" (list $context $resourceName $folder $definition) }}
   {{- end }}
 
   {{- $subDirs := list }}
@@ -51,4 +44,24 @@ spec:
   {{- if ( $context.Values.global.enabledModules | has "prometheus-crd" ) }}
 {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards") }}
   {{- end }}
+{{- end }}
+
+
+{{- /* Usage: {{ include "helm_lib_single_dashboard" (list . "dashboard-name" "folder" $dashboard) }} */ -}}
+{{- /* renders a single dashboard */ -}}
+{{- define "helm_lib_single_dashboard" -}}
+  {{- $context := index . 0 }}
+  {{- $resourceName := index . 1 }}
+  {{- $folder := index . 2 }}
+  {{- $definition := index . 3 }}
+---
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  name: d8-{{ $resourceName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | nindent 2 }}
+spec:
+  folder: "{{ $folder }}"
+  definition: |
+    {{- $definition | nindent 4 }}
 {{- end }}
