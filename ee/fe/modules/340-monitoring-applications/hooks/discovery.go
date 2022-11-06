@@ -8,7 +8,6 @@ package hooks
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -21,16 +20,14 @@ import (
 )
 
 func getAllowedApplications() (set.Set, error) {
-	appsFolder := "../applications/"
-
-	res, err := filepath.Glob(appsFolder + "*")
+	res, err := filepath.Glob("../applications/*")
 	if err != nil {
 		return nil, err
 	}
 
 	apps := set.New()
 	for _, match := range res {
-		apps.Add(strings.TrimPrefix(match, appsFolder))
+		apps.Add(filepath.Base(match))
 	}
 
 	return apps, nil

@@ -28,9 +28,9 @@
   regex: "https-metrics"
   action: drop
 - sourceLabels:
-    - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
-    - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
-    - __meta_kubernetes_endpoint_port_name
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
+  - __meta_kubernetes_endpoint_port_name
   regex: "^true;;(.*)|;;http-metrics$"
   action: keep
 
@@ -40,9 +40,9 @@
   regex: "http-metrics"
   action: drop
 - sourceLabels:
-    - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
-    - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
-    - __meta_kubernetes_endpoint_port_name
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_service_annotationpresent_prometheus_deckhouse_io_tls
+  - __meta_kubernetes_endpoint_port_name
   regex: "^true;true;(.*)|;;https-metrics$"
   action: keep
   {{ end }}
