@@ -23,10 +23,10 @@ To avoid this, this patch makes refresh requests to declare and utilize their ow
 
 There is a bug in Dex that it saves connector data to the refresh token object and reads it first then the date from offline session.
 
-Upstream PR - https://github.com/dexidp/dex/pull/2729
+Upstream PR - https://github.com/dexidp/dex/pull/2729.
 
 ### OIDC RootCA and InsecureSkipVerify
 
-Allows OIDC connector to works with providers using self-signed certificates.
+Allows OIDC connector to work with providers using self-signed certificates.
 
-Upstream PR that should fix the problem in general - https://github.com/dexidp/dex/pull/1632
+Upstream PR that should fix the problem in general - https://github.com/dexidp/dex/pull/1632.

@@ -168,7 +168,7 @@
         {{- end }}
         {{- if $provider.oidc.rootCAData }}
         rootCAs:
-        - {{ $provider.ldap.rootCAData | quote }}
+        - {{ $provider.oidc.rootCAData | quote }}
         {{- end }}
       {{- end }}
 

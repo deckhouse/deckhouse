@@ -260,7 +260,7 @@ spec:
                     rootCAData:
                       type: string
                       description: |
-                        A raw certificate file can also be provided inline.
+                        A CA chain to validate the provider in PEM format.
                       x-doc-example: |
                         ```
                         -----BEGIN CERTIFICATE-----
@@ -271,7 +271,7 @@ spec:
                       type: boolean
                       default: false
                       description: |
-                        If a custom certificate isn't provided, this option can be used to turn on
+                        If a custom certificate isn't provided, this option can be used to turn off
                         TLS certificate checks. As noted, it is insecure and shouldn't be used outside
                         of explorative phases.
                 ldap: &ldap
@@ -310,7 +310,7 @@ spec:
                     rootCAData:
                       type: string
                       description: |
-                        A raw certificate file can also be provided inline.
+                        A CA chain to validate the provider in PEM format.
                       x-doc-example: |
                         ```
                         -----BEGIN CERTIFICATE-----
@@ -321,7 +321,7 @@ spec:
                       type: boolean
                       default: false
                       description: |
-                        If a custom certificate isn't provided, this option can be used to turn on
+                        If a custom certificate isn't provided, this option can be used to turn off
                         TLS certificate checks. As noted, it is insecure and shouldn't be used outside
                         of explorative phases.
                     bindDN:
