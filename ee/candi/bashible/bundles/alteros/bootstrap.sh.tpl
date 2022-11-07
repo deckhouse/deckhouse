@@ -4,9 +4,6 @@
 */}}
 #!/bin/bash
 export LANG=C
-
-. /etc/os-release
-
 until yum install nc curl wget -y; do
   echo "Error installing packages"
   sleep 10

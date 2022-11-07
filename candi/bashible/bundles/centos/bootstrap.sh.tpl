@@ -155,9 +155,6 @@ bb-rp-install() {
 */}}
 export PATH="/usr/local/bin:$PATH"
 export LANG=C
-
-. /etc/os-release
-
 until yum install nc curl wget -y; do
   echo "Error installing packages"
   sleep 10
