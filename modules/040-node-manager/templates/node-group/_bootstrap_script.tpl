@@ -8,7 +8,7 @@ bootstrap_job_log_pid=""
   {{- if eq .nodeGroup.nodeType "CloudEphemeral" }}
     {{- /*
 # Put bootstrap log information to Machine resource status
-    */ }}
+    */}}
 patch_pending=true
 output_log_port=8000
 while [ "$patch_pending" = true ] ; do
@@ -43,7 +43,7 @@ done
 
     {{- /*
 # Start output bootstrap logs
-    */ }}
+    */}}
 if type socat >/dev/null 2>&1; then
   socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
   bootstrap_job_log_pid=$!
@@ -58,7 +58,7 @@ fi
 
     {{- /*
 # Bashible first run
-    */ }}
+    */}}
 until /var/lib/bashible/bashible.sh; do
   echo "Error running bashible script. Retry in 10 seconds."
   sleep 10
@@ -66,7 +66,7 @@ done;
 
     {{- /*
 # Stop output bootstrap logs
-    */ }}
+    */}}
 if [ -n "${bootstrap_job_log_pid-}" ] && kill -s 0 "${bootstrap_job_log_pid-}" 2>/dev/null; then
   kill -9 "${bootstrap_job_log_pid-}"
 fi
@@ -147,22 +147,22 @@ mkdir -p $BOOTSTRAP_DIR
 
   {{- /*
 # Directory contains sensitive information
-  */ }}
+  */}}
 chmod 0700 $BOOTSTRAP_DIR
 
   {{- /*
 # Detect bundle
-  */ }}
+  */}}
 BUNDLE="$(detect_bundle)"
 
   {{- /*
 # Install necessary packages. Not in cloud config because cloud init do not retry installation and silently fails.
-  */ }}
+  */}}
 basic_bootstrap_${BUNDLE}
 
   {{- /*
 # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
-  */ }}
+  */}}
 if [[ -f $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh ]] ; then
   until $BOOTSTRAP_DIR/cloud-provider-bootstrap-networks.sh; do
     >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
@@ -180,11 +180,11 @@ fi
   {{- $context := . }}
   {{- /*
 # IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
-  */ }}
+  */}}
 export PATH="/usr/local/bin:$PATH"
   {{- /*
 # Get bashible script from secret
-  */ }}
+  */}}
 get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 {{- end }}
