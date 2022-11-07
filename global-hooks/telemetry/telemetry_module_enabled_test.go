@@ -17,11 +17,10 @@ package telemetry
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
