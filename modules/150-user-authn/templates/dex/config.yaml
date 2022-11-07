@@ -163,6 +163,13 @@
         {{- if $provider.oidc.promptType }}
         promptType: {{ $provider.oidc.promptType | quote }}
         {{- end }}
+        {{- if $provider.oidc.insecureSkipVerify }}
+        insecureSkipVerify: true
+        {{- end }}
+        {{- if $provider.oidc.rootCAData }}
+        rootCAs:
+        - {{ $provider.oidc.rootCAData | quote }}
+        {{- end }}
       {{- end }}
 
       {{- if eq $provider.type "Crowd" }}

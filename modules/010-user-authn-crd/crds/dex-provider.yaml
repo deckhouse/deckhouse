@@ -257,6 +257,23 @@ spec:
                         Determines if the Issuer should ask for confirmation and provide hints during the authentication process.
 
                         By default, the confirmation will be requested on the first authentication. Possible values may vary depending on the Issuer.
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-example: |
+                        ```
+                        -----BEGIN CERTIFICATE-----
+                        MIIFaDC...
+                        -----END CERTIFICATE-----
+                        ```
+                    insecureSkipVerify:
+                      type: boolean
+                      default: false
+                      description: |
+                        If a custom certificate isn't provided, this option can be used to turn off
+                        TLS certificate checks. As noted, it is insecure and shouldn't be used outside
+                        of explorative phases.
                 ldap: &ldap
                   type: object
                   required: ['host', 'userSearch']
@@ -293,7 +310,7 @@ spec:
                     rootCAData:
                       type: string
                       description: |
-                        A raw certificate file can also be provided inline.
+                        A CA chain to validate the provider in PEM format.
                       x-doc-example: |
                         ```
                         -----BEGIN CERTIFICATE-----
@@ -304,7 +321,7 @@ spec:
                       type: boolean
                       default: false
                       description: |
-                        If a custom certificate isn't provided, this option can be used to turn on
+                        If a custom certificate isn't provided, this option can be used to turn off
                         TLS certificate checks. As noted, it is insecure and shouldn't be used outside
                         of explorative phases.
                     bindDN:
