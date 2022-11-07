@@ -136,7 +136,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		notExpireMetrics := 0
 		for _, m := range metrics {
 			if m.Action != "expire" {
-				notExpireMetrics += 1
+				notExpireMetrics++
 			}
 		}
 

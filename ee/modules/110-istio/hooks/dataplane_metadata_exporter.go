@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -20,6 +18,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 const (

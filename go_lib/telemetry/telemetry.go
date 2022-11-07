@@ -89,7 +89,7 @@ func (m *metricsCollector) opts(opts ...Options) []metrics.Option {
 		}
 	}
 
-	return make([]metrics.Option, 0, 0)
+	return make([]metrics.Option, 0)
 }
 
 func (m *metricsCollector) name(n string) string {

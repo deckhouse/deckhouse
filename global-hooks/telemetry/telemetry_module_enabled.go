@@ -25,7 +25,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterAll: &go_hook.OrderedConfig{Order: float64(1000)},
+	OnAfterAll:   &go_hook.OrderedConfig{Order: float64(1000)},
+	AllowFailure: true,
 }, setTelemetry)
 
 func setTelemetry(input *go_hook.HookInput) error {

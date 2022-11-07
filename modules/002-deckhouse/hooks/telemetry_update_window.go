@@ -20,13 +20,21 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 
-	hook "github.com/deckhouse/deckhouse/go_lib/hooks/telemetry"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
-var _ = hook.RegisterHook(func(input *go_hook.HookInput, telemetryCollector telemetry.MetricsCollector) error {
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 1000},
+	// telemetry should not block Deckhouse
+	AllowFailure: true,
+}, updateWindowTelemetry)
+
+func updateWindowTelemetry(input *go_hook.HookInput) error {
+	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
+
 	h, err := newWindowTelemetryHook(input, telemetryCollector)
 	if err != nil {
 		return err
@@ -35,7 +43,7 @@ var _ = hook.RegisterHook(func(input *go_hook.HookInput, telemetryCollector tele
 	h.setUpdateModeMetrics()
 
 	return h.setWindowsMetrics()
-})
+}
 
 type windowTelemetryHook struct {
 	approvalMode string
