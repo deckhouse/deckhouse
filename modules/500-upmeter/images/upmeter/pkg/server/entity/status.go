@@ -99,7 +99,8 @@ func Statuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRan
 	return statuses, nil
 }
 
-/**
+/*
+*
 calculateStatuses returns arrays of EpisodeSummary objects for each group and probe.
 Each EpisodeSummary object is combined from Episodes for a step range.
 
@@ -109,16 +110,17 @@ Returned structure is map[group][probe][dataByTime]
 
 Example output:
 aGroup:
-  aProbe:
-  - timeslot: 0
-    up: 300
-    down: 0
-  - timeslot: 300
-    up: 300
-    down: 0
-  - timeslot: 900
-    up: 300
-    down: 0
+
+	aProbe:
+	- timeslot: 0
+	  up: 300
+	  down: 0
+	- timeslot: 300
+	  up: 300
+	  down: 0
+	- timeslot: 900
+	  up: 300
+	  down: 0
 */
 func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce

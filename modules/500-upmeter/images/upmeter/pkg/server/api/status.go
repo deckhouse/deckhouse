@@ -138,11 +138,10 @@ func getStatus(dbctx *dbcontext.DbContext, monitor *downtime.Monitor, filter *st
 	}
 
 	resp := &StatusResponse{
-		Statuses: statuses,
-		Step:     rng.Step,
-		From:     rng.From,
-		To:       rng.To,
-		// Episodes:  episodes, // To much data, only for debug.
+		Statuses:  statuses,
+		Step:      rng.Step,
+		From:      rng.From,
+		To:        rng.To,
 		Incidents: incidents,
 	}
 
