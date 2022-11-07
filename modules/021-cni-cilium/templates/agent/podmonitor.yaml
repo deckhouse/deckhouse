@@ -21,7 +21,7 @@ spec:
     - targetLabel: tier
       replacement: cluster
     - targetLabel: job
-      replacement: "cilium-operator"
+      replacement: "cilium-agent"
   selector:
     matchLabels:
       app: agent
