@@ -11,6 +11,9 @@ osDistributions:
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
+  rocky:
+    name: Rocky Linux
+    url: https://rockylinux.org/download
   alteros:
     name: AlterOS
     url: https://alter-os.ru/
