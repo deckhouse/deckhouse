@@ -19,6 +19,20 @@ positive:
           cpu:
             max: 2
             min: 0.2
+    - resourcesRequests:
+        mode: "VPA"
+        vpa:
+          memory:
+            max: 1.5Gi
+            min: 2.0Ki
+          cpu:
+            max: 2
+            min: 0.2
+    - resourcesRequests:
+        mode: "Static"
+        static:
+          memory: 1.5Gi
+          cpu: 0.2
   values:
     - internal: {}
 negative:
@@ -36,5 +50,11 @@ negative:
           cpu:
             max: "512cpu"
             min: "16Mi"
+    - resourcesRequests:
+        mode: "VPA"
+        vpa:
+          memory:
+            max: "1Hi"
+            min: "1.Mi"
   values:
     - somethingInConfig: yes

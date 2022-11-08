@@ -63,7 +63,7 @@ properties:
         x-examples: ["3Mi"]
         oneOf:
           - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         description: |
           Memory requests.

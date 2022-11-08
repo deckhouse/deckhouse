@@ -287,7 +287,7 @@ spec:
                                 Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                               x-kubernetes-int-or-string: true
                     classReference:
                       description: |
@@ -911,7 +911,7 @@ spec:
                                 Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                               x-kubernetes-int-or-string: true
                     classReference:
                       description: |
@@ -1518,7 +1518,7 @@ spec:
                                 Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                               x-kubernetes-int-or-string: true
                     classReference:
                       description: |
