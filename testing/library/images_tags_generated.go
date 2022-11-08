@@ -96,6 +96,7 @@ var DefaultImagesTags = map[string]interface{}{
 	},
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
+		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher120":    "imageHash-common-csiExternalAttacher120",
 		"csiExternalAttacher121":    "imageHash-common-csiExternalAttacher121",
 		"csiExternalAttacher122":    "imageHash-common-csiExternalAttacher122",
