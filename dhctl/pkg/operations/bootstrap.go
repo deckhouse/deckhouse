@@ -60,7 +60,7 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			err := log.Process("default", bootstrapScript, func() error {
 				if _, err := os.Stat(scriptPath); err != nil {
 					if os.IsNotExist(err) {
-						log.InfoF("Script %s doesn't found\n", scriptPath)
+						log.InfoF("Script %s wasn't found\n", scriptPath)
 						return nil
 					}
 					return fmt.Errorf("script path: %v", err)
