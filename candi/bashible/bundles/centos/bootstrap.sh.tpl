@@ -1,4 +1,4 @@
-{{- /*
+x{{- /*
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,8 +78,12 @@ bb-rp-get-token() {
   fi
 
   AUTH_HEADER="$(curl --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
-  AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
-  AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
+  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\-\/:]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
+  AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2)"
+  if [ -z ${AUTH_REALM} ]; then
+    >&2 echo "cannot parse registry auth header ${AUTH_HEADER}"
+    return 1
+  fi
 {{- /*
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
 */}}
