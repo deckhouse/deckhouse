@@ -30,4 +30,7 @@
   env:
   - name: KERNEL_CONSTRAINT
     value: {{ $semver_constraint | quote }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 6 }}
 {{- end }}
