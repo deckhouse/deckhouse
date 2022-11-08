@@ -51,8 +51,9 @@ COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
-COPY patches/nginx-tpl.patch /
+COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
+COPY patches/nginx-tmpl-backport-from-1-2.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -104,8 +105,9 @@ RUN apk update \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tpl.patch \
-  && patch -p1 < /auth-cookie-always.patch
+  && patch -p1 < /nginx-tmpl.patch \
+  && patch -p1 < /auth-cookie-always.patch \
+  && patch -p1 < /nginx-tmpl-backport-from-1-2.patch
 WORKDIR /
 USER www-data
 EXPOSE 80 443
