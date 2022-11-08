@@ -1055,6 +1055,10 @@ entries:
                 ru: Описание
               url: /modules/380-metallb/
             - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/380-metallb/usage.html
+            - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/380-metallb/configuration.html

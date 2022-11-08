@@ -4,29 +4,6 @@ title: "Модуль ingress-nginx: пример конфигурации"
 
 {% raw %}
 
-## Общий пример
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: nginx
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-  resourcesRequests:
-    mode: VPA
-    vpa:
-      mode: Auto
-      cpu:
-        max: 100m
-      memory:
-        max: 200Mi
-```
-
 ## Пример для AWS (Network Load Balancer)
 
 При создании балансера будут использованы все доступные в кластере зоны.
@@ -50,7 +27,7 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-## Пример для GCP
+## Пример для GCP / Yandex Cloud / Azure
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -78,7 +55,7 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
-## Пример для Bare metal (Host Ports)
+## Пример для Bare metal
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -96,7 +73,25 @@ spec:
     value: frontend
 ```
 
+## Пример для Bare metal (При использовании внешнего балансировщик, например Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и др.)
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    behindL7Proxy: true
+```
+
 ## Пример для Bare metal (MetalLB Load Balancer)
+
+Модуль `metallb` на текущий момент доступен только в редакции Enterprise Edition Deckhouse.
 
 ```yaml
 apiVersion: deckhouse.io/v1
