@@ -78,8 +78,10 @@ negative:
 
   # Cases with absent keys required for Helm.
   helmValues:
-  # No requried fields.
+  # No required fields.
+  # TODO: empty adapterCert is added as a workaround. Remove after cleaning 'default:{}' in values.yaml.
   - internal:
+      adapterCert: {}
       customMetrics:
         daemonset: { }
         deployment: { }

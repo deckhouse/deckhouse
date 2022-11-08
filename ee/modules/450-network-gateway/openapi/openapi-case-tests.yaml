@@ -10,7 +10,11 @@ positive:
         search:
           - office.example.com
   values:
-    - internal:
+    - nodeSelector:
+        type: network-gateway
+      subnet: "192.168.43.0/24"
+      publicAddress: "10.220.243.240"
+      internal:
         effectiveStorageClass: 'test'
 negative:
   configValues:

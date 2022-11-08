@@ -20,11 +20,12 @@ negative:
   configValues:
   - logLevel: FooBar
     bundle: Default
-  - update:
-      mode: Manual
-      windows:
-        - from: '8:00'
-          to: '13:00'
+# TODO oneOf is deleted in values.yaml, this case is positive now.
+#  - update:
+#      mode: Manual
+#      windows:
+#        - from: '8:00'
+#          to: '13:00'
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev??sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
