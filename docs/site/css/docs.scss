@@ -220,9 +220,6 @@
 .layout-sidebar__content {
     width: calc(1000px - 260px - 40px);
     flex: 1;
-    @media (min-width: 1441px) {
-        width: calc(1400px - 260px - 40px);
-    }
 }
 
 .sidebar {
