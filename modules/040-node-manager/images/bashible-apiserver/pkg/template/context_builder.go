@@ -146,10 +146,13 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
+			PodSubnetCIDR:      cb.clusterInputData.PodSubnetCIDR,
+			ServiceSubnetCIDR:  cb.clusterInputData.ServiceSubnetCIDR,
 		},
 		Registry:      cb.registryData,
 		Images:        cb.imagesTags,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		ModulesProxy:  cb.clusterInputData.ModulesProxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -449,6 +452,8 @@ type tplContextCommon struct {
 	Registry registry                     `json:"registry" yaml:"registry"`
 
 	PackagesProxy interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+
+	ModulesProxy interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -480,6 +485,8 @@ type normal struct {
 	ClusterDNSAddress  string   `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	ApiserverEndpoints []string `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string   `json:"kubernetesCA" yaml:"kubernetesCA"`
+	PodSubnetCIDR      string   `json:"podSubnetCIDR" yaml:"podSubnetCIDR"`
+	ServiceSubnetCIDR  string   `json:"serviceSubnetCIDR" yaml:"serviceSubnetCIDR"`
 }
 
 type registry struct {
@@ -510,9 +517,12 @@ type dockerCfg struct {
 
 type inputData struct {
 	ClusterDomain             string      `json:"clusterDomain" yaml:"clusterDomain"`
+	PodSubnetCIDR             string      `json:"podSubnetCIDR" yaml:"podSubnetCIDR"`
+	ServiceSubnetCIDR         string      `json:"serviceSubnetCIDR" yaml:"serviceSubnetCIDR"`
 	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	ModulesProxy              interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 	APIServerEndpoints        []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string      `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string    `json:"allowedBundles" yaml:"allowedBundles"`

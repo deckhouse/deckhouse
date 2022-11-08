@@ -123,6 +123,9 @@ spec:
 {{- define "bashible_input_data" }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
+    podSubnetCIDR: {{ $.Values.global.discovery.podSubnet | toYaml }}
+    serviceSubnetCIDR: {{ $.Values.global.discovery.serviceSubnet | toYaml }}
+
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
     cloudProvider:
       {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
@@ -131,6 +134,10 @@ spec:
     packagesProxy:
       {{- $.Values.global.clusterConfiguration.packagesProxy | toYaml | nindent 6 }}
     {{- end }}
+  {{- if hasKey $.Values.global.modules "proxy" }}
+    modulesProxy:
+      {{- $.Values.global.modules.proxy | toYaml | nindent 6 }}
+  {{- end }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}
