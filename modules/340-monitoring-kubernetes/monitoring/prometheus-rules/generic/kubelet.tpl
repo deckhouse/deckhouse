@@ -12,9 +12,9 @@
         or has set itself to NotReady, for more than 10 minutes
       summary: Node status is NotReady
   - alert: K8SManyNodesNotReady
-    expr: count(kube_node_status_condition{condition="Ready",status="true"} == 0)
-      > 1 and (count(kube_node_status_condition{condition="Ready",status="true"} ==
-      0) / count(kube_node_status_condition{condition="Ready",status="true"})) > 0.2
+    expr: count(kube_node_status_condition{condition="Ready",status="true"} == 0 and kube_node_spec_unschedulable == 0)
+      > 1 and (count(kube_node_status_condition{condition="Ready",status="true"} == 0 and kube_node_spec_unschedulable == 0) /
+      count(kube_node_status_condition{condition="Ready",status="true"})) > 0.2
     for: 1m
     labels:
       severity_level: "3"
