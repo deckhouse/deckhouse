@@ -98,8 +98,12 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-{{- if not .Values.openvpn.internal.migrated }}
+{{- if or (not .Values.openvpn.internal.migrated) (.Values.global.enabledModules | has "cni-cilium") }}
       initContainers:
+  {{- if (.Values.global.enabledModules | has "cni-cilium") }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
+  {{- end }}
+  {{- if not .Values.openvpn.internal.migrated }}
       - name: migration
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "easyrsaMigrator") }}
@@ -110,10 +114,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "openvpn_migration_resources" . | nindent 12 }}
+    {{- end }}
   {{- end }}
-
 {{- end }}
       containers:
 # sync-ccd
