@@ -38,6 +38,10 @@ func main() {
 	utsname := unix.Utsname{}
 	unix.Uname(&utsname)
 	kernelVersion := string(utsname.Release[:])
+	/* Kernel version should be splitted to parts because versions `5.15.0-52-generic`
+	parses by semver as prerelease version. Prerelease versions by default come before stable versions
+	in the order of precedence, so in semver terms `5.15.0-52-generic` less than `5.15`.
+	More info - https://github.com/Masterminds/semver#working-with-prerelease-versions */
 	v, err := semver.NewVersion(strings.Split(kernelVersion, "-")[0])
 	if err != nil {
 		log.Fatal(err)

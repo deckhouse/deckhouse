@@ -98,7 +98,10 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	/* Kernel version should be splitted to parts because versions `5.15.0-52-generic`
+	parses by semver as prerelease version. Prerelease versions by default come before stable versions
+	in the order of precedence, so in semver terms `5.15.0-52-generic` less than `5.15`.
+	More info - https://github.com/Masterminds/semver#working-with-prerelease-versions */
 	v, err := semver.NewVersion(strings.Split(node.Status.NodeInfo.KernelVersion, "-")[0])
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse kernel version %s for node %s: %v", node.Status.NodeInfo.KernelVersion, node.Name, err)
