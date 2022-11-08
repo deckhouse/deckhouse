@@ -19,25 +19,6 @@
         ```
       summary: MetalLB config not loaded.
 
-  - alert: D8MetalLBAddressPoolUsage80Percent
-    expr: ( metallb_allocator_addresses_in_use_total / on(pool) metallb_allocator_addresses_total ) * 100 > 80
-    for: 5m
-    labels:
-      severity_level: "9"
-      tier: cluster
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBAddressPoolUsage80Percent,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_metallb_failed: D8MetalLBAddressPoolUsage80Percent,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has address pool {{ $labels.pool }} past 80% usage. Consider extending `addressPools` array.
-        Details are in logs:
-        ```
-        kubectl -n d8-metallb logs deploy/controller -c controller
-        ```
-      summary: MetalLB address pool usage > 80%.
-
   - alert: D8MetalLBBGPSessionDown
     expr: metallb_bgp_session_up == 0
     for: 5m
