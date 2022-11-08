@@ -23,7 +23,7 @@ HTTPS_PROXY={{ .modulesProxy.httpsProxy | quote }}
 
   {{- $noProxy := list "169.254.169.254" .normal.clusterDomain .normal.podSubnetCIDR .normal.serviceSubnetCIDR }}
   {{- if .modulesProxy.noProxy }}
-    {{- $noProxy = concat $noProxy $context.Values.global.modules.proxy.noProxy }}
+    {{- $noProxy = concat $noProxy modulesProxy.noProxy }}
 NO_PROXY={{ $noProxy | join "," | quote }}
   {{- end }}
 
