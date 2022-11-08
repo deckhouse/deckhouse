@@ -368,7 +368,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -425,7 +424,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -721,7 +719,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -778,7 +775,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1074,7 +1070,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1131,7 +1126,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1427,7 +1421,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1484,7 +1477,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1780,7 +1772,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1837,7 +1828,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -2133,7 +2123,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2190,7 +2179,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2486,7 +2474,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2543,7 +2530,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2839,7 +2825,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2896,7 +2881,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3192,7 +3176,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3249,7 +3232,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3545,7 +3527,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3602,7 +3583,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd

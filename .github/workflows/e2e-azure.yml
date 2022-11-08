@@ -368,7 +368,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Docker/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -427,7 +426,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -725,7 +723,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Docker/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -784,7 +781,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1082,7 +1078,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Docker/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1141,7 +1136,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1439,7 +1433,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Docker/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1498,7 +1491,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1796,7 +1788,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Docker/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -1855,7 +1846,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Docker
@@ -2153,7 +2143,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -2212,7 +2201,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -2510,7 +2498,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -2569,7 +2556,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -2867,7 +2853,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -2926,7 +2911,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -3224,7 +3208,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -3283,7 +3266,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -3581,7 +3563,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -3640,7 +3621,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd

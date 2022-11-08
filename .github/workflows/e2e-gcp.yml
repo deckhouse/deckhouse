@@ -368,7 +368,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Docker/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -421,7 +420,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -713,7 +711,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Docker/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -766,7 +763,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1058,7 +1054,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Docker/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1111,7 +1106,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1403,7 +1397,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Docker/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1456,7 +1449,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1748,7 +1740,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Docker/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -1801,7 +1792,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Docker
@@ -2093,7 +2083,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.20"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -2146,7 +2135,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -2438,7 +2426,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -2491,7 +2478,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -2783,7 +2769,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.22"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -2836,7 +2821,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -3128,7 +3112,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.23"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -3181,7 +3164,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -3473,7 +3455,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.24"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -3526,7 +3507,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd

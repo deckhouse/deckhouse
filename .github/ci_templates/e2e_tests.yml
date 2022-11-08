@@ -298,7 +298,6 @@ check_e2e_labels:
         echo '::echo::off'
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
-      timeout-minutes: 60
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
@@ -315,7 +314,6 @@ check_e2e_labels:
 
     - name: Cleanup bootstrapped cluster
       if: always()
-      timeout-minutes: 60
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}

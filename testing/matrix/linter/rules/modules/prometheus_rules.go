@@ -38,8 +38,6 @@ type rulesCacheStruct struct {
 	mu    sync.RWMutex
 }
 
-const promtoolPath = "/deckhouse/bin/promtool"
-
 var rulesCache = rulesCacheStruct{
 	cache: make(map[string]checkResult),
 	mu:    sync.RWMutex{},
@@ -61,8 +59,9 @@ func (r *rulesCacheStruct) Get(hash string) (checkResult, bool) {
 }
 
 func PromtoolAvailable() bool {
-	info, err := os.Stat(promtoolPath)
-	return err == nil && (info.Mode().Perm()&0111 != 0)
+	promtoolPath, err := exec.LookPath("promtool")
+	info, err2 := os.Stat(promtoolPath)
+	return err == nil && err2 == nil && (info.Mode().Perm()&0111 != 0)
 }
 
 func marshalChartYaml(object storage.StoreObject) ([]byte, error) {
@@ -91,7 +90,7 @@ func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path st
 }
 
 func checkRuleFile(path string) error {
-	promtoolComand := exec.Command(promtoolPath, "check", "rules", path)
+	promtoolComand := exec.Command("promtool", "check", "rules", path)
 	_, err := promtoolComand.Output()
 	return err
 }

@@ -288,7 +288,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: AWS/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -343,7 +342,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -648,7 +646,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Azure/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -707,7 +704,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Azure
           CRI: Containerd
@@ -1016,7 +1012,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: GCP/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -1069,7 +1064,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: GCP
           CRI: Containerd
@@ -1372,7 +1366,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -1429,7 +1422,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -1736,7 +1728,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: OpenStack/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: OpenStack
           CRI: Containerd
@@ -1789,7 +1780,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: OpenStack
           CRI: Containerd
@@ -2092,7 +2082,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: vSphere/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2147,7 +2136,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2452,7 +2440,6 @@ jobs:
           echo '::echo::off'
 
       - name: "Run e2e test: Static/Containerd/1.21"
-        timeout-minutes: 60
         env:
           PROVIDER: Static
           CRI: Containerd
@@ -2505,7 +2492,6 @@ jobs:
 
       - name: Cleanup bootstrapped cluster
         if: always()
-        timeout-minutes: 60
         env:
           PROVIDER: Static
           CRI: Containerd
