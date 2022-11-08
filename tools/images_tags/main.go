@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -72,15 +73,27 @@ func main() {
 
 	tags := make(map[string]map[string]string)
 
-	// Run werf config render to get config file from which  we calculate images names
-	cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
-	cmd.Dir = path.Join("..")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println(string(out))
-		panic(err)
+	var out []byte
+	var err error
+
+	renderedWerfConfig := os.Getenv("RENDERED_WERF_CONFIG")
+	if renderedWerfConfig != "" {
+		// Rendered werf config specified, use it without calling werf
+		out, err = ioutil.ReadFile(renderedWerfConfig)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// Run werf config render to get config file from which we calculate images names
+		cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
+		cmd.Dir = path.Join("..")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println(string(out))
+			panic(err)
+		}
 	}
 
 	// Parse werf config and take images tags from it
