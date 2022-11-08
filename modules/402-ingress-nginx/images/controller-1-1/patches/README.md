@@ -35,7 +35,7 @@ https://github.com/kubernetes/ingress-nginx/pull/8213
 
 ### Nginx tmpl backport from 1.2
 
-Without this fix, redirects don't work if using behindL7Proxy controller and a load balancer without X-Forwarded-Proto header. They redirect to nil://example.com/abc.
+Without this fix, redirects don't work if using behindL7Proxy controller and a load balancer without X-Forwarded-Proto header. In this case, ingress-nginx redirects to nil://example.com/abc.
 Backported from 1.2 version.
 
 https://github.com/kubernetes/ingress-nginx/pull/8468
