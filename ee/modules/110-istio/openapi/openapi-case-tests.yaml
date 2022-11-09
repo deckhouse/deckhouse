@@ -9,6 +9,7 @@ positive:
     - controlPlane:
         resourcesManagement:
           static:
-            memory: "2G"
+            requests:
+              memory: "2G"
   values:
     - {}
