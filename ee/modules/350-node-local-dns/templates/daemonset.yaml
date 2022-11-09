@@ -49,6 +49,13 @@ spec:
   selector:
     matchLabels:
       app: node-local-dns
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+      maxSurge: 100%
+{{- end }}
   template:
     metadata:
       labels:
@@ -63,11 +70,6 @@ spec:
 {{- end }}
       serviceAccountName: d8-node-local-dns
 {{- if (.Values.global.enabledModules | has "cni-cilium") }}
-      updateStrategy:
-        type: RollingUpdate
-        rollingUpdate:
-          maxUnavailable: 100%
-          maxSurge: 100%
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
 {{- end }}
