@@ -39,16 +39,18 @@ type PublicStatusResponse struct {
 }
 
 type GroupStatus struct {
-	Group  string        `json:"group"`
-	Status PublicStatus  `json:"status"`
-	Probes []ProbeUptime `json:"probes"`
+	Group  string              `json:"group"`
+	Status PublicStatus        `json:"status"`
+	Probes []ProbeAvailability `json:"probes"`
 }
 
-type ProbeUptime struct {
+type ProbeAvailability struct {
 	// Probe is the name of the probe
 	Probe string `json:"probe"`
-	// Uptime is the uptime as a fraction of 1, i.e. it is in the range from 0 to 1
-	Uptime float64 `json:"uptime"`
+
+	// Availability is the ratio represented as a fraction of 1, i.e. it is from 0 to 1 and it must
+	// neve be negative
+	Availability float64 `json:"availability"`
 }
 
 type PublicStatus string
@@ -80,7 +82,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	statuses, status, err := h.getStatusSummary()
 	if err != nil {
-		log.Errorf("Cannot get current status: %v\n", err)
+		log.Errorf("Cannot get status summary: %v", err)
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
@@ -117,6 +119,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
+		// The group overall status
 		groupRef := check.ProbeRef{
 			Group: group,
 			Probe: dao.GroupAggregation,
@@ -140,7 +143,8 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 			return nil, StatusOutage, err
 		}
 
-		probeUptimes := make([]ProbeUptime, 0, len(resp.Statuses))
+		probeAvails := make([]ProbeAvailability, 0, len(resp.Statuses))
+		// Uptime per probe
 		for _, probeRef := range h.ProbeLister.Probes() {
 			if probeRef.Group != group {
 				// not so many probes in the list, so it is ok to iterate
@@ -163,16 +167,21 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 				log.Errorf("generating summary %s: %v", group, err)
 				return nil, StatusOutage, err
 			}
-			probeUptimes = append(probeUptimes, ProbeUptime{
-				Probe:  probeRef.Probe,
-				Uptime: calculateUptime(summary),
+
+			av := calculateAvailability(summary)
+			if av < 0 {
+				continue
+			}
+			probeAvails = append(probeAvails, ProbeAvailability{
+				Probe:        probeRef.Probe,
+				Availability: av,
 			})
 		}
 
 		gs := GroupStatus{
 			Group:  group,
 			Status: calculateStatus(summary),
-			Probes: probeUptimes,
+			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
 	}
@@ -181,14 +190,17 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	return groupStatuses, totalStatus, nil
 }
 
-func calculateUptime(summary []entity.EpisodeSummary) float64 {
-	var up, down, unknown float64
+// Negative availability means we have no valid data
+func calculateAvailability(summary []entity.EpisodeSummary) float64 {
+	var uptime, total float64
 	for _, s := range summary {
-		up += float64(s.Up)
-		down += float64(s.Down)
-		unknown += float64(s.Unknown)
+		uptime += float64(s.Up + s.Unknown)
+		total += float64(s.Up + s.Unknown + s.Down)
 	}
-	return (up + unknown) / (up + unknown + down)
+	if total == 0 {
+		return -1
+	}
+	return uptime / total
 }
 
 func threeStepRange(now time.Time) ranges.StepRange {
@@ -225,25 +237,27 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 // calculateStatus returns the status for a group.
 //
 // Input array should have 3 elements
-func calculateStatus(summary []entity.EpisodeSummary) PublicStatus {
+func calculateStatus(sums []entity.EpisodeSummary) PublicStatus {
 	slotSize := 5 * time.Minute
 
-	var prev, current entity.EpisodeSummary
-	if len(summary) == 2 || summary[2].NoData == slotSize {
-		prev, current = summary[0], summary[1]
+	var prev, cur entity.EpisodeSummary
+	if len(sums) == 2 || sums[2].NoData == slotSize {
+		// we actually have only two slots of data at most
+		prev, cur = sums[0], sums[1]
 	} else {
-		prev, current = summary[1], summary[2]
+		// ignore 1st slot
+		prev, cur = sums[1], sums[2]
 	}
 
 	// Ignore empty EpisodeSummary, i.e. when NoData equals slot size
-	if current.Down == 0 && prev.Down == 0 &&
-		(current.Up > 0 || (prev.Up > 0 && current.Up == 0 && current.NoData == slotSize)) {
+	if cur.Down == 0 && prev.Down == 0 &&
+		(cur.Up > 0 || (prev.Up > 0 && cur.Up == 0 && cur.NoData == slotSize)) {
 		return StatusOperational
 	}
 
-	if current.Up == 0 && current.Muted == 0 &&
+	if cur.Up == 0 && cur.Muted == 0 &&
 		prev.Up == 0 && prev.Muted == 0 &&
-		(current.Down > 0 || (prev.Down > 0 && current.Down == 0 && current.NoData == slotSize)) {
+		(cur.Down > 0 || (prev.Down > 0 && cur.Down == 0 && cur.NoData == slotSize)) {
 		return StatusOutage
 	}
 
