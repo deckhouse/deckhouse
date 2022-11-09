@@ -268,6 +268,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		// 	return err
 		// }
 
+		// 50%
 		standbyRequestCPU := resource.NewScaledQuantity(ngTemplateAllocatableCPU.ScaledValue(resource.Milli)/100*80, resource.Milli)
 		standbyRequestMemory := resource.NewScaledQuantity(ngTemplateAllocatableMemory.ScaledValue(resource.Milli)/100*80, resource.Milli)
 
