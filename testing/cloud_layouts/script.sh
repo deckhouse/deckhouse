@@ -539,17 +539,34 @@ function pause-the-test() {
 
 trap pause-the-test EXIT
 
+#
+# UPMETER AVAILABILITY SETUP
+#
+### Get the IP of upmeter server
 for ((i=0; i<10; i++)); do
-  smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
-  >&2 echo "Attempt to get Endpoints for smoke-mini #$i failed. Sleeping 30 seconds..."
+  upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') && break
+  >&2 echo "Attempt to get Endpoints for upmeter #$i failed. Sleeping 30 seconds..."
   sleep 30
 done
-
-if [[ -z "$smoke_mini_addr" ]]; then
-  >&2 echo "Couldn't get smoke-mini's address from Endpoints in 5 minutes."
+if [[ -z "$upmeter_addr" ]]; then
+  >&2 echo "Couldn't get upmeter address from Endpoints in 5 minutes."
   exit 1
 fi
 
+### Get access token of upmeter agent to make requests to upmeter server
+for ((i=0; i<10; i++)); do
+  upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" && break
+  >&2 echo "Attempt to get Upmeter SA auth token #$i failed. Sleeping 30 seconds..."
+  sleep 30
+done
+if [[ -z "$upmeter_auth_token" ]]; then
+  >&2 echo "Couldn't get Upmeter SA auth token upmeter-agent Pod."
+  exit 1
+fi
+
+#
+# INGRESS CONTROLLER SETUP
+#
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 else
@@ -557,18 +574,35 @@ else
 fi
 
 for ((i=0; i<15; i++)); do
-  for path in api disk dns prometheus; do
-    # if any path unaccessible, curl returns error exit code, and script fails, so we use || true to avoid script fail.
-    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")" || true
-    printf -v "$path" "%s" "$result"
-  done
+  ### Get availability data based on last 10 minutes
+  avail_json="$(curl -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}/public/api/status")"
+  if [[ -z "$avail_json" ]]; then
+    >&2 echo "Attempt to get availability data #$i failed. Sleeping 30 seconds..."
+    sleep 30
+    continue
+  fi
 
-  cat <<EOF
-Kubernetes API check: $([ "$api" == "ok" ] && echo "success" || echo "failure")
-Disk check: $([ "$disk" == "ok" ] && echo "success" || echo "failure")
-DNS check: $([ "$dns" == "ok" ] && echo "success" || echo "failure")
-Prometheus check: $([ "$prometheus" == "ok" ] && echo "success" || echo "failure")
-EOF
+  ### Transform the data to a simple flat report of the following structure  [{ "probe": "group/probe", "status": "ok/failure" }]
+  avail_report="$(jq '
+    [
+      .rows[]
+      | [
+          .group as $group
+          | .probes[]
+          | {
+            probe: ($group + "/" + .probe),
+            status: (if .status == "Operational" then "ok" else "failure" end)
+          }
+        ]
+    ]
+    | flatten
+    ' <<<"$avail_json")"
+
+  ### Print the list of probe statuses
+  echo "$(jq -r '.[] | [.status, "", .probe] | @tsv' <<<"$avail_report")"
+
+  ### Gather the overall availability status: "ok" or "failure"
+  availability="$(jq -r 'if ([ .[] | select(.status != "ok") ] | length == 0) then "ok" else "failure" end'<<<"$avail_report")"
 
   if [[ -n "$ingress_inlet" ]]; then
     if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
@@ -599,7 +633,7 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$api:$disk:$dns:$prometheus:$ingress" == "ok:ok:ok:ok:ok" ]]; then
+  if [[ "$availability:$ingress" == "ok:ok" ]]; then
     exit 0
   fi
 
