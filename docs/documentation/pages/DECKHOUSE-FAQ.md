@@ -122,16 +122,48 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 #### Nexus
 
-The following parameters must be set if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
+##### Requirements
+
+The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
+
+* `Docker Bearer Token Realm` is enabled
+* Docker proxy repository was created 
+* Deckhouse is able to access created repository using one of the following ways:
+  * Anonymous repository access was enabled
+  * Access control was configured:
+    * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created
+    * Nexus user was created with a role above
+* `Maximum metadata age` for created repository was set to 0
+
+##### How to configure Nexus
 
 * Enable `Docker Bearer Token Realm`:
-  ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus1.png)
+  ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
 
-* Enable anonymous registry access (otherwise, Bearer authentication [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms)):
-  ![Enable anonymous registry access](images/registry/nexus/nexus2.png)
+* Create docker proxy repository pointing to [Deckhouse registry](https://registry.deckhouse.io/):
+  ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
+  
+* Fill in the create page fields as follows:
+  * `Name` should contain created repository name, e.g. `d8-proxy`
+  * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` should contain dedicated port for created repository, e.g. `8123` or other
+  * Consider disabling `Allow anonymous docker pull` - it should be enabled only if you are planning to allow unrestricted access to repository
+  * `Remote storage` should be set to `https://registry.deckhouse.io/`
+  * `Auto blocking enabled` and `Not found cache enabled` could be disabled for debugging purposes, otherwise it should be enabled
+  * `Maximum Metadata Age` should be set to 0
+  * `Authentication` should be enabled if you are planning to use Enterprise Edition with the following fields set as:
+    * `Authentication Type` should be set to `Username`
+    * `Username` should be set to `license-token`
+    * `Password` should be set to your licence key for Deckhouse EE
 
-* Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching):
-  ![Set the `Maximum metadata age`](images/registry/nexus/nexus3.png)
+  ![Repository settings example 1](images/registry/nexus/nexus-repo-example-1.png)
+  ![Repository settings example 2](images/registry/nexus/nexus-repo-example-2.png)
+  ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
+
+* If you are planning to configure repository access control and haven't enabled `Allow anonymous docker pull`:
+  * Create Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions
+  ![Create Nexus role](images/registry/nexus/nexus-role.png)
+  * Create Nexus user with the role above
+  ![Create Nexus user](images/registry/nexus/nexus-user.png)
 
 #### Harbor
 
