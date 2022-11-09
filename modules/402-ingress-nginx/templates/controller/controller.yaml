@@ -182,16 +182,10 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
-        {{- if semverCompare "=0.33" $controllerVersion }}
-        - name: SHUTDOWN_GRACE_PERIOD
-          value: {{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod | quote }}
-        {{- end }}
-  {{- if semverCompare ">=0.33" $controllerVersion }}
-    {{- if $geoIP2.maxmindLicenseKey }}
+        {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
           value: "true"
-    {{- end }}
-  {{- end }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /controller/healthz
@@ -221,10 +215,8 @@ spec:
         {{- if $loadBalancer }}
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
-        {{- if semverCompare ">=0.46" $controllerVersion }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
-        {{- end }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
@@ -234,29 +226,21 @@ spec:
         {{- if $defaultSSLCertificateSecretRef.name }}
         - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
         {{- end }}
-        {{- if semverCompare ">=1.1" $controllerVersion }}
         - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
-  {{- if semverCompare ">=0.33" $controllerVersion }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
       {{- if $geoIP2.maxmindEditionIDs }}
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
       {{- end }}
     {{- end }}
-    {{- if semverCompare ">=1.0" $controllerVersion }}
-        # Starting from v1.0 we dropped `pod-ip.patch` in favor of the existing argument.
         - --healthz-host=127.0.0.1
-        # Starting from v1.0 we need explicitly define the ConfigMap name for leader election.
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
-    {{- end }}
-  {{- end }}
         lifecycle:
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:

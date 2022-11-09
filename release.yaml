@@ -23,9 +23,9 @@
 
 # release requirements, don't forget to register check function in a file requirements.go
 requirements:
-  "k8s": "1.20.0" # modules/040-control-plane-manager/hooks/requirements.go
-  "ingressNginx": "0.33" # modules/402-ingress-nginx/hooks/requirements.go
+  "k8s": "1.20.0" # modules/040-control-plane-manager/requirements/check.go
+  "ingressNginx": "1.1" # modules/402-ingress-nginx/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:
-  "1.36": ["ingressNginx"] # modules/402-ingress-nginx/hooks/requirements.go
+  "1.36": ["ingressNginx"] # modules/402-ingress-nginx/requirements/disruption.go

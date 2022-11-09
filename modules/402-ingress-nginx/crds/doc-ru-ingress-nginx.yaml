@@ -51,8 +51,6 @@ spec:
                 validationEnabled:
                   description: |
                     Включить валидацию Ingress-правил.
-
-                    **Внимание!**: Данная функция не работает для контроллеров версии <0.33.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
@@ -182,7 +180,7 @@ spec:
                         Применять ли настройки `hsts` ко всем поддоменам сайта.
                 geoIP2:
                   description: |
-                    Опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше).
+                    Опции для включения GeoIP2.
                   properties:
                     maxmindLicenseKey:
                       description: |

@@ -36,7 +36,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.19.11")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.21.0")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -44,7 +44,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.33")
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.1")
 
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
@@ -77,7 +77,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     additionalLogFields:
       my-cookie: "$cookie_MY_COOKIE"
     validationEnabled: true
-    controllerVersion: "0.46"
+    controllerVersion: "1.1"
     inlet: LoadBalancer
     hsts: true
     hstsOptions:
@@ -101,7 +101,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     config:
       load-balance: ewma
     ingressClass: nginx
-    controllerVersion: "0.33"
+    controllerVersion: "1.1"
     inlet: LoadBalancerWithProxyProtocol
     resourcesRequests:
       mode: Static
@@ -119,13 +119,14 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 - name: test-without-hpa
   spec:
     inlet: LoadBalancer
-    controllerVersion: "0.48"
+    ingressClass: nginx
+    controllerVersion: "1.1"
     maxReplicas: 3
     minReplicas: 3
 - name: test-next
   spec:
     ingressClass: test
-    controllerVersion: "0.33"
+    controllerVersion: "1.1"
     inlet: "HostPortWithProxyProtocol"
     geoIP2:
       maxmindLicenseKey: abc12345
@@ -138,7 +139,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 - name: solid
   spec:
     ingressClass: solid
-    controllerVersion: "0.33"
+    controllerVersion: "1.1"
     inlet: "HostWithFailover"
     resourcesRequests:
       mode: VPA
@@ -165,7 +166,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 cpu: 100m
 ephemeral-storage: 150Mi
 memory: 200Mi`))
-			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
+			Expect(testD.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=120`)))
 			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--default-ssl-certificate=")))
 			// publish service for LB
 			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement(ContainSubstring("--publish-service=d8-ingress-nginx/test-load-balancer")))
@@ -230,9 +231,9 @@ memory: 200Mi`))
 			testNextDaemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next")
 			Expect(testNextDaemonSet.Exists()).To(BeTrue())
 
-			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`0.33`))
+			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`1.1`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
-			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"60"}`)))
+			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=60`)))
 			// should not have --publish-service, inlet: HostPort
 			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--publish-service=")))
 
@@ -267,7 +268,7 @@ memory: 500Mi`))
 			Expect(mainDS.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
 			Expect(mainDS.Field("spec.template.spec.hostNetwork").String()).To(Equal("true"))
 			Expect(mainDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
-			Expect(mainDS.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"0"}`)))
+			Expect(mainDS.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=0`)))
 			Expect(mainDS.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement("--default-ssl-certificate=default/custom-secret"))
 
 			manVPA := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-solid")

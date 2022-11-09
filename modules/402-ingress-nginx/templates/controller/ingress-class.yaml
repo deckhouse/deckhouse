@@ -6,9 +6,7 @@
     {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
       {{- $controllerClass := "k8s.io/ingress-nginx" }} # this is must have to ingress controller < 1.0
       {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
-      {{- if semverCompare ">=1.1" $controllerVersion }}
         {{- $controllerClass = (printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass) }}
-      {{- end }}
       {{- if $crd.spec.ingressClass }}
         {{- $_ := set $ingressClasses $crd.spec.ingressClass $controllerClass }}
       {{- end }}
