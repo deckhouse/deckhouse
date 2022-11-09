@@ -461,6 +461,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -485,6 +499,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -736,7 +764,7 @@
           "refId": "M"
         },
         {
-          "expr": "max by (pod)\n(\n  avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])\n  * on (pod) group_left() \n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])\n  * on(pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -745,7 +773,7 @@
           "refId": "N"
         },
         {
-          "expr": "max by (pod) \n(\n  avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])\n  * on (pod) group_left() \n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -2837,194 +2865,276 @@
       "type": "row"
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fill": 1,
-      "fillGradient": 0,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "-1": {
+                  "color": "transparent",
+                  "index": 0,
+                  "text": "Network graph for Pod with hostNetwork: true is meaningless"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 0
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "datasource": {
+        "uid": "${ds_prometheus}",
+        "type": "prometheus"
+      },
+      "description": "This graph shows Network Receive (except for the hostNetwork Pods)",
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
         "y": 67
       },
-      "hiddenSeries": false,
       "id": 27,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
       "links": [],
-      "nullPointMode": "null as zero",
       "options": {
-        "alertThreshold": true
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
+      "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by(pod) (rate(container_network_receive_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Recieve",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "Bps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
+          "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=\"$pod\"}\n*\n-1",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "refId": "B"
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Receive",
+      "transformations": [],
+      "type": "timeseries"
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fill": 1,
-      "fillGradient": 0,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "-1": {
+                  "color": "transparent",
+                  "index": 0,
+                  "text": "no traffic available for hostNetwork: true"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 0
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "datasource": {
+        "uid": "${ds_prometheus}",
+        "type": "prometheus"
+      },
+      "description": "This graph shows Network Transmit (except for the hostNetwork Pods)",
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
         "y": 67
       },
-      "hiddenSeries": false,
       "id": 62,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
       "links": [],
-      "nullPointMode": "null as zero",
       "options": {
-        "alertThreshold": true
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
+      "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by(pod) (rate(container_network_transmit_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Transmit",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "Bps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
+          "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=\"$pod\"}\n*\n-1",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "refId": "B"
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Transmit",
+      "transformations": [],
+      "type": "timeseries"
     },
     {
       "collapsed": false,
