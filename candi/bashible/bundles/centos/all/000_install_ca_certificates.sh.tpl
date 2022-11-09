@@ -29,7 +29,7 @@ bb-sync-file /etc/pki/ca-trust/source/anchors/registry-ca.crt - registry-ca-chan
 {{ .registry.ca }}
 EOF
 {{- else }}
-if [-f /etc/pki/ca-trust/source/anchors/registry-ca.crt ]; then
+if [ -f /etc/pki/ca-trust/source/anchors/registry-ca.crt ]; then
   rm -f /etc/pki/ca-trust/source/anchors/registry-ca.crt
   _update_ca_certificates
 fi

@@ -34,7 +34,7 @@ bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-chan
 {{ .registry.ca }}
 EOF
 {{- else }}
-if [-f /usr/local/share/ca-certificates/registry-ca.crt ]; then
+if [ -f /usr/local/share/ca-certificates/registry-ca.crt ]; then
   rm -f /usr/local/share/ca-certificates/registry-ca.crt
   _update_ca_certificates
 fi
