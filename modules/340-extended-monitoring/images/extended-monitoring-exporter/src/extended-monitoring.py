@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from concurrent.futures.thread import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from itertools import chain
 from threading import Thread
 from time import sleep
@@ -272,12 +273,14 @@ def _get_metrics():
 class GetHandler(BaseHTTPRequestHandler):
     _response = ""
     _populated = False
+    _last_observe = datetime.now()
 
     @classmethod
     def get_metrics(cls):
         # setting string variable is atomic in Python
         cls._response, quantity = _get_metrics()
         logging.info('Metrics are collected successfully. Batches quantity: {}'.format(quantity))
+        cls._last_observe = datetime.now()
 
     @classmethod
     def loop_get_metrics(cls):
@@ -301,8 +304,11 @@ class GetHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/healthz":
-            self.send_response(200)
+            # Fail if metrics were last collected more than 15 minutes ago
+            fresh_enough = self.__class__._last_observe > (datetime.now() - timedelta(minutes=15))
+            self.send_response(200 if fresh_enough else 500)
             self.end_headers()
+            logging.info('Last observed time: {}'.format(self.__class__._last_observe.strftime("%m/%d/%Y, %H:%M:%S")))
             return
 
         if self.path == "/metrics":
