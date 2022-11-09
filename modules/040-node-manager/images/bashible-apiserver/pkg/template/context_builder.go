@@ -146,8 +146,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
-			PodSubnetCIDR:      cb.clusterInputData.PodSubnetCIDR,
-			ServiceSubnetCIDR:  cb.clusterInputData.ServiceSubnetCIDR,
 		},
 		Registry:      cb.registryData,
 		Images:        cb.imagesTags,
@@ -485,8 +483,6 @@ type normal struct {
 	ClusterDNSAddress  string   `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	ApiserverEndpoints []string `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string   `json:"kubernetesCA" yaml:"kubernetesCA"`
-	PodSubnetCIDR      string   `json:"podSubnetCIDR" yaml:"podSubnetCIDR"`
-	ServiceSubnetCIDR  string   `json:"serviceSubnetCIDR" yaml:"serviceSubnetCIDR"`
 }
 
 type registry struct {
@@ -517,8 +513,6 @@ type dockerCfg struct {
 
 type inputData struct {
 	ClusterDomain             string      `json:"clusterDomain" yaml:"clusterDomain"`
-	PodSubnetCIDR             string      `json:"podSubnetCIDR" yaml:"podSubnetCIDR"`
-	ServiceSubnetCIDR         string      `json:"serviceSubnetCIDR" yaml:"serviceSubnetCIDR"`
 	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+_restart_containerd() {
+  systemctl daemon-reload
+  bb-flag-set containerd-need-restart
+}
+
 {{- if .modulesProxy }}
   {{- if .modulesProxy.httpProxy }}
 HTTP_PROXY={{ .modulesProxy.httpProxy | quote }}
@@ -21,17 +26,11 @@ HTTP_PROXY={{ .modulesProxy.httpProxy | quote }}
 HTTPS_PROXY={{ .modulesProxy.httpsProxy | quote }}
   {{- end }}
 
-  {{- $noProxy := list "169.254.169.254" .normal.clusterDomain .normal.podSubnetCIDR .normal.serviceSubnetCIDR }}
   {{- if .modulesProxy.noProxy }}
-    {{- $noProxy = concat $noProxy .modulesProxy.noProxy }}
-NO_PROXY={{ $noProxy | join "," | quote }}
+NO_PROXY={{ .modulesProxy.noProxy | quote }}
   {{- end }}
 
-bb-event-on 'bb-sync-file-changed' '_on_proxy_default_environment_changed'
-_on_proxy_default_environment_changed() {
-  systemctl daemon-reload
-  bb-flag-set containerd-need-restart
-}
+bb-event-on 'bb-sync-file-changed' '_restart_containerd'
 
 mkdir -p /etc/systemd/system.conf.d/
 
@@ -39,4 +38,9 @@ bb-sync-file /etc/systemd/system.conf.d/proxy-default-environment.conf - << EOF
 [Manager]
 DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY:-}" "HTTPS_PROXY=${HTTPS_PROXY:-}" "NO_PROXY=${NO_PROXY:-}"
 EOF
+{{- else }}
+if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
+  rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
+  _restart_containerd
+fi
 {{- end }}
