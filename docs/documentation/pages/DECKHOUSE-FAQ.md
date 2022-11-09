@@ -127,7 +127,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * `Docker Bearer Token Realm` is enabled
-* Docker proxy repository was created 
+* Docker proxy repository was created
 * Deckhouse is able to access created repository using one of the following ways:
   * Anonymous repository access was enabled
   * Access control was configured:
