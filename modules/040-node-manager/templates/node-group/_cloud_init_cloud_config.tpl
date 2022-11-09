@@ -24,15 +24,15 @@ write_files:
   {{- if $bootstrap_script_common := $context.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type)  }}
 - path: '/var/lib/bashible/cloud-provider-bootstrap-networks.sh'
   permissions: '0700'
-  encoding: b64
-  content: {{ tpl $bootstrap_script_common $tpl_context | b64enc }}
+  content: |
+    {{- tpl $bootstrap_script_common $tpl_context | nindent 4 }}
   {{- else }}
     {{- range $path, $_ := $context.Files.Glob (printf "candi/cloud-providers/%s/bashible/bundles/*/bootstrap-networks.sh.tpl" $context.Values.nodeManager.internal.cloudProvider.type) }}
       {{- $bundle := (dir $path | base) }}
 - path: '/var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh'
   permissions: '0700'
-  encoding: b64
-  content: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
+  content: |
+    {{- tpl ($context.Files.Get $path) $tpl_context | nindent 4 }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -51,13 +51,13 @@ write_files:
 
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
-  encoding: b64
-  content: {{ include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context | b64enc }}
+  content: |
+    {{- include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context | nindent 4 }}
 
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
-  encoding: b64
-  content: {{ $context.Values.nodeManager.internal.kubernetesCA | b64enc }}
+  content: |
+    {{- $context.Values.nodeManager.internal.kubernetesCA | nindent 4 }}
 
 - path: /var/lib/bashible/bootstrap-token
   content: {{ $bootstrap_token }}
