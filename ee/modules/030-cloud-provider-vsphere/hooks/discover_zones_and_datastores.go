@@ -13,6 +13,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"k8s.io/client-go/restmapper"
 
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -82,6 +83,16 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		Datacenter: output.Datacenter,
 		Zones:      output.Zones,
 	})
+
+	k, _ := dc.GetK8sClient()
+	aa, a := restmapper.GetAPIGroupResources(k.Discovery())
+		mr := restmapper.NewDiscoveryRESTMapper(aa)
+		mr.ResourcesFor()
+	restmapper.NewDeferredDiscoveryRESTMapper(k.DiscoveryV1beta1())
+	sg, _ := k.Discovery().ServerGroups()
+	sg.
+	sc, _ := k.Discovery().OpenAPISchema()
+	sc.
 
 	storageClasses := output.ZonedDataStores
 
