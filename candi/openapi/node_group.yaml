@@ -1489,8 +1489,17 @@ spec:
                         Parameters of the "idle" process (resource consumer) for the prepared instances.
                       type: object
                       properties:
+                        overprovisioningRate:
+                          type: integer
+                          minimum: 1
+                          maximum: 100
+                          default: 50
+                          description: |
+                            Percent of the node-group's node capacity which will be overprovisioned by standby-holder pod.
                         notHeldResources:
                           description: |
+                            Deprecated: this parameter does not make sense any more. Use `overprovisioningRate` instead.
+
                             Describes the resources that will not be held (consumed) by the standby holder.
                           type: object
                           properties:

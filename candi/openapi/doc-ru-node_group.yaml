@@ -168,8 +168,12 @@ spec:
                       description: |
                         Параметры *занимателя* ресурсов для подогретых инстансов.
                       properties:
+                        overprovisioningRate:
+                          description: Процент ресурсов узла, которые будут выделены для удержания с помощью standby-holder пода.
                         notHeldResources:
                           description: |
+                            Устарело: параметр больше не используется. Используйте `overprovisioningRate` вместо него.
+
                             Ресурсы, которые не будут заняты.
                           properties:
                             cpu:

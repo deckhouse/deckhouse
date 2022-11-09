@@ -167,12 +167,14 @@ func (c CloudInstances) IsEmpty() bool {
 }
 
 type StandbyHolder struct {
-	// Describes the amount of resources, that will not be held by standby holder.
+	// Percent of the node-group's node capacity which will be overprovisioned with standby-holder pod.
+	OverprovisioningRate *int64 `json:"overprovisioningRate,omitempty"`
+	// Deprecated: Describes the amount of resources, that will not be held by standby holder.
 	NotHeldResources Resources `json:"notHeldResources,omitempty"`
 }
 
 func (s StandbyHolder) IsEmpty() bool {
-	return s.NotHeldResources.IsEmpty()
+	return s.OverprovisioningRate == nil
 }
 
 type Resources struct {
