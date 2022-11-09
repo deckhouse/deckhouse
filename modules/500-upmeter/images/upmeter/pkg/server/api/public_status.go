@@ -39,8 +39,16 @@ type PublicStatusResponse struct {
 }
 
 type GroupStatus struct {
-	Group  string       `json:"group"`
-	Status PublicStatus `json:"status"`
+	Group  string        `json:"group"`
+	Status PublicStatus  `json:"status"`
+	Probes []ProbeUptime `json:"probes"`
+}
+
+type ProbeUptime struct {
+	// Probe is the name of the probe
+	Probe string `json:"probe"`
+	// Uptime is the uptime as a fraction of 1, i.e. it is in the range from 0 to 1
+	Uptime float64 `json:"uptime"`
 }
 
 type PublicStatus string
@@ -109,14 +117,14 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
-		ref := check.ProbeRef{
+		totalByGroup := check.ProbeRef{
 			Group: group,
 			Probe: dao.GroupAggregation,
 		}
 
 		filter := &statusFilter{
 			stepRange:         rng,
-			probeRef:          ref,
+			probeRef:          totalByGroup,
 			muteDowntimeTypes: muteTypes,
 		}
 
@@ -126,21 +134,61 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 			return nil, StatusOutage, err
 		}
 
-		summary, err := pickSummary(ref, resp.Statuses)
+		summary, err := pickSummary(totalByGroup, resp.Statuses)
 		if err != nil {
 			log.Errorf("generating summary %s: %v", group, err)
 			return nil, StatusOutage, err
 		}
 
+		probeUptimes := make([]ProbeUptime, 0, len(resp.Statuses))
+		for _, ref := range h.ProbeLister.Probes() {
+			if ref.Group != group {
+				// not so many probes in the list, so it is ok to iterate
+				continue
+			}
+
+			filter := &statusFilter{
+				stepRange:         rng,
+				probeRef:          ref,
+				muteDowntimeTypes: muteTypes,
+			}
+			resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
+			if err != nil {
+				log.Errorf("cannot calculate status for group %s: %v", group, err)
+				return nil, StatusOutage, err
+			}
+
+			summary, err := pickSummary(totalByGroup, resp.Statuses)
+			if err != nil {
+				log.Errorf("generating summary %s: %v", group, err)
+				return nil, StatusOutage, err
+			}
+			probeUptimes = append(probeUptimes, ProbeUptime{
+				Probe:  ref.Probe,
+				Uptime: calculateUptime(summary),
+			})
+		}
+
 		gs := GroupStatus{
 			Group:  group,
 			Status: calculateStatus(summary),
+			Probes: probeUptimes,
 		}
 		groupStatuses = append(groupStatuses, gs)
 	}
 
 	totalStatus := calculateTotalStatus(groupStatuses)
 	return groupStatuses, totalStatus, nil
+}
+
+func calculateUptime(summary []entity.EpisodeSummary) float64 {
+	var up, down, unknown float64
+	for _, s := range summary {
+		up += float64(s.Up)
+		down += float64(s.Down)
+		unknown += float64(s.Unknown)
+	}
+	return (up + unknown) / (up + unknown + down)
 }
 
 func threeStepRange(now time.Time) ranges.StepRange {

@@ -98,6 +98,18 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 				{From: 1603670400, To: 1603756800},
 				{From: 1603756800, To: 1603843200},
 			},
+		}, {
+			name: "30s aligned range is foced to 5m",
+			args: args{from: 1603784700, to: 1603784730, step: 30},
+			want: []Range{
+				{From: 1603784700, To: 1603785000},
+			},
+		}, {
+			name: "30s not aligned range is foced to 5m",
+			args: args{from: 1603784693, to: 1603784732, step: 30},
+			want: []Range{
+				{From: 1603784700, To: 1603785000},
+			},
 		},
 	}
 

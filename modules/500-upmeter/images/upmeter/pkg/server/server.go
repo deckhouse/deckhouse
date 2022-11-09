@@ -176,7 +176,7 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
-	// Setup API handlers
+	// API handlers
 	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx, ProbeLister: probeLister})
 	mux.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
 	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor, ProbeLister: probeLister})
