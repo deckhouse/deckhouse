@@ -305,7 +305,8 @@ class GetHandler(BaseHTTPRequestHandler):
 
         if self.path == "/healthz":
             # Fail if metrics were last collected more than 15 minutes ago
-            self.send_response(200 if self.__class__._last_observe > (datetime.now() - timedelta(minutes=15)) else 500)
+            fresh_enough = self.__class__._last_observe > (datetime.now() - timedelta(minutes=15))
+            self.send_response(200 if fresh_enough else 500)
             self.end_headers()
             logging.info('Last observed time: {}'.format(self.__class__._last_observe.strftime("%m/%d/%Y, %H:%M:%S")))
             return
