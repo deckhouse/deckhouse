@@ -117,14 +117,14 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
-		totalByGroup := check.ProbeRef{
+		groupRef := check.ProbeRef{
 			Group: group,
 			Probe: dao.GroupAggregation,
 		}
 
 		filter := &statusFilter{
 			stepRange:         rng,
-			probeRef:          totalByGroup,
+			probeRef:          groupRef,
 			muteDowntimeTypes: muteTypes,
 		}
 
@@ -134,22 +134,22 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 			return nil, StatusOutage, err
 		}
 
-		summary, err := pickSummary(totalByGroup, resp.Statuses)
+		summary, err := pickSummary(groupRef, resp.Statuses)
 		if err != nil {
 			log.Errorf("generating summary %s: %v", group, err)
 			return nil, StatusOutage, err
 		}
 
 		probeUptimes := make([]ProbeUptime, 0, len(resp.Statuses))
-		for _, ref := range h.ProbeLister.Probes() {
-			if ref.Group != group {
+		for _, probeRef := range h.ProbeLister.Probes() {
+			if probeRef.Group != group {
 				// not so many probes in the list, so it is ok to iterate
 				continue
 			}
 
 			filter := &statusFilter{
 				stepRange:         rng,
-				probeRef:          ref,
+				probeRef:          probeRef,
 				muteDowntimeTypes: muteTypes,
 			}
 			resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
@@ -158,13 +158,13 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 				return nil, StatusOutage, err
 			}
 
-			summary, err := pickSummary(totalByGroup, resp.Statuses)
+			summary, err := pickSummary(probeRef, resp.Statuses)
 			if err != nil {
 				log.Errorf("generating summary %s: %v", group, err)
 				return nil, StatusOutage, err
 			}
 			probeUptimes = append(probeUptimes, ProbeUptime{
-				Probe:  ref.Probe,
+				Probe:  probeRef.Probe,
 				Uptime: calculateUptime(summary),
 			})
 		}
