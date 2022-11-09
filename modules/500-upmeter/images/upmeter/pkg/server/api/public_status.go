@@ -51,6 +51,9 @@ type ProbeAvailability struct {
 	// Availability is the ratio represented as a fraction of 1, i.e. it is from 0 to 1 and it must
 	// neve be negative
 	Availability float64 `json:"availability"`
+
+	// Status is the high-level interpretation of the probe result
+	Status PublicStatus `json:"status"`
 }
 
 type PublicStatus string
@@ -175,6 +178,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
+				Status:       calculateStatus(summary),
 			})
 		}
 
@@ -236,31 +240,44 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 
 // calculateStatus returns the status for a group.
 //
-// Input array should have 3 elements
+// Input array should have 3 elements, but might have only twoof them.
+//
+// The status returned is as follows:
+//   - Operational is when we observe only uptime
+//   - Outage is when we observe only downtime
+//   - Degraded is when we observe mixed uptime and downtime
 func calculateStatus(sums []entity.EpisodeSummary) PublicStatus {
 	slotSize := 5 * time.Minute
 
 	var prev, cur entity.EpisodeSummary
 	if len(sums) == 2 || sums[2].NoData == slotSize {
-		// we actually have only two slots of data at most
+		// we have only two slots of data at most
 		prev, cur = sums[0], sums[1]
 	} else {
-		// ignore 1st slot
+		// ignore 1st slot, pick fresher ones
 		prev, cur = sums[1], sums[2]
 	}
 
-	// Ignore empty EpisodeSummary, i.e. when NoData equals slot size
-	if cur.Down == 0 && prev.Down == 0 &&
-		(cur.Up > 0 || (prev.Up > 0 && cur.Up == 0 && cur.NoData == slotSize)) {
+	// Operational is when we observe only uptime
+	var (
+		hasNoDowntime = cur.Down == 0 && prev.Down == 0
+		hasUptime     = cur.Up > 0 || (prev.Up > 0 && cur.NoData == slotSize)
+	)
+	if hasNoDowntime && hasUptime {
 		return StatusOperational
 	}
 
-	if cur.Up == 0 && cur.Muted == 0 &&
-		prev.Up == 0 && prev.Muted == 0 &&
-		(cur.Down > 0 || (prev.Down > 0 && cur.Down == 0 && cur.NoData == slotSize)) {
+	// Outage is when we observe only downtime
+	var (
+		hasNoUptime = cur.Up == 0 && prev.Up == 0
+		isNotMuted  = cur.Muted == 0 && prev.Muted == 0
+		hasDowntime = cur.Down > 0 || (prev.Down > 0 && cur.NoData == slotSize)
+	)
+	if hasNoUptime && isNotMuted && hasDowntime {
 		return StatusOutage
 	}
 
+	// Degraded is when we observe mixed uptime and downtime
 	return StatusDegraded
 }
 
