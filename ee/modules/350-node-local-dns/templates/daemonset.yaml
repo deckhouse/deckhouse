@@ -49,13 +49,6 @@ spec:
   selector:
     matchLabels:
       app: node-local-dns
-{{- if (.Values.global.enabledModules | has "cni-cilium") }}
-  updateStrategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 100%
-      maxSurge: 100%
-{{- end }}
   template:
     metadata:
       labels:
