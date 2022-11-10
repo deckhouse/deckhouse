@@ -223,9 +223,9 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 
 		readyNodesCount := 0
 		var (
-			latestNodeTimestamp         *metav1.Time
-			ngTemplateAllocatableCPU    = resource.MustParse("4000m")
-			ngTemplateAllocatableMemory = resource.MustParse("8Gi")
+			latestNodeTimestamp   *metav1.Time
+			nodeAllocatableCPU    = resource.MustParse("4000m")
+			nodeAllocatableMemory = resource.MustParse("8Gi")
 		)
 
 		for _, node := range input.Snapshots["nodes"] {
@@ -243,10 +243,10 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			}
 
 			if standbyNode.AllocatableCPU != nil {
-				ngTemplateAllocatableCPU = *standbyNode.AllocatableCPU
+				nodeAllocatableCPU = *standbyNode.AllocatableCPU
 			}
 			if standbyNode.AllocatableMemory != nil {
-				ngTemplateAllocatableMemory = *standbyNode.AllocatableMemory
+				nodeAllocatableMemory = *standbyNode.AllocatableMemory
 			}
 		}
 
@@ -271,8 +271,9 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			desiredStandby = 1
 		}
 
-		standbyRequestCPU := resource.NewScaledQuantity(ngTemplateAllocatableCPU.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
-		standbyRequestMemory := resource.NewScaledQuantity(ngTemplateAllocatableMemory.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
+		// calculate standby request as percent of the node
+		standbyRequestCPU := resource.NewScaledQuantity(nodeAllocatableCPU.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
+		standbyRequestMemory := resource.NewScaledQuantity(nodeAllocatableMemory.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:          ng.Name,
