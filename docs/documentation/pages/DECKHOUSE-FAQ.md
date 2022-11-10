@@ -128,11 +128,10 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 * `Docker Bearer Token Realm` is enabled
 * Docker proxy repository was created
-* Deckhouse is able to access created repository using one of the following ways:
-  * Anonymous repository access was enabled
-  * Access control was configured:
-    * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created
-    * Nexus user was created with a role above
+* `Allow anonymous docker pull` is enabled
+* Access control was configured:
+  * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created
+  * Nexus user was created with a role above
 * `Maximum metadata age` for created repository was set to 0
 
 ##### How to configure Nexus
@@ -146,7 +145,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 * Fill in the create page fields as follows:
   * `Name` should contain created repository name, e.g. `d8-proxy`
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` should contain dedicated port for created repository, e.g. `8123` or other
-  * Consider disabling `Allow anonymous docker pull` - it should be enabled only if you are planning to allow unrestricted access to repository
+  * `Allow anonymous docker pull` should be enabled in order for Bearer-token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms), however anonymous access [won't be working](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it was explicitly enabled in Settings -> Security -> Anonymous Access and `anonymous` user was granted access rights to created repository
   * `Remote storage` should be set to `https://registry.deckhouse.io/`
   * `Auto blocking enabled` and `Not found cache enabled` could be disabled for debugging purposes, otherwise it should be enabled
   * `Maximum Metadata Age` should be set to 0
@@ -159,7 +158,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   ![Repository settings example 2](images/registry/nexus/nexus-repo-example-2.png)
   ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
 
-* If you are planning to configure repository access control and haven't enabled `Allow anonymous docker pull`:
+* Configure Nexus access control to allow Nexus to access created repository:
   * Create Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions
   ![Create Nexus role](images/registry/nexus/nexus-role.png)
   * Create Nexus user with the role above

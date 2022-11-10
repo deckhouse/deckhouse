@@ -132,11 +132,10 @@ deckhouse: |
 
 * Включен `Docker Bearer Token Realm`
 * Создан проксирующий репозиторий Docker
-* Deckhouse должен иметь доступ к созданному репозиторию одним из следующих способов:
-  * К репозиторию должен быть включен анонимный доступ на чтение
-  * Должен быть настроен контроль доступа:
-    * Создана роль Nexus с полномочиями `nx-repository-view-docker-<Ваш репозиторий>-browse` и `nx-repository-view-docker-<Ваш репозиторий>-read`
-    * Создан пользователь Nexus с ролью, созданной выше
+* Параметр `Allow anonymous docker pull` должен быть включен
+* Должен быть настроен контроль доступа:
+  * Создана роль Nexus с полномочиями `nx-repository-view-docker-<Ваш репозиторий>-browse` и `nx-repository-view-docker-<Ваш репозиторий>-read`
+  * Создан пользователь Nexus с ролью, созданной выше
 * Параметр `Maximum metadata age` созданного репозитория должен быть установлен в 0
 
 ##### How to configure Nexus
@@ -150,7 +149,7 @@ deckhouse: |
 * Заполните поля страницы создания следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например, `8123` или иной
-  * Рассмотрите возможность отключения `Allow anonymous docker pull` - оно должно быть включено только в том случае, если Вы планируете разрешить неограниченный доступ к создаваемому репозиторию
+  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию 
   * `Remote storage` должно иметь значение `https://registry.deckhouse.io/`
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены в целях отладки, в противном случае их следует включить
   * `Maximum Metadata Age` должно иметь значение 0
@@ -163,7 +162,7 @@ deckhouse: |
   ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
   ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
 
-* Если Вы планируете настроить контроль доступа и не включали `Allow anonymous docker pull`:
+* Настроить контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
   * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<Ваш репозиторий>-browse` и `nx-repository-view-docker-<Ваш репозиторий>-read`
     ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
   * Создайте пользователя Nexus с ролью, созданной выше
