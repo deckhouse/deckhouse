@@ -98,6 +98,9 @@ SWITCH_TO_IMAGE_TAG=
 # ssh command with common args.
 ssh_command="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet"
 
+# On Centos7/RedHat bootstrap puts jq to /usr/local/bin/jq
+export PATH="/usr/local/bin:$PATH"
+
 # Path to private SSH key to connect to cluster after bootstrap
 ssh_private_key_path=
 # User for SSH connect.
