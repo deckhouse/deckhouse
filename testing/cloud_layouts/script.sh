@@ -528,20 +528,6 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 
-function pause-the-test() {
-  while true; do
-    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
-      break
-    fi
-
-    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
-
-    sleep 30
-  done
-}
-
-trap pause-the-test EXIT
-
 #
 # UPMETER AVAILABILITY SETUP
 #
@@ -578,14 +564,14 @@ fi
 
 for ((i=0; i<15; i++)); do
   ### Get availability data based on last 10 minutes
-  avail_json="$(curl -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}/public/api/status")"
+  avail_json="$(curl -k -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status")"
   if [[ -z "$avail_json" ]]; then
     >&2 echo "Attempt to get availability data #$i failed. Sleeping 30 seconds..."
     sleep 30
     continue
   fi
 
-  ### Transform the data to a simple flat report of the following structure  [{ "probe": "group/probe", "status": "ok/failure" }]
+  ### Transform the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/failure" }]
   avail_report="$(jq '
     [
       .rows[]
@@ -594,7 +580,8 @@ for ((i=0; i<15; i++)); do
           | .probes[]
           | {
             probe: ($group + "/" + .probe),
-            status: (if .status == "Operational" then "ok" else "failure" end)
+            status: (if .availability > 0.99 then "ok" else "failure" end),
+            availability: .availability
           }
         ]
     ]
@@ -602,7 +589,7 @@ for ((i=0; i<15; i++)); do
     ' <<<"$avail_json")"
 
   ### Print the list of probe statuses
-  echo "$(jq -r '.[] | [.status, "", .probe] | @tsv' <<<"$avail_report")"
+  echo "$(jq -r '.[] | [((.availability * 1000 | round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
 
   ### Gather the overall availability status: "ok" or "failure"
   availability="$(jq -r 'if ([ .[] | select(.status != "ok") ] | length == 0) then "ok" else "failure" end'<<<"$avail_report")"
