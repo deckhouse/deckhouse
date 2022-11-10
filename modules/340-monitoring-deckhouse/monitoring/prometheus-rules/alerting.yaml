@@ -1,7 +1,7 @@
 - name: d8.deckhouse.image
   rules:
   - alert: D8DeckhouseIsNotOnReleaseChannel
-    expr: max(d8_deckhouse_is_not_on_release_channel) > 0
+    expr: max by (release_channel) (deckhouse_release_channel{release_channel=""} == 1) > 0
     labels:
       severity_level: "9"
       d8_module: deckhouse
