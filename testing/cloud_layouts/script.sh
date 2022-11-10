@@ -603,6 +603,9 @@ for ((i=0; i<15; i++)); do
     ' <<<"$avail_json")"
 
   ### Print the list of probe statuses
+  echo '='
+  echo '====================== AVAILABILITY, STATUS, PROBE '======================
+  #     0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
   echo "$(jq -r '.[] | [((.availability * 1000 | round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
 
   ### Gather the overall availability status: "ok" or "failure"
