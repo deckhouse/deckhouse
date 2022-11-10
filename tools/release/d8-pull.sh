@@ -25,6 +25,9 @@ Usage: $0
     --release
         Deckhouse release to download, if not set latest release is used.
 
+    --do-not-pull-release-metadata-images
+        If set, release metadata images (registry.deckhouse.io/deckhouse/(ce|ee|fe)/release-channel:(early-access|alpha|beta|stable|rock-solid)) will not pull
+
     --edition
         Deckhouse edition to download, possible values ce|ee (default: ee).
 
@@ -49,10 +52,14 @@ REGISTRY_ROOT="registry.deckhouse.io"
 REGISTRY="${REGISTRY_ROOT}/deckhouse"
 RELEASE=$(curl -fsL https://api.github.com/repos/deckhouse/deckhouse/tags | jq -r ".[0].name")
 IMAGE=""
+PULL_RELEASE_METADATA_IMAGES="yes"
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --do-not-pull-release-metadata-images)
+        PULL_RELEASE_METADATA_IMAGES="no"
+        ;;
       --release)
         shift
         if [[ $# -ne 0 ]]; then
@@ -167,13 +174,21 @@ echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
 IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_tags.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 
+if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
+  echo "Pull metadata images"
+  #saving metadata about release channel
+  pull_image "alpha" "release-channel"
+  pull_image "beta" "release-channel"
+  pull_image "early-access" "release-channel"
+  pull_image "stable" "release-channel"
+  pull_image "rock-solid" "release-channel"
+fi
+
 trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
 pull_image "$RELEASE"
 #saving Deckhouse install image
 pull_image "$RELEASE" "install"
-#saving metadata about release channel
-pull_image "$RELEASE" "release-channel"
 #saving uniq images from images_tags.json
 l=$(echo "$IMAGES" | wc -l)
 count=1
