@@ -1,8 +1,8 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 
-FROM $BASE_DEBIAN_BULLSEYE as builder
+FROM $BASE_UBUNTU_JAMMY as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.1.9
+ARG DRBD_VERSION=9.2.0
 
 RUN apt-get update \
  && apt-get install -y make git \
@@ -23,7 +23,7 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.sh' \
  && chmod +x /entry.sh
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 
 RUN apt-get update \
  && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev \

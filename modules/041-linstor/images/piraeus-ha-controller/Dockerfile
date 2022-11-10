@@ -1,10 +1,10 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_DEBIAN_BULLSEYE as utils-builder
+FROM $BASE_UBUNTU_JAMMY as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.21.4
+ARG UTILS_VERSION=9.22.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -25,8 +25,8 @@ RUN git checkout v${UTILS_VERSION} \
  && ./autogen.sh \
  && ./configure \
  && make debrelease VERSION=${UTILS_VERSION} \
- && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_${UTILS_VERSION}.orig.tar.gz \
- && tar -C / -xvf ../drbd-utils_${UTILS_VERSION}.orig.tar.gz
+ && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /drbd-utils-${UTILS_VERSION}
 RUN dpkg-buildpackage -us -uc
 
@@ -34,7 +34,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG PIRAEUS_HA_CONTROLLER_GITREPO=https://github.com/piraeusdatastore/piraeus-ha-controller
-ARG PIRAEUS_HA_CONTROLLER_VERSION=1.1.0
+ARG PIRAEUS_HA_CONTROLLER_VERSION=1.1.1
 
 RUN git clone ${PIRAEUS_HA_CONTROLLER_GITREPO} /usr/local/go/piraeus-ha-controller \
  && cd /usr/local/go/piraeus-ha-controller \
@@ -45,7 +45,7 @@ RUN git clone ${PIRAEUS_HA_CONTROLLER_GITREPO} /usr/local/go/piraeus-ha-controll
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /packages/
 COPY --from=builder /agent /
 

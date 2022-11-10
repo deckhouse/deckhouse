@@ -1,9 +1,9 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG PIRAEUS_OPERATOR_GITREPO=https://github.com/piraeusdatastore/piraeus-operator
-ARG PIRAEUS_OPERATOR_VERSION=1.9.1
+ARG PIRAEUS_OPERATOR_VERSION=1.10.0
 
 # Copy patches
 COPY ./patches /patches
@@ -16,6 +16,6 @@ RUN git clone ${PIRAEUS_OPERATOR_GITREPO} /usr/local/go/piraeus-operator \
  && go build \
  && mv ./manager /piraeus-operator
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 COPY --from=builder /piraeus-operator /usr/bin/piraeus-operator
 ENTRYPOINT ["/usr/bin/piraeus-operator"]

@@ -1,9 +1,9 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 
-FROM $BASE_DEBIAN_BULLSEYE as utils-builder
+FROM $BASE_UBUNTU_JAMMY as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.21.4
+ARG UTILS_VERSION=9.22.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -24,17 +24,17 @@ RUN git checkout v${UTILS_VERSION} \
  && ./autogen.sh \
  && ./configure \
  && make debrelease VERSION=${UTILS_VERSION} \
- && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_${UTILS_VERSION}.orig.tar.gz \
- && tar -C / -xvf ../drbd-utils_${UTILS_VERSION}.orig.tar.gz
+ && mv drbd-utils-${UTILS_VERSION}.tar.gz ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf ../drbd-utils_$(echo ${UTILS_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /drbd-utils-${UTILS_VERSION}
 RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE as reactor-builder
+FROM $BASE_UBUNTU_JAMMY as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
-ARG REACTOR_VERSION=0.8.0
+ARG REACTOR_VERSION=0.9.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -47,14 +47,14 @@ WORKDIR /drbd-reactor
 RUN git reset --hard v${REACTOR_VERSION} \
  && install /dev/null /usr/local/bin/lbvers.py \
  && make debrelease VERSION=${REACTOR_VERSION} \
- && mv drbd-reactor-${REACTOR_VERSION}.tar.gz ../drbd-reactor_${REACTOR_VERSION}.orig.tar.gz \
- && tar -C / -xvf ../drbd-reactor_${REACTOR_VERSION}.orig.tar.gz
+ && mv drbd-reactor-${REACTOR_VERSION}.tar.gz ../drbd-reactor_$(echo ${REACTOR_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf ../drbd-reactor_$(echo ${REACTOR_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /drbd-reactor-${REACTOR_VERSION}
 RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=reactor-builder /drbd-reactor_*.deb /packages/

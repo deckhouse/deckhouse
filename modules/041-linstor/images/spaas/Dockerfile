@@ -1,11 +1,11 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU_JAMMY
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG SPAAS_GITREPO=https://github.com/LINBIT/saas
-ARG SPAAS_COMMIT_REF=0824aafa1e1abaedee19c70a98048cea0dedb8ab
+ARG SPAAS_COMMIT_REF=8c014b93b0e68a37268bdd077d64f2bb2288fe8d
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.1.9
+ARG DRBD_VERSION=9.2.0
 
 RUN git clone ${SPAAS_GITREPO} /usr/local/go/spaas \
  && cd /usr/local/go/spaas \
@@ -28,13 +28,15 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 #  && cd /drbd
 #  && wget ${DRBD_PKG}
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU_JAMMY
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       gcc \
       libc6-dev \
       make \
       coccinelle \
+      libpython3-dev \
+ && update-alternatives --install /usr/bin/python python /usr/bin/python3 100 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && ln -sf /proc/mounts /etc/mtab
