@@ -149,7 +149,7 @@ deckhouse: |
 * Заполните поля страницы создания следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например, `8123` или иной
-  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию 
+  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию
   * `Remote storage` должно иметь значение `https://registry.deckhouse.io/`
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены в целях отладки, в противном случае их следует включить
   * `Maximum Metadata Age` должно иметь значение 0
