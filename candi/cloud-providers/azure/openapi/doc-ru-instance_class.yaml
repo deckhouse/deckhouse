@@ -18,6 +18,18 @@ spec:
                     ```shell
                     az vm list-sizes --location westeurope -o table
                     ```
+                capacity:
+                  description: |
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `machineSize`).
+
+                    Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла, и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`Standard_A1_v2`, `Standard_B16ms` и т.п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
                 urn:
                   description: |
                     Образ виртуальной машины, который будет использоваться для инстанса.

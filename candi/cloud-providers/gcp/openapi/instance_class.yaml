@@ -36,6 +36,28 @@ spec:
                     GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
                   example: n1-standard-4
                   type: string
+                capacity:
+                  type: object
+                  description: |
+                    Instance capacity for *non-standard* instance types (the `machineType` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`a2-highgpu-8g`, `c2-standard-8`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1000m"
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1500Mi"
                 image:
                   description: |
                     Image to use while provisioning GCP servers.

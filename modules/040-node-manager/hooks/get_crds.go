@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -352,7 +353,8 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 			// Put instanceClass.spec into values.
-			ngForValues["instanceClass"] = instanceClasses[nodeGroupInstanceClassName]
+			instanceClassSpec := instanceClasses[nodeGroupInstanceClassName]
+			ngForValues["instanceClass"] = instanceClassSpec
 
 			var zones []string
 			if nodeGroup.Spec.CloudInstances.Zones != nil {
@@ -360,6 +362,20 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 			if zones == nil {
 				zones = defaultZones.Slice()
+			}
+
+			// Scale from zero check
+			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
+				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
+					// capacity calculation required only for scaling from zero, we can save some time in the other cases
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
+					if err != nil {
+						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
+						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types", nodeGroupInstanceClassKind))
+						continue
+					}
+					ngForValues["nodeCapacity"] = nodeCapacity
+				}
 			}
 
 			if ngForValues["cloudInstances"] == nil {

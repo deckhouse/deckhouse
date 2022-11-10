@@ -34,6 +34,28 @@ spec:
                     **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
                   example: t3.large
                   type: string
+                capacity:
+                  type: object
+                  description: |
+                    Instance capacity for *non-standard* instance types (the `instanceTypes` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`t2.micro`, `m6a.12xlarge`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1000m"
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1500Mi"
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.

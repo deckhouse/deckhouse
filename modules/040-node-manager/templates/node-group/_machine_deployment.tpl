@@ -16,6 +16,13 @@ metadata:
   name: {{ $machineDeploymentName }}
   annotations:
     zone: {{ $zone_name | quote }}
+    {{- if $ng.nodeCapacity }}
+    cluster-autoscaler.kubernetes.io/scale-from-zero: "true"
+    cluster-autoscaler.kubernetes.io/node-region: {{ $context.Values.nodeManager.internal.cloudProvider.region | quote }}
+    cluster-autoscaler.kubernetes.io/node-cpu: {{ $ng.nodeCapacity.cpu | quote }}
+    cluster-autoscaler.kubernetes.io/node-memory: {{ $ng.nodeCapacity.memory | quote }}
+    cluster-autoscaler.kubernetes.io/node-zone: {{ $zone_name | quote }}
+    {{- end }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
 spec:

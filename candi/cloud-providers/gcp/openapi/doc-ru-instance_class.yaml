@@ -19,6 +19,18 @@ spec:
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
 
                     GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                capacity:
+                  description: |
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `machineType`).
+
+                    Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла, и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`a2-highgpu-8g`, `c2-standard-8` и т.п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
                 image:
                   description: |
                     Образ, который будет использоваться в заказанных инстансах. Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).
