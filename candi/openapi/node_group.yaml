@@ -267,7 +267,6 @@ spec:
                       type: object
                       properties:
                         notHeldResources:
-                          deprecated: true
                           description: |
                             Describes the resources that will not be held (consumed) by the standby holder.
                           type: object
@@ -1498,6 +1497,7 @@ spec:
                           description: |
                             Percent of the node-group's node capacity which will be overprovisioned by standby-holder pod.
                         notHeldResources:
+                          deprecated: true
                           description: |
                             Deprecated: this parameter does not make sense any more. Use `overprovisioningRate` instead.
 
