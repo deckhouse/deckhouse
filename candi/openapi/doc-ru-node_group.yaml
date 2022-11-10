@@ -150,7 +150,9 @@ spec:
                         Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
                     maxPerZone:
                       description: |
-                        Максимальное количество инстансов в зоне. Проставляется как верхняя граница в cluster-autoscaler.
+                        Максимальное количество инстансов в зоне.
+
+                        Проставляется как верхняя граница в cluster-autoscaler.
                     maxUnavailablePerZone:
                       description: |
                         Недоступное количество инстансов при RollingUpdate'е.
