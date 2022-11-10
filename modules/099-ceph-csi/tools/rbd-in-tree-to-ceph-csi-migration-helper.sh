@@ -22,6 +22,9 @@ target_pv_name="$(jq -r '.spec.volumeName' <<< "$target_pvc")"
 sample_pv="$(kubectl get pv "$sample_pv_name" -o json)"
 target_pv="$(kubectl get pv "$target_pv_name" -o json)"
 
+echo "$target_pvc" > "backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
+echo "$target_pv" > "backup-pv-$target_pv_name.json"
+
 pool_name="$(jq -r '.spec.csi.volumeAttributes.pool' <<< "$sample_pv")"
 original_rbd_image_name="$(jq -r '.spec.rbd.image' <<< "$target_pv")"
 new_rbd_image_name="$(jq -rn --arg s "$original_rbd_image_name" '$s | sub("kubernetes-dynamic-pvc-"; "csi-vol-")')"
@@ -43,8 +46,9 @@ new_target_pvc="$(jq --argjson a "$new_annotations_for_target_pvc" --arg sc "$ne
   ' <<< "$target_pvc")"
 
 while true; do
-  msg="rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
-Rename rbd image in ceph cluster and type yes to confirm: "
+  msg="Rename the rbd image in your ceph cluster using the following command:
+rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
+After renaming, enter yes to confirm: "
   read -p "$msg" confirm
   if [ "$confirm" == "yes" ]; then
     break
