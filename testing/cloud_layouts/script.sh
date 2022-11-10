@@ -528,6 +528,20 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 
+function pause-the-test() {
+  while true; do
+    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
+      break
+    fi
+
+    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
+
+    sleep 30
+  done
+}
+
+trap pause-the-test EXIT
+
 #
 # UPMETER AVAILABILITY SETUP
 #
