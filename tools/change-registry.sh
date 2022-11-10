@@ -71,8 +71,14 @@ function parse_args() {
   REGISTRY_ADDRESS="$(cut -d "/" -f1 <<< "$TEMP_URL")"
   REGISTRY_PATH="${TEMP_URL#"$REGISTRY_ADDRESS"}"
   REGISTRY_SCHEME="$(sed "s/:\/\///" <<< "$REGISTRY_SCHEME")"
+
+  if [[ "$REGISTRY_PATH" == "" ]]; then
+    >&2 echo "Cannot parse path from registry url: $REGISTRY_URL. Registry url must have at least slash at the end. (for example, https://registry.example.com/ instead of https://registry.example.com)"
+    exit 1
+  fi
+
   if [[ "$REGISTRY_SCHEME" == "" ]]; then
-    >&2 echo "Cannot parse scheme from registry url: $URL. Scheme should be 'http' or 'https'."
+    >&2 echo "Cannot parse scheme from registry url: $REGISTRY_URL. Scheme should be 'http' or 'https'."
     exit 1
   fi
 
