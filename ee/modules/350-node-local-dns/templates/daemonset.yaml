@@ -62,6 +62,10 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- end }}
       serviceAccountName: d8-node-local-dns
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+      initContainers:
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
+{{- end }}
       containers:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | nindent 8 }}
