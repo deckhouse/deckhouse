@@ -267,6 +267,7 @@ spec:
                       type: object
                       properties:
                         notHeldResources:
+                          deprecated: true
                           description: |
                             Describes the resources that will not be held (consumed) by the standby holder.
                           type: object
