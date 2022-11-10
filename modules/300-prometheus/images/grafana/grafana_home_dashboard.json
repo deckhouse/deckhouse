@@ -168,7 +168,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (release_channel) (label_replace(deckhouse_release_channel{job=\"deckhouse\"}, \"release_channel\", \"Undefinded\", \"release_channel\", \"\"))",
+          "expr": "sum by (release_channel) (label_replace(deckhouse_release_channel{job=\"deckhouse\"}, \"release_channel\", \"Undefined\", \"release_channel\", \"\"))",
           "instant": true,
           "interval": "",
           "legendFormat": "{{label_name}}",
