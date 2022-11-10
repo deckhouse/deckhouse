@@ -198,10 +198,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		}
 	}
 
-	ignored := 0
-	withoutSidecar := 0
-	total := 0
-	worked := 0
+	var ignored, withoutSidecar, total, worked float64
 
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
@@ -269,10 +266,10 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
 	telemetryCollector.Expire(telemetryGroup)
 
-	telemetryCollector.Set("total_pods_used", float64(total), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_ignored", float64(ignored), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_without_sidecar", float64(withoutSidecar), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_worked", float64(worked), nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("total_pods_used", total, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_ignored", ignored, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_without_sidecar", withoutSidecar, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("pods_worked", worked, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
 
 	return nil
 }
