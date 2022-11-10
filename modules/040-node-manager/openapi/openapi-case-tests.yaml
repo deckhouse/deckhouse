@@ -36,3 +36,8 @@ positive:
                 zoneb: mysubnetidb
             tags:
               aaa: aaa
+
+negative:
+  configValues:
+    # NOTE: bundles from EE
+    - allowedBundles: [ "alteros", "astra" ]
