@@ -22,12 +22,11 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 31,
-  "iteration": 1668111578079,
+  "iteration": 1668117398181,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "datasource": null,
       "gridPos": {
         "h": 6,
         "w": 4,
@@ -44,7 +43,6 @@
       "type": "text"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -104,14 +102,28 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "fixedColor": "#770b5a",
             "mode": "fixed"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "pattern": "",
+                "result": {
+                  "index": 0,
+                  "text": "Unknown"
+                }
+              },
+              "type": "regex"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -150,12 +162,16 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (version, edition) (deckhouse_build_info{job=\"deckhouse\"})",
+          "expr": "sum by (release_channel) (label_replace(deckhouse_release_channel{job=\"deckhouse\"}, \"release_channel\", \"Undefinded\", \"release_channel\", \"\"))",
           "instant": true,
           "interval": "",
-          "legendFormat": "{{ version }} {{ edition }}",
+          "legendFormat": "{{label_name}}",
           "refId": "A"
         }
       ],
@@ -165,7 +181,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -224,7 +239,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -284,7 +298,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -331,7 +344,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": true,
           "expr": "count by (phase) (kube_pod_status_phase == 1)",
@@ -346,7 +358,6 @@
       "type": "piechart"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -392,7 +403,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": true,
           "expr": "count by (label_node_deckhouse_io_group) (label_replace(kube_node_labels, \"label_node_deckhouse_io_group\", \"unknown\", \"label_node_deckhouse_io_group\", \"\"))",
@@ -407,7 +417,6 @@
       "type": "piechart"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -453,7 +462,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": true,
           "expr": "count by (controller_type) (kube_controller_pod)",
@@ -468,7 +476,6 @@
       "type": "piechart"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -514,7 +521,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": true,
           "expr": "count by (type) (kube_service_spec_type)",
@@ -529,7 +535,10 @@
       "type": "piechart"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -575,12 +584,16 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (git_version) (kubernetes_build_info{job=\"kube-apiserver\"})",
+          "expr": "sum by (version) (deckhouse_kubernetes_version)",
           "instant": true,
           "interval": "",
-          "legendFormat": "{{ git_version }}",
+          "legendFormat": "__auto",
           "refId": "A"
         }
       ],
@@ -590,7 +603,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -636,7 +648,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "exemplar": true,
           "expr": "max by (cluster_version) (etcd_cluster_version{job=\"kube-etcd3\"})",
           "instant": true,
@@ -651,7 +662,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -711,7 +721,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -771,7 +780,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "gridPos": {
         "h": 3,
         "w": 4,
@@ -796,7 +804,6 @@
       "type": "dashlist"
     },
     {
-      "datasource": null,
       "gridPos": {
         "h": 3,
         "w": 4,
@@ -806,7 +813,6 @@
       "id": 32,
       "links": [],
       "options": {
-        "folderId": 1,
         "maxItems": 1,
         "query": "Prometheus-(self)",
         "showHeadings": false,
@@ -822,7 +828,6 @@
       "type": "dashlist"
     },
     {
-      "datasource": null,
       "description": "Drill down is an analytics capability that allows users to instantly shift from an overview of data to a more detailed and granular view within the same dataset they are analyzing by clicking on a metric in a dashboard or report.\n\nNamespaces -> Namespace -> Namespace / Controller -> Namespace / Controller / Pod",
       "gridPos": {
         "h": 8,
@@ -850,7 +855,6 @@
       "type": "dashlist"
     },
     {
-      "datasource": null,
       "gridPos": {
         "h": 12,
         "w": 4,
@@ -860,7 +864,6 @@
       "id": 29,
       "links": [],
       "options": {
-        "folderId": 1,
         "maxItems": 7,
         "query": "",
         "showHeadings": false,
@@ -878,7 +881,6 @@
       "type": "dashlist"
     },
     {
-      "datasource": null,
       "gridPos": {
         "h": 12,
         "w": 4,
@@ -905,7 +907,6 @@
       "type": "dashlist"
     },
     {
-      "datasource": null,
       "description": "List of all enabled modules (explicitly enabled and enabled by default).  If you click on a module name, the documentation for the module will be opened.",
       "fieldConfig": {
         "defaults": {
@@ -974,7 +975,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": false,
           "expr": "max by (module, module_name) (label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\"))",
@@ -1005,7 +1005,6 @@
     },
     {
       "columns": [],
-      "datasource": null,
       "description": "Links to web interfaces of Deckhouse modules. An interface is added to the list automatically if module is enabled.",
       "fieldConfig": {
         "defaults": {
@@ -1190,7 +1189,6 @@
       "type": "table"
     },
     {
-      "datasource": null,
       "description": "Difference between the last timestamp in the Prometheus tsdb and the current time. It shows how far in the past users can see.",
       "fieldConfig": {
         "defaults": {
@@ -1296,7 +1294,6 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "datasource": null,
           "editorMode": "code",
           "exemplar": false,
           "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds) / 60 / 60 / 24",
@@ -1325,7 +1322,208 @@
       "type": "table"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#265d43",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "pattern": "",
+                "result": {
+                  "index": 0,
+                  "text": "Unknown"
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 4,
+        "y": 12
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (mode) (label_replace(deckhouse_update_mode, \"mode\", \"Auto\", \"mode\", \"\"))",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Update Mode",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P0D6E4079E36703EB"
+      },
+      "description": "Intervals in which Deckhouse can start its updating. No Data means that Deckhouse can be updated anytime.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "json-view",
+            "filterable": false,
+            "inspect": false,
+            "width": 20
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "pattern": "prometheus",
+                "result": {
+                  "color": "light-purple",
+                  "index": 0
+                }
+              },
+              "type": "regex"
+            },
+            {
+              "options": {
+                "pattern": "prometheus-longterm",
+                "result": {
+                  "color": "light-blue",
+                  "index": 1
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "days"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "days"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 14
+      },
+      "id": 33,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": false
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (from, to, days) (deckhouse_update_window)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Update Windows",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "days",
+                "from",
+                "to"
+              ]
+            }
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
       "gridPos": {
         "h": 3,
         "w": 4,
@@ -1335,9 +1533,8 @@
       "id": 5,
       "links": [],
       "options": {
-        "folderId": 12,
         "maxItems": 1,
-        "query": "",
+        "query": "Capacity Planning",
         "showHeadings": false,
         "showRecentlyViewed": false,
         "showSearch": true,
@@ -1355,19 +1552,10 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "datasource": null,
-        "filters": [],
-        "hide": 0,
-        "name": "Filters",
-        "skipUrlSync": false,
-        "type": "adhoc"
-      }
-    ]
+    "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1400,6 +1588,6 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "M5QPqhtnz",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }
