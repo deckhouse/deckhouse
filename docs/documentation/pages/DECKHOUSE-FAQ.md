@@ -126,15 +126,15 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
-* `Docker Bearer Token Realm` is enabled
-* Docker proxy repository was created
-* `Allow anonymous docker pull` is enabled
+* `Docker Bearer Token Realm` is enabled.
+* Docker proxy repository was created.
+* `Allow anonymous docker pull` is enabled.
 * Access control was configured:
-  * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created
-  * Nexus user was created with a role above
-* `Maximum metadata age` for created repository was set to 0
+  * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created.
+  * Nexus user was created with a role above.
+* `Maximum metadata age` for the created repository was set to 0.
 
-##### How to configure Nexus
+##### Configuration
 
 * Enable `Docker Bearer Token Realm`:
   ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
@@ -143,26 +143,26 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
   
 * Fill in the create page fields as follows:
-  * `Name` should contain created repository name, e.g. `d8-proxy`
-  * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` should contain dedicated port for created repository, e.g. `8123` or other
-  * `Allow anonymous docker pull` should be enabled in order for Bearer-token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms), however anonymous access [won't be working](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it was explicitly enabled in Settings -> Security -> Anonymous Access and `anonymous` user was granted access rights to created repository
-  * `Remote storage` should be set to `https://registry.deckhouse.io/`
-  * `Auto blocking enabled` and `Not found cache enabled` could be disabled for debugging purposes, otherwise it should be enabled
-  * `Maximum Metadata Age` should be set to 0
-  * `Authentication` should be enabled if you are planning to use Enterprise Edition with the following fields set as:
-    * `Authentication Type` should be set to `Username`
-    * `Username` should be set to `license-token`
-    * `Password` should be set to your licence key for Deckhouse EE
+  * `Name` should contain created repository name, e.g. `d8-proxy`.
+  * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` should contain a dedicated port for the created repository, e.g. `8123` or another.
+  * `Allow anonymous docker pull` should be enabled in order for Bearer-token authentication to [work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms), however anonymous access [won't be working](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories) unless it was explicitly enabled in Settings -> Security -> Anonymous Access and `anonymous` user was granted access rights to the created repository.
+  * `Remote storage` should be set to `https://registry.deckhouse.io/`.
+  * `Auto blocking enabled` and `Not found cache enabled` could be disabled for debugging purposes, otherwise it should be enabled.
+  * `Maximum Metadata Age` should be set to 0.
+  * `Authentication` should be enabled if you are planning to use Deckhouse Enterprise Edition with the following fields set:
+    * `Authentication Type` should be set to `Username`.
+    * `Username` should be set to `license-token`.
+    * `Password` should be set to your license key for Deckhouse Enterprise Edition.
 
   ![Repository settings example 1](images/registry/nexus/nexus-repo-example-1.png)
   ![Repository settings example 2](images/registry/nexus/nexus-repo-example-2.png)
   ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Configure Nexus access control to allow Nexus to access created repository:
-  * Create Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions
-  ![Create Nexus role](images/registry/nexus/nexus-role.png)
-  * Create Nexus user with the role above
-  ![Create Nexus user](images/registry/nexus/nexus-user.png)
+  * Create a Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions.
+  ![Create a Nexus role](images/registry/nexus/nexus-role.png)
+  * Create a Nexus user with the role above.
+  ![Create a Nexus user](images/registry/nexus/nexus-user.png)
 
 #### Harbor
 
