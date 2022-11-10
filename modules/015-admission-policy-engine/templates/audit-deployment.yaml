@@ -70,7 +70,7 @@ spec:
         - --constraint-violations-limit=20
         - --audit-from-cache=false
         - --audit-chunk-size=500
-        - --audit-match-kind-only=false
+        - --audit-match-kind-only=true
         - --emit-audit-events=false
         - --operation=audit
         - --operation=status

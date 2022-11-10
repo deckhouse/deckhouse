@@ -17,15 +17,22 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
@@ -40,6 +47,8 @@ var (
 		"Path under which to expose metrics")
 	interval = flag.Duration("server.interval", 15*time.Second,
 		"Kubernetes API server polling interval")
+	kindsCM = flag.String("match-kinds-configmap", "gatekeeper-match-kinds",
+		"ConfigMap for export tracking resource kinds")
 
 	ticker *time.Ticker
 	done   = make(chan bool)
@@ -69,6 +78,16 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) startScheduled(t time.Duration) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		klog.Fatalf("Create kubernetes config failed: %+v\n", err)
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		klog.Fatalf("Create kubernetes client failed: %+v\n", err)
+	}
+
 	ticker = time.NewTicker(t)
 	go func() {
 		for {
@@ -76,7 +95,7 @@ func (e *Exporter) startScheduled(t time.Duration) {
 			case <-done:
 				return
 			case <-ticker.C:
-				constraints, err := gatekeeper.GetConstraints()
+				constraints, err := gatekeeper.GetConstraints(config, client)
 				if err != nil {
 					klog.Warningf("Get constraints failed: %+v\n", err)
 				}
@@ -88,6 +107,10 @@ func (e *Exporter) startScheduled(t time.Duration) {
 				allMetrics = append(allMetrics, constraintInformationMetrics...)
 
 				metrics = allMetrics
+
+				if kindsCM != nil && len(*kindsCM) > 0 {
+					updateCM(client, constraints)
+				}
 			}
 		}
 	}()
@@ -132,3 +155,28 @@ func main() {
 		klog.Fatalf("Server Shutdown Failed:%+v", err)
 	}
 }
+
+func updateCM(client *kubernetes.Clientset, constraints []gatekeeper.Constraint) {
+	if len(constraints) == 0 {
+		return
+	}
+
+	hasher := sha256.New()           // writer
+	buf := bytes.NewBuffer(nil)
+
+	// deduplicate
+	m := map[string]gatekeeper.MatchKind
+
+	for _, con := range constraints {
+		for _, k := range con.Spec.Match.Kinds {
+			sort.Strings(k.APIGroups)
+			sort.Strings(k.Kinds)
+			key := fmt.Sprintf("%s:%s", strings.Join(k.APIGroups, ","), strings.Join(k.Kinds, ","))
+
+			m[key] = con.Spec.Match.Kinds
+		}
+	}
+
+}
+
+
