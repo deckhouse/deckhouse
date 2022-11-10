@@ -93,7 +93,7 @@ Creating, starting, and connecting virtual machines to the cluster are performed
 
 There are two ways for setting the number of nodes in a group when nodes are provisioned as part of a group:
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
-- The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
+- The [minimum](cr.html#nodegroup-v1-spec-cloudinstances-minperzone)/[maximum](cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the Pods are in the `Pending` state. If you create several node groups with different parameters and [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority), then the group priority will be considered when automatically scaling (first of all, the group with a high priority will be scaled).
 
 ## Chaos monkey
 
