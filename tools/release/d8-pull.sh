@@ -172,6 +172,8 @@ trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 pull_image "$RELEASE"
 #saving Deckhouse install image
 pull_image "$RELEASE" "install"
+#saving metadata about release channel
+pull_image "$RELEASE" "release-channel"
 #saving uniq images from images_tags.json
 l=$(echo "$IMAGES" | wc -l)
 count=1
