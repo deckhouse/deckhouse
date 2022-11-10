@@ -78,9 +78,9 @@ entries:
                     ru: Описание
                   url: /modules/810-deckhouse-web/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/810-deckhouse-web/usage.html
+                  url: /modules/810-deckhouse-web/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -128,9 +128,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-aws/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-aws/usage.html
+                  url: /modules/030-cloud-provider-aws/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-aws/faq.html
             - title: Google Cloud Platform
@@ -166,9 +166,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-gcp/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-gcp/usage.html
+                  url: /modules/030-cloud-provider-gcp/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-gcp/faq.html
             - title: Microsoft Azure
@@ -204,9 +204,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-azure/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-azure/usage.html
+                  url: /modules/030-cloud-provider-azure/examples.html
             - title: OpenStack
               d8Revision: ee
               folders:
@@ -241,9 +241,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-openstack/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-openstack/usage.html
+                  url: /modules/030-cloud-provider-openstack/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-openstack/faq.html
             - title: VMware vSphere
@@ -280,9 +280,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-vsphere/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-vsphere/usage.html
+                  url: /modules/030-cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
             - title: Yandex.Cloud
@@ -318,9 +318,9 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-yandex/cr.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/030-cloud-provider-yandex/usage.html
+                  url: /modules/030-cloud-provider-yandex/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-yandex/faq.html
         - title:
@@ -332,9 +332,9 @@ entries:
                 ru: Описание
               url: /modules/040-control-plane-manager/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/040-control-plane-manager/usage.html
+              url: /modules/040-control-plane-manager/examples.html
             - title:
                 en: Configuration
                 ru: Настройки
@@ -350,9 +350,9 @@ entries:
                 ru: Описание
               url: /modules/040-node-manager/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/040-node-manager/usage.html
+              url: /modules/040-node-manager/examples.html
             - title:
                 en: Reference
                 ru: Справка
@@ -422,9 +422,9 @@ entries:
                     ru: Настройки
                   url: /modules/042-kube-dns/configuration.html
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/042-kube-dns/usage.html
+                  url: /modules/042-kube-dns/examples.html
                 - title: FAQ
                   url: /modules/042-kube-dns/faq.html
             - title: node-local-dns
@@ -435,9 +435,9 @@ entries:
                     ru: Описание
                   url: /modules/350-node-local-dns/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/350-node-local-dns/usage.html
+                  url: /modules/350-node-local-dns/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -463,9 +463,9 @@ entries:
                 ru: Описание
               url: /modules/500-dashboard/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/500-dashboard/usage.html
+              url: /modules/500-dashboard/examples.html
             - title:
                 en: Configuration
                 ru: Настройки
@@ -478,9 +478,9 @@ entries:
                 ru: Описание
               url: /modules/500-openvpn/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/500-openvpn/usage.html
+              url: /modules/500-openvpn/examples.html
             - title:
                 en: Configuration
                 ru: Настройки
@@ -496,9 +496,9 @@ entries:
                 ru: Описание
               url: /modules/402-ingress-nginx/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/402-ingress-nginx/usage.html
+              url: /modules/402-ingress-nginx/examples.html
             - title:
                 en: Reference
                 ru: Справка
@@ -533,9 +533,9 @@ entries:
                     ru: "Custom Resources (от istio.io)"
                   url: /modules/110-istio/istio-cr.html
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/110-istio/usage.html
+              url: /modules/110-istio/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -634,9 +634,9 @@ entries:
                     ru: Описание
                   url: /modules/460-log-shipper/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/460-log-shipper/usage.html
+                  url: /modules/460-log-shipper/examples.html
                 - title:
                     en: Advanced Usage
                     ru: Расширенная конфигурация
@@ -670,9 +670,9 @@ entries:
                     ru: Описание
                   url: /modules/500-okmeter/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/500-okmeter/usage.html
+                  url: /modules/500-okmeter/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -684,9 +684,9 @@ entries:
                     ru: Описание
                   url: /modules/303-prometheus-pushgateway/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/303-prometheus-pushgateway/usage.html
+                  url: /modules/303-prometheus-pushgateway/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -698,9 +698,9 @@ entries:
                     ru: Описание
                   url: /modules/500-upmeter/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/500-upmeter/usage.html
+                  url: /modules/500-upmeter/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -756,9 +756,9 @@ entries:
                 ru: Описание
               url: /modules/302-vertical-pod-autoscaler/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/302-vertical-pod-autoscaler/usage.html
+              url: /modules/302-vertical-pod-autoscaler/examples.html
             - title:
                 en: Reference
                 ru: Справка
@@ -782,9 +782,9 @@ entries:
                     ru: Описание
                   url: /modules/400-descheduler/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/400-descheduler/usage.html
+                  url: /modules/400-descheduler/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -796,9 +796,9 @@ entries:
                     ru: Описание
                   url: /modules/465-pod-reloader/
                 - title:
-                    en: Usage
+                    en: Examples
                     ru: Примеры
-                  url: /modules/465-pod-reloader/usage.html
+                  url: /modules/465-pod-reloader/examples.html
                 - title:
                     en: Configuration
                     ru: Настройки
@@ -874,9 +874,9 @@ entries:
                   ru: Описание
                 url: /modules/050-network-policy-engine/
               - title:
-                  en: Usage
+                  en: Examples
                   ru: Примеры
-                url: /modules/050-network-policy-engine/usage.html
+                url: /modules/050-network-policy-engine/examples.html
               - title:
                   en: Configuration
                   ru: Настройки
@@ -915,8 +915,8 @@ entries:
               url: /modules/099-ceph-csi/
             - title:
                 ru: Примеры
-                en: Usage
-              url: /modules/099-ceph-csi/usage.html
+                en: Examples
+              url: /modules/099-ceph-csi/examples.html
             - title:
                 ru: Справка
                 en: Reference
@@ -959,9 +959,9 @@ entries:
                 ru: Описание
               url: /modules/031-local-path-provisioner/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/031-local-path-provisioner/usage.html
+              url: /modules/031-local-path-provisioner/examples.html
             - title:
                 en: Reference
                 ru: Справка
@@ -999,9 +999,9 @@ entries:
                 ru: Настройки
               url: /modules/600-namespace-configurator/configuration.html
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/600-namespace-configurator/usage.html
+              url: /modules/600-namespace-configurator/examples.html
         - title: secret-copier
           folders:
             - title:
@@ -1034,9 +1034,9 @@ entries:
                 ru: Описание
               url: /modules/450-keepalived/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/450-keepalived/usage.html
+              url: /modules/450-keepalived/examples.html
             - title:
                 en: Reference
                 ru: Справка
@@ -1055,9 +1055,9 @@ entries:
                 ru: Описание
               url: /modules/380-metallb/
             - title:
-                en: Usage
+                en: Examples
                 ru: Примеры
-              url: /modules/380-metallb/usage.html
+              url: /modules/380-metallb/examples.html
             - title:
                 en: Configuration
                 ru: Настройки
