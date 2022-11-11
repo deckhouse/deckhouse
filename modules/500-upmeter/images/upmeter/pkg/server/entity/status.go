@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/server/ranges"
 )
@@ -72,7 +71,7 @@ func (s *EpisodeSummary) Avail() time.Duration {
 
 func (s *EpisodeSummary) Complete() bool {
 	// muted and downtimes cannot affect this
-	return s.Up+s.Down+s.Unknown+s.NoData == 5*time.Minute
+	return int64(s.Up+s.Down+s.Unknown+s.NoData) == s.TimeSlot*int64(time.Second)
 }
 
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
@@ -94,22 +93,7 @@ type RangeEpisodeLister interface {
 	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
 }
 
-func Statuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
-	daoCtx := dbctx.Start()
-	defer daoCtx.Stop()
-
-	// dao := dao.NewEpisodeDao5m(daoCtx)
-	dao := dao.NewEpisodeDao30s(daoCtx)
-	episodes, err := dao.ListEpisodeSumsForRanges(rng, ref)
-	if err != nil {
-		return nil, err
-	}
-
-	statuses := calculateStatuses(episodes, incidents, rng.Subranges, ref)
-	return statuses, nil
-}
-
-func GetStatuses(lister RangeEpisodeLister, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
 	episodes, err := lister.ListEpisodeSumsForRanges(rng, ref)
 	if err != nil {
 		return nil, err

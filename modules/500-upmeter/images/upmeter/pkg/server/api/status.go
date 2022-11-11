@@ -164,7 +164,7 @@ func getStatus(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filt
 		return nil, err
 	}
 
-	statuses, err := entity.GetStatuses(lister, filter.probeRef, filter.stepRange, incidents)
+	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents)
 	if err != nil {
 		return nil, err
 	}

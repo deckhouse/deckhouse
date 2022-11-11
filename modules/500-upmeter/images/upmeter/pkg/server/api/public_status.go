@@ -111,23 +111,33 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	var (
-		rng    ranges.StepRange
-		lister entity.RangeEpisodeLister
-		now    = time.Now()
-	)
+	now := time.Now()
+
 	if peek {
+		slotSize := 30 * time.Second
 		// Observe only last fulfilled 30 seconds for the speed of availability calculation
-		rng = new30SecondsStepRange(now)
-		lister = dao.NewEpisodeDao30s(daoCtx)
-	} else {
-		// Observe 10 minutes of fulfilled data for accuracy
-		rng = new15MinutesStepRange(now)
-		lister = dao.NewEpisodeDao5m(daoCtx)
+		return h.calcStatuses(
+			new30SecondsStepRange(now),
+			dao.NewEpisodeDao30s(daoCtx),
+			func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+				return pickSummaryByLastComleteEpisode(ref, statuses, slotSize)
+			},
+		)
 	}
 
-	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, now.Unix())
+	// Observe 10 minutes of fulfilled data for accuracy
+	return h.calcStatuses(
+		new15MinutesStepRange(now),
+		dao.NewEpisodeDao5m(daoCtx),
+		pickSummary,
+	)
+}
 
+func (h *PublicStatusHandler) calcStatuses(
+	rng ranges.StepRange,
+	lister entity.RangeEpisodeLister,
+	flattenSummary func(check.ProbeRef, map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error),
+) ([]GroupStatus, error) {
 	muteTypes := []string{
 		"Maintenance",
 		"InfrastructureMaintenance",
@@ -155,14 +165,14 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 			return nil, err
 		}
 
-		groupSummary, err := pickSummary(groupRef, resp.Statuses)
+		groupSummary, err := flattenSummary(groupRef, resp.Statuses)
 		if err != nil {
 			log.Errorf("generating summary %s: %v", group, err)
 			return nil, err
 		}
 
-		probeAvails := make([]ProbeAvailability, 0, len(resp.Statuses))
 		// Uptime per probe
+		probeAvails := make([]ProbeAvailability, 0, len(resp.Statuses))
 		for _, probeRef := range h.ProbeLister.Probes() {
 			if probeRef.Group != group {
 				// not so many probes in the list, not a big deal to spend n^2 iterations
@@ -180,7 +190,7 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 				return nil, err
 			}
 
-			probeSummary, err := pickSummary(probeRef, resp.Statuses)
+			probeSummary, err := flattenSummary(probeRef, resp.Statuses)
 			if err != nil {
 				log.Errorf("generating summary %s: %v", group, err)
 				return nil, err
@@ -210,15 +220,15 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 
 // Negative availability means we have no valid data
 func calculateAvailability(summary []entity.EpisodeSummary) float64 {
-	var uptime, total float64
+	var worked, measured float64
 	for _, s := range summary {
-		uptime += float64(s.Up + s.Unknown)
-		total += float64(s.Up + s.Unknown + s.Down)
+		worked += float64(s.Up + s.Unknown)
+		measured += float64(s.Up + s.Unknown + s.Down)
 	}
-	if total == 0 {
+	if measured == 0 {
 		return -1
 	}
-	return uptime / total
+	return worked / measured
 }
 
 func new15MinutesStepRange(now time.Time) ranges.StepRange {
@@ -238,7 +248,20 @@ func new30SecondsStepRange(now time.Time) ranges.StepRange {
 
 var ErrNoData = fmt.Errorf("no data")
 
-// pickSummary makes assertions
+// pickSummaryByLastComleteEpisode returns the last fulfilled episode summary for the given probe.
+func pickSummaryByLastComleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
+	summary, err := pickSummary(ref, statuses)
+	if err != nil {
+		return nil, err
+	}
+	lastFulfilled, found := shrinkToFulfilled(summary, slotSize)
+	if !found {
+		return nil, ErrNoData
+	}
+	return []entity.EpisodeSummary{lastFulfilled}, nil
+}
+
+// pickSummary
 func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
@@ -259,13 +282,13 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	return episodeSummaries[:3], nil
 }
 
-func shrinkToFulfilled(summary []entity.EpisodeSummary) (entity.EpisodeSummary, bool) {
+func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) (entity.EpisodeSummary, bool) {
 	for i := len(summary) - 1; i >= 0; i-- {
 		if summary[i].Complete() {
 			return summary[i], true
 		}
 	}
-	return entity.EpisodeSummary{NoData: 5 * time.Minute}, false
+	return entity.EpisodeSummary{NoData: slotSize}, false
 }
 
 // calculateStatus returns the status for a group.
