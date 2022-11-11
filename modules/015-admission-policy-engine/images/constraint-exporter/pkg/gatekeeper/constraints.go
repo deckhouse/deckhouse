@@ -133,8 +133,6 @@ func GetConstraints(config *rest.Config, client *kubernetes.Clientset) ([]Constr
 					continue
 				}
 
-				fmt.Println("Meta", constraint.Meta)
-
 				constraint.Meta.Kind = item.GetKind()
 				constraint.Meta.Name = item.GetName()
 

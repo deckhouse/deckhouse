@@ -68,11 +68,11 @@ func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
 		return
 	}
 
-	fmt.Println("CHECKSUM", checksum, kt.latestChecksum)
-
 	if checksum == kt.latestChecksum {
 		return
 	}
+
+	klog.Info("Checksum is not equal. Updating")
 
 	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
 	if err != nil {
@@ -109,7 +109,7 @@ func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
 	kt.latestChecksum = checksum
 }
 
-func (kt *KindTracker) FindPreviousHash() error {
+func (kt *KindTracker) FindInitialChecksum() error {
 	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

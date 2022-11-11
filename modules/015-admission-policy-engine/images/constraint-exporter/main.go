@@ -80,7 +80,7 @@ func NewExporter() *Exporter {
 
 func (e *Exporter) initKindTracker(cmNS, cmName string) error {
 	kt := kinds.NewKindTracker(e.client, cmNS, cmName)
-	err := kt.FindPreviousHash()
+	err := kt.FindInitialChecksum()
 	if err != nil {
 		return err
 	}

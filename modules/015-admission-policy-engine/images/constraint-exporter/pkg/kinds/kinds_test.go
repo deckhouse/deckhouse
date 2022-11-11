@@ -38,7 +38,7 @@ func TestDeduplicate(t *testing.T) {
 		},
 	}}}
 
-	res := deduplicateKinds([]gatekeeper.Constraint{con, con2})
+	res, _ := deduplicateKinds([]gatekeeper.Constraint{con, con2})
 
 	assert.Len(t, res, 2)
 	assert.Equal(t, res[":Pod"], gatekeeper.MatchKind{APIGroups: []string{""}, Kinds: []string{"Pod"}})

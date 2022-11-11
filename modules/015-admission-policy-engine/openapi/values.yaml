@@ -22,6 +22,16 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-      trackedKinds:
-        type: object
-        additionalProperties: true
+      trackedResources:
+        type: array
+        items:
+          type: object
+          properties:
+            apiGroups:
+              type: array
+              items:
+                type: string
+            resources:
+              type: array
+              items:
+                type: string
