@@ -161,7 +161,7 @@ func (h *PublicStatusHandler) calcStatuses(
 			muteDowntimeTypes: muteTypes,
 		}
 
-		groupSummary, err := h.getProbeSummary(lister, h.DowntimeMonitor, filter, pickSummary)
+		groupSummary, err := h.getProbeSummary(lister, filter, pickSummary)
 		if err != nil {
 			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
@@ -180,7 +180,7 @@ func (h *PublicStatusHandler) calcStatuses(
 				muteDowntimeTypes: muteTypes,
 			}
 
-			probeSummary, err := h.getProbeSummary(lister, h.DowntimeMonitor, filter, pickSummary)
+			probeSummary, err := h.getProbeSummary(lister, filter, pickSummary)
 			if err != nil {
 				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
@@ -209,14 +209,12 @@ func (h *PublicStatusHandler) calcStatuses(
 
 func (h *PublicStatusHandler) getProbeSummary(
 	lister entity.RangeEpisodeLister,
-	monitor *downtime.Monitor,
 	filter *statusFilter,
-	pickSummary summaryPicker) ([]entity.EpisodeSummary, error) {
-
+	pickSummary summaryPicker,
+) ([]entity.EpisodeSummary, error) {
 	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter)
 	if err != nil {
-		log.Errorf("fetching summary: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("fetching summary: %w", err)
 	}
 
 	gpSummary, err := pickSummary(filter.probeRef, resp.Statuses)
