@@ -146,6 +146,8 @@ func (h *PublicStatusHandler) calcStatuses(
 		"InfrastructureAccident",
 	}
 
+	slotSize := time.Duration(rng.Step) * time.Second
+
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
@@ -192,13 +194,13 @@ func (h *PublicStatusHandler) calcStatuses(
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-				Status:       calculateStatus(probeSummary),
+				Status:       calculateStatus(probeSummary, slotSize),
 			})
 		}
 
 		gs := GroupStatus{
 			Group:  group,
-			Status: calculateStatus(groupSummary),
+			Status: calculateStatus(groupSummary, slotSize),
 			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
@@ -313,9 +315,7 @@ func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) 
 //   - Operational is when we observe only uptime
 //   - Outage is when we observe only downtime
 //   - Degraded is when we observe mixed uptime and downtime
-func calculateStatus(sums []entity.EpisodeSummary) PublicStatus {
-	slotSize := 5 * time.Minute
-
+func calculateStatus(sums []entity.EpisodeSummary, slotSize time.Duration) PublicStatus {
 	// for the peek case
 	if len(sums) == 1 {
 		switch {
