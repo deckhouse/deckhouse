@@ -158,21 +158,24 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Expect(m[startIndex+1].Name).To(Equal(telemetry.WrapName("istio_driven_pods_total")))
 				Expect(*m[startIndex+1].Value).To(Equal(stats.drivenByIstio))
 
-				found := 0
+				foundVersioned := 0
+				foundAll := 0
 				for _, d := range m {
 					if d.Name == telemetry.WrapName("istio_driven_pods_group_by_full_version_total") {
+						foundAll++
 						desiredVer := d.Labels["version"]
 
 						for ver, count := range stats.versions {
 							if desiredVer == ver {
 								Expect(*d.Value).To(Equal(count))
-								found++
+								foundVersioned++
 							}
 						}
 					}
 				}
 
-				Expect(found).To(Equal(len(stats.versions)))
+				Expect(foundVersioned).To(Equal(len(stats.versions)))
+				Expect(foundAll).To(Equal(len(stats.versions)))
 			}
 
 			// there are no istio pods or ignored pods in the cluster, hense no metrics
