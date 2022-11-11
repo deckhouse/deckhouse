@@ -173,17 +173,6 @@ check_requirements
 echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
 IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_tags.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
-
-if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
-  echo "Pull metadata images"
-  #saving metadata about release channel
-  pull_image "alpha" "release-channel"
-  pull_image "beta" "release-channel"
-  pull_image "early-access" "release-channel"
-  pull_image "stable" "release-channel"
-  pull_image "rock-solid" "release-channel"
-fi
-
 trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
 pull_image "$RELEASE"
@@ -197,6 +186,16 @@ for i in $IMAGES; do
   printf '\rImages downloaded %s out of %s' "$count" "$l"
   count=$((count + 1))
 done
+
+if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
+  echo "Pull metadata images"
+  #saving metadata about release channel
+  pull_image "alpha" "release-channel"
+  pull_image "beta" "release-channel"
+  pull_image "early-access" "release-channel"
+  pull_image "stable" "release-channel"
+  pull_image "rock-solid" "release-channel"
+fi
 
 echo ""
 echo "Operation is complete."
