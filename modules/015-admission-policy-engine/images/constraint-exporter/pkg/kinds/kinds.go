@@ -95,6 +95,10 @@ func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
 
 	data, _ := yaml.Marshal(kinds)
 
+	if len(cm.Annotations) == 0 {
+		cm.Annotations = make(map[string]string, 0)
+	}
+
 	cm.Annotations[checksumAnnotation] = checksum
 	cm.Data = map[string]string{"kinds.yaml": string(data)}
 

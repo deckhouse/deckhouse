@@ -37,7 +37,7 @@ func xxxx(input *go_hook.HookInput) error {
 
 	kinds := snap[0].(string)
 
-	input.LogEntry.Info("Find kinds", kinds)
+	input.LogEntry.Infof("Find kinds: %s", kinds)
 
 	input.Values.Set("admissionPolicyEngine.internal.trackedKinds", kinds)
 
