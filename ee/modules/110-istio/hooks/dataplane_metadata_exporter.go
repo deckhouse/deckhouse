@@ -198,15 +198,14 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		}
 	}
 
-	var ignored, withoutSidecar, total, worked float64
+	var istioDrivenPodsCount float64
+	podsByFullVersion := make(map[string]float64)
 
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
-		total++
 		// sidecar.istio.io/inject=false annotation set -> ignore
 		if !istioPodInfo.InjectAnnotation {
-			ignored++
 			continue
 		}
 
@@ -227,7 +226,6 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPodInfo.Revision == istioRevsionAbsent {
-			withoutSidecar++
 			continue
 		}
 
@@ -260,16 +258,19 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"desired_version":      desiredVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
-		worked++
+		istioDrivenPodsCount++
+		podsByFullVersion[istioPodInfo.FullVersion]++
 	}
 
 	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
 	telemetryCollector.Expire(telemetryGroup)
 
-	telemetryCollector.Set("total_pods_used", total, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_ignored", ignored, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_without_sidecar", withoutSidecar, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
-	telemetryCollector.Set("pods_worked", worked, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	telemetryCollector.Set("istio_driven_pods_total", istioDrivenPodsCount, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	for v, c := range podsByFullVersion {
+		telemetryCollector.Set("istio_driven_pods_group_by_full_version_total", c, map[string]string{
+			"version": v,
+		}, telemetry.NewOptions().WithGroup(telemetryGroup))
+	}
 
 	return nil
 }
