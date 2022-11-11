@@ -32,6 +32,7 @@
  - **[extended-monitoring]** Restart if metrics were last collected more than 15 minutes. [#2988](https://github.com/deckhouse/deckhouse/pull/2988)
  - **[ingress-nginx]** Fix erroneous redirect to nil://example.com. [#2970](https://github.com/deckhouse/deckhouse/pull/2970)
     Ingress-nginx v1.1 pods will be restarted.
+ - **[monitoring-kubernetes-control-plane]** Port to listen changed to 8008 because it is already used by the ingress-nginx module. [#3019](https://github.com/deckhouse/deckhouse/pull/3019)
  - **[node-local-dns]** Disable `node-local-dns` for cilium installations on nodes with kernel < 5.7 due to problems with `ebpf-socket` and resolved endpoints. [#2995](https://github.com/deckhouse/deckhouse/pull/2995)
     The node-local-dns module stops working for cilium installations on nodes with kernels < 5.7.
 
