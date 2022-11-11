@@ -30,3 +30,9 @@ properties:
           - "networking.k8s.io:Ingress"
         items:
           type: string
+      trackedKinds:
+        type: array
+        items:
+          type: object
+          properties:
+            additionalProperties: true
