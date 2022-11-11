@@ -8,6 +8,7 @@ package hooks
 import (
 	"context"
 
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -15,19 +16,55 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 
+	assertNoMetrics := func(f *HookExecutionConfig) {
+		m := f.MetricsCollector.CollectedMetrics()
+		Expect(m).To(HaveLen(1))
+
+		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+			Group:  telemetry.WrapName(telemetryGroup),
+			Action: "expire",
+		}))
+	}
+
+	assertTelemetryMetrics := func(f *HookExecutionConfig, versions []string) {
+		m := f.MetricsCollector.CollectedMetrics()
+		Expect(m).To(HaveLen(len(versions) + 1))
+
+		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+			Group:  telemetry.WrapName(telemetryGroup),
+			Action: "expire",
+		}))
+
+		found := 0
+		for i := 1; i < len(m); i++ {
+			metric := m[i]
+			Expect(metric.Name).To(Equal(telemetry.WrapName("istio_control_plane_full_version")))
+			currentVer := metric.Labels["version"]
+			for _, ver := range versions {
+				if currentVer == ver {
+					found++
+					break
+				}
+			}
+		}
+
+		Expect(versions).To(HaveLen(found))
+	}
+
 	Context("Empty cluster and no settings", func() {
 		BeforeEach(func() {
 			values := `
 internal:
   versionMap: {
-    "1.1": {},
-    "1.2": {}
+    "1.1": {"fullVersion": "1.1.1"},
+    "1.2": {"fullVersion": "1.2.11"}
   }
 globalVersion: "1.2" # default version "from openapi/values.yaml"
 `
@@ -43,6 +80,8 @@ globalVersion: "1.2" # default version "from openapi/values.yaml"
 
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.2"]`))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
+
+			assertTelemetryMetrics(f, []string{"1.2.11"})
 		})
 	})
 
@@ -53,10 +92,10 @@ globalVersion: "1.2" # default version "from openapi/values.yaml"
 			values := `
 internal:
   versionMap: {
-    "1.10": {},
-    "1.3": {},
-    "1.4": {},
-    "1.42": {}
+    "1.10": {"fullVersion": "1.10.10"},
+    "1.3": {"fullVersion": "1.3.1"},
+    "1.4": {"fullVersion": "1.4.3"},
+    "1.42": {"fullVersion": "1.42.42"}
   }
   globalVersion: "1.42"
 globalVersion: "1.4" # default version "from openapi/values.yaml"
@@ -68,6 +107,8 @@ globalVersion: "1.4" # default version "from openapi/values.yaml"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.42"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.42"))
+
+			assertTelemetryMetrics(f, []string{"1.42.42"})
 		})
 	})
 
@@ -78,9 +119,9 @@ globalVersion: "1.4" # default version "from openapi/values.yaml"
 			values := `
 internal:
   versionMap: {
-    "1.10": {},
-    "1.3": {},
-    "1.4": {}
+    "1.10": {"fullVersion": "1.10.10"},
+    "1.3": {"fullVersion": "1.3.1"},
+    "1.4": {"fullVersion": "1.4.3"},
   }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
@@ -111,6 +152,8 @@ spec: {}
 		It("Hook must fail with error", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError("can't find istio.deckhouse.io/global-version annotation for istiod global Service d8-istio/istiod"))
+
+			assertNoMetrics(f)
 		})
 	})
 
@@ -121,9 +164,9 @@ spec: {}
 			values := `
 internal:
   versionMap: {
-    "1.10": {},
-    "1.3": {},
-    "1.4": {}
+    "1.10": {"fullVersion": "1.10.10"},
+    "1.3": {"fullVersion": "1.3.1"},
+    "1.4": {"fullVersion": "1.4.3"},
   }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
@@ -156,6 +199,8 @@ spec: {}
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.3"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.3"))
+
+			assertTelemetryMetrics(f, []string{"1.3.1"})
 		})
 	})
 
@@ -166,10 +211,10 @@ spec: {}
 			values := `
 internal:
   versionMap: {
-    "1.10": {},
-    "1.2": {},
-    "1.3": {},
-    "1.4": {}
+    "1.10": {"fullVersion": "1.10.10"},
+    "1.2": {"fullVersion": "1.2.4"},
+    "1.3": {"fullVersion": "1.3.1"},
+    "1.4": {"fullVersion": "1.4.3"},
   }
 globalVersion: "1.4" # default version "from openapi/values.yaml"
 `
@@ -203,6 +248,8 @@ spec: {}
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.2"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
+
+			assertTelemetryMetrics(f, []string{"1.2.4"})
 		})
 	})
 
@@ -213,9 +260,9 @@ spec: {}
 			values := `
 internal:
   versionMap: {
-    "1.1": {},
-    "1.2": {},
-    "1.3": {},
+    "1.1": {"fullVersion": "1.1.5"},
+    "1.2": {"fullVersion": "1.2.3"},
+    "1.3": {"fullVersion": "1.3.11"},
   }
 globalVersion: "1.3" # default version "from openapi/values.yaml"
 `
@@ -228,6 +275,8 @@ globalVersion: "1.3" # default version "from openapi/values.yaml"
 			Expect(f).ToNot(ExecuteSuccessfully())
 
 			Expect(f.GoHookError).To(MatchError("unsupported versions: [2.0,2.7,2.8,2.9]"))
+
+			assertNoMetrics(f)
 		})
 	})
 })
