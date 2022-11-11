@@ -90,12 +90,27 @@ func (a ByTimeSlot) Less(i, j int) bool {
 	return a[i].TimeSlot < a[j].TimeSlot
 }
 
+type RangeEpisodeLister interface {
+	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
+}
+
 func Statuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
 	daoCtx := dbctx.Start()
 	defer daoCtx.Stop()
 
-	dao5m := dao.NewEpisodeDao5m(daoCtx)
-	episodes, err := dao5m.ListEpisodeSumsForRanges(rng, ref)
+	// dao := dao.NewEpisodeDao5m(daoCtx)
+	dao := dao.NewEpisodeDao30s(daoCtx)
+	episodes, err := dao.ListEpisodeSumsForRanges(rng, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	statuses := calculateStatuses(episodes, incidents, rng.Subranges, ref)
+	return statuses, nil
+}
+
+func GetStatuses(lister RangeEpisodeLister, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+	episodes, err := lister.ListEpisodeSumsForRanges(rng, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +145,7 @@ aGroup:
 func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
-	episodes = combineEpisodesByTimeslot(episodes)
+	episodes = combineEpisodesByTimeslot(episodes, stepRanges[0].Diff())
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
@@ -158,7 +173,7 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 }
 
 // Each group/probe should have only 1 Episode per Start.
-func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
+func combineEpisodesByTimeslot(episodes []check.Episode, slotSize time.Duration) []check.Episode {
 	// It could have been a more shallow map map[string][]check.Episode, the key being
 	//           fmt.Sprintf("%s-%d", probeId, start)
 	idx := make(map[string]map[int64][]int)
@@ -179,7 +194,7 @@ func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]
 			for _, index := range indices {
-				ep = ep.Combine(episodes[index], 5*time.Minute)
+				ep = ep.Combine(episodes[index], slotSize)
 			}
 			newEpisodes = append(newEpisodes, ep)
 		}
@@ -218,6 +233,10 @@ func calcMuteDuration(inc check.DowntimeIncident, rng ranges.Range, group string
 
 // updateMute applies muting to a EpisodeSummary based on intervals described by incidents.
 func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incidents []check.DowntimeIncident, stepRanges []ranges.Range) {
+	if len(incidents) == 0 || len(stepRanges) == 0 {
+		return
+	}
+
 	for group := range statuses {
 		for _, stepRange := range stepRanges {
 			var (

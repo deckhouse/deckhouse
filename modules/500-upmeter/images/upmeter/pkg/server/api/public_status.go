@@ -106,13 +106,27 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 // getGroupStatuses returns total statuses for each group for the current partial 5m timeslot plus
-// previous full 5m timeslot.
+// previous full 5m timeslot. If peek is true, then the current partial 5m timeslot is not included.
 func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	rng := new15MinuteStepRange(time.Now())
-	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, time.Now().Unix())
+	var (
+		rng    ranges.StepRange
+		lister entity.RangeEpisodeLister
+		now    = time.Now()
+	)
+	if peek {
+		// Observe only last fulfilled 30 seconds for the speed of availability calculation
+		rng = new30SecondsStepRange(now)
+		lister = dao.NewEpisodeDao30s(daoCtx)
+	} else {
+		// Observe 10 minutes of fulfilled data for accuracy
+		rng = new15MinutesStepRange(now)
+		lister = dao.NewEpisodeDao5m(daoCtx)
+	}
+
+	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, now.Unix())
 
 	muteTypes := []string{
 		"Maintenance",
@@ -135,7 +149,7 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 			muteDowntimeTypes: muteTypes,
 		}
 
-		resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
+		resp, err := getStatus(lister, h.DowntimeMonitor, filter)
 		if err != nil {
 			log.Errorf("cannot calculate status for group %s: %v", group, err)
 			return nil, err
@@ -160,7 +174,7 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 				probeRef:          probeRef,
 				muteDowntimeTypes: muteTypes,
 			}
-			resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
+			resp, err := getStatus(lister, h.DowntimeMonitor, filter)
 			if err != nil {
 				log.Errorf("cannot calculate status for group %s: %v", group, err)
 				return nil, err
@@ -207,12 +221,19 @@ func calculateAvailability(summary []entity.EpisodeSummary) float64 {
 	return uptime / total
 }
 
-func new15MinuteStepRange(now time.Time) ranges.StepRange {
+func new15MinutesStepRange(now time.Time) ranges.StepRange {
 	step := 5 * time.Minute
 	slotStart := now.Truncate(step)
 	from := slotStart.Add(-2 * step)
 	to := slotStart.Add(step)
-	return ranges.NewStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
+	return ranges.New5MinStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
+}
+
+func new30SecondsStepRange(now time.Time) ranges.StepRange {
+	step := 30 * time.Second
+	from := now.Truncate(step)
+	to := from.Add(step)
+	return ranges.New30SecStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
 var ErrNoData = fmt.Errorf("no data")

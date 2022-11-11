@@ -36,11 +36,22 @@ func (r Range) Diff() time.Duration {
 	return time.Duration(r.To-r.From) * time.Second
 }
 
-// NewStepRange aligns range borders and calculates subranges.
+// New5MinStepRange returns SteRange aligned to 5 minute step.
+func New5MinStepRange(from, to, step int64) StepRange {
+	step = alignStep(step, 300)
+	return NewStepRange(from, to, step)
+}
+
+// New30SecStepRange returns SteRange aligned to 30 seconds step.
+func New30SecStepRange(from, to, step int64) StepRange {
+	step = alignStep(step, 30)
+	return NewStepRange(from, to, step)
+}
+
+// New5MinStepRange aligns range borders and calculates subranges.
 func NewStepRange(from, to, step int64) StepRange {
+	to = alignEdgeForward(to, step)
 	count := (to - from) / step
-	step = alignStep(step)
-	to = alignEdge(to, step)
 	from = to - step*count
 
 	res := StepRange{
@@ -70,17 +81,13 @@ func NewStepRange(from, to, step int64) StepRange {
 	return res
 }
 
-// alignStep makes sure that the step is a multiple of 300.
-func alignStep(step int64) int64 {
-	var (
-		minStep     = int64(300)
-		alignedStep = step - step%minStep
-	)
-	return maxInt64(minStep, alignedStep)
+// alignStep makes sure that the step is a multiple of min.
+func alignStep(step, min int64) int64 {
+	return maxInt64(min, step-step%min)
 }
 
-// alignStep makes sure the
-func alignEdge(to, step int64) int64 {
+// alignEdgeForward makes sure the edge is a multiple of step, rounded to bigger side.
+func alignEdgeForward(to, step int64) int64 {
 	if to%step == 0 {
 		return to
 	}

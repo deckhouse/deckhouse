@@ -18,10 +18,12 @@ package dao
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 type EpisodeDao30s struct {
@@ -231,4 +233,94 @@ func (d *EpisodeDao30s) GetEarliestTimeSlot() (time.Time, error) {
 	}
 
 	return slot, nil
+}
+
+// ListEpisodeSumsForRanges completely duplicates the same method in EpisodeDao5m
+// TODO (e.shevchenko): DRY
+func (d *EpisodeDao30s) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error) {
+	res := make([]check.Episode, 0)
+
+	queryParts := map[string]string{
+		"select": `SELECT sum(nano_up), sum(nano_down), sum(nano_unknown), sum(nano_unmeasured)`,
+		"from":   "FROM episodes_30s",
+		"where":  "WHERE timeslot >= ? AND timeslot < ?",
+	}
+
+	for _, stepRange := range rng.Subranges {
+		// Build query
+
+		selectPart := queryParts["select"]
+		where := queryParts["where"]
+		var groupBy []string // GROUP BY group_name, probe_name
+
+		queryArgs := []interface{}{
+			stepRange.From,
+			stepRange.To,
+		}
+		if ref.Group != "" {
+			selectPart += ", group_name"
+			where += " AND group_name = ?"
+			queryArgs = append(queryArgs, ref.Group)
+			groupBy = append(groupBy, "group_name")
+		}
+
+		if !areAllProbesRequested(ref.Probe) {
+			// Choose specific probe
+			where += " AND probe_name = ?"
+			queryArgs = append(queryArgs, ref.Probe)
+		}
+
+		selectPart += ", probe_name"
+		groupBy = append(groupBy, "probe_name")
+
+		if len(groupBy) > 0 {
+			where += " GROUP BY " + strings.Join(groupBy, ", ")
+		}
+
+		query := selectPart + " " + queryParts["from"] + " " + where
+
+		// Exec and parse
+
+		rows, err := d.DbCtx.StmtRunner().Query(query, queryArgs...)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			entity := Entity{}
+			var err error
+			if len(groupBy) == 0 {
+				err = rows.Scan(
+					&entity.Episode.Up,
+					&entity.Episode.Down,
+					&entity.Episode.Unknown,
+					&entity.Episode.NoData)
+			}
+			if len(groupBy) == 1 {
+				err = rows.Scan(
+					&entity.Episode.Up,
+					&entity.Episode.Down,
+					&entity.Episode.Unknown,
+					&entity.Episode.NoData,
+					&entity.Episode.ProbeRef.Group)
+			}
+			if len(groupBy) == 2 {
+				err = rows.Scan(
+					&entity.Episode.Up,
+					&entity.Episode.Down,
+					&entity.Episode.Unknown,
+					&entity.Episode.NoData,
+					&entity.Episode.ProbeRef.Group,
+					&entity.Episode.ProbeRef.Probe)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("row to entity episode: %v", err)
+			}
+			entity.Episode.TimeSlot = time.Unix(stepRange.From, 0)
+			res = append(res, entity.Episode)
+		}
+	}
+
+	return res, nil
 }
