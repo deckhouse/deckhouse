@@ -17,6 +17,7 @@ limitations under the License.
 package entity
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -96,7 +97,7 @@ type RangeEpisodeLister interface {
 func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
 	episodes, err := lister.ListEpisodeSumsForRanges(rng, ref)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing episodes for range %s: %w", rng, err)
 	}
 
 	statuses := calculateStatuses(episodes, incidents, rng.Subranges, ref)

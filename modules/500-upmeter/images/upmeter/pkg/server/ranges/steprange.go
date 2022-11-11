@@ -17,6 +17,7 @@ limitations under the License.
 package ranges
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -25,6 +26,10 @@ type StepRange struct {
 	To        int64
 	Step      int64
 	Subranges []Range
+}
+
+func (r StepRange) String() string {
+	return fmt.Sprintf("StepRange{From: %d, To: %d, Step: %d, Subranges: (N=%d)}", r.From, r.To, r.Step, len(r.Subranges))
 }
 
 type Range struct {

@@ -167,7 +167,7 @@ func (h *PublicStatusHandler) calcStatuses(
 
 		groupSummary, err := flattenSummary(groupRef, resp.Statuses)
 		if err != nil {
-			log.Errorf("generating summary %s: %v", group, err)
+			log.Errorf("generating summary for group %s: %v", group, err)
 			return nil, err
 		}
 
@@ -192,7 +192,7 @@ func (h *PublicStatusHandler) calcStatuses(
 
 			probeSummary, err := flattenSummary(probeRef, resp.Statuses)
 			if err != nil {
-				log.Errorf("generating summary %s: %v", group, err)
+				log.Errorf("generating summary for probe %s/%s: %v", group, groupRef.Probe, err)
 				return nil, err
 			}
 
@@ -252,11 +252,11 @@ var ErrNoData = fmt.Errorf("no data")
 func pickSummaryByLastComleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
 	summary, err := pickSummary(ref, statuses)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting summary for slot size %s: %w", slotSize, err)
 	}
 	lastFulfilled, found := shrinkToFulfilled(summary, slotSize)
 	if !found {
-		return nil, ErrNoData
+		return nil, fmt.Errorf("shrinking data to last complete episode: %w", ErrNoData)
 	}
 	return []entity.EpisodeSummary{lastFulfilled}, nil
 }
