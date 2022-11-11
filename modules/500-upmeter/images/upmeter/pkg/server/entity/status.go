@@ -27,23 +27,28 @@ import (
 )
 
 type EpisodeSummary struct {
-	TimeSlot  int64                    `json:"ts"`
-	StartDate string                   `json:"start"`
-	EndDate   string                   `json:"end"`
-	Up        time.Duration            `json:"up"`
-	Down      time.Duration            `json:"down"`
-	Unknown   time.Duration            `json:"unknown"`
-	Muted     time.Duration            `json:"muted"`
-	NoData    time.Duration            `json:"nodata"`
+	StartDate string `json:"start"`
+	EndDate   string `json:"end"`
+
+	TimeSlot int64 `json:"ts"`
+
+	Up       time.Duration `json:"up"`
+	Down     time.Duration `json:"down"`
+	Unknown  time.Duration `json:"unknown"`
+	Muted    time.Duration `json:"muted"`
+	NoData   time.Duration `json:"nodata"`
+	SlotSize time.Duration `json:"slot_size"`
+
 	Downtimes []check.DowntimeIncident `json:"downtimes"`
 }
 
-func newEpisodeSummary(stepRange ranges.Range) *EpisodeSummary {
+func newEpisodeSummary(rng ranges.Range) *EpisodeSummary {
 	return &EpisodeSummary{
-		TimeSlot:  stepRange.From,
-		StartDate: time.Unix(stepRange.From, 0).Format(time.RFC3339),
-		EndDate:   time.Unix(stepRange.To, 0).Format(time.RFC3339),
-		NoData:    stepRange.Diff(),
+		TimeSlot:  rng.From,
+		SlotSize:  rng.Dur(),
+		StartDate: time.Unix(rng.From, 0).Format(time.RFC3339),
+		EndDate:   time.Unix(rng.To, 0).Format(time.RFC3339),
+		NoData:    rng.Dur(),
 	}
 }
 
@@ -72,7 +77,7 @@ func (s *EpisodeSummary) Avail() time.Duration {
 
 func (s *EpisodeSummary) Complete() bool {
 	// muted and downtimes cannot affect this
-	return int64(s.Up+s.Down+s.Unknown+s.NoData) == s.TimeSlot*int64(time.Second)
+	return s.Up+s.Down+s.Unknown+s.NoData == s.SlotSize
 }
 
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
@@ -130,7 +135,7 @@ aGroup:
 func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
-	episodes = combineEpisodesByTimeslot(episodes, stepRanges[0].Diff())
+	episodes = combineEpisodesByTimeslot(episodes, stepRanges[0].Dur())
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
@@ -225,7 +230,7 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 	for group := range statuses {
 		for _, stepRange := range stepRanges {
 			var (
-				step             = stepRange.Diff()
+				step             = stepRange.Dur()
 				muted            time.Duration
 				relatedDowntimes []check.DowntimeIncident
 			)
@@ -318,7 +323,7 @@ func calculateTotalForPeriod(statuses map[string]map[string]map[int64]*EpisodeSu
 
 // Create empty statuses for each probe.
 // Group -> Probe -> Slot -> *EpisodeSummary
-func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range) map[string]map[string]map[int64]*EpisodeSummary {
+func newSummaryTable(episodes []check.Episode, rangeList []ranges.Range) map[string]map[string]map[int64]*EpisodeSummary {
 	statuses := map[string]map[string]map[int64]*EpisodeSummary{}
 
 	for _, episode := range episodes {
@@ -335,8 +340,8 @@ func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range) map[st
 			statuses[group][probe] = map[int64]*EpisodeSummary{}
 		}
 
-		for _, stepRange := range stepRanges {
-			statuses[group][probe][stepRange.From] = newEpisodeSummary(stepRange)
+		for _, rng := range rangeList {
+			statuses[group][probe][rng.From] = newEpisodeSummary(rng)
 		}
 	}
 

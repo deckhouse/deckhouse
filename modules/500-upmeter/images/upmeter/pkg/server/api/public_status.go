@@ -114,12 +114,12 @@ func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, erro
 	now := time.Now()
 
 	if peek {
-		slotSize := 30 * time.Second
 		// Observe only last fulfilled 30 seconds for the speed of availability calculation
 		return h.calcStatuses(
 			new30SecondsStepRange(now),
 			dao.NewEpisodeDao30s(daoCtx),
 			func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+				slotSize := 30 * time.Second
 				return pickGroupProbeSummaryByLastCompleteEpisode(ref, statuses, slotSize)
 			},
 		)

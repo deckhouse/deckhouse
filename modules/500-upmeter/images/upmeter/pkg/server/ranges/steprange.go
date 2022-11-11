@@ -37,7 +37,7 @@ type Range struct {
 	To   int64
 }
 
-func (r Range) Diff() time.Duration {
+func (r Range) Dur() time.Duration {
 	return time.Duration(r.To-r.From) * time.Second
 }
 
