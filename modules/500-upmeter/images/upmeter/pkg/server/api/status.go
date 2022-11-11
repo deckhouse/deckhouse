@@ -132,32 +132,6 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 	return parsed, nil
 }
 
-// func getStatus(dbctx *dbcontext.DbContext, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
-// 	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	daoCtx := dbctx.Start()
-// 	defer daoCtx.Stop()
-// 	dao5m := dao.NewEpisodeDao5m(daoCtx)
-
-// 	statuses, err := entity.GetStatuses(dao5m, filter.probeRef, filter.stepRange, incidents)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	resp := &StatusResponse{
-// 		Statuses:  statuses,
-// 		Step:      filter.stepRange.Step,
-// 		From:      filter.stepRange.From,
-// 		To:        filter.stepRange.To,
-// 		Incidents: incidents,
-// 	}
-
-// 	return resp, nil
-// }
-
 func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
 	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
 	if err != nil {

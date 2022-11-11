@@ -27,10 +27,10 @@ import (
 )
 
 type EpisodeSummary struct {
+	TimeSlot int64 `json:"ts"`
+
 	StartDate string `json:"start"`
 	EndDate   string `json:"end"`
-
-	TimeSlot int64 `json:"ts"`
 
 	Up       time.Duration `json:"up"`
 	Down     time.Duration `json:"down"`
@@ -99,13 +99,13 @@ type RangeEpisodeLister interface {
 	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
 }
 
-func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
-	episodes, err := lister.ListEpisodeSumsForRanges(rng, ref)
+func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+	episodes, err := lister.ListEpisodeSumsForRanges(srng, ref)
 	if err != nil {
-		return nil, fmt.Errorf("listing episodes for range %s: %w", rng, err)
+		return nil, fmt.Errorf("listing episodes for range %s: %w", srng, err)
 	}
 
-	statuses := calculateStatuses(episodes, incidents, rng.Subranges, ref)
+	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref)
 	return statuses, nil
 }
 
@@ -132,19 +132,19 @@ aGroup:
 	  up: 300
 	  down: 0
 */
-func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
+func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
-	episodes = combineEpisodesByTimeslot(episodes, stepRanges[0].Dur())
+	episodes = combineEpisodesByTimeslot(episodes, rangeList[0].Dur())
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
 	// map[string]map[string]map[int64]*EpisodeSummary
-	statuses := newSummaryTable(episodes, stepRanges)
+	statuses := newSummaryTable(episodes, rangeList)
 
 	// Sum up episodes for each probe by Start within each step range.
 	// TODO various optimizations can be applied here.
-	for _, stepRange := range stepRanges {
+	for _, stepRange := range rangeList {
 		for _, episode := range episodes {
 			if !episode.IsInRange(stepRange.From, stepRange.To) {
 				continue
@@ -154,10 +154,10 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 		}
 	}
 
-	updateMute(statuses, incidents, stepRanges)
+	updateMute(statuses, incidents, rangeList)
 
 	// Calculate group-level summaries including __total__
-	calculateTotalForPeriod(statuses, stepRanges)
+	calculateTotalForPeriod(statuses, rangeList)
 
 	return transformTimestampedMapsToSortedArrays(statuses, ref)
 }
