@@ -19,9 +19,10 @@ package hooks
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
