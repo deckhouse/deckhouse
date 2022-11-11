@@ -134,7 +134,7 @@ deckhouse: |
 * Создан проксирующий репозиторий Docker.
 * Параметр `Allow anonymous docker pull` должен быть включен.
 * Должен быть настроен контроль доступа:
-  * Создана роль Nexus с полномочиями `nx-repository-view-docker-<Ваш репозиторий>-browse` и `nx-repository-view-docker-<Ваш репозиторий>-read`.
+  * Создана роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
   * Создан пользователь Nexus с ролью, созданной выше.
 * Параметр `Maximum metadata age` созданного репозитория должен быть установлен в 0.
 
@@ -156,14 +156,14 @@ deckhouse: |
   * Если планируется использовать Deckhouse Enterprise Edition, то `Authentication` должно быть включено с одновременным заполнением следующих полей:
     * `Authentication Type` должно иметь значение `Username`.
     * `Username` должно иметь значение `license-token`.
-    * `Password` должно иметь значение ключа Вашей лицензии Deckhouse Enterprise Edition.
+    * `Password` должно иметь значение ключа лицензии Deckhouse Enterprise Edition.
 
   ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
   ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
   ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
-  * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<Ваш репозиторий>-browse` и `nx-repository-view-docker-<Ваш репозиторий>-read`.
+  * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
     ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
   * Создайте пользователя Nexus с ролью, созданной выше.
     ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
