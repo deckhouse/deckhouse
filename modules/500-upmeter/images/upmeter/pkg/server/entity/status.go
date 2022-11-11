@@ -222,22 +222,22 @@ func calcMuteDuration(inc check.DowntimeIncident, rng ranges.Range, group string
 }
 
 // updateMute applies muting to a EpisodeSummary based on intervals described by incidents.
-func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incidents []check.DowntimeIncident, stepRanges []ranges.Range) {
-	if len(incidents) == 0 || len(stepRanges) == 0 {
+func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incidents []check.DowntimeIncident, rangeList []ranges.Range) {
+	if len(incidents) == 0 || len(rangeList) == 0 {
 		return
 	}
 
 	for group := range statuses {
-		for _, stepRange := range stepRanges {
+		for _, rng := range rangeList {
 			var (
-				step             = stepRange.Dur()
+				step             = rng.Dur()
 				muted            time.Duration
 				relatedDowntimes []check.DowntimeIncident
 			)
 
 			// calculate maximum known mute duration
 			for _, incident := range incidents {
-				m := calcMuteDuration(incident, stepRange, group)
+				m := calcMuteDuration(incident, rng, group)
 				if m == 0 {
 					continue
 				}
@@ -247,7 +247,7 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 
 			// Apply `muted` to all probes in group.
 			for probeName := range statuses[group] {
-				status := statuses[group][probeName][stepRange.From]
+				status := statuses[group][probeName][rng.From]
 
 				status.Downtimes = relatedDowntimes
 
