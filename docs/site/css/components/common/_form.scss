@@ -82,8 +82,9 @@
   }
 
   .fake-checkbox {
-    display: inline-block;
     position: relative;
+    display: inline-block;
+    flex-shrink: 0;
     width: 17px;
     height: 17px;
     margin-top: 1px;

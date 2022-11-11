@@ -1,10 +1,10 @@
 request-access:
   header:
     ru:
-      title: "Запросить лицензионный ключ"
+      title: "Запросить пробный доступ на 30 дней"
       text: "Заполните форму и мы отправим данные для доступа вам на почту."
     en:
-      title: "Request access"
+      title: "Request 30 days access"
       text: "Fill out this form and we will send you access credentials via email."
   success-message:
     ru:
