@@ -24,5 +24,4 @@ properties:
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       trackedKinds:
         type: object
-        properties:
-          additionalProperties: true
+        additionalProperties: true
