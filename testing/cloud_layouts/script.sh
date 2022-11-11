@@ -98,9 +98,6 @@ SWITCH_TO_IMAGE_TAG=
 # ssh command with common args.
 ssh_command="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet"
 
-# On Centos7/RedHat bootstrap puts jq to /usr/local/bin/jq
-# export PATH="/usr/local/bin:$PATH"
-
 # Path to private SSH key to connect to cluster after bootstrap
 ssh_private_key_path=
 # User for SSH connect.
@@ -547,9 +544,6 @@ trap pause-the-test EXIT
 #
 ### Get the IP of upmeter server
 for ((i=0; i<15; i++)); do
-  echo $PATH || true            ## DELETE ME
-  ls /usr/local/bin/jq || true  ## DELETE ME
-  which jq || true              ## DELETE ME
   upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') && break
   >&2 echo "Attempt to get Endpoints for upmeter #$i failed. Sleeping 30 seconds..."
   sleep 30

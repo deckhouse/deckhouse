@@ -70,6 +70,11 @@ func (s *EpisodeSummary) Avail() time.Duration {
 	return s.Up + s.Down + s.Unknown
 }
 
+func (s *EpisodeSummary) Complete() bool {
+	// muted and downtimes cannot affect this
+	return s.Up+s.Down+s.Unknown+s.NoData == 5*time.Minute
+}
+
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
 type ByTimeSlot []EpisodeSummary
 

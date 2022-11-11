@@ -83,7 +83,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, status, err := h.getStatusSummary()
+	statuses, err := h.getGroupStatuses(r.URL.Query().Get("peek") == "1")
 	if err != nil {
 		log.Errorf("Cannot get status summary: %v", err)
 		// Skipping the error because the JSON structure is defined in advance.
@@ -97,20 +97,21 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Skipping the error because the JSON structure is defined in advance.
+	totalStatus := calculateTotalStatus(statuses)
 	out, _ := json.Marshal(&PublicStatusResponse{
 		Rows:   statuses,
-		Status: status,
+		Status: totalStatus,
 	})
 	w.Write(out)
 }
 
-// getStatusSummary returns total statuses for each group for the current partial 5m timeslot plus
+// getGroupStatuses returns total statuses for each group for the current partial 5m timeslot plus
 // previous full 5m timeslot.
-func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, error) {
+func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	rng := threeStepRange(time.Now())
+	rng := new15MinuteStepRange(time.Now())
 	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, time.Now().Unix())
 
 	muteTypes := []string{
@@ -137,20 +138,20 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 		resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
 		if err != nil {
 			log.Errorf("cannot calculate status for group %s: %v", group, err)
-			return nil, StatusOutage, err
+			return nil, err
 		}
 
-		summary, err := pickSummary(groupRef, resp.Statuses)
+		groupSummary, err := pickSummary(groupRef, resp.Statuses)
 		if err != nil {
 			log.Errorf("generating summary %s: %v", group, err)
-			return nil, StatusOutage, err
+			return nil, err
 		}
 
 		probeAvails := make([]ProbeAvailability, 0, len(resp.Statuses))
 		// Uptime per probe
 		for _, probeRef := range h.ProbeLister.Probes() {
 			if probeRef.Group != group {
-				// not so many probes in the list, so it is ok to iterate
+				// not so many probes in the list, not a big deal to spend n^2 iterations
 				continue
 			}
 
@@ -162,36 +163,35 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 			resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
 			if err != nil {
 				log.Errorf("cannot calculate status for group %s: %v", group, err)
-				return nil, StatusOutage, err
+				return nil, err
 			}
 
-			summary, err := pickSummary(probeRef, resp.Statuses)
+			probeSummary, err := pickSummary(probeRef, resp.Statuses)
 			if err != nil {
 				log.Errorf("generating summary %s: %v", group, err)
-				return nil, StatusOutage, err
+				return nil, err
 			}
 
-			av := calculateAvailability(summary)
+			av := calculateAvailability(probeSummary)
 			if av < 0 {
 				continue
 			}
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-				Status:       calculateStatus(summary),
+				Status:       calculateStatus(probeSummary),
 			})
 		}
 
 		gs := GroupStatus{
 			Group:  group,
-			Status: calculateStatus(summary),
+			Status: calculateStatus(groupSummary),
 			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
 	}
 
-	totalStatus := calculateTotalStatus(groupStatuses)
-	return groupStatuses, totalStatus, nil
+	return groupStatuses, nil
 }
 
 // Negative availability means we have no valid data
@@ -207,7 +207,7 @@ func calculateAvailability(summary []entity.EpisodeSummary) float64 {
 	return uptime / total
 }
 
-func threeStepRange(now time.Time) ranges.StepRange {
+func new15MinuteStepRange(now time.Time) ranges.StepRange {
 	step := 5 * time.Minute
 	slotStart := now.Truncate(step)
 	from := slotStart.Add(-2 * step)
@@ -238,6 +238,15 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	return episodeSummaries[:3], nil
 }
 
+func shrinkToFulfilled(summary []entity.EpisodeSummary) (entity.EpisodeSummary, bool) {
+	for i := len(summary) - 1; i >= 0; i-- {
+		if summary[i].Complete() {
+			return summary[i], true
+		}
+	}
+	return entity.EpisodeSummary{NoData: 5 * time.Minute}, false
+}
+
 // calculateStatus returns the status for a group.
 //
 // Input array should have 3 elements, but might have only twoof them.
@@ -248,6 +257,18 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 //   - Degraded is when we observe mixed uptime and downtime
 func calculateStatus(sums []entity.EpisodeSummary) PublicStatus {
 	slotSize := 5 * time.Minute
+
+	// for the peek case
+	if len(sums) == 1 {
+		switch {
+		case sums[0].Up == slotSize:
+			return StatusOperational
+		case sums[0].Down == slotSize:
+			return StatusOutage
+		default:
+			return StatusDegraded
+		}
+	}
 
 	var prev, cur entity.EpisodeSummary
 	if len(sums) == 2 || sums[2].NoData == slotSize {
