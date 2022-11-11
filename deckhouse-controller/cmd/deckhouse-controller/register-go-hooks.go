@@ -22,7 +22,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/global-hooks/deckhouse-config"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
 	_ "github.com/deckhouse/deckhouse/global-hooks/resources"
-	_ "github.com/deckhouse/deckhouse/global-hooks/telemetry"
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/003-deckhouse-config/hooks"
