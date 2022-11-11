@@ -280,7 +280,16 @@ func pickGroupProbeSummary(ref check.ProbeRef, statuses map[string]map[string][]
 	}
 
 	episodeSummaries := statuses[g][p]
-	n := len(episodeSummaries) - 1 // ignore summary column in the end
+	if len(episodeSummaries) == 0 {
+		return nil, fmt.Errorf("%w (empty row) for probe '%s/%s'", ErrNoData, g, p)
+	}
+
+	if len(episodeSummaries) == 1 {
+		return episodeSummaries, nil
+	}
+
+	// Summary column in the end is implied, ignore summary column in the end
+	n := len(episodeSummaries) - 1
 	if n != 3 {
 		return nil, fmt.Errorf("unexpected count %d!=3 for probe '%s/%s'", n, g, p)
 	}
