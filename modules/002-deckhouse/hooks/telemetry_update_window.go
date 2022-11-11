@@ -33,25 +33,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, updateWindowTelemetry)
 
 func updateWindowTelemetry(input *go_hook.HookInput) error {
-	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
+	telemetryCollector := input.MetricsCollector
 
 	h, err := newWindowTelemetryHook(input, telemetryCollector)
 	if err != nil {
 		return err
 	}
 
-	h.setUpdateModeMetrics()
-
 	return h.setWindowsMetrics()
 }
 
 type windowTelemetryHook struct {
 	approvalMode string
-	collector    telemetry.MetricsCollector
+	collector    go_hook.MetricsCollector
 	windows      update.Windows
 }
 
-func newWindowTelemetryHook(input *go_hook.HookInput, telemetryCollector telemetry.MetricsCollector) (*windowTelemetryHook, error) {
+func newWindowTelemetryHook(input *go_hook.HookInput, telemetryCollector go_hook.MetricsCollector) (*windowTelemetryHook, error) {
 	windows, err := getUpdateWindows(input)
 	if err != nil {
 		return nil, err
@@ -69,6 +67,10 @@ func newWindowTelemetryHook(input *go_hook.HookInput, telemetryCollector telemet
 }
 
 func (h *windowTelemetryHook) setWindowsMetrics() error {
+	h.collector.Set(telemetry.WrapName("update_window_approval_mode"), 1.0, map[string]string{
+		"mode": h.approvalMode,
+	})
+
 	if h.approvalMode == "Auto" && len(h.windows) > 0 {
 		h.setFlattenWindowsMetrics()
 	}
@@ -86,36 +88,26 @@ func (h *windowTelemetryHook) humanOut(w update.Window, day string) string {
 }
 
 func (h *windowTelemetryHook) setFlattenWindowsMetrics() {
-	const group = "update_window"
-	h.collector.Expire(group)
+	metricName := telemetry.WrapName("update_window")
 
 	for _, w := range h.windows {
 		for _, day := range w.Days {
 			d := day
-			h.collector.Set(group, 1.0, map[string]string{
+			h.collector.Set(metricName, 1.0, map[string]string{
 				"from":    w.From,
 				"to":      w.To,
 				"weekday": d,
 				"human":   h.humanOut(w, d),
-			}, telemetry.NewOptions().WithGroup(group))
+			})
 		}
 
 		if len(w.Days) == 0 {
-			h.collector.Set(group, 1.0, map[string]string{
+			h.collector.Set(metricName, 1.0, map[string]string{
 				"from":    w.From,
 				"to":      w.To,
 				"weekday": "",
 				"human":   h.humanOut(w, ""),
-			}, telemetry.NewOptions().WithGroup(group))
+			})
 		}
 	}
-}
-
-func (h *windowTelemetryHook) setUpdateModeMetrics() {
-	const group = "update_window_approval_mode"
-	h.collector.Expire(group)
-
-	h.collector.Set(group, 1.0, map[string]string{
-		"mode": h.approvalMode,
-	}, telemetry.NewOptions().WithGroup(group))
 }

@@ -8,7 +8,6 @@ package hooks
 import (
 	"context"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -25,25 +24,15 @@ var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 
 	assertNoMetrics := func(f *HookExecutionConfig) {
 		m := f.MetricsCollector.CollectedMetrics()
-		Expect(m).To(HaveLen(1))
-
-		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-			Group:  telemetry.WrapName(telemetryGroup),
-			Action: "expire",
-		}))
+		Expect(m).To(HaveLen(0))
 	}
 
 	assertTelemetryMetrics := func(f *HookExecutionConfig, versions []string) {
 		m := f.MetricsCollector.CollectedMetrics()
-		Expect(m).To(HaveLen(len(versions) + 1))
-
-		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-			Group:  telemetry.WrapName(telemetryGroup),
-			Action: "expire",
-		}))
+		Expect(m).To(HaveLen(len(versions)))
 
 		found := 0
-		for i := 1; i < len(m); i++ {
+		for i := 0; i < len(m); i++ {
 			metric := m[i]
 			Expect(metric.Name).To(Equal(telemetry.WrapName("istio_control_plane_full_version")))
 			currentVer := metric.Labels["version"]

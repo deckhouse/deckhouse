@@ -28,9 +28,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(revisionsDiscovery))
 
 func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
-	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
-	telemetryCollector.Expire(telemetryGroup)
-
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
 	var unsupportedVersions = make([]string, 0)
@@ -108,10 +105,9 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 			continue
 		}
 
-		telemetryCollector.Set("istio_control_plane_full_version", 1.0, map[string]string{
+		input.MetricsCollector.Set(telemetry.WrapName("istio_control_plane_full_version"), 1.0, map[string]string{
 			"version": fullVer.FullVersion,
-		}, telemetry.NewOptions().WithGroup(telemetryGroup))
-
+		})
 	}
 
 	return nil

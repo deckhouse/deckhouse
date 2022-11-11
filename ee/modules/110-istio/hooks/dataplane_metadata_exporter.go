@@ -27,7 +27,6 @@ const (
 	istioVersionUnknown          = "unknown"
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
-	telemetryGroup               = "istio_telemetry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -262,14 +261,11 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		podsByFullVersion[istioPodInfo.FullVersion]++
 	}
 
-	telemetryCollector := telemetry.NewTelemetryMetricCollector(input)
-	telemetryCollector.Expire(telemetryGroup)
-
-	telemetryCollector.Set("istio_driven_pods_total", istioDrivenPodsCount, nil, telemetry.NewOptions().WithGroup(telemetryGroup))
+	input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_total"), istioDrivenPodsCount, nil)
 	for v, c := range podsByFullVersion {
-		telemetryCollector.Set("istio_driven_pods_group_by_full_version_total", c, map[string]string{
+		input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_group_by_full_version_total"), c, map[string]string{
 			"version": v,
-		}, telemetry.NewOptions().WithGroup(telemetryGroup))
+		})
 	}
 
 	return nil

@@ -45,22 +45,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 	assertModeMetric := func(f *HookExecutionConfig, typeT string) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
-		Expect(metrics).ToNot(BeEmpty())
-
-		expireIndex := -1
-		for i, m := range metrics {
-			if m.Action == "expire" && m.Group == telemetry.WrapName("update_window_approval_mode") {
-				expireIndex = i
-				break
-			}
-		}
-
-		Expect(expireIndex >= 0).To(BeTrue())
-
 		metricIndex := -1
 		for i, m := range metrics {
 			if m.Name == telemetry.WrapName("update_window_approval_mode") {
-				Expect(m.Group).To(Equal(telemetry.WrapName("update_window_approval_mode")))
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("mode"))
 				Expect(m.Labels["mode"]).To(Equal(typeT))
@@ -70,7 +57,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		}
 
 		Expect(metricIndex >= 0).To(BeTrue())
-		Expect(metricIndex > expireIndex).To(BeTrue())
 	}
 
 	assertWindowMetric := func(f *HookExecutionConfig, from, to, day, human string) {
@@ -78,21 +64,10 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 		Expect(metrics).ToNot(BeEmpty())
 
-		expireIndex := -1
-		for i, m := range metrics {
-			if m.Action == "expire" && m.Group == telemetry.WrapName("update_window") {
-				expireIndex = i
-				break
-			}
-		}
-
-		Expect(expireIndex >= 0).To(BeTrue())
-
 		metricIndex := -1
 		dayFound := false
 		for i, m := range metrics {
 			if m.Name == telemetry.WrapName("update_window") {
-				Expect(m.Group).To(Equal(telemetry.WrapName("update_window")))
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("from"))
 				Expect(m.Labels).To(HaveKey("to"))
@@ -126,7 +101,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			Expect(dayFound).To(BeTrue())
 		}
 		Expect(metricIndex >= 0).To(BeTrue())
-		Expect(metricIndex > expireIndex).To(BeTrue())
 	}
 
 	assertOnlyModeMetric := func(f *HookExecutionConfig) {

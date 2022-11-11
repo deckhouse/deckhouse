@@ -150,13 +150,8 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 			}))
 
 			assertTelemetryStat := func(startIndex int) {
-				Expect(m[startIndex]).To(BeEquivalentTo(operation.MetricOperation{
-					Group:  telemetry.WrapName(telemetryGroup),
-					Action: "expire",
-				}))
-
-				Expect(m[startIndex+1].Name).To(Equal(telemetry.WrapName("istio_driven_pods_total")))
-				Expect(*m[startIndex+1].Value).To(Equal(stats.drivenByIstio))
+				Expect(m[startIndex].Name).To(Equal(telemetry.WrapName("istio_driven_pods_total")))
+				Expect(*m[startIndex].Value).To(Equal(stats.drivenByIstio))
 
 				foundVersioned := 0
 				foundAll := 0
@@ -180,12 +175,12 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 
 			// there are no istio pods or ignored pods in the cluster, hense no metrics
 			if yamlState == "" || want == nil {
-				Expect(m).To(HaveLen(3))
+				Expect(m).To(HaveLen(2))
 				assertTelemetryStat(1)
 				return
 			}
 
-			Expect(m).To(HaveLen(4 + len(stats.versions)))
+			Expect(m).To(HaveLen(3 + len(stats.versions)))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   istioPodMetadataMetricName,
 				Group:  metadataExporterMetricsGroup,
