@@ -22,17 +22,7 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-      watchedValidationResources:
-        type: array
-        description: "apiGroup + kind pairs for validation webhook"
-        x-examples:
-          - ":Pods"
-          - "networking.k8s.io:Ingress"
-        items:
-          type: string
       trackedKinds:
-        type: array
-        items:
-          type: object
-          properties:
-            additionalProperties: true
+        type: object
+        properties:
+          additionalProperties: true
