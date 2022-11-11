@@ -83,7 +83,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, err := h.getGroupStatuses(r.URL.Query().Get("peek") == "1")
+	statuses, err := h.getGroupStatusList(r.URL.Query().Get("peek") == "1")
 	if err != nil {
 		log.Errorf("Cannot get status summary: %v", err)
 		// Skipping the error because the JSON structure is defined in advance.
@@ -105,9 +105,9 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	w.Write(out)
 }
 
-// getGroupStatuses returns total statuses for each group for the current partial 5m timeslot plus
+// getGroupStatusList returns total statuses for each group for the current partial 5m timeslot plus
 // previous full 5m timeslot. If peek is true, then the current partial 5m timeslot is not included.
-func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error) {
+func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, error) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
@@ -120,7 +120,7 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 			new30SecondsStepRange(now),
 			dao.NewEpisodeDao30s(daoCtx),
 			func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
-				return pickSummaryByLastComleteEpisode(ref, statuses, slotSize)
+				return pickGroupProbeSummaryByLastCompleteEpisode(ref, statuses, slotSize)
 			},
 		)
 	}
@@ -129,14 +129,16 @@ func (h *PublicStatusHandler) getGroupStatuses(peek bool) ([]GroupStatus, error)
 	return h.calcStatuses(
 		new15MinutesStepRange(now),
 		dao.NewEpisodeDao5m(daoCtx),
-		pickSummary,
+		pickGroupProbeSummary,
 	)
 }
+
+type summaryPicker func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error)
 
 func (h *PublicStatusHandler) calcStatuses(
 	rng ranges.StepRange,
 	lister entity.RangeEpisodeLister,
-	flattenSummary func(check.ProbeRef, map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error),
+	pickSummary summaryPicker,
 ) ([]GroupStatus, error) {
 	muteTypes := []string{
 		"Maintenance",
@@ -159,20 +161,13 @@ func (h *PublicStatusHandler) calcStatuses(
 			muteDowntimeTypes: muteTypes,
 		}
 
-		resp, err := getStatus(lister, h.DowntimeMonitor, filter)
+		groupSummary, err := h.getProbeSummary(lister, h.DowntimeMonitor, filter, pickSummary)
 		if err != nil {
-			log.Errorf("cannot calculate status for group %s: %v", group, err)
-			return nil, err
-		}
-
-		groupSummary, err := flattenSummary(groupRef, resp.Statuses)
-		if err != nil {
-			log.Errorf("generating summary for group %s: %v", group, err)
-			return nil, err
+			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
 
 		// Uptime per probe
-		probeAvails := make([]ProbeAvailability, 0, len(resp.Statuses))
+		probeAvails := make([]ProbeAvailability, 0)
 		for _, probeRef := range h.ProbeLister.Probes() {
 			if probeRef.Group != group {
 				// not so many probes in the list, not a big deal to spend n^2 iterations
@@ -184,16 +179,10 @@ func (h *PublicStatusHandler) calcStatuses(
 				probeRef:          probeRef,
 				muteDowntimeTypes: muteTypes,
 			}
-			resp, err := getStatus(lister, h.DowntimeMonitor, filter)
-			if err != nil {
-				log.Errorf("cannot calculate status for group %s: %v", group, err)
-				return nil, err
-			}
 
-			probeSummary, err := flattenSummary(probeRef, resp.Statuses)
+			probeSummary, err := h.getProbeSummary(lister, h.DowntimeMonitor, filter, pickSummary)
 			if err != nil {
-				log.Errorf("generating summary for probe %s/%s: %v", group, groupRef.Probe, err)
-				return nil, err
+				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
 
 			av := calculateAvailability(probeSummary)
@@ -216,6 +205,25 @@ func (h *PublicStatusHandler) calcStatuses(
 	}
 
 	return groupStatuses, nil
+}
+
+func (h *PublicStatusHandler) getProbeSummary(
+	lister entity.RangeEpisodeLister,
+	monitor *downtime.Monitor,
+	filter *statusFilter,
+	pickSummary summaryPicker) ([]entity.EpisodeSummary, error) {
+
+	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter)
+	if err != nil {
+		log.Errorf("fetching summary: %w", err)
+		return nil, err
+	}
+
+	gpSummary, err := pickSummary(filter.probeRef, resp.Statuses)
+	if err != nil {
+		return nil, fmt.Errorf("flattening summary: %w", err)
+	}
+	return gpSummary, nil
 }
 
 // Negative availability means we have no valid data
@@ -241,16 +249,16 @@ func new15MinutesStepRange(now time.Time) ranges.StepRange {
 
 func new30SecondsStepRange(now time.Time) ranges.StepRange {
 	step := 30 * time.Second
-	from := now.Truncate(step)
-	to := from.Add(step)
+	to := now.Truncate(step)
+	from := to.Add(-step)
 	return ranges.New30SecStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
 var ErrNoData = fmt.Errorf("no data")
 
-// pickSummaryByLastComleteEpisode returns the last fulfilled episode summary for the given probe.
-func pickSummaryByLastComleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
-	summary, err := pickSummary(ref, statuses)
+// pickGroupProbeSummaryByLastCompleteEpisode returns the last fulfilled episode summary for the given probe.
+func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
+	summary, err := pickGroupProbeSummary(ref, statuses)
 	if err != nil {
 		return nil, fmt.Errorf("getting summary for slot size %s: %w", slotSize, err)
 	}
@@ -261,8 +269,8 @@ func pickSummaryByLastComleteEpisode(ref check.ProbeRef, statuses map[string]map
 	return []entity.EpisodeSummary{lastFulfilled}, nil
 }
 
-// pickSummary
-func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+// pickGroupProbeSummary
+func pickGroupProbeSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
 

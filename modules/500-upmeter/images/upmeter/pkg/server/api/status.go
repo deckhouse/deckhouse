@@ -81,7 +81,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	resp, err := getStatus(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter)
+	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
@@ -158,7 +158,7 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 // 	return resp, nil
 // }
 
-func getStatus(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
+func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
 	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
 	if err != nil {
 		return nil, err
