@@ -169,7 +169,10 @@ window.onload = function() {
   const breadcrumbsMarginTop = parseInt(breadcrumbs.css('margin-top'), 10);
   const sidebarWrapperInner = $('.sidebar__wrapper-inner');
   const sidebar = $('.sidebar__container');
-  const sidebarOffsetTop = sidebar.offset().top - breadcrumbsHeight + breadcrumbsMarginTop;
+  let sidebarOffsetTop = 0
+  if (sidebar.length > 0) {
+    sidebarOffsetTop = sidebar.offset().top - breadcrumbsHeight + breadcrumbsMarginTop;
+  }
   const footerHeight = $('.footer').height();
   const docHeight = $(document).height();
   const screenHeight = $(window).outerHeight();
