@@ -24,6 +24,7 @@ properties:
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       trackedResources:
         type: array
+        default: []
         items:
           type: object
           properties:
