@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: admission-policy-engine :: hooks :: detect_validation_resources", func() {
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validation_resources", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true} } }`,
 		`{"admissionPolicyEngine":{}}`,
@@ -45,7 +45,7 @@ var _ = FDescribe("Modules :: admission-policy-engine :: hooks :: detect_validat
 var cm = `
 apiVersion: v1
 data:
-  kinds.yaml: |
+  validate-kinds.yaml: |
     - apiGroups:
       - ""
       kinds:

@@ -14,7 +14,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "constraint-exporter-cm",
@@ -49,17 +49,24 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 		return err
 	}
 
-	res := make([]matchResoyrce, 0, len(matchKinds))
+	if len(matchKinds) == 0 {
+		return nil
+	}
 
-	k8s, _ := dc.GetK8sClient()
+	res := make([]matchResource, 0, len(matchKinds))
+
+	k8s, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
 	apiRes, err := restmapper.GetAPIGroupResources(k8s.Discovery())
+	if err != nil {
+		return err
+	}
 
 	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
 
 	for _, mk := range matchKinds {
-		groups := make([]string, 0, len(mk.APIGroups))
-		resources := make([]string, 0, len(mk.Kinds))
-
 		uniqGroups := make(map[string]struct{})
 		uniqResources := make(map[string]struct{})
 
@@ -79,6 +86,9 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 			}
 		}
 
+		groups := make([]string, 0, len(mk.APIGroups))
+		resources := make([]string, 0, len(mk.Kinds))
+
 		for k := range uniqGroups {
 			groups = append(groups, k)
 		}
@@ -87,14 +97,11 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 			resources = append(resources, k)
 		}
 
-		res = append(res, matchResoyrce{
+		res = append(res, matchResource{
 			APIGroups: groups,
 			Resources: resources,
 		})
 	}
-
-	input.LogEntry.Infof("Find matchKinds: %s", matchKinds)
-	input.LogEntry.Infof("make resources: %s", res)
 
 	input.Values.Set("admissionPolicyEngine.internal.trackedResources", res)
 
@@ -109,7 +116,7 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
-	return cm.Data["kinds.yaml"], nil
+	return cm.Data["validate-kinds.yaml"], nil
 }
 
 type matchKind struct {
@@ -117,7 +124,7 @@ type matchKind struct {
 	Kinds     []string `json:"kinds"`
 }
 
-type matchResoyrce struct {
+type matchResource struct {
 	APIGroups []string `json:"apiGroups"`
 	Resources []string `json:"resources"`
 }

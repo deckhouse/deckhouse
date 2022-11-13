@@ -43,8 +43,8 @@ var (
 		"Path under which to expose metrics")
 	interval = flag.Duration("server.interval", 30*time.Second,
 		"Kubernetes API server polling interval")
-	trackKinds       = flag.Bool("track-match-kinds", true, "TODO")
-	trackKindsCMName = flag.String("match-kinds-configmap", "constraint-exporter",
+	trackValidationKinds = flag.Bool("track-validation-match-kinds", true, "Tracked kinds for validation webhook")
+	trackKindsCMName     = flag.String("match-kinds-configmap", "constraint-exporter",
 		"ConfigMap for export tracking resource kinds")
 
 	ticker *time.Ticker
@@ -139,11 +139,11 @@ func main() {
 
 	ns := os.Getenv("POD_NAMESPACE")
 	if len(ns) == 0 {
-		klog.Fatal("Pod namespace not set")
+		klog.Fatal("Pod namespace is not set")
 	}
 
 	exporter := NewExporter()
-	if *trackKinds {
+	if *trackValidationKinds {
 		err := exporter.initKindTracker(ns, *trackKindsCMName)
 		if err != nil {
 			klog.Fatal(err)

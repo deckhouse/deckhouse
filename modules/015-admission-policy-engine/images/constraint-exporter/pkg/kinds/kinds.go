@@ -37,6 +37,10 @@ func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string) *KindTrac
 }
 
 func deduplicateKinds(constraints []gatekeeper.Constraint) (map[string]gatekeeper.MatchKind /*kinds checksum*/, string) {
+	if len(constraints) == 0 {
+		return nil, ""
+	}
+
 	// deduplicate
 	m := make(map[string]gatekeeper.MatchKind, 0)
 	hasher := sha256.New()
@@ -100,11 +104,12 @@ func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
 	}
 
 	cm.Annotations[checksumAnnotation] = checksum
-	cm.Data = map[string]string{"kinds.yaml": string(data)}
+	cm.Data = map[string]string{"validate-kinds.yaml": string(data)}
 
 	_, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Update(context.TODO(), cm, v1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Update kinds failed: %s", err)
+		return
 	}
 	kt.latestChecksum = checksum
 }
