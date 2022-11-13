@@ -18,7 +18,6 @@ package gatekeeper
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
@@ -135,8 +134,6 @@ func GetConstraints(config *rest.Config, client *kubernetes.Clientset) ([]Constr
 
 				constraint.Meta.Kind = item.GetKind()
 				constraint.Meta.Name = item.GetName()
-
-				fmt.Printf("CONST: %+v\n", constraint)
 
 				constraints = append(constraints, constraint)
 			}
