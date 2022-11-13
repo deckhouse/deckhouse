@@ -14,6 +14,8 @@
     {{- if $context.Values.global.modules.proxy.noProxy }}
       {{- $noProxy = concat $noProxy $context.Values.global.modules.proxy.noProxy }}
     {{- end }}
+- name: no_proxy
+  value: {{ $noProxy | join "," | quote }}
 - name: NO_PROXY
   value: {{ $noProxy | join "," | quote }}
   {{- end }}
