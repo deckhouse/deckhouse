@@ -9,7 +9,7 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 ## Особенности работы descheduler
 
 * При вытеснении Pod'ов с нагруженного узла учитывается `priorityClass` (ознакомьтесь с модулем [priority-class](../001-priority-class/));
-* Pod'ы с [priorityClassName](../001-priority-class/configuration.html) `system-cluster-critical` или `system-node-critical` (*критичные* Pod'ы) не вытесняются;
+* Pod'ы с [priorityClassName](../001-priority-class/) `system-cluster-critical` или `system-node-critical` (*критичные* Pod'ы) не вытесняются;
 * Pod'ы без контроллера или с контроллером DaemonSet не вытесняются;
 * Pod'ы с local storage не вытесняются;
 * Best-effort Pod'ы вытесняются раньше, чем Burstable и Guaranteed;
