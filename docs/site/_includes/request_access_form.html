@@ -1,8 +1,7 @@
 <div id="request_access_intro" data-header-form>
   <h3 class="text text_h3">{{ site.data.modal['request-access']['header'][page.lang]['title']}}</h3>
   <p class="text">{{ site.data.modal['request-access']['header'][page.lang]['text']}}</p>
-<!--  <form class="form" action="https://license.deckhouse.io/api/license/request" id="request_access_form" data-form>-->
-  <form class="form" action="https://license-deckhouse.test.flant.com/api/license/request" id="request_access_form" data-form>
+  <form class="form" action="https://license.deckhouse.io/api/license/request" id="request_access_form" data-form>
     <input id="h0n3y" class="form__h0n3y" data-h0n3y autocomplete="off" type="text" name="comment" placeholder="Comment">
     {%- if page.lang == "ru" %}
     <input type="hidden" id="language_ru" name="language" value="ru">
