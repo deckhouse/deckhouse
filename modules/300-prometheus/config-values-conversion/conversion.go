@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,8 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package config_values_conversion
 
-//go:generate go run register/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
+import (
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+)
 
-//go:generate go run config_values_conversions/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-config-values-conversions.go,../modules/003-deckhouse-config/images/deckhouse-config-webhook/register-config-values-conversions.go
+const moduleName = "prometheus"
+
+var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
+
+// convertV1ToV2 removes deprecated fields.
+func convertV1ToV2(values *conversion.ModuleSettings) error {
+	return values.DeleteAndClean("auth.password")
+}
