@@ -130,7 +130,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 * Docker proxy repository was created.
 * `Allow anonymous docker pull` is enabled.
 * Access control was configured:
-  * Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions was created.
+  * Nexus role with `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions was created.
   * Nexus user was created with a role above.
 * `Maximum metadata age` for the created repository was set to 0.
 
@@ -159,7 +159,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   ![Repository settings example 3](images/registry/nexus/nexus-repo-example-3.png)
 
 * Configure Nexus access control to allow Nexus to access created repository:
-  * Create a Nexus role with `nx-repository-view-docker-<your-repo>-browse` and `nx-repository-view-docker-<your-repo>-read` permissions.
+  * Create a Nexus role with `nx-repository-view-docker-<repo>-browse` and `nx-repository-view-docker-<repo>-read` permissions.
   ![Create a Nexus role](images/registry/nexus/nexus-role.png)
   * Create a Nexus user with the role above.
   ![Create a Nexus user](images/registry/nexus/nexus-user.png)
