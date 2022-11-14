@@ -33,7 +33,6 @@ func skipModuleImageNameIfNeeded(filePath string) bool {
 
 var regexPatterns = map[string]string{
 	`$BASE_ALPINE`:           imageRegexp(`alpine:[\d.]+`),
-	`$BASE_DEBIAN`:           imageRegexp(`debian:[\d.]+`),
 	`$BASE_GOLANG_ALPINE`:    imageRegexp(`golang:1.15.[\d.]+-alpine3.12`),
 	`$BASE_GOLANG_16_ALPINE`: imageRegexp(`golang:1.16.[\d.]+-alpine3.12`),
 	`$BASE_GOLANG_BUSTER`:    imageRegexp(`golang:1.15.[\d.]+-buster`),

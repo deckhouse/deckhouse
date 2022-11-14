@@ -21,7 +21,7 @@ docker:
     kubelet: {{ printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_DEBIAN_BULLSEYE }}
+from: {{ $.Images.BASE_UBUNTU }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
