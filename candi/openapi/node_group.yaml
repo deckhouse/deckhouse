@@ -1492,7 +1492,7 @@ spec:
                         overprovisioningRate:
                           type: integer
                           minimum: 1
-                          maximum: 100
+                          maximum: 80
                           x-doc-default: 50
                           description: |
                             Percent of the node-group's node capacity which will be overprovisioned by standby-holder pod.
