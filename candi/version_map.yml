@@ -52,13 +52,13 @@ bashible: &bashible
           desiredVersion: "5.11.0-46-generic"
           allowedPattern: "5.4"
         aws:
-          desiredVersion: "5.4.0-1029-aws"
+          desiredVersion: "5.11.0-1028-aws"
           allowedPattern: "5.4"
         azure:
-          desiredVersion: "5.4.0-1034-azure"
+          desiredVersion: "5.11.0-1028-azure"
           allowedPattern: "5.4"
         gcp:
-          desiredVersion: "5.4.0-1029-gcp"
+          desiredVersion: "5.11.0-1029-gcp"
           allowedPattern: "5.4"
     '22.04':
       docker:
