@@ -83,14 +83,15 @@ help:
 
 
 GOLANGCI_VERSION = 1.46.2
-TRIVY_VERSION= 0.28.1
+GOFUMPT_VERSION  = 0.4.0
+TRIVY_VERSION    = 0.28.1
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.9.0
-TESTS_TIMEOUT="15m"
+GATOR_VERSION    = 3.9.0
+TESTS_TIMEOUT    = 15m
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
+deps: bin/golangci-lint bin/gofumpt bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
 
 ##@ Tests
 
@@ -132,12 +133,21 @@ bin/golangci-lint:
 	mkdir -p bin
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
-.PHONY: lint lint-fix
+bin/gofumpt:
+	mkdir -p bin
+	test -f bin/gofumpt-$(GOFUMPT_VERSION) || curl -sLo bin/gofumpt-$(GOFUMPT_VERSION) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS_NAME)_$(PLATFORM_NAME)
+	chmod u+x bin/gofumpt-$(GOFUMPT_VERSION)
+	ln -s gofumpt-$(GOFUMPT_VERSION) bin/gofumpt
+
+.PHONY: lint lint-fix format
 lint: ## Run linter.
-	golangci-lint run
+	bin/golangci-lint run
 
 lint-fix: ## Fix lint violations.
-	golangci-lint run --fix
+	bin/golangci-lint run --fix
+
+format:
+	bin/gofumpt -e -w -extra .
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
