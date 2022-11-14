@@ -399,9 +399,6 @@ podAntiAffinity:
 			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "clouddns")
 			Expect(clusterIssuer.Exists()).To(BeTrue())
 
-			if certManager.Field("disableLetsencrypt").Bool() == "true" {
-				Expect(clusterIssuer.Exists()).To(BeFalse())
-			}
 			if clusterIssuer.Field("apiVersion").String() == "cert-manager.io/v1" {
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.project").String()).To(Equal("project-209317"))
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
@@ -413,7 +410,7 @@ podAntiAffinity:
 			}
 		})
 	})
-	Context("<Control ClusterIssuer objects>", func() {
+	Context("<DisableLetsencrypt>", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
