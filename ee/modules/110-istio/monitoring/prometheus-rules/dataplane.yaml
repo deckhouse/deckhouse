@@ -15,18 +15,21 @@
       plk_protocol_version: "1"
       summary: control-plane version for Pod with already injected sidecar isn't installed
     expr: |
-      max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
       (
-        d8_istio_dataplane_metadata{revision!="absent"}
-        unless on (revision)
+        max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
         (
-          istio_build{component="pilot"}
-          * on (pod,namespace) group_left(revision)
+          d8_istio_dataplane_metadata{ revision!="absent" }
+          unless on (revision)
+          (
+            istio_build{ component="pilot" }
+            * on (pod,namespace) group_left(revision)
             (
               label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
             )
+          )
         )
-      )
+      # labels kube-state-metrics should exist
+      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
     for: 5m
     labels:
       severity_level: "4"
@@ -52,18 +55,21 @@
       plk_protocol_version: "1"
       summary: Desired control-plane version isn't installed
     expr: |
-      max by (dataplane_pod, namespace, revision, version, desired_version)
       (
-        label_replace(d8_istio_dataplane_metadata{desired_revision!="absent"}, "revision", "$1", "desired_revision", "(.+)")
-        unless on (revision)
+        max by (dataplane_pod, namespace, revision, version, desired_version)
         (
-          istio_build{component="pilot"}
-          * on (pod,namespace) group_left(revision)
+          label_replace( d8_istio_dataplane_metadata{ desired_revision!="absent" }, "revision", "$1", "desired_revision", "(.+)" )
+          unless on (revision)
+          (
+            istio_build{ component="pilot" }
+            * on (pod,namespace) group_left(revision)
             (
               label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
             )
+          )
         )
-      )
+      # labels kube-state-metrics should exist
+      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
     for: 5m
     labels:
       severity_level: "6"
