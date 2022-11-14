@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   ingressClass:
@@ -35,10 +36,6 @@ properties:
               The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response.
             x-examples:
               - https://$host/dex-authenticator/sign_in
-      password:
-        type: string
-        description: |
-          Deprecated.
       allowedUserGroups:
         type: array
         items:

@@ -30,9 +30,6 @@ properties:
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-      password:
-        description: |
-          Параметр устарел.
       allowedUserGroups:
         description: |
           Список групп, пользователям которых разрешен доступ к web-интерфейсу Hubble.
