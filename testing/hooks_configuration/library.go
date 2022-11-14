@@ -82,6 +82,8 @@ func GetAllHooks() ([]Hook, error) {
 			switch {
 			case err != nil:
 				return err
+			case strings.Contains(path, "testdata"): // ignore tests
+				return nil
 			case strings.HasSuffix(path, "test.go"): // ignore tests
 				return nil
 			case strings.HasSuffix(path, ".go"): // ignore go-hooks
