@@ -413,5 +413,22 @@ podAntiAffinity:
 			}
 		})
 	})
-})
+	Context("<Control ClusterIssuer objects>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.ValuesSet("certManager.disableLetsencrypt", true)
+			f.HelmRender()
+		})
 
+		It("Check non-creation ClusterIssuer objects if disableLetsencrypt set to true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			clusterIssuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(clusterIssuer.Exists()).To(BeFalse())
+			clusterIssuerStaging := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
+			Expect(clusterIssuerStaging.Exists()).To(BeFalse())
+		})
+	})
+})
