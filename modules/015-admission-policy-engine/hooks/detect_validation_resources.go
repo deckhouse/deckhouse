@@ -93,7 +93,8 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 					Kind:  kind,
 				})
 				if err != nil {
-					input.LogEntry.Warnf("Resource mapping failed. Group: %s, Kind: %s. Error: %s", apiGroup, kind, err)
+					// skip outdated resources, like extensions/Ingress
+					input.LogEntry.Warnf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
 					continue
 				}
 
