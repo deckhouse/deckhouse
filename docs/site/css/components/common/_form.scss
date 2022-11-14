@@ -69,6 +69,58 @@
     }
   }
 
+  .license-checkbox {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .checkbox {
+    position: absolute;
+    opacity: 0;
+    margin-top: 5px;
+    margin-left: 2px;
+  }
+
+  .fake-checkbox {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    margin-right: 10px;
+    box-sizing: border-box;
+    border: 2px solid $color-smooth;
+    transition: all .3s;
+  }
+
+  .checkbox:checked + .fake-checkbox {
+    border-color: #2A5EFF;
+    background-color: #2A5EFF;
+  }
+
+  .fake-checkbox::before {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background-color: #fff;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    opacity: 0;
+  }
+
+  .checkbox:checked + .fake-checkbox::before {
+    opacity: 1;
+  }
+
+  .license-link {
+    color: #2A5EFF;
+  }
+
   .label {
     font-size: $font-size-small;
     margin-bottom: $spacing-s;
