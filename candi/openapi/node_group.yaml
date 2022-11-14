@@ -255,15 +255,18 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned Nodes for this NodeGroup in all zones.
+                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** zone.
 
-                        The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
-                        The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
                       pattern: '^[0-9]+%?$'
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
-                        Parameters of the "idle" process (resource consumer) for the prepared instances.
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha1-spec-cloudinstances-standby).
                       type: object
                       properties:
                         notHeldResources:
@@ -875,15 +878,18 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned Nodes for this NodeGroup in all zones.
+                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** [zone](#nodegroup-v1alpha2-spec-cloudinstances-zones).
 
-                        The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
-                        The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1alpha2-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
                       pattern: '^[0-9]+%?$'
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
-                        Parameters of the "idle" process (resource consumer) for the prepared instances.
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha2-spec-cloudinstances-standby).
                       type: object
                       properties:
                         notHeldResources:
@@ -1478,15 +1484,18 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned Nodes for this NodeGroup in all zones.
+                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** [zone](#nodegroup-v1-spec-cloudinstances-zones).
 
-                        The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
-                        The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
                       pattern: '^[0-9]+%?$'
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
-                        Parameters of the "idle" process (resource consumer) for the prepared instances.
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1-spec-cloudinstances-standby).
                       type: object
                       properties:
                         overprovisioningRate:
@@ -1495,11 +1504,12 @@ spec:
                           maximum: 80
                           x-doc-default: 50
                           description: |
-                            Percent of the node-group's node capacity which will be overprovisioned by standby-holder pod.
+                            Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
                         notHeldResources:
                           deprecated: true
+                          x-doc-deprecated: true
                           description: |
-                            Deprecated: this parameter does not make sense any more. Use `overprovisioningRate` instead.
+                            Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
 
                             Describes the resources that will not be held (consumed) by the standby holder.
                           type: object
