@@ -1,0 +1,7 @@
+positive:
+  values:
+    - auth:
+        webui:
+          password: "dworpass"
+    - auth:
+        webui: {}

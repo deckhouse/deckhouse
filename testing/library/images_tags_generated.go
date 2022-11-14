@@ -169,6 +169,12 @@ var DefaultImagesTags = map[string]interface{}{
 	"deckhouseWeb": map[string]interface{}{
 		"web": "imageHash-deckhouseWeb-web",
 	},
+	"delivery": map[string]interface{}{
+		"argocd":               "imageHash-delivery-argocd",
+		"argocdImageUpdater":   "imageHash-delivery-argocdImageUpdater",
+		"redis":                "imageHash-delivery-redis",
+		"werfArgocdCmpSidecar": "imageHash-delivery-werfArgocdCmpSidecar",
+	},
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},

@@ -19,7 +19,7 @@
 
 
 {{- /* Usage: {{ include "helm_lib_resources_management_original_pod_resources" <resources configuration> }} */ -}}
-{{- /* returns rendered resources section based on configuration if it is */ -}}
+{{- /* returns rendered resources section based on configuration if it is present */ -}}
 {{- define "helm_lib_resources_management_original_pod_resources" -}}
   {{- $configuration := . -}}
 

@@ -1,0 +1,82 @@
+properties:
+  storageClass:
+    description: |
+      Имя storageClass'а, который использовать.
+
+      * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+      * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
+      * Если указать `false` — будет форсироваться использование emptyDir'а.
+  auth:
+    description: |
+      Доступ к web-интерфейсу
+    properties:
+      webui:
+        description: |
+          Настройки доступа к web-интерфейсу.
+        properties:
+          externalAuthentication:
+            description: |
+              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+              > Если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/), параметры externalAuthentication настраиваются автоматически.
+            properties:
+              authURL:
+                description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+              authSignInURL:
+                description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+          password:
+            description: |
+              Пароль для HTTP-авторизации для пользователя admin (генерируется автоматически, но можно менять).
+
+              Используется, если не включен параметр `externalAuthentication`.
+          allowedUserGroups:
+            description: |
+              Массив групп, пользователям которых позволен доступ в ArgoCD.
+
+              Используется, если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) или параметр `externalAuthentication`.
+
+              **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider) DexProvider.
+          whitelistSourceRanges:
+            description: Массив CIDR, которым разрешено проходить авторизацию в ArgoCD.
+          satisfyAny:
+            description: |
+              Разрешает пройти только одну из аутентификаций.
+
+              В комбинации с опцией `whitelistSourceRanges` позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
+  https:
+    description: |
+      Тип сертификата используемого для веб-приложений webui и status.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `Disabled` — webui/status будут работать только по HTTP.
+          - `CertManager` — webui/status будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — webui/status будут работать по https используя сертификат из namespace `d8-system`.
+          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для webui/status.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя secret'а в namespace `d8-system`, который будет использоваться для webui/status.
+
+              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

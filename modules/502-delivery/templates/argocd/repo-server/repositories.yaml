@@ -1,0 +1,17 @@
+{{  range $repo := .Values.delivery.internal.argocd.repositories }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  name: repo-{{ $repo.name }}
+  namespace: d8-{{ $.Chart.Name }}
+type: Opaque
+stringData:
+  type: helm
+  enableOCI: "true"
+  {{ $repo | toYaml | nindent 2 }}
+{{ end }}

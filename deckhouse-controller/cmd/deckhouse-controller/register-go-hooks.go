@@ -74,6 +74,8 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/dynamic_probe"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
+	_ "github.com/deckhouse/deckhouse/modules/502-delivery/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/502-delivery/hooks/werf_sources"
 	_ "github.com/deckhouse/deckhouse/modules/600-namespace-configurator/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
