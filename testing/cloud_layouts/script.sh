@@ -574,7 +574,7 @@ else
 fi
 
 # With sleep timeout of 30s, we have 20 minutes period in total to catch the 100% availability from upmeter
-for ((i=0; i<20; i++)); do
+for ((i=0; i<40; i++)); do
   ### Get availability data based on last 30 seconds of probe measurements, note 'peek=1' query param
   avail_json="$(curl -k -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1")"
   if [[ -z "$avail_json" ]]; then
