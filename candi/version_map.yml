@@ -49,7 +49,7 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.4.0-54-generic"
+          desiredVersion: "5.11.0-46-generic"
           allowedPattern: "5.4"
         aws:
           desiredVersion: "5.4.0-1029-aws"
