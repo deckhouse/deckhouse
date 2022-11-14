@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -20,7 +20,7 @@ RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       xfsprogs \
