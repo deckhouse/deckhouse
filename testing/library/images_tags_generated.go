@@ -163,6 +163,9 @@ var DefaultImagesTags = map[string]interface{}{
 		"imagesCopier":   "imageHash-deckhouse-imagesCopier",
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
+	"deckhouseConfig": map[string]interface{}{
+		"deckhouseConfigWebhook": "imageHash-deckhouseConfig-deckhouseConfigWebhook",
+	},
 	"deckhouseWeb": map[string]interface{}{
 		"web": "imageHash-deckhouseWeb-web",
 	},

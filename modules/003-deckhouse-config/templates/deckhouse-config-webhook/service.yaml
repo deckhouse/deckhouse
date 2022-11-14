@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deckhouse-config-webhook
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-config-webhook")) | nindent 2 }}
+spec:
+  ports:
+    - name: deckhouse-config-webhook
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: deckhouse-config-webhook

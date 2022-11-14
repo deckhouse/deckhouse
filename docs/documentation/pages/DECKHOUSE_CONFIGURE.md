@@ -3,55 +3,81 @@ title: "How to configure?"
 permalink: en/
 ---
 
-Deckhouse consists of a Deckhouse operator and modules. A module is a set of helm charts, hooks, files, and assembly rules for module components (Deckhouse components).
+Deckhouse consists of a Deckhouse operator and modules. A module is a bundle of Helm chart, Addon-operator hooks, other files, and building commands for module components (Deckhouse components).
 
 You can configure Deckhouse using the:
-- [Global settings](deckhouse-configure-global.html#parameters) stored in the `global` parameters of the [Deckhouse configuration](#deckhouse-configuration).
-- Module settings stored in [Deckhouse configuration](#deckhouse-configuration) and custom resources (for some Deckhouse modules).
+- [Global settings](deckhouse-configure-global.html#parameters) are stored in the `ModuleConfig/global` resource.
+- Module settings are stored in ModuleConfig resources and some modules have additional custom resources.
 
 ## Deckhouse configuration
 
-The Deckhouse configuration is stored in the `deckhouse` ConfigMap in the `d8-system` namespace and may contain the following parameters (keys):
+The Deckhouse configuration is stored in `ModuleConfig` resources and may contain the following parameters:
 
-- `global` —  contains the [global Deckhouse settings](deckhouse-configure-global.html) as a multi-line string in YAML format;
-- `<moduleName>` (where `<moduleName>` is the name of the Deckhouse module in camelCase) — contains the [module settings](#configuring-the-module) as a multi-line string in YAML format;
-- `<moduleName>Enabled` (where `<moduleName>` is the name of the Deckhouse module in camelCase) — this one explicitly [enables or disables the module](#enabling-and-disabling-the-module).
+- `metadata.name` — the name of the resource is the name of the Deckhouse module (kebab-cased).
+- `spec.version` — a version of module settings.
+- `spec.settings` — an object with module settings.
+- `spec.enabled` — optional boolean value to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default depending on the [used bundle](#module-bundles) when the parameter is not set.
 
-Use the following command to view the `deckhouse` ConfigMap:
+If `spec.settings` is not empty, `spec.version` is required. The latest version number is available in the description of module settings.
 
-```shell
-kubectl -n d8-system get cm/deckhouse -o yaml
-```
+Settings version may become obsolete with new releases. The Deckhouse will support previous versions to allow managing ModuleConfig resources using IaC. Also, it will warn about necessity to update `spec.settings` and `spec.version` when resource is changed or viewed.
 
-Example of the `deckhouse` ConfigMap:
+Resource `ModuleConfig/global` stores global settings. "global" can't be disabled, so the value of `spec.enabled` is ignored.
+
+Example of `ModuleConfig` resources:
 
 ```yaml
-apiVersion: v1
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
 metadata:
-  name: deckhouse
-  namespace: d8-system
-data:
-  global: |          # Note the vertical bar.
-    # Section of the YAML file with global settings.
+  name: global
+spec:
+  version: 1
+  settings:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
-  # monitoring-ping related section of the YAML file.
-  monitoringPing: |
+---
+# monitoring-ping settings.
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
+metadata:
+  name: monitoring-ping
+spec:
+  version: 1
+  settings:
     externalTargets:
     - host: 8.8.8.8
-  # Disabling the dashboard module.
-  dashboardEnabled: "false"
+---
+# Disable the dashboard module.
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
+metadata:
+  name: dashboard
+spec:
+  enabled: false
 ```
 
-Pay attention to the following:
-- The `|` sign — vertical bar glyph that must be specified when passing settings, because the parameter being passed is a multi-line string, not an object.
-- A module name is in *camelCase* style.
-
-Use the following command to edit the `deckhouse` ConfigMap:
+`status` field contains module state, you can get module state after applying changes:
 
 ```shell
-kubectl -n d8-system edit cm/deckhouse
+kubectl get moduleconfigs
+NAME                VERSION   AGE   ENABLED              STATUS
+deckhouse           1         12h   Enabled              Ready
+deckhouse-web       2         12h   Enabled              Ready
+global              1         12h   Always On
+prometheus          2         12h   Enabled              Ready
+upmeter             2         12h   Disabled by config
 ```
+
+To change Deckhouse configuration, create or edit ModuleConfig resource related to the module. For example, to tune `upmeter` module, use this command:
+
+```shell
+kubectl -n d8-system edit moduleconfig/upmeter
+```
+
+Changes are applied automatically after saving the resource.
+
+Deckhouse operator doesn't modify ModuleConfig resources, so you can use kubectl, Helm, Git and other IaC utilities to manage Deckhouse configuration.
 
 ### Configuring the module
 
@@ -59,9 +85,7 @@ kubectl -n d8-system edit cm/deckhouse
 
 Deckhouse only works with the enabled modules. Modules can be enabled or disabled by default, depending on the [bundle used](#module-bundles). Learn more on how to explicitly [enable and disable the module](#enabling-and-disabling-the-module).
 
-You can configure the module using the parameter with the module name in camelCase in the Deckhouse configuration. The parameter value is a multi-line YAML string with the module settings.
-
-Some modules can also be configured using custom resources. Use the search bar at the top of the page or select a module in the left menu to see a detailed description of its settings and the custom resources used.
+You can configure the module using the ModuleConfig resource named as module in kebab-case.
 
 Below is an example of the `kube-dns` module settings:
 
@@ -78,17 +102,29 @@ data:
     - 10.2.200.55
 ```
 
+Some modules can also be configured using custom resources. Use the search bar at the top of the page or select a module in the left menu to see a detailed description of its settings and the custom resources used.
+
 ### Enabling and disabling the module
 
 > Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
 
-To enable/disable a module, add the `<moduleName>Enabled` parameter to the `deckhouse` ConfigMap with one of the following two values: `"true"` or `"false"` (note: quotation marks are mandatory), where `<moduleName>` is the name of the module in camelCase.
+To enable/disable the module, set `spec.enabled` field of ModuleConfig resource to `true` or `false`. It may require creating ModuleConfig resource for the module.
 
-Here is an example of enabling the `user-authn` module:
+Here is an example of disabling the `user-authn` module, enabled by default:
 
 ```yaml
-data:
-  userAuthnEnabled: "true"
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: false
+```
+
+```shell
+kubectl get moduleconfigs
+NAME                VERSION   AGE   ENABLED              STATUS
+user-authn          1         12h   Disabled by config
 ```
 
 ## Module bundles

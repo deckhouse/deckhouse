@@ -2,6 +2,7 @@
 certManagerEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
+deckhouseConfigEnabled: true
 deckhouseWebEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true

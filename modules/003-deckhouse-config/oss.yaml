@@ -1,0 +1,29 @@
+- name: Shell operator
+  link: https://github.com/flant/shell-operator
+  description: A tool for running event-driven scripts in a Kubernetes cluster
+  logo: https://i.imgur.com/YrbED7T.png
+  licence: Apache License 2.0
+
+- name: Addon operator
+  link: https://github.com/flant/addon-operator
+  description: A tool to combine Helm charts with hooks and values storage to transform charts into smart modules that configure themselves and respond to changes in the cluster.
+  logo: https://i.imgur.com/UQW1wXJ.png
+  licence: Apache License 2.0
+
+- name: Helm
+  link: https://github.com/helm/helm
+  description: The package manager for Kubernetes
+  logo: https://helm.sh/img/helm.svg
+  licence: Apache License 2.0
+
+- name: JQ
+  link: https://github.com/stedolan/jq
+  description: A lightweight and flexible command-line JSON processor.
+  logo: https://stedolan.github.io/jq/jq.png
+  licence: Mixed (https://github.com/stedolan/jq/blob/master/COPYING)
+
+- name: image-syncer
+  link: https://github.com/AliyunContainerService/image-syncer
+  description: image-syncer is a docker registry tools. With image-syncer you can synchronize docker images from some source registries to target registries, which include most popular public docker registry services
+  logo: https://avatars.githubusercontent.com/u/16377432?s=200&v=4
+  licence: Apache License 2.0

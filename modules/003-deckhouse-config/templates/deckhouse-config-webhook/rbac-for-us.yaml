@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deckhouse-config-webhook
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-config-webhook")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:deckhouse-config:deckhouse-config-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-config-webhook")) | nindent 2 }}
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  verbs: ["create", "list", "update"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["list", "update"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["*"]
+  verbs: ["get","list","watch"]
+- apiGroups: [""]
+  resources: ["secrets","endpoints","configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:deckhouse-config:deckhouse-config-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-config-webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:deckhouse-config:deckhouse-config-webhook
+subjects:
+  - kind: ServiceAccount
+    name: deckhouse-config-webhook
+    namespace: d8-system
