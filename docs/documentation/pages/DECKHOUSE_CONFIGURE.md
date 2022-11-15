@@ -3,30 +3,19 @@ title: "How to configure?"
 permalink: en/
 ---
 
-Deckhouse consists of a Deckhouse operator and modules. A module is a bundle of Helm chart, Addon-operator hooks, other files, and building commands for module components (Deckhouse components).
+Deckhouse consists of a Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, building commands for module components (Deckhouse components) and other files.
+
+<div markdown="0" style="height: 0;" id="#deckhouse-configuration"></div>
 
 You can configure Deckhouse using the:
-- [Global settings](deckhouse-configure-global.html#parameters) are stored in the `ModuleConfig/global` resource.
-- Module settings are stored in ModuleConfig resources and some modules have additional custom resources.
+- **[Global settings](deckhouse-configure-global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be considered as a special `global` module that cannot be disabled.
+- **[Modules settings](#configuring-the-module)**. Module settings are stored in the custom resource `ModuleConfig`, whose name matches the module's name (in kebab-case).
+- **Custom resources.** Some modules are configured using additional custom resources.
 
-## Deckhouse configuration
-
-The Deckhouse configuration is stored in `ModuleConfig` resources and may contain the following parameters:
-
-- `metadata.name` — the name of the resource is the name of the Deckhouse module (kebab-cased).
-- `spec.version` — a version of module settings.
-- `spec.settings` — an object with module settings.
-- `spec.enabled` — optional boolean value to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default depending on the [used bundle](#module-bundles) when the parameter is not set.
-
-If `spec.settings` is not empty, `spec.version` is required. The latest version number is available in the description of module settings.
-
-Settings version may become obsolete with new releases. The Deckhouse will support previous versions to allow managing ModuleConfig resources using IaC. Also, it will warn about necessity to update `spec.settings` and `spec.version` when resource is changed or viewed.
-
-Resource `ModuleConfig/global` stores global settings. "global" can't be disabled, so the value of `spec.enabled` is ignored.
-
-Example of `ModuleConfig` resources:
+Example of a set of custom resources to configure Deckhouse:
 
 ```yaml
+# Global setting.
 apiVersion: deckhouse.io/v1
 kind: ModuleConfig
 metadata:
@@ -37,7 +26,7 @@ spec:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
 ---
-# monitoring-ping settings.
+# The monitoring-ping module settings.
 apiVersion: deckhouse.io/v1
 kind: ModuleConfig
 metadata:
@@ -57,10 +46,10 @@ spec:
   enabled: false
 ```
 
-`status` field contains module state, you can get module state after applying changes:
+You can view the list of custom resources `ModuleConfig`, the status (enabled/disabled) and the status of the corresponding modules using the command `kubectl get moduleconfigs`:
 
 ```shell
-kubectl get moduleconfigs
+$ kubectl get moduleconfigs
 NAME                VERSION   AGE   ENABLED              STATUS
 deckhouse           1         12h   Enabled              Ready
 deckhouse-web       2         12h   Enabled              Ready
@@ -69,7 +58,9 @@ prometheus          2         12h   Enabled              Ready
 upmeter             2         12h   Disabled by config
 ```
 
-To change Deckhouse configuration, create or edit ModuleConfig resource related to the module. For example, to tune `upmeter` module, use this command:
+To change the global Deckhouse configuration or a module configuration, create or edit the corresponding `ModuleConfig` custom resource.
+
+For example, to tune the `upmeter` module, run the following command:
 
 ```shell
 kubectl -n d8-system edit moduleconfig/upmeter
@@ -77,21 +68,30 @@ kubectl -n d8-system edit moduleconfig/upmeter
 
 Changes are applied automatically after saving the resource.
 
-Deckhouse operator doesn't modify ModuleConfig resources, so you can use kubectl, Helm, Git and other IaC utilities to manage Deckhouse configuration.
-
-### Configuring the module
+## Configuring the module
 
 > Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/VALUES.md). We would appreciate it if you *star* the project.
 
-Deckhouse only works with the enabled modules. Modules can be enabled or disabled by default, depending on the [bundle used](#module-bundles). Learn more on how to explicitly [enable and disable the module](#enabling-and-disabling-the-module).
+The module is configured using the custom resource `ModuleConfig`, whose name matches the module's name (in kebab-case). Custom resource `ModuleConfig` has the following fields:
 
-You can configure the module using the ModuleConfig resource named as module in kebab-case.
+- `metadata.name` — the name of the module in kebab-case (e.g, `prometheus`, `node-manager`).
+- `spec.version` — a version of the module settings scheme (an integer greater than zero). Mandatory field if `spec.settings` is not empty. The current version number can be seen in the module documentation in the section _"Settings"_.
+  - Deckhouse supports backward compatibility of versions of the module settings scheme. If you use an outdated version of the settings schema when editing or viewing the custom resource, a warning about the need to update the module settings schema will be displayed.
+- `spec.settings` — module settings. Optional field if the `spec.enabled` field is used. A description of possible settings can be found in the module documentation in the section _"Settings"_.
+- `spec.enabled` — optional field to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default depending on the [used bundle](#module-bundles) when the parameter is not set.
 
-Below is an example of the `kube-dns` module settings:
+> Deckhouse operator doesn't modify `ModuleConfig` resources. Using the Infrastructure as Code (IaC) approach, you can store Deckhouse settings in a version control system and use Helm, kubectl, and other familiar tools. 
+
+Example of a custom resource for configuring the `kube-dns` module:
 
 ```yaml
-data:
-  kubeDns: |
+apiVersion: deckhouse.io/v1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  version: 1
+  settings:
     stubZones:
     - upstreamNameservers:
       - 192.168.121.55
@@ -108,9 +108,9 @@ Some modules can also be configured using custom resources. Use the search bar a
 
 > Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
 
-To enable/disable the module, set `spec.enabled` field of ModuleConfig resource to `true` or `false`. It may require creating ModuleConfig resource for the module.
+To enable/disable the module, set `spec.enabled` field of the `ModuleConfig` custom resource to `true` or `false`. It may require creating `ModuleConfig` resource for the module.
 
-Here is an example of disabling the `user-authn` module, enabled by default:
+Here is an example of disabling the `user-authn` module (the module will be turned off despite the module bundles used):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -121,8 +121,12 @@ spec:
   enabled: false
 ```
 
+To check the status of the module, run the `kubectl get moduleconfig <MODULE_NAME>` command: 
+
+Example:
+
 ```shell
-kubectl get moduleconfigs
+$ kubectl get moduleconfigs
 NAME                VERSION   AGE   ENABLED              STATUS
 user-authn          1         12h   Disabled by config
 ```
@@ -131,23 +135,20 @@ user-authn          1         12h   Disabled by config
 
 Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
-{%- assign bundles = site.data.bundles | sort %}
 <table>
 <thead>
 <tr><th>Bundle name</th><th>List of modules, enabled by default</th></tr></thead>
 <tbody>
-{% for bundle in bundles %}
+{% for bundle in site.data.bundles.bundleNames %}
 <tr>
-<td><strong>{{ bundle[0] |  replace_first: "values-", "" | capitalize }}</strong></td>
-<td>{% assign modules = bundle[1] | sort %}
+<td><strong>{{ bundle }}</strong></td>
+<td>
 <ul style="columns: 3">
-{%- for module in modules %}
-{%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
+{%- for moduleName in site.data.bundles.bundleModules[bundle] %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
 {%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-{%- if module[1] != true %}{% continue %}{% endif %}
 <li>
-{{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
+{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
