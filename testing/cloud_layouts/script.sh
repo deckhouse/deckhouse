@@ -543,7 +543,7 @@ trap pause-the-test EXIT
 # UPMETER AVAILABILITY SETUP
 #
 ### Get the IP of upmeter server
-for ((i=0; i<15; i++)); do
+for ((i=0; i<40; i++)); do
   upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') && break
   >&2 echo "Attempt to get Endpoints for upmeter #$i failed. Sleeping 30 seconds..."
   sleep 30
