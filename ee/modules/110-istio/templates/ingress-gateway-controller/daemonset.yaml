@@ -132,7 +132,12 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.labels['service.istio.io/canonical-revision']
-        - name: ISTIO_META_WORKLOAD_NAME ###
+        - name: PROXY_CONFIG
+          value: |
+            {
+              "discoveryAddress": "istiod-{{ $revision }}.d8-istio.svc:15012"
+            }
+        - name: ISTIO_META_WORKLOAD_NAME
           value: {{ include "ingress_gateway_name" $controller.name }}
         - name: ISTIO_META_OWNER ###
           value: "kubernetes://apis/apps/v1/namespaces/d8-istio/daemonsets/{{ include "ingress_gateway_name" $controller.name }}"
@@ -147,6 +152,8 @@ spec:
         - name: ISTIO_META_REQUESTED_NETWORK_VIEW
           value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_DNS_CAPTURE
+          value: "true"
+        - name: PROXY_CONFIG_XDS_AGENT
           value: "true"
         - name: ISTIO_META_NETWORK
           value: {{ include "istioNetworkName" $ }}
