@@ -255,7 +255,7 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** zone.
+                        The summary number of overprovisioned nodes for this `NodeGroup` all zones.
 
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
@@ -878,7 +878,7 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** [zone](#nodegroup-v1alpha2-spec-cloudinstances-zones).
+                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1alpha2-spec-cloudinstances-zones).
 
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
@@ -1484,7 +1484,7 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` in **every** [zone](#nodegroup-v1-spec-cloudinstances-zones).
+                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1-spec-cloudinstances-zones).
 
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
