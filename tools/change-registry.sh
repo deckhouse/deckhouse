@@ -37,6 +37,20 @@ function usage() {
 " "$0"
 }
 
+# get token from registry auth
+# bb-rp-get-token
+function bb-rp-get-token() {
+  local AUTH=""
+  local AUTH_HEADER=""
+  local AUTH_REALM=""
+  local AUTH_SERVICE=""
+
+  AUTH_HEADER="$(curl --retry 3 -sSLi "${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
+  AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
+  AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
+  curl --retry 3 -fsSL -u ${REGISTRY_USER}:${REGISTRY_PASS} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:*" | jq -r '.token'
+}
+
 function parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -91,6 +105,13 @@ function parse_args() {
     >&2 echo "Cannot find ca file: $REGISTRY_CAFILE."
     exit 1
   fi
+
+  TOKEN="$(bb-rp-get-token)"
+  if [[ "$TOKEN" == "" ]]; then
+    echo "Cannot get Bearer token from registry"
+    exit 1
+  fi
+
 }
 
 function create_dockerconfigjson() {
@@ -118,8 +139,8 @@ if  [[ "$REGISTRY_CAFILE" != "" ]]; then
   REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
 fi
 
-kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
-if  [[ "$REGISTRY_CAFILE" != "" ]]; then
-  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
-  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
-fi
+#kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
+#if  [[ "$REGISTRY_CAFILE" != "" ]]; then
+#  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
+#  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
+#fi
