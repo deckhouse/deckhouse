@@ -49,17 +49,17 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.4.0-54-generic"
-          allowedPattern: "5.4"
+          desiredVersion: "5.11.0-46-generic"
+          allowedPattern: "5.4|5.11"
         aws:
-          desiredVersion: "5.4.0-1029-aws"
-          allowedPattern: "5.4"
+          desiredVersion: "5.11.0-1028-aws"
+          allowedPattern: "5.4|5.11"
         azure:
-          desiredVersion: "5.4.0-1034-azure"
-          allowedPattern: "5.4"
+          desiredVersion: "5.11.0-1028-azure"
+          allowedPattern: "5.4|5.11"
         gcp:
-          desiredVersion: "5.4.0-1029-gcp"
-          allowedPattern: "5.4"
+          desiredVersion: "5.11.0-1029-gcp"
+          allowedPattern: "5.4|5.11"
     '22.04':
       docker:
         desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
