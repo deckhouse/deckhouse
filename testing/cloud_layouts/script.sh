@@ -554,10 +554,17 @@ for ((i=0; i<$attempts; i++)); do
 
   if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
     if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
-      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query param
-      if avail_json="$(curl -k -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1")" 2>/dev/null; then
+
+      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
+      # param.
+      #
+      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
+      # -e flag does not work as expected. See
+      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
+      #
+      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" | echo null | jq -ce)" 2>/dev/null; then
         # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
-        avail_report="$(jq '
+        avail_report="$(jq -re '
           [
             .rows[]
             | [
@@ -577,7 +584,7 @@ for ((i=0; i<$attempts; i++)); do
         echo ''
         echo '====================== AVAILABILITY, STATUS, PROBE ======================'
         # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
-        echo "$(jq -r '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
+        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
         echo '========================================================================='
 
         # Overall availability status
