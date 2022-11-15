@@ -545,7 +545,8 @@ else
   ingress=""
 fi
 
-availability = ""
+availability=""
+
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
 for ((i=0; i<50; i++)); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
