@@ -546,9 +546,9 @@ else
 fi
 
 availability=""
-
+attempts=50
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
-for ((i=0; i<50; i++)); do
+for ((i=0; i<$attempts; i++)); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
   sleep 30
 
@@ -574,7 +574,7 @@ for ((i=0; i<50; i++)); do
           ' <<<"$avail_json")"
 
         # Printing the table of probe statuses
-        echo
+        echo ''
         echo '====================== AVAILABILITY, STATUS, PROBE ======================'
         # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
         echo "$(jq -r '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
@@ -584,17 +584,18 @@ for ((i=0; i<50; i++)); do
         availability="$(jq -r 'if   ([ .[] | select(.status != "ok") ] | length == 0)   then "ok"   else ""   end'<<<"$avail_report")"
 
       else
-        >&2 echo "Couldn't fetch availability data from upmeter"
+        >&2 echo "Couldn't fetch availability data from upmeter (attempt ${i}/${attempts})."
       fi
     else
-      >&2 echo "Couldn't get upmeter-agent serviceaccount token"
+      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt ${i}/${attempts})."
     fi
+  else
+    >&2 echo "Upmeter endpoint is not ready (attempt ${i}/${attempts})."
+  fi
+
     cat <<EOF
 Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "failure")
 EOF
-  else
-    >&2 echo "Upmeter endpoint is not ready."
-  fi
 
   if [[ -n "$ingress_inlet" ]]; then
     if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
@@ -604,16 +605,16 @@ EOF
             if [[ "$ingress_lb_code" == "404" ]]; then
               ingress="ok"
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt ${i}/${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb."
+            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt ${i}/${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
+          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt ${i}/${attempts})."
         fi
       else
-        >&2 echo "Can't get svc/nginx-load-balancer."
+        >&2 echo "Can't get svc/nginx-load-balancer (attempt ${i}/${attempts})."
       fi
     else
       >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
