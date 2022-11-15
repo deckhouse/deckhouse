@@ -192,11 +192,22 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.16
+
       - name: Run go generate
         run: |
-          TESTS_IMAGE_NAME="registry.deckhouse.io/base_images/golang:1.18.5-buster@sha256:eb4b3bd59da4604b0ab27d3837e39dacfba4a48cdd289419a3c49993c0eadba4"
-          docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c "trap 'chown -R $(id -u):$(id -g) /deckhouse' EXIT; make generate"
-          docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${TESTS_IMAGE_NAME} go generate .
+          (cd tools && go generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
 
       - name: Check generated code
         run: |
