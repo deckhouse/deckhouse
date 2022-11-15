@@ -572,7 +572,7 @@ for ((i=0; i<$attempts; i++)); do
                 | .probes[]
                 | {
                   probe: ($group + "/" + .probe),
-                  status: (if .availability > 0.99 then "ok" else "pending" end),
+                  status: (if .availability > 0.99 then "up" else "pending" end),
                   availability: .availability
                 }
               ]
@@ -581,7 +581,7 @@ for ((i=0; i<$attempts; i++)); do
           ' <<<"$avail_json")"
 
         # Printing the table of probe statuses
-        echo ''
+        echo '*'
         echo '====================== AVAILABILITY, STATUS, PROBE ======================'
         # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
         echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
@@ -601,7 +601,7 @@ for ((i=0; i<$attempts; i++)); do
   fi
 
     cat <<EOF
-Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "failure")
+Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
 EOF
 
   if [[ -n "$ingress_inlet" ]]; then
