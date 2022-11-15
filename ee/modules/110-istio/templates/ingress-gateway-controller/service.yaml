@@ -7,7 +7,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "ingress_gateway_name" $controller.name }}
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}-ingress
   {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name)) | nindent 2 }}
   {{- if $loadBalancer.annotations }}
   annotations:

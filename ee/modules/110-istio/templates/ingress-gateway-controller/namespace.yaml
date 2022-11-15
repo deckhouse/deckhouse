@@ -1,0 +1,10 @@
+{{- if .Values.istio.internal.ingressControllers -}}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-{{ .Chart.Name }}-ingress
+  annotations:
+    extended-monitoring.flant.com/enabled: ""
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+{{- end -}}

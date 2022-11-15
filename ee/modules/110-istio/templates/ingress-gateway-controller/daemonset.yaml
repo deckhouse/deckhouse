@@ -12,7 +12,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "ingress_gateway_name" $controller.name }}
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}-ingress
   {{- include "helm_lib_module_labels" (list $ (dict "app" "ingress-gateway-controller" "instance" $controller.name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
@@ -44,7 +44,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "ingress_gateway_name" $controller.name }}
-  namespace: d8-{{ $.Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}-ingress
   {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name "istio.deckhouse.io/ingress-gateway-class"  $ingressGatewayClass)) | nindent 2 }}
 spec:
   selector:
@@ -203,8 +203,6 @@ spec:
         volumeMounts:
         - mountPath: /etc/istio/proxy
           name: istio-envoy
-        - mountPath: /etc/istio/config
-          name: config-volume
         - mountPath: /var/run/secrets/istio
           name: istiod-ca-cert
         - mountPath: /var/lib/istio/data
@@ -247,10 +245,6 @@ spec:
         name: istio-envoy
       - emptyDir: {}
         name: istio-data
-      - configMap:
-          defaultMode: 420
-          name: istio-{{ $revision }}
-        name: config-volume
   {{- if eq (include "istioJWTPolicy" $) "third-party-jwt" }}
       - name: istio-token
         projected:
