@@ -562,7 +562,7 @@ for ((i=0; i<$attempts; i++)); do
       # -e flag does not work as expected. See
       # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
       #
-      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" | echo null | jq -ce)" 2>/dev/null; then
+      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
         # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
         avail_report="$(jq -re '
           [
