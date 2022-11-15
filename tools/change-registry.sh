@@ -101,6 +101,12 @@ function parse_args() {
     exit 1
   fi
 
+  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z]$"
+  if ! [[ $REGISTRY_ADDRESS =~ $domain_validator ]]; then
+    >&2 echo "Domain must contains only symbols from [a-z0-9-.], first symbol must be letter or number, and last symbol must be letter: $REGISTRY_ADDRESS."
+    exit 1
+  fi
+
   if [[ "$REGISTRY_CAFILE" != "" ]] && [[ ! -f "$REGISTRY_CAFILE" ]]; then
     >&2 echo "Cannot find ca file: $REGISTRY_CAFILE."
     exit 1
@@ -108,7 +114,7 @@ function parse_args() {
 
   TOKEN="$(bb-rp-get-token)"
   if [[ "$TOKEN" == "" ]]; then
-    echo "Cannot get Bearer token from registry"
+    >&2 echo "Cannot get Bearer token from registry"
     exit 1
   fi
 
@@ -139,8 +145,8 @@ if  [[ "$REGISTRY_CAFILE" != "" ]]; then
   REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
 fi
 
-#kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
-#if  [[ "$REGISTRY_CAFILE" != "" ]]; then
-#  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
-#  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
-#fi
+kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
+if  [[ "$REGISTRY_CAFILE" != "" ]]; then
+  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
+  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
+fi
