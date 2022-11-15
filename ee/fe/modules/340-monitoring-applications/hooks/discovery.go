@@ -20,7 +20,7 @@ import (
 )
 
 func getAllowedApplications() (set.Set, error) {
-	res, err := filepath.Glob("../applications/*")
+	res, err := filepath.Glob("/deckhouse/modules/340-monitoring-applications/applications/*")
 	if err != nil {
 		return nil, err
 	}
