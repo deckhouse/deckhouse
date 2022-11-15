@@ -6,6 +6,7 @@
   metrics_path: '/main/metrics'
   scheme: https
   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  scrape_timeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 20) }}
   tls_config:
     insecure_skip_verify: true
   static_configs:
@@ -25,6 +26,7 @@
   tls_config:
     insecure_skip_verify: true
   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  scrape_timeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 20) }}
   static_configs:
   - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabel_configs:
