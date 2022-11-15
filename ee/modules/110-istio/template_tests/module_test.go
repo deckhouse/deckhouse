@@ -630,13 +630,13 @@ updatePolicy:
 
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio-ingress", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
 
-			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-nodeport-test")
-			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-nodeport-test")
-			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-nodeport-test")
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio-ingress", "ingress-gateway-controller-nodeport-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio-ingress", "ingress-gateway-controller-nodeport-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio-ingress", "ingress-gateway-controller-nodeport-test")
 			Expect(ingressVpa.Exists()).To(BeTrue())
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
@@ -670,13 +670,13 @@ updatePolicy:
 
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio-ingress", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
 
-			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-loadbalancer-test")
-			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-loadbalancer-test")
-			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-loadbalancer-test")
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio-ingress", "ingress-gateway-controller-loadbalancer-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio-ingress", "ingress-gateway-controller-loadbalancer-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio-ingress", "ingress-gateway-controller-loadbalancer-test")
 			Expect(ingressVpa.Exists()).To(BeTrue())
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
@@ -708,13 +708,13 @@ updatePolicy:
 
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("serviceaccount", "d8-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("role", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("rolebinding", "d8-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("serviceaccount", "d8-istio-ingress", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-istio-ingress", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
 
-			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio", "ingress-gateway-controller-hostport-test")
-			ingressDs := f.KubernetesResource("daemonset", "d8-istio", "ingress-gateway-controller-hostport-test")
-			ingressSvc := f.KubernetesResource("service", "d8-istio", "ingress-gateway-controller-hostport-test")
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-istio-ingress", "ingress-gateway-controller-hostport-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-istio-ingress", "ingress-gateway-controller-hostport-test")
+			ingressSvc := f.KubernetesResource("service", "d8-istio-ingress", "ingress-gateway-controller-hostport-test")
 			Expect(ingressVpa.Exists()).To(BeTrue())
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())

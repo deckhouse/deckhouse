@@ -12,7 +12,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Istio hooks :: discovery_ingress_controllers :: ::", func() {
+var _ = Describe("Istio hooks :: discovery_ingress_controllers :: ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{ "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IngressIstioController", false)
 
