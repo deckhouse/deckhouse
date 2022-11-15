@@ -539,75 +539,61 @@ function pause-the-test() {
 
 trap pause-the-test EXIT
 
-#
-# UPMETER AVAILABILITY SETUP
-#
-### Get the IP of upmeter server
-for ((i=0; i<40; i++)); do
-  upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') && break
-  >&2 echo "Attempt to get Endpoints for upmeter #$i failed. Sleeping 30 seconds..."
-  sleep 30
-done
-if [[ -z "$upmeter_addr" ]]; then
-  >&2 echo "Couldn't get upmeter address from Endpoints in 5 minutes."
-  exit 1
-fi
-
-### Get access token of upmeter agent to make requests to upmeter server
-for ((i=0; i<10; i++)); do
-  upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" && break
-  >&2 echo "Attempt to get Upmeter SA auth token #$i failed. Sleeping 30 seconds..."
-  sleep 30
-done
-if [[ -z "$upmeter_auth_token" ]]; then
-  >&2 echo "Couldn't get Upmeter SA auth token upmeter-agent Pod."
-  exit 1
-fi
-
-#
-# INGRESS CONTROLLER SETUP
-#
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 else
   ingress=""
 fi
 
-# With sleep timeout of 30s, we have 20 minutes period in total to catch the 100% availability from upmeter
-for ((i=0; i<40; i++)); do
-  ### Get availability data based on last 30 seconds of probe measurements, note 'peek=1' query param
-  avail_json="$(curl -k -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1")"
-  if [[ -z "$avail_json" ]]; then
-    >&2 echo "Attempt to get availability data #$i failed. Sleeping 30 seconds..."
-    sleep 30
-    continue
+availability = ""
+# With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
+for ((i=0; i<50; i++)); do
+  # Sleeping at the start for readability. First iterations do not succeed anyway.
+  sleep 30
+
+  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
+    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
+      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query param
+      if avail_json="$(curl -k -s -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1")" 2>/dev/null; then
+        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
+        avail_report="$(jq '
+          [
+            .rows[]
+            | [
+                .group as $group
+                | .probes[]
+                | {
+                  probe: ($group + "/" + .probe),
+                  status: (if .availability > 0.99 then "ok" else "pending" end),
+                  availability: .availability
+                }
+              ]
+          ]
+          | flatten
+          ' <<<"$avail_json")"
+
+        # Printing the table of probe statuses
+        echo
+        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
+        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
+        echo "$(jq -r '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
+        echo '========================================================================='
+
+        # Overall availability status
+        availability="$(jq -r 'if   ([ .[] | select(.status != "ok") ] | length == 0)   then "ok"   else ""   end'<<<"$avail_report")"
+
+      else
+        >&2 echo "Couldn't fetch availability data from upmeter"
+      fi
+    else
+      >&2 echo "Couldn't get upmeter-agent serviceaccount token"
+    fi
+    cat <<EOF
+Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "failure")
+EOF
+  else
+    >&2 echo "Upmeter endpoint is not ready."
   fi
-
-  ### Transform the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/failure" }]
-  avail_report="$(jq '
-    [
-      .rows[]
-      | [
-          .group as $group
-          | .probes[]
-          | {
-            probe: ($group + "/" + .probe),
-            status: (if .availability > 0.99 then "ok" else "failure" end),
-            availability: .availability
-          }
-        ]
-    ]
-    | flatten
-    ' <<<"$avail_json")"
-
-  ### Print the list of probe statuses
-  echo '='
-  echo '====================== AVAILABILITY, STATUS, PROBE ======================'
-  #     0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
-  echo "$(jq -r '.[] | [((.availability * 1000 | round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
-
-  ### Gather the overall availability status: "ok" or "failure"
-  availability="$(jq -r 'if   ([ .[] | select(.status != "ok") ] | length == 0)   then "ok"   else "failure"   end'<<<"$avail_report")"
 
   if [[ -n "$ingress_inlet" ]]; then
     if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
@@ -641,8 +627,6 @@ EOF
   if [[ "$availability:$ingress" == "ok:ok" ]]; then
     exit 0
   fi
-
-  sleep 30
 done
 
 >&2 echo 'Timeout waiting for checks to succeed'
