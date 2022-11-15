@@ -73,13 +73,5 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	if input.Values.Get(deckhouseImagePath).String() == "" {
 		input.Values.Set(deckhouseImagePath, image)
 	}
-
-	// Generate alert for deckhouse being not on release channel
-	if input.Values.Exists("deckhouse.releaseChannel") {
-		input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", 0, nil)
-	} else {
-		input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", 1, nil)
-	}
-
 	return nil
 }
