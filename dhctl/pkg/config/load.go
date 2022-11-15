@@ -125,7 +125,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 
 	schema := s.getV1alpha1CompatibilitySchema(index)
 	if schema == nil {
-		return fmt.Errorf("Schema for %s does not found.", index.String())
+		return fmt.Errorf("Schema for %s wasn't found.", index.String())
 	}
 
 	isValid, err := openAPIValidate(doc, schema)

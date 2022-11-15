@@ -240,7 +240,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
 				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
 
-				logMsg := "Deckhouse not begin installed. Abort from cache"
+				logMsg := "Deckhouse installation was not started before. Abort from cache"
 				if app.ForceAbortFromCache {
 					logMsg = "Force aborting from cache"
 				}
@@ -271,7 +271,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return err
 			}
 
-			log.InfoLn("Deckhouse was begin installed. Destroy cluster")
+			log.InfoLn("Deckhouse installation was started before. Destroy cluster")
 			return nil
 		})
 

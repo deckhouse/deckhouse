@@ -289,7 +289,7 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
 	zeroUserInfo := LockUserInfo{
 		Name:       "unknown",
 		Host:       "unknown",
-		Additional: "Info does not set",
+		Additional: "Info is not set",
 	}
 	userInfo := zeroUserInfo
 	if lease != nil {
