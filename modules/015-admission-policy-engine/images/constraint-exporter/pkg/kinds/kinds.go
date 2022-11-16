@@ -27,7 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 )
@@ -41,14 +43,19 @@ type KindTracker struct {
 	cmNamespace string
 	cmName      string
 
+	trackKinds     bool
+	trackResources bool
+
 	latestChecksum string
 }
 
-func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string) *KindTracker {
+func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string, trackKinds, trackResources bool) *KindTracker {
 	return &KindTracker{
-		client:      client,
-		cmNamespace: cmNS,
-		cmName:      cmName,
+		client:         client,
+		cmNamespace:    cmNS,
+		cmName:         cmName,
+		trackKinds:     trackKinds,
+		trackResources: trackResources,
 	}
 }
 
@@ -77,7 +84,7 @@ func deduplicateKinds(constraints []gatekeeper.Constraint) (map[string]gatekeepe
 	return m, fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
-func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
+func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint) {
 	if len(constraints) == 0 {
 		return
 	}
@@ -113,28 +120,94 @@ func (kt *KindTracker) UpdateKinds(constraints []gatekeeper.Constraint) {
 		kinds = append(kinds, k)
 	}
 
-	data, _ := yaml.Marshal(kinds)
-
 	if len(cm.Annotations) == 0 {
 		cm.Annotations = make(map[string]string, 0)
 	}
 
 	cm.Annotations[checksumAnnotation] = checksum
-	cm.Data = map[string]string{"validate-kinds.yaml": string(data)}
+	if len(cm.Data) == 0 {
+		cm.Data = make(map[string]string)
+	}
+
+	if kt.trackKinds {
+		data, _ := yaml.Marshal(kinds)
+		cm.Data["validate-kinds.yaml"] = string(data)
+	}
+
+	if kt.trackResources {
+		// convert kinds to the resources
+		resourceData, err := kt.convertToResources(kinds)
+		if err != nil {
+			klog.Errorf("Convert kinds to resources failed. Try later")
+			return
+		}
+		cm.Data["validate-resources.yaml"] = string(resourceData)
+	}
 
 	_, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Update(context.TODO(), cm, v1.UpdateOptions{})
 	if err != nil {
-		klog.Errorf("Update kinds failed: %s", err)
+		klog.Errorf("Update tracked objects failed: %s", err)
 		return
 	}
 	kt.latestChecksum = checksum
+}
+
+func (kt *KindTracker) convertToResources(kinds []gatekeeper.MatchKind) ([]byte, error) {
+	apiRes, err := restmapper.GetAPIGroupResources(kt.client.Discovery())
+	if err != nil {
+		return nil, err
+	}
+
+	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
+
+	res := make([]matchResource, 0, len(kinds))
+
+	for _, mk := range kinds {
+		uniqGroups := make(map[string]struct{})
+		uniqResources := make(map[string]struct{})
+
+		for _, apiGroup := range mk.APIGroups {
+			for _, kind := range mk.Kinds {
+				rm, err := rmapper.RESTMapping(schema.GroupKind{
+					Group: apiGroup,
+					Kind:  kind,
+				})
+				if err != nil {
+					// skip outdated resources, like extensions/Ingress
+					klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
+					continue
+				}
+
+				uniqGroups[rm.Resource.Group] = struct{}{}
+				uniqResources[rm.Resource.Resource] = struct{}{}
+			}
+		}
+
+		groups := make([]string, 0, len(mk.APIGroups))
+		resources := make([]string, 0, len(mk.Kinds))
+
+		for k := range uniqGroups {
+			groups = append(groups, k)
+		}
+
+		for k := range uniqResources {
+			resources = append(resources, k)
+		}
+
+		res = append(res, matchResource{
+			APIGroups: groups,
+			Resources: resources,
+		})
+	}
+
+	return yaml.Marshal(res)
 }
 
 func (kt *KindTracker) FindInitialChecksum() error {
 	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			klog.Info("Kinds configmap not found. Creating.")
+			klog.Info("Track objects configmap not found. Creating.")
 			err = kt.createCM()
 			if err != nil {
 				return err
@@ -173,4 +246,9 @@ func (kt *KindTracker) createCM() error {
 	_, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Create(context.TODO(), cm, v1.CreateOptions{})
 
 	return err
+}
+
+type matchResource struct {
+	APIGroups []string `json:"apiGroups"`
+	Resources []string `json:"resources"`
 }

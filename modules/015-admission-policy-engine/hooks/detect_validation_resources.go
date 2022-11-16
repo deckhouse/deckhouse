@@ -22,8 +22,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -56,68 +54,12 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	kindsRaw := snap[0].(string)
+	resourcesRaw := snap[0].(string)
+	var res []matchResource
 
-	var matchKinds []matchKind
-
-	err := yaml.Unmarshal([]byte(kindsRaw), &matchKinds)
+	err := yaml.Unmarshal([]byte(resourcesRaw), &res)
 	if err != nil {
 		return err
-	}
-
-	if len(matchKinds) == 0 {
-		return nil
-	}
-
-	res := make([]matchResource, 0, len(matchKinds))
-
-	k8s, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-	apiRes, err := restmapper.GetAPIGroupResources(k8s.Discovery())
-	if err != nil {
-		return err
-	}
-
-	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
-
-	for _, mk := range matchKinds {
-		uniqGroups := set.New()
-		uniqResources := make(map[string]struct{})
-
-		for _, apiGroup := range mk.APIGroups {
-			for _, kind := range mk.Kinds {
-				rm, err := rmapper.RESTMapping(schema.GroupKind{
-					Group: apiGroup,
-					Kind:  kind,
-				})
-				if err != nil {
-					// skip outdated resources, like extensions/Ingress
-					input.LogEntry.Warnf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
-					continue
-				}
-
-				uniqGroups[rm.Resource.Group] = struct{}{}
-				uniqResources[rm.Resource.Resource] = struct{}{}
-			}
-		}
-
-		groups := make([]string, 0, len(mk.APIGroups))
-		resources := make([]string, 0, len(mk.Kinds))
-
-		for k := range uniqGroups {
-			groups = append(groups, k)
-		}
-
-		for k := range uniqResources {
-			resources = append(resources, k)
-		}
-
-		res = append(res, matchResource{
-			APIGroups: groups,
-			Resources: resources,
-		})
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.trackedResources", res)
@@ -133,12 +75,7 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
-	return cm.Data["validate-kinds.yaml"], nil
-}
-
-type matchKind struct {
-	APIGroups []string `json:"apiGroups"`
-	Kinds     []string `json:"kinds"`
+	return cm.Data["validate-resources.yaml"], nil
 }
 
 type matchResource struct {

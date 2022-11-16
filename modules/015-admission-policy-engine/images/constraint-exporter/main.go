@@ -25,15 +25,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 	"github.com/flant/constraint_exporter/pkg/kinds"
+
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-
-	"github.com/flant/constraint_exporter/pkg/gatekeeper"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -43,8 +43,9 @@ var (
 		"Path under which to expose metrics")
 	interval = flag.Duration("server.interval", 30*time.Second,
 		"Kubernetes API server polling interval")
-	trackValidationKinds = flag.Bool("track-validation-match-kinds", true, "Tracked kinds for validation webhook")
-	trackKindsCMName     = flag.String("match-kinds-configmap", "constraint-exporter",
+	trackValidationKinds     = flag.Bool("track-validation-match-kinds", false, "Tracked kinds for validation webhook")
+	trackValidationResources = flag.Bool("track-validation-match-resource", true, "Tracked kinds for validation webhook are converted to the resources")
+	trackObjectsCMName       = flag.String("track-objects-configmap", "constraint-exporter",
 		"ConfigMap for export tracking resource kinds")
 
 	ticker *time.Ticker
@@ -76,18 +77,6 @@ func NewExporter() *Exporter {
 		kubeConfig: config,
 		metrics:    make([]prometheus.Metric, 0),
 	}
-}
-
-func (e *Exporter) initKindTracker(cmNS, cmName string) error {
-	kt := kinds.NewKindTracker(e.client, cmNS, cmName)
-	err := kt.FindInitialChecksum()
-	if err != nil {
-		return err
-	}
-
-	e.kindTracker = kt
-
-	return nil
 }
 
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
@@ -127,7 +116,7 @@ func (e *Exporter) startScheduled(t time.Duration) {
 				e.metrics = allMetrics
 
 				if e.kindTracker != nil {
-					go e.kindTracker.UpdateKinds(constraints)
+					go e.kindTracker.UpdateTrackedObjects(constraints)
 				}
 			}
 		}
@@ -143,8 +132,8 @@ func main() {
 	}
 
 	exporter := NewExporter()
-	if *trackValidationKinds {
-		err := exporter.initKindTracker(ns, *trackKindsCMName)
+	if *trackValidationKinds || *trackValidationResources {
+		err := exporter.initKindTracker(ns, *trackObjectsCMName, *trackValidationKinds, *trackValidationResources)
 		if err != nil {
 			klog.Fatal(err)
 		}
@@ -184,4 +173,16 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		klog.Fatalf("Server Shutdown Failed:%+v", err)
 	}
+}
+
+func (e *Exporter) initKindTracker(cmNS, cmName string, trackKinds, trackResources bool) error {
+	kt := kinds.NewKindTracker(e.client, cmNS, cmName, trackKinds, trackResources)
+	err := kt.FindInitialChecksum()
+	if err != nil {
+		return err
+	}
+
+	e.kindTracker = kt
+
+	return nil
 }

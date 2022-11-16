@@ -33,7 +33,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validati
 			f.BindingContexts.Set(f.KubeStateSet(cm))
 			f.RunHook()
 		})
-		It("should generate resources", func() {
+		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").Array()).NotTo(BeEmpty())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"]}, {"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}]`))
@@ -45,25 +45,22 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validati
 var cm = `
 apiVersion: v1
 data:
-  validate-kinds.yaml: |
+  validate-resources.yaml: |
     - apiGroups:
       - ""
-      kinds:
-      - Pod
+      resources:
+      - pods
     - apiGroups:
       - extensions
       - networking.k8s.io
-      kinds:
-      - Ingress
+      resources:
+      - ingresses
 kind: ConfigMap
 metadata:
   annotations:
     security.deckhouse.io/constraints-checksum: b73817c9948c3f7d823859980f0d8b1216f1f00222570bde38c9bd54b50cea87
-  creationTimestamp: "2022-11-11T19:00:16Z"
   labels:
     owner: constraint-exporter
   name: constraint-exporter
   namespace: d8-admission-policy-engine
-  resourceVersion: "116772759"
-  uid: db6044f5-9d18-449d-979d-b862598654ba
 `
