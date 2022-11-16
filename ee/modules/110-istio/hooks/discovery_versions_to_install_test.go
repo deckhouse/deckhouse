@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -33,7 +32,7 @@ var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 
 		found := false
 		for _, metric := range m {
-			Expect(metric.Name).To(Equal(telemetry.WrapName("istio_control_plane_full_version")))
+			Expect(metric.Name).To(Equal("d8_telemetry_istio_control_plane_full_version"))
 			currentVer := metric.Labels["version"]
 			if currentVer == version {
 				found = true
