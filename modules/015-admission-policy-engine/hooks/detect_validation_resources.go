@@ -83,7 +83,7 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
 
 	for _, mk := range matchKinds {
-		uniqGroups := make(map[string]struct{})
+		uniqGroups := set.New()
 		uniqResources := make(map[string]struct{})
 
 		for _, apiGroup := range mk.APIGroups {
