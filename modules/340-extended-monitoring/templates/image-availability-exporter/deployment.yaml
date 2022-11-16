@@ -75,6 +75,8 @@ spec:
         {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         {{- end }}
+        env:
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
