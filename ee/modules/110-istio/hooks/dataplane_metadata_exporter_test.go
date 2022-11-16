@@ -107,7 +107,7 @@ func istioPodYAML(pod podParams) string {
 	return internal.TemplateToYAML(podTemplate, pod)
 }
 
-var _ = FDescribe("Istio hooks :: revisions_monitoring ::", func() {
+var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 
 	var hookInitValues = `
 {  "istio":
@@ -141,47 +141,46 @@ var _ = FDescribe("Istio hooks :: revisions_monitoring ::", func() {
 		})
 	})
 
-	DescribeTable("There are different desired and actual revisions",
-		func(objectsYAMLs []string, want *wantedMetric) {
-			f.ValuesSet("istio.internal.globalVersion", "1.42")
-			yamlState := strings.Join(objectsYAMLs, "\n---\n")
-			f.BindingContexts.Set(f.KubeStateSet(yamlState))
+	DescribeTable("There are different desired and actual revisions", func(objectsYAMLs []string, want *wantedMetric) {
+		f.ValuesSet("istio.internal.globalVersion", "1.42")
+		yamlState := strings.Join(objectsYAMLs, "\n---\n")
+		f.BindingContexts.Set(f.KubeStateSet(yamlState))
 
-			f.RunHook()
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
-			m := f.MetricsCollector.CollectedMetrics()
+		f.RunHook()
+		Expect(f).To(ExecuteSuccessfully())
+		Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+		m := f.MetricsCollector.CollectedMetrics()
 
-			// the first action should always be "expire"
-			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  metadataExporterMetricsGroup,
-				Action: "expire",
-			}))
+		// the first action should always be "expire"
+		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+			Group:  metadataExporterMetricsGroup,
+			Action: "expire",
+		}))
 
-			// there are no istio pods or ignored pods in the cluster, hense no metrics
-			if yamlState == "" || want == nil {
-				Expect(m).To(HaveLen(2))
-				return
-			}
+		// there are no istio pods or ignored pods in the cluster, hense no metrics
+		if yamlState == "" || want == nil {
+			Expect(m).To(HaveLen(2))
+			return
+		}
 
-			Expect(len(m) >= 3).To(BeTrue())
-			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   istioPodMetadataMetricName,
-				Group:  metadataExporterMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"namespace":            nsName,
-					"dataplane_pod":        podName,
-					"desired_revision":     want.DesiredRevision,
-					"revision":             want.Revision,
-					"version":              want.Version,
-					"desired_version":      want.DesiredVersion,
-					"full_version":         want.FullVersion,
-					"desired_full_version": want.DesiredFullVersion,
-				},
-			}))
-		},
+		Expect(len(m) >= 3).To(BeTrue())
+		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+			Name:   istioPodMetadataMetricName,
+			Group:  metadataExporterMetricsGroup,
+			Action: "set",
+			Value:  pointer.Float64Ptr(1.0),
+			Labels: map[string]string{
+				"namespace":            nsName,
+				"dataplane_pod":        podName,
+				"desired_revision":     want.DesiredRevision,
+				"revision":             want.Revision,
+				"version":              want.Version,
+				"desired_version":      want.DesiredVersion,
+				"full_version":         want.FullVersion,
+				"desired_full_version": want.DesiredFullVersion,
+			},
+		}))
+	},
 
 		// Checks for normal behavior, everything with revision is ok!
 		Entry("Empty cluster", []string{}, nil),
