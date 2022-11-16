@@ -548,7 +548,7 @@ fi
 availability=""
 attempts=50
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
-for ((i=0; i<$attempts; i++)); do
+for i in $(seq $attempts); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
   sleep 30
 
@@ -572,7 +572,7 @@ for ((i=0; i<$attempts; i++)); do
                 | .probes[]
                 | {
                   probe: ($group + "/" + .probe),
-                  status: (if .availability > 0.99 then "up" else "pending" end),
+                  status: (if .availability > 0.99   then "up"   else "pending"   end),
                   availability: .availability
                 }
               ]
