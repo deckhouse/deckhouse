@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
+
 	"github.com/stretchr/testify/assert"
 )
 

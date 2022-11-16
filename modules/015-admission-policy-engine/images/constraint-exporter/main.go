@@ -37,17 +37,29 @@ import (
 )
 
 var (
-	listenAddress = flag.String("server.telemetry-address", ":15060",
-		"Address to listen on for telemetry")
-	metricsPath = flag.String("server.telemetry-path", "/metrics",
-		"Path under which to expose metrics")
-	interval = flag.Duration("server.interval", 30*time.Second,
-		"Kubernetes API server polling interval")
-	trackValidationKinds     = flag.Bool("track-validation-match-kinds", false, "Tracked kinds for validation webhook")
-	trackValidationResources = flag.Bool("track-validation-match-resource", true, "Tracked kinds for validation webhook are converted to the resources")
-	trackObjectsCMName       = flag.String("track-objects-configmap", "constraint-exporter",
-		"ConfigMap for export tracking resource kinds")
+	// flags
+	listenAddress string
+	metricsPath   string
+	interval      time.Duration
 
+	trackValidationKinds     bool
+	trackValidationResources bool
+	trackObjectsCMName       string
+)
+
+func init() {
+	flag.StringVar(&listenAddress, "server.telemetry-address", ":15060",
+		"Address to listen on for telemetry")
+	flag.StringVar(&metricsPath, "server.telemetry-path", "/metrics",
+		"Path under which to expose metrics")
+	flag.DurationVar(&interval, "server.interval", 30*time.Second,
+		"Kubernetes API server polling interval")
+	flag.BoolVar(&trackValidationKinds, "track-validation-match-kinds", false, "Tracked kinds for validation webhook")
+	flag.BoolVar(&trackValidationResources, "track-validation-match-resource", true, "Tracked kinds for validation webhook are converted to the resources")
+	flag.StringVar(&trackObjectsCMName, "track-objects-configmap", "constraint-exporter", "ConfigMap for export tracking resource kinds")
+}
+
+var (
 	ticker *time.Ticker
 	done   = make(chan bool)
 )
@@ -132,14 +144,14 @@ func main() {
 	}
 
 	exporter := NewExporter()
-	if *trackValidationKinds || *trackValidationResources {
-		err := exporter.initKindTracker(ns, *trackObjectsCMName, *trackValidationKinds, *trackValidationResources)
+	if trackValidationKinds || trackValidationResources {
+		err := exporter.initKindTracker(ns, trackObjectsCMName, trackValidationKinds, trackValidationResources)
 		if err != nil {
 			klog.Fatal(err)
 		}
 	}
 
-	exporter.startScheduled(*interval)
+	exporter.startScheduled(interval)
 	prometheus.Unregister(collectors.NewGoCollector())
 	prometheus.MustRegister(exporter)
 
@@ -147,10 +159,10 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	mux := http.NewServeMux()
-	mux.Handle(*metricsPath, promhttp.Handler())
+	mux.Handle(metricsPath, promhttp.Handler())
 
 	srv := &http.Server{
-		Addr:    *listenAddress,
+		Addr:    listenAddress,
 		Handler: mux,
 	}
 
