@@ -7,9 +7,9 @@ Deckhouse consists of the Deckhouse operator and modules. A module is a bundle o
 
 <div markdown="0" style="height: 0;" id="#deckhouse-configuration"></div>
 
-You can configure Deckhouse using the:
+You can configure Deckhouse using:
 - **[Global settings](deckhouse-configure-global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
-- **[Modules settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
+- **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
 - **Custom resources.** Some modules are configured using the additional custom resources.
 
 An example of a set of custom resources for configuring Deckhouse:
