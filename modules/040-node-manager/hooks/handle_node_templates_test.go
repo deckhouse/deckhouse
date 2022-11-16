@@ -682,7 +682,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Must be executed successfully; control-plane node-roles must be added", func() {
+		It("Must be executed successfully; control-plane node-role labels must be added", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			labels := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("metadata.labels")
@@ -743,6 +743,9 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(0))
+			// collected metrics should not have 'd8_missed_taint_on_master_ng' metric
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+			Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
 		})
 	})
 
@@ -839,6 +842,64 @@ spec:
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(1))
 			Expect(taints.Array()[0].String()).To(Equal(`{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}`))
+			// collected metrics should not have 'd8_missed_taint_on_master_ng' metric
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+			Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
+		})
+	})
+
+	Context("NG has master taint but does not have control-plane and worker ng exists", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudEphemeral
+---
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    node.deckhouse.io/configuration-checksum: 3ef180a2b2cce73299012a049437bfef447b031ccfbb6c7d26913124a9ac1c1e
+  labels:
+    kubernetes.io/hostname: kube-master-0
+    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
+    node.deckhouse.io/group: master
+    node.deckhouse.io/type: CloudPermanent
+  name: kube-master-0
+spec:
+  podCIDR: 10.111.0.0/24
+  podCIDRs:
+  - 10.111.0.0/24
+  providerID: aws:///eu-central-1a/i-05724e80e8b61b339
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Metric 'd8_missed_taint_on_master_ng' should appear", func() {
+			// collected metrics should have 'd8_missed_taint_on_master_ng' metric
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_missed_taint_on_master_ng"))
+			Expect(*f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(float64(1)))
 		})
 	})
 })
