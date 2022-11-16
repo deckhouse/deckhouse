@@ -128,7 +128,7 @@ deckhouse: |
 
 ##### Требования
 
-В случае использования менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
+При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
 
 * Включен `Docker Bearer Token Realm`.
 * Создан проксирующий репозиторий Docker.
@@ -149,14 +149,14 @@ deckhouse: |
 * Заполните поля страницы создания следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например, `8123` или иной.
-  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию.
   * `Remote storage` должно иметь значение `https://registry.deckhouse.io/`.
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены в целях отладки, в противном случае их следует включить.
-  * `Maximum Metadata Age` должно иметь значение 0.
-  * Если планируется использовать Deckhouse Enterprise Edition, то `Authentication` должно быть включено с одновременным заполнением следующих полей:
+  * `Maximum Metadata Age` должно быть равно 0.
+  * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
     * `Authentication Type` должно иметь значение `Username`.
     * `Username` должно иметь значение `license-token`.
-    * `Password` должно иметь значение ключа лицензии Deckhouse Enterprise Edition.
+    * `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
 
   ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
   ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
