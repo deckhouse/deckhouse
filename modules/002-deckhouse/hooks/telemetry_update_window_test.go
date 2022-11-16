@@ -59,7 +59,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		Expect(metricIndex >= 0).To(BeTrue())
 	}
 
-	assertWindowMetric := func(f *HookExecutionConfig, from, to, day, human string) {
+	assertWindowMetric := func(f *HookExecutionConfig, from, to, day string) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
 		Expect(metrics).ToNot(BeEmpty())
@@ -71,13 +71,12 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
 				Expect(m.Labels).To(HaveKey("from"))
 				Expect(m.Labels).To(HaveKey("to"))
-				Expect(m.Labels).To(HaveKey("human"))
 				if day != "" {
-					if day != m.Labels["weekday"] {
+					if day != m.Labels["day"] {
 						continue
-					} else {
-						dayFound = true
 					}
+
+					dayFound = true
 				}
 
 				if from != m.Labels["from"] {
@@ -85,10 +84,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				}
 
 				if to != m.Labels["to"] {
-					continue
-				}
-
-				if human != m.Labels["human"] {
 					continue
 				}
 
@@ -124,17 +119,15 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
 				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
 			})
 
 			It("Sets mode metric Manual", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertModeMetric(f, "Manual")
 			})
 
 			It("Sets only one mode metric", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertOnlyModeMetric(f)
 			})
 		})
@@ -145,17 +138,15 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:00"}]`))
 
 				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
 			})
 
 			It("Sets mode metric Manual", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertModeMetric(f, "Manual")
 			})
 
 			It("Sets only one mode metric", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertOnlyModeMetric(f)
 			})
 		})
@@ -168,17 +159,15 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
 				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
 			})
 
 			It("Sets mode metric Auto", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertModeMetric(f, "Auto")
 			})
 
 			It("Sets only one mode metric", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertOnlyModeMetric(f)
 			})
 		})
@@ -193,20 +182,18 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 ]`))
 
 				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
 			})
 
 			It("Sets mode metric Auto", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
 				assertModeMetric(f, "Auto")
 			})
 
 			It("Sets windows metric", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				assertWindowMetric(f, "00:00", "23:00", "", "00:00 - 23:00")
-				assertWindowMetric(f, "01:00", "02:00", "Mon", "Mon - 01:00 - 02:00")
-				assertWindowMetric(f, "01:00", "02:00", "Fri", "Fri - 01:00 - 02:00")
+				assertWindowMetric(f, "00:00", "23:00", "")
+				assertWindowMetric(f, "01:00", "02:00", "Mon")
+				assertWindowMetric(f, "01:00", "02:00", "Fri")
 			})
 		})
 	})

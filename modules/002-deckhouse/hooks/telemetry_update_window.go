@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -78,15 +76,6 @@ func (h *windowTelemetryHook) setWindowsMetrics() error {
 	return nil
 }
 
-func (h *windowTelemetryHook) humanOut(w update.Window, day string) string {
-	human := fmt.Sprintf("%s - %s", w.From, w.To)
-	if day != "" {
-		human = fmt.Sprintf("%s - %s", day, human)
-	}
-
-	return human
-}
-
 func (h *windowTelemetryHook) setFlattenWindowsMetrics() {
 	metricName := telemetry.WrapName("update_window")
 
@@ -94,19 +83,17 @@ func (h *windowTelemetryHook) setFlattenWindowsMetrics() {
 		for _, day := range w.Days {
 			d := day
 			h.collector.Set(metricName, 1.0, map[string]string{
-				"from":    w.From,
-				"to":      w.To,
-				"weekday": d,
-				"human":   h.humanOut(w, d),
+				"from": w.From,
+				"to":   w.To,
+				"day":  d,
 			})
 		}
 
 		if len(w.Days) == 0 {
 			h.collector.Set(metricName, 1.0, map[string]string{
-				"from":    w.From,
-				"to":      w.To,
-				"weekday": "",
-				"human":   h.humanOut(w, ""),
+				"from": w.From,
+				"to":   w.To,
+				"day":  "",
 			})
 		}
 	}
