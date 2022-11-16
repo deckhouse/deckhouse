@@ -32,7 +32,7 @@ rules:
       - patch
       - update
       - watch
-{{/*  For contraint exporter*/}}
+{{/*  For constraint exporter*/}}
   - apiGroups:
       - ""
     resources:
