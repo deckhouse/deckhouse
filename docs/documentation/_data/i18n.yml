@@ -107,6 +107,9 @@ common:
   versions:
     en: versions
     ru: версии
+  version_of_schema:
+    en: Schema version
+    ru: Версия схемы
   versions_supported:
     en: Supported versions
     ru: Поддерживаемые версии

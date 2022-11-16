@@ -584,9 +584,9 @@ module Jekyll
         if ( get_hash_value(input, "x-config-version") ) then
           configVersion = input['x-config-version']
         end
-        result.push('<p>')
-        result.push('spec.version: %d' % configVersion)
-        result.push('</p>')
+        result.push('<p><font size="-1">')
+        result.push(%Q(#{get_i18n_term("version_of_schema")}: #{configVersion}))
+        result.push('</font></p>')
 
         result.push('<div markdown="0">')
         result.push(format_examples(nil, input))
