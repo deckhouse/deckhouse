@@ -19,7 +19,8 @@ webhooks:
       matchExpressions:
       - key: heritage
         operator: NotIn
-        values: deckhouse
+        values:
+        - deckhouse
     rules:
       - apiGroups:
           - networking.k8s.io
@@ -51,7 +52,8 @@ webhooks:
       matchExpressions:
       - key: heritage
         operator: In
-        values: deckhouse
+        values:
+        - deckhouse
     rules:
       - apiGroups:
           - networking.k8s.io
