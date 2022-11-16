@@ -3,7 +3,7 @@ title: "Global configuration"
 permalink: en/deckhouse-configure-global.html
 ---
 
-The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)). Global settings can be considered as a special global module that cannot be disabled.
+The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)). They can be thought of as a special global module that cannot be disabled.
 
 > The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter defines the template some Deckhouse modules use to create Ingress resources. To access them, you can either configure your DNS or add the DNS mappings locally (e.g., in the `/etc/hosts` file in Linux).
 >
