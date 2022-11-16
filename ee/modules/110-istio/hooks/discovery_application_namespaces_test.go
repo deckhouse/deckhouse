@@ -79,7 +79,7 @@ spec: {}
 		})
 	})
 
-	FContext("Application namespaces with labels and IstioOperator", func() {
+	Context("Application namespaces with labels and IstioOperator", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
