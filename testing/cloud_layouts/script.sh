@@ -587,17 +587,25 @@ for ((i=0; i<$attempts; i++)); do
         echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
         echo '========================================================================='
 
-        # Overall availability status
-        availability="$(jq -r 'if   ([ .[] | select(.status != "ok") ] | length == 0)   then "ok"   else ""   end'<<<"$avail_report")"
+        # Overall availability status. We check that all probes are in place because at some point
+        # in the start the list can be empty.
+        availability="$(jq -r '
+          if (
+            (. | length > 0) and
+            ([ .[] | select(.status != "up") ] | length == 0)
+          )
+          then "ok"
+          else ""
+          end '<<<"$avail_report")"
 
       else
-        >&2 echo "Couldn't fetch availability data from upmeter (attempt ${i}/${attempts})."
+        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
       fi
     else
-      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt ${i}/${attempts})."
+      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
     fi
   else
-    >&2 echo "Upmeter endpoint is not ready (attempt ${i}/${attempts})."
+    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
   fi
 
     cat <<EOF
@@ -612,16 +620,16 @@ EOF
             if [[ "$ingress_lb_code" == "404" ]]; then
               ingress="ok"
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt ${i}/${attempts})."
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt ${i}/${attempts})."
+            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt #${i} of ${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt ${i}/${attempts})."
+          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt #${i} of ${attempts})."
         fi
       else
-        >&2 echo "Can't get svc/nginx-load-balancer (attempt ${i}/${attempts})."
+        >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
       fi
     else
       >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
