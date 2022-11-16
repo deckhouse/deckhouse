@@ -54,4 +54,4 @@ properties:
       Удалять секрет с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
   disableLetsencrypt:
     description: |
-      Не создавать объекты ClusterIssuer в кластере, если опция 'true'
+      Не создавать объекты ClusterIssuer в кластере (если 'true').
