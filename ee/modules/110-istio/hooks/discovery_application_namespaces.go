@@ -20,9 +20,9 @@ import (
 )
 
 type NamespaceInfo struct {
-	Name     string
-	Revision string // for dataplane_metadata_exporter.go
-	Phase    v1.NamespacePhase
+	Name                    string
+	Revision                string // for dataplane_metadata_exporter.go
+	DeletionTimestampExists bool
 }
 
 func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -32,9 +32,11 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, fmt.Errorf("cannot convert ns object to ns: %v", err)
 	}
 
+	_, deletionTimestampExists := ns.Annotations["deletionTimestamp"]
+
 	var namespaceInfo = NamespaceInfo{
-		Name:  ns.Name,
-		Phase: ns.Status.Phase,
+		Name:                    ns.Name,
+		DeletionTimestampExists: deletionTimestampExists,
 	}
 
 	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
@@ -137,7 +139,7 @@ func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	namespaces = append(namespaces, input.Snapshots["istio_pod_definite_rev"]...)
 	for _, ns := range namespaces {
 		nsInfo := ns.(NamespaceInfo)
-		if nsInfo.Phase == v1.NamespaceTerminating {
+		if nsInfo.DeletionTimestampExists {
 			continue
 		}
 		if !internal.Contains(applicationNamespaces, nsInfo.Name) {

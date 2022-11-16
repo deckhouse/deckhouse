@@ -162,15 +162,15 @@ metadata:
   labels:
     istio-injection: enabled
 ---
-# ns in terminatig phase
+# ns with deletionTimestamp
 apiVersion: v1
 kind: Namespace
 metadata:
   name: kube-ns10
+  annotations:
+    deletionTimestamp: "2020-10-22T21:30:34Z"
   labels:
     istio-injection: enabled
-status:
-  phase: Terminating
 `))
 			f.RunHook()
 		})
