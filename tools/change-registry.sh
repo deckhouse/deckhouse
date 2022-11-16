@@ -103,7 +103,7 @@ function parse_args() {
 
   domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z]$"
   if ! [[ $REGISTRY_ADDRESS =~ $domain_validator ]]; then
-    >&2 echo "Domain must contains only symbols from [a-z0-9-.], first symbol must be letter or number, and last symbol must be letter: $REGISTRY_ADDRESS."
+    >&2 echo "Registry domain doesn't fit the regex "^[a-z0-9][-a-z0-9\.]*[a-z]$": $REGISTRY_ADDRESS."
     exit 1
   fi
 
@@ -114,7 +114,7 @@ function parse_args() {
 
   TOKEN="$(bb-rp-get-token)"
   if [[ "$TOKEN" == "" ]]; then
-    >&2 echo "Cannot get Bearer token from registry"
+    >&2 echo "Cannot get Bearer token from registry $REGISTRY_URL"
     exit 1
   fi
 
