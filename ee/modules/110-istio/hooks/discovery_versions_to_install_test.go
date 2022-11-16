@@ -27,24 +27,20 @@ var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 		Expect(m).To(HaveLen(0))
 	}
 
-	assertTelemetryMetrics := func(f *HookExecutionConfig, versions []string) {
+	assertTelemetryMetrics := func(f *HookExecutionConfig, version string) {
 		m := f.MetricsCollector.CollectedMetrics()
-		Expect(m).To(HaveLen(len(versions)))
+		Expect(m).To(HaveLen(1))
 
-		found := 0
-		for i := 0; i < len(m); i++ {
-			metric := m[i]
+		found := false
+		for _, metric := range m {
 			Expect(metric.Name).To(Equal(telemetry.WrapName("istio_control_plane_full_version")))
 			currentVer := metric.Labels["version"]
-			for _, ver := range versions {
-				if currentVer == ver {
-					found++
-					break
-				}
+			if currentVer == version {
+				found = true
 			}
 		}
 
-		Expect(versions).To(HaveLen(found))
+		Expect(found).To(BeTrue())
 	}
 
 	Context("Empty cluster and no settings", func() {
@@ -70,7 +66,7 @@ globalVersion: "1.2" # default version "from openapi/values.yaml"
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.2"]`))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
 
-			assertTelemetryMetrics(f, []string{"1.2.11"})
+			assertTelemetryMetrics(f, "1.2.11")
 		})
 	})
 
@@ -97,7 +93,7 @@ globalVersion: "1.4" # default version "from openapi/values.yaml"
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.42"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.42"))
 
-			assertTelemetryMetrics(f, []string{"1.42.42"})
+			assertTelemetryMetrics(f, "1.42.42")
 		})
 	})
 
@@ -189,7 +185,7 @@ spec: {}
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.3"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.3"))
 
-			assertTelemetryMetrics(f, []string{"1.3.1"})
+			assertTelemetryMetrics(f, "1.3.1")
 		})
 	})
 
@@ -238,7 +234,7 @@ spec: {}
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.2"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
 
-			assertTelemetryMetrics(f, []string{"1.2.4"})
+			assertTelemetryMetrics(f, "1.2.4")
 		})
 	})
 
