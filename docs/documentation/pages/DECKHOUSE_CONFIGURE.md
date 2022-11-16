@@ -75,12 +75,12 @@ Changes are applied automatically after saving the resource.
 The module is configured using the custom resource `ModuleConfig`, whose name matches the module's name (in kebab-case). Custom resource `ModuleConfig` has the following fields:
 
 - `metadata.name` — the name of the module in kebab-case (e.g, `prometheus`, `node-manager`).
-- `spec.version` — a version of the module settings scheme (an integer greater than zero). Mandatory field if `spec.settings` is not empty. The current version number can be seen in the module documentation in the section _"Settings"_.
+- `spec.version` — a version of the module settings scheme (an integer greater than zero). Mandatory field if `spec.settings` is not empty. The current version number can be seen in the module documentation in the section *"Settings"*.
   - Deckhouse supports backward compatibility of versions of the module settings scheme. If you use an outdated version of the settings schema when editing or viewing the custom resource, a warning about the need to update the module settings schema will be displayed.
-- `spec.settings` — module settings. Optional field if the `spec.enabled` field is used. A description of possible settings can be found in the module documentation in the section _"Settings"_.
+- `spec.settings` — module settings. Optional field if the `spec.enabled` field is used. A description of possible settings can be found in the module documentation in the section *"Settings"*.
 - `spec.enabled` — optional field to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default depending on the [used bundle](#module-bundles) when the parameter is not set.
 
-> Deckhouse operator doesn't modify `ModuleConfig` resources. Using the Infrastructure as Code (IaC) approach, you can store Deckhouse settings in a version control system and use Helm, kubectl, and other familiar tools. 
+> Deckhouse operator doesn't modify `ModuleConfig` resources. Using the Infrastructure as Code (IaC) approach, you can store Deckhouse settings in a version control system and use Helm, kubectl, and other familiar tools.
 
 Example of a custom resource for configuring the `kube-dns` module:
 
@@ -121,7 +121,7 @@ spec:
   enabled: false
 ```
 
-To check the status of the module, run the `kubectl get moduleconfig <MODULE_NAME>` command: 
+To check the status of the module, run the `kubectl get moduleconfig <MODULE_NAME>` command:
 
 Example:
 
