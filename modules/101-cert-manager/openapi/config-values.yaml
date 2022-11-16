@@ -112,6 +112,6 @@ properties:
   disableLetsencrypt:
     type: boolean
     description: |
-      Feature to disable letsencrypt and letsencrypt-staging ClusterIssuer ojbects.
+      Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
     x-examples: [true, false]
 
