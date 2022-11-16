@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -20,11 +22,19 @@ import (
 type NamespaceInfo struct {
 	Name     string
 	Revision string // for dataplane_metadata_exporter.go
+	Phase    v1.NamespacePhase
 }
 
 func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	ns := v1.Namespace{}
+	err := sdk.FromUnstructured(obj, &ns)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert ns object to ns: %v", err)
+	}
+
 	var namespaceInfo = NamespaceInfo{
-		Name: obj.GetName(),
+		Name:  ns.Name,
+		Phase: ns.Status.Phase,
 	}
 
 	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
@@ -127,6 +137,9 @@ func applicationNamespacesDiscovery(input *go_hook.HookInput) error {
 	namespaces = append(namespaces, input.Snapshots["istio_pod_definite_rev"]...)
 	for _, ns := range namespaces {
 		nsInfo := ns.(NamespaceInfo)
+		if nsInfo.Phase == v1.NamespaceTerminating {
+			continue
+		}
 		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
 		}

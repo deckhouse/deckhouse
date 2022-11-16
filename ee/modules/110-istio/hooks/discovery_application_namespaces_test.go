@@ -79,7 +79,7 @@ spec: {}
 		})
 	})
 
-	Context("Application namespaces with labels and IstioOperator", func() {
+	FContext("Application namespaces with labels and IstioOperator", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
@@ -161,6 +161,16 @@ metadata:
   name: kube-ns9
   labels:
     istio-injection: enabled
+---
+# ns in terminatig phase
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-ns10
+  labels:
+    istio-injection: enabled
+status:
+  phase: Terminating
 `))
 			f.RunHook()
 		})
