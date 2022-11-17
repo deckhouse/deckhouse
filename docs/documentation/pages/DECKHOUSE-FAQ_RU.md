@@ -126,16 +126,47 @@ deckhouse: |
 
 #### Nexus
 
-При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
+##### Требования
 
-* Включить `Docker Bearer Token Realm`:
-![Включить `Docker Bearer Token Realm`](images/registry/nexus/nexus1.png)
+При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
 
-* Включить анонимный доступ к registry (иначе [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация):
-![Включить анонимный доступ к registry](images/registry/nexus/nexus2.png)
+* Включен `Docker Bearer Token Realm`.
+* Создан проксирующий репозиторий Docker.
+* Параметр `Allow anonymous docker pull` должен быть включен.
+* Должен быть настроен контроль доступа:
+  * Создана роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+  * Создан пользователь Nexus с ролью, созданной выше.
+* Параметр `Maximum metadata age` созданного репозитория должен быть установлен в 0.
 
-* Установить `Maximum metadata age` в 0 (иначе автоматическое обновление Deckhouse не будет работать корректно из-за кеширования):
-![Установить `Maximum metadata age`](images/registry/nexus/nexus3.png)
+##### Настройка
+
+* Включите `Docker Bearer Token Realm`:
+  ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
+
+* Создайте проксирующий репозиторий Docker, указывающий на [Deckhouse registry](https://registry.deckhouse.io/):
+  ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
+
+* Заполните поля страницы создания следующим образом:
+  * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
+  * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например, `8123` или иной.
+  * `Allow anonymous docker pull` должно быть включено, чтобы [работала](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) авторизация с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/docker-authentication#DockerAuthentication-UnauthenticatedAccesstoDockerRepositories), если он не был явно включен в Settings -> Security -> Anonymous Access, и пользователю `anonymous` не были даны права на доступ к репозиторию.
+  * `Remote storage` должно иметь значение `https://registry.deckhouse.io/`.
+  * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
+  * `Maximum Metadata Age` должно быть равно 0.
+  * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+    * `Authentication Type` должно иметь значение `Username`.
+    * `Username` должно иметь значение `license-token`.
+    * `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
+
+  ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
+  ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
+  ![Пример настроек репозитория 3](images/registry/nexus/nexus-repo-example-3.png)
+
+* Настройте контроль доступа Nexus для доступа Deckhouse к созданному репозиторию:
+  * Создайте роль Nexus с полномочиями `nx-repository-view-docker-<репозиторий>-browse` и `nx-repository-view-docker-<репозиторий>-read`.
+    ![Создание роли Nexus](images/registry/nexus/nexus-role.png)
+  * Создайте пользователя Nexus с ролью, созданной выше.
+    ![Создание пользователя Nexus](images/registry/nexus/nexus-user.png)
 
 #### Harbor
 
