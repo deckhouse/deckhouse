@@ -55,7 +55,7 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	resourcesRaw := snap[0].(string)
-	var res []matchResource
+	res := make([]matchResource, 0)
 
 	err := yaml.Unmarshal([]byte(resourcesRaw), &res)
 	if err != nil {
