@@ -51,12 +51,12 @@ spec:
 
 ```shell
 $ kubectl get moduleconfigs
-NAME                VERSION   AGE   ENABLED              STATUS
-deckhouse           1         12h   Enabled              Ready
-deckhouse-web       2         12h   Enabled              Ready
-global              1         12h   Always On
-prometheus          2         12h   Enabled              Ready
-upmeter             2         12h   Disabled by config
+NAME                STATE      VERSION    STATUS    AGE
+deckhouse           Enabled    1                    12h
+deckhouse-web       Enabled    2                    12h
+global              Enabled    1                    12h
+prometheus          Enabled    2                    12h
+upmeter             Disabled   2                    12h
 ```
 
 Чтобы изменить глобальную конфигурацию Deckhouse или конфигурацию модуля, нужно создать или отредактировать соответствующий ресурс `ModuleConfig`.
@@ -128,8 +128,8 @@ spec:
 
 ```shell
 $ kubectl get moduleconfig user-authn
-NAME                VERSION   AGE   ENABLED              STATUS
-user-authn          1         12h   Disabled by config
+NAME                STATE      VERSION    STATUS    AGE
+user-authn          Disabled   1                    12h
 ```
 
 ## Наборы модулей

@@ -50,12 +50,12 @@ You can view the list of `ModuleConfig` custom resources and the states of the c
 
 ```shell
 $ kubectl get moduleconfigs
-NAME                VERSION   AGE   ENABLED              STATUS
-deckhouse           1         12h   Enabled              Ready
-deckhouse-web       2         12h   Enabled              Ready
-global              1         12h   Always On
-prometheus          2         12h   Enabled              Ready
-upmeter             2         12h   Disabled by config
+NAME                STATE      VERSION    STATUS    AGE
+deckhouse           Enabled    1                    12h
+deckhouse-web       Enabled    2                    12h
+global              Enabled    1                    12h
+prometheus          Enabled    2                    12h
+upmeter             Disabled   2                    12h
 ```
 
 To change the global Deckhouse configuration or module configuration, create or edit the corresponding `ModuleConfig` custom resource.
@@ -127,8 +127,8 @@ Example:
 
 ```shell
 $ kubectl get moduleconfigs
-NAME                VERSION   AGE   ENABLED              STATUS
-user-authn          1         12h   Disabled by config
+NAME                STATE      VERSION    STATUS    AGE
+user-authn          Disabled   1                    12h
 ```
 
 ## Module bundles
