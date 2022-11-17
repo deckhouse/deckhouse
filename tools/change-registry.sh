@@ -37,6 +37,20 @@ function usage() {
 " "$0"
 }
 
+# get token from registry auth
+# bb-rp-get-token
+function bb-rp-get-token() {
+  local AUTH=""
+  local AUTH_HEADER=""
+  local AUTH_REALM=""
+  local AUTH_SERVICE=""
+
+  AUTH_HEADER="$(curl --retry 3 -sSLi "${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
+  AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
+  AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
+  curl --retry 3 -fsSL -u ${REGISTRY_USER}:${REGISTRY_PASS} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:*" | jq -r '.token'
+}
+
 function parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -71,8 +85,14 @@ function parse_args() {
   REGISTRY_ADDRESS="$(cut -d "/" -f1 <<< "$TEMP_URL")"
   REGISTRY_PATH="${TEMP_URL#"$REGISTRY_ADDRESS"}"
   REGISTRY_SCHEME="$(sed "s/:\/\///" <<< "$REGISTRY_SCHEME")"
+
+  if [[ "$REGISTRY_PATH" == "" ]]; then
+    >&2 echo "Cannot parse path from registry url: $REGISTRY_URL. Registry url must have at least slash at the end. (for example, https://registry.example.com/ instead of https://registry.example.com)"
+    exit 1
+  fi
+
   if [[ "$REGISTRY_SCHEME" == "" ]]; then
-    >&2 echo "Cannot parse scheme from registry url: $URL. Scheme should be 'http' or 'https'."
+    >&2 echo "Cannot parse scheme from registry url: $REGISTRY_URL. Scheme should be 'http' or 'https'."
     exit 1
   fi
 
@@ -81,10 +101,23 @@ function parse_args() {
     exit 1
   fi
 
+  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z]$"
+  if ! [[ $REGISTRY_ADDRESS =~ $domain_validator ]]; then
+    >&2 echo "Registry domain doesn't fit the regex "^[a-z0-9][-a-z0-9\.]*[a-z]$": $REGISTRY_ADDRESS."
+    exit 1
+  fi
+
   if [[ "$REGISTRY_CAFILE" != "" ]] && [[ ! -f "$REGISTRY_CAFILE" ]]; then
     >&2 echo "Cannot find ca file: $REGISTRY_CAFILE."
     exit 1
   fi
+
+  TOKEN="$(bb-rp-get-token)"
+  if [[ "$TOKEN" == "" ]]; then
+    >&2 echo "Cannot get Bearer token from registry $REGISTRY_URL"
+    exit 1
+  fi
+
 }
 
 function create_dockerconfigjson() {
