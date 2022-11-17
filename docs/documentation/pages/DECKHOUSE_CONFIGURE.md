@@ -80,7 +80,7 @@ The module is configured using the `ModuleConfig` custom resource , whose name i
 - `spec.settings` — module settings. This field is optional if the `spec.enabled` field is used. For a description of the available settings, see *"Settings "* in the module's documentation.
 - `spec.enabled` — this optional field allows you to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default based on the [bundle in use](#module-bundles) if this parameter is not set.
 
-> Deckhouse operator doesn't modify `ModuleConfig` resources. As part of the Infrastructure as Code (IaC) approach, you can store Deckhouse settings in a version control system and use Helm, kubectl, and other familiar tools.
+> Deckhouse doesn't modify `ModuleConfig` resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, kubectl, and other familiar tools for deploy.
 
 An example of a custom resource for configuring the `kube-dns` module:
 
