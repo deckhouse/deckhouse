@@ -32,7 +32,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func updateWindowTelemetry(input *go_hook.HookInput) error {
 	telemetryCollector := input.MetricsCollector
-
 	h, err := newWindowTelemetryHook(input, telemetryCollector)
 	if err != nil {
 		return err

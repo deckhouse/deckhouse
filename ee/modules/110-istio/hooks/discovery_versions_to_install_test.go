@@ -22,24 +22,15 @@ var _ = Describe("Istio hooks :: discovery_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 
 	assertNoMetrics := func(f *HookExecutionConfig) {
-		m := f.MetricsCollector.CollectedMetrics()
-		Expect(m).To(HaveLen(0))
+		metrics := f.MetricsCollector.CollectedMetrics()
+		Expect(metrics).To(HaveLen(0))
 	}
 
 	assertTelemetryMetrics := func(f *HookExecutionConfig, version string) {
-		m := f.MetricsCollector.CollectedMetrics()
-		Expect(m).To(HaveLen(1))
-
-		found := false
-		for _, metric := range m {
-			Expect(metric.Name).To(Equal("d8_telemetry_istio_control_plane_full_version"))
-			currentVer := metric.Labels["version"]
-			if currentVer == version {
-				found = true
-			}
-		}
-
-		Expect(found).To(BeTrue())
+		metrics := f.MetricsCollector.CollectedMetrics()
+		Expect(metrics).To(HaveLen(1))
+		Expect(metrics[0].Name).To(Equal("d8_telemetry_istio_control_plane_full_version"))
+		Expect(metrics[0].Labels["version"]).To(Equal(version))
 	}
 
 	Context("Empty cluster and no settings", func() {
