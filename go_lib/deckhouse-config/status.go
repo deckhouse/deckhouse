@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -44,7 +44,7 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *v1.ModuleConfig, bundleName string) Status {
+func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName string) Status {
 	// Special case: unknown module name.
 	if !s.possibleNames.Has(cfg.GetName()) {
 		return Status{

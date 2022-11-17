@@ -39,7 +39,7 @@ const testModulesDir = "testdata/test-startup-sync/modules"
 var _ = Describe("Global hooks :: deckhouse-config :: migrate", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	// Emulate ensure_crd hook.
-	f.RegisterCRD("deckhouse.io", "v1", "ModuleConfig", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	BeforeEach(func() {
 		// Load addon-operator with 3 modules: deckhouse, cert-manager and prometheus.
@@ -185,7 +185,7 @@ deckhouse: |
 var _ = Describe("Global hooks :: deckhouse-config :: sync", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	// Emulate ensure_crd hook.
-	f.RegisterCRD("deckhouse.io", "v1", "ModuleConfig", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	BeforeEach(func() {
 		// Load addon-operator with 3 modules: deckhouse, cert-manager and prometheus.
@@ -199,7 +199,7 @@ var _ = Describe("Global hooks :: deckhouse-config :: sync", func() {
 			// See openapi schemas in testdata/test-deckhouse directory.
 			existingModuleConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -208,7 +208,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse
@@ -217,7 +217,7 @@ spec:
   settings:
     paramStr: Debug
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: unknown-module-name
@@ -264,7 +264,7 @@ spec:
 			// See openapi schemas in testdata/test-deckhouse directory.
 			existingConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -273,7 +273,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse
@@ -282,7 +282,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: prometheus
@@ -291,7 +291,7 @@ spec:
   settings:
     paramNum: 10
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: unknown-module-name
@@ -342,7 +342,7 @@ deckhouse: |
 		BeforeEach(func() {
 			existingConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -351,7 +351,7 @@ spec:
   settings:
     paramStr: 100
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse

@@ -27,7 +27,7 @@ import (
 
 var moduleConfigYaml = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -39,7 +39,7 @@ spec:
 
 var enabledModuleConfigYaml = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -53,7 +53,7 @@ spec:
 var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig status ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	f.RegisterCRD("deckhouse.io", "v1", "ModuleConfig", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Known module enabled", func() {
 

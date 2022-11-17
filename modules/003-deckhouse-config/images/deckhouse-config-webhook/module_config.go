@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
 type ModuleConfigValidator struct {
@@ -75,7 +75,7 @@ func (c *ModuleConfigValidator) Validate(_ context.Context, review *kwhmodel.Adm
 	return allowResult(res.VersionWarning)
 }
 
-func getModuleConfig(obj metav1.Object) (*d8config_v1.ModuleConfig, error) {
+func getModuleConfig(obj metav1.Object) (*d8cfg_v1alpha1.ModuleConfig, error) {
 	untypedCfg, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
@@ -85,7 +85,7 @@ func getModuleConfig(obj metav1.Object) (*d8config_v1.ModuleConfig, error) {
 		return nil, fmt.Errorf("expect ModuleConfig, got %s", untypedCfg.GetKind())
 	}
 
-	var cfg d8config_v1.ModuleConfig
+	var cfg d8cfg_v1alpha1.ModuleConfig
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(untypedCfg.UnstructuredContent(), &cfg)
 	if err != nil {
 		return nil, err

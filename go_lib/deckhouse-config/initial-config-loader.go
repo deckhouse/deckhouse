@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -78,7 +78,7 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 	hasValues := false
 	for k := range cm.Data {
 		valuesKey := strings.TrimSuffix(k, "Enabled")
-		if valuesKey != k {
+		if valuesKey == k {
 			hasValues = true
 		}
 		possibleNames.Add(utils.ModuleNameFromValuesKey(valuesKey))
@@ -118,7 +118,7 @@ func (l *InitialConfigLoader) initKubeClient() error {
 
 // ModuleConfigListToInitialConfig runs conversion for ModuleConfig resources to transforms settings and enabled flag to
 // the ConfigMap content. Then parse resulting ConfigMap to the KubeConfig.
-func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8config_v1.ModuleConfig, possibleNames set.Set) (*kcm.KubeConfig, error) {
+func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8cfg_v1alpha1.ModuleConfig, possibleNames set.Set) (*kcm.KubeConfig, error) {
 	data := make(map[string]string)
 
 	for _, cfg := range allConfigs {

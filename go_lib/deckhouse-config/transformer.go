@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils"
 	"sigs.k8s.io/yaml"
 
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -41,7 +41,7 @@ func NewTransformer(possibleNames set.Set) *Transformer {
 
 // ModuleConfigListToConfigMap creates new Data for ConfigMap from existing ModuleConfig objects.
 // It creates module sections for known modules using a cached set of possible names.
-func (t *Transformer) ModuleConfigListToConfigMap(allConfigs []*d8config_v1.ModuleConfig) (map[string]string, error) {
+func (t *Transformer) ModuleConfigListToConfigMap(allConfigs []*d8cfg_v1alpha1.ModuleConfig) (map[string]string, error) {
 	data := make(map[string]string)
 
 	// Note: possibleNames are kebab-cased, cfg.Name should also be kebab-cased.
@@ -84,7 +84,7 @@ func (t *Transformer) ModuleConfigListToConfigMap(allConfigs []*d8config_v1.Modu
 // Conversion chain is triggered for each section to convert values to the latest
 // version. If module has no conversions, 'version: 1' is used.
 // It ignores sections with unknown names.
-func (t *Transformer) ConfigMapToModuleConfigList(cmData map[string]string) ([]*d8config_v1.ModuleConfig, []string, error) {
+func (t *Transformer) ConfigMapToModuleConfigList(cmData map[string]string) ([]*d8cfg_v1alpha1.ModuleConfig, []string, error) {
 	// Messages to log.
 	msgs := make([]string, 0)
 
@@ -116,7 +116,7 @@ func (t *Transformer) ConfigMapToModuleConfigList(cmData map[string]string) ([]*
 	}
 
 	// Transform ConfigMap sections to ModuleConfig objects.
-	cfgList := make([]*d8config_v1.ModuleConfig, 0)
+	cfgList := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
 	for _, section := range sections {
 		// Note: possibleNames items and modCfg.ModuleName keys are kebab-cased, modCfg.ModuleConfigKey is camelCased.
 		// Ignore unknown module names.

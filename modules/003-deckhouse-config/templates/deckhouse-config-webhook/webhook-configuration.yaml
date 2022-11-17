@@ -9,7 +9,7 @@ webhooks:
       - apiGroups:
           - "deckhouse.io"
         apiVersions:
-          - "v1"
+          - "v1alpha1"
         resources:
           - "moduleconfigs"
         operations:

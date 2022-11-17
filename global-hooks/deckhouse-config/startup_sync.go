@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
@@ -202,7 +202,7 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 	patchCollector.Filter(modify, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
 }
 
-func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8config_v1.ModuleConfig) error {
+func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
 	for _, cfg := range allConfigs {
 		res, err := d8config.Service().ConfigValidator().Validate(cfg)
 		if err != nil {

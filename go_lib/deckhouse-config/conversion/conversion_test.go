@@ -45,5 +45,5 @@ func TestConversionError(t *testing.T) {
 	}
 	newVals, err = c.Convert(vals)
 	g.Expect(err).Should(HaveOccurred(), "should return error")
-	g.Expect(newVals.Get("params.0.param1.name").Exists()).Should(BeTrue(), "should not modify values on error")
+	g.Expect(vals.Get("params.0.param1.name").Exists()).Should(BeTrue(), "should not modify values on error")
 }

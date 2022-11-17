@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8configv1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
 func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
@@ -121,7 +121,7 @@ data:
 		g.Expect(err).ShouldNot(HaveOccurred(), "should create cm/%s in fake client", GeneratedConfigMapName)
 
 		err = createModCfg(kubeClient, `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -135,7 +135,7 @@ spec:
 		g.Expect(err).ShouldNot(HaveOccurred(), "should create ModuleConfig/global in fake client")
 
 		err = createModCfg(kubeClient, `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -150,7 +150,7 @@ spec:
 
 		// Extra module — not in generated ConfigMap: unknown or new.
 		err = createModCfg(kubeClient, `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-two
@@ -165,7 +165,7 @@ spec:
 
 		// Enabled only module.
 		err = createModCfg(kubeClient, `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-three
@@ -231,7 +231,7 @@ func createCm(kubeClient client.Client, manifest string) error {
 }
 
 func createModCfg(kubeClient client.Client, manifest string) error {
-	var cfg d8configv1.ModuleConfig
+	var cfg d8cfg_v1alpha1.ModuleConfig
 	err := yaml.Unmarshal([]byte(manifest), &cfg)
 	if err != nil {
 		return err
@@ -243,6 +243,6 @@ func createModCfg(kubeClient client.Client, manifest string) error {
 	}
 	obj := &unstructured.Unstructured{Object: content}
 
-	_, err = kubeClient.Dynamic().Resource(d8configv1.GroupVersionResource()).Create(context.Background(), obj, metav1.CreateOptions{})
+	_, err = kubeClient.Dynamic().Resource(d8cfg_v1alpha1.GroupVersionResource()).Create(context.Background(), obj, metav1.CreateOptions{})
 	return err
 }

@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -79,7 +79,7 @@ params:
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(cfgList).ShouldNot(BeEmpty())
 
-	cfgMap := make(map[string]*v1.ModuleConfig)
+	cfgMap := make(map[string]*d8cfg_v1alpha1.ModuleConfig)
 	for _, cfg := range cfgList {
 		cfgMap[cfg.Name] = cfg
 	}
@@ -140,7 +140,7 @@ func ensureReport(t *testing.T, msgs []string, name string) {
 	g.Expect(msgs).Should(ContainElement(ContainSubstring(name)), "should report about transformation '%s', got:\n%s", name, strings.Join(msgs, "\n"))
 }
 
-func ensureConfigIsPresent(t *testing.T, cfgMap map[string]*v1.ModuleConfig, name string) {
+func ensureConfigIsPresent(t *testing.T, cfgMap map[string]*d8cfg_v1alpha1.ModuleConfig, name string) {
 	g := NewWithT(t)
 	g.Expect(cfgMap).Should(HaveKey(name), "should have '%s', got objects: %+v", name, cfgMap)
 }

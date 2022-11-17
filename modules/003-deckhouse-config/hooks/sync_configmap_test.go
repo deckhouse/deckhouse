@@ -35,7 +35,7 @@ const testModulesDir = "testdata/test-sync/modules"
 var _ = Describe("Module :: deckhouse-config :: hooks :: sync ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	// Emulate ensure_crd hook.
-	f.RegisterCRD("deckhouse.io", "v1", "ModuleConfig", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	BeforeEach(func() {
 		// Load addon-operator with 3 modules: deckhouse, cert-manager and prometheus.
@@ -49,7 +49,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: sync ::", func() {
 			// See openapi schemas in testdata/test-sync directory.
 			validModuleConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -58,7 +58,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse
@@ -67,7 +67,7 @@ spec:
   settings:
     paramStr: Debug
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: unknown-module-name
@@ -107,7 +107,7 @@ spec:
 			// See openapi schemas in testdata/test-deckhouse directory.
 			validModuleConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -116,7 +116,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse
@@ -125,7 +125,7 @@ spec:
   settings:
     paramStr: val1
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: prometheus
@@ -134,7 +134,7 @@ spec:
   settings:
     paramNum: 10
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: unknown-module-name
@@ -181,7 +181,7 @@ deckhouse: |
 		BeforeEach(func() {
 			existingConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -190,7 +190,7 @@ spec:
   settings:
     paramStr: 100
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: deckhouse
@@ -219,7 +219,7 @@ deckhouse: |
 	Context("giving ModuleConfig with obsolete version", func() {
 		existingConfigs := `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,13 +58,13 @@ func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
 
 func (f *moduleConfigKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "ModuleConfig"}
+	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 }
 
 func GroupVersionResource() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
 		Group:    "deckhouse.io",
-		Version:  "v1",
+		Version:  "v1alpha1",
 		Resource: "moduleconfigs",
 	}
 }

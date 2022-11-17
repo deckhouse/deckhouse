@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
@@ -78,16 +78,16 @@ func GetConfigMap(klient k8s.Client, ns string, name string) (*v1.ConfigMap, err
 }
 
 // GetAllConfigs returns all ModuleConfig objects.
-func GetAllConfigs(kubeClient k8s.Client) ([]*d8config_v1.ModuleConfig, error) {
-	gvr := d8config_v1.GroupVersionResource()
+func GetAllConfigs(kubeClient k8s.Client) ([]*d8cfg_v1alpha1.ModuleConfig, error) {
+	gvr := d8cfg_v1alpha1.GroupVersionResource()
 	unstructuredObjs, err := kubeClient.Dynamic().Resource(gvr).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	objs := make([]*d8config_v1.ModuleConfig, 0, len(unstructuredObjs.Items))
+	objs := make([]*d8cfg_v1alpha1.ModuleConfig, 0, len(unstructuredObjs.Items))
 	for _, unstructured := range unstructuredObjs.Items {
-		var obj d8config_v1.ModuleConfig
+		var obj d8cfg_v1alpha1.ModuleConfig
 
 		err := sdk.FromUnstructured(&unstructured, &obj)
 		if err != nil {

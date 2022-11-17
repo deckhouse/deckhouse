@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
 // ConfigValidator is a validator for values in ModuleConfig.
@@ -55,7 +55,7 @@ type ValidationResult struct {
 // Validate checks version value if spec.settings value is not empty,
 // then converts spec.settings to the latest version and finally validates
 // spec.settings using OpenAPI schema defined in related config-values.yaml file.
-func (c *ConfigValidator) Validate(cfg *v1.ModuleConfig) (ValidationResult, error) {
+func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) (ValidationResult, error) {
 	result := ValidationResult{}
 
 	// It is ok if resource spec is empty or if it has enabled field only.

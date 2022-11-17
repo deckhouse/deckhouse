@@ -32,7 +32,7 @@ import (
 var (
 	validCases = map[string]string{
 		"settings-and-version-1": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -42,7 +42,7 @@ spec:
     paramStr: val1
 `,
 		"settings-and-version-2": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -52,7 +52,7 @@ spec:
     paramStr: val1
 `,
 		"settings-versions-enabled": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -63,7 +63,7 @@ spec:
   enabled: false
 `,
 		"enabled-only": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -71,7 +71,7 @@ spec:
   enabled: true
 `,
 		"empty": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -81,7 +81,7 @@ spec: {}
 
 	invalidCases = map[string]string{
 		"settings-and-version-0": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -91,7 +91,7 @@ spec:
     paramStr: val1
 		`,
 		"settings-only": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -100,7 +100,7 @@ spec:
     paramStr: val1
 `,
 		"version-only": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -108,7 +108,7 @@ spec:
   version: 1
 `,
 		"settings-and-enabled": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -118,7 +118,7 @@ spec:
   enabled: false
 `,
 		"version-and-enabled": `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -166,7 +166,7 @@ type: object
 properties:
   apiVersion:
     type: string
-    enum: ["deckhouse.io/v1"]
+    enum: ["deckhouse.io/v1alpha1"]
   kind:
     type: string
     enum: [ModuleConfig]
@@ -216,7 +216,7 @@ type: object
 properties:
   apiVersion:
     type: string
-    enum: ["deckhouse.io/v1"]
+    enum: ["deckhouse.io/v1alpha1"]
   kind:
     type: string
     enum: [ModuleConfig]

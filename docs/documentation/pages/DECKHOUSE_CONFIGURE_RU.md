@@ -17,7 +17,7 @@ Deckhouse настраивается с помощью:
 
 ```yaml
 # Глобальные настройки.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -28,7 +28,7 @@ spec:
       publicDomainTemplate: "%s.kube.company.my"
 ---
 # Настройки модуля monitoring-ping.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: monitoring-ping
@@ -39,7 +39,7 @@ spec:
     - host: 8.8.8.8
 ---
 # Отключить модуль dashboard.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: dashboard
@@ -86,7 +86,7 @@ kubectl -n d8-system edit moduleconfig/upmeter
 Пример custom resource для настройки модуля `kube-dns`:
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: kube-dns
@@ -114,7 +114,7 @@ spec:
 Пример явного выключения модуля `user-authn` (модуль будет выключен независимо от используемого набора модулей):
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: user-authn

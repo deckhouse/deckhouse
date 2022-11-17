@@ -14,7 +14,7 @@ spec:
     kind: ModuleConfig
   preserveUnknownFields: false
   versions:
-    - name: v1
+    - name: v1alpha1
       served: true
       storage: true
       schema:

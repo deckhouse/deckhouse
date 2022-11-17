@@ -61,7 +61,7 @@ func runValidate(t *testing.T, rootDir string, manifest string) (*kwhvalidating.
 }
 
 const validObsoleteCfgVer1 = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -86,7 +86,7 @@ func TestValidateValidObjectVer1(t *testing.T) {
 }
 
 const validLatestCfgVer2 = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -107,7 +107,7 @@ func TestValidateValidLatestObjectVer2(t *testing.T) {
 }
 
 const unknownCfg = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-three
@@ -129,7 +129,7 @@ func TestValidateUnknownConfig(t *testing.T) {
 }
 
 const invalidCfg = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: module-one
@@ -154,7 +154,7 @@ func TestValidateConfigWithExcessParams(t *testing.T) {
 // Also test global conversion: paramNum is not defined in config-values.yaml,
 // it should be converted to globalParam to settings validate successfully.
 const validObsoleteGlobalCfg = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -179,7 +179,7 @@ func TestValidateValidObsoleteGlobalConfig(t *testing.T) {
 }
 
 const invalidGlobalCfg = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -200,7 +200,7 @@ func TestValidateInvalidGlobalConfig(t *testing.T) {
 }
 
 const noVerGlobalCfg = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global

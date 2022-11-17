@@ -16,7 +16,7 @@ An example of a set of custom resources for configuring Deckhouse:
 
 ```yaml
 # Global setting.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
@@ -27,7 +27,7 @@ spec:
       publicDomainTemplate: "%s.kube.company.my"
 ---
 # The monitoring-ping module settings.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: monitoring-ping
@@ -38,7 +38,7 @@ spec:
     - host: 8.8.8.8
 ---
 # Disable the dashboard module.
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: dashboard
@@ -85,7 +85,7 @@ The module is configured using the `ModuleConfig` custom resource , whose name i
 An example of a custom resource for configuring the `kube-dns` module:
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: kube-dns
@@ -113,7 +113,7 @@ To enable/disable the module, set `spec.enabled` field of the `ModuleConfig` cus
 Here is an example of disabling the `user-authn` module (the module will be turned off even if it is enabled as part of a module bundle):
 
 ```yaml
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: user-authn

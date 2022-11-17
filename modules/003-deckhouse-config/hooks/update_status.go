@@ -31,7 +31,7 @@ import (
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
 /*
@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "configs",
-			ApiVersion:                   "deckhouse.io/v1",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "ModuleConfig",
 			FilterFunc:                   filterModuleConfigForStatus,
 			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
@@ -79,7 +79,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // filterModuleConfigForStatus returns name, enabled flag and the current status from ModuleConfig object.
 func filterModuleConfigForStatus(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cfg d8config_v1.ModuleConfig
+	var cfg d8cfg_v1alpha1.ModuleConfig
 
 	err := sdk.FromUnstructured(unstructured, &cfg)
 	if err != nil {
@@ -87,11 +87,11 @@ func filterModuleConfigForStatus(unstructured *unstructured.Unstructured) (go_ho
 	}
 
 	// Extract name, spec and status.
-	return &d8config_v1.ModuleConfig{
+	return &d8cfg_v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cfg.Name,
 		},
-		Spec: d8config_v1.ModuleConfigSpec{
+		Spec: d8cfg_v1alpha1.ModuleConfigSpec{
 			Version:  cfg.Spec.Version,
 			Enabled:  cfg.Spec.Enabled,
 			Settings: cfg.Spec.Settings,
@@ -124,7 +124,7 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 		statusPatch := makeStatusPatch(cfg, moduleStatus)
 		if statusPatch != nil {
 			input.LogEntry.Infof("Patch /status for %s: change (state=%s, status=%s) to state=%s, status=%s", cfg.GetName(), cfg.Status.State, cfg.Status.Status, statusPatch.State, statusPatch.Status)
-			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
+			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 		}
 	}
 
@@ -144,7 +144,7 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	return nil
 }
 
-func makeStatusPatch(cfg *d8config_v1.ModuleConfig, moduleStatus d8config.Status) *statusPatch {
+func makeStatusPatch(cfg *d8cfg_v1alpha1.ModuleConfig, moduleStatus d8config.Status) *statusPatch {
 	if cfg == nil || !isStatusChanged(cfg.Status, moduleStatus) {
 		return nil
 	}
@@ -156,7 +156,7 @@ func makeStatusPatch(cfg *d8config_v1.ModuleConfig, moduleStatus d8config.Status
 	}
 }
 
-func isStatusChanged(currentStatus d8config_v1.ModuleConfigStatus, moduleStatus d8config.Status) bool {
+func isStatusChanged(currentStatus d8cfg_v1alpha1.ModuleConfigStatus, moduleStatus d8config.Status) bool {
 	switch {
 	case currentStatus.State != moduleStatus.State:
 		return true
@@ -168,21 +168,21 @@ func isStatusChanged(currentStatus d8config_v1.ModuleConfigStatus, moduleStatus 
 	return false
 }
 
-type statusPatch d8config_v1.ModuleConfigStatus
+type statusPatch d8cfg_v1alpha1.ModuleConfigStatus
 
 func (sp statusPatch) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
-		"status": d8config_v1.ModuleConfigStatus(sp),
+		"status": d8cfg_v1alpha1.ModuleConfigStatus(sp),
 	}
 
 	return json.Marshal(m)
 }
 
 // snapshotToModuleConfigList returns a typed array of ModuleConfig items from untyped items in the snapshot.
-func snapshotToModuleConfigList(snapshot []go_hook.FilterResult) []*d8config_v1.ModuleConfig {
-	configs := make([]*d8config_v1.ModuleConfig, 0, len(snapshot))
+func snapshotToModuleConfigList(snapshot []go_hook.FilterResult) []*d8cfg_v1alpha1.ModuleConfig {
+	configs := make([]*d8cfg_v1alpha1.ModuleConfig, 0, len(snapshot))
 	for _, item := range snapshot {
-		cfg := item.(*d8config_v1.ModuleConfig)
+		cfg := item.(*d8cfg_v1alpha1.ModuleConfig)
 		configs = append(configs, cfg)
 	}
 	return configs
