@@ -48,9 +48,9 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 	// Special case: unknown module name.
 	if !s.possibleNames.Has(cfg.GetName()) {
 		return Status{
-			State:   "",
+			State:   "N/A",
 			Version: "",
-			Status:  "Warning: unknown module name",
+			Status:  "Ignored: unknown module name",
 		}
 	}
 
