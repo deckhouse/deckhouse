@@ -52,3 +52,6 @@ properties:
   cleanupOrphanSecrets:
     description: |
       Удалять секрет с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
+  disableLetsencrypt:
+    description: |
+      Не создавать ClusterIssuer `letsencrypt` и `letsencrypt-staging` в кластере (если `true`).

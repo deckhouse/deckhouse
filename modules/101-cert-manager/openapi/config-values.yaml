@@ -108,3 +108,10 @@ properties:
     description: |
       Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
     x-examples: [true, false]
+
+  disableLetsencrypt:
+    type: boolean
+    description: |
+      Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
+    x-examples: [true, false]
+

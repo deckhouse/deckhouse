@@ -403,6 +403,7 @@ podAntiAffinity:
 
 			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "clouddns")
 			Expect(clusterIssuer.Exists()).To(BeTrue())
+
 			if clusterIssuer.Field("apiVersion").String() == "cert-manager.io/v1" {
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.project").String()).To(Equal("project-209317"))
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
@@ -412,6 +413,24 @@ podAntiAffinity:
 				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
 				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			}
+		})
+	})
+	Context("<DisableLetsencrypt>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.ValuesSet("certManager.disableLetsencrypt", true)
+			f.HelmRender()
+		})
+
+		It("Check non-creation ClusterIssuer objects if disableLetsencrypt set to true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			clusterIssuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(clusterIssuer.Exists()).To(BeFalse())
+			clusterIssuerStaging := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
+			Expect(clusterIssuerStaging.Exists()).To(BeFalse())
 		})
 	})
 })
