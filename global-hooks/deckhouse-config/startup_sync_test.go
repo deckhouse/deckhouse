@@ -80,8 +80,11 @@ certManagerEnabled: "true"
 			Expect(generatedCM.Field("metadata.annotations").String()).Should(MatchJSON(annotationJSON))
 			Expect(generatedCM.Field("data.global").String()).Should(ContainSubstring("param1: val1"))
 			Expect(generatedCM.Field("data.deckhouse").Exists()).Should(BeTrue())
+			Expect(generatedCM.Field("data.deckhouse").String()).Should(ContainSubstring("p1: val1"))
 			Expect(generatedCM.Field("data.certManager").Exists()).Should(BeTrue())
+			Expect(generatedCM.Field("data.certManager").String()).Should(ContainSubstring("param1: val1"))
 			Expect(generatedCM.Field("data.certManagerEnabled").Exists()).Should(BeTrue())
+			Expect(generatedCM.Field("data.certManagerEnabled").String()).Should(Equal("true"))
 
 			// Test deployment
 			deckhouseDeploy := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
@@ -371,7 +374,7 @@ deckhouse: |
 			f.RunHook()
 		})
 
-		It("should create new sections and update values for existing", func() {
+		It("should fail on validating ModuleConfig spec.settings", func() {
 			Expect(f).ToNot(ExecuteSuccessfully(), "should fail on invalid values in ModuleConfig object")
 		})
 	})
