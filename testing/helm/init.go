@@ -76,6 +76,9 @@ func SetupHelmConfig(values string) *Config {
 	}
 
 	modulePath := filepath.Dir(wd)
+	for filepath.Base(filepath.Dir(modulePath)) != "modules" && filepath.Dir(modulePath) != "/" {
+		modulePath = filepath.Dir(modulePath)
+	}
 
 	moduleName, err := library.GetModuleNameByPath(modulePath)
 	if err != nil {
