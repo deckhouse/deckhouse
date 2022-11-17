@@ -93,6 +93,11 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
   {{- end }}
+    startupProbe:
+      failureThreshold: 300
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 3
   - name: config-reloader
     resources:
       requests:
@@ -100,6 +105,11 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "longterm_config_reloader_resources" . | nindent 8 }}
   {{- end }}
+    startupProbe:
+      failureThreshold: 300
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 3
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
