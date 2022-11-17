@@ -9,9 +9,11 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
+    kind: ModuleConfig
     plural: moduleconfigs
     singular: moduleconfig
-    kind: ModuleConfig
+    shortNames:
+    - mc
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
