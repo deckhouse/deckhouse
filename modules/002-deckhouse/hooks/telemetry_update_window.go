@@ -52,9 +52,6 @@ func newWindowTelemetryHook(input *go_hook.HookInput, telemetryCollector go_hook
 		return nil, err
 	}
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	if approvalMode == "" {
-		approvalMode = "NotSet"
-	}
 
 	return &windowTelemetryHook{
 		windows:      windows,
