@@ -74,8 +74,6 @@ func (s *configMapSection) getValuesMap() (map[string]interface{}, error) {
 // convertValues runs conversions on section values.
 // Assume that values are from cm/deckhouse, so start conversions from the version 1.
 func (s *configMapSection) convertValues() (int, map[string]interface{}, error) {
-	// TODO handle empty values.
-
 	// Values without conversion has version 1.
 	latestVersion := 1
 	latestValues, err := s.getValuesMap()
