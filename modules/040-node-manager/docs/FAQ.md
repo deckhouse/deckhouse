@@ -8,7 +8,7 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 
 To add a new static node (e.g., VM or bare-metal server) to the cluster, you need to:
 
-1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
+1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](examples.html#an-example-of-the-static-nodegroup-configuration).
 2. Get the script for installing and configuring the node:
 
    ```shell
@@ -99,7 +99,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
 
 To make an existing Node controllable by the `node-manager`, perform the following steps:
 
-1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
+1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](examples.html#an-example-of-the-static-nodegroup-configuration).
 2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
 3. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
