@@ -161,6 +161,16 @@ metadata:
   name: kube-ns9
   labels:
     istio-injection: enabled
+---
+# ns with deletionTimestamp
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-ns10
+  annotations:
+    deletionTimestamp: "2020-10-22T21:30:34Z"
+  labels:
+    istio-injection: enabled
 `))
 			f.RunHook()
 		})
