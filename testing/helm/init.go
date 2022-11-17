@@ -75,47 +75,48 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
+	// Discover module path and name: bubble up to the module root, also guard againt filesystem root.
 	modulePath := filepath.Dir(wd)
 	for filepath.Base(filepath.Dir(modulePath)) != "modules" && filepath.Dir(modulePath) != "/" {
 		modulePath = filepath.Dir(modulePath)
 	}
-
 	moduleName, err := library.GetModuleNameByPath(modulePath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	moduleName = strcase.ToLowerCamel(moduleName)
 	moduleValuesKey := addonutils.ModuleNameToValuesKey(moduleName)
 
-	defaultConfigValues := addonutils.Values{
-		addonutils.GlobalValuesKey: map[string]interface{}{},
-		moduleValuesKey:            map[string]interface{}{},
-	}
+	// Create values structure
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defaultConfigValues := addonutils.Values{
+		addonutils.GlobalValuesKey: map[string]interface{}{},
+		moduleValuesKey:            map[string]interface{}{},
+	}
 	mergedConfigValues := addonutils.MergeValues(defaultConfigValues, initialValues)
-
-	config := new(Config)
-	config.modulePath = modulePath
-	config.moduleName = moduleName
-
 	initialValuesJSON, err := json.Marshal(mergedConfigValues)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	config.ValuesValidator = validation.NewValuesValidator()
-
-	if err := values_validation.LoadOpenAPISchemas(config.ValuesValidator, moduleName, modulePath); err != nil {
+	// Populate the validator with OpenAPI schema
+	validator := validation.NewValuesValidator()
+	if err := values_validation.LoadOpenAPISchemas(validator, moduleName, modulePath); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// Helm config
+	config := new(Config)
+	config.modulePath = modulePath
+	config.moduleName = moduleName
+	config.ValuesValidator = validator
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
