@@ -96,7 +96,7 @@ certManagerEnabled: "true"
 	Context("Phase 2. Migrate to ModuleConfig objects", func() {
 
 		Context("giving valid ConfigMap", func() {
-			// Setup conversion chain for 'deckhouse' module.
+			// Register 2 conversions to test conversion chains.
 			var _ = conversion.RegisterFunc("deckhouse", 1, 2, func(settings *conversion.ModuleSettings) error {
 				return nil
 			})
@@ -145,7 +145,8 @@ unknownModule: |
 				cfg = f.KubernetesGlobalResource("ModuleConfig", "deckhouse")
 				Expect(cfg.Exists()).Should(BeTrue(), "should create ModuleConfig/deckhouse")
 				Expect(cfg.Field("spec.enabled").Exists()).Should(BeFalse())
-				Expect(cfg.Field("spec.version").Int()).Should(BeEquivalentTo(3), "should migrate to latest version")
+				// See registers at the Context beginning.
+				Expect(cfg.Field("spec.version").Int()).Should(BeEquivalentTo(3), "should migrate to latest registered version")
 
 				cfg = f.KubernetesGlobalResource("ModuleConfig", "cert-manager")
 				Expect(cfg.Exists()).Should(BeTrue(), "should create ModuleConfig/cert-manager")
