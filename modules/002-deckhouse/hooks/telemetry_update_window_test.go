@@ -118,7 +118,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
 				f.RunHook()
+			})
 
+			It("Executes hook successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
@@ -137,7 +139,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:00"}]`))
 
 				f.RunHook()
+			})
 
+			It("Executes hook successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
@@ -158,7 +162,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 				f.ValuesSet("deckhouse.update.windows", []string{})
 
 				f.RunHook()
+			})
 
+			It("Executes hook successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
@@ -182,6 +188,10 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 				f.RunHook()
 
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Executes hook successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
