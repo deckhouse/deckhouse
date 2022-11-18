@@ -96,7 +96,17 @@ spec:
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
 {{- end }}
     startupProbe:
+      exec:
+        command:
+        - sh
+        - -c
+        - if [ -x "$(command -v curl)" ]; then exec curl http://localhost:9090/-/ready;
+        elif [ -x "$(command -v wget)" ]; then exec wget -q -O /dev/null http://localhost:9090/-/ready;
+        else exit 1; fi
       failureThreshold: 300
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 3
   - name: config-reloader
     resources:
       requests:
@@ -105,7 +115,17 @@ spec:
         {{- include "config_reloader_resources" . | nindent 8 }}
 {{- end }}
     startupProbe:
+      exec:
+        command:
+        - sh
+        - -c
+        - if [ -x "$(command -v curl)" ]; then exec curl http://localhost:9090/-/ready;
+        elif [ -x "$(command -v wget)" ]; then exec wget -q -O /dev/null http://localhost:9090/-/ready;
+        else exit 1; fi
       failureThreshold: 300
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 3
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
