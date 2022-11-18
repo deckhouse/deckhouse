@@ -89,17 +89,17 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) (Validation
 	convMsg := ""
 	settings := cfg.Spec.Settings
 	if chain.LatestVersion() != cfg.Spec.Version {
-		newVersion, newValues, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
+		newVersion, newSettings, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
 		if err != nil {
 			return result, fmt.Errorf("convert '%s' settings from version %d to %d: %v", cfg.GetName(), cfg.Spec.Version, chain.LatestVersion(), err)
 		}
 		// Clear settings and version if settings convert to an empty object.
-		if len(newValues) == 0 {
-			newValues = nil
+		if len(newSettings) == 0 {
+			newSettings = nil
 			newVersion = 0
 		}
-		settings = newValues
-		result.Settings = newValues
+		settings = newSettings
+		result.Settings = newSettings
 		result.Version = newVersion
 		result.IsConverted = true
 		convMsg = fmt.Sprintf(" converted to %d", newVersion)

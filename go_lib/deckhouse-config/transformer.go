@@ -101,17 +101,17 @@ func (t *Transformer) ConfigMapToModuleConfigList(cmData map[string]string) ([]*
 		globalValues = cfg.Global.Values
 	}
 	sections = append(sections, &configMapSection{
-		name:        "global",
-		valuesKey:   "global",
-		values:      globalValues,
-		enabledFlag: nil,
+		name:      "global",
+		valuesKey: "global",
+		values:    globalValues,
+		enabled:   nil,
 	})
 	for _, modCfg := range cfg.Modules {
 		sections = append(sections, &configMapSection{
-			name:        modCfg.ModuleName,
-			valuesKey:   modCfg.ModuleConfigKey,
-			values:      modCfg.Values,
-			enabledFlag: modCfg.IsEnabled,
+			name:      modCfg.ModuleName,
+			valuesKey: modCfg.ModuleConfigKey,
+			values:    modCfg.Values,
+			enabled:   modCfg.IsEnabled,
 		})
 	}
 

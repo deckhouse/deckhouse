@@ -32,10 +32,10 @@ import (
 
 // configMapSection is a holder for one module section from the ConfigMap.
 type configMapSection struct {
-	name        string
-	valuesKey   string
-	values      utils.Values
-	enabledFlag *bool
+	name      string
+	valuesKey string
+	values    utils.Values
+	enabled   *bool
 }
 
 // getValuesMap returns a values map or nil for module or global section.
@@ -132,15 +132,15 @@ func (s *configMapSection) getModuleConfig() (*d8cfg_v1alpha1.ModuleConfig, stri
 
 	// Enabled flag is not applicable for global section.
 	if s.name != "global" {
-		if s.enabledFlag != nil {
+		if s.enabled != nil {
 			msgs = append(msgs, "has enabled flag")
-			cfg.Spec.Enabled = s.enabledFlag
+			cfg.Spec.Enabled = s.enabled
 		} else {
 			msgs = append(msgs, "no enabled flag")
 		}
 	}
 
-	if s.enabledFlag == nil && len(values) == 0 {
+	if s.enabled == nil && len(values) == 0 {
 		cfg = nil
 		msgs = append(msgs, "ignore creating empty object")
 	}
@@ -186,8 +186,8 @@ func (s *configMapSection) getConfigMapData() (map[string]string, error) {
 		out[s.valuesKey] = string(sectionBytes)
 	}
 
-	if s.enabledFlag != nil {
-		out[s.valuesKey+"Enabled"] = strconv.FormatBool(*s.enabledFlag)
+	if s.enabled != nil {
+		out[s.valuesKey+"Enabled"] = strconv.FormatBool(*s.enabled)
 	}
 
 	return out, nil
@@ -198,9 +198,9 @@ func configMapSectionsFromKubeConfig(kubeCfg *kcm.KubeConfig) []*configMapSectio
 
 	// Handle "global" key.
 	globalSection := &configMapSection{
-		name:        "global",
-		valuesKey:   "global",
-		enabledFlag: nil,
+		name:      "global",
+		valuesKey: "global",
+		enabled:   nil,
 	}
 	if kubeCfg.Global != nil {
 		globalSection.values = kubeCfg.Global.Values
@@ -210,10 +210,10 @@ func configMapSectionsFromKubeConfig(kubeCfg *kcm.KubeConfig) []*configMapSectio
 	// Handle modules.
 	for _, modCfg := range kubeCfg.Modules {
 		sections = append(sections, &configMapSection{
-			name:        modCfg.ModuleName,
-			valuesKey:   modCfg.ModuleConfigKey,
-			values:      modCfg.Values,
-			enabledFlag: modCfg.IsEnabled,
+			name:      modCfg.ModuleName,
+			valuesKey: modCfg.ModuleConfigKey,
+			values:    modCfg.Values,
+			enabled:   modCfg.IsEnabled,
 		})
 	}
 	return sections

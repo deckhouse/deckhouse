@@ -38,10 +38,10 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 		{
 			"no values, no enabled",
 			&configMapSection{
-				name:        "module-one",
-				valuesKey:   "moduleOne",
-				values:      nil,
-				enabledFlag: nil,
+				name:      "module-one",
+				valuesKey: "moduleOne",
+				values:    nil,
+				enabled:   nil,
 			},
 			map[string]string{},
 			ExpectNoError,
@@ -49,10 +49,10 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 		{
 			"no values",
 			&configMapSection{
-				name:        "module-one",
-				valuesKey:   "moduleOne",
-				values:      nil,
-				enabledFlag: pointer.BoolPtr(true),
+				name:      "module-one",
+				valuesKey: "moduleOne",
+				values:    nil,
+				enabled:   pointer.BoolPtr(true),
 			},
 			map[string]string{
 				"moduleOneEnabled": "true",
@@ -67,7 +67,7 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 				values: map[string]interface{}{
 					"moduleOne": nil,
 				},
-				enabledFlag: pointer.BoolPtr(true),
+				enabled: pointer.BoolPtr(true),
 			},
 			map[string]string{
 				"moduleOneEnabled": "true",
@@ -86,7 +86,7 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 						},
 					},
 				},
-				enabledFlag: nil,
+				enabled: nil,
 			},
 			map[string]string{
 				"moduleOne": "paramGroup:\n  param1: value1\n",
@@ -105,7 +105,7 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 						},
 					},
 				},
-				enabledFlag: pointer.BoolPtr(true),
+				enabled: pointer.BoolPtr(true),
 			},
 			map[string]string{
 				"moduleOne":        "paramGroup:\n  param1: value1\n",
@@ -123,7 +123,7 @@ func TestConfigMapSectionToConfigMapData(t *testing.T) {
 						1000: "value1",
 					},
 				},
-				enabledFlag: pointer.BoolPtr(true),
+				enabled: pointer.BoolPtr(true),
 			},
 			nil,
 			ExpectError,
