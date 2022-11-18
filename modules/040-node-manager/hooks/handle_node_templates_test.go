@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -682,7 +684,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Must be executed successfully; control-plane node-roles must be added", func() {
+		It("Must be executed successfully; control-plane node-role labels must be added", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			labels := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("metadata.labels")
@@ -743,6 +745,8 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(0))
+			// collected metrics should not have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", nil)).To(BeFalse())
 		})
 	})
 
@@ -839,6 +843,76 @@ spec:
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(1))
 			Expect(taints.Array()[0].String()).To(Equal(`{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}`))
+			// collected metrics should not have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", nil)).To(BeFalse())
+		})
+	})
+
+	Context("NG has master taint but does not have control-plane and worker ng exists", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudEphemeral
+---
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    node.deckhouse.io/configuration-checksum: 3ef180a2b2cce73299012a049437bfef447b031ccfbb6c7d26913124a9ac1c1e
+  labels:
+    kubernetes.io/hostname: kube-master-0
+    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
+    node.deckhouse.io/group: master
+    node.deckhouse.io/type: CloudPermanent
+  name: kube-master-0
+spec:
+  podCIDR: 10.111.0.0/24
+  podCIDRs:
+  - 10.111.0.0/24
+  providerID: aws:///eu-central-1a/i-05724e80e8b61b339
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Metric 'd8_nodegroup_taint_missing' should appear", func() {
+			// collected metrics should have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", pointer.Float64(1))).To(BeTrue())
 		})
 	})
 })
+
+func metricEqual(metrics []operation.MetricOperation, name string, value *float64) bool {
+	for _, metric := range metrics {
+		if metric.Name == name {
+			if value != nil && *value == *metric.Value {
+				return true
+			} else if value == nil {
+				return true
+			}
+			return false
+		}
+	}
+
+	return false
+}

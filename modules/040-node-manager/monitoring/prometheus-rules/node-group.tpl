@@ -78,3 +78,25 @@
       description: |
         Possibly, autoscaler has provisioned too many Nodes. Take a look at the state of the Machine in the cluster.
 {{- template "todo_list" }}
+
+  - alert: NodeGroupMasterTaintIsAbsent
+    expr: |
+      max (d8_nodegroup_taint_missing{name="master"}) > 0
+    for: 20m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The 'master' node group does not contain desired taint.
+      description: |
+        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably control-plane nodes are misconfigured
+        and are able to run not only control-plane Pods. Please, add:
+        ```yaml
+          nodeTemplate:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/control-plane
+        ```
+        to the `master` node group spec.
+        `key: node-role.kubernetes.io/master` taint was deprecated and will have no effect in Kubernetes 1.24+.

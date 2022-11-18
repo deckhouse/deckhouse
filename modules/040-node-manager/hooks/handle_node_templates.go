@@ -156,6 +156,8 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 	for _, nodeGroup := range nodeGroups {
 		ng := nodeGroup.(NodeSettings)
 		ngs[ng.Name] = ng
+
+		checkMasterNGTaints(input, ng, nodeGroups, nodes)
 	}
 
 	for _, nodeObj := range nodes {
@@ -361,6 +363,29 @@ func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 	}
 
 	return nil
+}
+
+// "control-plane" taint could be absent only for single-node installations
+// it's not valid for the other cases
+func checkMasterNGTaints(input *go_hook.HookInput, ng NodeSettings, nodeGroups, nodes []go_hook.FilterResult) {
+	if ng.Name != "master" {
+		return
+	}
+
+	if len(nodeGroups) == 1 && len(nodes) == 1 {
+		return
+	}
+
+	controlPlaneTaintIsMissed := true
+	for _, taint := range ng.Taints {
+		if taint.Key == "node-role.kubernetes.io/control-plane" {
+			controlPlaneTaintIsMissed = false
+			break
+		}
+	}
+	if controlPlaneTaintIsMissed {
+		input.MetricsCollector.Set("d8_nodegroup_taint_missing", 1, map[string]string{"name": ng.Name})
+	}
 }
 
 // ApplyTemplateMap return actual merged with template without excess keys.
