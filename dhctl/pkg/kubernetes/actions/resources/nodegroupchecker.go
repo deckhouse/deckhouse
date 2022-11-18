@@ -1,8 +1,15 @@
 package resources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"time"
+
+	v1 "k8s.io/api/core/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -35,6 +42,37 @@ type nodegroupChecker struct {
 	ngName string
 }
 
+func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]v1.Event, error) {
+	list, err := n.kubeCl.CoreV1().Events("default").List(context.TODO(), metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.name=%s", n.ngName),
+		TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	events := list.Items
+
+	sort.Slice(events, func(i, j int) bool {
+		// sort reverse
+		return events[j].ObjectMeta.CreationTimestamp.Before(&events[i].ObjectMeta.CreationTimestamp)
+	})
+
+	tt := time.Now().Add(-lastTime)
+	res := make([]v1.Event, 0)
+	for _, e := range events {
+		if e.ObjectMeta.CreationTimestamp.After(tt) {
+			res = append(res, e)
+			continue
+		}
+
+		break
+	}
+
+	return res, nil
+}
+
 func (n *nodegroupChecker) IsReady() (bool, error) {
 	unstruct, err := converge.GetNodeGroup(n.kubeCl, n.ngName)
 	ng, err := unstructuredToNodeGroup(unstruct)
@@ -56,6 +94,17 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		log.ErrorF("Last machine failures:\n")
 		for _, f := range ng.Status.LastMachineFailures {
 			log.ErrorF("\t%s\n", f.LastOperation.Description)
+		}
+
+		dur := 2 * time.Minute
+		events, err := n.lastEvents(dur)
+		if err != nil {
+			return false, err
+		}
+
+		log.ErrorF("Last %v nodegroup events:\n", dur.String())
+		for _, e := range events {
+			log.ErrorF("\t%s\n", e.Message)
 		}
 
 		return false, nil
