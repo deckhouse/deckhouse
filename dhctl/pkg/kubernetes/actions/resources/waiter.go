@@ -22,7 +22,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources) 
 	checkers := make([]Checker, 0)
 
 	for _, r := range resources {
-		check, err := TryToGetEphemeralNodeGroupChecker(kubeCl, r)
+		check, err := tryToGetEphemeralNodeGroupChecker(kubeCl, r)
 		if err != nil {
 			errRes = multierror.Append(errRes, err)
 			continue

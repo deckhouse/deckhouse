@@ -229,13 +229,25 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 
 	resourceCreator := NewCreator(kubeCl, resources)
 
+	checkers, err := GetCheckers(kubeCl, resources)
+	if err != nil {
+		return err
+	}
+
+	waiter := NewWaiter(checkers)
+
 	for {
 		err := resourceCreator.TryToCreate()
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
 			return err
 		}
 
-		if err == nil {
+		ready, errWaiter := waiter.ReadyAll()
+		if errWaiter != nil {
+			return errWaiter
+		}
+
+		if ready && err == nil {
 			return nil
 		}
 

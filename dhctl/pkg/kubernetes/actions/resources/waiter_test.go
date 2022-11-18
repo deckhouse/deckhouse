@@ -245,4 +245,17 @@ func TestWaiterStep(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, ready, "should not ready")
 	})
+
+	t.Run("with multiple ready and one not ready checks", func(t *testing.T) {
+		w := NewWaiter([]Checker{
+			newTestChecker(true, nil),
+			newTestChecker(false, nil),
+			newTestChecker(true, nil),
+		})
+
+		_, err := w.ReadyAll()
+
+		require.NoError(t, err)
+		require.Len(t, w.checkers, 1, "should remove ready checks")
+	})
 }

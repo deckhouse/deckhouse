@@ -117,13 +117,21 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 		return err
 	})
 }
+
+func GetNodeGroupDirect(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstructured.Unstructured, error) {
+	var err error
+	ng, err := kubeCl.Dynamic().
+		Resource(nodeGroupResource).
+		Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+
+	return ng, err
+}
+
 func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstructured.Unstructured, error) {
 	var ng *unstructured.Unstructured
 	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
 		var err error
-		ng, err = kubeCl.Dynamic().
-			Resource(nodeGroupResource).
-			Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+		ng, err = GetNodeGroupDirect(kubeCl, nodeGroupName)
 
 		return err
 	})
