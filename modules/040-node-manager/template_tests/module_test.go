@@ -80,6 +80,15 @@ mcmEmergencyBrake: false
 
 const nodeManagerAWS = `
 internal:
+  clusterAutoscalerPriorities:
+    "50":
+    - ^xxx-staging-[0-9a-zA-Z]+$
+    "70":
+    - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+    "90":
+    - ^xxx-staging-spot-[0-9a-zA-Z]+$
+    - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+    - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -549,6 +558,17 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "cluster-autoscaler-priority-expander")
+					Expect(cm.Field("data.priorities").String()).To(MatchYAML(`
+50:
+  - ^xxx-staging-[0-9a-zA-Z]+$
+70:
+  - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+90:
+  - ^xxx-staging-spot-[0-9a-zA-Z]+$
+  - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+  - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+`))
 
 					assertSpecDotGroupsArray(rule, false)
 				})
