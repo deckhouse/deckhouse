@@ -23,7 +23,7 @@ import (
 )
 
 // deckhouse-config Service is a middleware between ModuleManager instance and hooks to
-// safely retrieve information about modules.
+// safely (in terms of addon-operator internals) retrieve information about modules.
 
 var (
 	serviceInstance     *ConfigService
