@@ -745,8 +745,8 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(0))
-			// collected metrics should not have 'd8_nodegroup_controlplane_taint_missing' metric
-			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", nil)).To(BeFalse())
+			// collected metrics should not have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", nil)).To(BeFalse())
 		})
 	})
 
@@ -843,8 +843,8 @@ spec:
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(1))
 			Expect(taints.Array()[0].String()).To(Equal(`{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}`))
-			// collected metrics should not have 'd8_nodegroup_controlplane_taint_missing' metric
-			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", nil)).To(BeFalse())
+			// collected metrics should not have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", nil)).To(BeFalse())
 		})
 	})
 
@@ -896,8 +896,8 @@ spec:
 		})
 
 		It("Metric 'd8_nodegroup_controlplane_taint_missing' should appear", func() {
-			// collected metrics should have 'd8_nodegroup_controlplane_taint_missing' metric
-			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", pointer.Float64(1))).To(BeTrue())
+			// collected metrics should have 'd8_nodegroup_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", pointer.Float64(1))).To(BeTrue())
 		})
 	})
 })
