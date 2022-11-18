@@ -37,6 +37,7 @@
  - **[monitoring-kubernetes-control-plane]** Port to listen changed to 8008 because it is already used by the ingress-nginx module. [#3019](https://github.com/deckhouse/deckhouse/pull/3019)
  - **[node-local-dns]** Disable `node-local-dns` for cilium installations on nodes with kernel < 5.7 due to problems with `ebpf-socket` and resolved endpoints. [#2995](https://github.com/deckhouse/deckhouse/pull/2995)
     The node-local-dns module stops working for cilium installations on nodes with kernels < 5.7.
+ - **[node-manager]** Fix `cluster-autoscaler` configMap generation when a few node groups have the same priority. [#3062](https://github.com/deckhouse/deckhouse/pull/3062)
 
 ## Chore
 
