@@ -46,7 +46,7 @@ hostPort: 2222
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 		})
 	})
 
@@ -66,7 +66,7 @@ auth:
 		It("should convert to latest version", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty(), "should delete storageClass field")
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
@@ -93,7 +93,7 @@ auth:
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty(), "should delete storageClass field")
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})

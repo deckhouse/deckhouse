@@ -48,8 +48,8 @@ auth:
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.webui.password").String()).Should(BeEmpty())
-			Expect(f.FinalValues.Get("auth.status.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.webui.password").Exists()).Should(BeFalse(), "should delete auth.webui.password field")
+			Expect(f.FinalValues.Get("auth.status.password").Exists()).Should(BeFalse(), "should delete auth.status.password field")
 		})
 	})
 
@@ -73,8 +73,8 @@ auth:
 		It("should convert to latest version", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.webui.password").String()).Should(BeEmpty())
-			Expect(f.FinalValues.Get("auth.status.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.webui.password").Exists()).Should(BeFalse(), "should delete auth.webui.password field")
+			Expect(f.FinalValues.Get("auth.status.password").Exists()).Should(BeFalse(), "should delete auth.status.password field")
 		})
 	})
 })
@@ -103,8 +103,8 @@ auth:
 
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalValues.Get("auth.webui.password").String()).Should(BeEmpty())
-			Expect(f.FinalValues.Get("auth.status.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.webui.password").Exists()).Should(BeFalse(), "should delete auth.webui.password field")
+			Expect(f.FinalValues.Get("auth.status.password").Exists()).Should(BeFalse(), "should delete auth.status.password field")
 		})
 	})
 })

@@ -36,7 +36,7 @@ auth:
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 
@@ -55,7 +55,7 @@ auth:
 		It("should convert to latest version", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 })
@@ -80,7 +80,7 @@ auth:
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").String()).Should(BeEmpty())
+			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 })
