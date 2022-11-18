@@ -99,4 +99,4 @@
               key: node-role.kubernetes.io/control-plane
         ```
         to the `master` node group spec.
-        `key: node-role.kubernetes.io/master` taint was deprecated and will not worker in the kubernetes 1.24+.
+        `key: node-role.kubernetes.io/master` taint was deprecated and will have no effect in Kubernetes 1.24+.
