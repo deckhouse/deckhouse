@@ -81,7 +81,7 @@ bb-rp-get-token() {
   AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
   if [ -z ${AUTH_REALM} ]; then
-    >&2 echo "cannot parse registry auth header ${AUTH_HEADER}"
+    >&2 echo "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
     return 1
   fi
 {{- /*

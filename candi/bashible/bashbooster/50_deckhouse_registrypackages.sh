@@ -44,7 +44,7 @@ bb-rp-is-installed?() {
   AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
   AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
   if [ -z ${AUTH_REALM} ]; then
-    bb-exit 1 "cannot parse registry auth header ${AUTH_HEADER}"
+    bb-exit 1 "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
   fi
   # shellcheck disable=SC2086
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
