@@ -229,7 +229,7 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 	// Log deleted sections.
 	for name := range generatedCM.Data {
 		if _, has := cmData[name]; !has {
-			input.LogEntry.Warnf("Seems ModuleConfig/%s was deleted. Delete section '%s' from cm/%s...", name, name, cm.Name)
+			input.LogEntry.Warnf("ModuleConfig/%s was deleted. Section '%s' will be deleted from cm/%s.", name, name, cm.Name)
 		}
 	}
 
