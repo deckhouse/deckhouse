@@ -24,7 +24,7 @@ func (n *nodegroupChecker) Name() string {
 	return fmt.Sprintf("NodeGroup %s readiness check", n.ngName)
 }
 
-func TryToGetEphemeralNodeGroupChecker(kubeCl *client.KubernetesClient, r *template.Resource) (Checker, error) {
+func TryToGetEphemeralNodeGroupChecker(kubeCl *client.KubernetesClient, r *template.Resource) (*nodegroupChecker, error) {
 	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
 		log.Debugf("TryToGetEphemeralNodeGroupChecker: skip GVK (%s %s %s)",
 			r.GVK.Version, r.GVK.Group, r.GVK.Kind)

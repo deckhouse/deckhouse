@@ -172,3 +172,77 @@ spec:
 		require.Equal(t, checkers[1].Name(), "NodeGroup node readiness check")
 	})
 }
+
+type testChecker struct {
+	returns bool
+	err     error
+}
+
+func newTestChecker(returns bool, err error) *testChecker {
+	return &testChecker{
+		returns: returns,
+		err:     err,
+	}
+}
+
+func (n *testChecker) IsReady() (bool, error) {
+	return n.returns, n.err
+}
+
+func (n *testChecker) Name() string {
+	return fmt.Sprintf("Test checker")
+}
+
+func TestWaiterStep(t *testing.T) {
+	t.Run("without checks", func(t *testing.T) {
+		w := NewWaiter(make([]Checker, 0))
+		ready, err := w.ReadyAll()
+
+		require.NoError(t, err)
+		require.True(t, ready, "should ready")
+	})
+
+	t.Run("with one ready check", func(t *testing.T) {
+		w := NewWaiter([]Checker{newTestChecker(true, nil)})
+		ready, err := w.ReadyAll()
+
+		require.NoError(t, err)
+		require.True(t, ready, "should ready")
+	})
+
+	t.Run("with multiple ready checks", func(t *testing.T) {
+		w := NewWaiter([]Checker{
+			newTestChecker(true, nil),
+			newTestChecker(true, nil),
+			newTestChecker(true, nil),
+		})
+		ready, err := w.ReadyAll()
+
+		require.NoError(t, err)
+		require.True(t, ready, "should ready")
+	})
+
+	t.Run("with multiple ready and one error checks", func(t *testing.T) {
+		w := NewWaiter([]Checker{
+			newTestChecker(true, nil),
+			newTestChecker(false, fmt.Errorf("error")),
+			newTestChecker(true, nil),
+		})
+		ready, err := w.ReadyAll()
+
+		require.Error(t, err, "should error")
+		require.False(t, ready)
+	})
+
+	t.Run("with multiple ready and one not ready checks", func(t *testing.T) {
+		w := NewWaiter([]Checker{
+			newTestChecker(true, nil),
+			newTestChecker(false, nil),
+			newTestChecker(true, nil),
+		})
+		ready, err := w.ReadyAll()
+
+		require.NoError(t, err)
+		require.False(t, ready, "should not ready")
+	})
+}

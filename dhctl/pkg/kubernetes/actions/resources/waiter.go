@@ -50,7 +50,7 @@ func NewWaiter(checkers []Checker) *Waiter {
 	}
 }
 
-func (w *Waiter) Step() (bool, error) {
+func (w *Waiter) ReadyAll() (bool, error) {
 	checkersToStay := make([]Checker, 0)
 
 	for _, c := range w.checkers {
