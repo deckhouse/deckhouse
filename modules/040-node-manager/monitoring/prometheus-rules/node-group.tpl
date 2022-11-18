@@ -91,7 +91,7 @@
       plk_markup_format: "markdown"
       summary: The 'master' node group does not contain desired taint.
       description: |
-        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably, your control-plane nodes are missconfigured
+        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably control-plane nodes are misconfigured
         and are able to run not only control-plane Pods. Please, add:
         ```yaml
           nodeTemplate:
