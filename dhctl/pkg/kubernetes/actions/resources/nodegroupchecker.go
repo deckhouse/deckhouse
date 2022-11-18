@@ -7,8 +7,7 @@ import (
 	"sort"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -42,9 +41,9 @@ type nodegroupChecker struct {
 	ngName string
 }
 
-func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]v1.Event, error) {
-	list, err := n.kubeCl.CoreV1().Events("default").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.name=%s", n.ngName),
+func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]eventsv1.Event, error) {
+	list, err := n.kubeCl.EventsV1().Events("default").List(context.TODO(), metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("regarding.name=%s", n.ngName),
 		TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
 	})
 
@@ -60,7 +59,7 @@ func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]v1.Event, error
 	})
 
 	tt := time.Now().Add(-lastTime)
-	res := make([]v1.Event, 0)
+	res := make([]eventsv1.Event, 0)
 	for _, e := range events {
 		if e.ObjectMeta.CreationTimestamp.After(tt) {
 			res = append(res, e)
@@ -104,7 +103,7 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 
 		log.ErrorF("Last %v nodegroup events:\n", dur.String())
 		for _, e := range events {
-			log.ErrorF("\t%s\n", e.Message)
+			log.ErrorF("\t%s:%s\n", e.Reason, e.Note)
 		}
 
 		return false, nil
