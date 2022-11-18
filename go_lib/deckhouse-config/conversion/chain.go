@@ -127,8 +127,8 @@ func (c *ModuleChain) Count() int {
 	return len(c.conversions)
 }
 
-// IsValidVersion returns whether version has registered conversion or the latest.
-func (c *ModuleChain) IsValidVersion(version int) bool {
+// IsKnownVersion returns whether version has registered conversion or the latest.
+func (c *ModuleChain) IsKnownVersion(version int) bool {
 	c.m.RLock()
 	defer c.m.RUnlock()
 

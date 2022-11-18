@@ -70,7 +70,7 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) (Validation
 	chain := conversion.Registry().Chain(cfg.GetName())
 	latestVer := chain.LatestVersion()
 
-	if !chain.IsValidVersion(cfg.Spec.Version) {
+	if !chain.IsKnownVersion(cfg.Spec.Version) {
 		previousVersions := concatIntList(chain.PreviousVersionsList())
 		if previousVersions != "" {
 			previousVersions = fmt.Sprintf(", or one of previous versions: %s", previousVersions)

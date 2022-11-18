@@ -72,7 +72,7 @@ func (c *Converter) ConvertToLatest(fromVersion int) {
 
 	Expect(modChain).ShouldNot(BeNil(), "Module %s should have registered conversions", c.moduleName)
 
-	hasConversion := modChain.IsValidVersion(fromVersion)
+	hasConversion := modChain.IsKnownVersion(fromVersion)
 	Expect(hasConversion).Should(BeTrue(), "%s version is unknown for module %s: no conversion registered, not the latest one", fromVersion, c.moduleName)
 
 	convVer, convValues, convError := modChain.ConvertToLatest(fromVersion, c.values.Values)

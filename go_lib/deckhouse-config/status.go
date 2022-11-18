@@ -64,11 +64,11 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 	}
 	if cfg.Spec.Version > 0 && len(cfg.Spec.Settings) > 0 {
 		version = strconv.Itoa(cfg.Spec.Version)
-		if !chain.IsValidVersion(cfg.Spec.Version) {
+		if !chain.IsKnownVersion(cfg.Spec.Version) {
 			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
 		} else if chain.Conversion(cfg.Spec.Version) != nil {
 			// Warn about obsolete version if there is conversion for spec.version.
-			versionWarning = fmt.Sprintf("Warning: update spec.settings schema to version %d", chain.LatestVersion())
+			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
 		}
 	}
 
@@ -114,7 +114,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 
 		// Special case: enabled in config but disabled by script.
 		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-			statusMsgs = append(statusMsgs, "Info: deckhouse can't enable this module, see documentation on module and enabled scripts")
+			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
 		}
 	}
 
