@@ -1,9 +1,20 @@
 /*
 Copyright 2022 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
-package config_values_conversion
+package settings_conversion
 
 import (
 	"testing"
@@ -19,7 +30,7 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: istio :: config values conversions :: version 1", func() {
+var _ = Describe("Module :: deckhouse-web :: config values conversions :: version 1", func() {
 	f := SetupConverter(``)
 
 	const migratedValues = `
@@ -61,7 +72,7 @@ auth:
 })
 
 // Test older values conversion to latest version.
-var _ = Describe("Module :: istio :: config values conversions :: to latest", func() {
+var _ = Describe("Module :: deckhouse-web :: config values conversions :: to latest", func() {
 	f := SetupConverter(``)
 
 	Context("giving values of version 1", func() {

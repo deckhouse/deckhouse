@@ -18,4 +18,4 @@ package main
 
 //go:generate go run register/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
 
-//go:generate go run config_values_conversions/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-config-values-conversions.go,../modules/003-deckhouse-config/images/deckhouse-config-webhook/register-config-values-conversions.go
+//go:generate go run config_values_conversions/main.go -output ../deckhouse-controller/cmd/deckhouse-controller/register-settings-conversions.go,../modules/003-deckhouse-config/images/deckhouse-config-webhook/register-settings-conversions.go

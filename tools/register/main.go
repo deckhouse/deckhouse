@@ -66,7 +66,7 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 			if f.Name() == "testdata" {
 				return filepath.SkipDir
 			}
-			if f.Name() == "config-values-conversion" {
+			if f.Name() == "settings-conversion" {
 				return filepath.SkipDir
 			}
 			return nil

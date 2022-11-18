@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config_values_conversion
+package settings_conversion
 
 import (
 	"testing"
@@ -30,15 +30,14 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: dashboard :: config values conversions :: version 1", func() {
+var _ = Describe("Module :: openvpn :: config values conversions :: version 1", func() {
 	f := SetupConverter(``)
 
 	const migratedValues = `
-auth:
-  allowedUserGroups:
-  - admin
+inlet: ExternalIP
+hostPort: 2222
 `
-	Context("giving already migrated values in ConfigMap", func() {
+	Context("giving already migrated config values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml(".", migratedValues)
 			f.Convert(1)
@@ -47,17 +46,18 @@ auth:
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 		})
 	})
 
 	const nonMigratedValues = `
+inlet: ExternalIP
+hostPort: 2222
+storageClass: default
 auth:
-  password: Long-password-value
-  allowedUserGroups:
-  - admin
+  password: p4ssw0rd
 `
-	Context("giving non-migrated values in ConfigMap", func() {
+	Context("giving non-migrated values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml(".", nonMigratedValues)
 			f.Convert(1)
@@ -66,31 +66,34 @@ auth:
 		It("should convert to latest version", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 })
 
 // Test older values conversion to latest version.
-var _ = Describe("Module :: dashboard :: config values conversions :: to latest", func() {
+var _ = Describe("Module :: openvpn :: config values conversions :: to latest", func() {
 	f := SetupConverter(``)
 
-	Context("giving values of version 1", func() {
-		const v1Values = `
+	Context("version 1", func() {
+		const v0Values = `
+inlet: ExternalIP
+hostPort: 2222
+storageClass: default
 auth:
-  password: Long-password-value
-  allowedUserGroups:
-  - admin
+  password: p4ssw0rd
 `
 
 		BeforeEach(func() {
-			f.ValuesSetFromYaml(".", v1Values)
+			f.ValuesSetFromYaml(".", v0Values)
 			f.ConvertToLatest(1)
 		})
 
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
 			Expect(f.FinalVersion).Should(Equal(2))
+			Expect(f.FinalValues.Get("storageClass").Exists()).Should(BeFalse(), "should delete storageClass field")
 			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})

@@ -77,13 +77,13 @@ git:
     - go_lib
     - go.mod
     - go.sum
-    - modules/*/config-values-conversion/**/*.go
+    - modules/*/settings-conversion/**/*.go
 {{ if eq .Env "EE" }}
-    - ee/modules/*/config-values-conversion/**/*.go
+    - ee/modules/*/settings-conversion/**/*.go
 {{ end }}
 {{ if eq .Env "FE" }}
-    - ee/modules/*/config-values-conversion/**/*.go
-    - ee/fe/modules/*/config-values-conversion/**/*.go
+    - ee/modules/*/settings-conversion/**/*.go
+    - ee/fe/modules/*/settings-conversion/**/*.go
 {{ end }}
   excludePaths:
     - {{ $webhookRelPath }}
@@ -95,13 +95,13 @@ git:
       - go.sum
     setup:
       - go_lib/**/*.go
-      - modules/*/config-values-conversion/**/*.go
+      - modules/*/settings-conversion/**/*.go
 {{ if eq .Env "EE" }}
-      - ee/modules/*/config-values-conversion/**/*.go
+      - ee/modules/*/settings-conversion/**/*.go
 {{ end }}
 {{ if eq .Env "FE" }}
-      - ee/modules/*/config-values-conversion/**/*.go
-      - ee/fe/modules/*/config-values-conversion/**/*.go
+      - ee/modules/*/settings-conversion/**/*.go
+      - ee/fe/modules/*/settings-conversion/**/*.go
 {{ end }}
 mount:
   - fromPath: ~/go-pkg-cache

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config_values_conversion
+package settings_conversion
 
 import (
 	"testing"

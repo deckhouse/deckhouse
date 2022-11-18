@@ -34,8 +34,8 @@ package main
 
 import (
 	_ "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-{{ range $value := . }}
-	_ "{{ $value }}"
+{{ range $package := . }}
+	_ "{{ $package }}"
 {{- end }}
 )
 `
@@ -122,22 +122,22 @@ func main() {
 	var conversionPackages []string
 
 	conversionDirs := []string{
-		filepath.Join(workDir, "global-hooks/config-values-conversion"),
+		filepath.Join(workDir, "global-hooks/settings-conversion"),
 	}
 
-	moduleDirs, err := filepath.Glob(filepath.Join(workDir, "modules/*/config-values-conversion"))
+	moduleDirs, err := filepath.Glob(filepath.Join(workDir, "modules/*/settings-conversion"))
 	if err != nil {
 		panic(fmt.Errorf("search conversions for CE: %v", err))
 	}
 	conversionDirs = append(conversionDirs, moduleDirs...)
 
-	moduleDirs, err = filepath.Glob(filepath.Join(workDir, "ee/modules/*/config-values-conversion"))
+	moduleDirs, err = filepath.Glob(filepath.Join(workDir, "ee/modules/*/settings-conversion"))
 	if err != nil {
 		panic(fmt.Errorf("search conversions for EE: %v", err))
 	}
 	conversionDirs = append(conversionDirs, moduleDirs...)
 
-	moduleDirs, err = filepath.Glob(filepath.Join(workDir, "ee/fe/modules/*/config-values-conversion"))
+	moduleDirs, err = filepath.Glob(filepath.Join(workDir, "ee/fe/modules/*/settings-conversion"))
 	if err != nil {
 		panic(fmt.Errorf("search conversions for FE: %v", err))
 	}

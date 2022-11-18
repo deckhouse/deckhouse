@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config_values_conversion
+package settings_conversion
 
 import (
 	"testing"
@@ -30,7 +30,7 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: prometheus :: config values conversions :: version 1", func() {
+var _ = Describe("Module :: dashboard :: config values conversions :: version 1", func() {
 	f := SetupConverter(``)
 
 	const migratedValues = `
@@ -72,7 +72,7 @@ auth:
 })
 
 // Test older values conversion to latest version.
-var _ = Describe("Module :: prometheus :: config values conversions :: to latest", func() {
+var _ = Describe("Module :: dashboard :: config values conversions :: to latest", func() {
 	f := SetupConverter(``)
 
 	Context("giving values of version 1", func() {
