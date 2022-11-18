@@ -895,7 +895,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Metric 'd8_nodegroup_controlplane_taint_missing' should appear", func() {
+		It("Metric 'd8_nodegroup_taint_missing' should appear", func() {
 			// collected metrics should have 'd8_nodegroup_taint_missing' metric
 			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", pointer.Float64(1))).To(BeTrue())
 		})
@@ -905,7 +905,7 @@ spec:
 func metricEqual(metrics []operation.MetricOperation, name string, value *float64) bool {
 	for _, metric := range metrics {
 		if metric.Name == name {
-			if value != nil && value == metric.Value {
+			if value != nil && *value == *metric.Value {
 				return true
 			} else if value == nil {
 				return true
