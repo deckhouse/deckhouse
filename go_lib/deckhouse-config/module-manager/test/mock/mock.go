@@ -21,6 +21,8 @@ import (
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var (
@@ -35,11 +37,11 @@ var (
 func NewModuleManager(modules ...ModuleMock) *ModuleManagerMock {
 	// Index input list of modules.
 	modulesMap := map[string]*module_manager.Module{}
-	enabledModules := map[string]struct{}{}
+	enabledModules := set.New()
 	for _, mod := range modules {
 		modulesMap[mod.module.Name] = mod.module
 		if mod.enabled == nil || *mod.enabled {
-			enabledModules[mod.module.Name] = struct{}{}
+			enabledModules.Add(mod.module.Name)
 		}
 	}
 
@@ -52,12 +54,11 @@ func NewModuleManager(modules ...ModuleMock) *ModuleManagerMock {
 type ModuleManagerMock struct {
 	module_manager.ModuleManager
 	modules        map[string]*module_manager.Module
-	enabledModules map[string]struct{}
+	enabledModules set.Set
 }
 
 func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
-	_, has := m.enabledModules[name]
-	return has
+	return m.enabledModules.Has(name)
 }
 
 func (m *ModuleManagerMock) GetModule(name string) *module_manager.Module {
