@@ -21,8 +21,8 @@ import (
 	"sync"
 )
 
-// ModuleChain is a chain of conversions for module.
-type ModuleChain struct {
+// Chain is a chain of conversions for module.
+type Chain struct {
 	m sync.RWMutex
 
 	moduleName string
@@ -33,14 +33,14 @@ type ModuleChain struct {
 	latestVersion int
 }
 
-func NewModuleChain(moduleName string) *ModuleChain {
-	return &ModuleChain{
+func NewChain(moduleName string) *Chain {
+	return &Chain{
 		moduleName:  moduleName,
 		conversions: make(map[int]*Conversion),
 	}
 }
 
-func (c *ModuleChain) Add(conversion *Conversion) {
+func (c *Chain) Add(conversion *Conversion) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -52,7 +52,7 @@ func (c *ModuleChain) Add(conversion *Conversion) {
 	}
 }
 
-func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interface{}) (int, map[string]interface{}, error) {
+func (c *Chain) ConvertToLatest(fromVersion int, values map[string]interface{}) (int, map[string]interface{}, error) {
 	// Shortcut: return if fromVersion is already the latest.
 	if fromVersion == c.latestVersion {
 		return fromVersion, values, nil
@@ -108,19 +108,19 @@ func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interfa
 	}
 }
 
-func (c *ModuleChain) Conversion(srcVersion int) *Conversion {
+func (c *Chain) Conversion(srcVersion int) *Conversion {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
 	return c.conversions[srcVersion]
 }
 
-func (c *ModuleChain) LatestVersion() int {
+func (c *Chain) LatestVersion() int {
 	return c.latestVersion
 }
 
 // Count returns a number of registered conversions for the module.
-func (c *ModuleChain) Count() int {
+func (c *Chain) Count() int {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -128,7 +128,7 @@ func (c *ModuleChain) Count() int {
 }
 
 // IsKnownVersion returns whether version has registered conversion or the latest.
-func (c *ModuleChain) IsKnownVersion(version int) bool {
+func (c *Chain) IsKnownVersion(version int) bool {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -140,7 +140,7 @@ func (c *ModuleChain) IsKnownVersion(version int) bool {
 }
 
 // VersionList returns all valid versions (all previous and the latest).
-func (c *ModuleChain) VersionList() []int {
+func (c *Chain) VersionList() []int {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	versions := make([]int, 0)
@@ -152,7 +152,7 @@ func (c *ModuleChain) VersionList() []int {
 }
 
 // PreviousVersionsList returns supported previous versions.
-func (c *ModuleChain) PreviousVersionsList() []int {
+func (c *Chain) PreviousVersionsList() []int {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -164,8 +164,8 @@ func (c *ModuleChain) PreviousVersionsList() []int {
 }
 
 // NewNoConvChain return a chain with the latestVersion equal to 1 for modules without registered conversions.
-func NewNoConvChain(moduleName string) *ModuleChain {
-	return &ModuleChain{
+func NewNoConvChain(moduleName string) *Chain {
+	return &Chain{
 		moduleName:    moduleName,
 		conversions:   make(map[int]*Conversion),
 		latestVersion: 1,

@@ -56,7 +56,7 @@ func RegisterFunc(moduleName string, srcVersion int, targetVersion int, conversi
 
 type ConvRegistry struct {
 	// module name -> module chain
-	chains map[string]*ModuleChain
+	chains map[string]*Chain
 
 	m sync.RWMutex
 }
@@ -66,10 +66,10 @@ func (r *ConvRegistry) Add(moduleName string, conversion *Conversion) {
 	defer r.m.Unlock()
 
 	if r.chains == nil {
-		r.chains = make(map[string]*ModuleChain)
+		r.chains = make(map[string]*Chain)
 	}
 	if _, has := r.chains[moduleName]; !has {
-		r.chains[moduleName] = NewModuleChain(moduleName)
+		r.chains[moduleName] = NewChain(moduleName)
 	}
 
 	r.chains[moduleName].Add(conversion)
@@ -77,7 +77,7 @@ func (r *ConvRegistry) Add(moduleName string, conversion *Conversion) {
 
 // Chain returns a chain with registered conversions or
 // a stub — a chain without conversions with version 1 as the latest.
-func (r *ConvRegistry) Chain(moduleName string) *ModuleChain {
+func (r *ConvRegistry) Chain(moduleName string) *Chain {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
