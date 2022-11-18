@@ -48,7 +48,7 @@ func TestJSONValuesNew(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			vals, err := ModuleSettingsFromMap(tt.input)
+			vals, err := SettingsFromMap(tt.input)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should adopt input")
 			g.Expect(vals.String()).Should(Equal(tt.expect))
 
@@ -96,7 +96,7 @@ func TestJSONValuesDeleteEmpty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			vals := ModuleSettingsFromBytes([]byte(tt.input))
+			vals := SettingsFromBytes([]byte(tt.input))
 			err := vals.DeleteIfEmptyParent(tt.path)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should delete path")
 			g.Expect(vals.String()).Should(Equal(tt.expect))
@@ -158,7 +158,7 @@ func TestJSONValuesDeleteAndClean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			vals := ModuleSettingsFromBytes([]byte(tt.input))
+			vals := SettingsFromBytes([]byte(tt.input))
 			err := vals.DeleteAndClean(tt.path)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should delete path")
 			g.Expect(vals.String()).Should(Equal(tt.expect))

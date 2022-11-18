@@ -25,6 +25,6 @@ const moduleName = "cilium-hubble"
 var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
 // convertV1ToV2 removes deprecated fields.
-func convertV1ToV2(values *conversion.ModuleSettings) error {
-	return values.DeleteAndClean("auth.password")
+func convertV1ToV2(settings *conversion.Settings) error {
+	return settings.DeleteAndClean("auth.password")
 }

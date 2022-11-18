@@ -97,10 +97,10 @@ certManagerEnabled: "true"
 
 		Context("giving valid ConfigMap", func() {
 			// Register 2 conversions to test conversion chains.
-			var _ = conversion.RegisterFunc("deckhouse", 1, 2, func(settings *conversion.ModuleSettings) error {
+			var _ = conversion.RegisterFunc("deckhouse", 1, 2, func(settings *conversion.Settings) error {
 				return nil
 			})
-			var _ = conversion.RegisterFunc("deckhouse", 2, 3, func(settings *conversion.ModuleSettings) error {
+			var _ = conversion.RegisterFunc("deckhouse", 2, 3, func(settings *conversion.Settings) error {
 				return nil
 			})
 

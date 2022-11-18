@@ -36,11 +36,11 @@ import (
 
 func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
 	// Define some conversions with deletions.
-	conversion.RegisterFunc("global", 1, 2, func(s *conversion.ModuleSettings) error {
-		return s.Delete("paramGroup.obsoleteParam")
+	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
+		return settings.Delete("paramGroup.obsoleteParam")
 	})
-	conversion.RegisterFunc("module-one", 1, 2, func(s *conversion.ModuleSettings) error {
-		return s.Delete("paramGroup.obsoleteParam")
+	conversion.RegisterFunc("module-one", 1, 2, func(settings *conversion.Settings) error {
+		return settings.Delete("paramGroup.obsoleteParam")
 	})
 
 	// KubeClient
@@ -86,13 +86,13 @@ data:
 		g.Expect(kubeCfg.Global).ShouldNot(BeNil(), "should have global")
 		g.Expect(kubeCfg.Global.Values).ShouldNot(BeNil(), "should have global values")
 
-		ms, err := conversion.ModuleSettingsFromMap(kubeCfg.Global.Values)
+		ms, err := conversion.SettingsFromMap(kubeCfg.Global.Values)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap global values")
 		g.Expect(ms.Get("global.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
 		g.Expect(ms.Get("global.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
 
 		g.Expect(kubeCfg.Modules).Should(HaveKey("module-one"), "should have module config")
-		ms, err = conversion.ModuleSettingsFromMap(kubeCfg.Modules["module-one"].Values)
+		ms, err = conversion.SettingsFromMap(kubeCfg.Modules["module-one"].Values)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap 'module-one' values")
 		g.Expect(ms.Get("moduleOne.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
 		g.Expect(ms.Get("moduleOne.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
@@ -185,13 +185,13 @@ spec:
 		g.Expect(kubeCfg.Global).ShouldNot(BeNil(), "should have global")
 		g.Expect(kubeCfg.Global.Values).ShouldNot(BeNil(), "should have global values")
 
-		ms, err := conversion.ModuleSettingsFromMap(kubeCfg.Global.Values)
+		ms, err := conversion.SettingsFromMap(kubeCfg.Global.Values)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap global values")
 		g.Expect(ms.Get("global.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
 		g.Expect(ms.Get("global.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
 
 		g.Expect(kubeCfg.Modules).Should(HaveKey("module-one"), "should have module config")
-		ms, err = conversion.ModuleSettingsFromMap(kubeCfg.Modules["module-one"].Values)
+		ms, err = conversion.SettingsFromMap(kubeCfg.Modules["module-one"].Values)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap 'module-one' values")
 		g.Expect(ms.Get("moduleOne.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
 		g.Expect(ms.Get("moduleOne.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())

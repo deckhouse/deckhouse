@@ -30,17 +30,17 @@ func TestConversionError(t *testing.T) {
 		Target: 2,
 	}
 
-	vals := ModuleSettingsFromString(`{"params":[{"param1":{"name":"value"}}]}`)
+	vals := SettingsFromString(`{"params":[{"param1":{"name":"value"}}]}`)
 
-	c.Conversion = func(v *ModuleSettings) error {
-		return v.Delete("params.0")
+	c.Conversion = func(settings *Settings) error {
+		return settings.Delete("params.0")
 	}
 	newVals, err := c.Convert(vals)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(newVals.Get("params.0").Exists()).Should(BeFalse(), "should delete path")
 
-	c.Conversion = func(v *ModuleSettings) error {
-		_ = v.Delete("params.0.param1.name")
+	c.Conversion = func(settings *Settings) error {
+		_ = settings.Delete("params.0.param1.name")
 		return fmt.Errorf("oops")
 	}
 	newVals, err = c.Convert(vals)

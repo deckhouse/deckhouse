@@ -27,9 +27,9 @@ const moduleName = "module-one"
 var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
 // convertV1ToV2 transforms numeric field to string field.
-func convertV1ToV2(values *conversion.ModuleSettings) error {
-	newValue := fmt.Sprintf("%d", values.Get("paramNum").Int())
-	_ = values.Delete("paramNum")
-	_ = values.Set("paramStr", newValue)
+func convertV1ToV2(settings *conversion.Settings) error {
+	newValue := fmt.Sprintf("%d", settings.Get("paramNum").Int())
+	_ = settings.Delete("paramNum")
+	_ = settings.Set("paramStr", newValue)
 	return nil
 }

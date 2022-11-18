@@ -26,75 +26,75 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// ModuleSettings is a helper to simplify module settings manipulation in conversion functions.
+// Settings is a helper to simplify module settings manipulation in conversion functions.
 // Access and update map[string]interface{} is difficult, so gjson and sjson come to the rescue.
-type ModuleSettings struct {
+type Settings struct {
 	m         sync.RWMutex
 	jsonBytes []byte
 }
 
-func ModuleSettingsFromMap(in map[string]interface{}) (*ModuleSettings, error) {
+func SettingsFromMap(in map[string]interface{}) (*Settings, error) {
 	data, err := json.Marshal(in)
 	if err != nil {
 		return nil, err
 	}
-	return ModuleSettingsFromBytes(data), nil
+	return SettingsFromBytes(data), nil
 }
 
-func ModuleSettingsFromBytes(bytes []byte) *ModuleSettings {
-	return &ModuleSettings{
+func SettingsFromBytes(bytes []byte) *Settings {
+	return &Settings{
 		jsonBytes: bytes,
 	}
 }
 
-func ModuleSettingsFromString(jsonStr string) *ModuleSettings {
-	return ModuleSettingsFromBytes([]byte(jsonStr))
+func SettingsFromString(jsonStr string) *Settings {
+	return SettingsFromBytes([]byte(jsonStr))
 }
 
-func (v *ModuleSettings) Get(path string) gjson.Result {
-	v.m.RLock()
-	defer v.m.RUnlock()
-	return gjson.GetBytes(v.jsonBytes, path)
+func (s *Settings) Get(path string) gjson.Result {
+	s.m.RLock()
+	defer s.m.RUnlock()
+	return gjson.GetBytes(s.jsonBytes, path)
 }
 
-func (v *ModuleSettings) Set(path string, value interface{}) error {
-	v.m.Lock()
-	defer v.m.Unlock()
+func (s *Settings) Set(path string, value interface{}) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	newValues, err := sjson.SetBytes(v.jsonBytes, path, value)
+	newValues, err := sjson.SetBytes(s.jsonBytes, path, value)
 	if err != nil {
 		return err
 	}
-	v.jsonBytes = newValues
+	s.jsonBytes = newValues
 	return nil
 }
 
-func (v *ModuleSettings) SetFromJSON(path string, jsonRawValue string) error {
-	v.m.Lock()
-	defer v.m.Unlock()
+func (s *Settings) SetFromJSON(path string, jsonRawValue string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	newValues, err := sjson.SetRawBytes(v.jsonBytes, path, []byte(jsonRawValue))
+	newValues, err := sjson.SetRawBytes(s.jsonBytes, path, []byte(jsonRawValue))
 	if err != nil {
 		return err
 	}
-	v.jsonBytes = newValues
+	s.jsonBytes = newValues
 	return nil
 }
 
 // delete removes field by path without locks.
-func (v *ModuleSettings) delete(path string) error {
-	newValues, err := sjson.DeleteBytes(v.jsonBytes, path)
+func (s *Settings) delete(path string) error {
+	newValues, err := sjson.DeleteBytes(s.jsonBytes, path)
 	if err != nil {
 		return err
 	}
 
-	v.jsonBytes = newValues
+	s.jsonBytes = newValues
 	return nil
 }
 
 // isEmpty returns true if value is null, empty array, or empty map.
-func (v *ModuleSettings) isEmptyNode(path string) bool {
-	obj := gjson.GetBytes(v.jsonBytes, path)
+func (s *Settings) isEmptyNode(path string) bool {
+	obj := gjson.GetBytes(s.jsonBytes, path)
 	switch {
 	case obj.IsArray():
 		return len(obj.Array()) == 0
@@ -105,38 +105,38 @@ func (v *ModuleSettings) isEmptyNode(path string) bool {
 }
 
 // IsEmptyNode returns true if value is empty array, or empty map.
-func (v *ModuleSettings) IsEmptyNode(path string) bool {
-	v.m.RLock()
-	defer v.m.RUnlock()
-	return v.isEmptyNode(path)
+func (s *Settings) IsEmptyNode(path string) bool {
+	s.m.RLock()
+	defer s.m.RUnlock()
+	return s.isEmptyNode(path)
 }
 
 // Delete removes field by path.
-func (v *ModuleSettings) Delete(path string) error {
-	v.m.Lock()
-	defer v.m.Unlock()
+func (s *Settings) Delete(path string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	return v.delete(path)
+	return s.delete(path)
 }
 
 // DeleteIfEmptyParent removes field by path if value is an empty object or an empty array.
-func (v *ModuleSettings) DeleteIfEmptyParent(path string) error {
-	v.m.Lock()
-	defer v.m.Unlock()
+func (s *Settings) DeleteIfEmptyParent(path string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	if v.isEmptyNode(path) {
-		return v.delete(path)
+	if s.isEmptyNode(path) {
+		return s.delete(path)
 	}
 	return nil
 }
 
 // DeleteAndClean removes path and its empty parents.
 // This method supports only dot separated paths. gjson's selectors and modifiers are not supported.
-func (v *ModuleSettings) DeleteAndClean(path string) error {
-	v.m.Lock()
-	defer v.m.Unlock()
+func (s *Settings) DeleteAndClean(path string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	err := v.delete(path)
+	err := s.delete(path)
 	if err != nil {
 		return err
 	}
@@ -150,10 +150,10 @@ func (v *ModuleSettings) DeleteAndClean(path string) error {
 		parts = parts[0 : len(parts)-1]
 
 		path = strings.Join(parts, ".")
-		if !v.isEmptyNode(path) {
+		if !s.isEmptyNode(path) {
 			break
 		}
-		err = v.delete(path)
+		err = s.delete(path)
 		if err != nil {
 			return err
 		}
@@ -162,29 +162,29 @@ func (v *ModuleSettings) DeleteAndClean(path string) error {
 }
 
 // Map transforms values into map[string]interface{} object.
-func (v *ModuleSettings) Map() (map[string]interface{}, error) {
-	v.m.RLock()
-	defer v.m.RUnlock()
+func (s *Settings) Map() (map[string]interface{}, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
 
 	var m map[string]interface{}
 
-	err := json.Unmarshal(v.jsonBytes, &m)
+	err := json.Unmarshal(s.jsonBytes, &m)
 	if err != nil {
-		return nil, fmt.Errorf("json values to map: %s\n%s", err, string(v.jsonBytes))
+		return nil, fmt.Errorf("json values to map: %s\n%s", err, string(s.jsonBytes))
 	}
 	return m, nil
 }
 
 // Bytes returns underlying json text.
-func (v *ModuleSettings) Bytes() []byte {
-	v.m.RLock()
-	defer v.m.RUnlock()
-	return v.jsonBytes
+func (s *Settings) Bytes() []byte {
+	s.m.RLock()
+	defer s.m.RUnlock()
+	return s.jsonBytes
 }
 
 // Bytes returns underlying json text as string.
-func (v *ModuleSettings) String() string {
-	v.m.RLock()
-	defer v.m.RUnlock()
-	return string(v.jsonBytes)
+func (s *Settings) String() string {
+	s.m.RLock()
+	defer s.m.RUnlock()
+	return string(s.jsonBytes)
 }

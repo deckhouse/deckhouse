@@ -30,17 +30,17 @@ import (
 func TestTransformer(t *testing.T) {
 	g := NewWithT(t)
 
-	conversion.RegisterFunc("global", 1, 2, func(configValues *conversion.ModuleSettings) error {
-		return configValues.Set("params.someParam", "newValue")
+	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
+		return settings.Set("params.someParam", "newValue")
 	})
-	conversion.RegisterFunc("module-one", 1, 2, func(configValues *conversion.ModuleSettings) error {
-		return configValues.Set("params.someParam", "newValue")
+	conversion.RegisterFunc("module-one", 1, 2, func(settings *conversion.Settings) error {
+		return settings.Set("params.someParam", "newValue")
 	})
-	conversion.RegisterFunc("module-two", 1, 2, func(configValues *conversion.ModuleSettings) error {
-		return configValues.DeleteAndClean("params.params.param1")
+	conversion.RegisterFunc("module-two", 1, 2, func(settings *conversion.Settings) error {
+		return settings.DeleteAndClean("params.params.param1")
 	})
-	conversion.RegisterFunc("module-four", 1, 2, func(configValues *conversion.ModuleSettings) error {
-		return configValues.DeleteAndClean("params.params.param1")
+	conversion.RegisterFunc("module-four", 1, 2, func(settings *conversion.Settings) error {
+		return settings.DeleteAndClean("params.params.param1")
 	})
 
 	cmData := map[string]string{

@@ -60,7 +60,7 @@ func (c *Converter) Convert(fromVersion int) {
 	conv := chain.Conversion(fromVersion)
 	Expect(conv).ShouldNot(BeNil(), "Conversion for module %s and version %s should be registered", c.moduleName, fromVersion)
 
-	convValues, convError := conv.Convert(conversion.ModuleSettingsFromBytes(c.values.JSONRepr))
+	convValues, convError := conv.Convert(conversion.SettingsFromBytes(c.values.JSONRepr))
 
 	c.FinalValues = values_store.NewStoreFromRawJSON(convValues.Bytes())
 	c.FinalVersion = conv.Target

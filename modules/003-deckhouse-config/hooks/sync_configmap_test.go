@@ -236,8 +236,8 @@ deckhouse: |
 `)
 
 		BeforeEach(func() {
-			conversion.RegisterFunc("global", 1, 2, func(cfg *conversion.ModuleSettings) error {
-				return cfg.Delete("paramStr")
+			conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
+				return settings.Delete("paramStr")
 			})
 
 			f.BindingContexts.Set(f.KubeStateSet(existingConfigs + cm))

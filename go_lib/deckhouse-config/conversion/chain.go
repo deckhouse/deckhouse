@@ -72,7 +72,7 @@ func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interfa
 
 	tries := 0
 	currentVersion := fromVersion
-	currentValues, err := ModuleSettingsFromMap(values)
+	currentValues, err := SettingsFromMap(values)
 	if err != nil {
 		return 0, nil, fmt.Errorf("bad input values: %v", err)
 	}

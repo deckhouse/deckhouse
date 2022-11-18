@@ -25,9 +25,9 @@ import (
 var _ = conversion.RegisterFunc("global", 1, 2, convertV1ToV2)
 
 // convertV1ToV2 transforms numeric field to string field.
-func convertV1ToV2(values *conversion.ModuleSettings) error {
-	newValue := fmt.Sprintf("%d", values.Get("paramNum").Int())
-	_ = values.Delete("paramNum")
-	_ = values.Set("globalParam", newValue)
+func convertV1ToV2(settings *conversion.Settings) error {
+	newValue := fmt.Sprintf("%d", settings.Get("paramNum").Int())
+	_ = settings.Delete("paramNum")
+	_ = settings.Set("globalParam", newValue)
 	return nil
 }

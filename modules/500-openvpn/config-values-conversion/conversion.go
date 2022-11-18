@@ -25,10 +25,10 @@ const moduleName = "openvpn"
 var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
 // convertV1ToV2 removes deprecated fields.
-func convertV1ToV2(values *conversion.ModuleSettings) error {
-	err := values.DeleteAndClean("auth.password")
+func convertV1ToV2(settings *conversion.Settings) error {
+	err := settings.DeleteAndClean("auth.password")
 	if err != nil {
 		return err
 	}
-	return values.Delete("storageClass")
+	return settings.Delete("storageClass")
 }

@@ -16,7 +16,7 @@ limitations under the License.
 
 package conversion
 
-type ConversionFunc func(configValues *ModuleSettings) error
+type ConversionFunc func(settings *Settings) error
 
 type Conversion struct {
 	Source     int
@@ -24,12 +24,12 @@ type Conversion struct {
 	Conversion ConversionFunc
 }
 
-func (c *Conversion) Convert(configValues *ModuleSettings) (*ModuleSettings, error) {
+func (c *Conversion) Convert(settings *Settings) (*Settings, error) {
 	if c.Conversion == nil {
 		return nil, nil
 	}
 	// Copy values to prevent accidental mutating on error.
-	newValues := ModuleSettingsFromBytes(configValues.Bytes())
+	newValues := SettingsFromBytes(settings.Bytes())
 	err := c.Conversion(newValues)
 	if err != nil {
 		return nil, err
