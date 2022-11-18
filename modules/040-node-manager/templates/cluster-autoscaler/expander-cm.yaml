@@ -10,7 +10,7 @@ data:
     {{- if hasKey $.Values.nodeManager.internal "clusterAutoscalerPriorities" }}
     {{- range $k, $v := $.Values.nodeManager.internal.clusterAutoscalerPriorities }}
     {{ $k | atoi }}:
-{{ $v | toYaml | indent 6 }}
+      {{- $v | toYaml | nindent 6 }}
     {{- end }}
     {{- else }}
     {}
