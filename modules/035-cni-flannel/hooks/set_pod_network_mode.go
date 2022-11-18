@@ -32,6 +32,7 @@ type FlannelConfig struct {
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// qwe
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
