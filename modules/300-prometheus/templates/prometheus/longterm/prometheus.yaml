@@ -95,9 +95,6 @@ spec:
   {{- end }}
     startupProbe:
       failureThreshold: 300
-      periodSeconds: 15
-      successThreshold: 1
-      timeoutSeconds: 3
   - name: config-reloader
     resources:
       requests:
@@ -107,9 +104,6 @@ spec:
   {{- end }}
     startupProbe:
       failureThreshold: 300
-      periodSeconds: 15
-      successThreshold: 1
-      timeoutSeconds: 3
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
