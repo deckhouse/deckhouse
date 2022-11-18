@@ -185,7 +185,7 @@ bin:
 	mkdir -p bin
 
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
-	cd tools/regcopy; go build -o bin/regcopy
+	cd tools/regcopy; go get -a; go build -o bin/regcopy
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
