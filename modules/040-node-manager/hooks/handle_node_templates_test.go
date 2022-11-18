@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -743,9 +745,8 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(0))
-			// collected metrics should not have 'd8_missed_taint_on_master_ng' metric
-			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
-			Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
+			// collected metrics should not have 'd8_nodegroup_controlplane_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", nil)).To(BeFalse())
 		})
 	})
 
@@ -842,9 +843,8 @@ spec:
 			taints := f.KubernetesGlobalResource("Node", "kube-master-0").Parse().Get("spec.taints")
 			Expect(taints.Array()).To(HaveLen(1))
 			Expect(taints.Array()[0].String()).To(Equal(`{"effect":"NoSchedule","key":"node-role.kubernetes.io/master"}`))
-			// collected metrics should not have 'd8_missed_taint_on_master_ng' metric
-			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
-			Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
+			// collected metrics should not have 'd8_nodegroup_controlplane_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", nil)).To(BeFalse())
 		})
 	})
 
@@ -895,11 +895,24 @@ spec:
 			f.RunHook()
 		})
 
-		It("Metric 'd8_missed_taint_on_master_ng' should appear", func() {
-			// collected metrics should have 'd8_missed_taint_on_master_ng' metric
-			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
-			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_missed_taint_on_master_ng"))
-			Expect(*f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(float64(1)))
+		It("Metric 'd8_nodegroup_controlplane_taint_missing' should appear", func() {
+			// collected metrics should have 'd8_nodegroup_controlplane_taint_missing' metric
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_controlplane_taint_missing", pointer.Float64(1))).To(BeTrue())
 		})
 	})
 })
+
+func metricEqual(metrics []operation.MetricOperation, name string, value *float64) bool {
+	for _, metric := range metrics {
+		if metric.Name == name {
+			if value != nil && value == metric.Value {
+				return true
+			} else if value == nil {
+				return true
+			}
+			return false
+		}
+	}
+
+	return false
+}

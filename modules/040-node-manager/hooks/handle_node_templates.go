@@ -384,7 +384,7 @@ func checkMasterNGTaints(input *go_hook.HookInput, ng NodeSettings, nodeGroups, 
 		}
 	}
 	if controlPlaneTaintIsMissed {
-		input.MetricsCollector.Set("d8_missed_taint_on_master_ng", 1, nil)
+		input.MetricsCollector.Set("d8_nodegroup_controlplane_taint_missing", 1, nil)
 	}
 }
 

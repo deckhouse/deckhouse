@@ -81,7 +81,7 @@
 
   - alert: NodeGroupMasterTaintIsAbsent
     expr: |
-      max (d8_missed_taint_on_master_ng) > 0
+      max (d8_nodegroup_controlplane_taint_missing) > 0
     for: 20m
     labels:
       severity_level: "4"
