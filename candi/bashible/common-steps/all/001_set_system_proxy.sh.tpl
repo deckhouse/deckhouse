@@ -36,7 +36,7 @@ mkdir -p /etc/systemd/system.conf.d/
 
 bb-sync-file /etc/systemd/system.conf.d/proxy-default-environment.conf - << EOF
 [Manager]
-DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY:-}" "HTTPS_PROXY=${HTTPS_PROXY:-}" "NO_PROXY=${NO_PROXY:-}"
+DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY:-}" "http_proxy=${HTTP_PROXY:-}" "HTTPS_PROXY=${HTTPS_PROXY:-}" "https_proxy=${HTTPS_PROXY:-}" "NO_PROXY=${NO_PROXY:-}" "no_proxy=${NO_PROXY:-}"
 EOF
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
