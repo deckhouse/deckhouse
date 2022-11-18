@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
 const (
-	shouldMigrateAnnotation = "deckhouse.io/should-migrate-to-module-config-objects"
+	migrationAnnotation = "deckhouse.io/should-migrate-to-module-config-objects"
 )
 
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
@@ -90,7 +90,7 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 		hasGeneratedCM = false
 	}
 	if hasGeneratedCM {
-		_, shouldMigrate := generatedCM.GetAnnotations()[shouldMigrateAnnotation]
+		_, shouldMigrate := generatedCM.GetAnnotations()[migrationAnnotation]
 		if shouldMigrate {
 			input.LogEntry.Infof("Migrate Configmap to ModuleConfig resources.")
 			return createInitialModuleConfigs(input, generatedCM.Data)
@@ -123,7 +123,7 @@ func migrateToGeneratedConfigMap(input *go_hook.HookInput, kubeClient k8s.Client
 	}
 
 	newCm := d8config.GeneratedConfigMap(data)
-	newCm.SetAnnotations(map[string]string{shouldMigrateAnnotation: "true"})
+	newCm.SetAnnotations(map[string]string{migrationAnnotation: "true"})
 
 	input.PatchCollector.Create(newCm, object_patch.UpdateIfExists())
 
@@ -134,7 +134,7 @@ func migrateToGeneratedConfigMap(input *go_hook.HookInput, kubeClient k8s.Client
 
 func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]string) error {
 	// Create ModuleConfig objects from ConfigMap data.
-	objs, msgs, err := d8config.Service().Transformer().ConfigMapToModuleConfigList(cmData)
+	configs, msgs, err := d8config.Service().Transformer().ConfigMapToModuleConfigList(cmData)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		input.LogEntry.Infof(msg)
 	}
 
-	for _, cfg := range objs {
+	for _, cfg := range configs {
 		res, err := d8config.Service().ConfigValidator().Validate(cfg)
 		if err != nil {
 			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
@@ -154,13 +154,13 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		}
 	}
 
-	input.LogEntry.Infof("Create %d ModuleConfig objects", len(objs))
-	for _, obj := range objs {
-		input.PatchCollector.Create(obj, object_patch.UpdateIfExists())
+	input.LogEntry.Infof("Create %d ModuleConfig objects", len(configs))
+	for _, cfg := range configs {
+		input.PatchCollector.Create(cfg, object_patch.UpdateIfExists())
 	}
 
 	// Recreate ConfigMap from ModuleConfig objects to clean-up deprecated module sections.
-	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(objs)
+	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(configs)
 	if err != nil {
 		return err
 	}

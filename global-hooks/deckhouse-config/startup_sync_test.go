@@ -76,7 +76,7 @@ certManagerEnabled: "true"
 			// Check generated ConfigMap.
 			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
 			Expect(generatedCM.Exists()).Should(BeTrue())
-			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, shouldMigrateAnnotation)
+			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, migrationAnnotation)
 			Expect(generatedCM.Field("metadata.annotations").String()).Should(MatchJSON(annotationJSON))
 			Expect(generatedCM.Field("data.global").String()).Should(ContainSubstring("param1: val1"))
 			Expect(generatedCM.Field("data.deckhouse").Exists()).Should(BeTrue())
@@ -118,7 +118,7 @@ certManager: |
 certManagerEnabled: "false"
 unknownModule: |
   paramBool: true
-`, shouldMigrateAnnotation)
+`, migrationAnnotation)
 				f.KubeStateSet(cm)
 
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
@@ -168,7 +168,7 @@ global: |
 deckhouse: |
   paramStr: 100
   paramNum: "100"
-`, shouldMigrateAnnotation)
+`, migrationAnnotation)
 				f.KubeStateSet(cm)
 
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
