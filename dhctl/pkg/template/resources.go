@@ -113,14 +113,7 @@ func (r Resources) Less(i, j int) bool {
 	return firstOrder < secondOrder
 }
 
-func ParseResources(path string, data map[string]interface{}) (Resources, error) {
-	fileContent, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("loading resources file: %v", err)
-	}
-
-	content := string(fileContent)
-
+func ParseResourcesContent(content string, data map[string]interface{}) (Resources, error) {
 	if data != nil {
 		t := template.New("resource_render").Funcs(FuncMap())
 		t, err := t.Parse(content)
@@ -166,6 +159,17 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 	sort.Stable(resources)
 
 	return resources, nil
+}
+
+func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+	fileContent, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("loading resources file: %v", err)
+	}
+
+	content := string(fileContent)
+
+	return ParseResourcesContent(content, data)
 }
 
 func BigFileSplit(content string) []string {
