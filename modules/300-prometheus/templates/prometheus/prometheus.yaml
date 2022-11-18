@@ -59,6 +59,9 @@ spec:
   - name: deckhouse-registry
   listenLocal: true
   containers:
+  - name: prometheus
+    startupProbe:
+      failureThreshold: 300
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -95,18 +98,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
 {{- end }}
-    startupProbe:
-      exec:
-        command:
-        - sh
-        - -c
-        - if [ -x "$(command -v curl)" ]; then exec curl http://localhost:9090/-/ready;
-          elif [ -x "$(command -v wget)" ]; then exec wget -q -O /dev/null http://localhost:9090/-/ready;
-          else exit 1; fi
-      failureThreshold: 300
-      periodSeconds: 15
-      successThreshold: 1
-      timeoutSeconds: 3
   - name: config-reloader
     resources:
       requests:
@@ -114,18 +105,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "config_reloader_resources" . | nindent 8 }}
 {{- end }}
-    startupProbe:
-      exec:
-        command:
-        - sh
-        - -c
-        - if [ -x "$(command -v curl)" ]; then exec curl http://localhost:9090/-/ready;
-          elif [ -x "$(command -v wget)" ]; then exec wget -q -O /dev/null http://localhost:9090/-/ready;
-          else exit 1; fi
-      failureThreshold: 300
-      periodSeconds: 15
-      successThreshold: 1
-      timeoutSeconds: 3
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
