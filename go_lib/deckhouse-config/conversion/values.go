@@ -93,26 +93,22 @@ func (v *ModuleSettings) delete(path string) error {
 }
 
 // isEmpty returns true if value is null, empty array, or empty map.
-func (v *ModuleSettings) isEmptyParent(path string) bool {
+func (v *ModuleSettings) isEmptyNode(path string) bool {
 	obj := gjson.GetBytes(v.jsonBytes, path)
 	switch {
 	case obj.IsArray():
-		if len(obj.Array()) == 0 {
-			return true
-		}
+		return len(obj.Array()) == 0
 	case obj.IsObject():
-		if len(obj.Map()) == 0 {
-			return true
-		}
+		return len(obj.Map()) == 0
 	}
 	return false
 }
 
-// IsEmptyParent returns true if value is empty array, or empty map.
-func (v *ModuleSettings) IsEmptyParent(path string) bool {
+// IsEmptyNode returns true if value is empty array, or empty map.
+func (v *ModuleSettings) IsEmptyNode(path string) bool {
 	v.m.RLock()
 	defer v.m.RUnlock()
-	return v.isEmptyParent(path)
+	return v.isEmptyNode(path)
 }
 
 // Delete removes field by path.
@@ -128,7 +124,7 @@ func (v *ModuleSettings) DeleteIfEmptyParent(path string) error {
 	v.m.Lock()
 	defer v.m.Unlock()
 
-	if v.isEmptyParent(path) {
+	if v.isEmptyNode(path) {
 		return v.delete(path)
 	}
 	return nil
@@ -154,7 +150,7 @@ func (v *ModuleSettings) DeleteAndClean(path string) error {
 		parts = parts[0 : len(parts)-1]
 
 		path = strings.Join(parts, ".")
-		if !v.isEmptyParent(path) {
+		if !v.isEmptyNode(path) {
 			break
 		}
 		err = v.delete(path)
