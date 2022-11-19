@@ -125,19 +125,23 @@ unknownModule: |
 				f.RunHook()
 			})
 
-			It("Should create ModuleConfig objects", func() {
+			It("Should run successfully and reach phase 2", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				// Ensure phase 2.
 				Expect(f.LogrusOutput).Should(gbytes.Say("Migrate Configmap to ModuleConfig"), "should run phase 2")
+			})
 
+			It("Should drop annotation from generated ConfigMap", func() {
 				// Check generated ConfigMap.
 				generatedCM := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
 				Expect(generatedCM.Exists()).Should(BeTrue())
 
 				annotations := generatedCM.Field("metadata.annotations")
 				Expect(annotations.Map()).Should(HaveLen(0), "should delete annotation, got %+v", annotations.String())
+			})
 
+			It("Should create ModuleConfig objects", func() {
 				cfg := f.KubernetesGlobalResource("ModuleConfig", "global")
 				Expect(cfg.Exists()).Should(BeTrue(), "should create ModuleConfig/global")
 				Expect(cfg.Field("spec.enabled").Exists()).Should(BeFalse())
