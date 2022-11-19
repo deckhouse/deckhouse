@@ -72,3 +72,34 @@ bb-deckhouse-get-disruptive-update-approval() {
     bb-log-info "Disruption approved!"
     bb-flag-set disruption
 }
+
+bb-node-has-force-install-desired-kernel-annotation?() {
+  attempt=0
+  until
+    bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+    jq -e '.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel")' >/dev/null
+  do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        bb-log-error "ERROR: Failed to get annotation 'update.node.deckhouse.io/force-install-desired-kernel' from Node."
+        exit 1
+    fi
+    sleep 10
+  done
+}
+
+bb-node-remove-install-desired-kernel-annotation() {
+  attempt=0
+  until
+
+    bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" update.node.deckhouse.io/force-install-desired-kernel-
+    jq -e '.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel")' >/dev/null
+  do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        bb-log-error "ERROR: Failed remove annotation 'update.node.deckhouse.io/force-install-desired-kernel' from Node."
+        exit 1
+    fi
+    sleep 10
+  done
+}

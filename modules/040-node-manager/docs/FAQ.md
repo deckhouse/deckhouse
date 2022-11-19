@@ -488,6 +488,16 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
 
+## how to update linux kernel on node to desired version ?
+
+Annotate node with special annotation `update.node.deckhouse.io/force-install-desired-kernel`.
+
+```shell
+kubectl annotate node <node name> update.node.deckhouse.io/force-install-desired-kernel=
+```
+
+> The desired version of the Linux kernel can be viewed [here](../candi/version_map.yml)
+
 ## How to use containerd with Nvidia GPU support?
 
 Since using the Nvidia GPU requires a custom containerd configuration, it is necessary to create a NodeGroup with the `Unmanaged` CRI type.

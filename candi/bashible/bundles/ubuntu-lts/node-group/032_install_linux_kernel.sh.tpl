@@ -51,6 +51,17 @@ if [ -f /var/lib/bashible/kernel_version_config_by_cloud_provider ]; then
   source /var/lib/bashible/kernel_version_config_by_cloud_provider
 fi
 
+# On node bootstrap always install desired kernel
+if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  allowed_versions_pattern=""
+fi
+
+# Check force desired kernel install annotation
+if bb-node-has-force-install-desired-kernel-annotation?; then
+  bb-flag-set remove-annotation
+  allowed_versions_pattern=""
+fi
+
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
   exit 1
@@ -95,4 +106,10 @@ if [ -n "$packages_to_remove" ]; then
 fi
 
 rm -f /var/lib/bashible/kernel_version_config_by_cloud_provider
+
+# remove force desired kernel install annotation
+if bb-flag? remove-annotation; then
+  bb-node-remove-install-desired-kernel-annotation
+  bb-flag-unset remove-annotation
+fi
 {{- end }}

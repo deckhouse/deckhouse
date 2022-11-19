@@ -491,6 +491,16 @@ spec:
 
 Дополнительные шаги для конфигурации узлов задаются при помощи custom resource `NodeGroupConfiguration`.
 
+## Как обновить ядро линукс на узлах до предпочитаемой версии ?
+Установить для ноды аннотацию `update.node.deckhouse.io/force-install-desired-kernel`.
+
+```shell
+kubectl annotate node <имя узла> update.node.deckhouse.io/force-install-desired-kernel=
+
+```
+
+> Предпочитаемую версию ядра линукс можно посмотреть [здесь](../candi/version_map.yml)
+
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
 Так как для использования Nvidia GPU требуется особая настройка containerd, необходимо создать NodeGroup с типом CRI `Unmanaged`.
