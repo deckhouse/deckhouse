@@ -25,25 +25,27 @@ import (
 
 func TestConversionError(t *testing.T) {
 	g := NewWithT(t)
+
 	c := Conversion{
 		Source: 1,
 		Target: 2,
 	}
 
-	vals := SettingsFromString(`{"params":[{"param1":{"name":"value"}}]}`)
+	settings := SettingsFromString(`{"params":[{"param1":{"name":"value"}}]}`)
 
 	c.Conversion = func(settings *Settings) error {
 		return settings.Delete("params.0")
 	}
-	newVals, err := c.Convert(vals)
+	newSettings, err := c.Convert(settings)
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(newVals.Get("params.0").Exists()).Should(BeFalse(), "should delete path")
+	g.Expect(newSettings.Get("params.0").Exists()).Should(BeFalse(), "should delete path")
 
 	c.Conversion = func(settings *Settings) error {
 		_ = settings.Delete("params.0.param1.name")
 		return fmt.Errorf("oops")
 	}
-	newVals, err = c.Convert(vals)
+	newSettings, err = c.Convert(settings)
 	g.Expect(err).Should(HaveOccurred(), "should return error")
-	g.Expect(vals.Get("params.0.param1.name").Exists()).Should(BeTrue(), "should not modify values on error")
+	g.Expect(settings.Get("params.0.param1.name").Exists()).Should(BeTrue(), "should not modify source settings on error")
+	g.Expect(newSettings).Should(BeNil(), "should return nil settings on error")
 }

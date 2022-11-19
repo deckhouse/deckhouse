@@ -24,6 +24,7 @@ import (
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"sigs.k8s.io/yaml"
 )
 
 // Settings is a helper to simplify module settings manipulation in conversion functions.
@@ -49,6 +50,17 @@ func SettingsFromBytes(bytes []byte) *Settings {
 
 func SettingsFromString(jsonStr string) *Settings {
 	return SettingsFromBytes([]byte(jsonStr))
+}
+
+func SettingsFromYAML(yamlStr string) (*Settings, error) {
+	var settings map[string]interface{}
+
+	err := yaml.Unmarshal([]byte(yamlStr), &settings)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal settings from YAML: %v", err)
+	}
+
+	return SettingsFromMap(settings)
 }
 
 func (s *Settings) Get(path string) gjson.Result {
@@ -101,7 +113,7 @@ func (s *Settings) isEmptyNode(path string) bool {
 	case obj.IsObject():
 		return len(obj.Map()) == 0
 	}
-	return false
+	return obj.Value() == nil
 }
 
 // IsEmptyNode returns true if value is empty array, or empty map.

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/conversion"
@@ -31,67 +32,61 @@ func Test(t *testing.T) {
 }
 
 var _ = Describe("Module :: prometheus :: config values conversions :: version 1", func() {
-	f := SetupConverter(``)
+	ct := SetupConversionTester()
 
-	const migratedValues = `
+	Context("giving settings in version 1", func() {
+		table.DescribeTable("should convert from 1 to 2",
+			ct.TestConversionToNextVersion(1, 2),
+			table.Entry("giving empty settings", ``, ``),
+			table.Entry("giving empty conversion result", `
 auth:
-  allowedUserGroups:
-  - admin
-`
-	Context("giving already migrated values in ConfigMap", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml(".", migratedValues)
-			f.Convert(1)
-		})
-
-		It("should convert", func() {
-			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
-		})
-	})
-
-	const nonMigratedValues = `
+  password: Long-password-value
+`, ``),
+			table.Entry("giving settings with auth.password",
+				`
 auth:
   password: Long-password-value
   allowedUserGroups:
   - admin
-`
-	Context("giving non-migrated values in ConfigMap", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml(".", nonMigratedValues)
-			f.Convert(1)
-		})
+`,
+				`
+auth:
+  allowedUserGroups:
+  - admin
+`,
+			),
+			table.Entry("giving settings without auth.password",
+				`auth:
+  allowedUserGroups:
+  - admin
+`,
+				`auth:
+  allowedUserGroups:
+  - admin
+`,
+			))
 
-		It("should convert to latest version", func() {
-			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
-		})
-	})
-})
-
-// Test older values conversion to latest version.
-var _ = Describe("Module :: prometheus :: config values conversions :: to latest", func() {
-	f := SetupConverter(``)
-
-	Context("giving values of version 1", func() {
-		const v1Values = `
+		table.DescribeTable("should convert from 1 to valid latest",
+			ct.TestConversionToValidLatest(1),
+			table.Entry("giving empty settings", ``),
+			table.Entry("giving empty conversion result", `
+auth:
+  password: Long-password-value
+`),
+			table.Entry("giving settings with auth.password",
+				`
 auth:
   password: Long-password-value
   allowedUserGroups:
   - admin
-`
-
-		BeforeEach(func() {
-			f.ValuesSetFromYaml(".", v1Values)
-			f.ConvertToLatest(1)
-		})
-
-		It("should convert", func() {
-			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalVersion).Should(Equal(2))
-			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
-		})
+`,
+			),
+			table.Entry("giving settings without auth.password",
+				`
+auth:
+  allowedUserGroups:
+  - admin
+`,
+			))
 	})
 })

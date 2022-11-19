@@ -17,6 +17,9 @@ limitations under the License.
 package mock
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
@@ -53,8 +56,9 @@ func NewModuleManager(modules ...ModuleMock) *ModuleManagerMock {
 
 type ModuleManagerMock struct {
 	module_manager.ModuleManager
-	modules        map[string]*module_manager.Module
-	enabledModules set.Set
+	modules         map[string]*module_manager.Module
+	enabledModules  set.Set
+	valuesValidator *validation.ValuesValidator
 }
 
 func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
@@ -78,6 +82,30 @@ func (m *ModuleManagerMock) GetModuleNames() []string {
 }
 
 func (m *ModuleManagerMock) GetValuesValidator() *validation.ValuesValidator {
+	return m.valuesValidator
+}
+
+func (m *ModuleManagerMock) InitModuleValuesValidator(modName string, modPath string) error {
+	m.valuesValidator = validation.NewValuesValidator()
+
+	module := m.GetModule(modName)
+	if modPath == "" {
+		modPath = module.Path
+	}
+	openAPIPath := filepath.Join(modPath, "openapi")
+	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(openAPIPath)
+	if err != nil {
+		return fmt.Errorf("module '%s' read openAPI schemas: %v", modName, err)
+	}
+
+	err = m.valuesValidator.SchemaStorage.AddModuleValuesSchemas(
+		module.ValuesKey(),
+		configBytes,
+		valuesBytes,
+	)
+	if err != nil {
+		return fmt.Errorf("add module '%s' schemas: %v", module.Name, err)
+	}
 	return nil
 }
 
