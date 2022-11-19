@@ -36,14 +36,18 @@ func unstructuredToNodeGroup(o *unstructured.Unstructured) (*NodeGroup, error) {
 	return &ng, nil
 }
 
-type nodegroupChecker struct {
-	kubeCl *client.KubernetesClient
-	ngName string
+type nodeGroupGetter interface {
+	NodeGroup(string) (*NodeGroup, error)
+	Events(string) ([]eventsv1.Event, error)
 }
 
-func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]eventsv1.Event, error) {
+type kubeNodegroupGetter struct {
+	kubeCl *client.KubernetesClient
+}
+
+func (n *kubeNodegroupGetter) Events(ng string) ([]eventsv1.Event, error) {
 	list, err := n.kubeCl.EventsV1().Events("default").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("regarding.name=%s", n.ngName),
+		FieldSelector: fmt.Sprintf("regarding.name=%s", ng),
 		TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
 	})
 
@@ -51,7 +55,29 @@ func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]eventsv1.Event,
 		return nil, err
 	}
 
-	events := list.Items
+	return list.Items, nil
+}
+
+func (n *kubeNodegroupGetter) NodeGroup(ngName string) (*NodeGroup, error) {
+	unstruct, err := converge.GetNodeGroup(n.kubeCl, ngName)
+	if err != nil {
+		return nil, err
+	}
+
+	return unstructuredToNodeGroup(unstruct)
+}
+
+type nodegroupChecker struct {
+	ngGetter nodeGroupGetter
+	ngName   string
+	logger   log.Logger
+}
+
+func (n *nodegroupChecker) lastEvents(lastTime time.Duration, reason string) ([]eventsv1.Event, error) {
+	events, err := n.ngGetter.Events(n.ngName)
+	if err != nil {
+		return nil, err
+	}
 
 	sort.Slice(events, func(i, j int) bool {
 		// sort reverse
@@ -62,6 +88,10 @@ func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]eventsv1.Event,
 	res := make([]eventsv1.Event, 0)
 	for _, e := range events {
 		if e.ObjectMeta.CreationTimestamp.After(tt) {
+			if reason != "" && e.Reason != reason {
+				continue
+			}
+
 			res = append(res, e)
 			continue
 		}
@@ -73,43 +103,42 @@ func (n *nodegroupChecker) lastEvents(lastTime time.Duration) ([]eventsv1.Event,
 }
 
 func (n *nodegroupChecker) IsReady() (bool, error) {
-	unstruct, err := converge.GetNodeGroup(n.kubeCl, n.ngName)
-	ng, err := unstructuredToNodeGroup(unstruct)
+	ng, err := n.ngGetter.NodeGroup(n.ngName)
 	if err != nil {
 		return false, err
 	}
 
 	if ng.Status.Desired == 0 {
-		log.InfoF("Waiting for desired nodes will be greater than 0")
+		n.logger.LogInfoF("Waiting for desired nodes will be greater than 0")
 		return false, nil
 	}
 
 	if ng.Status.Ready == ng.Status.Desired {
-		log.DebugF("nodegroupChecker is ready: %d == %d")
+		n.logger.LogDebugF("nodegroupChecker is ready: %d == %d")
 		return true, nil
 	}
 
 	if len(ng.Status.LastMachineFailures) > 0 {
-		log.ErrorF("Last machine failures:\n")
+		n.logger.LogErrorF("Last machine failures:\n")
 		for _, f := range ng.Status.LastMachineFailures {
-			log.ErrorF("\t%s\n", f.LastOperation.Description)
+			n.logger.LogErrorF("\t%s\n", f.LastOperation.Description)
 		}
 
 		dur := 2 * time.Minute
-		events, err := n.lastEvents(dur)
+		events, err := n.lastEvents(dur, "MachineFailed")
 		if err != nil {
 			return false, err
 		}
 
-		log.ErrorF("Last %v nodegroup events:\n", dur.String())
+		n.logger.LogErrorF("Last %v nodegroup events:\n", dur.String())
 		for _, e := range events {
-			log.ErrorF("\t%s:%s\n", e.Reason, e.Note)
+			n.logger.LogErrorF("\t%s:%s\n", e.Reason, e.Note)
 		}
 
 		return false, nil
 	}
 
-	log.InfoF("Waiting for ready nodes count will be equal desired nodes count (%d/%d)",
+	n.logger.LogInfoF("Waiting for ready nodes count will be equal desired nodes count (%d/%d)",
 		ng.Status.Ready, ng.Status.Desired)
 
 	return false, nil
@@ -148,7 +177,8 @@ func tryToGetEphemeralNodeGroupChecker(kubeCl *client.KubernetesClient, r *templ
 	}
 
 	return &nodegroupChecker{
-		kubeCl: kubeCl,
-		ngName: ng.GetName(),
+		ngGetter: &kubeNodegroupGetter{kubeCl: kubeCl},
+		ngName:   ng.GetName(),
+		logger:   log.GetDefaultLogger(),
 	}, nil
 }
