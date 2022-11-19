@@ -76,30 +76,44 @@ bb-deckhouse-get-disruptive-update-approval() {
 bb-node-has-force-install-desired-kernel-annotation?() {
   attempt=0
   until
-    bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
-    jq -e '.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel")' >/dev/null
+    has_annotation="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+    jq '.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel")')"
   do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        bb-log-error "ERROR: Failed to get annotation 'update.node.deckhouse.io/force-install-desired-kernel' from Node."
+        bb-log-error "ERROR: Failed to get 'update.node.deckhouse.io/force-install-desired-kernel' annotation from Node."
         exit 1
     fi
     sleep 10
   done
+  if [[ "${has_annotation}" == "true" ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 bb-node-remove-install-desired-kernel-annotation() {
   attempt=0
   until
+    node_data="$(
+      bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+      {
+        "resourceVersion": .metadata.resourceVersion,
+        "isInstallDesiredKernel": (.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel"))
+      }
+    ')" &&
+     jq -ne --argjson n "$node_data" '$n.isInstallDesiredKernel | not' >/dev/null
 
-    bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" update.node.deckhouse.io/force-install-desired-kernel-
-    jq -e '.metadata.annotations | has("update.node.deckhouse.io/force-install-desired-kernel")' >/dev/null
   do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        bb-log-error "ERROR: Failed remove annotation 'update.node.deckhouse.io/force-install-desired-kernel' from Node."
+        bb-log-error "ERROR: Failed to remove 'update.node.deckhouse.io/force-install-desired-kernel' annotation from Node."
         exit 1
     fi
-    sleep 10
+    bb-kubectl \
+      --kubeconfig=/etc/kubernetes/kubelet.conf \
+      --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+      annotate node "$(hostname -s)" update.node.deckhouse.io/force-install-desired-kernel- || { bb-log-info "Retry removing 'update.node.deckhouse.io/force-install-desired-kernel' annotation on Node in 10 sec..."; sleep 10; }
   done
 }
