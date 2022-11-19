@@ -492,6 +492,7 @@ spec:
 Дополнительные шаги для конфигурации узлов задаются при помощи custom resource `NodeGroupConfiguration`.
 
 ## Как обновить ядро линукс на узлах до предпочитаемой версии ?
+
 Установить для ноды аннотацию `update.node.deckhouse.io/force-install-desired-kernel`.
 
 ```shell
