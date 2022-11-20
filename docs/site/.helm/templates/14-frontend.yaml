@@ -3,62 +3,55 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: frontend
   annotations:
     "werf.io/replicas-on-creation": "1"
   labels:
-    service: backend
+    service: frontend
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      service: backend
+      service: frontend
   template:
     metadata:
       labels:
-        service: backend
+        service: frontend
     spec:
       imagePullSecrets:
         - name: registrysecret
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
-        - name: backend
-          command: ["/app/server"]
-          image: {{ index .Values.werf.image "web-backend" }}
+        - name: frontend
+          command: ["nginx", "-g", "daemon off;"]
+          image: {{ index .Values.werf.image "web-frontend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
           - containerPort: 8080
             name: http
             protocol: TCP
-          env:
-          - name: VROUTER_DOMAIN_MAP
-            value: {{ .Values.global.domain_map | quote }}
-          {{- include "vrouter_envs" . | nindent 10 }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx", "-s", "quit"]
           livenessProbe:
             httpGet:
-              path: /health
+              path: /healthz
               port: 8080
           readinessProbe:
             httpGet:
-              path: /health
+              path: /healthz
               port: 8080
-          volumeMounts:
-            - name: release-channels
-              mountPath: /app/release-channels
-      volumes:
-        - name: release-channels
-          configMap:
-            name: release-channels-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: frontend
 spec:
   clusterIP: None
   selector:
-    service: backend
+    service: frontend
   ports:
   - name: http
     port: 80
@@ -68,21 +61,21 @@ spec:
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: backend
+  name: frontend
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: backend
+    name: frontend
   updatePolicy:
     updateMode: "Initial"
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: backend
+  name: frontend
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      service: backend
+      service: frontend

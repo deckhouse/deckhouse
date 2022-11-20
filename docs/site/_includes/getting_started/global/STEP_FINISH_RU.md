@@ -43,7 +43,7 @@
 
 Для доступа к Prometheus напрямую: [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/)
 
-[Подробнее](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) о модуле `monitoring`.
+[Подробнее](/documentation/v1/modules/300-prometheus/) о модуле `monitoring`.
 </div>
 </div>
 
@@ -83,7 +83,7 @@ Status page
 Настройка CI/CD-системы
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
+[Создайте](/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
@@ -96,7 +96,7 @@ Status page
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
 
-[Подробнее](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/) о возможностях `ingress-nginx`
+[Подробнее](/documentation/v1/modules/402-ingress-nginx/) о возможностях `ingress-nginx`
 модуля.
 </div>
 </div>
@@ -109,7 +109,7 @@ Status page
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
 Service'у.
 
-[Подробнее](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) о модуле `monitoring-custom`.
+[Подробнее](/documentation/v1/modules/340-monitoring-custom/) о модуле `monitoring-custom`.
 </div>
 </div>
 
@@ -133,13 +133,13 @@ Service'у.
 {% if page.platform_type == 'cloud' %}
 При создании кластера были созданы разные группы узлов. Чтобы увидеть их в кластере, выполните команду `kubectl get
 nodegroups`. Подробнее об этом в
-[документации](/{{ page.lang }}/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
+[документации](/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
 
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
-[NodeGroup](/{{ page.lang }}/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
+Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
+[NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
 # TODO Bare metal!!!
@@ -158,7 +158,7 @@ nodegroups`. Подробнее об этом в
 Внешняя аутентификация
 </h2>
 <div markdown="1">
-Deckhouse поддерживает [множество](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html)
+Deckhouse поддерживает [множество](/documentation/v1/modules/150-user-authn/usage.html)
 механизмов внешней аутентификации.
 </div>
 <div class="cards-blocks__cards">
@@ -169,7 +169,7 @@ Deckhouse поддерживает [множество](/{{ page.lang }}/documen
 </h3>
 <div class="cards-item__text" markdown="1">
 Например, для включения аутентификации через GitHub можно
-[сконфигурировать](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) объект
+[сконфигурировать](/documentation/v1/modules/150-user-authn/usage.html) объект
 `DexProvider`. После создания `DexProvider`, при попытке доступа ко всем компонентам Deckhouse (Grafana, Dashboard и
 т.д.) потребуются аутентификации через GitHub
 </div>
@@ -181,7 +181,7 @@ Deckhouse поддерживает [множество](/{{ page.lang }}/documen
 </h3>
 <div class="cards-item__text" markdown="1">
 Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо создать объект
-[DexAuthenticator](/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
+[DexAuthenticator](/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
 </div>
 </div>
 
@@ -190,7 +190,7 @@ Deckhouse поддерживает [множество](/{{ page.lang }}/documen
 Внешняя аутентификация для Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Настройте [`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
+Настройте [`publishAPI`](/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
 </div>
 </div>
 
@@ -202,7 +202,7 @@ Deckhouse поддерживает [множество](/{{ page.lang }}/documen
 ## Что дальше?
 
 Подробная информация о системе в целом и по каждому компоненту Deckhouse Platform расположена в
-[документации](/{{ page.lang }}/documentation/v1/).
+[документации](/documentation/v1/).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/ru/community/about.html#online-community).
 </div>

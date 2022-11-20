@@ -9,7 +9,7 @@ Deckhouse только что завершил процесс установки
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
+Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
 {% snippetcut %}
 ```shell
 sudo -i
@@ -18,7 +18,7 @@ kubectl get nodes
 {% endsnippetcut %}
 
 # Доступ к кластеру через NGINX Ingress
-[IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
+[IngressNginxController](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
 Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.

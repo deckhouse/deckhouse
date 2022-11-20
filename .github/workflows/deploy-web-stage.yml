@@ -265,7 +265,9 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLnN0YWdlLmZsYW50LmNvbSIsICJydSIgOiAiZGVja2hvdXNlLnJ1LnN0YWdlLmZsYW50LmNvbSJ9"
       # </template: deploy_site_template>
 
       # <template: doc_version_template>
@@ -289,6 +291,7 @@ jobs:
           WERF_NAMESPACE: deckhouse-web-stage
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
       # </template: deploy_doc_template>
 

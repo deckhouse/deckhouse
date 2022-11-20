@@ -47,7 +47,7 @@
                 {%- for item in column.items %}
                 <li>
                     {%- if item.external_url %}<a href="{{ item.external_url }}" target="_blank">
-                    {%- elsif item.url %}<a href="/{{ page.lang }}{{ item.url }}">
+                    {%- elsif item.url %}<a href="{{ item.url }}">
                     {%- else %}<a href="#">{% endif %}
                         {{- item.title -}}
                     </a>

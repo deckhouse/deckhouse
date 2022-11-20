@@ -1,8 +1,14 @@
 {{- $_ := set . "Version" ( splitList "/" .Values.global.doc_version | last ) }}
 {{- $_ := set . "VersionURLNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" ) }}
 {{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
-{{- $host := .Values.global.url }}
+{{- $hostEn := .Values.global.url }}
+{{- $hostRu := .Values.global.url_ru }}
+{{- $hosts := list -}}
+{{- $hosts = append $hosts (dict "Lang" "en" "URL" $hostEn) -}}
+{{- $hosts = append $hosts (dict "Lang" "ru" "URL" $hostRu) -}}
 
+
+{{- if eq .Values.web.env "web-production" }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,35 +19,61 @@ metadata:
       ssi on;
       ssi_silent_errors on;
       {{- include "rewrites" . | nindent 6 }}
-{{- if or ( eq .Values.web.env "web-stage")  ( eq .Values.web.env "web-test")  }}
-    nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-    nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.web.env }}.svc.cluster.local/dex-authenticator/auth
-    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+spec:
+  ingressClassName: "nginx"
+  tls:
+{{- range $hosts }}
+  - hosts:
+      - {{ .URL }}
+      - www.{{ .URL }}
+    secretName: tls-{{ .URL }}
 {{- end }}
+  rules:
+{{- range $hosts }}
+  - host: {{ .URL }}
+    http:
+      paths:
+      - path: /documentation/{{ $.VersionURLNormalized }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
+            port:
+              name: http
+{{- end }}
+{{- else }}
+{{- range $hosts }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $.Chart.Name }}-{{ .Lang }}-{{ $.VersionDNSNormalized }}
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Original-URI         $request_uri;
+      ssi on;
+      ssi_silent_errors on;
+      {{- include "rewrites" . | nindent 6 }}
+    nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    nginx.ingress.kubernetes.io/auth-url: https://{{ $.Chart.Name }}-{{ .Lang }}-dex-authenticator.deckhouse-{{ $.Values.web.env }}.svc.cluster.local/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 spec:
   ingressClassName: "nginx"
   tls:
   - hosts:
-      - {{ $host }}
-{{- if eq .Values.web.env "web-production" }}
-      - www.{{ $host }}
-{{- end }}
-    secretName: tls-{{ $host }}
+      - {{ .URL }}
+    secretName: tls-{{ .URL }}
   rules:
-  - host: {{ $host }}
+  - host: {{ .URL }}
     http:
       paths:
-      - path: /ru/documentation/{{ .VersionURLNormalized }}
+      - path: /documentation/{{ $.VersionURLNormalized }}
         pathType: Prefix
         backend:
           service:
-            name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+            name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
             port:
               name: http
-      - path: /en/documentation/{{ .VersionURLNormalized }}
-        pathType: Prefix
-        backend:
-          service:
-            name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
-            port:
-              name: http
+---
+{{- end }}
+{{- end }}
+

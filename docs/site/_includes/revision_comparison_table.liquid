@@ -28,7 +28,7 @@
       <td class="table__cell_left-title">
         <div>
           {%- if item.url %}
-          <a href="/{{ page.lang }}{{ item.url | relative_url }}">{{ item.description[page.lang] }}</a>
+          <a href="{{ item.url | relative_url }}">{{ item.description[page.lang] }}</a>
           {%- elsif item.external_url %}
           <a href="{{ item.external_url[page.lang] }}">{{ item.description[page.lang] }}</a>
           {%- else %}

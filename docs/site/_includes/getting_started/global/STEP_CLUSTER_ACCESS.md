@@ -9,7 +9,7 @@ To do, so you need to get master IP either from dhctl logs or from cloud provide
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) to Kubernetes API later.
+You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) to Kubernetes API later.
 {% snippetcut %}
 ```shell
 sudo -i
@@ -18,7 +18,7 @@ kubectl get nodes
 {% endsnippetcut %}
 
 # Access cluster using NGINX Ingress
-[IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
+[IngressNginxController](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
 The only thing left is to configure access to web interfaces of components that are already installed in the cluster (Grafana, Prometheus, Dashboard, etc.).
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer is already created, and you just need to point a DNS domain to it.

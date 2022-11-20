@@ -11,7 +11,7 @@ Now that you have installed and properly configured Deckhouse, let's look at wha
 
 The in-cluster documentation is available at [deckhouse.example.com](https://deckhouse.example.com)
 
-Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module:
+Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/documentation/v1/modules/150-user-authn/) module:
 - Login — `admin`
 - Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `deckhouse-web` module. Use the following command to get it:
 
@@ -48,7 +48,7 @@ Explore Grafana dashboards bundled with Deckhouse at [grafana.example.com](https
 
 Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/) to access Prometheus directly.
 
-[Learn more](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
+[Learn more](/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
 </div>
 </div>
 
@@ -57,7 +57,7 @@ Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/)
 Dashboard
 </h3>
 <div class="cards-item__text" markdown="1">
-Enable the [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/) module and get access to the Kubernetes Dashboard at: [dashboard.example.com](https://dashboard.example.com)
+Enable the [dashboard](/documentation/v1/modules/500-dashboard/) module and get access to the Kubernetes Dashboard at: [dashboard.example.com](https://dashboard.example.com)
 </div>
 </div>
 
@@ -66,7 +66,7 @@ Enable the [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/)
 Status page
 </h3>
 <div class="cards-item__text" markdown="1">
-Enable the [upmeter](/{{ page.lang }}/documentation/v1/modules/500-upmeter/) module and get information about the overall status of Deckhouse and its components at [status.example.com](https://status.example.com).
+Enable the [upmeter](/documentation/v1/modules/500-upmeter/) module and get information about the overall status of Deckhouse and its components at [status.example.com](https://status.example.com).
 
 At the [upmeter.example.com](https://upmeter.example.com) page you can get detailed SLA statistics for each component and time frame.
 </div>
@@ -88,7 +88,7 @@ Deploying your first application
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-Enable the [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) module and [create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+Enable the [user-authz](/documentation/v1/modules/140-user-authz/) module and [create](/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
 </div>
@@ -101,7 +101,7 @@ Routing traffic
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
 
-[Learn more](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+[Learn more](/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
 </div>
 </div>
 
@@ -110,9 +110,9 @@ Create a `Service` and `Ingress` for your application.
 Monitoring your application
 </h3>
 <div class="cards-item__text" markdown="1">
-Enable the [monitoring-custom](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) module and add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
+Enable the [monitoring-custom](/documentation/v1/modules/340-monitoring-custom/) module and add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
-For more information, see the `monitoring-custom` module's [documentation](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/).
+For more information, see the `monitoring-custom` module's [documentation](/documentation/v1/modules/340-monitoring-custom/).
 </div>
 </div>
 
@@ -126,7 +126,7 @@ For more information, see the `monitoring-custom` module's [documentation](/{{ p
 External authentication
 </h2>
 <div markdown="1">
-Deckhouse supports [various](https://deckhouse.io/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html)
+Deckhouse supports [various](/documentation/v1/modules/150-user-authn/usage.html)
 external authentication mechanisms.
 </div>
 <div class="cards-blocks__cards">
@@ -136,7 +136,7 @@ external authentication mechanisms.
 Configuring DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a `DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., will be authenticated using GitHub.
+You have to [configure](/documentation/v1/modules/150-user-authn/usage.html) a `DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., will be authenticated using GitHub.
 </div>
 </div>
 
@@ -145,7 +145,7 @@ You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn
 External authentication for any Ingress
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to create a [DexAuthenticator](https://deckhouse.io/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
+You have to create a [DexAuthenticator](/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
 </div>
 </div>
 
@@ -154,7 +154,7 @@ You have to create a [DexAuthenticator](https://deckhouse.io/{{ page.lang }}/doc
 External authentication for the Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Configure [`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
+Configure [`publishAPI`](/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
 and create a `kubeconfig` file for external access to the API using the web interface available at `kubeconfig.example.com`.
 </div>
 </div>
@@ -166,7 +166,7 @@ and create a `kubeconfig` file for external access to the API using the web inte
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/{{ page.lang }}/documentation/v1/).
+Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/documentation/v1/).
 
 Please, reach us via our [online community](/en/community/about.html#online-community) if you have any questions.
 </div>

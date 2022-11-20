@@ -15,7 +15,7 @@
 - <span class="mightChange">опциональные</span> параметры.
 - Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
 {% if page.platform_type == 'cloud' %}
-> Полное описание параметров конфигурации cloud-провайдеров вы можете найти в [документации](/{{ page.lang }}/documentation/v1/kubernetes.html).
+> Полное описание параметров конфигурации cloud-провайдеров вы можете найти в [документации](/documentation/v1/kubernetes.html).
 >{% endif %}
 {%- if page.platform_type == 'baremetal' %}
 > Выполнять установку необходимо с **[персонального компьютера](step2.html#процесс-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
@@ -23,7 +23,7 @@
 {%- if page.platform_type == 'existing' %}
 > Ознакомьтесь предварительно с разделом *[Если что-то пошло не так](#если-что-то-пошло-не-так)*, возможно там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
 >{% endif %}
-> Deckhouse Platform использует каналы обновлений (release channels), о чём вы можете подробнее узнать в [документации](/{{ page.lang }}/documentation/v1/deckhouse-release-channels.html).
+> Deckhouse Platform использует каналы обновлений (release channels), о чём вы можете подробнее узнать в [документации](/documentation/v1/deckhouse-release-channels.html).
 
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/config.yml.{{ include.layout }}.{{ revision }}.inc" syntax="yaml" %}
