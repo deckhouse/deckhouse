@@ -88,12 +88,9 @@ while true; do
 
   url="https://127.0.0.1:6445/api/v1/nodes/$(hostname -s)"
   ready_condition_key=""
-  if d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem > /dev/null; then
-    ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem | jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"
-  fi
-
-  # if ready_condition_key don't exist continue
-  if [[ -z "${ready_condition_key}" ]]; then
+  if ! ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt \
+       --cert /var/lib/kubelet/pki/kubelet-client-current.pem |
+       jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"; then
     bb-log-warning "failed to get ready condition from node"
     sleep 2
     continue
@@ -115,7 +112,9 @@ while true; do
     }
   ]')"
 
-  if d8-curl -s -f -X PATCH "$url/status" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem --data "${patch}"  --header "Content-Type: application/json-patch+json" >/dev/null; then
+  if d8-curl -s -f -X PATCH "$url/status" --cacert /etc/kubernetes/pki/ca.crt \
+     --cert /var/lib/kubelet/pki/kubelet-client-current.pem --data "${patch}" \
+     --header "Content-Type: application/json-patch+json" >/dev/null; then
     break
   fi
 
