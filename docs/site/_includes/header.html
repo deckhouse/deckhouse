@@ -4,7 +4,7 @@
   <header class="header">
     <div class="header__content container">
       <div class="header__logo">
-        <a href="/{{ page.lang }}/"><img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse" /></a>
+        <a href="/"><img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse" /></a>
         {%- if site.mode == 'local' %}
         <span class='updatechannel__content disable'>&nbsp;</span>
         {%- endif %}
@@ -23,7 +23,7 @@
                   {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
                   {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
                   {%- if item.items %} data-proofer-ignore{% endif %}>
-                  <a {% if item.external_url %}href="{{ item.external_url }}" target="_blank"{% else %}href="/{{ page.lang }}{{ item.url }}"{% endif %}>{{ item.title }}</a>
+                  <a {% if item.external_url %}href="{{ item.external_url }}" target="_blank"{% else %}href="{{ item.url }}"{% endif %}>{{ item.title }}</a>
 
                   {% if item.items %}
                     <div class="submenu-container">
@@ -34,7 +34,7 @@
                             {%- if subitem.external_url %}
                               <a href="{{ subitem.external_url }}" class="submenu-item-link" target="_blank">
                             {%- elsif subitem.url %}
-                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">
+                              <a href="{{ subitem.url }}" class="submenu-item-link">
                             {%- else %}
                               <a href="#" class="submenu-item-link">
                             {% endif %}
@@ -59,20 +59,30 @@
             <div class="submenu-container">
               <ul class="submenu">
                 <li data-proofer-ignore class="submenu-item">
-                  <a data-proofer-ignore href="/en
-                  {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  <a data-proofer-ignore href="
+                  {%- if site.mode == 'local' %}/en
+                      {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
                   {%- else -%}
-                        {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                      {%- if page.mode == 'ssi' -%}
+                           {{ site.urls['en'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                      {%- else -%}
+                           {{ site.urls['en'] }}{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                      {%- endif %}
                   {%- endif %}"
                      class="submenu-item-link">
                       English
                   </a>
                 </li>
                 <li data-proofer-ignore class="submenu-item">
-                  <a data-proofer-ignore href="/ru
-                  {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  <a data-proofer-ignore href="
+                  {%- if site.mode == 'local' %}/ru
+                      {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
                   {%- else -%}
-                        {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                      {%- if page.mode == 'ssi' -%}
+                           {{ site.urls['ru'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                      {%- else -%}
+                           {{ site.urls['ru'] }}{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                      {%- endif %}
                   {%- endif %}"
                      class="submenu-item-link">
                       Русский

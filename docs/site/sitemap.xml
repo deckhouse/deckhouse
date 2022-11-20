@@ -7,7 +7,7 @@ searchable: false
 
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
    <sitemap>
-      <loc>{{ site.url }}/en/documentation/v1/sitemap.xml</loc>
+      <loc>{{ site.url }}/documentation/v1/sitemap.xml</loc>
    </sitemap>
    <sitemap>
       <loc>{{ site.url }}/sitemap-site.xml</loc>

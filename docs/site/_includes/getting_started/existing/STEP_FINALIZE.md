@@ -1,7 +1,7 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-The in-cluster [documentation module](/{{ page.lang }}/documentation/v1/modules/810-deckhouse-web/) will be the only module with a WEB interface that runs after completing the Deckhouse installation (unless you have enabled other modules in the Deckhouse configuration). If you do not use [nip.io](https://nip.io) or similar services, you must add the appropriate DNS record to access the module’s WEB interface.
+The in-cluster [documentation module](/documentation/v1/modules/810-deckhouse-web/) will be the only module with a WEB interface that runs after completing the Deckhouse installation (unless you have enabled other modules in the Deckhouse configuration). If you do not use [nip.io](https://nip.io) or similar services, you must add the appropriate DNS record to access the module’s WEB interface.
 
 Create a DNS record to access a WEB interface of the documentation module:
 <ul>
