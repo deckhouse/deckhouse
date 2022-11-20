@@ -43,7 +43,7 @@ Explore Grafana dashboards bundled with Deckhouse at [grafana.example.com](https
 
 Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/) to access Prometheus directly.
 
-[Learn more](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
+[Learn more](/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
 </div>
 </div>
 
@@ -83,7 +83,7 @@ Deploying your first application
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
+[Create](/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
 a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
@@ -97,7 +97,7 @@ Routing traffic
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
 
-[Learn more](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+[Learn more](/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
 </div>
 </div>
 
@@ -108,7 +108,7 @@ Monitoring your application
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
-For more information, see the `monitoring-custom` module's [documentation](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/).
+For more information, see the `monitoring-custom` module's [documentation](/documentation/v1/modules/340-monitoring-custom/).
 </div>
 </div>
 
@@ -129,13 +129,13 @@ Other features
 Managing nodes
 </h3>
 <div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/{{ page.lang }}/documentation/v1/modules/040-node-manager/).
+Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/documentation/v1/modules/040-node-manager/).
 
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
-[InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) and a
-[NodeGroup](/{{ page.lang }}/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
+[InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) and a
+[NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
 </div>
 </div>
 
@@ -150,7 +150,7 @@ You need to create a new
 External authentication
 </h2>
 <div markdown="1">
-Deckhouse supports [various](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html)
+Deckhouse supports [various](/documentation/v1/modules/150-user-authn/usage.html)
 external authentication mechanisms.
 </div>
 <div class="cards-blocks__cards">
@@ -160,7 +160,7 @@ external authentication mechanisms.
 Configuring DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a
+You have to [configure](/documentation/v1/modules/150-user-authn/usage.html) a
 `DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc.,
 will be authenticated using GitHub.
 </div>
@@ -171,7 +171,7 @@ will be authenticated using GitHub.
 External authentication for any Ingress
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to create a [DexAuthenticator](/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
+You have to create a [DexAuthenticator](/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
 </div>
 </div>
 
@@ -181,7 +181,7 @@ External authentication for the Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
 Configure
-[`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
+[`publishAPI`](/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
 and create a `kubeconfig` file for external access to the API using the web interface available at `kubeconfig.example.com`.
 </div>
 </div>
@@ -193,7 +193,7 @@ and create a `kubeconfig` file for external access to the API using the web inte
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/{{ page.lang }}/documentation/v1/).
+Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/documentation/v1/).
 
 Please, reach us via our [online community](/en/community/about.html#online-community) if you have any questions.
 </div>

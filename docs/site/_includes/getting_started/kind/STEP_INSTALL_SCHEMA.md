@@ -2,9 +2,9 @@
 
 Installing Deckhouse on kind, will allow you to get a Kubernetes cluster with Deckhouse installed in less than 10 minutes. It will allow you to get acquainted with Deckhouse main features quickly.
 
-Please note that some features, such as [node management](/{{ page.lang }}/documentation/v1/modules/040-node-manager/) and [control plane management](/{{ page.lang }}/documentation/v1/modules/040-control-plane-manager/) will not work.
+Please note that some features, such as [node management](/documentation/v1/modules/040-node-manager/) and [control plane management](/documentation/v1/modules/040-control-plane-manager/) will not work.
 
-This guide covers installing Deckhouse in a **minimal** configuration, with Grafana based [monitoring](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) enabled. To simplify, the [nip.io](https://nip.io ) service is used for working with DNS.
+This guide covers installing Deckhouse in a **minimal** configuration, with Grafana based [monitoring](/documentation/v1/modules/300-prometheus/) enabled. To simplify, the [nip.io](https://nip.io ) service is used for working with DNS.
 
 ## Installation process
 
@@ -40,4 +40,4 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 </li>
 </ul>
 
-After installation is complete, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/{{ page.lang }}/documentation/v1/) to learn more or reach out to the Deckhouse [community](/en/community/about.html).
+After installation is complete, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/documentation/v1/) to learn more or reach out to the Deckhouse [community](/en/community/about.html).

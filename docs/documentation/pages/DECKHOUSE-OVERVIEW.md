@@ -3,7 +3,7 @@ title: Overview
 permalink: en/deckhouse-overview.html
 ---
 
-Welcome to the home page of the Deckhouse Kubernetes cluster management platform documentation! We recommend starting with the [Getting started]({{ site.url }}/{{ page.lang }}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
+Welcome to the home page of the Deckhouse Kubernetes cluster management platform documentation! We recommend starting with the [Getting started]({{ site.url }}/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.
 
 Here are some tips on how to find what you need:
 <ul>
@@ -15,13 +15,13 @@ Here are some tips on how to find what you need:
   <div markdown="1">
   - Deckhouse — global settings and general information about the platform.
   - Kubernetes cluster — all things related to control-plane, integration with cloud providers, node management, network management, etc.
-  - Accessing cluster — tools for accessing ([openvpn]({{ site.url }}/{{ page.lang }}/documentation/v1/modules/500-openvpn/)) and managing the cluster ([dashboard](modules/500-dashboard/)).
-  - Network Load Balancing — [Nginx Ingress](modules/402-ingress-nginx/) and [Istio]({{ site.url }}/{{ page.lang }}/documentation/v1/modules/110-istio/) features.
+  - Accessing cluster — tools for accessing ([openvpn]({{ site.url }}/documentation/v1/modules/500-openvpn/)) and managing the cluster ([dashboard](modules/500-dashboard/)).
+  - Network Load Balancing — [Nginx Ingress](modules/402-ingress-nginx/) and [Istio]({{ site.url }}/documentation/v1/modules/110-istio/) features.
   - Monitoring — [Prometheus/Grafana](modules/300-prometheus/), [custom monitoring capabilities](modules/340-monitoring-custom/), and [logs collecting](modules/460-log-shipper/).
   - Autoscaling & Managing resources — all things related to Pod management and scaling.
   - Security — [authentication](modules/150-user-authn/), [authorization](modules/140-user-authz/) and [certificate management](modules/101-cert-manager/).
   - Storage — [integration with Ceph](modules/099-ceph-csi/), working [with a local storage](modules/031-local-path-provisioner/) on nodes, organizing [Linstor based storage](modules/041-linstor/).
-  - Little things — [time synchronization](modules/470-chrony/), automatic [copying of secrets]({{ site.url }}/{{ page.lang }}/documentation/v1/modules/600-secret-copier/) by namespaces, and other amenities.
+  - Little things — [time synchronization](modules/470-chrony/), automatic [copying of secrets]({{ site.url }}/documentation/v1/modules/600-secret-copier/) by namespaces, and other amenities.
   - Bare Metal Support — modules for comfortable work with a cluster on bare metal servers.
   </div>
   {% endofftopic %}

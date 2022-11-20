@@ -2,11 +2,22 @@
 
 project: deckhouse-web
 configVersion: 1
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Env "development") (eq $.Env "local") }}
+      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- end }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
 
 ---
 artifact: web-static
-from: jekyll/builder:3.8
-fromCacheVersion: 20210702
+from: {{ .Images.BASE_JEKYLL }}
 ansible:
   install:
     - shell: |
@@ -33,11 +44,13 @@ git:
   group: jekyll
   excludePaths:
   - '**/*.sh'
+  - LOCAL_DEV.md
   - werf*.yaml
   - docker-compose*.yml
   - .werf
   - .helm
   - backend
+  - Makefile
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     beforeSetup: '**/*'
@@ -63,8 +76,8 @@ ansible:
         executable: /bin/sh
         chdir: /go/src/app
 git:
-  - url: https://github.com/z9r5/v-router.git
-    tag: v1.0.4
+  - url: https://github.com/flant/web-router.git
+    tag: v1.0.14
     add: /
     to: /go/src/app
     stageDependencies:
@@ -75,3 +88,25 @@ import:
     add: /app/_site
     to: /app/root
     before: setup
+---
+image: web-frontend
+docker:
+  WORKDIR: /app
+from: {{ .Images.BASE_NGINX_ALPINE }}
+ansible:
+  setup:
+  - name: "Copy nginx.conf"
+    copy:
+      content: |
+        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
+      dest: /etc/nginx/nginx.conf
+import:
+- artifact: web-static
+  add: /app/_site
+  to: /app
+  before: setup
+  owner: nginx
+  group: nginx
+  excludePaths:
+  - en/includes/
+  - ru/includes/

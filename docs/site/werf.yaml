@@ -30,7 +30,6 @@ gitWorktree:
 ---
 artifact: web-static
 from: {{ .Images.BASE_JEKYLL }}
-fromCacheVersion: 20210702
 ansible:
   install:
     - shell: |
@@ -88,7 +87,7 @@ ansible:
         chdir: /go/src/app
 git:
   - url: https://github.com/flant/web-router.git
-    tag: v1.0.13
+    tag: v1.0.14
     add: /
     to: /go/src/app
     stageDependencies:
@@ -111,3 +110,28 @@ import:
     add: /app/_site
     to: /app/root
     before: setup
+    includePaths:
+    - en/includes/
+    - ru/includes/
+---
+image: web-frontend
+docker:
+  WORKDIR: /app
+from: {{ .Images.BASE_NGINX_ALPINE }}
+ansible:
+  setup:
+  - name: "Copy nginx.conf"
+    copy:
+      content: |
+        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
+      dest: /etc/nginx/nginx.conf
+import:
+- artifact: web-static
+  add: /app/_site
+  to: /app
+  before: setup
+  owner: nginx
+  group: nginx
+  excludePaths:
+  - en/includes/
+  - ru/includes/
