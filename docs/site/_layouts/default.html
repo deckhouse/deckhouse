@@ -16,7 +16,7 @@
     {% include header.html %}
     {{ content }}
   </div>
-  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
+  {% include footer.html %}
 
   {% include form_in_modal.html mode="request_access" %}
   {% include form_in_modal.html mode="request_callback" %}

@@ -29,7 +29,7 @@
               return element.url === results[i].ref;
             });
 
-        appendString += '<li><a href="./' + item.url + '"><h3>' + item.title + '</h3></a>';
+        appendString += '<li><a href="./' + item.url.replace(/^\//,'') + '"><h3>' + item.title + '</h3></a>';
         appendString += '<p>' + getNormalizedContent(item.content) + '</p></li>';
       }
 

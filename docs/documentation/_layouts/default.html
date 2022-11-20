@@ -11,7 +11,7 @@
   {%- if site.mode == 'local' %}
   {% include head-local.html %}
   {%- endif %}
-  <!--#include virtual="/{{ page.lang }}/includes/head-site.html" -->
+  <!--#include virtual="/includes/head-site.html" -->
 </head>
 
 <body>
@@ -19,11 +19,11 @@
     {%- if site.mode == 'local' %}
     {% include header.html %}
     {%- else %}
-     <!--#include virtual="/{{ page.lang }}/includes/header.html" -->
+     <!--#include virtual="/includes/header.html" -->
     {%- endif %}
     {{ content }}
   </div>
-  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
+     <!--#include virtual="/includes/footer.html" -->
 </body>
 {%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL_RU.md' %}
 {% include openapi-tippy.html %}

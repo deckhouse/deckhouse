@@ -7,11 +7,11 @@
 <div markdown="1">
 ## Все установлено, настроено и работает!
 
-Давайте посмотрим что доступно в модуле [monitoring](/{{ page.lang }}/documentation/v1/modules/300-prometheus/):
+Давайте посмотрим что доступно в модуле [monitoring](/documentation/v1/modules/300-prometheus/):
 
 - **Grafana** доступна по адресу [grafana-127-0-0-1.nip.io](http://grafana-127-0-0-1.nip.io).
 
-  Доступ к Grafana ограничен basic-аутентификацией (больше вариантов аутентификации можно получить, включив модуль [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/):
+  Доступ к Grafana ограничен basic-аутентификацией (больше вариантов аутентификации можно получить, включив модуль [user-auth](/documentation/v1/modules/150-user-authn/):
   - Логин — `admin`;
   - Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `prometheus`, например, выполнив следующую команду:
 
@@ -47,9 +47,9 @@ Deckhouse, развернутый в кластере kind, вполне при�
 Dashboard
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/) и получите доступ к Kubernetes Dashboard по адресу [dashboard-127-0-0-1.nip.io](http://dashboard-127-0-0-1.nip.io/)
+Включите модуль [dashboard](/documentation/v1/modules/500-dashboard/) и получите доступ к Kubernetes Dashboard по адресу [dashboard-127-0-0-1.nip.io](http://dashboard-127-0-0-1.nip.io/)
 
-Для работы Dashboard необходимо включить модуль [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/).
+Для работы Dashboard необходимо включить модуль [user-authz](/documentation/v1/modules/140-user-authz/).
 </div>
 </div>
 
@@ -58,7 +58,7 @@ Dashboard
 Status page
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [upmeter](/{{ page.lang }}/documentation/v1/modules/500-upmeter/) чтобы видеть общий статус Deckhouse по адресу [status-127-0-0-1.nip.io](http://status-127-0-0-1.nip.io), а также чтобы получать данные о доступности компонентов Deckhouse по адресу [upmeter-127-0-0-1.nip.io](http://upmeter-127-0-0-1.nip.io).
+Включите модуль [upmeter](/documentation/v1/modules/500-upmeter/) чтобы видеть общий статус Deckhouse по адресу [status-127-0-0-1.nip.io](http://status-127-0-0-1.nip.io), а также чтобы получать данные о доступности компонентов Deckhouse по адресу [upmeter-127-0-0-1.nip.io](http://upmeter-127-0-0-1.nip.io).
 </div>
 </div>
 
@@ -84,7 +84,7 @@ Deckhouse делает проще настройку доступа CI/CD-сис
 Настройка CI/CD-системы
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) и [создайте](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер.
+Включите модуль [user-authz](/documentation/v1/modules/140-user-authz/) и [создайте](/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
@@ -95,7 +95,7 @@ Deckhouse делает проще настройку доступа CI/CD-сис
 Направляем трафик на приложение
 </h3>
 <div class="cards-item__text" markdown="1">
-Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/140-user-authz/).
+Ознакомьтесь с возможностями модуля [ingress-nginx](/documentation/v1/modules/140-user-authz/).
 
 Создайте `Service` и `Ingress` для вашего приложения.
 </div>
@@ -106,7 +106,7 @@ Deckhouse делает проще настройку доступа CI/CD-сис
 Мониторинг приложения
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [monitoring-custom](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) и добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
+Включите модуль [monitoring-custom](/documentation/v1/modules/340-monitoring-custom/) и добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
 Service.
 </div>
 </div>
@@ -121,7 +121,7 @@ Service.
 Внешняя аутентификация
 </h2>
 <div markdown="1">
-С помощью модуля [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) Deckhouse поддерживает [множество](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html)
+С помощью модуля [user-authn](/documentation/v1/modules/150-user-authn/) Deckhouse поддерживает [множество](/documentation/v1/modules/150-user-authn/usage.html)
 механизмов внешней аутентификации.
 </div>
 <div class="cards-blocks__cards">
@@ -131,7 +131,7 @@ Service.
 Настройка DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
-Например, для включения аутентификации через GitHub можно включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и [сконфигурировать](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) объект
+Например, для включения аутентификации через GitHub можно включить модуль [user-authn](/documentation/v1/modules/150-user-authn/) и [сконфигурировать](/documentation/v1/modules/150-user-authn/usage.html) объект
 `DexProvider`. После создания `DexProvider` при попытке доступа ко всем компонентам Deckhouse (Grafana, Dashboard и
 т.д.) потребуется аутентификация через GitHub.
 </div>
@@ -142,8 +142,8 @@ Service.
 Внешняя аутентификация для любого Ingress
 </h3>
 <div class="cards-item__text" markdown="1">
-Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и создать объект
-[DexAuthenticator](/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
+Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо включить модуль [user-authn](/documentation/v1/modules/150-user-authn/) и создать объект
+[DexAuthenticator](/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
 </div>
 </div>
 
@@ -152,7 +152,7 @@ Service.
 Внешняя аутентификация для Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/), настройте [`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
+Включите модуль [user-authn](/documentation/v1/modules/150-user-authn/), настройте [`publishAPI`](/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
 </div>
 </div>
 
@@ -164,7 +164,7 @@ Service.
 ## Что дальше?
 
 Подробная информация о системе в целом и по каждому компоненту Deckhouse Platform расположена в
-[документации](/{{ page.lang }}/documentation/v1/).
+[документации](/documentation/v1/).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/ru/community/about.html#online-community).
 </div>

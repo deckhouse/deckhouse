@@ -29,8 +29,8 @@ sections:
           ru: Bare metal
         revision: ce
         external_url:
-          en: https://deckhouse.io/en/gs/bm/step2.html
-          ru: https://deckhouse.io/ru/gs/bm/step2.html
+          en: https://deckhouse.io/gs/bm/step2.html
+          ru: https://deckhouse.ru/gs/bm/step2.html
       - description:
           en: Public cloud providers (AWS, Azure, GCP, Yandex.Cloud)
           ru: Публичные облака (AWS, Azure, GCP, Yandex.Cloud)
@@ -132,8 +132,8 @@ sections:
         revision: ee
         url: /documentation/v1/modules/350-node-local-dns/
       - description:
-          en: <a href="/en/documentation/v1/modules/002-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
-          ru: <a href="/ru/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
+          en: <a href="/documentation/v1/modules/002-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
+          ru: <a href="/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
         revision:
           ce: true
           ee: true
@@ -149,8 +149,8 @@ sections:
           ce: true
           ee: true
         external_url:
-          en: https://deckhouse.io/en/about_us.html#open-source
-          ru: https://deckhouse.io/ru/about_us.html#open-source
+          en: https://deckhouse.io/about_us.html#open-source
+          ru: https://deckhouse.ru/about_us.html#open-source
       - description:
           en: Open Source License
           ru: Лицензия Open Source

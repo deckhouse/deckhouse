@@ -14,7 +14,7 @@
 - <span class="mustChange">highlighted</span> parameters you *must* define.
 - <span class="mightChange">parameters</span> you might want to change.
 {% if page.platform_type == 'cloud' %}
-> The other available cloud provider related options are described in the [documentation](/{{ page.lang }}/documentation/v1/kubernetes.html).
+> The other available cloud provider related options are described in the [documentation](/documentation/v1/kubernetes.html).
 >{% endif %}
 {%- if page.platform_type == 'baremetal' %}
 > The installation must be performed from a **[personal computer](step2.html#installation-process)** with SSH access to the node, the **master node** of the future cluster.
@@ -22,7 +22,7 @@
 {%- if page.platform_type == 'existing' %}
 > We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 >{% endif %}
-> To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/{{ page.lang }}/documentation/v1/deckhouse-release-channels.html).
+> To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/documentation/v1/deckhouse-release-channels.html).
 
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/config.yml.{{ include.layout }}.{{ revision }}.inc" syntax="yaml" %}

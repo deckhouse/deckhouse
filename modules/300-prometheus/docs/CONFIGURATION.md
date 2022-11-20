@@ -9,7 +9,7 @@ The module is **enabled** by default and does not require any configuration – 
 
 ## Authentication
 
-[user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
 If these options are disabled, the module will use basic auth with the auto-generated password.
 
 Use kubectl to see password:

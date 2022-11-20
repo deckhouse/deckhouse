@@ -7,6 +7,9 @@ company_url:
   en: https://flant.com
   ru: https://flant.ru
 url: https://deckhouse.io
+urls:
+  ru: https://deckhouse.ru
+  en: https://deckhouse.io
 canonical_url_prefix: /documentation/v1
 site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."

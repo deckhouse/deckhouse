@@ -103,10 +103,11 @@ steps:
     run: |
       # Do not exit on html-proofer error.
       set +e
+      # TODO: Fix this
       docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 \
-        --allow-hash-href --check-html --empty-alt-ignore \
+        --allow-hash-href --check-html --empty-alt-ignore --external_only \
         --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-        --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/ru\/documentation\/latest\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
+        --url-swap "https\:\/\/deckhouse.io\/:/,https\:\/\/deckhouse.ru\/:/,\/documentation\/$:/doc/en/,\/documentation\/v1\/:/doc/en/,\/documentation\/latest\/:/doc/en/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
       # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
       exit 0
 
@@ -131,14 +132,27 @@ steps:
 # </template: doc_version_template>
 {!{- end -}!}
 
+{!{ define "doc_release_version_template" }!}
+{!{/* ci_commit_ref_name is a tagname or branch name */}!}
+# <template: doc_release_version_template>
+- name: Set documentation version
+  env:
+    CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+  run: |
+    echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
+# </template: doc_release_version_template>
+{!{- end -}!}
+
 {!{ define "deploy_doc_template" }!}
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
 
@@ -156,6 +170,7 @@ steps:
     WERF_NAMESPACE: {!{ $ns }!}
     WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
     WERF_SET_URL: "global.url={!{ $url }!}"
+    WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
 # </template: deploy_doc_template>
 {!{- end -}!}
@@ -165,11 +180,14 @@ steps:
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
+{!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
 
 # <template: deploy_site_template>
 - name: Deploy site to {!{ $env }!}
@@ -186,6 +204,8 @@ steps:
     WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
     WERF_SET_URL: "global.url={!{ $url }!}"
+    WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
+    WERF_SET_DOMAIN_MAP: "global.domain_map={!{ base64.Encode $siteDomainMap }!}"
 # </template: deploy_site_template>
 {!{- end -}!}
