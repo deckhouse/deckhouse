@@ -90,6 +90,31 @@ spec:
       value: frigate
 status: {}
 `
+		nodeGroupStandbyAbsoluteOverprovisioningRate = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: standby-absolute
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 10
+    minPerZone: 1
+    zones:
+      - zone1
+      - zone2
+    standby: 5
+    standbyHolder:
+      overprovisioningRate: 80
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: ship-class
+      value: frigate
+status: {}
+`
+
 		nodeGroupStandbyAbsoluteTooBigStandby = `
 ---
 apiVersion: deckhouse.io/v1
@@ -189,6 +214,40 @@ status:
   - status: "True"
     type: Ready
 `
+
+		nodesWithTimestamp = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  creationTimestamp: "2021-01-01T06:02:26Z"
+  name: standby-node-1
+  labels:
+    node.deckhouse.io/group: %[1]s
+status:
+  allocatable:
+    cpu: 4
+    memory: 8264994695
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  creationTimestamp: "2022-02-02T06:02:26Z"
+  name: standby-node-2
+  labels:
+    node.deckhouse.io/group: %[1]s
+status:
+  allocatable:
+    cpu: 2
+    memory: 4126652008
+  conditions:
+  - status: "True"
+    type: Ready
+`
+
 		podStandby0 = `
 ---
 apiVersion: v1
@@ -225,26 +284,7 @@ status:
   - status: "True"
     type: Ready
 `
-		nodeGroupStandbyAbsoluteNotHeldResources = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: standby-absolute
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 10
-    minPerZone: 1
-    zones:
-      - zone1
-    standby: 2
-    standbyHolder:
-      notHeldResources:
-        cpu: 600m
-        memory: 750Mi
-status: {}
-`
+
 		nodeGroupWithoutZones = `
 ---
 apiVersion: deckhouse.io/v1
@@ -283,14 +323,6 @@ status:
 	f := HookExecutionConfigInit(`
 {
 	"global": {
-        "modules": {
-            "resourcesRequests": {
-			    "everyNode": {
-				    "cpu": "300m",
-				    "memory": "512Mi"
-			    }
-		    }
-        },
 		"discovery": {
 			"kubernetesVersion": "1.16.15",
 			"kubernetesVersions": [
@@ -373,7 +405,7 @@ status:
 
 		It("Hook must not fail; standby NG should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"10m","reserveMemory": "10Mi","taints":[{"key":"ship-class","value":"frigate","effect":"NoExecute"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"2","reserveMemory": "4295Mi","taints":[{"key":"ship-class","value":"frigate","effect":"NoExecute"}]}`))
 		})
 	})
 
@@ -387,7 +419,7 @@ status:
 
 		It("Hook must not fail; standby NG should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-absolute", "standby": 5, "reserveCPU": "3700m","reserveMemory": "1455Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-absolute", "standby": 5, "reserveCPU": "3","reserveMemory": "2064Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
 		})
 	})
 
@@ -401,7 +433,7 @@ status:
 
 		It("Hook must not fail; standby NG should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-absolute", "standby": 18, "reserveCPU": "3700m","reserveMemory": "1455Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-absolute", "standby": 18, "reserveCPU": "3","reserveMemory": "2064Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
 		})
 	})
 
@@ -414,7 +446,7 @@ status:
 
 		It("Hook must not fail; standby NG should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-percent", "standby": 12, "reserveCPU": "5700m","reserveMemory": "3423Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name": "standby-percent", "standby": 12, "reserveCPU": "3","reserveMemory": "2064Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
 		})
 	})
 
@@ -428,8 +460,8 @@ status:
 
 		It("Hook must not fail; standby NGs should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"5700m","reserveMemory": "3423Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.1").String()).To(MatchJSON(`{"name":"standby-percent","standby":12,"reserveCPU":"3700m","reserveMemory": "1455Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"3","reserveMemory": "2064Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.1").String()).To(MatchJSON(`{"name":"standby-percent","standby":12,"reserveCPU":"2","reserveMemory": "1032Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
 		})
 	})
 
@@ -445,17 +477,17 @@ status:
 
 		It("Hook must not fail; standby NGs should be discovered; status standby should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"5700m","reserveMemory": "3423Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.1").String()).To(MatchJSON(`{"name":"standby-percent","standby":12,"reserveCPU":"3700m","reserveMemory": "1455Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"3","reserveMemory": "2064Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.1").String()).To(MatchJSON(`{"name":"standby-percent","standby":12,"reserveCPU":"2","reserveMemory": "1032Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-absolute").Field("status").String()).To(MatchJSON(`{"standby":2}`))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-percent").Field("status").String()).To(MatchJSON(`{"standby":0}`))
 		})
 	})
 
-	Context("Cluster with standby NGs defined by absolute value, having not held resources parameter and nodes and pod", func() {
+	Context("Cluster with standby NGs defined by absolute value", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStandbyAbsoluteNotHeldResources +
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStandbyAbsolute +
 				fmt.Sprintf(nodeStandby6Cpu, "standby-absolute") +
 				fmt.Sprintf(podStandby0, "standby-absolute")))
 			f.RunHook()
@@ -463,7 +495,39 @@ status:
 
 		It("Hook must not fail; standby NGs should be discovered; status standby should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":2,"reserveCPU":"5100m","reserveMemory": "2673Mi","taints":[]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"3","reserveMemory": "2064Mi","taints": [{"key": "ship-class","value": "frigate","effect": "NoExecute"}]}`))
+
+			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-absolute").Field("status").String()).To(MatchJSON(`{"standby":1}`))
+		})
+	})
+
+	Context("Cluster with standby NGs defined by absolute value, having overprovisioning rate and nodes and pod", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStandbyAbsoluteOverprovisioningRate +
+				fmt.Sprintf(nodeStandby6Cpu, "standby-absolute") +
+				fmt.Sprintf(podStandby0, "standby-absolute")))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; standby NGs should be discovered; status standby should be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"4800m","reserveMemory": "3302Mi","taints": [{"key": "ship-class","value": "frigate","effect": "NoExecute"}]}`))
+
+			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-absolute").Field("status").String()).To(MatchJSON(`{"standby":1}`))
+		})
+	})
+
+	Context("Cluster with standby NGs and two different nodes, simulates instance class recreation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStandbyAbsolute +
+				fmt.Sprintf(nodesWithTimestamp, "standby-absolute") +
+				fmt.Sprintf(podStandby0, "standby-absolute")))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; overprovisioning resources should be discovered from the latest node", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"1","reserveMemory": "2064Mi","taints": [{"key": "ship-class","value": "frigate","effect": "NoExecute"}]}`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-absolute").Field("status").String()).To(MatchJSON(`{"standby":1}`))
 		})
@@ -482,7 +546,7 @@ status:
 
 		It("Hook must not fail; standby NGs should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"worker","standby":3,"reserveCPU":"3700m","reserveMemory": "1455Mi","taints":[]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"worker","standby":3,"reserveCPU":"2","reserveMemory": "1032Mi","taints":[]}`))
 		})
 	})
 

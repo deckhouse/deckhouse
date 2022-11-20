@@ -35,13 +35,13 @@ import (
 )
 
 type StandbyNodeGroupInfo struct {
-	Name                    string
-	NeedStandby             bool
-	MaxPerZone              int
-	ZonesCount              int
-	Standby                 *intstr.IntOrString
-	StandbyNotHeldResources ngv1.Resources
-	Taints                  []v1.Taint
+	Name                 string
+	NeedStandby          bool
+	MaxPerZone           int
+	ZonesCount           int
+	Standby              *intstr.IntOrString
+	OverprovisioningRate int64
+	Taints               []v1.Taint
 }
 
 func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -63,6 +63,8 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	needStandby := false
 	maxPerZone := 0
+	overprovisioningRate := int64(50) // default: 50%
+
 	if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
 		// No nil-checking for MaxPerZone and MinPerZone pointers as these fields are mandatory for CloudEphemeral NGs.
 		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
@@ -73,16 +75,20 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 				}
 			}
 		}
+
+		if nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate != nil {
+			overprovisioningRate = *nodeGroup.Spec.CloudInstances.StandbyHolder.OverprovisioningRate
+		}
 	}
 
 	return StandbyNodeGroupInfo{
-		Name:                    nodeGroup.GetName(),
-		NeedStandby:             needStandby,
-		MaxPerZone:              maxPerZone,
-		ZonesCount:              zonesCount,
-		Standby:                 nodeGroup.Spec.CloudInstances.Standby,
-		StandbyNotHeldResources: nodeGroup.Spec.CloudInstances.StandbyHolder.NotHeldResources,
-		Taints:                  taints,
+		Name:                 nodeGroup.GetName(),
+		NeedStandby:          needStandby,
+		MaxPerZone:           maxPerZone,
+		ZonesCount:           zonesCount,
+		Standby:              nodeGroup.Spec.CloudInstances.Standby,
+		OverprovisioningRate: overprovisioningRate,
+		Taints:               taints,
 	}, nil
 }
 
@@ -92,6 +98,7 @@ type StandbyNodeInfo struct {
 	AllocatableMemory *resource.Quantity
 	IsReady           bool
 	IsUnschedulable   bool
+	CreationTimestamp metav1.Time
 }
 
 func standbyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -116,6 +123,7 @@ func standbyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		AllocatableMemory: node.Status.Allocatable.Memory(),
 		IsReady:           isReady,
 		IsUnschedulable:   node.Spec.Unschedulable,
+		CreationTimestamp: node.CreationTimestamp,
 	}, nil
 }
 
@@ -214,8 +222,12 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
 
 		readyNodesCount := 0
-		allocatableCPUList := make([]*resource.Quantity, 0)
-		allocatableMemoryList := make([]*resource.Quantity, 0)
+		var (
+			latestNodeTimestamp   *metav1.Time
+			nodeAllocatableCPU    = resource.MustParse("4000m")
+			nodeAllocatableMemory = resource.MustParse("8Gi")
+		)
+
 		for _, node := range input.Snapshots["nodes"] {
 			standbyNode := node.(StandbyNodeInfo)
 			if standbyNode.Group != ng.Name {
@@ -224,11 +236,17 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			if standbyNode.IsReady && !standbyNode.IsUnschedulable {
 				readyNodesCount++
 			}
+
+			// get resources from the latest created node. handle case when nodes are reordered with a new instance class
+			if latestNodeTimestamp != nil && !latestNodeTimestamp.Before(&standbyNode.CreationTimestamp) {
+				continue
+			}
+
 			if standbyNode.AllocatableCPU != nil {
-				allocatableCPUList = append(allocatableCPUList, standbyNode.AllocatableCPU)
+				nodeAllocatableCPU = *standbyNode.AllocatableCPU
 			}
 			if standbyNode.AllocatableMemory != nil {
-				allocatableMemoryList = append(allocatableMemoryList, standbyNode.AllocatableMemory)
+				nodeAllocatableMemory = *standbyNode.AllocatableMemory
 			}
 		}
 
@@ -253,23 +271,15 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			desiredStandby = 1
 		}
 
-		// Calculate CPU amount.
-		standbyRequestCPU, err := calculateStandbyRequestCPU(input, allocatableCPUList, ng)
-		if err != nil {
-			return err
-		}
-
-		// Calculate Mem amount.
-		standbyRequestMemory, err := calculateStandbyRequestMemory(input, allocatableMemoryList, ng)
-		if err != nil {
-			return err
-		}
+		// calculate standby request as percent of the node
+		standbyRequestCPU := resource.NewScaledQuantity(nodeAllocatableCPU.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
+		standbyRequestMemory := resource.NewScaledQuantity(nodeAllocatableMemory.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
 			Name:          ng.Name,
 			Standby:       desiredStandby,
-			ReserveCPU:    standbyRequestCPU,
-			ReserveMemory: standbyRequestMemory,
+			ReserveCPU:    standbyRequestCPU.String(),
+			ReserveMemory: fmt.Sprintf("%dMi", standbyRequestMemory.ScaledValue(resource.Mega)),
 			Taints:        ng.Taints,
 		})
 	}
@@ -297,79 +307,4 @@ func intOrPercent(val *intstr.IntOrString, max int) int {
 	}
 
 	return val.IntValue()
-}
-
-func calculateStandbyRequestCPU(input *go_hook.HookInput, allocatableAmounts []*resource.Quantity, ng StandbyNodeGroupInfo) (string, error) {
-	// minAllocatableForNow is a zero or the least quantity from allocatableList.
-	minAllocatableForNow := resource.NewQuantity(0, resource.DecimalSI)
-	if len(allocatableAmounts) > 0 {
-		allocatableAmounts[0].DeepCopyInto(minAllocatableForNow)
-	}
-	for _, amount := range allocatableAmounts {
-		if amount.Cmp(*minAllocatableForNow) < 0 {
-			amount.DeepCopyInto(minAllocatableForNow)
-		}
-	}
-
-	// Get reserved CPU for system components on every node from global values.
-	reservedOnEveryNode, _ := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.cpu")
-
-	// Get reserved CPU for system components on standby node from NodeGroup.
-	reservedOnStandbyNode, err := resource.ParseQuantity(ng.StandbyNotHeldResources.CPU.String())
-	if err != nil {
-		return "", fmt.Errorf("nodegroup/%s: standbyNotHeldResoures.CPU '%s' is a malformed quantity: %v", ng.Name, ng.StandbyNotHeldResources.CPU.String(), err)
-	}
-
-	// Calculate milliCPUs available for Standby Pod.
-	availableMillis := minAllocatableForNow.MilliValue() - reservedOnEveryNode.MilliValue() - reservedOnStandbyNode.MilliValue()
-
-	// Request at least "cpu: 10m".
-	if availableMillis < 10 {
-		availableMillis = 10
-	}
-	return fmt.Sprintf("%dm", availableMillis), nil
-}
-
-func calculateStandbyRequestMemory(input *go_hook.HookInput, allocatableAmounts []*resource.Quantity, ng StandbyNodeGroupInfo) (string, error) {
-	// minAllocatableForNow is a zero or the least quantity from allocatableList.
-	minAllocatableForNow := resource.NewQuantity(0, resource.DecimalSI)
-	if len(allocatableAmounts) > 0 {
-		allocatableAmounts[0].DeepCopyInto(minAllocatableForNow)
-	}
-	for _, amount := range allocatableAmounts {
-		if amount.Cmp(*minAllocatableForNow) < 0 {
-			amount.DeepCopyInto(minAllocatableForNow)
-		}
-	}
-
-	// Get reserved Memory for system components on every node from global values.
-	reservedOnEveryNode, _ := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.memory")
-
-	// Get reserved Memory for system components on standby node from NodeGroup.
-	reservedOnStandbyNode, err := resource.ParseQuantity(ng.StandbyNotHeldResources.Memory.String())
-	if err != nil {
-		return "", fmt.Errorf("nodegroup/%s: standbyNotHeldResoures.Memory '%s' is a malformed quantity: %v", ng.Name, ng.StandbyNotHeldResources.Memory.String(), err)
-	}
-
-	// Calculate memory bytes available for Standby Pod and convert to Mi.
-	availableBytes := minAllocatableForNow.Value() - reservedOnEveryNode.Value() - reservedOnStandbyNode.Value()
-	availableMi := availableBytes / 1024 / 1024
-	// Request at least "memory: 10Mi".
-	if availableMi < 10 {
-		availableMi = 10
-	}
-	return fmt.Sprintf("%dMi", availableMi), nil
-}
-
-func getQuantityFromValue(input *go_hook.HookInput, valuePath string) (*resource.Quantity, error) {
-	value, ok := input.Values.GetOk(valuePath)
-	if !ok {
-		return nil, fmt.Errorf("value '%s' is required", valuePath)
-	}
-	str := value.String()
-	q, err := resource.ParseQuantity(str)
-	if err != nil {
-		return nil, fmt.Errorf("value '%s' '%s' is a malformed quantity: %v", valuePath, str, err)
-	}
-	return &q, nil
 }
