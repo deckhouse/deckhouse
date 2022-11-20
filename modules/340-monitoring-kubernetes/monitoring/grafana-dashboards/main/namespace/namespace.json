@@ -434,6 +434,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -458,6 +472,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -708,7 +736,7 @@
           "refId": "M"
         },
         {
-          "expr": "sum by (controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n    -\n    (\n      sum by (pod) (\n        sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n        *  \n        sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n      )\n    )\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
+          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -716,7 +744,7 @@
           "refId": "N"
         },
         {
-          "expr": "sum by (controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n    -\n    (\n      sum by (pod) (\n        sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n        *  \n        sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n      )\n    )\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
+          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -2865,14 +2893,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n    -\n    (\n      sum by (pod) (\n        sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n        *  \n        sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n      )\n    )\n  )\n)",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (controller) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n    * on (pod) group_left() \n    (\n      sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n      -\n      (\n        sum by (pod) (\n          sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n          *  \n          sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n        )\n      )\n    )\n  )\n)",
+          "expr": "# Total is a sum of data rates of all Pods in selected containers.\nsum (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  # Select Pods with hostNetwork: false.\n  kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n  * on(pod)\n  # Sum data rate for all interfaces in the Pod. \n  sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -2883,7 +2911,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Recieve",
+      "title": "Receive",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2974,14 +3002,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n    -\n    (\n      sum by (pod) (\n        sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n        *  \n        sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n      )\n    )\n  )\n)",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (controller) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n    * on (pod) group_left() \n    (\n      sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n      -\n      (\n        sum by (pod) (\n          sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n          *  \n          sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n        )\n      )\n    )\n  )\n)",
+          "expr": "# Total is a sum of data rates of all Pods in selected containers.\nsum (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  # Select Pods with hostNetwork: false.\n  kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n  * on(pod)\n  # Sum data rate for all interfaces in the Pod. \n  sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx4]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
