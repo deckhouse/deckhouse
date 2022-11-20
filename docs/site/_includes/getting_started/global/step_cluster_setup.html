@@ -145,7 +145,7 @@
 
     <div class="form__row">
       <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
-        List of IP addresses and domain names for which the proxy server is not used, comma-separated. For wildcard, you can use domain with dot in the beginning, like ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
+        A comma-separated list of IP addresses and domain names for which a proxy server is not used. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
       </label>
       <input
         class="textfield"
@@ -153,7 +153,7 @@
         name="modulesNoProxyAddressList" placeholder=""
         autocomplete="off" />
       <span class="info">
-         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard, you can use domain with dot in the beginning, like ".example.com". Leave it blank if there are no such exceptions.
+         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". Leave it blank if there are no such exceptions.
       </span>
     </div>
 </div>
