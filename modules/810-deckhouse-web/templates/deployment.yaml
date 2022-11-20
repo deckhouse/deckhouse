@@ -44,7 +44,7 @@ spec:
   {{- end }}
         volumeMounts:
           - name: config
-            mountPath: /usr/share/nginx/html/config
+            mountPath: /app/config
           - name: tmp
             mountPath: /tmp
       volumes:
