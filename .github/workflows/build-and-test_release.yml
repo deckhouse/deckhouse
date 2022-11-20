@@ -2085,10 +2085,11 @@ jobs:
         run: |
           # Do not exit on html-proofer error.
           set +e
+          # TODO: Fix this
           docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 \
-            --allow-hash-href --check-html --empty-alt-ignore \
+            --allow-hash-href --check-html --empty-alt-ignore --external_only \
             --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/ru\/documentation\/latest\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
+            --url-swap "https\:\/\/deckhouse.io\/:/,https\:\/\/deckhouse.ru\/:/,\/documentation\/$:/doc/en/,\/documentation\/v1\/:/doc/en/,\/documentation\/latest\/:/doc/en/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
           exit 0
 
@@ -2325,6 +2326,7 @@ jobs:
           WERF_NAMESPACE: deckhouse-web-production
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
       # </template: deploy_doc_template>
       # <template: deploy_site_template>
@@ -2342,7 +2344,9 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
           WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2375,132 +2379,6 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
-
-
-  deploy_tagged_doc:
-    name: Deploy tagged documentation
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_tag != '' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_flant_registry_step>
-      - name: Check flant registry credentials
-        id: check_flant_registry
-        env:
-          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "::set-output name=has_flant_credentials::true"
-            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
-          else
-            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
-          fi
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-
-      # <template: doc_version_template>
-      - name: Set documentation version
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-        run: |
-          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
-      # </template: doc_version_template>
-      # <template: deploy_doc_template>
-      - name: Deploy documentation to stage
-        uses: werf/actions/converge@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-stage
-        env:
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-          WERF_DIR: "docs/documentation"
-          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
-          WERF_NAMESPACE: deckhouse-web-stage
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
-          WERF_SET_WEB_ENV: "web.env=web-stage"
-      # </template: deploy_doc_template>
-      # <template: deploy_doc_template>
-      - name: Deploy documentation to production
-        uses: werf/actions/converge@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
-          env: web-production
-        env:
-          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-          WERF_DIR: "docs/documentation"
-          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
-          WERF_NAMESPACE: deckhouse-web-production
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.io"
-          WERF_SET_WEB_ENV: "web.env=web-production"
-      # </template: deploy_doc_template>
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,one-line';
-            const name = 'Deploy tagged documentation';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-
   last_comment:
     name: Update comment on finish
     needs:
@@ -2514,7 +2392,6 @@ jobs:
       - doc_web_build
       - main_web_build
       - deploy_latest_web
-      - deploy_tagged_doc
       - tests
       - matrix_tests
       - dhctl_tests
@@ -2526,7 +2403,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","deploy_latest_web":"Deploy latest doc and site","deploy_tagged_doc":"Deploy tagged documentation","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
+        {"build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","deploy_latest_web":"Deploy latest doc and site","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
     steps:
 
       # <template: checkout_step>

@@ -1417,10 +1417,11 @@ jobs:
         run: |
           # Do not exit on html-proofer error.
           set +e
+          # TODO: Fix this
           docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 \
-            --allow-hash-href --check-html --empty-alt-ignore \
+            --allow-hash-href --check-html --empty-alt-ignore --external_only \
             --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/ru\/documentation\/latest\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
+            --url-swap "https\:\/\/deckhouse.io\/:/,https\:\/\/deckhouse.ru\/:/,\/documentation\/$:/doc/en/,\/documentation\/v1\/:/doc/en/,\/documentation\/latest\/:/doc/en/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
           exit 0
 
