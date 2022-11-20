@@ -43,17 +43,10 @@ fi
 # On node bootstrap always install desired kernel
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   allowed_versions_pattern=""
-fi
-
 # Check force desired kernel install annotation
-if bb-node-has-force-install-desired-kernel-annotation?; then
+elif bb-node-has-force-install-desired-kernel-annotation?; then
   bb-flag-set remove-annotation
   allowed_versions_pattern=""
-fi
-
-if [[ -z $desired_version ]]; then
-  bb-log-error "Desired version must be set"
-  exit 1
 fi
 
 should_install_kernel=true
