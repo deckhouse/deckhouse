@@ -14,13 +14,15 @@ services:
       VROUTER_LOG_LEVEL: "debug"
       VROUTER_PATH_STATIC: "/app/root"
       VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
-      VROUTER_I18N_TYPE: "location"
+      VROUTER_I18N_TYPE: "separate-domain"
+      VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
     networks:
       - deckhouse
     volumes:
       - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
   front:
-    image: nginx:latest
+    image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
+    #image: nginx:latest
     volumes:
       - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
     ports:

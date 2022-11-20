@@ -15,15 +15,15 @@
   <div class="button-group">
   <!--  delete this -->
   {%- if step == 0 and ee_only != true %}
-    <a class="button button_default" href="/{{ page.lang }}/gs/">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
-    <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}-ce.html">Community Edition</a>
-    <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}-ee.html">Enterprise Edition</a>
+    <a class="button button_default" href="/gs/">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+    <a class="button button_alt" href="/gs/{{ page.platform_code }}/step{{ next_step }}-ce.html">Community Edition</a>
+    <a class="button button_alt" href="/gs/{{ page.platform_code }}/step{{ next_step }}-ee.html">Enterprise Edition</a>
   {%- else %}
   <!-- -  -->
     {% unless step == 1 %}
-        <a class="button button_default" href="/{{ page.lang }}/gs/{% if step >2 %}{{ page.platform_code }}/step{{ prev_step }}.html{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+        <a class="button button_default" href="/gs/{% if step >2 %}{{ page.platform_code }}/step{{ prev_step }}.html{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
         {%- if include.nextStepCaption %}
-          <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}.html">{{ site.data['getting_started']['buttonCaption']['next'][page.lang] }}{{ site.data['getting_started']['buttonCaption'][include.nextStepCaption][page.lang] }}</a>
+          <a class="button button_alt" href="/gs/{{ page.platform_code }}/step{{ next_step }}.html">{{ site.data['getting_started']['buttonCaption']['next'][page.lang] }}{{ site.data['getting_started']['buttonCaption'][include.nextStepCaption][page.lang] }}</a>
         {%- endif %}
     {% endunless %}
   {%- endif %}

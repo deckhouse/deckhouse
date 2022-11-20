@@ -200,24 +200,6 @@ jobs:
 {!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web) | strings.Indent 6 }!}
 
-{!{/* Autodeploy documentation to production and stage envs on a new tag */}!}
-{!{ $jobNames = coll.Merge $jobNames (dict "deploy_tagged_doc" "Deploy tagged documentation") }!}
-  deploy_tagged_doc:
-    name: {!{ $jobNames.deploy_tagged_doc }!}
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_tag != '' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_tagged_doc) | strings.Indent 6 }!}
-
   last_comment:
     name: Update comment on finish
     needs:
@@ -231,7 +213,6 @@ jobs:
       - doc_web_build
       - main_web_build
       - deploy_latest_web
-      - deploy_tagged_doc
       - tests
       - matrix_tests
       - dhctl_tests

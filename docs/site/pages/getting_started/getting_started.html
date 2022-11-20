@@ -8,7 +8,7 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 
-<p>Probably, you have already familiarized yourself with the main <a href="/{{ page.lang }}/#features">Deckhouse
+<p>Probably, you have already familiarized yourself with the main <a href="/#features">Deckhouse
     Platform features</a>. This getting started guide walks you through the step-by-step process of installing the
   platform.</p>
 
@@ -30,13 +30,13 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
+          href="/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
       </div>
       <p>
         <small>
-          The complete list of supported cloud providers and their specific settings is available in the <a href="/{{ page.lang }}/documentation/v1/kubernetes.html" title="Supported cloud providers and their specific settings">Cloud&nbsp;providers</a> section of the documentation.
+          The complete list of supported cloud providers and their specific settings is available in the <a href="/documentation/v1/kubernetes.html" title="Supported cloud providers and their specific settings">Cloud&nbsp;providers</a> section of the documentation.
         </small>
       </p>
     </div>
@@ -50,7 +50,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
+          href="/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
       </div>

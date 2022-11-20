@@ -12,14 +12,11 @@ ansible:
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
-  to: /usr/share/nginx/html
+  to: /app
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
-mount:
-  - from: build_dir
-    to: /usr/local/bundle
 ansible:
   install:
     - shell: |
@@ -39,7 +36,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "{{ .Env }} version. Merging modules of different releases"
+    - name: "{{ .Env }} version. Merging modules of different releases..."
       shell: |
         cp -rf /src/ee/modules /src >& /dev/null
         cp -rf /src/fe/modules /src >& /dev/null
@@ -56,7 +53,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Add permalinks"
+    - name: "Adding permalinks..."
       shell: |
         for i in $(find . -regex '.*.md' -print); do
           grep -q "^---" $i
@@ -72,7 +69,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate configuration schemas"
+    - name: "Generating configuration schemas..."
       shell: |
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh
@@ -81,7 +78,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
-    - name: "Generate cluster configuration schemas"
+    - name: "Generating cluster configuration schemas..."
       shell: |
         export MODULES_DIR=modules_en
         bash ./generate_cluster_configuration.sh
@@ -90,7 +87,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
-    - name: "Generate CR schemas"
+    - name: "Generating CR schemas..."
       shell: |
         export MODULES_DIR=modules_en
         bash ./modules_generate_cr.sh
@@ -99,34 +96,34 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
-    - name: "Prepare OSS licence info"
+    - name: "Preparing OSS licence info..."
       shell: |
         export MODULES_DIR=/src/modules
         bash ./modules_generate_ossinfo.sh
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate sidebars"
+    - name: "Generating sidebars..."
       shell: |
         export MODULES_DIR=modules_ru
         /bin/bash ./modules_make_data > _data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> _data/sidebars/modules.yml2  && mv -f _data/sidebars/modules.yml2 _data/sidebars/modules.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Extract the default Kubernetes version"
+    - name: "Extracting the default Kubernetes version..."
       shell: |
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Make the supported OS & K8S version array"
+    - name: "Filling in the array of supported OS & K8S versions..."
       shell: |
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
       args:
         warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/_data/
-    - name: "Convert public documentation links to internal relative"
+    - name: "Converting public documentation links to internal relative..."
       shell: |
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
           xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
@@ -150,7 +147,7 @@ ansible:
         echo -e "\nd8Revision: {{ .Env }}" >> /tmp/_config_additional.yml
       args:
         executable: /bin/bash
-    - name: "Generate documentation static"
+    - name: "Generating static files of the documentation part..."
       shell: |
         mkdir -m 777 -p /app/_site/
         JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
@@ -158,7 +155,7 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
         warn: false
-    - name: "Generate main static"
+    - name: "Generating static file's of the main part..."
       shell: |
         JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
       args:
@@ -184,6 +181,7 @@ git:
   excludePaths:
     - '**/werf*.yaml'
     - '**/docker-compose.yml'
+    - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
     - documentation/pages/internal
