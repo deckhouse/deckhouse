@@ -149,7 +149,7 @@ EOF
 
 function __main__() {
   group="group_node_metrics"
-  jq -c --arg group "$group" '.group = $group' <<<'{"action":"expire"}' >>$METRICS_PATH
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
   generate_node_count_metric "nodes"      "$group" "flant_pricing_count_nodes_by_type"             # DEPRECATED all nodes except CP nodes with expected taints
   generate_node_count_metric "nodes_all"  "$group" "flant_pricing_node_count"                      # all nodes
@@ -174,7 +174,7 @@ function generate_node_count_metric() {
 
   for node_index in $(context::jq --arg snapshot_name "${snapshot_name}" '.snapshots[$snapshot_name] | to_entries[] | select(.value.filterResult.nodeGroup != null) | .key '); do
     node_data="$(context::get snapshots.${snapshot_name}.${node_index}.filterResult)"
-    node_group="$( .   jq -r '.nodeGroup'       <<< "$node_data" )"
+    node_group="$(     jq -r '.nodeGroup'       <<< "$node_data" )"
     type_from_node="$( jq -r '.pricingNodeType' <<< "$node_data" )"
     virtualization="$( jq -r '.virtualization'  <<< "$node_data" )"
 
