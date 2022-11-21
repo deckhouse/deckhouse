@@ -290,8 +290,3 @@ func episodes(ref *check.ProbeRef, slots []time.Time) []*check.Episode {
 	}
 	return eps
 }
-
-func episode(ref *check.ProbeRef, slotUnix int64) *check.Episode {
-	ep := check.NewEpisode(*ref, time.Unix(slotUnix, 0), 30*time.Second, check.Stats{})
-	return &ep
-}

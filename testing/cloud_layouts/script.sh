@@ -539,35 +539,77 @@ function pause-the-test() {
 
 trap pause-the-test EXIT
 
-for ((i=0; i<10; i++)); do
-  smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
-  >&2 echo "Attempt to get Endpoints for smoke-mini #$i failed. Sleeping 30 seconds..."
-  sleep 30
-done
-
-if [[ -z "$smoke_mini_addr" ]]; then
-  >&2 echo "Couldn't get smoke-mini's address from Endpoints in 5 minutes."
-  exit 1
-fi
-
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 else
   ingress=""
 fi
 
-for ((i=0; i<15; i++)); do
-  for path in api disk dns prometheus; do
-    # if any path unaccessible, curl returns error exit code, and script fails, so we use || true to avoid script fail.
-    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")" || true
-    printf -v "$path" "%s" "$result"
-  done
+availability=""
+attempts=50
+# With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
+for i in $(seq $attempts); do
+  # Sleeping at the start for readability. First iterations do not succeed anyway.
+  sleep 30
 
-  cat <<EOF
-Kubernetes API check: $([ "$api" == "ok" ] && echo "success" || echo "failure")
-Disk check: $([ "$disk" == "ok" ] && echo "success" || echo "failure")
-DNS check: $([ "$dns" == "ok" ] && echo "success" || echo "failure")
-Prometheus check: $([ "$prometheus" == "ok" ] && echo "success" || echo "failure")
+  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
+    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
+
+      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
+      # param.
+      #
+      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
+      # -e flag does not work as expected. See
+      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
+      #
+      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
+        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
+        avail_report="$(jq -re '
+          [
+            .rows[]
+            | [
+                .group as $group
+                | .probes[]
+                | {
+                  probe: ($group + "/" + .probe),
+                  status: (if .availability > 0.99   then "up"   else "pending"   end),
+                  availability: .availability
+                }
+              ]
+          ]
+          | flatten
+          ' <<<"$avail_json")"
+
+        # Printing the table of probe statuses
+        echo '*'
+        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
+        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
+        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
+        echo '========================================================================='
+
+        # Overall availability status. We check that all probes are in place because at some point
+        # in the start the list can be empty.
+        availability="$(jq -r '
+          if (
+            (. | length > 0) and
+            ([ .[] | select(.status != "up") ] | length == 0)
+          )
+          then "ok"
+          else ""
+          end '<<<"$avail_report")"
+
+      else
+        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
+      fi
+    else
+      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
+    fi
+  else
+    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
+  fi
+
+    cat <<EOF
+Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
 EOF
 
   if [[ -n "$ingress_inlet" ]]; then
@@ -578,16 +620,16 @@ EOF
             if [[ "$ingress_lb_code" == "404" ]]; then
               ingress="ok"
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb."
+            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt #${i} of ${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
+          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt #${i} of ${attempts})."
         fi
       else
-        >&2 echo "Can't get svc/nginx-load-balancer."
+        >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
       fi
     else
       >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
@@ -599,11 +641,9 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$api:$disk:$dns:$prometheus:$ingress" == "ok:ok:ok:ok:ok" ]]; then
+  if [[ "$availability:$ingress" == "ok:ok" ]]; then
     exit 0
   fi
-
-  sleep 30
 done
 
 >&2 echo 'Timeout waiting for checks to succeed'

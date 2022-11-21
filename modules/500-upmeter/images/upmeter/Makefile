@@ -1,8 +1,10 @@
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION=1.46.2
+GOLANGCI_LINT_VERSION=1.50.1
 # https://github.com/mvdan/gofumpt
-GOFUMPT_VERSION=0.3.1
-GOARCH=amd64
+GOFUMPT_VERSION=0.4.0
+
+ARCH_NAME := $(shell uname -m)
+OS_NAME := $(shell uname)
 UNAME=$(shell uname -s)
 
 GOFUMPT_BIN=/tmp/gofumpt-$(GOFUMPT_VERSION)
@@ -23,8 +25,8 @@ all: deps fmt build test
 
 deps:
 	go mod tidy
-	@test -f $(GOFUMPT_BIN)      || curl -sLo $(GOFUMPT_BIN) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
-	@test -f $(GOLANGCILINT_BIN) || curl -sfL https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(GOARCH).tar.gz | tar -xzOf - golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(GOARCH)/golangci-lint > $(GOLANGCILINT_BIN)
+	@test -f $(GOFUMPT_BIN)      || curl -sLo $(GOFUMPT_BIN) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(ARCH_NAME)
+	@test -f $(GOLANGCILINT_BIN) || curl -sfL https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(ARCH_NAME).tar.gz | tar -xzOf - golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(ARCH_NAME)/golangci-lint > $(GOLANGCILINT_BIN)
 	@chmod +x $(GOLANGCILINT_BIN) $(GOFUMPT_BIN)
 
 lint:
@@ -34,7 +36,6 @@ fmt:
 	@# - gofumpt is not included in the .golangci.yaml because it conflicts with imports https://github.com/golangci/golangci-lint/issues/1490#issuecomment-778782810
 	@# - goimports is not turned on since it is used mostly by gofumpt internally
 	$(GOFUMPT_BIN) -l -w -extra .
-	gci -w -local d8.io/upmeter .
 	goimports -w -local d8.io/upmeter .
 	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
 
@@ -49,7 +50,7 @@ ci: deps lint
         || exit 1
 
 build:
-	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/upmeter ./cmd/upmeter/
+	GOOS="$(OS)" GOARCH="$(ARCH_NAME)" go build -ldflags="-s -w" -o /tmp/upmeter ./cmd/upmeter/
 
 build-docker:
 	docker build \

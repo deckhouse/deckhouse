@@ -25,6 +25,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/server/entity"
 	"d8.io/upmeter/pkg/server/ranges"
@@ -60,7 +61,14 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// force default filtering
+	// Adjust range to 5m slots.
+	rng := ranges.New5MinStepRange(filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step)
+	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
+		filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step,
+		rng.From, rng.To, rng.Step)
+	filter.stepRange = rng
+
+	// Force default filtering.
 	if len(filter.muteDowntimeTypes) == 0 {
 		filter.muteDowntimeTypes = []string{
 			"Maintenance",
@@ -69,7 +77,11 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
+	// Query the DB
+	daoCtx := h.DbCtx.Start()
+	defer daoCtx.Stop()
+
+	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
@@ -120,29 +132,22 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 	return parsed, nil
 }
 
-func getStatus(dbctx *dbcontext.DbContext, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
-	// Adjust range to step slots.
-	rng := ranges.NewStepRange(filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step)
-	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
-		filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step,
-		rng.From, rng.To, rng.Step)
-
-	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, rng)
+func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
+	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := entity.Statuses(dbctx, filter.probeRef, rng, incidents)
+	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &StatusResponse{
-		Statuses: statuses,
-		Step:     rng.Step,
-		From:     rng.From,
-		To:       rng.To,
-		// Episodes:  episodes, // To much data, only for debug.
+		Statuses:  statuses,
+		Step:      filter.stepRange.Step,
+		From:      filter.stepRange.From,
+		To:        filter.stepRange.To,
 		Incidents: incidents,
 	}
 

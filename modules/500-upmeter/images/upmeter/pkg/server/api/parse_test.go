@@ -28,7 +28,7 @@ func Test_parseStepRange(t *testing.T) {
 	g := NewWithT(t)
 
 	cases := []struct {
-		args [3]string
+		args [3]string // from, to, step
 		want ranges.StepRange
 	}{
 		{
@@ -40,6 +40,11 @@ func Test_parseStepRange(t *testing.T) {
 			// duration notation in step
 			args: [...]string{"1617061615", "1617083215", "30m"},
 			want: ranges.StepRange{From: 1617061615, To: 1617083215, Step: 1800},
+		},
+		{
+			// seconds notation for small step
+			args: [...]string{"1617061600", "1617083230", "30"},
+			want: ranges.StepRange{From: 1617061600, To: 1617083230, Step: 30},
 		},
 	}
 

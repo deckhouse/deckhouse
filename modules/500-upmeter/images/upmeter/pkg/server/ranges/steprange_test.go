@@ -98,12 +98,24 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 				{From: 1603670400, To: 1603756800},
 				{From: 1603756800, To: 1603843200},
 			},
+		}, {
+			name: "30s aligned range is foced to 5m",
+			args: args{from: 1603784700, to: 1603784730, step: 30},
+			want: []Range{
+				{From: 1603784700, To: 1603785000},
+			},
+		}, {
+			name: "30s not aligned range is foced to 5m",
+			args: args{from: 1603784693, to: 1603784732, step: 30},
+			want: []Range{
+				{From: 1603784700, To: 1603785000},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewStepRange(tt.args.from, tt.args.to, tt.args.step).Subranges
+			got := New5MinStepRange(tt.args.from, tt.args.to, tt.args.step).Subranges
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateAdjustedStepRanges() = %v, want %v", got, tt.want)
@@ -137,7 +149,7 @@ func TestAlignStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := alignStep(tt.arg); got != tt.want {
+			if got := alignStep(tt.arg, 300); got != tt.want {
 				t.Errorf("alignStep() = %v, want %v", got, tt.want)
 			}
 		})
@@ -209,7 +221,7 @@ func TestAlignEdge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := alignEdge(tt.args.to, tt.args.step); got != tt.want {
+			if got := alignEdgeForward(tt.args.to, tt.args.step); got != tt.want {
 				t.Errorf("alignEdge() = %v, want %v", got, tt.want)
 			}
 		})
@@ -222,8 +234,8 @@ func Test_readjusting(t *testing.T) {
 		to := from + rand.Int63n(30000)
 		step := 1 + rand.Int63n(30000)
 
-		rng1 := NewStepRange(from, to, step)
-		rng2 := NewStepRange(rng1.From, rng1.To, rng1.Step)
+		rng1 := New5MinStepRange(from, to, step)
+		rng2 := New5MinStepRange(rng1.From, rng1.To, rng1.Step)
 
 		if !reflect.DeepEqual(rng1, rng2) {
 			t.Errorf("step ranges must be equal: initial=%v, secondary=%v", rng1, rng2)
