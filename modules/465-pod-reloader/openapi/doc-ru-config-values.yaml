@@ -11,3 +11,7 @@ properties:
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  reloadOnCreate:
+    type: boolean
+    description: |
+      Опция для редеплоя rolling upgrade объекта при его модификации.
