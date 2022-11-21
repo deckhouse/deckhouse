@@ -16,13 +16,13 @@ type Checker interface {
 	Name() string
 }
 
-func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources) ([]Checker, error) {
+func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, skipNGs []string) ([]Checker, error) {
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
 
 	for _, r := range resources {
-		check, err := tryToGetEphemeralNodeGroupChecker(kubeCl, r)
+		check, err := tryToGetEphemeralNodeGroupChecker(kubeCl, r, skipNGs)
 		if err != nil {
 			errRes = multierror.Append(errRes, err)
 			continue
@@ -42,12 +42,19 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources) 
 
 type Waiter struct {
 	checkers []Checker
+	attempts int
 }
 
 func NewWaiter(checkers []Checker) *Waiter {
 	return &Waiter{
+		attempts: 6,
 		checkers: checkers,
 	}
+}
+
+func (w *Waiter) WithAttempts(a int) *Waiter {
+	w.attempts = a
+	return w
 }
 
 func (w *Waiter) ReadyAll() (bool, error) {
@@ -55,7 +62,7 @@ func (w *Waiter) ReadyAll() (bool, error) {
 
 	for _, c := range w.checkers {
 		var ready bool
-		err := retry.NewLoop(c.Name(), 5, 3*time.Second).Run(func() error {
+		err := retry.NewLoop(c.Name(), w.attempts, 5*time.Second).Run(func() error {
 			var err error
 			ready, err = c.IsReady()
 			return err

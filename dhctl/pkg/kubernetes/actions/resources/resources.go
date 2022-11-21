@@ -229,7 +229,7 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 
 	resourceCreator := NewCreator(kubeCl, resources)
 
-	checkers, err := GetCheckers(kubeCl, resources)
+	checkers, err := GetCheckers(kubeCl, resources, app.SkipNodeGroupsReadiness)
 	if err != nil {
 		return err
 	}

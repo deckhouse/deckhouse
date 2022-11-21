@@ -24,9 +24,10 @@ var (
 	InternalNodeIP = ""
 	DevicePath     = ""
 
-	ResourcesPath    = ""
-	ResourcesTimeout = "15m"
-	DeckhouseTimeout = 10 * time.Minute
+	ResourcesPath           = ""
+	ResourcesTimeout        = "15m"
+	DeckhouseTimeout        = 10 * time.Minute
+	SkipNodeGroupsReadiness = make([]string, 0)
 
 	PostBootstrapScriptTimeout = 10 * time.Minute
 	PostBootstrapScriptPath    = ""
@@ -83,6 +84,12 @@ func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
+
+	cmd.Flag("skip-node-group-readiness-check", `Do not wait while node group(s)
+become ready (all nodes will be bootstrapped in the cluster).
+`).
+		Envar(configEnvName("SKIP_NODE_GROUPS")).
+		StringsVar(&SkipNodeGroupsReadiness)
 }
 
 func DefineAbortFlags(cmd *kingpin.CmdClause) {

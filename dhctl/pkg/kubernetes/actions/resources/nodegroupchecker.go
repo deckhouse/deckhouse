@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/utils/strings/slices"
+
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -172,10 +174,18 @@ func (n *nodegroupChecker) Name() string {
 	return fmt.Sprintf("NodeGroup %s readiness check", n.ngName)
 }
 
-func tryToGetEphemeralNodeGroupChecker(kubeCl *client.KubernetesClient, r *template.Resource) (*nodegroupChecker, error) {
+func tryToGetEphemeralNodeGroupChecker(
+	kubeCl *client.KubernetesClient,
+	r *template.Resource,
+	skipNG []string) (*nodegroupChecker, error) {
 	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
 		log.DebugF("tryToGetEphemeralNodeGroupChecker: skip GVK (%s %s %s)",
 			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
+		return nil, nil
+	}
+
+	if slices.Contains(skipNG, r.Object.GetName()) {
+		log.DebugF("Nodegroup %s was skipped", r.Object.GetName())
 		return nil, nil
 	}
 

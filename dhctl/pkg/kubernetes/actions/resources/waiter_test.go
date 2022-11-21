@@ -38,7 +38,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 2)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 0)
 	})
@@ -56,7 +56,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 0, "should skip")
 	})
@@ -85,7 +85,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 0, "should skip")
 	})
@@ -122,7 +122,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 0, "should skip")
 	})
@@ -134,7 +134,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
@@ -148,7 +148,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
@@ -164,7 +164,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 4)
 
-		checkers, err := GetCheckers(nil, resources)
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
 		require.Len(t, checkers, 2, "should get all check")
 
@@ -228,6 +228,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, fmt.Errorf("error")),
 			newTestChecker(true, nil),
 		})
+		w.WithAttempts(0)
 		ready, err := w.ReadyAll()
 
 		require.Error(t, err, "should error")
