@@ -93,7 +93,7 @@ func (c *DbContext) StmtRunner() StmtRunner {
 		return c.db
 	}
 
-	panic("Call StmtRunner from uninitialized DbContext")
+	panic("DB context is uninitialized")
 }
 
 // Start captures a connection from pool and returns a stoppable context.

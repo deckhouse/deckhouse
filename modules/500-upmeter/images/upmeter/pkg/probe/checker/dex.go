@@ -56,7 +56,7 @@ func (v dexAPIVerifier) Request() *http.Request {
 }
 
 /*
-	Expected JSON
+Expected JSON
 
 	{
 	  "keys": [

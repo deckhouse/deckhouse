@@ -171,8 +171,8 @@ func (c *dsPodsReadinessChecker) verifyPodStatus(pod *v1.Pod) error {
 func findDaemonSetNodeNames(nodes []*v1.Node, ds *appsv1.DaemonSet) []string {
 	names := make([]string, 0)
 	for _, node := range nodes {
-		if !isNodeReady(node) {
-			// Filter by status
+		if !isNodeReadyLongEnough(node, 10*time.Minute) {
+			// Filter by status, let the daemonset pod to be created on the node before checking
 			continue
 		}
 
@@ -191,7 +191,7 @@ func findDaemonSetNodeNames(nodes []*v1.Node, ds *appsv1.DaemonSet) []string {
 	return names
 }
 
-func isNodeReady(node *v1.Node) bool {
+func isNodeReadyLongEnough(node *v1.Node, threshold time.Duration) bool {
 	for _, cond := range node.Status.Conditions {
 		if cond.Type != v1.NodeReady {
 			// not the condition type we are looking for
@@ -203,10 +203,7 @@ func isNodeReady(node *v1.Node) bool {
 			return false
 		}
 
-		// NOTE 10 min hardcoded
-		threshold := 10 * time.Minute
 		startInThePast := metav1.NewTime(time.Now().Add(-threshold))
-
 		isReadyLongEnough := cond.LastTransitionTime.Before(&startInThePast)
 		return isReadyLongEnough
 	}

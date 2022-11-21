@@ -39,7 +39,20 @@ type PublicStatusResponse struct {
 }
 
 type GroupStatus struct {
-	Group  string       `json:"group"`
+	Group  string              `json:"group"`
+	Status PublicStatus        `json:"status"`
+	Probes []ProbeAvailability `json:"probes"`
+}
+
+type ProbeAvailability struct {
+	// Probe is the name of the probe
+	Probe string `json:"probe"`
+
+	// Availability is the ratio represented as a fraction of 1, i.e. it is from 0 to 1 and it must
+	// neve be negative
+	Availability float64 `json:"availability"`
+
+	// Status is the high-level interpretation of the probe result
 	Status PublicStatus `json:"status"`
 }
 
@@ -70,9 +83,9 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, status, err := h.getStatusSummary()
+	statuses, err := h.getGroupStatusList(r.URL.Query().Get("peek") == "1")
 	if err != nil {
-		log.Errorf("Cannot get current status: %v\n", err)
+		log.Errorf("Cannot get status summary: %v", err)
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
@@ -84,77 +97,180 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Skipping the error because the JSON structure is defined in advance.
+	totalStatus := calculateTotalStatus(statuses)
 	out, _ := json.Marshal(&PublicStatusResponse{
 		Rows:   statuses,
-		Status: status,
+		Status: totalStatus,
 	})
 	w.Write(out)
 }
 
-// getStatusSummary returns total statuses for each group for the current partial 5m timeslot plus
-// previous full 5m timeslot.
-func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, error) {
+// getGroupStatusList returns total statuses for each group for the current partial 5m timeslot plus
+// previous full 5m timeslot. If peek is true, then the current partial 5m timeslot is not included.
+func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, error) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	rng := threeStepRange(time.Now())
-	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, time.Now().Unix())
+	now := time.Now()
 
+	if peek {
+		// Observe only last fulfilled 30 seconds for the speed of availability calculation
+		return h.calcStatuses(
+			new30SecondsStepRange(now),
+			dao.NewEpisodeDao30s(daoCtx),
+			func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+				slotSize := 30 * time.Second
+				return pickGroupProbeSummaryByLastCompleteEpisode(ref, statuses, slotSize)
+			},
+		)
+	}
+
+	// Observe 10 minutes of fulfilled data for accuracy
+	return h.calcStatuses(
+		new15MinutesStepRange(now),
+		dao.NewEpisodeDao5m(daoCtx),
+		pickGroupProbeSummary,
+	)
+}
+
+type summaryPicker func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error)
+
+func (h *PublicStatusHandler) calcStatuses(
+	rng ranges.StepRange,
+	lister entity.RangeEpisodeLister,
+	pickSummary summaryPicker,
+) ([]GroupStatus, error) {
 	muteTypes := []string{
 		"Maintenance",
 		"InfrastructureMaintenance",
 		"InfrastructureAccident",
 	}
 
+	slotSize := time.Duration(rng.Step) * time.Second
+
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
 	for _, group := range groups {
-		ref := check.ProbeRef{
+		// The group overall status
+		groupRef := check.ProbeRef{
 			Group: group,
 			Probe: dao.GroupAggregation,
 		}
 
 		filter := &statusFilter{
 			stepRange:         rng,
-			probeRef:          ref,
+			probeRef:          groupRef,
 			muteDowntimeTypes: muteTypes,
 		}
 
-		resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
+		groupSummary, err := h.getProbeSummary(lister, filter, pickSummary)
 		if err != nil {
-			log.Errorf("cannot calculate status for group %s: %v", group, err)
-			return nil, StatusOutage, err
+			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
 
-		summary, err := pickSummary(ref, resp.Statuses)
-		if err != nil {
-			log.Errorf("generating summary %s: %v", group, err)
-			return nil, StatusOutage, err
+		// Uptime per probe
+		probeAvails := make([]ProbeAvailability, 0)
+		for _, probeRef := range h.ProbeLister.Probes() {
+			if probeRef.Group != group {
+				// not so many probes in the list, not a big deal to spend n^2 iterations
+				continue
+			}
+
+			filter := &statusFilter{
+				stepRange:         rng,
+				probeRef:          probeRef,
+				muteDowntimeTypes: muteTypes,
+			}
+
+			probeSummary, err := h.getProbeSummary(lister, filter, pickSummary)
+			if err != nil {
+				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
+			}
+
+			av := calculateAvailability(probeSummary)
+			if av < 0 {
+				continue
+			}
+			probeAvails = append(probeAvails, ProbeAvailability{
+				Probe:        probeRef.Probe,
+				Availability: av,
+				Status:       calculateStatus(probeSummary, slotSize),
+			})
 		}
 
 		gs := GroupStatus{
 			Group:  group,
-			Status: calculateStatus(summary),
+			Status: calculateStatus(groupSummary, slotSize),
+			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
 	}
 
-	totalStatus := calculateTotalStatus(groupStatuses)
-	return groupStatuses, totalStatus, nil
+	return groupStatuses, nil
 }
 
-func threeStepRange(now time.Time) ranges.StepRange {
+func (h *PublicStatusHandler) getProbeSummary(
+	lister entity.RangeEpisodeLister,
+	filter *statusFilter,
+	pickSummary summaryPicker,
+) ([]entity.EpisodeSummary, error) {
+	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter)
+	if err != nil {
+		return nil, fmt.Errorf("fetching summary: %w", err)
+	}
+
+	gpSummary, err := pickSummary(filter.probeRef, resp.Statuses)
+	if err != nil {
+		return nil, fmt.Errorf("flattening summary: %w", err)
+	}
+	return gpSummary, nil
+}
+
+// Negative availability means we have no valid data
+func calculateAvailability(summary []entity.EpisodeSummary) float64 {
+	var worked, measured float64
+	for _, s := range summary {
+		worked += float64(s.Up + s.Unknown)
+		measured += float64(s.Up + s.Unknown + s.Down)
+	}
+	if measured == 0 {
+		return -1
+	}
+	return worked / measured
+}
+
+func new15MinutesStepRange(now time.Time) ranges.StepRange {
 	step := 5 * time.Minute
 	slotStart := now.Truncate(step)
 	from := slotStart.Add(-2 * step)
 	to := slotStart.Add(step)
-	return ranges.NewStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
+	return ranges.New5MinStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
+}
+
+func new30SecondsStepRange(now time.Time) ranges.StepRange {
+	step := 30 * time.Second
+	to := now.Truncate(step)
+	from := to.Add(-step)
+	return ranges.New30SecStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
 var ErrNoData = fmt.Errorf("no data")
 
-// pickSummary makes assertions
-func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+// pickGroupProbeSummaryByLastCompleteEpisode returns the last fulfilled episode summary for the given probe.
+func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
+	summary, err := pickGroupProbeSummary(ref, statuses)
+	if err != nil {
+		return nil, fmt.Errorf("getting summary for slot size %s: %w", slotSize, err)
+	}
+	lastFulfilled, found := shrinkToFulfilled(summary, slotSize)
+	if !found {
+		return nil, fmt.Errorf("shrinking data to last complete episode: %w", ErrNoData)
+	}
+	return []entity.EpisodeSummary{lastFulfilled}, nil
+}
+
+// pickGroupProbeSummary
+func pickGroupProbeSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
 
@@ -166,7 +282,15 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	}
 
 	episodeSummaries := statuses[g][p]
-	n := len(episodeSummaries) - 1 // ignore summary column in the end
+	if len(episodeSummaries) == 0 {
+		return nil, fmt.Errorf("%w (empty row) for probe '%s/%s'", ErrNoData, g, p)
+	}
+
+	// Summary column in the end is implied, ignore summary column in the end
+	n := len(episodeSummaries) - 1
+	if n == 1 {
+		return episodeSummaries, nil
+	}
 	if n != 3 {
 		return nil, fmt.Errorf("unexpected count %d!=3 for probe '%s/%s'", n, g, p)
 	}
@@ -174,31 +298,65 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	return episodeSummaries[:3], nil
 }
 
+func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) (entity.EpisodeSummary, bool) {
+	for i := len(summary) - 1; i >= 0; i-- {
+		if summary[i].Complete() {
+			return summary[i], true
+		}
+	}
+	return entity.EpisodeSummary{NoData: slotSize}, false
+}
+
 // calculateStatus returns the status for a group.
 //
-// Input array should have 3 elements
-func calculateStatus(summary []entity.EpisodeSummary) PublicStatus {
-	slotSize := 5 * time.Minute
-
-	var prev, current entity.EpisodeSummary
-	if len(summary) == 2 || summary[2].NoData == slotSize {
-		prev, current = summary[0], summary[1]
-	} else {
-		prev, current = summary[1], summary[2]
+// Input array should have 3 elements, but might have only twoof them.
+//
+// The status returned is as follows:
+//   - Operational is when we observe only uptime
+//   - Outage is when we observe only downtime
+//   - Degraded is when we observe mixed uptime and downtime
+func calculateStatus(sums []entity.EpisodeSummary, slotSize time.Duration) PublicStatus {
+	// for the peek case
+	if len(sums) == 1 {
+		switch {
+		case sums[0].Up == slotSize:
+			return StatusOperational
+		case sums[0].Down == slotSize:
+			return StatusOutage
+		default:
+			return StatusDegraded
+		}
 	}
 
-	// Ignore empty EpisodeSummary, i.e. when NoData equals slot size
-	if current.Down == 0 && prev.Down == 0 &&
-		(current.Up > 0 || (prev.Up > 0 && current.Up == 0 && current.NoData == slotSize)) {
+	var prev, cur entity.EpisodeSummary
+	if len(sums) == 2 || sums[2].NoData == slotSize {
+		// we have only two slots of data at most
+		prev, cur = sums[0], sums[1]
+	} else {
+		// ignore 1st slot, pick fresher ones
+		prev, cur = sums[1], sums[2]
+	}
+
+	// Operational is when we observe only uptime
+	var (
+		hasNoDowntime = cur.Down == 0 && prev.Down == 0
+		hasUptime     = cur.Up > 0 || (prev.Up > 0 && cur.NoData == slotSize)
+	)
+	if hasNoDowntime && hasUptime {
 		return StatusOperational
 	}
 
-	if current.Up == 0 && current.Muted == 0 &&
-		prev.Up == 0 && prev.Muted == 0 &&
-		(current.Down > 0 || (prev.Down > 0 && current.Down == 0 && current.NoData == slotSize)) {
+	// Outage is when we observe only downtime
+	var (
+		hasNoUptime = cur.Up == 0 && prev.Up == 0
+		isNotMuted  = cur.Muted == 0 && prev.Muted == 0
+		hasDowntime = cur.Down > 0 || (prev.Down > 0 && cur.NoData == slotSize)
+	)
+	if hasNoUptime && isNotMuted && hasDowntime {
 		return StatusOutage
 	}
 
+	// Degraded is when we observe mixed uptime and downtime
 	return StatusDegraded
 }
 

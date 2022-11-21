@@ -33,17 +33,21 @@ const (
 // First, we use busy_timeout+MaxOpenConns(1) as a common workaround.
 //
 // Next, custom pool helps to stick queries and transactions to connections.
-//   (See https://turriate.com/articles/making-sqlite-faster-in-go)
+//
+//	(See https://turriate.com/articles/making-sqlite-faster-in-go)
 //
 // And finally, set _txlock=immediate to start transactions in write mode.
-//   (See https://www.sqlite.org/lang_transaction.html)
+//
+//	(See https://www.sqlite.org/lang_transaction.html)
 //
 // busy_time and MaxOpenConns help eliminate errors "database is locked"
-//      See     https://github.com/mattn/go-sqlite3/issues/274
-//              https://github.com/mattn/go-sqlite3#faq
+//
+//	See     https://github.com/mattn/go-sqlite3/issues/274
+//	        https://github.com/mattn/go-sqlite3#faq
 //
 // Can I use this in multiple routines concurrently?
-//      Yes for readonly. But, No for writable. See #50, #51, #209, #274.
+//
+//	Yes for readonly. But, No for writable. See #50, #51, #209, #274.
 func DefaultConnectionOptions() map[string]string {
 	return map[string]string{
 		"_busy_timeout": "9999999",

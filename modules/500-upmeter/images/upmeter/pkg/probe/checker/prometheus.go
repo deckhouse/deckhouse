@@ -58,7 +58,7 @@ func (v prometheusAPIVerifier) Request() *http.Request {
 }
 
 /*
-	Expected JSON
+Expected JSON
 
 	{
 	  "status": "success",
@@ -118,22 +118,21 @@ func (v *metricPresenceVerifier) Request() *http.Request {
 }
 
 /*
-{
-  "status": "success",
-  "data": {
-    "resultType": "vector",
-    "result": [                 <- array must not be empty
-      {
-        "metric": {},
-        "value": [
-          1614179019.102,
-          "24"                  <- string number must not be zero
-        ]
-      }
-    ]
-  }
-}
-
+	{
+	  "status": "success",
+	  "data": {
+	    "resultType": "vector",
+	    "result": [                 <- array must not be empty
+	      {
+	        "metric": {},
+	        "value": [
+	          1614179019.102,
+	          "24"                  <- string number must not be zero
+	        ]
+	      }
+	    ]
+	  }
+	}
 */
 func (v *metricPresenceVerifier) Verify(body []byte) check.Error {
 	resultPath := "data.result"
