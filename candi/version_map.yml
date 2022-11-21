@@ -12,7 +12,7 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "4.18.0-20-generic"
+          desiredVersion: "4.18.0-*-generic"
           allowedPattern: "4.18"
     '18.04':
       docker:
@@ -26,16 +26,16 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.3.0-51-generic"
+          desiredVersion: "5.3.0-*-generic"
           allowedPattern: "5.3"
         aws:
-          desiredVersion: "5.3.0-1017-aws"
+          desiredVersion: "5.3.0-*-aws"
           allowedPattern: "5.3"
         azure:
-          desiredVersion: "5.4.0-1034-azure"
+          desiredVersion: "5.4.0-*-azure"
           allowedPattern: "5.3"
         gcp:
-          desiredVersion: "5.3.0-1018-gcp"
+          desiredVersion: "5.3.0-*-gcp"
           allowedPattern: "5.3"
     '20.04':
       docker:
@@ -49,16 +49,16 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.11.0-46-generic"
+          desiredVersion: "5.11.0-*-generic"
           allowedPattern: "5.4|5.11"
         aws:
-          desiredVersion: "5.11.0-1028-aws"
+          desiredVersion: "5.11.0-*-aws"
           allowedPattern: "5.4|5.11"
         azure:
-          desiredVersion: "5.11.0-1028-azure"
+          desiredVersion: "5.11.0-*-azure"
           allowedPattern: "5.4|5.11"
         gcp:
-          desiredVersion: "5.11.0-1029-gcp"
+          desiredVersion: "5.11.0-*-gcp"
           allowedPattern: "5.4|5.11"
     '22.04':
       docker:
@@ -72,16 +72,16 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.15.0-27-generic"
+          desiredVersion: "5.15.0-*-generic"
           allowedPattern: "5.15"
         aws:
-          desiredVersion: "5.15.0-1004-aws"
+          desiredVersion: "5.15.0-*-aws"
           allowedPattern: "5.15"
         azure:
-          desiredVersion: "5.15.0-1003-azure"
+          desiredVersion: "5.15.0-*-azure"
           allowedPattern: "5.15"
         gcp:
-          desiredVersion: "5.15.0-1003-gcp"
+          desiredVersion: "5.15.0-*-gcp"
           allowedPattern: "5.15"
   debian:
     '9': &debian9
@@ -96,7 +96,7 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "4.9.0-17-amd64"
+          desiredVersion: "4.9.0-*-amd64"
           allowedPattern: "4.9|4.15|4.19|5.4|5.10"
     '10':
       docker:
@@ -110,7 +110,7 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "4.19.0-18-amd64"
+          desiredVersion: "4.19.0-*-amd64"
           allowedPattern: "4.19"
     '11':
       docker:
@@ -124,7 +124,7 @@ bashible: &bashible
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.10.0-10-amd64"
+          desiredVersion: "5.10.0-*-amd64"
           allowedPattern: "5.10"
   centos:
     '7':
