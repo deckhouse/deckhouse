@@ -178,7 +178,7 @@ func (l *InitialConfigLoader) ConfigMapToInitialConfig(cmData map[string]string)
 		return nil, fmt.Errorf("parse ConfigMap data: %v", err)
 	}
 
-	sections := configMapSectionsFromKubeConfig(kubeCfg)
+	sections := kubeConfigToConfigMapSections(kubeCfg)
 	newData := map[string]string{}
 	for _, section := range sections {
 		sData, err := section.getConfigMapData()

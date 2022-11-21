@@ -193,7 +193,7 @@ func (s *configMapSection) getConfigMapData() (map[string]string, error) {
 	return out, nil
 }
 
-func configMapSectionsFromKubeConfig(kubeCfg *kcm.KubeConfig) []*configMapSection {
+func kubeConfigToConfigMapSections(kubeCfg *kcm.KubeConfig) []*configMapSection {
 	sections := make([]*configMapSection, 0)
 
 	// Handle "global" key.

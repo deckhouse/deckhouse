@@ -95,25 +95,7 @@ func (t *Transformer) ConfigMapToModuleConfigList(cmData map[string]string) ([]*
 	}
 
 	// Construct list of sections from *KubeConfig objects.
-	sections := make([]*configMapSection, 0)
-	var globalValues utils.Values
-	if cfg.Global != nil {
-		globalValues = cfg.Global.Values
-	}
-	sections = append(sections, &configMapSection{
-		name:      "global",
-		valuesKey: "global",
-		values:    globalValues,
-		enabled:   nil,
-	})
-	for _, modCfg := range cfg.Modules {
-		sections = append(sections, &configMapSection{
-			name:      modCfg.ModuleName,
-			valuesKey: modCfg.ModuleConfigKey,
-			values:    modCfg.Values,
-			enabled:   modCfg.IsEnabled,
-		})
-	}
+	sections := kubeConfigToConfigMapSections(cfg)
 
 	// Transform ConfigMap sections to ModuleConfig objects.
 	cfgList := make([]*d8cfg_v1alpha1.ModuleConfig, 0)

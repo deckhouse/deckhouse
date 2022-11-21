@@ -68,7 +68,6 @@ auth:
 
 		table.DescribeTable("should convert from 1 to valid latest",
 			ct.TestConversionToValidLatest(1),
-			table.Entry("giving empty settings", ``),
 			table.Entry("giving empty conversion result", `
 auth:
   password: Long-password-value
