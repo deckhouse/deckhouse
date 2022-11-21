@@ -105,6 +105,7 @@ spec:
         - --address=127.0.0.1:8085
         - --balance-similar-node-groups=true
         - --expander=priority,least-waste
+        - --max-failing-time=120m
         - --v=2
         env:
         - name: CONTROL_NAMESPACE
