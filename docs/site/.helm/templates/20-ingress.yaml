@@ -19,6 +19,7 @@ metadata:
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
+      rewrite ^(/en|/ru)?/documentation/v1\.3[0-7](\.[0-9]+)?(/.*)$ /documentation/v1.38$3 redirect;
       rewrite ^(/en|/ru)?(/documentation/v1\.[0-9]+)\.[0-9]+(/.*)$ $2$3 redirect;
       rewrite ^/ru/(.*) https://{{ $hostRu }}/$1 redirect;
       rewrite ^/en/(.*) https://{{ $hostEn }}/$1 redirect;
