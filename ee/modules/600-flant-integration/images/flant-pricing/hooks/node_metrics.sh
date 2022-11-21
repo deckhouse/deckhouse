@@ -53,6 +53,85 @@ function __config__() {
           "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
           "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
         }
+
+    - name: nodes_all
+      group: main
+      queue: /node_metrics
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "node.deckhouse.io/group"
+          operator: Exists
+
+      # All nodes managed by deckhouse, counting into flant_pricing_node_count
+      jqFilter: |
+        select( .metadata.labels."node.deckhouse.io/group" != null )
+        | {
+          "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        }
+
+    - name: nodes_cp
+      group: main
+      queue: /node_metrics
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "node.deckhouse.io/group"
+          operator: Exists
+
+      # Control plane nodes, counting into flant_pricing_controlplane_node_count
+      jqFilter: |
+        select( .metadata.labels."node.deckhouse.io/group" == "master" )
+        | {
+          "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        }
+
+    - name: nodes_t_cp
+      group: main
+      queue: /node_metrics
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: "node.deckhouse.io/group"
+          operator: Exists
+
+      # Control plane nodes with desired taints, counting into flant_pricing_controlplane_tainted_node_count
+      jqFilter: |
+        select(
+          .metadata.labels."node.deckhouse.io/group" == "master"
+          and
+          .spec.taints != null
+          and
+          (
+            [
+              .spec.taints[]
+              | select(
+                .key == "node-role.kubernetes.io/control-plane" or
+                .key == "node-role.kubernetes.io/master"
+              )
+            ]
+            | length > 0
+          )
+        )
+        | {
+          "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        }
+
     - name: ngs
       group: main
       queue: /node_metrics
@@ -69,42 +148,59 @@ EOF
 }
 
 function __main__() {
-  count_nodes_by_type_metric_name="flant_pricing_count_nodes_by_type"
   group="group_node_metrics"
-  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+  jq -c --arg group "$group" '.group = $group' <<<'{"action":"expire"}' >>$METRICS_PATH
 
-  node_types=( ephemeral vm hard special )
+  generate_node_count_metric "nodes"      "$group" "flant_pricing_count_nodes_by_type"             # DEPRECATED all nodes except CP nodes with expected taints
+  generate_node_count_metric "nodes_all"  "$group" "flant_pricing_node_count"                      # all nodes
+  generate_node_count_metric "nodes_cp"   "$group" "flant_pricing_controlplane_node_count"         # CP nodes
+  generate_node_count_metric "nodes_t_cp" "$group" "flant_pricing_controlplane_tainted_node_count" # CP nodes with expected taints
+}
+
+# Args:
+#   $1 - snapshot name
+#   $2 - metric group
+#   $3 - metric name
+function generate_node_count_metric() {
+  local snapshot_name="$1"
+  local metric_group="$2"
+  local metric_name="$3"
+
+  metric_node_types=( ephemeral vm hard special )
   ephemeral_nodes=0
   vm_nodes=0
   hard_nodes=0
   special_nodes=0
 
-  for node_index in $(context::jq '.snapshots.nodes | to_entries[] | select(.value.filterResult.nodeGroup != null) | .key'); do
-    node_data="$(context::get snapshots.nodes.$node_index.filterResult)"
-    node_group="$(jq -r '.nodeGroup' <<< "$node_data")"
-    pricing_node_type="$(jq -r '.pricingNodeType' <<< "$node_data")"
-    virtualization="$(jq -r '.virtualization' <<< "$node_data")"
+  for node_index in $(context::jq --arg snapshot_name "${snapshot_name}" '.snapshots[$snapshot_name] | to_entries[] | select(.value.filterResult.nodeGroup != null) | .key '); do
+    node_data="$(context::get snapshots.${snapshot_name}.${node_index}.filterResult)"
+    node_group="$( .   jq -r '.nodeGroup'       <<< "$node_data" )"
+    type_from_node="$( jq -r '.pricingNodeType' <<< "$node_data" )"
+    virtualization="$( jq -r '.virtualization'  <<< "$node_data" )"
 
     if ! ng_data="$(context::jq -erc --arg node_group "$node_group" '.snapshots.ngs[] | select(.filterResult.name == $node_group) | .filterResult')"; then
-      pricing="$pricing_node_type"
+      # NodeGroup snapshot is not found, use pricing node type from the node
+      pricing_node_type="$type_from_node"
     else
-      pricing="$(
-        jq -nr --arg pricing_node_type "$pricing_node_type" \
+      # NodeGroup snapshot is found, try to get pricing node type from node and fall back to getting it from NodeGroup
+      pricing_node_type="$(
+        jq -nr \
+          --arg type_from_node "$type_from_node" \
           --arg virtualization "$virtualization" \
           --argjson ng "$ng_data" '
-          if $pricing_node_type != "unknown"
-            then $pricing_node_type
+          if $type_from_node != "unknown"
+            then $type_from_node
           else
-            if $ng.nodeType == "CloudEphemeral" then "Ephemeral"
-            elif $ng.nodeType == "CloudPermanent" or $ng.nodeType == "CloudStatic" then "VM"
-            elif $ng.nodeType == "Static" and $virtualization != "unknown" then "VM"
+            if   $ng.nodeType == "CloudEphemeral"                                   then "Ephemeral"
+            elif $ng.nodeType == "CloudPermanent" or $ng.nodeType == "CloudStatic"  then "VM"
+            elif $ng.nodeType == "Static" and $virtualization != "unknown"          then "VM"
             else "Hard"
             end
           end
       ')"
     fi
 
-    case $pricing in
+    case $pricing_node_type in
       Ephemeral)
         (( ephemeral_nodes = ephemeral_nodes + 1 ))
       ;;
@@ -120,20 +216,22 @@ function __main__() {
     esac
   done
 
-  for node_type in "${node_types[@]}"; do
+  for node_type in "${metric_node_types[@]}"; do
     count_variable_name="${node_type}_nodes"
-    jq -nc --arg metric_name $count_nodes_by_type_metric_name --arg group "$group" \
-      --arg node_type "$node_type" \
+    jq -nc \
+      --arg metric_group "$metric_group" \
+      --arg metric_name  "$metric_name"  \
+      --arg node_type    "$node_type"    \
       --argjson count "${!count_variable_name}" '
       {
         "name": $metric_name,
-        "group": $group,
+        "group": $metric_group,
         "set": $count,
         "labels": {
           "type": $node_type
         }
       }
-      ' >> $METRICS_PATH
+      ' >>$METRICS_PATH
   done
 }
 
