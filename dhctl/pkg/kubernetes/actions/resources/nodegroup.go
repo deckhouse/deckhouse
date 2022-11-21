@@ -91,6 +91,9 @@ type NodeGroupStatus struct {
 
 	// A list of last failures of handled Machines.
 	LastMachineFailures []MachineFailure `json:"lastMachineFailures,omitempty"`
+
+	// Status' summary.
+	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
 }
 
 type MachineFailure struct {

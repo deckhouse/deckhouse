@@ -70,6 +70,23 @@ type nodegroupChecker struct {
 	ngGetter nodeGroupGetter
 	ngName   string
 	logger   log.Logger
+
+	startCheckTime time.Time
+}
+
+func newNodeGroupChecker(ngGetter nodeGroupGetter, ngName string) *nodegroupChecker {
+	return &nodegroupChecker{
+		ngGetter: ngGetter,
+		ngName:   ngName,
+		logger:   log.GetDefaultLogger(),
+
+		startCheckTime: time.Now().Add(1 * time.Minute),
+	}
+}
+
+func (n *nodegroupChecker) withLogger(l log.Logger) *nodegroupChecker {
+	n.logger = l
+	return n
 }
 
 func (n *nodegroupChecker) lastEvents(lastTime time.Duration, reason string) ([]eventsv1.Event, error) {
@@ -107,31 +124,39 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		return false, err
 	}
 
-	if ng.Status.Desired == 0 {
-		n.logger.LogInfoF("Waiting for desired nodes will be greater than 0")
-		return false, nil
-	}
-
+	// todo ask
 	if ng.Status.Ready == ng.Status.Desired {
 		n.logger.LogDebugF("nodegroupChecker is ready: %d == %d")
 		return true, nil
 	}
 
-	if len(ng.Status.LastMachineFailures) > 0 {
-		n.logger.LogErrorF("Last machine failures:\n")
+	if time.Now().Before(n.startCheckTime) {
+		n.logger.LogInfoF("Waiting 1 minute for node group status stabilize")
+		return false, nil
+	}
+
+	if ng.Status.Desired == 0 {
+		n.logger.LogInfoF("Waiting for desired nodes will be greater than 0")
+		return false, nil
+	}
+
+	if len(ng.Status.ConditionSummary.StatusMessage) > 0 {
+		n.logger.LogErrorF("Last machine failures:\n %s", ng.Status.ConditionSummary.StatusMessage)
 		for _, f := range ng.Status.LastMachineFailures {
 			n.logger.LogErrorF("\t%s\n", f.LastOperation.Description)
 		}
 
-		dur := 2 * time.Minute
+		dur := 1 * time.Minute
 		events, err := n.lastEvents(dur, "MachineFailed")
 		if err != nil {
 			return false, err
 		}
 
-		n.logger.LogErrorF("Last %v nodegroup events:\n", dur.String())
-		for _, e := range events {
-			n.logger.LogErrorF("\t%s:%s\n", e.Reason, e.Note)
+		if len(events) > 0 {
+			n.logger.LogErrorF("Last %v nodegroup events:\n", dur.String())
+			for _, e := range events {
+				n.logger.LogErrorF("\t%s:%s\n", e.Reason, e.Note)
+			}
 		}
 
 		return false, nil
@@ -175,9 +200,5 @@ func tryToGetEphemeralNodeGroupChecker(kubeCl *client.KubernetesClient, r *templ
 		return nil, nil
 	}
 
-	return &nodegroupChecker{
-		ngGetter: &kubeNodegroupGetter{kubeCl: kubeCl},
-		ngName:   ng.GetName(),
-		logger:   log.GetDefaultLogger(),
-	}, nil
+	return newNodeGroupChecker(&kubeNodegroupGetter{kubeCl: kubeCl}, ng.GetName()), nil
 }
