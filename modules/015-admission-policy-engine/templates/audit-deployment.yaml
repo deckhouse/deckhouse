@@ -70,7 +70,7 @@ spec:
         - --constraint-violations-limit=20
         - --audit-from-cache=false
         - --audit-chunk-size=500
-        - --audit-match-kind-only=false
+        - --audit-match-kind-only=true
         - --emit-audit-events=false
         - --operation=audit
         - --operation=status
@@ -131,6 +131,11 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "constraintExporter") }}
         imagePullPolicy: 'IfNotPresent'
+        env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

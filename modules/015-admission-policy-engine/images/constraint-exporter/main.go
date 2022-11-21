@@ -25,32 +25,70 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"k8s.io/klog/v2"
-
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
+	"github.com/flant/constraint_exporter/pkg/kinds"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 var (
-	listenAddress = flag.String("server.telemetry-address", ":15060",
-		"Address to listen on for telemetry")
-	metricsPath = flag.String("server.telemetry-path", "/metrics",
-		"Path under which to expose metrics")
-	interval = flag.Duration("server.interval", 15*time.Second,
-		"Kubernetes API server polling interval")
+	// flags
+	listenAddress string
+	metricsPath   string
+	interval      time.Duration
 
-	ticker *time.Ticker
-	done   = make(chan bool)
-
-	metrics = make([]prometheus.Metric, 0)
+	trackValidationKinds     bool
+	trackValidationResources bool
+	trackObjectsCMName       string
 )
 
-type Exporter struct{}
+func init() {
+	flag.StringVar(&listenAddress, "server.telemetry-address", ":15060",
+		"Address to listen on for telemetry")
+	flag.StringVar(&metricsPath, "server.telemetry-path", "/metrics",
+		"Path under which to expose metrics")
+	flag.DurationVar(&interval, "server.interval", 30*time.Second,
+		"Kubernetes API server polling interval")
+	flag.BoolVar(&trackValidationKinds, "track-validation-match-kinds", false, "Tracked kinds for validation webhook")
+	flag.BoolVar(&trackValidationResources, "track-validation-match-resource", true, "Tracked kinds for validation webhook are converted to the resources")
+	flag.StringVar(&trackObjectsCMName, "track-objects-configmap", "constraint-exporter", "ConfigMap for export tracking resource kinds")
+}
+
+var (
+	ticker *time.Ticker
+	done   = make(chan bool)
+)
+
+type Exporter struct {
+	client     *kubernetes.Clientset
+	kubeConfig *rest.Config
+
+	kindTracker *kinds.KindTracker
+
+	metrics []prometheus.Metric
+}
 
 func NewExporter() *Exporter {
-	return &Exporter{}
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		klog.Fatalf("Create kubernetes config failed: %+v\n", err)
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		klog.Fatalf("Create kubernetes client failed: %+v\n", err)
+	}
+
+	return &Exporter{
+		client:     client,
+		kubeConfig: config,
+		metrics:    make([]prometheus.Metric, 0),
+	}
 }
 
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
@@ -63,7 +101,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		gatekeeper.Up, prometheus.GaugeValue, 1,
 	)
-	for _, m := range metrics {
+	for _, m := range e.metrics {
 		ch <- m
 	}
 }
@@ -76,7 +114,7 @@ func (e *Exporter) startScheduled(t time.Duration) {
 			case <-done:
 				return
 			case <-ticker.C:
-				constraints, err := gatekeeper.GetConstraints()
+				constraints, err := gatekeeper.GetConstraints(e.kubeConfig, e.client)
 				if err != nil {
 					klog.Warningf("Get constraints failed: %+v\n", err)
 				}
@@ -87,7 +125,11 @@ func (e *Exporter) startScheduled(t time.Duration) {
 				constraintInformationMetrics := gatekeeper.ExportConstraintInformation(constraints)
 				allMetrics = append(allMetrics, constraintInformationMetrics...)
 
-				metrics = allMetrics
+				e.metrics = allMetrics
+
+				if e.kindTracker != nil {
+					go e.kindTracker.UpdateTrackedObjects(constraints)
+				}
 			}
 		}
 	}()
@@ -96,8 +138,20 @@ func (e *Exporter) startScheduled(t time.Duration) {
 func main() {
 	flag.Parse()
 
+	ns := os.Getenv("POD_NAMESPACE")
+	if len(ns) == 0 {
+		klog.Fatal("Pod namespace is not set")
+	}
+
 	exporter := NewExporter()
-	exporter.startScheduled(*interval)
+	if trackValidationKinds || trackValidationResources {
+		err := exporter.initKindTracker(ns, trackObjectsCMName, trackValidationKinds, trackValidationResources)
+		if err != nil {
+			klog.Fatal(err)
+		}
+	}
+
+	exporter.startScheduled(interval)
 	prometheus.Unregister(collectors.NewGoCollector())
 	prometheus.MustRegister(exporter)
 
@@ -105,10 +159,10 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	mux := http.NewServeMux()
-	mux.Handle(*metricsPath, promhttp.Handler())
+	mux.Handle(metricsPath, promhttp.Handler())
 
 	srv := &http.Server{
-		Addr:    *listenAddress,
+		Addr:    listenAddress,
 		Handler: mux,
 	}
 
@@ -131,4 +185,16 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		klog.Fatalf("Server Shutdown Failed:%+v", err)
 	}
+}
+
+func (e *Exporter) initKindTracker(cmNS, cmName string, trackKinds, trackResources bool) error {
+	kt := kinds.NewKindTracker(e.client, cmNS, cmName, trackKinds, trackResources)
+	err := kt.FindInitialChecksum()
+	if err != nil {
+		return err
+	}
+
+	e.kindTracker = kt
+
+	return nil
 }

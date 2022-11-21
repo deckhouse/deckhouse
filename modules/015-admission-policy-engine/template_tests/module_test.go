@@ -54,13 +54,12 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
 	Context("Cluster with deckhouse on master node", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			// f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
 			f.HelmRender()
 		})
 
@@ -70,8 +69,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			sa := f.KubernetesResource("ServiceAccount", nsName, "admission-policy-engine")
 			dp := f.KubernetesResource("Deployment", nsName, "gatekeeper-controller-manager")
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(sa.Exists()).To(BeTrue())
 			Expect(dp.Exists()).To(BeTrue())
+			Expect(vw.Exists()).To(BeTrue())
 		})
 	})
 })

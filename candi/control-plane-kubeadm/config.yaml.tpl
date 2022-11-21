@@ -3,7 +3,7 @@
     {{- $featureGates = list $featureGates "TTLAfterFinished=true" | join "," }}
 {{- end }}
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}

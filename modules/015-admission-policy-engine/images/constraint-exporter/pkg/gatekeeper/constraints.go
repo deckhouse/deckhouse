@@ -19,13 +19,12 @@ package gatekeeper
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog/v2"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +56,17 @@ type Constraint struct {
 
 // ConstraintSpec collect general information about the overall constraints applied to the cluster
 type ConstraintSpec struct {
-	EnforcementAction string `json:"enforcementAction"`
+	EnforcementAction string          `json:"enforcementAction"`
+	Match             ConstraintMatch `json:"match"`
+}
+
+type ConstraintMatch struct {
+	Kinds []MatchKind `json:"kinds"`
+}
+
+type MatchKind struct {
+	APIGroups []string `json:"apiGroups"`
+	Kinds     []string `json:"kinds"`
 }
 
 const (
@@ -66,26 +75,7 @@ const (
 	constraintsGroupVersion = "v1beta1"
 )
 
-func createKubeClient() (*kubernetes.Clientset, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
-}
-
-func createKubeClientGroupVersion() (controllerClient.Client, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
+func createKubeClientGroupVersion(config *rest.Config) (controllerClient.Client, error) {
 	client, err := controllerClient.New(config, controllerClient.Options{})
 	if err != nil {
 		return nil, err
@@ -95,13 +85,8 @@ func createKubeClientGroupVersion() (controllerClient.Client, error) {
 }
 
 // GetConstraints returns a list of all OPA constraints
-func GetConstraints() ([]Constraint, error) {
-	client, err := createKubeClient()
-	if err != nil {
-		return nil, err
-	}
-
-	cClient, err := createKubeClientGroupVersion()
+func GetConstraints(config *rest.Config, client *kubernetes.Clientset) ([]Constraint, error) {
+	cClient, err := createKubeClientGroupVersion(config)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +123,6 @@ func GetConstraints() ([]Constraint, error) {
 
 		if len(actual.Items) > 0 {
 			for _, item := range actual.Items {
-				// kind := item.GetKind()
-				// name := item.GetName()
-				// namespace := item.GetNamespace()
-				// klog.Infof("Kind:%s, Name:%s, Namespace:%s \n", kind, name, namespace)
 				var constraint Constraint
 
 				err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.UnstructuredContent(), &constraint)
@@ -150,11 +131,10 @@ func GetConstraints() ([]Constraint, error) {
 					continue
 				}
 
-				constraints = append(constraints, Constraint{
-					Meta:   ConstraintMeta{Kind: item.GetKind(), Name: item.GetName()},
-					Status: ConstraintStatus{TotalViolations: constraint.Status.TotalViolations, Violations: constraint.Status.Violations},
-					Spec:   ConstraintSpec{EnforcementAction: constraint.Spec.EnforcementAction},
-				})
+				constraint.Meta.Kind = item.GetKind()
+				constraint.Meta.Name = item.GetName()
+
+				constraints = append(constraints, constraint)
 			}
 		}
 
