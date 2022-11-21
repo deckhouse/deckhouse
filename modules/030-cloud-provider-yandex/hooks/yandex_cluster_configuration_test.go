@@ -86,7 +86,6 @@ masterNodeGroup:
     memory: 4096
     platform: standard-v2
   replicas: 1
-nodeNetworkCIDR: 10.231.0.0/22
 provider:
   cloudID: test
   folderID: test
@@ -94,7 +93,6 @@ provider:
     {
       "id": "test"
     }
-sshPublicKey: ssh-rsa test
 withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
