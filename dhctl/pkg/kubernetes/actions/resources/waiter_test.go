@@ -171,6 +171,22 @@ spec:
 		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
 		require.Equal(t, checkers[1].Name(), "NodeGroup node readiness check")
 	})
+
+	t.Run("with multiple cloud ephemeral nodegroup but skip one", func(t *testing.T) {
+		content := resourcesContentWithoutNg +
+			ngTemplate("system", 0, 2) +
+			ngTemplate("node", 1, 2)
+
+		resources, err := template.ParseResourcesContent(content, nil)
+		require.NoError(t, err)
+		require.Len(t, resources, 4)
+
+		checkers, err := GetCheckers(nil, resources, []string{"node"})
+		require.NoError(t, err)
+		require.Len(t, checkers, 1, "should get onecheck")
+
+		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
+	})
 }
 
 type testChecker struct {
