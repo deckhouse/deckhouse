@@ -151,10 +151,10 @@ function __main__() {
   group="group_node_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
-  generate_node_count_metric "nodes"      "$group" "flant_pricing_count_nodes_by_type"             # DEPRECATED all nodes except CP nodes with expected taints
-  generate_node_count_metric "nodes_all"  "$group" "flant_pricing_node_count"                      # all nodes
-  generate_node_count_metric "nodes_cp"   "$group" "flant_pricing_controlplane_node_count"         # CP nodes
-  generate_node_count_metric "nodes_t_cp" "$group" "flant_pricing_controlplane_tainted_node_count" # CP nodes with expected taints
+  generate_node_count_metric "nodes"      "$group" "flant_pricing_count_nodes_by_type"        # DEPRECATED all nodes except CP nodes with expected taints
+  generate_node_count_metric "nodes_all"  "$group" "flant_pricing_nodes"                      # all nodes
+  generate_node_count_metric "nodes_cp"   "$group" "flant_pricing_controlplane_nodes"         # CP nodes
+  generate_node_count_metric "nodes_t_cp" "$group" "flant_pricing_controlplane_tainted_nodes" # CP nodes with expected taints
 }
 
 # Args:
