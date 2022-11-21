@@ -140,26 +140,28 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		return false, err
 	}
 
+	n.logger.LogInfoF("For node group '%s':", n.ngName)
+
 	// todo ask
 	if ng.Status.Ready == ng.Status.Desired {
-		n.logger.LogDebugF("nodegroupChecker is ready: %d == %d")
+		n.logger.LogInfoF("\t\tAll nodes are 'Ready'")
 		return true, nil
 	}
 
 	if time.Now().Before(n.startCheckTime) {
-		n.logger.LogInfoF("Waiting 1 minute for node group status stabilize")
+		n.logger.LogInfoF("\t\tWaiting 1 minute for stabilize node group status")
 		return false, nil
 	}
 
 	if ng.Status.Desired == 0 {
-		n.logger.LogInfoF("Waiting for desired nodes will be greater than 0")
+		n.logger.LogInfoF("\t\tWaiting for desired nodes will be greater than 0")
 		return false, nil
 	}
 
 	if len(ng.Status.ConditionSummary.StatusMessage) > 0 {
-		n.logger.LogErrorF("Last machine failures:\n %s", ng.Status.ConditionSummary.StatusMessage)
+		n.logger.LogErrorF("\t\tLast machine failures:\n %s", ng.Status.ConditionSummary.StatusMessage)
 		for _, f := range ng.Status.LastMachineFailures {
-			n.logger.LogErrorF("\t%s\n", f.LastOperation.Description)
+			n.logger.LogErrorF("\t\t\t%s\n", f.LastOperation.Description)
 		}
 
 		dur := 1 * time.Minute
@@ -169,16 +171,16 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		}
 
 		if len(events) > 0 {
-			n.logger.LogErrorF("Last %v nodegroup events:\n", dur.String())
+			n.logger.LogErrorF("\t\tLast events for node group:\n", dur.String())
 			for _, e := range events {
-				n.logger.LogErrorF("\t%s:%s\n", e.Reason, e.Note)
+				n.logger.LogErrorF("\t\t\t%s: %s\n", e.Reason, e.Note)
 			}
 		}
 
 		return false, nil
 	}
 
-	n.logger.LogInfoF("Waiting for ready nodes count will be equal desired nodes count (%d/%d)",
+	n.logger.LogInfoF("\t\tWaiting for 'Ready' nodes count will be equal 'Desired' nodes count (%d/%d)",
 		ng.Status.Ready, ng.Status.Desired)
 
 	return false, nil
@@ -223,6 +225,8 @@ func tryToGetEphemeralNodeGroupChecker(
 			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
 		return nil, nil
 	}
+
+	log.InfoF("Got readiness checker for nodegroup %s", ng.GetName())
 
 	return newNodeGroupChecker(&kubeNodegroupGetter{kubeCl: kubeCl}, ng.GetName()), nil
 }

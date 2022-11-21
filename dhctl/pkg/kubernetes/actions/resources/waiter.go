@@ -76,7 +76,7 @@ func (w *Waiter) ReadyAll() (bool, error) {
 
 	for _, c := range w.checkers {
 		var ready bool
-		err := retry.NewLoop(c.Name(), w.attempts, 5*time.Second).Run(func() error {
+		err := retry.NewSilentLoop(c.Name(), w.attempts, 5*time.Second).Run(func() error {
 			var err error
 			ready, err = c.IsReady()
 			return err
