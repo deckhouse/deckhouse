@@ -115,7 +115,7 @@ bin/gator-${GATOR_VERSION}/gator:
 .PHONY: bin/gator
 bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
-	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
+	ln -s gator-${GATOR_VERSION}/gator bin/gator
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
@@ -137,11 +137,15 @@ bin/golangci-lint:
 	mkdir -p bin
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
-bin/gofumpt:
-	mkdir -p bin
-	test -f bin/gofumpt-$(GOFUMPT_VERSION) || curl -sLo bin/gofumpt-$(GOFUMPT_VERSION) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(PLATFORM)_$(ARCH)
-	chmod u+x bin/gofumpt-$(GOFUMPT_VERSION)
-	ln -s gofumpt-$(GOFUMPT_VERSION) bin/gofumpt
+bin/gofumpt-${GOFUMPT_VERSION}/gofumpt:
+	mkdir -p bin/gofumpt-${GOFUMPT_VERSION}
+	curl -sLo bin/gofumpt-${GOFUMPT_VERSION}/gofumpt https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v${GOFUMPT_VERSION}_${PLATFORM}_${ARCH}
+	chmod u+x bin/gofumpt-${GOFUMPT_VERSION}/gofumpt
+
+.PHONY: bin/gofumpt
+bin/gofumpt: bin/gofumpt-${GOFUMPT_VERSION}/gofumpt
+	rm -f bin/gofumpt
+	ln -s gofumpt-${GOFUMPT_VERSION}/gofumpt bin/gofumpt
 
 .PHONY: lint lint-fix format
 lint: ## Run linter.
@@ -258,3 +262,7 @@ bin/werf: bin bin/trdl ## Install werf for images-tags generator.
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
 	cd candi/tools; bash update_kubernetes_patchversions.sh
+
+.PHONY: clean
+clean: ## Remove all deps
+	rm -rf bin
