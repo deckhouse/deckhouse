@@ -21,27 +21,19 @@ endif
 ifeq ($(OS_NAME), Linux)
 	PLATFORM = linux
 	JQ_PLATFORM = linux64
-	YQ_PLATFORM = linux
-	TRDL_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
 	PLATFORM = darwin
 	JQ_PLATFORM = osx-amd64
-	YQ_PLATFORM = darwin
-	TRDL_PLATFORM = darwin
 endif
 JQ_VERSION = 1.6
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
 	ARCH = amd64
-	YQ_ARCH = amd64
 	CRANE_ARCH = x86_64
-	TRDL_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	ARCH = arm64
-	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
-	TRDL_ARCH = arm64
 endif
 
 
@@ -245,13 +237,13 @@ bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion s
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(PLATFORM)_$(ARCH) -o bin/yq && chmod +x bin/yq
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
+	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(PLATFORM)-$(ARCH)/bin/trdl -o bin/trdl
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-tags generator.
