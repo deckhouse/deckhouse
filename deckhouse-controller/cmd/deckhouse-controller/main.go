@@ -26,12 +26,14 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -90,13 +92,29 @@ func main() {
 
 			sh_app.AppStartMessage = version()
 
-			operator, err := addon_operator.Init()
+			// Workaround to run AddonOperator with deprecated settings:
+			// - Init temporary Kubernetes client.
+			// - Parse config from ConfigMap or load from ModuleConfig resources.
+			// - Run conversions for sections.
+			loader := d8config.NewInitialConfigLoader(nil)
+			initialKubeConfig, err := loader.GetInitialKubeConfig(os.Getenv("ADDON_OPERATOR_CONFIG_MAP"))
+			if err != nil {
+				log.Error(err)
+				os.Exit(1)
+			}
+
+			operator := addon_operator.NewAddonOperator()
+			operator.InitialKubeConfig = initialKubeConfig
+			err = addon_operator.Bootstrap(operator)
 			if err != nil {
 				os.Exit(1)
 			}
 			operator.Start()
 
-			// Block action by waiting signals from OS.
+			// Init deckhouse-config service with ModuleManager instance.
+			d8config.InitService(operator.ModuleManager)
+
+			// Block main thread by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {
 				operator.Shutdown()
 				os.Exit(1)

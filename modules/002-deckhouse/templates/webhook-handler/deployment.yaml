@@ -87,7 +87,7 @@ spec:
         - name: ENABLED_MODULES
           value: "{{ $.Values.global.enabledModules | join " " }}"
         - name: DECKHOUSE_CONFIG_MAP
-          value: "{{ $.Values.deckhouse.internal.configMapName }}"
+          value: deckhouse-generated-config-do-not-edit
         ports:
           - containerPort: 9680
             name: validating-http

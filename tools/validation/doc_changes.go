@@ -43,6 +43,11 @@ func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
 
 		fileName := fileInfo.NewFileName
 
+		if strings.Contains(fileName, "testdata") {
+			msgs.Add(NewSkip(fileName, ""))
+			continue
+		}
+
 		if docFileRe.MatchString(fileName) {
 			msgs.Add(checkDocFile(fileName, info))
 			continue

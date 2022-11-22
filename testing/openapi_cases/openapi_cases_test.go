@@ -69,7 +69,7 @@ var _ = Describe("OpenAPI case tests", func() {
 })
 
 func ExecuteTestCases(testCases *TestCases) {
-	// Silence addon-operator logger. (Validation, ModuleManager)
+	// Silence addon-operator logger. (Validation, moduleManager)
 	log.SetOutput(ioutil.Discard)
 
 	modulePath, _ := filepath.Split(testCases.dir)

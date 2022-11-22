@@ -127,7 +127,7 @@ spec:
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
               value: "60"
             - name: ADDON_OPERATOR_CONFIG_MAP
-              value: deckhouse
+              value: deckhouse-generated-config-do-not-edit
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
               value: deckhouse_
             - name: ADDON_OPERATOR_NAMESPACE

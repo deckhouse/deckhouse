@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 required:
   - auth
@@ -44,10 +45,6 @@ properties:
                 type: string
                 description: |
                   URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
-          password:
-            type: string
-            description: |
-              Deprecated.
           allowedUserGroups:
             type: array
             items:
@@ -74,9 +71,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
-
-              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
             properties:
               authURL:
                 type: string
@@ -89,7 +84,9 @@ properties:
           password:
             type: string
             description: |
-              Deprecated.
+              Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
+
+              This parameter is used if the `externalAuthentication` is not enabled.
           allowedUserGroups:
             type: array
             items:

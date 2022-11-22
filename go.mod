@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.7-0.20221018124000-7002084b9640 // branch: main
+	github.com/flant/addon-operator v1.0.7-0.20221108074825-ba5d9983d012 // branch: main
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/shell-operator v1.0.13-0.20221018121846-032ccd06522c // branch: main
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -32,7 +32,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.20.2
 	github.com/otiai10/copy v1.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1

@@ -73,9 +73,6 @@ properties:
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-      password:
-        description: |
-          Параметр устарел.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в панель администратора OpenVPN.
@@ -131,9 +128,6 @@ properties:
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-  storageClass:
-    description: |
-      Параметр будет удален в следующих релизах, т.к. мы отказались от использования диска для хранения сертификатов.
 oneOf:
   - properties:
       tcpEnabled:

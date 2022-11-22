@@ -4,72 +4,95 @@ permalink: ru/
 lang: ru
 ---
 
-Deckhouse состоит из оператора Deckhouse и модулей. Модуль — набор helm-чартов, хуков, файлов и правил сборки компонентов модуля (компонентов Deckhouse).
+Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков [Addon-operator'а](https://github.com/flant/addon-operator/), правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
 
-Поведение Deckhouse настраивается с помощью:
-- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в параметре `global` [конфигурации Deckhouse](#конфигурация-deckhouse).
-- Настроек модулей, хранящихся в [конфигурации Deckhouse](#конфигурация-deckhouse) и custom resource'ах (для некоторых модулей Deckhouse).
+<div markdown="0" style="height: 0;" id="конфигурация-deckhouse"></div>
 
-## Конфигурация Deckhouse
+Deckhouse настраивается с помощью:
+- **[Глобальных настроек](deckhouse-configure-global.html).** Глобальные настройки хранятся в custom resource `ModuleConfig/global`. Глобальные настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
+- **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
+- **Custom resource'ов.** Некоторые модули настраиваются с помощью дополнительных custom resource'ов.
 
-Конфигурация Deckhouse хранится в ConfigMap `deckhouse` в пространстве имен `d8-system` и может содержать следующие параметры (ключи):
-- `global` —  содержит [глобальные настройки](deckhouse-configure-global.html) Deckhouse в виде multi-line-строки в формате YAML;
-- `<moduleName>` (где `<moduleName>` — название модуля Deckhouse в camelCase) — содержит [настройки модуля](#настройка-модуля) в виде multi-line-строки в формате YAML;
-- `<moduleName>Enabled` (где `<moduleName>` — название модуля Deckhouse в camelCase) — параметр позволяет явно [включить или отключить модуль](#включение-и-отключение-модуля).
-
-Чтобы посмотреть конфигурацию Deckhouse выполните следующую команду:
-
-```shell
-kubectl -n d8-system get cm/deckhouse -o yaml
-```
-
-Пример ConfigMap `deckhouse`:
+Пример набора custom resource'ов конфигурации Deckhouse:
 
 ```yaml
-apiVersion: v1
+# Глобальные настройки.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
 metadata:
-  name: deckhouse
-  namespace: d8-system
-data:
-  global: |          # Вертикальная черта.
-    # Глобальные настройки в формате YAML.
+  name: global
+spec:
+  version: 1
+  settings:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
-  # Настройки модуля monitoring-ping в формате YAML.
-  monitoringPing: |
+---
+# Настройки модуля monitoring-ping.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-ping
+spec:
+  version: 1
+  settings:
     externalTargets:
     - host: 8.8.8.8
-  # Отключение модуля dashboard.
-  dashboardEnabled: "false"
+---
+# Отключить модуль dashboard.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: dashboard
+spec:
+  enabled: false
 ```
 
-Обратите внимание на несколько важных нюансов в конфигурации:
-* Символ `|` (вертикальная черта) обязательно должен быть указан в параметрах настройки, т.к. передаваемое значение — многострочная строка (multi-line string), а не объект.
-* Наименование модулей пишется в стиле *camelCase*.
-
-Чтобы изменить конфигурацию Deckhouse отредактируйте ConfigMap `deckhouse`, например, следующим способом:
+Посмотреть список custom resource'ов `ModuleConfig`, состояние модуля (включен/выключен) и его статус можно с помощью команды `kubectl get moduleconfigs`:
 
 ```shell
-kubectl -n d8-system edit cm/deckhouse
+$ kubectl get moduleconfigs
+NAME                STATE      VERSION    STATUS    AGE
+deckhouse           Enabled    1                    12h
+deckhouse-web       Enabled    2                    12h
+global              Enabled    1                    12h
+prometheus          Enabled    2                    12h
+upmeter             Disabled   2                    12h
 ```
 
-После сохранения конфигурации Deckhouse изменения применяются автоматически.
+Чтобы изменить глобальную конфигурацию Deckhouse или конфигурацию модуля, нужно создать или отредактировать соответствующий ресурс `ModuleConfig`.
 
-### Настройка модуля
+Например, чтобы отредактировать конфигурацию модуля `upmeter`, выполните следующую команду:
+
+```shell
+kubectl -n d8-system edit moduleconfig/upmeter
+```
+
+После завершения редактирования изменения применяются автоматически.
+
+## Настройка модуля
 
 > При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту *звезду*.
 
-Deckhouse работает только с включёнными модулями. В зависимости от используемого [набора модулей](#наборы-модулей) модули могут быть включены или выключены по умолчанию. Читайте подробнее про явное [включение или отключение модуля](#включение-и-отключение-модуля).
+Модуль настраивается с помощью custom resource `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case). Custom resource `ModuleConfig` имеет следующие поля:
 
-Модуль настраивается в конфигурации Deckhouse в параметре с названием модуля в camelCase. Значением параметра передается multi-line-строка в формате YAML с настройками модуля.
+- `metadata.name` — название модуля Deckhouse в kebab-case (например `prometheus`, `node-manager`).
+- `spec.version` — версия схемы настроек модуля (целое число, больше нуля). Обязательное поле, если `spec.settings` не пустое. Номер актуальной версии можно увидеть в документации модуля в разделе *"Настройки"*.
+  - Deckhouse поддерживает обратную совместимость версий схемы настроек модуля. Если используется схема настроек устаревшей версии, при редактировании или просмотре custom resource'а будет выведено предупреждение о необходимости обновить схему настроек модуля.
+- `spec.settings` — настройки модуля. Необязательное поле, если используется поле `spec.enabled`. Описание возможных настроек можно найти в документации модуля в разделе *"Настройки"*.
+- `spec.enabled` — необязательное поле для явного [включения или отключения модуля](#включение-и-отключение-модуля). Если не задано, модуль может быть включён по умолчанию в одном из [наборов модулей](#наборы-модулей).
 
-Некоторые модули дополнительно настраиваются с помощью custom resource'ов. Воспользуйтесь поиском (наверху страницы) или найдите модуль в меню слева, чтобы получить документацию по его настройкам и используемым custom resource'ам.
+> Deckhouse не изменяет custom resource'ы `ModuleConfig`. Это позволяет применять подход Infrastructure as Code (IaC) при хранении конфигурации. Другими словами, можно воспользоваться всеми преимуществами системы контроля версий для хранения настроек Deckhouse, использовать Helm, kubectl и другие привычные инструменты.
 
-Пример настройки параметров модуля `kube-dns`:
+Пример custom resource для настройки модуля `kube-dns`:
 
 ```yaml
-data:
-  kubeDns: |
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  version: 1
+  settings:
     stubZones:
     - upstreamNameservers:
       - 192.168.121.55
@@ -80,17 +103,33 @@ data:
     - 10.2.200.55
 ```
 
+Некоторые модули настраиваются с помощью дополнительных custom resource'ов. Воспользуйтесь поиском (наверху страницы) или выберите модуль в меню слева, чтобы просмотреть документацию по его настройкам и используемым custom resource'ам.
+
 ### Включение и отключение модуля
 
 > Некоторые модули могут быть включены по умолчанию в зависимости от используемого [набора модулей](#наборы-модулей).
 
-Для включения или отключения модуля необходимо добавить в ConfigMap `deckhouse` параметр `<moduleName>Enabled`, который может принимать одно из двух значений: `"true"` или `"false"` (кавычки обязательны), где `<moduleName>` — название модуля в camelCase.
+Для явного включения или отключения модуля необходимо установить `true` или `false` в поле `.spec.enabled` в соответствующем custom resource `ModuleConfig`. Если для модуля нет такого custom resource `ModuleConfig`, его нужно создать.
 
-Пример включения модуля `user-authn`:
+Пример явного выключения модуля `user-authn` (модуль будет выключен независимо от используемого набора модулей):
 
 ```yaml
-data:
-  userAuthnEnabled: "true"
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: false
+```
+
+Проверить состояние модуля можно с помощью команды `kubectl get moduleconfig <ИМЯ_МОДУЛЯ>`.
+
+Пример:  
+
+```shell
+$ kubectl get moduleconfig user-authn
+NAME                STATE      VERSION    STATUS    AGE
+user-authn          Disabled   1                    12h
 ```
 
 ## Наборы модулей

@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   inlet:
@@ -113,10 +114,6 @@ properties:
             type: string
             description: |
               The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
-      password:
-        type: string
-        description: |
-          Deprecated.
       allowedUserGroups:
         type: array
         items:
@@ -221,10 +218,6 @@ properties:
     type: boolean
     default: false
     x-examples: [true, false]
-  storageClass:
-    type: string
-    description: |
-      The parameter will be removed in future releases, as we have abandoned the use of a disk for storing certificates.
 oneOf:
   - properties:
       tcpEnabled:

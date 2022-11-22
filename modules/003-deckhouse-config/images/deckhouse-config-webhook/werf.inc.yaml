@@ -1,0 +1,108 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ .Images.BASE_ALPINE }}
+#from: { { .BaseAlpine }}
+git:
+  - add: /
+    to: /deckhouse
+    includePaths:
+      - modules/*/openapi
+      - global-hooks/openapi
+      # Include schemas from candi.
+      - candi/openapi/*
+      - candi/cloud-providers/*/openapi
+      # Include EE and FE modules.
+{{ if eq .Env "EE" }}
+      - ee/modules/*/openapi
+{{ end }}
+{{ if eq .Env "FE" }}
+      - ee/modules/*/openapi
+      - ee/fe/modules/*/openapi
+{{ end }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/deckhouse-config-webhook
+    to: /deckhouse-config-webhook
+    before: setup
+shell:
+  install:
+    # Move ee/fe modules to MODULES_DIR.
+    - mv /deckhouse/ee/modules/* /deckhouse/modules || true
+    - mv /deckhouse/ee/fe/modules/* /deckhouse/modules || true
+docker:
+  ENTRYPOINT: ["/deckhouse-config-webhook"]
+---
+{{ $webhookAbsPath := "/deckhouse/modules/003-deckhouse-config/images/deckhouse-config-webhook" }}
+{{ $webhookRelPath := "modules/003-deckhouse-config/images/deckhouse-config-webhook" }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+# from: { { .BaseGolang16Alpine }}
+shell:
+  beforeInstall:
+    #- apk add --no-cache git
+  install:
+    - cd {{ $webhookAbsPath }}
+    - go mod download
+  setup:
+    # Migrate ee/fe internal packages imports.
+#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+    - cd {{ $webhookAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o deckhouse-config-webhook
+    - mkdir /src
+    - mv deckhouse-config-webhook /src
+    - ls -la /deckhouse
+    - go version /src/deckhouse-config-webhook
+
+git:
+- add: /{{ $webhookRelPath }}
+  to:  {{ $webhookAbsPath }}
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+    - hack
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+- add: /
+  to: /deckhouse
+  includePaths:
+    - dhctl/go.mod
+    - dhctl/go.sum
+    - go_lib
+    - go.mod
+    - go.sum
+    - modules/*/settings-conversion/**/*.go
+{{ if eq .Env "EE" }}
+    - ee/modules/*/settings-conversion/**/*.go
+{{ end }}
+{{ if eq .Env "FE" }}
+    - ee/modules/*/settings-conversion/**/*.go
+    - ee/fe/modules/*/settings-conversion/**/*.go
+{{ end }}
+  excludePaths:
+    - {{ $webhookRelPath }}
+  stageDependencies:
+    install:
+      - dhctl/go.mod
+      - dhctl/go.sum
+      - go.mod
+      - go.sum
+    setup:
+      - go_lib/**/*.go
+      - modules/*/settings-conversion/**/*.go
+{{ if eq .Env "EE" }}
+      - ee/modules/*/settings-conversion/**/*.go
+{{ end }}
+{{ if eq .Env "FE" }}
+      - ee/modules/*/settings-conversion/**/*.go
+      - ee/fe/modules/*/settings-conversion/**/*.go
+{{ end }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg

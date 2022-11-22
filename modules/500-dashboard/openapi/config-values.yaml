@@ -35,10 +35,6 @@ properties:
               Default value is false.
 
               > **Caution!** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`;
-      password:
-        type: string
-        description: |
-          Deprecated.
       whitelistSourceRanges:
         type: array
         items:
