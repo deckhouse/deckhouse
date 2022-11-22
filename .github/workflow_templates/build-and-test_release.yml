@@ -144,6 +144,15 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.dhctl_tests) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "golang_format" "GolangCI Lint") }!}
+  golang_format:
+    name: {!{ $jobNames.golang_format }!}
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golang_format" "build_fe") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golang_format) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "golangci_lint" "GolangCI Lint") }!}
   golangci_lint:
     name: {!{ $jobNames.golangci_lint }!}
@@ -236,6 +245,7 @@ jobs:
       - matrix_tests
       - dhctl_tests
       - golangci_lint
+      - golang_format
       - openapi_test_cases
       - web_links_test
       - validators

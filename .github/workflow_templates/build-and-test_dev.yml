@@ -118,6 +118,15 @@ jobs:
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
 
+  golang_format:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Golang Formattig
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "golang_format" "build_deckhouse") | strings.Indent 4 }!}
+
   golangci_lint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: GolangCI Lint
@@ -166,6 +175,7 @@ jobs:
       - build_deckhouse
       - validators
       - openapi_test_cases
+      - golang_format
       - golangci_lint
       - dhctl_tests
       - matrix_tests
