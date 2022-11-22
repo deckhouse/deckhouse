@@ -123,7 +123,13 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName)
 		statusPatch := makeStatusPatch(cfg, moduleStatus)
 		if statusPatch != nil {
-			input.LogEntry.Infof("Patch /status for %s: change (state=%s, status=%s) to state=%s, status=%s", cfg.GetName(), cfg.Status.State, cfg.Status.Status, statusPatch.State, statusPatch.Status)
+			input.LogEntry.Infof(
+				"Patch /status for moduleconfig/%s: state '%s' to '%s', version '%s' to %s', status '%s' to '%s'",
+				cfg.GetName(),
+				cfg.Status.State, statusPatch.State,
+				cfg.Status.Version, statusPatch.Version,
+				cfg.Status.Status, statusPatch.Status,
+			)
 			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "ModuleConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 		}
 	}
