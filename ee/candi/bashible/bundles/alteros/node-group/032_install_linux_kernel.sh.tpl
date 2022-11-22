@@ -44,7 +44,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | sed "s/kernel//" | awk '{print $2$1}')"
+desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | tail -n 1 | sed "s/kernel//" | awk '{print $2$1}')"
 
 should_install_kernel=true
 
@@ -76,7 +76,6 @@ if ! grep -q "cgroup.memory=nokmem" /etc/default/grub; then
   bb-log-info "Setting reboot flag due to grub cmdline for kernel was updated"
   bb-flag-set reboot
 fi
-
 
 # remove force desired kernel install annotation
 if bb-flag? remove-annotation; then

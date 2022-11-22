@@ -50,7 +50,7 @@ elif bb-node-has-force-install-desired-kernel-annotation?; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | sed "s/kernel//" | awk '{print $2$1}')"
+desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | tail -n 1 | sed "s/kernel//" | awk '{print $2$1}')"
 
 should_install_kernel=true
 
