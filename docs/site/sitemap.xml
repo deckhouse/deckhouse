@@ -1,15 +1,9 @@
 ---
 layout: null
 searchable: false
+sitemap_include: false
+permalink: en/sitemap.xml
+lang: en
 ---
 
-<?xml version="1.0" encoding="UTF-8"?>
-
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-   <sitemap>
-      <loc>{{ site.url }}/documentation/v1/sitemap.xml</loc>
-   </sitemap>
-   <sitemap>
-      <loc>{{ site.url }}/sitemap-site.xml</loc>
-   </sitemap>
-</sitemapindex>
+{% include sitemap.liquid %}

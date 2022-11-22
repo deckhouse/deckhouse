@@ -35,7 +35,7 @@ deckhouse:
     prometheusEnabled: true
     # [<en>] Disabling longterm Prometheus in the prometheus module configuration —  it is redundant for Deckhouse testing.
     # [<ru>] В настройках модуля prometheus отключаем запуск longterm Prometheus — для тестирования Deckhouse он избыточен.
-    # [<ru>] Подробнее о longterm Prometheus — https://deckhouse.io/ru/documentation/v1/modules/300-prometheus/
+    # [<ru>] Подробнее о longterm Prometheus — https://deckhouse.ru/documentation/v1/modules/300-prometheus/
     prometheus:
       longtermRetentionDays: 0
     # [<en>] Enabling a module for cluster control plane monitoring.

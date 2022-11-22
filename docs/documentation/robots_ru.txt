@@ -1,9 +1,9 @@
 ---
 layout: none
-permalink: en/robots.txt
+permalink: ru/robots.txt
 searchable: false
 sitemap_include: false
-lang: en
+lang: ru
 ---
 
 {% include robots.txt.liquid %}

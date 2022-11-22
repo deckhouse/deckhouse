@@ -9,7 +9,7 @@ lang: en
 - The code within some branch that is not a part of a release is considered a dev version.
 - Release (verb) — the process of creating, announcing, and releasing a new form (version) of the program.
 *Do not confuse* it with changing the version within the release channel.
-- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`. [More](https://deckhouse.io/en/documentation/v1/deckhouse-release-channels.html) about release channels on the site.
+- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`. [More](https://deckhouse.io/documentation/v1/deckhouse-release-channels.html) about release channels on the site.
 - We use the versioning scheme similar to the [semver](https://semver.org/) one.
 - Patch release changing — the process of changing version on a release channel when increments only patch version number.
 - Release changing — the process of changing version on a release channel when increments minor version number.
