@@ -17,7 +17,7 @@ spec:
       name: worker
     maxPerZone: 1
     minPerZone: 1
-    zones: ["1"]
+    zones: ["westeurope-1"]
   disruptions:
     approvalMode: Manual
   nodeTemplate:
