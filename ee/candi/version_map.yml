@@ -12,7 +12,7 @@ bashible:
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.15.73-*"
+          desiredVersion: "5.15.72-*"
           allowedPattern: "5.15"
   alteros: &alteros
     '7':
