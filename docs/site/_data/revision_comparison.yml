@@ -184,5 +184,5 @@ sections:
           ru: Обучение и консультации
         revision: ee
         external_url:
-          en: https://deckhouse.io/en/services/training.html
-          ru: https://deckhouse.io/ru/services/training.html
+          en: https://deckhouse.io/services/training.html
+          ru: https://deckhouse.ru/services/training.html
