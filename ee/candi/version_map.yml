@@ -12,7 +12,7 @@ bashible:
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.15.35-1.el7.3.x86_64"
+          desiredVersion: "5.15.35-*"
           allowedPattern: "5.15"
   alteros: &alteros
     '7':
@@ -27,7 +27,7 @@ bashible:
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.16.2-1.el7.alteros.x86_64"
+          desiredVersion: "5.16.2-*"
           allowedPattern: "5.16"
   astra: &astra
     '1.7':
@@ -42,7 +42,7 @@ bashible:
         allowedPattern: ""
       kernel:
         generic:
-          desiredVersion: "5.15.0-33-generic"
+          desiredVersion: "5.15.0-*-generic"
           allowedPattern: "5.15"
 k8s:
   '1.20':
