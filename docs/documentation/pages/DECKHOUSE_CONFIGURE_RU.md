@@ -136,23 +136,20 @@ user-authn          Disabled   1                    12h
 
 В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
-{%- assign bundles = site.data.bundles | sort %}
 <table>
 <thead>
 <tr><th>Набор модулей (bundle)</th><th>Список включенных по умолчанию модулей</th></tr></thead>
 <tbody>
-{% for bundle in bundles %}
+{% for bundle in site.data.bundles.bundleNames %}
 <tr>
-<td><strong>{{ bundle[0] |  replace_first: "values-", "" | capitalize }}</strong></td>
-<td>{% assign modules = bundle[1] | sort %}
+<td><strong>{{ bundle }}</strong></td>
+<td>
 <ul style="columns: 3">
-{%- for module in modules %}
-{%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
+{%- for moduleName in site.data.bundles.bundleModules[bundle] %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
 {%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-{%- if module[1] != true %}{% continue %}{% endif %}
 <li>
-{{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
+{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>

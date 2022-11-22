@@ -32,8 +32,6 @@ module Comparator
                 next
             end
 
-            puts "Comparing %s and %s" % [page.path, pageToCompare.path]
-
             comparingPage = ComparatorPage.new(site, page, pageToCompare, converter)
             next if comparingPages.find { |item| item.path == comparingPage.path if item.path }
             comparingPages << comparingPage

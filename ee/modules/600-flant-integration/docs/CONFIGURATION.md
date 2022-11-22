@@ -2,7 +2,7 @@
 title: "The flant-integration module: configuration"
 ---
 
-This module is **disabled** by default.
+{% include module-bundle.liquid %}
 
 ## Parameters
 

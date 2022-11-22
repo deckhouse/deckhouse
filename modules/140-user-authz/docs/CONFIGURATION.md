@@ -2,12 +2,7 @@
 title: "The user-authz module: configuration"
 ---
 
-This module is **enabled** by default. To disable it, add the following lines to the `deckhouse` ConfigMap:
-
-```yaml
-data:
-  userAuthzEnabled: "false"
-```
+{% include module-bundle.liquid %}
 
 > **Caution!** We strongly do not recommend creating Pods and ReplicaSets – these objects are secondary and should be created by other controllers. Access to creating and modifying Pods and ReplicaSets is disabled.
 >

@@ -2,12 +2,7 @@
 title: "The openvpn module: configuration"
 ---
 
-This module is **disabled** by default. To enable it, add the following lines to the `deckhouse` ConfigMap:
-
-```yaml
-data:
-  openvpnEnabled: "true"
-```
+{% include module-bundle.liquid %}
 
 > **Caution!** The admin panel always uses a subnet defined in the `tunnelNetwork` parameter. Static user addresses must be issued from this subnet. If the UDP protocol is used, these addresses will be converted for use in `udpTunnelNetwork` subnet. In this case, the networks in the `tunnelNetwork` and `udpTunnelNetwork` parameters must be the same size.
 >

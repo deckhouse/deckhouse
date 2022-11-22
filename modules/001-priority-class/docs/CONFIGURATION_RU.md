@@ -2,4 +2,4 @@
 title: "Модуль priority-class: настройки"
 ---
 
-Модуль **включен** по умолчанию и не требует конфигурации
+{% include module-bundle.liquid %}

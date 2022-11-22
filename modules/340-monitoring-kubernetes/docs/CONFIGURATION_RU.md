@@ -2,7 +2,7 @@
 title: "Модуль monitoring-kubernetes: настройки"
 ---
 
-Модуль по умолчанию **включен**.
+{% include module-bundle.liquid %}
 
 ## Параметры
 

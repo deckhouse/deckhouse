@@ -2,7 +2,7 @@
 title: "Модуль flant-integration: настройки"
 ---
 
-Модуль по умолчанию **выключен**.
+{% include module-bundle.liquid %}
 
 ## Параметры
 

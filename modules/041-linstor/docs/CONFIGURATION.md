@@ -2,12 +2,7 @@
 title: "The linstor module: configuration"
 ---
 
-This module is **disabled** by default. To enable it, add the following lines to the `deckhouse` ConfigMap:
-
-```yaml
-data:
-  linstorEnabled: "true"
-```
+{% include module-bundle.liquid %}
 
 > The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
 > The functionality of the module with other kernels is possible but not guaranteed.

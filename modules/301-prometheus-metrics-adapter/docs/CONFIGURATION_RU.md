@@ -3,7 +3,9 @@ title: "Модуль prometheus-metrics-adapter: настройки"
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 
-По умолчанию — **включен** в кластерах начиная с версии 1.9, если включен модуль `prometheus`. В общем случае конфигурации не требуется.
+{% include module-bundle.liquid %}
+
+Модуль работает если включен модуль `prometheus`. В общем случае конфигурации не требуется.
 
 ## Параметры
 

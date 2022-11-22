@@ -5,7 +5,9 @@ type:
 search: prometheus
 ---
 
-The module is **enabled** by default and does not require any configuration – it works right out-of-the-box.
+{% include module-bundle.liquid %}
+
+The module does not require any configuration – it works right out-of-the-box.
 
 ## Authentication
 

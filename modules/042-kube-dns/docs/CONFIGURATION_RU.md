@@ -2,7 +2,7 @@
 title: "Модуль kube-dns: настройки"
 ---
 
-Модуль по умолчанию **включен**.
+{% include module-bundle.liquid %}
 
 ## Параметры
 
