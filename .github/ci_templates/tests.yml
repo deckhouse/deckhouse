@@ -19,13 +19,6 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
-{!{ define "golang_format_run_args" }!}
-# <template: golang_format_run_args>
-args: 'sh -c "make bin/gofumpt && make format"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
-# </template: golang_format_run_args>
-{!{- end -}!}
-
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
 args: 'sh -c "go generate tools/register.go && golangci-lint run"'

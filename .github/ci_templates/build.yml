@@ -6,35 +6,22 @@ steps:
   {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
 
-  - name: Run go generate
+  # We have to choose the order of code generation and formatting. For now, we format generated code.
+  - name: Generate Go code
     run: |
       TESTS_IMAGE_NAME={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
       docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c "trap 'chown -R $(id -u):$(id -g) /deckhouse' EXIT; make generate"
       docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${TESTS_IMAGE_NAME} go generate .
 
-  - name: Check generated code
+  - name: Format Go code
+    run: |
+      TESTS_IMAGE_NAME={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
+      docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c "trap 'chown -R $(id -u):$(id -g) /deckhouse' EXIT; make bin/gofumpt && make format"
+
+  - name: Check Go code
     run: |
       git diff --exit-code
 # </template: go_generate_template>
-{!{ end }!}
-
-{!{ define "go_format_template" }!}
-# <template: go_format_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-
-  - name: Run go generate
-    run: |
-      TESTS_IMAGE_NAME={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
-      docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c "trap 'chown -R $(id -u):$(id -g) /deckhouse' EXIT; make deps && make format"
-
-  - name: Check Go code formatting
-    run: |
-      git diff --exit-code
-# </template: go_format_template>
 {!{ end }!}
 
 {!{ define "workflow_render_template" }!}
