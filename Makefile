@@ -19,25 +19,21 @@ endif
 
 # Set platform for deps
 ifeq ($(OS_NAME), Linux)
+	PLATFORM = linux
 	JQ_PLATFORM = linux64
-	YQ_PLATFORM = linux
-	TRDL_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
+	PLATFORM = darwin
 	JQ_PLATFORM = osx-amd64
-	YQ_PLATFORM = darwin
-	TRDL_PLATFORM = darwin
 endif
 JQ_VERSION = 1.6
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
-	YQ_ARCH = amd64
+	ARCH = amd64
 	CRANE_ARCH = x86_64
-	TRDL_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
-	YQ_ARCH = arm64
+	ARCH = arm64
 	CRANE_ARCH = arm64
-	TRDL_ARCH = arm64
 endif
 
 
@@ -83,14 +79,15 @@ help:
 
 
 GOLANGCI_VERSION = 1.46.2
-TRIVY_VERSION= 0.28.1
+GOFUMPT_VERSION  = 0.4.0
+TRIVY_VERSION    = 0.28.1
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.9.0
-TESTS_TIMEOUT="15m"
+GATOR_VERSION    = 3.9.0
+TESTS_TIMEOUT    = 15m
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
+deps: bin/golangci-lint bin/gofumpt bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
 
 ##@ Tests
 
@@ -110,7 +107,7 @@ bin/gator-${GATOR_VERSION}/gator:
 .PHONY: bin/gator
 bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
-	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
+	ln -s gator-${GATOR_VERSION}/gator bin/gator
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
@@ -132,12 +129,25 @@ bin/golangci-lint:
 	mkdir -p bin
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
-.PHONY: lint lint-fix
+bin/gofumpt-${GOFUMPT_VERSION}/gofumpt:
+	mkdir -p bin/gofumpt-${GOFUMPT_VERSION}
+	curl -sLo bin/gofumpt-${GOFUMPT_VERSION}/gofumpt https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v${GOFUMPT_VERSION}_${PLATFORM}_${ARCH}
+	chmod u+x bin/gofumpt-${GOFUMPT_VERSION}/gofumpt
+
+.PHONY: bin/gofumpt
+bin/gofumpt: bin/gofumpt-${GOFUMPT_VERSION}/gofumpt
+	rm -f bin/gofumpt
+	ln -s gofumpt-${GOFUMPT_VERSION}/gofumpt bin/gofumpt
+
+.PHONY: lint lint-fix format
 lint: ## Run linter.
-	golangci-lint run
+	bin/golangci-lint run
 
 lint-fix: ## Fix lint violations.
-	golangci-lint run --fix
+	bin/golangci-lint run --fix
+
+format:
+	bin/gofumpt -e -w -extra .
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -175,7 +185,7 @@ bin:
 	mkdir -p bin
 
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
-	cd tools/regcopy; go build -o bin/regcopy
+	cd tools/regcopy; go get -a; go build -o bin/regcopy
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
@@ -227,13 +237,13 @@ bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion s
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(PLATFORM)_$(ARCH) -o bin/yq && chmod +x bin/yq
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
+	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(PLATFORM)-$(ARCH)/bin/trdl -o bin/trdl
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-tags generator.
@@ -244,3 +254,7 @@ bin/werf: bin bin/trdl ## Install werf for images-tags generator.
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
 	cd candi/tools; bash update_kubernetes_patchversions.sh
+
+.PHONY: clean
+clean: ## Remove all deps
+	rm -rf bin
