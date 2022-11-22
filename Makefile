@@ -19,10 +19,12 @@ endif
 
 # Set platform for deps
 ifeq ($(OS_NAME), Linux)
+	PLATFORM = linux
 	JQ_PLATFORM = linux64
 	YQ_PLATFORM = linux
 	TRDL_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
+	PLATFORM = darwin
 	JQ_PLATFORM = osx-amd64
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
@@ -31,10 +33,12 @@ JQ_VERSION = 1.6
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
+	ARCH = amd64
 	YQ_ARCH = amd64
 	CRANE_ARCH = x86_64
 	TRDL_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
+	ARCH = arm64
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
 	TRDL_ARCH = arm64
@@ -135,7 +139,7 @@ bin/golangci-lint:
 
 bin/gofumpt:
 	mkdir -p bin
-	test -f bin/gofumpt-$(GOFUMPT_VERSION) || curl -sLo bin/gofumpt-$(GOFUMPT_VERSION) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS_NAME)_$(PLATFORM_NAME)
+	test -f bin/gofumpt-$(GOFUMPT_VERSION) || curl -sLo bin/gofumpt-$(GOFUMPT_VERSION) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(PLATFORM)_$(ARCH)
 	chmod u+x bin/gofumpt-$(GOFUMPT_VERSION)
 	ln -s gofumpt-$(GOFUMPT_VERSION) bin/gofumpt
 
