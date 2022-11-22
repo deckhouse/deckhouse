@@ -20,11 +20,18 @@ fi
 
 {{- if .registry.ca }}
 bb-event-on 'registry-ca-changed' '_update_ca_certificates'
-function _update_ca_certificates() {
+_update_ca_certificates() {
+  bb-flag-set containerd-need-restart
   update-ca-trust
 }
 
 bb-sync-file /etc/pki/ca-trust/source/anchors/registry-ca.crt - registry-ca-changed << "EOF"
 {{ .registry.ca }}
 EOF
+{{- else }}
+if [ -f /etc/pki/ca-trust/source/anchors/registry-ca.crt ]; then
+  rm -f /etc/pki/ca-trust/source/anchors/registry-ca.crt
+  _update_ca_certificates
+fi
 {{- end }}
+

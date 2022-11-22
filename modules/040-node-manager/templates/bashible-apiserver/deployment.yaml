@@ -123,6 +123,7 @@ spec:
 {{- define "bashible_input_data" }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
+
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
     cloudProvider:
       {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
@@ -131,6 +132,20 @@ spec:
     packagesProxy:
       {{- $.Values.global.clusterConfiguration.packagesProxy | toYaml | nindent 6 }}
     {{- end }}
+  {{- if hasKey $.Values.global.modules "proxy" }}
+    modulesProxy:
+    {{- if hasKey $.Values.global.modules.proxy "httpProxy" }}
+      httpProxy: {{ $.Values.global.modules.proxy.httpProxy | quote }}
+    {{- end }}
+    {{- if hasKey $.Values.global.modules.proxy "httpsProxy" }}
+      httpsProxy: {{ $.Values.global.modules.proxy.httpsProxy | quote }}
+    {{- end }}
+    {{- $noProxy := list "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+    {{- if hasKey $.Values.global.modules.proxy "noProxy" }}
+      {{- $noProxy = concat $noProxy $.Values.global.modules.proxy.noProxy }}
+      noProxy: {{ $noProxy | join "," | quote }}
+    {{- end }}
+  {{- end }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}

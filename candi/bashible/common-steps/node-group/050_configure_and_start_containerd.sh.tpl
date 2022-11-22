@@ -13,12 +13,18 @@
 # limitations under the License.
 
 {{- if eq .cri "Containerd" }}
-bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
 _on_containerd_config_changed() {
   {{ if ne .runType "ImageBuilding" -}}
   systemctl restart containerd.service
   {{- end }}
 }
+
+if bb-flag? containerd-need-restart; then
+  bb-log-warning "'containerd-need-restart' flag was set. Containerd should be restarted!"
+  _on_containerd_config_changed
+fi
+
+bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
 
   {{- $max_concurrent_downloads := 3 }}
   {{- if hasKey .nodeGroup.cri "containerd" }}

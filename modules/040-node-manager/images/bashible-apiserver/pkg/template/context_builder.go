@@ -150,6 +150,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Registry:      cb.registryData,
 		Images:        cb.imagesTags,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		ModulesProxy:  cb.clusterInputData.ModulesProxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -449,6 +450,8 @@ type tplContextCommon struct {
 	Registry registry                     `json:"registry" yaml:"registry"`
 
 	PackagesProxy interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+
+	ModulesProxy interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -513,6 +516,7 @@ type inputData struct {
 	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	ModulesProxy              interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 	APIServerEndpoints        []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string      `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string    `json:"allowedBundles" yaml:"allowedBundles"`
