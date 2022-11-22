@@ -140,26 +140,26 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		return false, err
 	}
 
-	n.logger.LogInfoF("For node group '%s':", n.ngName)
+	n.logger.LogInfoF("For node group '%s':\n", n.ngName)
 
 	// todo ask
-	if ng.Status.Ready == ng.Status.Desired {
-		n.logger.LogInfoF("\t\tAll nodes are 'Ready'")
+	if ng.Status.Desired > 0 && ng.Status.Ready == ng.Status.Desired {
+		n.logger.LogInfoF("\t\tAll nodes are 'Ready'\n")
 		return true, nil
 	}
 
 	if time.Now().Before(n.startCheckTime) {
-		n.logger.LogInfoF("\t\tWaiting 1 minute for stabilize node group status")
+		n.logger.LogInfoF("\t\tWaiting 1 minute for stabilize node group status\n")
 		return false, nil
 	}
 
 	if ng.Status.Desired == 0 {
-		n.logger.LogInfoF("\t\tWaiting for desired nodes will be greater than 0")
+		n.logger.LogInfoF("\t\tWaiting for desired nodes will be greater than 0\n")
 		return false, nil
 	}
 
 	if len(ng.Status.ConditionSummary.StatusMessage) > 0 {
-		n.logger.LogErrorF("\t\tLast machine failures:\n %s", ng.Status.ConditionSummary.StatusMessage)
+		n.logger.LogErrorF("\t\tLast machine failures:\n %s\n", ng.Status.ConditionSummary.StatusMessage)
 		for _, f := range ng.Status.LastMachineFailures {
 			n.logger.LogErrorF("\t\t\t%s\n", f.LastOperation.Description)
 		}
@@ -180,7 +180,7 @@ func (n *nodegroupChecker) IsReady() (bool, error) {
 		return false, nil
 	}
 
-	n.logger.LogInfoF("\t\tWaiting for 'Ready' nodes count will be equal 'Desired' nodes count (%d/%d)",
+	n.logger.LogInfoF("\t\tWaiting for 'Ready' nodes count will be equal 'Desired' nodes count (%d/%d)\n",
 		ng.Status.Ready, ng.Status.Desired)
 
 	return false, nil
