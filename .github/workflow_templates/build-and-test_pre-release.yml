@@ -20,7 +20,7 @@ jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
   go_generate:
-    name: Go Generate
+    name: Go Generate And Format
     needs:
       - git_info
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}

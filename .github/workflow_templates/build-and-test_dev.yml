@@ -52,7 +52,7 @@ jobs:
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
   go_generate:
-    name: Go Generate
+    name: Go Generate And Format
     needs:
       - git_info
       - pull_request_info

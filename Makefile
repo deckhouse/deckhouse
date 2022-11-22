@@ -175,7 +175,8 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 
 .PHONY: generate render-workflow
 generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	pushd tools; go generate; popd
+	go generate ./modules/500-upmeter/hooks/smokemini/internal/snapshot
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
