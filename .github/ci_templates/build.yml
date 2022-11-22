@@ -11,7 +11,6 @@ steps:
     run: |
       TESTS_IMAGE_NAME={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}
       docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse ${TESTS_IMAGE_NAME} sh -c "trap 'chown -R $(id -u):$(id -g) /deckhouse' EXIT; make generate"
-      docker run -v $(pwd):/deckhouse --tmpfs /deckhouse/.git/worktrees -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${TESTS_IMAGE_NAME} go generate .
 
   - name: Format Go code
     run: |
