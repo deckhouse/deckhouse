@@ -264,7 +264,7 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 	input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_total"), istioDrivenPodsCount, nil)
 	for v, c := range podsByFullVersion {
 		input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_group_by_full_version_total"), c, map[string]string{
-			"version": v,
+			"full_version": v,
 		})
 	}
 

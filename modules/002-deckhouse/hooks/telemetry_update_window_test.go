@@ -67,9 +67,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		dayFound := false
 		for i, m := range metrics {
 			if m.Name == "d8_telemetry_update_window" {
-				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
-				Expect(m.Labels).To(HaveKey("from"))
-				Expect(m.Labels).To(HaveKey("to"))
 				if day != "" {
 					if day != m.Labels["day"] {
 						continue
@@ -95,6 +92,11 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			Expect(dayFound).To(BeTrue())
 		}
 		Expect(metricIndex >= 0).To(BeTrue())
+
+		metric := metrics[metricIndex]
+		Expect(metric.Value).To(Equal(pointer.Float64Ptr(1.0)))
+		Expect(metric.Labels).To(HaveKey("from"))
+		Expect(metric.Labels).To(HaveKey("to"))
 	}
 
 	assertOnlyModeMetric := func(f *HookExecutionConfig) {

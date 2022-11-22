@@ -548,7 +548,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				for _, d := range m {
 					if d.Name == "d8_telemetry_istio_driven_pods_group_by_full_version_total" {
 						foundAll++
-						desiredVer := d.Labels["version"]
+						desiredVer := d.Labels["full_version"]
 
 						for ver, count := range stats.versions {
 							if desiredVer == ver {

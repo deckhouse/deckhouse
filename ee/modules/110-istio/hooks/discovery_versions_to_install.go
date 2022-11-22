@@ -106,7 +106,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 		}
 
 		input.MetricsCollector.Set(telemetry.WrapName("istio_control_plane_full_version"), 1.0, map[string]string{
-			"version": fullVer.FullVersion,
+			"full_version": fullVer.FullVersion,
 		})
 	}
 
