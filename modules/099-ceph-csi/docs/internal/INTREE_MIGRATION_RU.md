@@ -1,4 +1,4 @@
-## Миграции PersistentVolume's с in-tree rbd driver на csi driver (Ceph CSI)
+## Миграция с in-tree RBD драйвера на CSI (Ceph CSI)
 
 Для упрощения миграции был написан скрипт [rbd-in-tree-to-ceph-csi-migration-helper.sh](../../tools/rbd-in-tree-to-ceph-csi-migration-helper.sh).
 Перед запуском необходимо удалить Pod использующий PVC. В процессе миграции будет необходимо вручную выполнить команду в ceph-кластере для переименования rbd-образа (Ceph CSI использует другой формат имени).
@@ -136,6 +136,8 @@ persistentvolume/pvc-4a77a995-ce1e-463c-9726-d05966d3c5ef created
 
 
 ## Описание процесса миграции
+
+### Оглавление:
 
 1. Манифесты мигрируемых PVC и PV используемые для демонстрации процесса.
 2. Манифесты PVC и PV из которых будут заимствованы параметры характерные для Ceph CSI.
