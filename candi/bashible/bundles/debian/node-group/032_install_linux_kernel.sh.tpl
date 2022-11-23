@@ -70,7 +70,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(apt-cache show "linux-image-${desired_version}" | grep "Package:" | tail -n 1 | cut -d" " -f2 | sed "s/linux-image-//")"
+desired_version="$(apt-cache show "linux-image-${desired_version}" | grep "Package:" | sort -V | tail -n 1 | cut -d" " -f2 | sed "s/linux-image-//")"
 
 should_install_kernel=true
 version_in_use="$(uname -r)"
