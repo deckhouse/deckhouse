@@ -18,6 +18,7 @@ package checker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -153,10 +154,33 @@ func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	}
 
 	props.minPerZone = *ng.Spec.CloudInstances.MinPerZone
-	props.zones = ng.Spec.CloudInstances.Zones
 	if ng.Spec.CloudInstances.MaxUnavailablePerZone != nil {
 		// MaxUnavailablePerZone is zero by default
 		props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
+	}
+
+	props.zones = ng.Spec.CloudInstances.Zones
+	if ng.Spec.CloudInstances.ClassReference.Kind == "AzureInstanceClass" {
+		cloudProviderSettings, err := f.access.Kubernetes().CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-node-manager-cloud-provider", metav1.GetOptions{})
+		if err != nil {
+			return props, err
+		}
+		azureValues, ok := cloudProviderSettings.Data["azure"]
+		if !ok {
+			return props, fmt.Errorf("azure cloud provider settings not found")
+		}
+		var azureSettings map[string]interface{}
+		if err := json.Unmarshal(azureValues, &azureSettings); err != nil {
+			return props, fmt.Errorf("failed to unmarshal azure cloud provider settings: %v", err)
+		}
+		location, ok := azureSettings["location"]
+		if !ok {
+			return props, fmt.Errorf("azure cloud provider settings does not contain location")
+		}
+
+		for i := range props.zones {
+			props.zones[i] = fmt.Sprintf("%s-%s", location, props.zones[i])
+		}
 	}
 
 	return props, nil

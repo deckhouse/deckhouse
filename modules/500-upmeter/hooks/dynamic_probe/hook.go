@@ -140,15 +140,30 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return nil, err
 	}
 
-	data, ok := secret.Data["zones"]
+	zoneData, ok := secret.Data["zones"]
 	if !ok {
 		// zone absence is fine for static clusters
 		return []string{}, nil
 	}
-
 	var zones []string
-	if err := yaml.Unmarshal(data, &zones); err != nil {
+	if err := yaml.Unmarshal(zoneData, &zones); err != nil {
 		return nil, err
 	}
+
+	regionData, ok := secret.Data["region"]
+	if !ok {
+		return []string{}, nil
+	}
+	providerData, ok := secret.Data["type"]
+	if !ok {
+		return []string{}, nil
+	}
+	if string(providerData) == "azure" {
+		// Azure zones are in format "region-zone"
+		for i, zone := range zones {
+			zones[i] = string(regionData) + "-" + zone
+		}
+	}
+
 	return zones, nil
 }
