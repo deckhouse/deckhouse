@@ -93,7 +93,8 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 		loc            = parseCloudLocations(input.Snapshots["cloud_provider_secret"])
 	)
 
-	// Populate values
+	// Populate values. `zonePrefix` is for cloud zones that are passed around without region
+	// prefix, e.g. "west-1" will be just "1" in Azure.
 	data := emptyNames().
 		WithIngressControllers(ingressNames...).
 		WithZonePrefix(loc.zonePrefix)
@@ -137,6 +138,8 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return names, nil
 }
 
+// cloudLocations contains zones (with prefixes) and reqion prefix itself for NodeGroup fetcher in
+// Upmeter Agent.
 type cloudLocations struct {
 	zones      []string
 	zonePrefix string
