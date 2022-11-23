@@ -169,17 +169,18 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return nil, err
 	}
 
-	region, ok := secret.Data["region"]
-	if !ok {
-		return loc, nil
-	}
 	provider, ok := secret.Data["type"]
 	if !ok {
 		return loc, nil
 	}
 	if string(provider) == "azure" {
+		region, ok := secret.Data["region"]
+		if !ok {
+			return loc, fmt.Errorf("azure cloud provider secret must contain region")
+		}
+
 		// Azure zones are in format "region-zone", and we have to track the knowledge of the zone
-		// prefix
+		// prefix since nodegroups don't carry the region information themselves.
 		loc.zonePrefix = string(region)
 		for i, zone := range loc.zones {
 			loc.zones[i] = fmt.Sprintf("%s-%s", region, zone)
