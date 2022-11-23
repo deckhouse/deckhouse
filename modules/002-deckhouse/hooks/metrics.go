@@ -19,12 +19,11 @@ package hooks
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
