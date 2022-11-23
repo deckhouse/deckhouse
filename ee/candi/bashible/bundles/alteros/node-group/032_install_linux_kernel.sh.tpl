@@ -44,7 +44,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | grep "x86_64" | tail -n 1 | sed "s/kernel//" | awk '{print $2$1}')"
+desired_version="$(yum -q list "kernel-ml-${desired_version}" | grep "kernel-ml" | grep "x86_64" | tail -n 1 | sed "s/kernel-ml//" | awk '{print $2$1}')"
 
 should_install_kernel=true
 
@@ -59,10 +59,10 @@ fi
 
 if [[ "$should_install_kernel" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
-  bb-yum-install "kernel-${desired_version}"
-  packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
+  bb-yum-install "kernel-ml-${desired_version}"
+  packages_to_remove="$(rpm -q kernel-ml | grep -Ev "^kernel-ml-${desired_version}$" || true)"
 else
-  packages_to_remove="$(rpm -q kernel | grep -Ev "$allowed_versions_pattern" | grep -Ev "^kernel-${version_in_use}$" || true)"
+  packages_to_remove="$(rpm -q kernel-ml | grep -Ev "$allowed_versions_pattern" | grep -Ev "^kernel-ml-${version_in_use}$" || true)"
 fi
 
 if [ -n "$packages_to_remove" ]; then
