@@ -94,9 +94,11 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 	)
 
 	// Populate values
-	data := emptyNames().WithIngressControllers(ingressNames...)
+	data := emptyNames().
+		WithIngressControllers(ingressNames...).
+		WithZonePrefix(loc.zonePrefix)
 
-	// We cannot track any ephemeral node group if no zones present in cloud provider secret.
+	// We can track ephemeral node groups if only we have zones present in cloud provider secret.
 	if len(loc.zones) > 0 {
 		data = data.
 			WithZones(loc.zones...).
