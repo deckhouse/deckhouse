@@ -40,7 +40,7 @@ if [ "${VERSION_ID}" == "8" ] ; then
   alternatives --set python /usr/bin/python3
 fi
 
-for FS_NAME in `egrep -v -e '(^[[:space:]]*$|^#)' /etc/fstab | awk '{ print $1}'`; do
+for FS_NAME in `egrep -v -e '(^[[:space:]]*$|^#)' /etc/fstab | awk '{ print $1 }'`; do
   if  [[ `xfs_info $FS_NAME | grep --count ftype=0` -eq 1 ]]; then
      echo "XFS file system with fstop=0 was found on the node ($FS_NAME). This may cause problems (https://www.suse.com/support/kb/doc/?id=000020068), please fix it and try again."
      exit 1
