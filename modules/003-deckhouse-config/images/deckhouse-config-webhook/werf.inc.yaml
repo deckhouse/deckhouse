@@ -18,20 +18,20 @@ git:
       - ee/modules/*/openapi
       - ee/fe/modules/*/openapi
 {{ end }}
-stageDependencies:
-  install:
-    - modules/*/openapi
-    - global-hooks/openapi
-    # Include schemas from candi.
-    - candi/openapi/*
-    - candi/cloud-providers/*/openapi
-    # Include EE and FE modules.
+    stageDependencies:
+      install:
+        - modules/*/openapi
+        - global-hooks/openapi
+        # Include schemas from candi.
+        - candi/openapi/*
+        - candi/cloud-providers/*/openapi
+        # Include EE and FE modules.
 {{ if eq .Env "EE" }}
-    - ee/modules/*/openapi
+        - ee/modules/*/openapi
 {{ end }}
 {{ if eq .Env "FE" }}
-    - ee/modules/*/openapi
-    - ee/fe/modules/*/openapi
+        - ee/modules/*/openapi
+        - ee/fe/modules/*/openapi
 {{ end }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
