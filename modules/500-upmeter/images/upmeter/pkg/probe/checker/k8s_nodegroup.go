@@ -18,7 +18,6 @@ package checker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -213,17 +212,9 @@ func (f *nodeGroupFetcher) fetchAzureRegion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	azureValues, ok := cloudProviderSettings.Data["azure"]
+	region, ok := cloudProviderSettings.Data["region"]
 	if !ok {
-		return "", fmt.Errorf("azure cloud provider settings not found")
-	}
-	var azureSettings map[string]string
-	if err := json.Unmarshal(azureValues, &azureSettings); err != nil {
-		return "", fmt.Errorf("failed to unmarshal azure cloud provider settings: %v", err)
-	}
-	region, ok := azureSettings["location"]
-	if !ok {
-		return "", fmt.Errorf("azure cloud provider settings does not contain location")
+		return "", fmt.Errorf("azure cloud provider does not contain region")
 	}
 	f.azureRegion = string(region)
 	return f.azureRegion, nil
