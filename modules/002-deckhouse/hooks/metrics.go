@@ -19,6 +19,8 @@ package hooks
 import (
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -34,7 +36,7 @@ func collectMetrics(input *go_hook.HookInput) error {
 		"release_channel": input.Values.Get("deckhouse.releaseChannel").String(),
 	})
 
-	input.MetricsCollector.Set("deckhouse_update_mode", 1, map[string]string{
+	input.MetricsCollector.Set(telemetry.WrapName("update_window_approval_mode"), 1, map[string]string{
 		"mode": input.Values.Get("deckhouse.update.mode").String(),
 	})
 
@@ -46,7 +48,7 @@ func collectMetrics(input *go_hook.HookInput) error {
 		}
 
 		for _, windows := range windows {
-			input.MetricsCollector.Set("deckhouse_update_window", 1, map[string]string{
+			input.MetricsCollector.Set(telemetry.WrapName("update_window"), 1, map[string]string{
 				"from": windows.From,
 				"to":   windows.To,
 				"days": strings.Join(windows.Days, " "),

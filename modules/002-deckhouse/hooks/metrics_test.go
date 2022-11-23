@@ -24,7 +24,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", func() {
+var _ = Describe("Modules :: deckhouse :: hooks :: metrics ", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
           "modulesImages": {
@@ -58,7 +58,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		Expect(metricIndex >= 0).To(BeTrue())
 	}
 
-	assertWindowMetric := func(f *HookExecutionConfig, from, to, day string) {
+	assertWindowMetric := func(f *HookExecutionConfig, from, to, days string) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
 		Expect(metrics).ToNot(BeEmpty())
@@ -67,8 +67,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		dayFound := false
 		for i, m := range metrics {
 			if m.Name == "d8_telemetry_update_window" {
-				if day != "" {
-					if day != m.Labels["day"] {
+				if days != "" {
+					if days != m.Labels["days"] {
 						continue
 					}
 
@@ -88,7 +88,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			}
 		}
 
-		if day != "" {
+		if days != "" {
 			Expect(dayFound).To(BeTrue())
 		}
 		Expect(metricIndex >= 0).To(BeTrue())
@@ -99,7 +99,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 		Expect(metric.Labels).To(HaveKey("to"))
 	}
 
-	assertOnlyModeMetric := func(f *HookExecutionConfig) {
+	assertOnlyModeAndReleaseChannelMetric := func(f *HookExecutionConfig) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 		Expect(metrics).ToNot(BeEmpty())
 
@@ -110,7 +110,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			}
 		}
 
-		Expect(notExpireMetrics).To(Equal(1))
+		// + 1 - release channel
+		Expect(notExpireMetrics).To(Equal(2))
 	}
 
 	Context("Approval mode is 'Manual'", func() {
@@ -131,7 +132,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			})
 
 			It("Sets only one mode metric", func() {
-				assertOnlyModeMetric(f)
+				assertOnlyModeAndReleaseChannelMetric(f)
 			})
 		})
 
@@ -149,10 +150,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 			It("Sets mode metric Manual", func() {
 				assertModeMetric(f, "Manual")
-			})
-
-			It("Sets only one mode metric", func() {
-				assertOnlyModeMetric(f)
 			})
 		})
 	})
@@ -175,7 +172,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 			})
 
 			It("Sets only one mode metric", func() {
-				assertOnlyModeMetric(f)
+				assertOnlyModeAndReleaseChannelMetric(f)
 			})
 		})
 
@@ -203,8 +200,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: telemetry :: update window", 
 
 			It("Sets windows metric", func() {
 				assertWindowMetric(f, "00:00", "23:00", "")
-				assertWindowMetric(f, "01:00", "02:00", "Mon")
-				assertWindowMetric(f, "01:00", "02:00", "Fri")
+				assertWindowMetric(f, "01:00", "02:00", "Mon Fri")
 			})
 		})
 	})
