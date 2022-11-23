@@ -44,7 +44,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(yum -q list "kernel-lt-${desired_version}" | grep "kernel-lt" | tail -n 1 | sed "s/kernel-lt//" | awk '{print $2$1}')"
+desired_version="$(yum -q list "kernel-lt-${desired_version}" | grep "kernel-lt" | grep "x86_64" | tail -n 1 | sed "s/kernel-lt//" | awk '{print $2$1}')"
 
 should_install_kernel=true
 
@@ -66,6 +66,7 @@ else
 fi
 
 if [ -n "$packages_to_remove" ]; then
+  # Workaround for
   bb-yum-remove $packages_to_remove
 fi
 

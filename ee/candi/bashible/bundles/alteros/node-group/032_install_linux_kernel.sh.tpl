@@ -44,7 +44,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 # Evaluate latest available kernel version by desired version
-desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | tail -n 1 | sed "s/kernel//" | awk '{print $2$1}')"
+desired_version="$(yum -q list "kernel-${desired_version}" | grep "kernel" | grep "x86_64" | tail -n 1 | sed "s/kernel//" | awk '{print $2$1}')"
 
 should_install_kernel=true
 
