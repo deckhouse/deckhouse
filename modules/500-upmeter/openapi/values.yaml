@@ -88,6 +88,9 @@ properties:
             default: []
             items:
               type: string
+          zonePrefix:
+            type: string
+            default: ""
       auth:
         type: object
         default: {}

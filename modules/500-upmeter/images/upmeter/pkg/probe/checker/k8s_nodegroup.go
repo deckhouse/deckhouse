@@ -41,6 +41,8 @@ type NodegroupHasDesiredAmountOfNodes struct {
 	Name string
 	// Known availability zones in the cloud
 	KnownZones []string
+	// Zone prefix that can be omitted zone names in nodegroups
+	ZonePrefix string
 
 	// RequestTimeout is common for api operations
 	RequestTimeout time.Duration
@@ -51,8 +53,9 @@ type NodegroupHasDesiredAmountOfNodes struct {
 
 func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
 	ngFetcher := &nodeGroupFetcher{
-		access:  c.Access,
-		timeout: c.RequestTimeout,
+		access:     c.Access,
+		timeout:    c.RequestTimeout,
+		zonePrefix: c.ZonePrefix,
 	}
 
 	ngChecker := &nodesByNodegroupCountChecker{
@@ -126,9 +129,11 @@ type nodeGroupFetcher struct {
 	access  kubernetes.Access
 	timeout time.Duration
 
-	// In case of Azure, we need to fetch region from cloud provider configuration. This field
-	// caches the result.
-	azureRegion string
+	// For Azure, nodegroup contain partial zone names which are used as parameters in Azure
+	// tooling. To compare zones in nodes and nodegroups, we need to add this prefix to the zone
+	// names taken from nodegroup. Basically we are fixing nodegroup content which has lost the
+	// region information.
+	zonePrefix string
 }
 
 type nodeGroupProps struct {
@@ -163,16 +168,10 @@ func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	}
 
 	props.zones = ng.Spec.CloudInstances.Zones
-	if ng.Spec.CloudInstances.ClassReference.Kind == "AzureInstanceClass" {
-		// NodeGroup in Azure can contain zone notation like "1", "2", "3", whereas in nodes,
-		// topology label contain full zone name like "westeurope-1", "westeurope-2",
-		// "westeurope-3". We have to account that.
-		region, err := f.fetchAzureRegion()
-		if err != nil {
-			return props, err
-		}
-		for i := range props.zones {
-			props.zones[i] = fmt.Sprintf("%s-%s", region, props.zones[i])
+	if f.zonePrefix != "" {
+		// Fix for Azure, see the field description
+		for i, zone := range props.zones {
+			props.zones[i] = fmt.Sprintf("%s-%s", f.zonePrefix, zone)
 		}
 	}
 
@@ -196,26 +195,4 @@ func countHealthyNodesByZone(nodes []*v1.Node) (map[string]int32, error) {
 	}
 
 	return byZone, nil
-}
-
-func (f *nodeGroupFetcher) fetchAzureRegion() (string, error) {
-	if f.azureRegion != "" {
-		return f.azureRegion, nil
-	}
-
-	var (
-		ns         = "kube-system"
-		secretName = "d8-node-manager-cloud-provider"
-	)
-	cloudProviderSettings, err := f.access.Kubernetes().CoreV1().
-		Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	region, ok := cloudProviderSettings.Data["region"]
-	if !ok {
-		return "", fmt.Errorf("azure cloud provider does not contain region")
-	}
-	f.azureRegion = string(region)
-	return f.azureRegion, nil
 }

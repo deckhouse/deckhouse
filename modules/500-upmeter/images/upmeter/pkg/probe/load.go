@@ -67,6 +67,7 @@ type DynamicConfig struct {
 	IngressNginxControllers []string
 	NodeGroups              []string
 	Zones                   []string
+	ZonePrefix              string
 }
 
 func (l *Loader) Load() []*check.Runner {
@@ -146,7 +147,7 @@ func (l *Loader) collectConfigs() []runnerConfig {
 	l.configs = append(l.configs, initLoadBalancing(l.access, l.preflight)...)
 	l.configs = append(l.configs, initDeckhouse(l.access, l.preflight, l.logger)...)
 	l.configs = append(l.configs, initNginx(l.access, l.preflight, l.dynamic.IngressNginxControllers)...)
-	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.preflight, l.dynamic.NodeGroups, l.dynamic.Zones)...)
+	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.preflight, l.dynamic.NodeGroups, l.dynamic.Zones, l.dynamic.ZonePrefix)...)
 
 	return l.configs
 }

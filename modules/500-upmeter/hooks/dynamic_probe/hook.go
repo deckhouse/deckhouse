@@ -90,16 +90,16 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 	var (
 		ingressNames   = parseSingleStringSet(input.Snapshots["upmeter_discovery_ingress_controllers"]).Delete("").Slice()
 		nodeGroupNames = parseSingleStringSet(input.Snapshots["upmeter_discovery_nodegroups"]).Delete("").Slice()
-		cloudZones     = parseSingleStringSet(input.Snapshots["cloud_provider_secret"]).Delete("").Slice()
+		loc            = parseCloudLocations(input.Snapshots["cloud_provider_secret"])
 	)
 
 	// Populate values
 	data := emptyNames().WithIngressControllers(ingressNames...)
 
 	// We cannot track any ephemeral node group if no zones present in cloud provider secret.
-	if len(cloudZones) > 0 {
+	if len(loc.zones) > 0 {
 		data = data.
-			WithZones(cloudZones...).
+			WithZones(loc.zones...).
 			WithNodeGroups(nodeGroupNames...)
 	}
 
@@ -135,6 +135,20 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return names, nil
 }
 
+type cloudLocations struct {
+	zones      []string
+	zonePrefix string
+}
+
+func parseCloudLocations(filtered []go_hook.FilterResult) cloudLocations {
+	if len(filtered) != 1 {
+		return cloudLocations{}
+	}
+	loc := filtered[0].(cloudLocations)                  // let it panic
+	loc.zones = set.New(loc.zones...).Delete("").Slice() // unique and non-empty
+	return loc
+}
+
 func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
@@ -142,31 +156,33 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return nil, err
 	}
 
+	loc := cloudLocations{}
+
 	zoneData, ok := secret.Data["zones"]
 	if !ok {
 		// zone absence is fine for static clusters
-		return []string{}, nil
+		return loc, nil
 	}
-	var zones []string
-	if err := yaml.Unmarshal(zoneData, &zones); err != nil {
+	if err := yaml.Unmarshal(zoneData, &loc.zones); err != nil {
 		return nil, err
 	}
 
 	region, ok := secret.Data["region"]
 	if !ok {
-		return []string{}, nil
+		return loc, nil
 	}
-	providerData, ok := secret.Data["type"]
+	provider, ok := secret.Data["type"]
 	if !ok {
-		return []string{}, nil
+		return loc, nil
 	}
-	if string(providerData) == "azure" {
-		// Azure zones are in format "region-zone"
-		for i, zone := range zones {
-			zones[i] = fmt.Sprintf("%s-%s", region, zone)
-
+	if string(provider) == "azure" {
+		// Azure zones are in format "region-zone", and we have to track the knowledge of the zone
+		// prefix
+		loc.zonePrefix = string(region)
+		for i, zone := range loc.zones {
+			loc.zones[i] = fmt.Sprintf("%s-%s", region, zone)
 		}
 	}
 
-	return zones, nil
+	return loc, nil
 }
