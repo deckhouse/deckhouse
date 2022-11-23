@@ -88,7 +88,7 @@ version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]
 
 if [[ "$should_install_kernel" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
-  bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-modules-extra-${desired_version}" "linux-headers-${desired_version}"
+  bb-apt-install "linux-image-${desired_version}"
   packages_to_remove="$(
     dpkg --get-selections | grep -E '^linux-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$desired_version_pattern" | grep -Ev 'linux-[^0-9]+$' || true
   )"
