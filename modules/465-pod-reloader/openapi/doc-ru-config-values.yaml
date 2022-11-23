@@ -14,4 +14,4 @@ properties:
   reloadOnCreate:
     type: boolean
     description: |
-      Опция для редеплоя rolling upgrade объекта при его модификации.
+      Опция для перезапуска рабочей нагрузки в случае удаления и повторного применения измененного ресурса config map (cm) и secret. По умолчанию имеет значение 'true'.

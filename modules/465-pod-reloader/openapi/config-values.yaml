@@ -41,6 +41,7 @@ properties:
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   reloadOnCreate:
     type: boolean
+    default: true
     description: |
-      Option for redeployment to make the resource config update.
+      Option for workload redeployment after related config map/secret will be changed.
     x-examples: [true, false]
