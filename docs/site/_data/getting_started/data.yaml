@@ -301,8 +301,6 @@ installTypes:
       without_nat:
         name: WithoutNAT
         recommended: true
-      standard:
-        name: Standard
       with_nat_instance:
         name: WithNATInstance
     pages_title:
