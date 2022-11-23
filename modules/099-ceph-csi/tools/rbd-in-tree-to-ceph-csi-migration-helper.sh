@@ -47,7 +47,7 @@ new_target_pvc="$(jq --argjson a "$new_annotations_for_target_pvc" --arg sc "$ne
 
 while true; do
   msg="Rename the rbd image in your ceph cluster using the following command:
-rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
+>rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
 After renaming, enter yes to confirm: "
   read -p "$msg" confirm
   if [ "$confirm" == "yes" ]; then
@@ -56,7 +56,7 @@ After renaming, enter yes to confirm: "
 done
 
 while true; do
-  read -p "PVC $target_pvc_name and PV $target_pv_name will be removed (Type yes to confirm): " confirm
+  read -p "PersistentVolumeClaim $target_pvc_name and PersistentVolume $target_pv_name will be removed (Type yes to confirm): " confirm
   if [ "$confirm" == "yes" ]; then
     echo ">kubectl -n $target_pvc_namespace delete pvc $target_pvc_name"
     kubectl -n "$target_pvc_namespace" delete pvc "$target_pvc_name"
