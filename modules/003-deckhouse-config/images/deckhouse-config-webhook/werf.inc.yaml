@@ -1,7 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ .Images.BASE_ALPINE }}
-#from: { { .BaseAlpine }}
 git:
   - add: /
     to: /deckhouse
@@ -18,6 +17,21 @@ git:
 {{ if eq .Env "FE" }}
       - ee/modules/*/openapi
       - ee/fe/modules/*/openapi
+{{ end }}
+stageDependencies:
+  install:
+    - modules/*/openapi
+    - global-hooks/openapi
+    # Include schemas from candi.
+    - candi/openapi/*
+    - candi/cloud-providers/*/openapi
+    # Include EE and FE modules.
+{{ if eq .Env "EE" }}
+    - ee/modules/*/openapi
+{{ end }}
+{{ if eq .Env "FE" }}
+    - ee/modules/*/openapi
+    - ee/fe/modules/*/openapi
 {{ end }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -36,19 +50,11 @@ docker:
 {{ $webhookRelPath := "modules/003-deckhouse-config/images/deckhouse-config-webhook" }}
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_16_ALPINE }}
-# from: { { .BaseGolang16Alpine }}
 shell:
-  beforeInstall:
-    #- apk add --no-cache git
   install:
     - cd {{ $webhookAbsPath }}
     - go mod download
   setup:
-    # Migrate ee/fe internal packages imports.
-#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
     - cd {{ $webhookAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o deckhouse-config-webhook
     - mkdir /src
