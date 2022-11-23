@@ -66,8 +66,8 @@ else
 fi
 
 if [ -n "$packages_to_remove" ]; then
-  # Workaround for
-  bb-yum-remove $packages_to_remove
+  # workaround for bug in RedOS - we cannot remove running kernel
+  bb-yum-remove $packages_to_remove || true
 fi
 
 # Workaround for bug https://github.com/docker/for-linux/issues/841 - cannot allocate memory in /sys/fs/cgroup
