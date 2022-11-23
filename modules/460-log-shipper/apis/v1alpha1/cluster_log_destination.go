@@ -52,6 +52,9 @@ type ClusterLogDestinationSpec struct {
 	// Kafka spec for the Kafka endpoint
 	Kafka KafkaSpec `json:"kafka"`
 
+	// Splunk spec for the Splunk endpoint
+	Splunk SplunkSpec `json:"splunk"`
+
 	// Vector spec for the Vector endpoint
 	Vector VectorSpec `json:"vector"`
 
@@ -138,6 +141,16 @@ type LogstashSpec struct {
 
 type VectorSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
+
+	TLS CommonTLSSpec `json:"tls,omitempty"`
+}
+
+type SplunkSpec struct {
+	Endpoint string `json:"endpoint,omitempty"`
+
+	Token string `json:"token,omitempty"`
+
+	Index string `json:"index,omitempty"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }
