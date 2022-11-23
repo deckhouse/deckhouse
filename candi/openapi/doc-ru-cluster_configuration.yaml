@@ -37,6 +37,8 @@ apiVersions:
       podSubnetNodeCIDRPrefix:
         description: |
           Префикс сети Pod'ов на узле.
+
+          > Внимание! Не меняйте параметр в уже развернутом кластере.
       serviceSubnetCIDR:
         description: |
           Адресное пространство для service'ов кластера.

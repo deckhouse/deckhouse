@@ -76,7 +76,10 @@ apiVersions:
         description: Address space of the cluster's Pods.
       podSubnetNodeCIDRPrefix:
         type: string
-        description: The prefix of Pod network on a node.
+        description: |
+          The prefix of Pod network on a node.
+
+          > Caution! Don't change the parameter in a working cluster.
         default: "24"
       serviceSubnetCIDR:
         type: string
