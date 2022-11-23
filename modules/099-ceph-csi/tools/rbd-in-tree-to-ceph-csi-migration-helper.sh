@@ -55,14 +55,12 @@ After renaming, enter yes to confirm: "
   fi
 done
 
-
-echo "kubectl -n $target_pvc_namespace delete pvc $target_pvc_name
-kubectl delete pv $target_pv_name"
-
 while true; do
   read -p "PVC $target_pvc_name and PV $target_pv_name will be removed (Type yes to confirm): " confirm
   if [ "$confirm" == "yes" ]; then
+    echo ">kubectl -n $target_pvc_namespace delete pvc $target_pvc_name"
     kubectl -n "$target_pvc_namespace" delete pvc "$target_pvc_name"
+    echo ">kubectl delete pv $target_pv_name"
     kubectl delete pv "$target_pv_name"
     break
   fi
