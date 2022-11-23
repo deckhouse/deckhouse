@@ -22,7 +22,9 @@ target_pv_name="$(jq -r '.spec.volumeName' <<< "$target_pvc")"
 sample_pv="$(kubectl get pv "$sample_pv_name" -o json)"
 target_pv="$(kubectl get pv "$target_pv_name" -o json)"
 
+echo "Backup $target_pvc_namespace/$target_pvc to backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
 echo "$target_pvc" > "backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
+echo "Backup $target_pv to backup-pv-$target_pv_name.json"
 echo "$target_pv" > "backup-pv-$target_pv_name.json"
 
 pool_name="$(jq -r '.spec.csi.volumeAttributes.pool' <<< "$sample_pv")"
