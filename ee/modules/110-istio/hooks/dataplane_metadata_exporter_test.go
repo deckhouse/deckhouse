@@ -81,6 +81,21 @@ type wantedMetric struct {
 	DesiredFullVersion string
 }
 
+type telemetryIstioDrivenPods struct {
+	versions               map[string]float64
+	drivenByIstio          float64
+	notHaveDataPlaneMetric bool
+}
+
+func singleVersionLabelTelemetry(ver string) telemetryIstioDrivenPods {
+	return telemetryIstioDrivenPods{
+		drivenByIstio: 1,
+		versions: map[string]float64{
+			ver: 1,
+		},
+	}
+}
+
 func istioNsYAML(ns nsParams) string {
 	ns.Name = nsName
 	return internal.TemplateToYAML(nsTemplate, ns)
@@ -144,10 +159,11 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 
 		// there are no istio pods or ignored pods in the cluster, hense no metrics
 		if yamlState == "" || want == nil {
-			Expect(m).To(HaveLen(1))
+			Expect(m).To(HaveLen(2))
 			return
 		}
-		Expect(m).To(HaveLen(2))
+
+		Expect(len(m) >= 3).To(BeTrue())
 		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
@@ -510,5 +526,289 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				istioNsYAML(nsParams{}),
 				istioPodYAML(podParams{}),
 			}, nil),
+	)
+
+	DescribeTable("There are different desired and actual revisions for telemetry",
+		func(objectsYAMLs []string, stats telemetryIstioDrivenPods) {
+			f.ValuesSet("istio.internal.globalVersion", "1.42")
+			yamlState := strings.Join(objectsYAMLs, "\n---\n")
+			f.BindingContexts.Set(f.KubeStateSet(yamlState))
+
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			m := f.MetricsCollector.CollectedMetrics()
+
+			assertTelemetryStat := func(startIndex int) {
+				Expect(m[startIndex].Name).To(Equal("d8_telemetry_istio_driven_pods_total"))
+				Expect(*m[startIndex].Value).To(Equal(stats.drivenByIstio))
+
+				foundVersioned := 0
+				foundAll := 0
+				for _, d := range m {
+					if d.Name == "d8_telemetry_istio_driven_pods_group_by_full_version_total" {
+						foundAll++
+						desiredVer := d.Labels["full_version"]
+
+						for ver, count := range stats.versions {
+							if desiredVer == ver {
+								Expect(*d.Value).To(Equal(count))
+								foundVersioned++
+							}
+						}
+					}
+				}
+
+				Expect(foundVersioned).To(Equal(len(stats.versions)))
+				Expect(foundAll).To(Equal(len(stats.versions)))
+			}
+
+			// there are no istio pods or ignored pods in the cluster, hense no metrics
+			if yamlState == "" {
+				Expect(m).To(HaveLen(2))
+				assertTelemetryStat(1)
+				return
+			}
+
+			notVersionedMetrics := 3
+			if stats.notHaveDataPlaneMetric {
+				notVersionedMetrics = 2
+			}
+			Expect(m).To(HaveLen(notVersionedMetrics + len(stats.versions)))
+			assertTelemetryStat(notVersionedMetrics - 1)
+		},
+
+		// Checks for normal behavior, everything with revision is ok!
+		Entry("Empty cluster", []string{}, telemetryIstioDrivenPods{}),
+		Entry("NS with global revision, Pod to ignore with inject=false label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: false,
+				}),
+			}, telemetryIstioDrivenPods{notHaveDataPlaneMetric: true}),
+		Entry("NS with definite revision, but revision is absent in revisionFullVersionMap",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x00",
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x00",
+					Version:             "", // annotation is absent
+				}),
+			}, singleVersionLabelTelemetry("unknown")),
+		Entry("NS without any revisions, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: false,
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x42",
+					Version:             "1.42.42",
+				}),
+			}, telemetryIstioDrivenPods{
+				drivenByIstio: 1,
+				versions: map[string]float64{
+					"1.42.42": 1,
+				},
+			}),
+		Entry("NS with global revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x42",
+					Version:             "1.42.42",
+				}),
+			}, singleVersionLabelTelemetry("1.42.42")),
+		Entry("NS with definite revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x15",
+					Version:             "1.15.15",
+				}),
+			}, singleVersionLabelTelemetry("1.15.15")),
+		Entry("NS without any revisions, pod with istio.io/rev label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: false,
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x15",
+					CurrentRevision:  "v1x15",
+					Version:          "1.15.15",
+				}),
+			}, singleVersionLabelTelemetry("1.15.15")),
+		Entry("NS with global revision, pod with istio.io/rev label",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x15",
+					CurrentRevision:  "v1x15",
+					Version:          "1.15.15",
+				}),
+			}, singleVersionLabelTelemetry("1.15.15")),
+		Entry("NS with definite revision, pod with inject=true label",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x155",
+					CurrentRevision:  "v1x155",
+					Version:          "1.155.155",
+				}),
+			}, singleVersionLabelTelemetry("1.155.155")),
+		Entry("NS with global revision, Pod to ignore with inject=false annotation",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					DisableInjectionAnnotation: true,
+				}),
+			}, telemetryIstioDrivenPods{
+				drivenByIstio:          0,
+				notHaveDataPlaneMetric: true,
+			}),
+		Entry("NS with definite revision, Pod to ignore with inject=false annotation",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					DisableInjectionAnnotation: true,
+				}),
+			}, telemetryIstioDrivenPods{
+				drivenByIstio:          0,
+				notHaveDataPlaneMetric: true,
+			}),
+		Entry("NS with global revision, Pod revision is actual",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					CurrentRevision: "v1x42",
+					Version:         "1.42.42",
+				}),
+			}, singleVersionLabelTelemetry("1.42.42")),
+		Entry("Namespace with definite revision, pod revision is actual",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					CurrentRevision: "v1x15",
+					Version:         "1.15.15",
+				}),
+			}, singleVersionLabelTelemetry("1.15.15")),
+
+		// Checks for revision inconsistencies
+		Entry("NS global revision, pod revision is not actual",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					CurrentRevision: "v1x77",
+					Version:         "1.77.77",
+				}),
+			}, singleVersionLabelTelemetry("1.77.77")),
+		Entry("NS global revision, pod revision is absent (no sidecar)",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{}),
+			}, singleVersionLabelTelemetry("absent")),
+		Entry("Namespace with definite revision, pod revision is not actual",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					CurrentRevision: "v1x77",
+					Version:         "1.77.77",
+				}),
+			}, singleVersionLabelTelemetry("1.77.77")),
+		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{}),
+			}, singleVersionLabelTelemetry("absent")),
+		Entry("Namespace with definite revision and pod with definite revision is actual",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x77",
+					CurrentRevision:  "v1x77",
+					Version:          "1.77.77",
+				}),
+			}, singleVersionLabelTelemetry("1.77.77")),
+		Entry("Namespace with definite revision and pod with definite revision is not actual",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x77",
+					CurrentRevision:  "v1x71",
+					Version:          "1.71.71",
+				}),
+			}, singleVersionLabelTelemetry("1.71.71")),
+		Entry("Namespace without labels and pod with definite revision",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x77",
+					CurrentRevision:  "v1x77",
+					Version:          "1.77.77",
+				}),
+			}, singleVersionLabelTelemetry("1.77.77")),
+		Entry("Namespace without labels and pod with definite revision but sidecar absent",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x77",
+				}),
+			}, singleVersionLabelTelemetry("absent")),
+		Entry("Pod orphan",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{
+					CurrentRevision: "v1x77",
+					Version:         "1.77.77",
+				}),
+			}, singleVersionLabelTelemetry("1.77.77")),
+		Entry("Pod without current and desired revisions",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{}),
+			}, telemetryIstioDrivenPods{
+				drivenByIstio:          0,
+				notHaveDataPlaneMetric: true,
+			}),
 	)
 })

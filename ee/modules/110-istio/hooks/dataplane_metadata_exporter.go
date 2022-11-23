@@ -18,6 +18,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 const (
@@ -196,6 +197,9 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 		}
 	}
 
+	var istioDrivenPodsCount float64
+	podsByFullVersion := make(map[string]float64)
+
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
@@ -253,6 +257,16 @@ func dataplaneMetadataExporter(input *go_hook.HookInput) error {
 			"desired_version":      desiredVersion,
 		}
 		input.MetricsCollector.Set(istioPodMetadataMetricName, 1, labels, metrics.WithGroup(metadataExporterMetricsGroup))
+		istioDrivenPodsCount++
+		podsByFullVersion[istioPodInfo.FullVersion]++
 	}
+
+	input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_total"), istioDrivenPodsCount, nil)
+	for v, c := range podsByFullVersion {
+		input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_group_by_full_version_total"), c, map[string]string{
+			"full_version": v,
+		})
+	}
+
 	return nil
 }
