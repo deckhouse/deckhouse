@@ -41,7 +41,7 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-config
+  name: nginx-pages
 ```
 
 ## Tracking changes in specific resources
