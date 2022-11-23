@@ -66,7 +66,7 @@ while true; do
   fi
 done
 
-echo "kubectl create -f - <<\"END\"
+echo ">kubectl create -f - <<\"END\"
 $new_target_pvc
 END"
 
@@ -99,7 +99,7 @@ new_target_pv="$(jq --argjson m "$new_target_pvc_metadata" --argjson a "$new_ann
   del(.status)
   ' <<< "$target_pv")"
 
-echo "kubectl create -f - <<\"END\"
+echo ">kubectl create -f - <<\"END\"
 $new_target_pv
 END"
 
