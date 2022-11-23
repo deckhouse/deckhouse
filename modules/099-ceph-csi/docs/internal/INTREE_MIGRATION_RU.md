@@ -1,5 +1,9 @@
 ## Миграции PersistentVolume's с in-tree rbd driver на csi driver (Ceph CSI)
 
+Для упрощения миграции был написан скрипт [rbd-in-tree-to-ceph-csi-migration-helper.sh](../../tools/rbd-in-tree-to-ceph-csi-migration-helper.sh).
+С его помощью можно мигрировать отдельный волюм (пару PVC и PV). Перед запуском В процессе миграции будет необходимо вручную выполнить команду в ceph-кластере для переименования rbd-образа.
+
+
 Требования:
 * Включен и настроен модуль ceph-csi.
 * Pod использующий PersistentVolumeClaim отсутствует.
