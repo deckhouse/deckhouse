@@ -17,6 +17,8 @@ limitations under the License.
 package dynamic_probe
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -150,7 +152,7 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return nil, err
 	}
 
-	regionData, ok := secret.Data["region"]
+	region, ok := secret.Data["region"]
 	if !ok {
 		return []string{}, nil
 	}
@@ -161,7 +163,8 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 	if string(providerData) == "azure" {
 		// Azure zones are in format "region-zone"
 		for i, zone := range zones {
-			zones[i] = string(regionData) + "-" + zone
+			zones[i] = fmt.Sprintf("%s-%s", region, zone)
+
 		}
 	}
 

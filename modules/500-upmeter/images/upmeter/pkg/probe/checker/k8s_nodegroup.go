@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	kube "github.com/flant/kube-client/client"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -127,6 +126,10 @@ func (c *nodesByNodegroupCountChecker) Check() check.Error {
 type nodeGroupFetcher struct {
 	access  kubernetes.Access
 	timeout time.Duration
+
+	// In case of Azure, we need to fetch region from cloud provider configuration. This field
+	// caches the result.
+	azureRegion string
 }
 
 type nodeGroupProps struct {
@@ -165,12 +168,12 @@ func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 		// NodeGroup in Azure can contain zone notation like "1", "2", "3", whereas in nodes,
 		// topology label contain full zone name like "westeurope-1", "westeurope-2",
 		// "westeurope-3". We have to account that.
-		location, err := fetchAzureLocation(f.access.Kubernetes())
+		region, err := f.fetchAzureRegion()
 		if err != nil {
 			return props, err
 		}
 		for i := range props.zones {
-			props.zones[i] = fmt.Sprintf("%s-%s", location, props.zones[i])
+			props.zones[i] = fmt.Sprintf("%s-%s", region, props.zones[i])
 		}
 	}
 
@@ -196,8 +199,17 @@ func countHealthyNodesByZone(nodes []*v1.Node) (map[string]int32, error) {
 	return byZone, nil
 }
 
-func fetchAzureLocation(klient kube.Client) (string, error) {
-	cloudProviderSettings, err := klient.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-node-manager-cloud-provider", metav1.GetOptions{})
+func (f *nodeGroupFetcher) fetchAzureRegion() (string, error) {
+	if f.azureRegion != "" {
+		return f.azureRegion, nil
+	}
+
+	var (
+		ns         = "kube-system"
+		secretName = "d8-node-manager-cloud-provider"
+	)
+	cloudProviderSettings, err := f.access.Kubernetes().CoreV1().
+		Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -209,9 +221,10 @@ func fetchAzureLocation(klient kube.Client) (string, error) {
 	if err := json.Unmarshal(azureValues, &azureSettings); err != nil {
 		return "", fmt.Errorf("failed to unmarshal azure cloud provider settings: %v", err)
 	}
-	location, ok := azureSettings["location"]
+	region, ok := azureSettings["location"]
 	if !ok {
 		return "", fmt.Errorf("azure cloud provider settings does not contain location")
 	}
-	return string(location), nil
+	f.azureRegion = string(region)
+	return f.azureRegion, nil
 }
