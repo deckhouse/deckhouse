@@ -15,6 +15,12 @@ webhooks:
     {{- if $crd.spec.validationEnabled }}
   - name: {{ $crd.name }}.validate.d8-ingress-nginx
     matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: NotIn
+        values:
+        - deckhouse
     rules:
       - apiGroups:
           - networking.k8s.io
@@ -29,6 +35,39 @@ webhooks:
     failurePolicy: Fail
     sideEffects: None
     timeoutSeconds: 30
+    admissionReviewVersions:
+      - v1
+    {{- if semverCompare "<1.22" $kubernetesVersion}}
+      - v1beta1
+    {{- end }}
+    clientConfig:
+      service:
+        namespace: d8-ingress-nginx
+        name: {{ $crd.name }}-admission
+        path: /networking/v1/ingresses
+      caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
+  - name: {{ $crd.name }}.validate.d8-ingress-nginx-deckhouse
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: In
+        values:
+        - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    failurePolicy: Ignore
+    sideEffects: None
+    timeoutSeconds: 5
     admissionReviewVersions:
       - v1
     {{- if semverCompare "<1.22" $kubernetesVersion}}
