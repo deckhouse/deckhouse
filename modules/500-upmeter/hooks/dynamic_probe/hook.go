@@ -97,12 +97,12 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 	// prefix, e.g. "west-1" will be just "1" in Azure.
 	data := emptyNames().
 		WithIngressControllers(ingressNames...).
-		WithZonePrefix(loc.zonePrefix)
+		WithZonePrefix(loc.ZonePrefix)
 
 	// We can track ephemeral node groups if only we have zones present in cloud provider secret.
-	if len(loc.zones) > 0 {
+	if len(loc.Zones) > 0 {
 		data = data.
-			WithZones(loc.zones...).
+			WithZones(loc.Zones...).
 			WithNodeGroups(nodeGroupNames...)
 	}
 
@@ -141,8 +141,8 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 // cloudLocations contains zones (with prefixes) and reqion prefix itself for NodeGroup fetcher in
 // Upmeter Agent.
 type cloudLocations struct {
-	zones      []string
-	zonePrefix string
+	Zones      []string
+	ZonePrefix string
 }
 
 func parseCloudLocations(filtered []go_hook.FilterResult) cloudLocations {
@@ -150,7 +150,7 @@ func parseCloudLocations(filtered []go_hook.FilterResult) cloudLocations {
 		return cloudLocations{}
 	}
 	loc := filtered[0].(cloudLocations)                  // let it panic
-	loc.zones = set.New(loc.zones...).Delete("").Slice() // unique and non-empty
+	loc.Zones = set.New(loc.Zones...).Delete("").Slice() // unique and non-empty
 	return loc
 }
 
@@ -168,7 +168,7 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		// zone absence is fine for static clusters
 		return loc, nil
 	}
-	if err := yaml.Unmarshal(zoneData, &loc.zones); err != nil {
+	if err := yaml.Unmarshal(zoneData, &loc.Zones); err != nil {
 		return nil, err
 	}
 
@@ -184,9 +184,9 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 
 		// Azure zones are in format "region-zone", and we have to track the knowledge of the zone
 		// prefix since nodegroups don't carry the region information themselves.
-		loc.zonePrefix = string(region)
-		for i, zone := range loc.zones {
-			loc.zones[i] = fmt.Sprintf("%s-%s", region, zone)
+		loc.ZonePrefix = string(region)
+		for i, zone := range loc.Zones {
+			loc.Zones[i] = fmt.Sprintf("%s-%s", region, zone)
 		}
 	}
 
