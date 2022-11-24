@@ -60,7 +60,7 @@ metallb: |
   addressPools:
   - addresses:
     - 192.168.199.100-192.168.199.102
-    name: frontend_pool
+    name: frontend-pool
     protocol: layer2
   speaker:
     nodeSelector:
