@@ -253,7 +253,9 @@ function main() {
       echo === Step: $step
       echo ===
       {{- if eq .runType "ClusterBootstrap" }}
-      if [ "$attempt" -gt 2 ];then sx=x;fi
+      if [ "$attempt" -gt 2 ]; then
+        sx=x
+      fi
       {{- end }}
     done
   done
