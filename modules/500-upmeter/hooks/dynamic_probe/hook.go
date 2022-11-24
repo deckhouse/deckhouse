@@ -17,6 +17,8 @@ limitations under the License.
 package dynamic_probe
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -88,16 +90,19 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 	var (
 		ingressNames   = parseSingleStringSet(input.Snapshots["upmeter_discovery_ingress_controllers"]).Delete("").Slice()
 		nodeGroupNames = parseSingleStringSet(input.Snapshots["upmeter_discovery_nodegroups"]).Delete("").Slice()
-		cloudZones     = parseSingleStringSet(input.Snapshots["cloud_provider_secret"]).Delete("").Slice()
+		loc            = parseCloudLocations(input.Snapshots["cloud_provider_secret"])
 	)
 
-	// Populate values
-	data := emptyNames().WithIngressControllers(ingressNames...)
+	// Populate values. `zonePrefix` is for cloud zones that are passed around without region
+	// prefix, e.g. "west-1" will be just "1" in Azure.
+	data := emptyNames().
+		WithIngressControllers(ingressNames...).
+		WithZonePrefix(loc.ZonePrefix)
 
-	// We cannot track any ephemeral node group if no zones present in cloud provider secret.
-	if len(cloudZones) > 0 {
+	// We can track ephemeral node groups if only we have zones present in cloud provider secret.
+	if len(loc.Zones) > 0 {
 		data = data.
-			WithZones(cloudZones...).
+			WithZones(loc.Zones...).
 			WithNodeGroups(nodeGroupNames...)
 	}
 
@@ -133,6 +138,22 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return names, nil
 }
 
+// cloudLocations contains zones (with prefixes) and reqion prefix itself for NodeGroup fetcher in
+// Upmeter Agent.
+type cloudLocations struct {
+	Zones      []string
+	ZonePrefix string
+}
+
+func parseCloudLocations(filtered []go_hook.FilterResult) cloudLocations {
+	if len(filtered) != 1 {
+		return cloudLocations{}
+	}
+	loc := filtered[0].(cloudLocations)                  // let it panic
+	loc.Zones = set.New(loc.Zones...).Delete("").Slice() // unique and non-empty
+	return loc
+}
+
 func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
@@ -140,15 +161,34 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return nil, err
 	}
 
-	data, ok := secret.Data["zones"]
+	loc := cloudLocations{}
+
+	zoneData, ok := secret.Data["zones"]
 	if !ok {
 		// zone absence is fine for static clusters
-		return []string{}, nil
+		return loc, nil
 	}
-
-	var zones []string
-	if err := yaml.Unmarshal(data, &zones); err != nil {
+	if err := yaml.Unmarshal(zoneData, &loc.Zones); err != nil {
 		return nil, err
 	}
-	return zones, nil
+
+	provider, ok := secret.Data["type"]
+	if !ok {
+		return loc, nil
+	}
+	if string(provider) == "azure" {
+		region, ok := secret.Data["region"]
+		if !ok {
+			return loc, fmt.Errorf("azure cloud provider secret must contain region")
+		}
+
+		// Azure zones are in format "region-zone", and we have to track the knowledge of the zone
+		// prefix since nodegroups don't carry the region information themselves.
+		loc.ZonePrefix = string(region)
+		for i, zone := range loc.Zones {
+			loc.Zones[i] = fmt.Sprintf("%s-%s", region, zone)
+		}
+	}
+
+	return loc, nil
 }

@@ -127,6 +127,10 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	cmd.Flag("dynamic-probe-known-zone", "A known zone for node group").
 		StringsVar(&config.DynamicProbes.Zones)
 
+	// Zone prefix that can be used in some cloud providers
+	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
+		StringVar(&config.DynamicProbes.ZonePrefix)
+
 	// User-Agent
 	// TODO generate from CI?
 	cmd.Flag("user-agent", "User Agent for HTTP client").

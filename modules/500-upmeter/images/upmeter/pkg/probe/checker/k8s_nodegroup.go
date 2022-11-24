@@ -41,6 +41,8 @@ type NodegroupHasDesiredAmountOfNodes struct {
 	Name string
 	// Known availability zones in the cloud
 	KnownZones []string
+	// Zone prefix that can be omitted zone names in nodegroups
+	ZonePrefix string
 
 	// RequestTimeout is common for api operations
 	RequestTimeout time.Duration
@@ -51,8 +53,9 @@ type NodegroupHasDesiredAmountOfNodes struct {
 
 func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
 	ngFetcher := &nodeGroupFetcher{
-		access:  c.Access,
-		timeout: c.RequestTimeout,
+		access:     c.Access,
+		timeout:    c.RequestTimeout,
+		zonePrefix: c.ZonePrefix,
 	}
 
 	ngChecker := &nodesByNodegroupCountChecker{
@@ -125,6 +128,12 @@ func (c *nodesByNodegroupCountChecker) Check() check.Error {
 type nodeGroupFetcher struct {
 	access  kubernetes.Access
 	timeout time.Duration
+
+	// For Azure, nodegroup contain partial zone names which are used as parameters in Azure
+	// tooling. To compare zones in nodes and nodegroups, we need to add this prefix to the zone
+	// names taken from nodegroup. Basically we are fixing nodegroup content which has lost the
+	// region information.
+	zonePrefix string
 }
 
 type nodeGroupProps struct {
@@ -153,10 +162,17 @@ func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	}
 
 	props.minPerZone = *ng.Spec.CloudInstances.MinPerZone
-	props.zones = ng.Spec.CloudInstances.Zones
 	if ng.Spec.CloudInstances.MaxUnavailablePerZone != nil {
 		// MaxUnavailablePerZone is zero by default
 		props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
+	}
+
+	props.zones = ng.Spec.CloudInstances.Zones
+	if f.zonePrefix != "" {
+		// Fix for Azure, see the field description
+		for i, zone := range props.zones {
+			props.zones[i] = fmt.Sprintf("%s-%s", f.zonePrefix, zone)
+		}
 	}
 
 	return props, nil
