@@ -18,9 +18,11 @@ package hooks
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/google/go-containerregistry/pkg/authn"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -177,14 +179,14 @@ spec:
 			pullSecretName: "registry-credentials-4",
 		}
 
-		credGetter := map[string]dockerFileConfig{
+		configsBySecretName := map[string]dockerFileConfig{
 			"registry-credentials-1":      {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}}},
 			"registry-credentials-2":      {Auths: map[string]authn.AuthConfig{"cr-2.example.com": {Username: "n-2", Password: "pwd-2"}}},
 			"unused-registry-credentials": {Auths: map[string]authn.AuthConfig{"noop.example.com": {Username: "n-3", Password: "pwd-3"}}},
 			"registry-credentials-4":      {Auths: map[string]authn.AuthConfig{"cr-4.example.com": {Username: "n-4", Password: "pwd-4"}}},
 		}
 
-		vals, err := mapWerfSources([]werfSource{ws1, ws2, ws3, ws4}, credGetter)
+		vals, err := mapWerfSources([]werfSource{ws1, ws2, ws3, ws4}, configsBySecretName)
 
 		It("returns no errors", func() {
 			Expect(err).ToNot(HaveOccurred())
@@ -321,6 +323,150 @@ prefix: cr-1.example.com
 			Expect(err).ToNot(HaveOccurred())
 			Expect("\n" + string(b)).To(Equal(expected))
 		})
+	})
+
+	Context("Parsing registry secrets to the map", func() {
+		state := `
+data:
+  # 				 {"auths":{"cr-1.example.com":{"username":"n-1","password":"pwd-1"}}}
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xIiwicGFzc3dvcmQiOiJwd2QtMSJ9fX0=
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-1
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data:
+  # 				 {"auths":{"cr-2.example.com":{"username":"n-2","password":"pwd-2"}}}
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0yLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0yIiwicGFzc3dvcmQiOiJwd2QtMiJ9fX0=
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-2
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data:
+  # 				 {"auths":{"cr-1.example.com":{"username":"n-1","password":"pwd-1"},"cr-2.example.com":{"username":"n-2other","password":"pwd-2other"}}}
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xIiwicGFzc3dvcmQiOiJwd2QtMSJ9LCJjci0yLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0yb3RoZXIiLCJwYXNzd29yZCI6InB3ZC0yb3RoZXIifX19
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mixed-registries-1-2
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data:
+  # 				 {"auths":{"cr-1.example.com":{"username":"n-1other","password":"pwd-1other"}}}
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xb3RoZXIiLCJwYXNzd29yZCI6InB3ZC0xb3RoZXIifX19
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-1-other
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data:
+  # 				 {"auths":{"cr-3.example.com":{"auth":"bi0zOnB3ZC0z"}}}
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0zLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJiaTB6T25CM1pDMHoifX19
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-3-auth
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data: {}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ignored-no-data
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+---
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0zLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJiaTB6T25CM1pDMHoifX19
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ignored-type-opaque
+  namespace: d8-delivery
+type: Opaque
+---
+data:
+  ca.crt: LS0tLS0tLS0t
+  namespace: LS0tLS0tLS0t
+  token: LS0tLS0tLS0t
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ignored-type-service-account-token
+  namespace: d8-delivery
+  type: kubernetes.io/service-account-token
+`
+		manifests := strings.Split(state, "---")
+		filterResults := make([]go_hook.FilterResult, len(manifests))
+		for i, manifest := range manifests {
+			obj := &unstructured.Unstructured{}
+			_, _, err := decUnstructured.Decode([]byte(manifest), nil, obj)
+			if err != nil {
+				panic(err)
+			}
+			filterResult, err := filterDockerConfigJSON(obj)
+			if err != nil {
+				panic(err)
+			}
+			filterResults[i] = filterResult
+		}
+
+		want := map[string]dockerFileConfig{
+			"registry-credentials-1":       {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}}},
+			"registry-credentials-2":       {Auths: map[string]authn.AuthConfig{"cr-2.example.com": {Username: "n-2", Password: "pwd-2"}}},
+			"mixed-registries-1-2":         {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}, "cr-2.example.com": {Username: "n-2other", Password: "pwd-2other"}}},
+			"registry-credentials-1-other": {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1other", Password: "pwd-1other"}}},
+			"registry-credentials-3-auth":  {Auths: map[string]authn.AuthConfig{"cr-3.example.com": {Auth: "bi0zOnB3ZC0z"}}},
+		}
+
+		It("parses secrets with .dockerconfigjson", func() {
+			got, err := parseDockerConfigsBySecretName(filterResults)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got).To(Equal(want))
+		})
+
+		table.DescribeTable("extracting credentials from the map by secret name and registry", func(secret, registry, wantUsername, wantPassword string) {
+			u, p := extractCredentials(want, secret, registry)
+			Expect(u).To(Equal(wantUsername))
+			Expect(p).To(Equal(wantPassword))
+		},
+			table.Entry("registry & secret 1",
+				"registry-credentials-1", "cr-1.example.com",
+				"n-1", "pwd-1"),
+			table.Entry("registry & secret 2",
+				"registry-credentials-2", "cr-2.example.com",
+				"n-2", "pwd-2"),
+			table.Entry("shared registry/secret with same creds",
+				"mixed-registries-1-2", "cr-1.example.com",
+				"n-1", "pwd-1"),
+			table.Entry("shared registry/secret with different creds",
+				"mixed-registries-1-2", "cr-2.example.com",
+				"n-2other", "pwd-2other"),
+			table.Entry("shared registry with different creds",
+				"registry-credentials-1-other", "cr-1.example.com",
+				"n-1other", "pwd-1other"),
+			table.Entry("auth field",
+				"registry-credentials-3-auth", "cr-3.example.com",
+				"n-3", "pwd-3"),
+			table.Entry("registry and secret unknown",
+				"registry-unknown", "secret-unknown",
+				"", ""),
+			table.Entry("registry unknown",
+				"registry-unknown", "cr-1.example.com",
+				"", ""),
+			table.Entry("secret unknown",
+				"registry-credentials-1", "cr-0000.example.com",
+				"", ""),
+		)
 	})
 
 	XContext("Hook flow", func() {

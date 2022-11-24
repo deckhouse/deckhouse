@@ -198,16 +198,8 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 		if ws.argocdRepo == nil {
 			continue
 		}
-		username, password := "", ""
-		config, ok := credentialsBySecretName[ws.pullSecretName]
-		if ok {
-			registry := firstSegment(ws.repo)
-			creds, err := parseDockerConfigJSONCredentials(config, registry)
-			if err != nil {
-				return nil, err
-			}
-			username, password = creds.username, creds.password
-		}
+		registry := firstSegment(ws.repo)
+		username, password := extractCredentials(credentialsBySecretName, ws.pullSecretName, registry)
 
 		argoRepos = append(argoRepos, argocdHelmOCIRepository{
 			Name:     ws.name,
@@ -218,6 +210,20 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 		})
 	}
 	return argoRepos, nil
+}
+
+func extractCredentials(credentialsBySecretName map[string]dockerFileConfig, pullSecretName, registry string) (string, string) {
+	username, password := "", ""
+	config, ok := credentialsBySecretName[pullSecretName]
+	if !ok {
+		return username, password
+	}
+
+	creds, err := parseDockerConfigJSONCredentials(config, registry)
+	if err != nil {
+		return username, password
+	}
+	return creds.username, creds.password
 }
 
 // cr.example.com/path/to/image -> cr.example.com
