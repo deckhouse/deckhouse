@@ -251,7 +251,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 ## How do I change the configuration of a cluster?
 
-The general cluster parameters are stored in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure. It contains parameters such as:
+The general cluster parameters are stored in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
 
 To change the general cluster parameters, run the command:
 
