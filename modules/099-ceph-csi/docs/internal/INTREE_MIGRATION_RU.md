@@ -12,14 +12,14 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: sample
-  namespace: default
+  namespace: d8-monitoring
 spec:
   accessModes:
   - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: <ceph-csi-storage-class-name-change-me>
+  storageClassName: new-rbd
 END
 ```
 
@@ -428,7 +428,7 @@ spec:
     kind: PersistentVolumeClaim
     name: data-test-0
     namespace: default
-    resourceVersion: "8956643" # заменим на новый из созданного PVC на предыдущем шаге
+    resourceVersion: "8956643" # удалим
     uid: cd6f7b26-d768-4cab-88a4-baca5b242cc5 # заменим на новый из созданного PVC на предыдущем шаге
   mountOptions:
   - discard
@@ -503,7 +503,6 @@ spec:
     kind: PersistentVolumeClaim
     name: data-test-0
     namespace: default
-    resourceVersion: "8956721"
     uid: cd6f7b26-d768-4cab-88a4-baca5b242cc7
   mountOptions:
   - discard
