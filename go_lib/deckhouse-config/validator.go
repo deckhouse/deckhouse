@@ -110,7 +110,7 @@ func (c *ConfigValidator) ValidateCR(cfg *d8cfg_v1alpha1.ModuleConfig) Validatio
 			previousVersions = fmt.Sprintf(", or one of previous versions: %s", previousVersions)
 		}
 
-		msg := fmt.Sprintf("spec.version=%d is invalid. Use latest version %d%s", cfg.Spec.Version, latestVer, previousVersions)
+		msg := fmt.Sprintf("spec.version=%d is unsupported. Use latest version %d%s", cfg.Spec.Version, latestVer, previousVersions)
 		if result.HasVersionedSettings {
 			// Error if spec.settings are specified. Can't start conversions for such configuration.
 			result.ValidateCRError = msg
@@ -175,7 +175,7 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationR
 		if cfg.Spec.Version != result.Version {
 			convMsg = fmt.Sprintf(" converted to %d", result.Version)
 		}
-		result.ValidationError = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, err)
+		result.ValidationError = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, cleanupMultilineError(err))
 	}
 
 	return result
@@ -217,6 +217,18 @@ func concatIntList(items []int) string {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(strconv.Itoa(item))
+	}
+	return buf.String()
+}
+
+func cleanupMultilineError(err error) string {
+	if err == nil {
+		return ""
+	}
+	parts := strings.Split(err.Error(), "\n")
+	buf := strings.Builder{}
+	for _, part := range parts {
+		buf.WriteString(strings.TrimSpace(part))
 	}
 	return buf.String()
 }

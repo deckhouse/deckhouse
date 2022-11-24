@@ -145,8 +145,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 
 	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
 
-	for _, cfgItem := range configs {
-		cfg := cfgItem
+	for _, cfg := range configs {
 		res := d8config.Service().ConfigValidator().ConvertToLatest(cfg)
 		// Log conversion error and create ModuleConfig as-is.
 		// Ignore this ModuleConfig when update generated ConfigMap.
@@ -214,8 +213,7 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
 	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
 
-	for _, cfgItem := range allConfigs {
-		cfg := cfgItem
+	for _, cfg := range allConfigs {
 		res := d8config.Service().ConfigValidator().Validate(cfg)
 		// Conversion or validation error. Log error and ignore this ModuleConfig.
 		if res.HasError() {
