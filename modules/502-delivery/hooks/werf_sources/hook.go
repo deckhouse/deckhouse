@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,9 +28,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/google/go-containerregistry/pkg/authn"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
 )
 
 const namespace = "d8-delivery"
@@ -129,36 +126,37 @@ type internalUpdaterValues struct {
 }
 
 func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
-	werfSources, err := castWerfSources(input.Snapshots["werf_sources"])
+	// Input
+	werfSources, err := parseWerfSources(input.Snapshots["werf_sources"])
 	if err != nil {
 		return fmt.Errorf("cannot parse WerfSources: %v", err)
 	}
 	if len(werfSources) == 0 {
 		return nil
 	}
-
 	credsBySecretName, err := parseDockerConfigsBySecretName(input.Snapshots["credentials_secrets"])
 	if err != nil {
 		return fmt.Errorf("cannot parse credentials secrets: %v", err)
 	}
 
+	// Convert to values
 	vals, err := mapWerfSources(werfSources, credsBySecretName)
 	if err != nil {
 		return err
 	}
 
+	// Output
 	input.Values.Set("delivery.internal", vals)
 
 	return nil
 }
 
 func mapWerfSources(werfSources []werfSource, credsBySecret map[string]dockerFileConfig) (vals internalValues, err error) {
-	credentialsBySecretName, err := fetchRegistryCredentials(credsBySecret, werfSources)
+	argoRepos, err := convArgoCDRepositories(werfSources, credsBySecret)
 	if err != nil {
-		return vals, fmt.Errorf("cannot fetch registry secrets: %v", err)
+		return vals, fmt.Errorf("cannot convert ArgoCD repositories: %v", err)
 	}
 
-	argoRepos := convArgoCDRepositories(werfSources, credentialsBySecretName)
 	imageUpdaterRegistries := convImageUpdaterRegistries(werfSources)
 
 	vals = internalValues{
@@ -194,15 +192,20 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 	return registries
 }
 
-func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]registryCredentials) []argocdHelmOCIRepository {
+func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) ([]argocdHelmOCIRepository, error) {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
 		if ws.argocdRepo == nil {
 			continue
 		}
 		username, password := "", ""
-		creds, ok := credentialsBySecretName[ws.pullSecretName]
+		config, ok := credentialsBySecretName[ws.pullSecretName]
 		if ok {
+			registry := firstSegment(ws.repo)
+			creds, err := parseDockerConfigJSONCredentials(config, registry)
+			if err != nil {
+				return nil, err
+			}
 			username, password = creds.username, creds.password
 		}
 
@@ -214,7 +217,7 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 			URL:      ws.repo,
 		})
 	}
-	return argoRepos
+	return argoRepos, nil
 }
 
 // cr.example.com/path/to/image -> cr.example.com
@@ -288,7 +291,7 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	return ws, nil
 }
 
-func castWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
+func parseWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
 	var res []werfSource
 	for _, snap := range snapshots {
 		r, ok := snap.(werfSource)
@@ -296,7 +299,6 @@ func castWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
 			return nil, fmt.Errorf("unexpected type %T", snap)
 		}
 		res = append(res, r)
-
 	}
 	return res, nil
 }
@@ -304,61 +306,6 @@ func castWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
 type registryCredentials struct {
 	username string
 	password string
-}
-
-type credSecretMapper interface {
-	Get(ctx context.Context) (map[string][]byte, error)
-}
-
-type credSecretMapperImpl struct {
-	client    kubernetes.Interface
-	namespace string
-}
-
-func (m *credSecretMapperImpl) Get(ctx context.Context) (map[string][]byte, error) {
-	secretList, err := m.client.CoreV1().Secrets(namespace).
-		List(context.Background(),
-			metav1.ListOptions{FieldSelector: "type=kubernetes.io/dockerconfigjson"},
-		)
-	if err != nil {
-		return nil, fmt.Errorf("cannot list secrets: %v", err)
-	}
-
-	dataByName := make(map[string][]byte)
-	for _, secret := range secretList.Items {
-		name := secret.GetName()
-		data, ok := secret.Data[corev1.DockerConfigJsonKey]
-		if !ok {
-			return nil, fmt.Errorf("secret %q does not contain %q key", name, corev1.DockerConfigJsonKey)
-		}
-		dataByName[name] = data
-	}
-
-	return dataByName, nil
-}
-
-func fetchRegistryCredentials(credsBySecretName map[string]dockerFileConfig, werfSources []werfSource) (map[string]registryCredentials, error) {
-	credentialsBySecretName := make(map[string]registryCredentials)
-
-	for _, ws := range werfSources {
-		if ws.pullSecretName == "" {
-			continue
-		}
-
-		credsByRegistry, ok := credsBySecretName[ws.pullSecretName]
-		if !ok {
-			return nil, fmt.Errorf("secret %q not found", ws.pullSecretName)
-		}
-
-		registry := firstSegment(ws.repo)
-		creds, err := parseDockerConfigJSONCredentials(credsByRegistry, registry)
-		if err != nil {
-			return nil, fmt.Errorf("getting credentials for registry %q in secret %q: %v", registry, ws.pullSecretName, err)
-		}
-		credentialsBySecretName[ws.pullSecretName] = creds
-	}
-
-	return credentialsBySecretName, nil
 }
 
 func parseDockerConfigJSONCredentials(config dockerFileConfig, registry string) (registryCredentials, error) {
@@ -428,7 +375,6 @@ func filterDockerConfigJSON(obj *unstructured.Unstructured) (go_hook.FilterResul
 	var config dockerFileConfig
 	if err := json.Unmarshal(rawCreds, &config); err != nil {
 		return nil, fmt.Errorf("cannot decode docker config JSON: %v", err)
-
 	}
 
 	creds := credSecret{
