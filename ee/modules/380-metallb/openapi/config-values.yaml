@@ -166,7 +166,7 @@ properties:
         name:
           type: string
           description: |
-            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`).
+            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`). It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         protocol:
           type: string
