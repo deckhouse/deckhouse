@@ -99,7 +99,7 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 	}
 
 	// Deckhouse doesn't use ModuleConfig resources, use ConfigMap/deckhouse content.
-	return l.ConfigMapToInitialConfig(cm.Data)
+	return l.LegacyConfigMapToInitialConfig(cm.Data)
 }
 
 func (l *InitialConfigLoader) initKubeClient() error {
@@ -169,9 +169,9 @@ func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8cf
 	return kcm.ParseConfigMapData(data)
 }
 
-// ConfigMapToInitialConfig runs registered conversion for each module section in cmData.
+// LegacyConfigMapToInitialConfig runs registered conversion for each module section in cmData.
 // It assumes settings have version 0 (cm/deckhouse case).
-func (l *InitialConfigLoader) ConfigMapToInitialConfig(cmData map[string]string) (*kcm.KubeConfig, error) {
+func (l *InitialConfigLoader) LegacyConfigMapToInitialConfig(cmData map[string]string) (*kcm.KubeConfig, error) {
 	// Use ConfigMap parser from addon-operator.
 	kubeCfg, err := kcm.ParseConfigMapData(cmData)
 	if err != nil {

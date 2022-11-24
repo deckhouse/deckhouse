@@ -143,15 +143,23 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		input.LogEntry.Infof(msg)
 	}
 
-	for _, cfg := range configs {
-		res, err := d8config.Service().ConfigValidator().Validate(cfg)
-		if err != nil {
-			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
+	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+
+	for _, cfgItem := range configs {
+		cfg := cfgItem
+		res := d8config.Service().ConfigValidator().ConvertToLatest(cfg)
+		// Log conversion error and create ModuleConfig as-is.
+		// Ignore this ModuleConfig when update generated ConfigMap.
+		if res.HasError() {
+			input.LogEntry.Errorf("Invalid module section found in the generated ConfigMap. Created ModuleConfig/%s will be ignored. Validate error is: %v", cfg.GetName(), res.Error())
+			continue
 		}
+		// Update spec.settings to converted settings.
 		if res.IsConverted {
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		properCfgs = append(properCfgs, cfg)
 	}
 
 	input.LogEntry.Infof("Create %d ModuleConfig objects", len(configs))
@@ -160,7 +168,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 	}
 
 	// Recreate ConfigMap from ModuleConfig objects to clean-up deprecated module sections.
-	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(configs)
+	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(properCfgs)
 	if err != nil {
 		return err
 	}
@@ -202,19 +210,27 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 	patchCollector.Filter(modify, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
 }
 
+// syncModuleConfigs updates generated ConfigMap using ModuleConfig resources.
 func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
-	for _, cfg := range allConfigs {
-		res, err := d8config.Service().ConfigValidator().Validate(cfg)
-		if err != nil {
-			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
+	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+
+	for _, cfgItem := range allConfigs {
+		cfg := cfgItem
+		res := d8config.Service().ConfigValidator().Validate(cfg)
+		// Conversion or validation error. Log error and ignore this ModuleConfig.
+		if res.HasError() {
+			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored. Validate error is: %v", cfg.GetName(), res.Error())
+			continue
 		}
+		// Update spec.settings to converted settings.
 		if res.IsConverted {
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		properCfgs = append(properCfgs, cfg)
 	}
 
-	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(allConfigs)
+	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(properCfgs)
 	if err != nil {
 		return err
 	}

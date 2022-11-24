@@ -118,6 +118,14 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		}
 	}
 
+	// Show conversion or validation error for ignored ModuleConfig resources.
+	// Put error first.
+	// TODO(future): add cache for these errors.
+	res := Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		statusMsgs = append([]string{res.Error()}, statusMsgs...)
+	}
+
 	return Status{
 		Version: version,
 		State:   enabled,

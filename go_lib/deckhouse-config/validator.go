@@ -46,74 +46,139 @@ type ValuesValidator interface {
 }
 
 type ValidationResult struct {
-	IsConverted    bool
-	Settings       map[string]interface{}
-	Version        int
-	VersionWarning string
+	IsConverted bool
+	Settings    map[string]interface{}
+	Version     int
+
+	// true if spec.settings can be converted and validated.
+	HasVersionedSettings bool
+
+	ValidateCRWarning string
+	ValidateCRError   string
+	ConversionError   string
+	ValidationError   string
 }
 
-// Validate checks version value if spec.settings value is not empty,
-// then converts spec.settings to the latest version and finally validates
-// spec.settings using OpenAPI schema defined in related config-values.yaml file.
-func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) (ValidationResult, error) {
+func (v ValidationResult) HasError() bool {
+	return v.ConversionError != "" || v.ValidateCRError != "" || v.ValidationError != ""
+}
+
+func (v ValidationResult) Error() string {
+	errs := make([]string, 0)
+	if v.ValidateCRError != "" {
+		errs = append(errs, v.ValidateCRError)
+	}
+	if v.ConversionError != "" {
+		errs = append(errs, v.ConversionError)
+	}
+	if v.ValidationError != "" {
+		errs = append(errs, v.ValidationError)
+	}
+	return strings.Join(errs, ", ")
+}
+
+// ValidateCR checks if ModuleConfig resource is well-formed.
+func (c *ConfigValidator) ValidateCR(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
-	// It is ok if resource spec is empty or if it has enabled field only.
-	if len(cfg.Spec.Settings) == 0 && cfg.Spec.Version == 0 {
-		return result, nil
-	}
-	if cfg.Spec.Settings == nil && cfg.Spec.Version > 0 {
-		return result, fmt.Errorf("spec.version is forbidden when settings are not specified")
+	if cfg.Spec.Version == 0 {
+		// Resource is not valid when spec.settings are specified without version.
+		if cfg.Spec.Settings != nil {
+			result.ValidateCRError = "spec.version is required when spec.settings are specified"
+		}
+		// Resource is valid without spec.version and spec.settings.
+		return result
 	}
 
-	// Settings are present, check version using conversion chain.
+	// Can run conversions and validations if spec.version and spec.settings are specified.
+	if cfg.Spec.Settings == nil {
+		// Warn about spec.version without spec.settings.
+		result.ValidateCRWarning = "spec.version is redundant without spec.settings"
+	} else {
+		// Resource has both spec.settings and spec.version — it is ok to convert and validate with OpenAPI schema.
+		result.HasVersionedSettings = true
+	}
+
+	// Check if there is registered conversion for the version and if the version is the latest.
 	chain := conversion.Registry().Chain(cfg.GetName())
 	latestVer := chain.LatestVersion()
 
+	// Check if version is unknown.
 	if !chain.IsKnownVersion(cfg.Spec.Version) {
 		previousVersions := concatIntList(chain.PreviousVersionsList())
 		if previousVersions != "" {
 			previousVersions = fmt.Sprintf(", or one of previous versions: %s", previousVersions)
 		}
 
-		return result, fmt.Errorf("spec.version=%d is invalid. Use latest version %d%s", cfg.Spec.Version, latestVer, previousVersions)
+		msg := fmt.Sprintf("spec.version=%d is invalid. Use latest version %d%s", cfg.Spec.Version, latestVer, previousVersions)
+		if result.HasVersionedSettings {
+			// Error if spec.settings are specified. Can't start conversions for such configuration.
+			result.ValidateCRError = msg
+		} else {
+			// Warning if there are no spec.settings.
+			result.ValidateCRWarning = msg
+		}
+		return result
 	}
 
+	// Warning if version is not the latest.
 	versionMsg := ""
 	if cfg.Spec.Version != latestVer {
-		versionMsg = fmt.Sprintf("spec.version=%d is obsolete. Please migrate settings to the latest version %d", cfg.Spec.Version, latestVer)
+		versionMsg = fmt.Sprintf("spec.version=%d is obsolete. Please migrate spec.settings to the latest version %d", cfg.Spec.Version, latestVer)
 	}
-	result.VersionWarning = versionMsg
+	result.ValidateCRWarning = versionMsg
+	return result
+}
+
+// ConvertToLatest checks if ModuleConfig resource is well-formed and runs conversions for spec.settings is needed.
+func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
+	result := c.ValidateCR(cfg)
+	if result.HasError() || !result.HasVersionedSettings {
+		return result
+	}
 
 	// Run registered conversions if version is not the latest.
-	convMsg := ""
-	settings := cfg.Spec.Settings
+	result.Settings = cfg.Spec.Settings
+	chain := conversion.Registry().Chain(cfg.GetName())
 	if chain.LatestVersion() != cfg.Spec.Version {
 		newVersion, newSettings, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
 		if err != nil {
-			return result, fmt.Errorf("convert '%s' settings from version %d to %d: %v", cfg.GetName(), cfg.Spec.Version, chain.LatestVersion(), err)
+			result.ConversionError = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", cfg.Spec.Version, chain.LatestVersion(), err)
+			return result
 		}
 		// Clear settings and version if settings convert to an empty object.
 		if len(newSettings) == 0 {
 			newSettings = nil
 			newVersion = 0
 		}
-		settings = newSettings
 		result.Settings = newSettings
 		result.Version = newVersion
 		result.IsConverted = true
-		convMsg = fmt.Sprintf(" converted to %d", newVersion)
 	}
 
-	// Ignore validation for empty settings.
-	if len(settings) > 0 {
-		err := c.validateSettings(cfg.GetName(), settings)
-		if err != nil {
-			return result, fmt.Errorf("%s settings are not valid (version %d%s): %v", cfg.GetName(), cfg.Spec.Version, convMsg, err)
+	return result
+}
+
+// Validate checks ModuleConfig resource:
+// - check if resource is well-formed
+// - runs conversions for spec.settings is needed
+// - use OpenAPI schema defined in related config-values.yaml file to validate converted spec.settings.
+func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
+	result := c.ConvertToLatest(cfg)
+	if result.HasError() {
+		return result
+	}
+
+	err := c.validateSettings(cfg.GetName(), result.Settings)
+	if err != nil {
+		convMsg := ""
+		if cfg.Spec.Version != result.Version {
+			convMsg = fmt.Sprintf(" converted to %d", result.Version)
 		}
+		result.ValidationError = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, err)
 	}
 
-	return result, nil
+	return result
 }
 
 // validateSettings uses ValuesValidator from ModuleManager instance to validate spec.settings.
