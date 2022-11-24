@@ -387,6 +387,9 @@ func filterDockerConfigJSON(obj *unstructured.Unstructured) (go_hook.FilterResul
 func parseDockerConfigsBySecretName(snapshots []go_hook.FilterResult) (map[string]dockerFileConfig, error) {
 	var res map[string]dockerFileConfig
 	for _, snap := range snapshots {
+		if snap == nil {
+			continue
+		}
 		creds, ok := snap.(credSecret)
 		if !ok {
 			return nil, fmt.Errorf("unexpected type %T", snap)
