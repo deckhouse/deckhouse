@@ -196,22 +196,24 @@ spec:
 Пример:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: IngressIstioController
 metadata:
  name: main
 spec:
   # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway
-  ingressGatewayClass: hp
+  ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role.kubernetes.io/master: ''
+    node-role/frontend: ''
   tolerations:
-    - effect: NoSchedule
-      operator: Exists
+    - effect: NoExecute
+      key: dedicated
+      operator: Equal
+      value: frontend
   resourcesRequests:
     mode: VPA
 ```
@@ -224,7 +226,7 @@ metadata:
 spec:
   selector:
     # селектор меток для использования Istio Ingress Gateway main-hp
-    istio.deckhouse.io/ingress-gateway-class: hp 
+    istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
         # стандартный шаблон для использования протокола HTTP

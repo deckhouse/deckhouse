@@ -725,7 +725,7 @@ updatePolicy:
 			istioProxyContainer := ingressDs.Field("spec.template.spec.containers").Array()
 			Expect(len(istioProxyContainer)).To(Equal(1))
 			Expect((istioProxyContainer[0].Get("ports"))).To(MatchJSON(`[
-{"containerPort":8080,"hostPort":80,"name":"http2","protocol":"TCP"},
+{"containerPort":8080,"hostPort":80,"name":"http","protocol":"TCP"},
 {"containerPort":8443,"hostPort":443,"name":"https","protocol":"TCP"},
 {"containerPort":15090,"name":"http-envoy-prom","protocol":"TCP"},
 {"containerPort":15021,"name":"status-port","protocol":"TCP"},

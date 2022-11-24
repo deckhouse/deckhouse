@@ -29,9 +29,7 @@ spec:
                 ingressGatewayClass:
                   type: string
                   description: |
-                    The name of the Ingress gateway class to use with the Ingress istio gateway controller.
-
-                    The value of this parameter is used as a label selector for the [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resource. Example of the Gateway resource label: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
+                    Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right ingressgateway setup. The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
                   example: 'istio'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:

@@ -35,10 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
-	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
-	if err != nil {
-		return nil, fmt.Errorf("cannot get spec from istio ingress gateway controller %s: %v", name, err)
-	}
+	spec, ok, _ := unstructured.NestedMap(obj.Object, "spec")
 	if !ok {
 		return nil, fmt.Errorf("istio ingress gateway controller %s has no spec field", name)
 	}

@@ -166,7 +166,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         imagePullPolicy: IfNotPresent
         ports:
-        - name: http2
+        - name: http
           containerPort: 8080
           protocol: TCP
   {{- if eq $controller.spec.inlet "HostPort"}}

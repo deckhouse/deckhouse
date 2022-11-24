@@ -201,16 +201,18 @@ metadata:
  name: main
 spec:
   # ingressGatewayClass contains the label selector value used to create the Gateway resource
-  ingressGatewayClass: hp
+  ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role.kubernetes.io/master: ''
+    node-role/frontend: ''
   tolerations:
-    - effect: NoSchedule
-      operator: Exists
+    - effect: NoExecute
+      key: dedicated
+      operator: Equal
+      value: frontend
   resourcesRequests:
     mode: VPA
 ```
@@ -223,7 +225,7 @@ metadata:
 spec:
   selector:
     # label selector for using the Istio Ingress Gateway main-hp
-    istio.deckhouse.io/ingress-gateway-class: hp 
+    istio.deckhouse.io/ingress-gateway-class: istio-hp 
   servers:
     - port:
         # standard template for using the HTTP protocol
@@ -247,7 +249,7 @@ spec:
 ```
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: vs-app

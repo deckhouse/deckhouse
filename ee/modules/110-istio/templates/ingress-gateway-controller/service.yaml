@@ -18,9 +18,9 @@ spec:
   externalTrafficPolicy: Local
   {{- end }}
   ports:
-  - name: http2
+  - name: http
     port: 80
-    targetPort: http2
+    targetPort: http
     protocol: TCP
   {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpPort }}
     nodePort: {{ $nodePort.httpPort }}
