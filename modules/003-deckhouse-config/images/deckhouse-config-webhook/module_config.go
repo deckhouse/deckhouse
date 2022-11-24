@@ -68,7 +68,7 @@ func (c *ModuleConfigValidator) Validate(_ context.Context, review *kwhmodel.Adm
 	// Validate spec.settings using the OpenAPI schema.
 	res := d8config.Service().ConfigValidator().Validate(cfg)
 	if res.HasError() {
-		return rejectResult(err.Error())
+		return rejectResult(res.Error())
 	}
 
 	// Return allow with warning.

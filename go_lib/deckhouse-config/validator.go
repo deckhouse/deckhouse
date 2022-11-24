@@ -172,7 +172,7 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationR
 	err := c.validateSettings(cfg.GetName(), result.Settings)
 	if err != nil {
 		convMsg := ""
-		if cfg.Spec.Version != result.Version {
+		if result.IsConverted {
 			convMsg = fmt.Sprintf(" converted to %d", result.Version)
 		}
 		result.ValidationError = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, cleanupMultilineError(err))
