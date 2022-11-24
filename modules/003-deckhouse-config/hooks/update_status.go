@@ -123,6 +123,7 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName)
 		statusPatch := makeStatusPatch(cfg, moduleStatus)
 		if statusPatch != nil {
+			// TODO Switch to debug level in 1.42 release.
 			input.LogEntry.Infof(
 				"Patch /status for moduleconfig/%s: state '%s' to '%s', version '%s' to %s', status '%s' to '%s'",
 				cfg.GetName(),
