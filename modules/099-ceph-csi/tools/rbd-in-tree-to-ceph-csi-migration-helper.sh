@@ -22,9 +22,9 @@ target_pv_name="$(jq -r '.spec.volumeName' <<< "$target_pvc")"
 sample_pv="$(kubectl get pv "$sample_pv_name" -o json)"
 target_pv="$(kubectl get pv "$target_pv_name" -o json)"
 
-echo "Backup $target_pvc_namespace/$target_pvc_name to backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
+echo "Backup PVC $target_pvc_namespace/$target_pvc_name to backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
 echo "$target_pvc" > "backup-pvc-$target_pvc_namespace-$target_pvc_name.json"
-echo "Backup $target_pv_name to backup-pv-$target_pv_name.json"
+echo "Backup PV $target_pv_name to backup-pv-$target_pv_name.json"
 echo "$target_pv" > "backup-pv-$target_pv_name.json"
 
 pool_name="$(jq -r '.spec.csi.volumeAttributes.pool' <<< "$sample_pv")"
@@ -88,13 +88,13 @@ new_target_pvc_metadata="$(jq -r '.metadata' <<< "$new_target_pvc")"
 
 new_target_pv="$(jq --argjson m "$new_target_pvc_metadata" --argjson a "$new_annotations_for_target_pv" --argjson csi "$csi_section_for_target_pv" --arg sc "$new_storage_class_for_target" --arg sampleRbdImageUid "$sample_rbd_image_uid" --arg newRbdImageUid "$new_rbd_image_uid" '
   .metadata.annotations = $a |
-  .spec.claimRef.resourceVersion = $m.resourceVersion |
   .spec.claimRef.uid = $m.uid |
   .spec.csi = $csi |
   .spec.storageClassName = $sc |
   .spec.persistentVolumeReclaimPolicy = "Retain" |
   .spec.csi.volumeHandle = (.spec.csi.volumeHandle | sub($sampleRbdImageUid; $newRbdImageUid)) |
   del(.spec.rbd) |
+  del(.spec.claimRef.resourceVersion) |
   del(.metadata.resourceVersion) |
   del(.metadata.uid) |
   del(.metadata.creationTimestamp) |
