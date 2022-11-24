@@ -22,6 +22,7 @@ type names struct {
 	IngressControllerNames       []string `json:"ingressControllerNames"`
 	CloudEphemeralNodeGroupNames []string `json:"cloudEphemeralNodeGroupNames"`
 	Zones                        []string `json:"zones"`
+	ZonePrefix                   string   `json:"zonePrefix"`
 }
 
 // emptyNames fills fields with non-nil values
@@ -40,6 +41,11 @@ func (n *names) WithIngressControllers(ingNames ...string) *names {
 
 func (n *names) WithZones(zones ...string) *names {
 	n.Zones = zones
+	return n
+}
+
+func (n *names) WithZonePrefix(p string) *names {
+	n.ZonePrefix = p
 	return n
 }
 

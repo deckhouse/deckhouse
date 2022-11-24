@@ -60,6 +60,7 @@ type DynamicProbesConfig struct {
 	IngressControllers []string
 	NodeGroups         []string
 	Zones              []string
+	ZonePrefix         string
 }
 
 func NewConfig() *Config {
@@ -91,6 +92,7 @@ func (a *Agent) Start(ctx context.Context) error {
 		IngressNginxControllers: a.config.DynamicProbes.IngressControllers,
 		NodeGroups:              a.config.DynamicProbes.NodeGroups,
 		Zones:                   a.config.DynamicProbes.Zones,
+		ZonePrefix:              a.config.DynamicProbes.ZonePrefix,
 	}
 
 	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
