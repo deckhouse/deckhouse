@@ -21,6 +21,7 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"github.com/google/go-containerregistry/pkg/authn"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -176,12 +177,12 @@ spec:
 			pullSecretName: "registry-credentials-4",
 		}
 
-		credGetter := mockCredGetter(map[string][]byte{
-			"registry-credentials-1":      []byte(`{"auths": {"cr-1.example.com": {"username":"n-1", "password":"pwd-1" }}}`),
-			"registry-credentials-2":      []byte(`{"auths": {"cr-2.example.com": {"username":"n-2", "password":"pwd-2" }}}`),
-			"unused-registry-credentials": []byte(`{"auths": {"noop.example.com": {"username":"n-3", "password":"pwd-3" }}}`),
-			"registry-credentials-4":      []byte(`{"auths": {"cr-4.example.com": {"username":"n-4", "password":"pwd-4" }}}`),
-		})
+		credGetter := map[string]dockerFileConfig{
+			"registry-credentials-1":      {Auths: map[string]authn.AuthConfig{"cr-1.example.com": {Username: "n-1", Password: "pwd-1"}}},
+			"registry-credentials-2":      {Auths: map[string]authn.AuthConfig{"cr-2.example.com": {Username: "n-2", Password: "pwd-2"}}},
+			"unused-registry-credentials": {Auths: map[string]authn.AuthConfig{"noop.example.com": {Username: "n-3", Password: "pwd-3"}}},
+			"registry-credentials-4":      {Auths: map[string]authn.AuthConfig{"cr-4.example.com": {Username: "n-4", Password: "pwd-4"}}},
+		}
 
 		vals, err := mapWerfSources([]werfSource{ws1, ws2, ws3, ws4}, credGetter)
 
