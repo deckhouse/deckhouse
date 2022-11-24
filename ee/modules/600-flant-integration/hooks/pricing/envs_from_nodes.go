@@ -52,7 +52,7 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	if nodeGroup, ok := node.ObjectMeta.Labels["node.deckhouse.io/group"]; !ok || nodeGroup != "master" {
-		return n, err
+		return n, nil
 	}
 
 	for _, taint := range node.Spec.Taints {
