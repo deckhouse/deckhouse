@@ -228,6 +228,7 @@ func cleanupMultilineError(err error) string {
 	parts := strings.Split(err.Error(), "\n")
 	buf := strings.Builder{}
 	for _, part := range parts {
+		buf.WriteString(" ")
 		buf.WriteString(strings.TrimSpace(part))
 	}
 	return buf.String()
