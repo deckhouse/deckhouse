@@ -62,10 +62,17 @@ func cwd() string {
 		dir = filepath.Dir(dir)
 	}
 
+	// If deckhouse repo directory is symlinked (e.g. to /deckhouse), resolve the real path.
+	// Otherwise, filepath.Walk will ignore all subdirectories.
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		panic(err)
+	}
+
 	return dir
 }
 
-func walkModules(namespaces *[]string, sas *[]string, workDir string) error {
+func walkModules(namespaces, sas *[]string, workDir string) error {
 	chartNames := make(map[string]string)
 	saNames := make(map[string][]string)
 
@@ -73,6 +80,7 @@ func walkModules(namespaces *[]string, sas *[]string, workDir string) error {
 		if f != nil && f.IsDir() {
 			return nil
 		}
+
 		modulePath := filepath.Dir(strings.TrimPrefix(path, workDir))
 		// In case of files inside `templates` directory we want only module path
 		modulePath = strings.Split(modulePath, "templates")[0]
@@ -92,6 +100,7 @@ func walkModules(namespaces *[]string, sas *[]string, workDir string) error {
 			if name, ok := chart["name"]; ok {
 				chartNames[modulePath] = name.(string)
 			}
+
 			return nil
 		}
 
@@ -203,7 +212,7 @@ func main() {
 	type Data struct {
 		Namespace, ServiceAccount []string
 	}
-	var data = Data{
+	data := Data{
 		Namespace:      uniqueNonEmptyElementsOf(namespaces),
 		ServiceAccount: uniqueNonEmptyElementsOf(sas),
 	}
