@@ -217,7 +217,7 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 		res := d8config.Service().ConfigValidator().Validate(cfg)
 		// Conversion or validation error. Log error and ignore this ModuleConfig.
 		if res.HasError() {
-			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored. Validate error is: %v", cfg.GetName(), res.Error())
+			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored due to validation error: %v", cfg.GetName(), res.Error())
 			continue
 		}
 		// Update spec.settings to converted settings.
