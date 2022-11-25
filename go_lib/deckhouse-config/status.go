@@ -62,7 +62,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		// Use latest version if spec.version is empty.
 		version = strconv.Itoa(chain.LatestVersion())
 	}
-	if cfg.Spec.Version > 0 && len(cfg.Spec.Settings) > 0 {
+	if cfg.Spec.Version > 0 {
 		version = strconv.Itoa(cfg.Spec.Version)
 		if !chain.IsKnownVersion(cfg.Spec.Version) {
 			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
