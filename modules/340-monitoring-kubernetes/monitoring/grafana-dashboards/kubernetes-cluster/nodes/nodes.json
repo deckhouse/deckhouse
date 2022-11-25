@@ -982,7 +982,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "(sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4]))\n* on (node) group_left(node_group) sum by(node) (node_group_node_status{node_group=~\"$node_group\"})) * 100",
+              "expr": "(sum by (node, mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4]))\n* on (node) group_left(node_group) sum by(node) (node_group_node_status{node_group=~\"$node_group\"})) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
