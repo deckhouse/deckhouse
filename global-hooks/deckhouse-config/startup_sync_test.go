@@ -74,7 +74,8 @@ certManagerEnabled: "true"
 			Expect(f).To(ExecuteSuccessfully())
 
 			// Check generated ConfigMap.
-			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
+			// Note: use literal name to test accidental renaming.
+			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", "deckhouse-generated-config-do-not-edit")
 			Expect(generatedCM.Exists()).Should(BeTrue())
 			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, migrationAnnotation)
 			Expect(generatedCM.Field("metadata.annotations").String()).Should(MatchJSON(annotationJSON))
@@ -95,7 +96,7 @@ certManagerEnabled: "true"
 
 	Context("Phase 2. Migrate to ModuleConfig objects", func() {
 
-		Context("giving valid ConfigMap", func() {
+		Context("giving generated ConfigMap", func() {
 			// Register 2 conversions to test conversion chains.
 			var _ = conversion.RegisterFunc("deckhouse", 1, 2, func(settings *conversion.Settings) error {
 				return nil
@@ -161,7 +162,7 @@ unknownModule: |
 			})
 		})
 
-		Context("giving invalid ConfigMap", func() {
+		Context("giving invalid generated ConfigMap", func() {
 			BeforeEach(func() {
 				// Emulate migrated Deployment/deckhouse.
 				_ = os.Setenv("ADDON_OPERATOR_CONFIG_MAP", d8config.GeneratedConfigMapName)
@@ -179,8 +180,9 @@ deckhouse: |
 				f.RunHook()
 			})
 
-			It("Should get validation error", func() {
-				Expect(f).ToNot(ExecuteSuccessfully(), "should fail on invalid values")
+			It("Should run successfully", func() {
+				Expect(f).To(ExecuteSuccessfully(), "should not fail on invalid module section")
+				Expect(f.KubernetesGlobalResource("ModuleConfig", "deckhouse").Exists()).Should(BeTrue(), "should create ModuleConfig")
 			})
 		})
 	})
@@ -370,6 +372,7 @@ spec:
 			cm := d8ConfigMap(d8config.GeneratedConfigMapName, `
 global: |
   param2: val4
+# invalid values according to testdata/modules/001-deckhouse/openapi/config-values.yaml
 deckhouse: |
   logLevel: Info
 `)
@@ -379,9 +382,17 @@ deckhouse: |
 			f.RunHook()
 		})
 
-		It("should fail on validating ModuleConfig spec.settings", func() {
-			Expect(f).ToNot(ExecuteSuccessfully(), "should fail on invalid values in ModuleConfig object")
+		It("should not fail on validating ModuleConfig spec.settings", func() {
+			Expect(f).To(ExecuteSuccessfully(), "should not fail on invalid values in ModuleConfig object")
 		})
+
+		It("Should not create module section for deckhouse", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
+			Expect(cm.Exists()).Should(BeTrue())
+			Expect(cm.Field("data.global").Exists()).Should(BeFalse(), "should not create 'global', got data: %s", cm.Field("data").String())
+			Expect(cm.Field("data.deckhouse").Exists()).Should(BeFalse(), "should not create 'deckhouse', got data: %s", cm.Field("data").String())
+		})
+
 	})
 })
 

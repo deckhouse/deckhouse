@@ -45,16 +45,6 @@ spec:
                   description: |
                     Module settings.
                   x-kubernetes-preserve-unknown-fields: true
-              oneOf:
-                - minProperties: 0
-                  maxProperties: 0
-                - required: [enabled]
-                  minProperties: 1
-                  maxProperties: 1
-                - required: [version, settings]
-                  minProperties: 2
-                  maxProperties: 2
-                - required: [version, settings, enabled]
             status:
               type: object
               properties:
@@ -78,15 +68,15 @@ spec:
           type: string
           description: "Version of settings schema in use"
           jsonPath: .status.version
-        - name: Status
-          type: string
-          description: "Module state explanation, version warning or last error"
-          jsonPath: .status.status
-        - description: 'CreationTimestamp is a timestamp representing the server time
+        - name: Age
+          type: date
+          description: 'CreationTimestamp is a timestamp representing the server time
             when this object was created. It is not guaranteed to be set in happens-before
             order across separate operations. Clients may not set this value. It is represented
             in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
             lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
           jsonPath: .metadata.creationTimestamp
-          name: Age
-          type: date
+        - name: Status
+          type: string
+          description: "Module state explanation, version warning or last error"
+          jsonPath: .status.status

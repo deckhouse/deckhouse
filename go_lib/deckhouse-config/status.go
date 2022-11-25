@@ -54,6 +54,19 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		}
 	}
 
+	// Show conversion or validation error for ignored ModuleConfig resources.
+	// Put error first.
+	// TODO(future): add cache for these errors.
+	res := Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
+		return Status{
+			State:   "N/A",
+			Version: "",
+			Status:  invalidMsg,
+		}
+	}
+
 	// Get settings version from spec or get the latest version from registered conversions.
 	versionWarning := ""
 	version := ""

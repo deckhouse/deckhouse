@@ -172,9 +172,9 @@ func (c *ConversionTester) ConvertToLatest(fromVersion int, input string) ConvTe
 		},
 	}
 
-	validationRes, err := d8config.Service().ConfigValidator().Validate(cfg)
-	if err != nil {
-		res.Error = fmt.Errorf("validate input Settings: %v", err)
+	validationRes := d8config.Service().ConfigValidator().Validate(cfg)
+	if validationRes.HasError() {
+		res.Error = fmt.Errorf("validate input Settings: %v", validationRes.Error)
 		return res
 	}
 
