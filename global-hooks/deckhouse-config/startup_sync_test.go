@@ -74,7 +74,8 @@ certManagerEnabled: "true"
 			Expect(f).To(ExecuteSuccessfully())
 
 			// Check generated ConfigMap.
-			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
+			// Note: use literal name to test accidental renaming.
+			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", "deckhouse-generated-config-do-not-edit")
 			Expect(generatedCM.Exists()).Should(BeTrue())
 			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, migrationAnnotation)
 			Expect(generatedCM.Field("metadata.annotations").String()).Should(MatchJSON(annotationJSON))

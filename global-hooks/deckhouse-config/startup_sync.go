@@ -150,7 +150,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		// Log conversion error and create ModuleConfig as-is.
 		// Ignore this ModuleConfig when update generated ConfigMap.
 		if res.HasError() {
-			input.LogEntry.Errorf("Auto-created ModuleConfig/%s will be ignored. The module section in the generated ConfigMap is invalid: %v", cfg.GetName(), res.Error())
+			input.LogEntry.Errorf("Auto-created ModuleConfig/%s will be ignored. The module section in the generated ConfigMap is invalid: %v", cfg.GetName(), res.Error)
 			continue
 		}
 		// Update spec.settings to converted settings.
@@ -161,8 +161,8 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		properCfgs = append(properCfgs, cfg)
 	}
 
-	input.LogEntry.Infof("Create %d ModuleConfig objects", len(configs))
 	for _, cfg := range configs {
+		input.LogEntry.Infof("Create ModuleConfig/%s", cfg.GetName())
 		input.PatchCollector.Create(cfg, object_patch.UpdateIfExists())
 	}
 
@@ -217,7 +217,7 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 		res := d8config.Service().ConfigValidator().Validate(cfg)
 		// Conversion or validation error. Log error and ignore this ModuleConfig.
 		if res.HasError() {
-			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored due to validation error: %v", cfg.GetName(), res.Error())
+			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored due to validation error: %v", cfg.GetName(), res.Error)
 			continue
 		}
 		// Update spec.settings to converted settings.

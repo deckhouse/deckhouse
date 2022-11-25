@@ -59,7 +59,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 	// TODO(future): add cache for these errors.
 	res := Service().ConfigValidator().Validate(cfg)
 	if res.HasError() {
-		invalidMsg := fmt.Sprintf("Ignored: %s", res.Error())
+		invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
 		return Status{
 			State:   "N/A",
 			Version: "",

@@ -170,11 +170,11 @@ spec:
 			v := NewConfigValidator(nil)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
-			res := v.ValidateCR(cfg)
+			res := v.validateCR(cfg)
 
 			switch tt.expect {
 			case expectValid:
-				g.Expect(res.HasError()).Should(BeFalse(), "should be valid, got error: %s", res.Error())
+				g.Expect(res.HasError()).Should(BeFalse(), "should be valid, got error: %s", res.Error)
 			case expectInvalid:
 				g.Expect(res.HasError()).Should(BeTrue(), "should be invalid, got no error")
 			}
