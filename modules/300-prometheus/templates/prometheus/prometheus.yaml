@@ -58,6 +58,8 @@ spec:
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
+  query:
+    maxSamples: 100000000
   containers:
   - name: prometheus
     startupProbe:
