@@ -77,7 +77,7 @@ func (c *ConfigValidator) validateCR(cfg *d8cfg_v1alpha1.ModuleConfig) Validatio
 	// Can run conversions and validations if spec.version and spec.settings are specified.
 	if cfg.Spec.Settings == nil {
 		// Warn about spec.version without spec.settings.
-		result.Warning = "spec.version is redundant without spec.settings"
+		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
 
 	// TODO(future) Version validation is a part of conversion process, move to ConvertToLatest?

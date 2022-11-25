@@ -162,7 +162,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 	}
 
 	for _, cfg := range configs {
-		input.LogEntry.Infof("Create ModuleConfig/%s", cfg.GetName())
+		input.LogEntry.Infof("Creating ModuleConfig/%s", cfg.GetName())
 		input.PatchCollector.Create(cfg, object_patch.UpdateIfExists())
 	}
 
