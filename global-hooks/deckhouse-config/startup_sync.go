@@ -150,7 +150,7 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		// Log conversion error and create ModuleConfig as-is.
 		// Ignore this ModuleConfig when update generated ConfigMap.
 		if res.HasError() {
-			input.LogEntry.Errorf("Invalid module section found in the generated ConfigMap. Created ModuleConfig/%s will be ignored. Validate error is: %v", cfg.GetName(), res.Error())
+			input.LogEntry.Errorf("Auto-created ModuleConfig/%s will be ignored. The module section in the generated ConfigMap is invalid: %v", cfg.GetName(), res.Error())
 			continue
 		}
 		// Update spec.settings to converted settings.
