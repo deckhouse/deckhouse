@@ -8,7 +8,10 @@ apiVersions:
 
           Учетная запись должна иметь доступ ко всем VPC в списке. Также вы можете настроить соединение [вручную](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html), если доступа нет.
       masterNodeGroup:
-        description: Спецификация для описания NodeGroup master-узлов.
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: Сколько master-узлов создавать.

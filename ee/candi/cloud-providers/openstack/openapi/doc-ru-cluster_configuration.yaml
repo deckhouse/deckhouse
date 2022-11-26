@@ -22,6 +22,8 @@ apiVersions:
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: |
