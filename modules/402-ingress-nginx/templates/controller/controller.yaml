@@ -104,6 +104,10 @@ metadata:
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
+  revisionHistoryLimit: 3
+  {{- if $loadBalancer }}
+  minReadySeconds: 30
+  {{- end }}
   updateStrategy:
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if not $failover }}
