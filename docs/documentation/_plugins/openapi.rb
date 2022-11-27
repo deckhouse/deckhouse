@@ -590,6 +590,7 @@ module Jekyll
 
         result.push('<div markdown="0">')
         result.push(format_examples(nil, input))
+        result.push('</div>')
 
         if ( get_hash_value(input, "properties") )
            then
