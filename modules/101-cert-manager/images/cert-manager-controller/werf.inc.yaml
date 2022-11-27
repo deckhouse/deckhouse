@@ -26,7 +26,7 @@ mount:
 shell:
   beforeInstall:
   - apt update
-  - apt install patch jq docker -y
+  - apt install patch jq -y
   install:
   - mkdir /build
   - cd /build
@@ -34,4 +34,4 @@ shell:
   - cd /build/cert-manager
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - make CTR=tee _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
