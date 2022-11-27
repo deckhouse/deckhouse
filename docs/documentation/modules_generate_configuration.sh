@@ -20,7 +20,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
   if [ $? -eq 0 ]; then
     # Apply schema
     echo "Generating schema ${schema_path} for ${module_path}/docs/CONFIGURATION.md"
-    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.config-values \| format_configuration \}\}" ${module_path}/docs/CONFIGURATION.md
+    sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
   fi

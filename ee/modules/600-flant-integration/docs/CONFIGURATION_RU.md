@@ -2,11 +2,7 @@
 title: "Модуль flant-integration: настройки"
 ---
 
-{% include module-bundle.liquid %}
-
-## Параметры
-
-<!-- SCHEMA -->
+{% include module-configuration.liquid %}
 
 ## Пример конфигурации
 

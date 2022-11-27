@@ -2,9 +2,9 @@
 title: "Модуль dashboard: настройки"
 ---
 
-{% include module-bundle.liquid %}
-
 У модуля нет обязательных настроек.
+
+{% include module-configuration.liquid %}
 
 ## Аутентификация
 
@@ -24,7 +24,3 @@ kubectl -n d8-dashboard delete secret/basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
-
-## Параметры
-
-<!-- SCHEMA -->

@@ -2,11 +2,7 @@
 title: "The monitoring-applications module: configuration"
 ---
 
-{% include module-bundle.liquid %}
-
-## Parameters
-
-<!-- SCHEMA -->
+{% include module-configuration.liquid %}
 
 ## Supported Apps
 

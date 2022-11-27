@@ -8,8 +8,7 @@ If the cluster control plane is hosted on a virtual machines or bare-metal serve
 
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the vSphere cloud provider, the instance class is the [`VsphereInstanceClass`](cr.html#vsphereinstanceclass) custom resource that stores specific parameters of the machines.
 
-## Parameters
-<!-- SCHEMA -->
+{% include module-settings.liquid %}
 
 ## Storage
 
