@@ -26,13 +26,12 @@ mount:
 shell:
   beforeInstall:
   - apt update
-  - apt install patch jq -y
+  - apt install patch jq docker -y
   install:
   - mkdir /build
   - cd /build
   - git clone -b "v{{ $version }}" --single-branch --depth=1 https://github.com/jetstack/cert-manager.git
   - cd /build/cert-manager
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
-  - export APP_VERSION="v{{ $version }}-flant"
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - CTR="" make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
