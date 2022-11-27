@@ -3,7 +3,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
-  add: /build/cert-manager/bazel-bin/cmd/cainjector/cainjector_/cainjector
+  add: /build/cert-manager/_bin/server/cainjector-linux-amd64
   to: /bin/cainjector
   before: setup
 shell:
