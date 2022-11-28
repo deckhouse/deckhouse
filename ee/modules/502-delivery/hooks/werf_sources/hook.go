@@ -253,7 +253,7 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("spec.imageRepo field expected")
 	}
 
-	ws.apiURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiUrl")
+	ws.apiURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
 	if err != nil {
 		return nil, err
 	}

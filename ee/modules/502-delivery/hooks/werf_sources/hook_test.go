@@ -73,7 +73,7 @@ metadata:
   name: full-object
 spec:
   imageRepo: cr.example.com/the/path
-  apiUrl: https://different.example.com
+  apiURL: https://different.example.com
   pullSecretName: registry-credentials
   argocdRepoEnabled: true
   argocdRepo:
@@ -493,7 +493,7 @@ metadata:
   name: ws1
 spec:
   imageRepo: cr-1.example.com/the/path
-  apiUrl: https://cr.example.com
+  apiURL: https://cr.example.com
   pullSecretName: registry-credentials-1
 ---
 apiVersion: deckhouse.io/v1alpha1

@@ -36,12 +36,12 @@ spec:
                   type: string
                   description: Image repository name.
                   minLength: 1
-                apiUrl:
+                apiURL:
                   type: string
                   minLength: 5
                   description: |
                     URL of the registry API. It is automatically derived from `imageRepo` if not specified.
-                    E.g. if `imageRepo=cr.example.com/myproject`, then `apiUrl` it is derived as
+                    E.g. if `imageRepo=cr.example.com/myproject`, then `apiURL` is derived as
                     `https://cr.example.com/`.
                 pullSecretName:
                   type: string
