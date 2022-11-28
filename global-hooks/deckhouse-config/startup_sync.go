@@ -45,10 +45,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
-const (
-	migrationAnnotation = "deckhouse.io/should-migrate-to-module-config-objects"
-)
-
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
 // as early as possible and do two things:
 // - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
@@ -90,7 +86,7 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 		hasGeneratedCM = false
 	}
 	if hasGeneratedCM {
-		_, shouldMigrate := generatedCM.GetAnnotations()[migrationAnnotation]
+		_, shouldMigrate := generatedCM.GetAnnotations()[d8config.AnnoMigrationInProgress]
 		if shouldMigrate {
 			input.LogEntry.Infof("Migrate Configmap to ModuleConfig resources.")
 			return createInitialModuleConfigs(input, generatedCM.Data)
@@ -123,7 +119,7 @@ func migrateToGeneratedConfigMap(input *go_hook.HookInput, kubeClient k8s.Client
 	}
 
 	newCm := d8config.GeneratedConfigMap(data)
-	newCm.SetAnnotations(map[string]string{migrationAnnotation: "true"})
+	newCm.SetAnnotations(map[string]string{d8config.AnnoMigrationInProgress: "true"})
 
 	input.PatchCollector.Create(newCm, object_patch.UpdateIfExists())
 

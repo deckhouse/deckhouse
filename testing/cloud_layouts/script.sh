@@ -480,12 +480,30 @@ ENDSSH
     return 1
   fi
 
+  # TODO remove after full migration to ModuleConfig (after 1.42).
+  # Get logs during switching to catch logs on restart.
+  #for i in $(seq 1 1000) ; do kubectl -n d8-system logs deploy/deckhouse > $(printf "%02d" $i).log ; sleep 0.2; done
+  >&2 echo "Fetch Deckhouse logs during release switch ..."
+  catchLogsScript=$(cat <<'END_SCRIPT'
+  for i in $(seq 1 1000) ; do
+    echo '{"msg":"=================================================="}'
+    echo '{"msg":"Get deckhouse logs attempt '$i' of 1000"}'
+    echo '{"msg":"=================================================="}'
+    kubectl -n d8-system logs deploy/deckhouse
+    echo '{"msg":"<<<<<<<=================================>>>>>>>>>>"}'
+    echo
+    sleep 0.2;
+  done
+END_SCRIPT
+)
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log" &
+
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system get pods -l app=deckhouse
-[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')" ==  "True" ]]
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
 END_SCRIPT
 )
 

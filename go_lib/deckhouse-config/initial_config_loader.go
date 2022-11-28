@@ -34,6 +34,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
+const (
+	AnnoMigrationInProgress = "deckhouse.io/migration-in-progress"
+)
+
 // InitialConfigLoader runs conversions on module sections in the ConfigMap
 // or for settings in all ModuleConfig resources to make a KubeConfig
 // with values conform to the latest OpenAPI schemas.
@@ -89,8 +93,14 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 
 	// Check if the Deckhouse is using ModuleConfig resources and load config from ModuleConfig resources.
 	// It is not possible to load settings from the ConfigMap/deckhouse-generated-do-no-edit, because it
-	// has no versions but it is useful as a source of possible names.
-	if cmName == GeneratedConfigMapName {
+	// has no versions but it is useful as a source of possible names. Though use ConfigMap/deckhouse-generated-do-no-edit
+	// as-is if migration to ModuleConfig resources is still in progress (annotation is present).
+	migrationInProgress := false
+	if len(cm.GetAnnotations()) > 0 {
+		_, migrationInProgress = cm.GetAnnotations()[AnnoMigrationInProgress]
+	}
+
+	if cmName == GeneratedConfigMapName && !migrationInProgress {
 		cfgList, err := GetAllConfigs(l.KubeClient)
 		if err != nil {
 			return nil, fmt.Errorf("load initial config from ModuleConfig resources: %v", err)
@@ -98,7 +108,8 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 		return l.ModuleConfigListToInitialConfig(cfgList, possibleNames)
 	}
 
-	// Deckhouse doesn't use ModuleConfig resources, use ConfigMap/deckhouse content.
+	// Deckhouse doesn't use ModuleConfig resources, use data from ConfigMap/deckhouse or from ConfigMap/deckhouse-generated-config-do-not-edit.
+	// Assume data were not migrated and have version 0.
 	return l.LegacyConfigMapToInitialConfig(cm.Data)
 }
 
