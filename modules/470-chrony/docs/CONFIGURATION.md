@@ -2,7 +2,7 @@
 title: "The chrony module: configuration"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## An example of the configuration
 

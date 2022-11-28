@@ -6,4 +6,4 @@ title: "The snapshot-controller module: configuration"
 
 The module generally requires no configuration.
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

@@ -7,4 +7,4 @@ VPA работает не с контроллером Pod'а, а с самим P
 
 В общем случае конфигурация модуля не требуется. У модуля есть только настройки `nodeSelector/tolerations`.
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

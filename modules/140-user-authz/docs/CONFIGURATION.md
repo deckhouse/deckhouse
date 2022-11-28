@@ -8,4 +8,4 @@ title: "The user-authz module: configuration"
 
 All access rights are configured using [Custom Resources](cr.html).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

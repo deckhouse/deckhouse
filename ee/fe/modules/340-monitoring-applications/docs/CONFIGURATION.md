@@ -2,7 +2,7 @@
 title: "The monitoring-applications module: configuration"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Supported Apps
 

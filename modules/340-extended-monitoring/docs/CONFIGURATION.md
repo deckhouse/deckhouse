@@ -2,7 +2,7 @@
 title: "The extended-monitoring module: configuration"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## How to use `extended-monitoring-exporter`
 

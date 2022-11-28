@@ -2,7 +2,7 @@
 title: "Модуль upmeter: настройки"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Аутентификация
 

@@ -2,7 +2,7 @@
 title: "Модуль openvpn: настройки"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Примечания
 

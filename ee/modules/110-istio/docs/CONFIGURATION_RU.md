@@ -2,7 +2,7 @@
 title: "Модуль istio: настройки"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Аутентификация
 

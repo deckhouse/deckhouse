@@ -2,7 +2,7 @@
 title: "The istio module: configuration"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Authentication
 

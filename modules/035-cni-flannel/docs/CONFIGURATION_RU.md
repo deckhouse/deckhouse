@@ -6,4 +6,4 @@ title: "Модуль cni-flannel: настройки"
 - [OpenStack](../../modules/030-cloud-provider-openstack/);
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

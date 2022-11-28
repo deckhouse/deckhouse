@@ -2,7 +2,7 @@
 title: "Модуль chrony: настройки"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Пример конфигурации
 

@@ -7,4 +7,4 @@ VPA works directly with the Pod (instead of the Pod controller) by measuring and
 
 The module generally requires no configuration and only has the `nodeSelector/tolerations` settings.
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

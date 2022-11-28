@@ -4,7 +4,7 @@ title: "Модуль deckhouse-web: настройки"
 
 У модуля нет обязательных настроек.
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Аутентификация
 

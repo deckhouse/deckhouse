@@ -7,7 +7,7 @@ search: prometheus
 
 Модуль не требует обязательной конфигурации (всё работает из коробки).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Аутентификация
 

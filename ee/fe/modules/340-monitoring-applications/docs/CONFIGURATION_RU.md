@@ -2,7 +2,7 @@
 title: "Модуль monitoring-applications: настройки"
 ---
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
 
 ## Параметры
 

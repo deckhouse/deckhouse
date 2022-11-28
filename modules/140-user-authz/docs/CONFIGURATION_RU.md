@@ -8,4 +8,4 @@ title: "Модуль user-authz: настройки"
 
 Вся настройка прав доступа происходит с помощью [Custom Resources](cr.html).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

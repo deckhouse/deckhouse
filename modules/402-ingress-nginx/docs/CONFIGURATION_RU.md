@@ -6,4 +6,4 @@ title: "Модуль ingress-nginx: настройки"
 
 Конфигурация Ingress-контроллеров выполняется с помощью Custom Resource [IngressNginxController](cr.html#ingressnginxcontroller).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->

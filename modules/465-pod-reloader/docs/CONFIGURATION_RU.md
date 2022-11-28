@@ -4,4 +4,4 @@ title: "Модуль pod-reloader: настройки"
 
 Модуль не требует конфигурации (всё работает из коробки).
 
-{% include module-configuration.liquid %}
+<!-- SCHEMA -->
