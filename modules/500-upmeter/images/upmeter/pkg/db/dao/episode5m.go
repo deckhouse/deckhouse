@@ -202,7 +202,7 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 
 		rows, err := d.DbCtx.StmtRunner().Query(query, queryArgs...)
 		if err != nil {
-			return nil, fmt.Errorf("select for TimeslotRange: %v", err)
+			return nil, err
 		}
 		defer rows.Close()
 
@@ -234,7 +234,7 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 					&entity.Episode.ProbeRef.Probe)
 			}
 			if err != nil {
-				return nil, fmt.Errorf("row to Episode5m: %v", err)
+				return nil, fmt.Errorf("row to entity episode: %v", err)
 			}
 			entity.Episode.TimeSlot = time.Unix(stepRange.From, 0)
 			res = append(res, entity.Episode)

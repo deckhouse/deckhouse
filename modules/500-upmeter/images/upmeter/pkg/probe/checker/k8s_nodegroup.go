@@ -162,16 +162,18 @@ func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	return props, nil
 }
 
+// countHealthyNodesByZone returns a map of zone -> healthy nodes count
 func countHealthyNodesByZone(nodes []*v1.Node) (map[string]int32, error) {
 	byZone := map[string]int32{}
 
 	for _, node := range nodes {
 		zone, ok := node.GetLabels()["topology.kubernetes.io/zone"]
 		if !ok || zone == "" {
-			return nil, fmt.Errorf("node %q without zone", node.GetName())
+			return nil, fmt.Errorf("node %s has no zone", node.GetName())
 		}
 
-		if isNodeReady(node) {
+		// Instant status is what we seek to catch up with nodegroup desired state
+		if isNodeReadyLongEnough(node, 0) {
 			byZone[zone]++
 		}
 	}

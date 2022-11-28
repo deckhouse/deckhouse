@@ -57,7 +57,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	}
 
 	t.Run("simple case with minimal step", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 900, 300).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 900, 300).Subranges, probeRef)
 
 		// Len should be 4: 3 episodes + one total episode for a period.
 		assertTree(g, s, probeRef, 3+1, "simple case with minimal step")
@@ -68,7 +68,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("mmm", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 300).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 300).Subranges, probeRef)
 
 		assertTree(g, s, probeRef, 4+1, "testGroup/testProbe len 4")
 		assertTimers(g, s[group][probe][0], counters{up: 300})
@@ -79,7 +79,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("2x step", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 600).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 600).Subranges, probeRef)
 
 		assertTree(g, s, probeRef, 2+1, "testGroup/testProbe len 2")
 		assertTimers(g, s[group][probe][0], counters{up: 600})

@@ -58,25 +58,25 @@ func (v metricsAdapterAPIVerifier) Request() *http.Request {
 /*
 Expecting this with non-zero value
 
-{
-  "kind": "MetricValueList",
-  "apiVersion": "custom.metrics.k8s.io/v1beta1",
-  "metadata": {
-    "selfLink": "/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m"
-  },
-  "items": [
-    {
-      "describedObject": {
-        "kind": "Namespace",
-        "name": "d8-upmeter",
-        "apiVersion": "/v1"
-      },
-      "metricName": "memory_1m",
-      "timestamp": "2021-02-16T08:05:18Z",
-      "value": "73252864"                               <- we check this
-    }
-  ]
-}
+	{
+	  "kind": "MetricValueList",
+	  "apiVersion": "custom.metrics.k8s.io/v1beta1",
+	  "metadata": {
+	    "selfLink": "/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m"
+	  },
+	  "items": [
+	    {
+	      "describedObject": {
+	        "kind": "Namespace",
+	        "name": "d8-upmeter",
+	        "apiVersion": "/v1"
+	      },
+	      "metricName": "memory_1m",
+	      "timestamp": "2021-02-16T08:05:18Z",
+	      "value": "73252864"                               <- we check this
+	    }
+	  ]
+	}
 */
 func (v metricsAdapterAPIVerifier) Verify(body []byte) check.Error {
 	value := gjson.Get(string(body), "items.0.value")

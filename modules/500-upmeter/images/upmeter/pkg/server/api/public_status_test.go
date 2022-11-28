@@ -25,7 +25,7 @@ import (
 
 func Test_currentRange(t *testing.T) {
 	ts := time.Unix(1803468883, 90)
-	rng := threeStepRange(ts)
+	rng := new15MinutesStepRange(ts)
 
 	n := (rng.To - rng.From) / rng.Step
 	if n != 3 {
@@ -157,7 +157,7 @@ func Test_calculateStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := calculateStatus(tt.args.summary); got != tt.want {
+			if got := calculateStatus(tt.args.summary, 5*time.Minute); got != tt.want {
 				t.Errorf("calculateStatus() = %v, want %v", got, tt.want)
 			}
 		})
