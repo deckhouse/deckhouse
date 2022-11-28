@@ -44,7 +44,7 @@ func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) 
 
 func setInternalIngressControllers(input *go_hook.HookInput) error {
 	controllersFilterResult := input.Snapshots["controller"]
-	var controllers []IstioIngressGatewayController
+	controllers := make([]IstioIngressGatewayController, 0)
 
 	for _, c := range controllersFilterResult {
 		controller := c.(IstioIngressGatewayController)
