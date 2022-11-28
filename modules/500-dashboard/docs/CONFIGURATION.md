@@ -24,4 +24,3 @@ kubectl -n d8-dashboard delete secret/basic-auth
 ```
 
 > **Note!** The `auth.password` parameter is deprecated.
-

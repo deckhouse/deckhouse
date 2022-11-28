@@ -7,4 +7,3 @@ title: "The ingress-nginx module: configuration"
 Ingress controllers are configured using the [IngressNginxController](cr.html#ingressnginxcontroller) Custom Resource.
 
 {% include module-configuration.liquid %}
-

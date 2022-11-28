@@ -24,5 +24,3 @@ kubectl -n d8-system delete secret/deckhouse-web-basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
-
-{% include module-configuration.liquid %}
