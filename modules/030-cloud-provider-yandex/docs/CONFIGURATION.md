@@ -2,11 +2,9 @@
 title: "Cloud provider — Yandex.Cloud: configuration"
 ---
 
-## Parameters
-
 > **Note!** If the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `YandexInstanceClass` are changed. Details in the [node-manager module's documentation](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
 
-<!-- SCHEMA -->
+{% include module-settings.liquid %}
 
 ## Storage
 

@@ -6,6 +6,8 @@ title: "The cilium-hubble module: configuration"
 
 The module will be left disabled unless `cni-cilium` is used regardless of `ciliumHubbleEnabled:` parameter.
 
+{% include module-settings.liquid %}
+
 ## Authentication
 
 [user-authn](/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
@@ -24,7 +26,3 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 ```
 
 > **Note!** The `auth.password` parameter is deprecated.
-
-## Parameters
-
-<!-- SCHEMA -->

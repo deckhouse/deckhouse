@@ -5,9 +5,9 @@ type:
 search: prometheus
 ---
 
-{% include module-bundle.liquid %}
-
 The module does not require any configuration – it works right out-of-the-box.
+
+<!-- SCHEMA -->
 
 ## Authentication
 
@@ -27,10 +27,6 @@ kubectl -n d8-monitoring delete secret/basic-auth
 ```
 
 > **Note!** The `auth.password` parameter is deprecated.
-
-## Parameters
-
-<!-- SCHEMA -->
 
 ## Notes
 

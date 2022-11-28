@@ -2,7 +2,7 @@
 title: "Модуль upmeter: настройки"
 ---
 
-{% include module-bundle.liquid %}
+<!-- SCHEMA -->
 
 ## Аутентификация
 
@@ -34,7 +34,3 @@ kubectl -n d8-upmeter delete secret/basic-auth-status
 ```
 
 > **Внимание!** Параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
-
-## Параметры
-
-<!-- SCHEMA -->

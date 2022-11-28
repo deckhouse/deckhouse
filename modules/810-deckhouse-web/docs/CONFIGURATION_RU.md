@@ -2,9 +2,9 @@
 title: "Модуль deckhouse-web: настройки"
 ---
 
-{% include module-bundle.liquid %}
-
 У модуля нет обязательных настроек.
+
+<!-- SCHEMA -->
 
 ## Аутентификация
 
@@ -24,7 +24,3 @@ kubectl -n d8-system delete secret/deckhouse-web-basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
-
-## Параметры
-
-<!-- SCHEMA -->

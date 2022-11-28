@@ -8,6 +8,4 @@ The module does not have any mandatory settings.
 
 By default, it creates the `/` location with the `admin` user.
 
-## Parameters
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}
