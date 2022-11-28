@@ -15,4 +15,4 @@ metadata:
 data:
   registries.conf: |
     registries:
-{{- .Values.delivery.internal.argocdImageUpdater.registries | toYaml | nindent 6 }}
+      {{- .Values.delivery.internal.argocdImageUpdater.registries | toYaml | nindent 6 }}
