@@ -19,6 +19,4 @@ title: "Cloud provider — GCP: настройки"
 
 Также он позволяет отфильтровать ненужные StorageClass'ы, указав их в параметре `exclude`.
 
-## Параметры
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}

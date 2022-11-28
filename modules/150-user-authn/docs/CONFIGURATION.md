@@ -2,10 +2,6 @@
 title: "The user-authn module: configuration"
 ---
 
-{% include module-bundle.liquid %}
-
-## Parameters
-
 <!-- SCHEMA -->
 
 The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resource leads to the automatic deployment of [oauth2-proxy](https://github.com/pusher/oauth2_proxy) to your application's namespace and connecting it to Dex.

@@ -2,10 +2,6 @@
 title: "The flant-integration module: configuration"
 ---
 
-{% include module-bundle.liquid %}
-
-## Parameters
-
 <!-- SCHEMA -->
 
 ## Example of configuration

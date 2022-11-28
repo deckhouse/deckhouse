@@ -2,7 +2,7 @@
 title: "The istio module: configuration"
 ---
 
-{% include module-bundle.liquid %}
+<!-- SCHEMA -->
 
 ## Authentication
 
@@ -22,7 +22,3 @@ kubectl -n d8-istio delete secret/kiali-basic-auth
 ```
 
 > **Note!** The `auth.password` parameter is deprecated.
-
-## Parameters
-
-<!-- SCHEMA -->

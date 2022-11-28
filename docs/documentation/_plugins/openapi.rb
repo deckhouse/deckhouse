@@ -561,7 +561,7 @@ module Jekyll
 
     #
     # Returns configuration module content from the openAPI spec
-    def format_configuration(input)
+    def format_configuration(input, moduleConfig = false)
         result = []
         result.push('<div markdown="0">')
 
@@ -577,19 +577,23 @@ module Jekyll
         end
 
         if !( get_hash_value(input, 'i18n', 'en' ) )
-           input['i18n']['en'] = { "properties" => input['properties'] }
+            input['i18n']['en'] = { "properties" => input['properties'] }
         end
 
-        configVersion = 1
-        if ( get_hash_value(input, "x-config-version") ) then
-          configVersion = input['x-config-version']
+        if moduleConfig then
+            # ModuleConfiguration schema
+            configVersion = 1
+            if ( get_hash_value(input, "x-config-version") ) then
+              configVersion = input['x-config-version']
+            end
+            result.push('<p><font size="-1">')
+            result.push(%Q(#{get_i18n_term("version_of_schema")}: #{configVersion}))
+            result.push('</font></p>')
         end
-        result.push('<p><font size="-1">')
-        result.push(%Q(#{get_i18n_term("version_of_schema")}: #{configVersion}))
-        result.push('</font></p>')
 
         result.push('<div markdown="0">')
         result.push(format_examples(nil, input))
+        result.push('</div>')
 
         if ( get_hash_value(input, "properties") )
            then
@@ -645,10 +649,14 @@ module Jekyll
              end
           end
 
-          result.push(format_configuration(item))
+          result.push(format_configuration(item, false))
         end
         result.push('</div>')
         result.join
+    end
+
+    def format_module_configuration(input)
+        format_configuration(input, true)
     end
   end
 end
