@@ -417,7 +417,7 @@ spec:
                       - "https://http-inputs-hec.splunkcloud.com"
                     token:
                       type: string
-                      description: Default Splunk HEC token. If an event has a token set in its metadata, it will prevail over the one set here.
+                      description: Default Splunk HEC token. If an event has a token set in its metadata, it will have priority over the one set here.
                     index:
                       type: string
                       description: Index name to write events to.
