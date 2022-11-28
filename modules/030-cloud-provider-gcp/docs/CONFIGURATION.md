@@ -19,6 +19,4 @@ The module automatically creates StorageClasses that cover all the available dis
 
 Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
 
-## Parameters
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}

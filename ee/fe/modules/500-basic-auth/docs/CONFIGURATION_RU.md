@@ -8,6 +8,4 @@ title: "Модуль basic-auth: настройки"
 
 По умолчанию создается location `/` с пользователем `admin`.
 
-## Параметры
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}
