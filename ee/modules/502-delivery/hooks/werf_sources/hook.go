@@ -152,11 +152,7 @@ func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
 }
 
 func mapWerfSources(werfSources []werfSource, credsBySecret map[string]dockerFileConfig) (vals internalValues, err error) {
-	argoRepos, err := convArgoCDRepositories(werfSources, credsBySecret)
-	if err != nil {
-		return vals, fmt.Errorf("cannot convert ArgoCD repositories: %v", err)
-	}
-
+	argoRepos := convArgoCDRepositories(werfSources, credsBySecret)
 	imageUpdaterRegistries := convImageUpdaterRegistries(werfSources)
 
 	vals = internalValues{
@@ -192,7 +188,7 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 	return registries
 }
 
-func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) ([]argocdHelmOCIRepository, error) {
+func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) []argocdHelmOCIRepository {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
 		if ws.argocdRepo == nil {
@@ -209,7 +205,7 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 			URL:      ws.repo,
 		})
 	}
-	return argoRepos, nil
+	return argoRepos
 }
 
 func extractCredentials(credentialsBySecretName map[string]dockerFileConfig, pullSecretName, registry string) (string, string) {
