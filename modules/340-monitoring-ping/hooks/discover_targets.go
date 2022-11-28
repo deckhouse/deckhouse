@@ -56,6 +56,10 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
+	if node.Spec.Unschedulable {
+		return nil, nil
+	}
+
 	target := nodeTarget{Name: node.Name}
 	for _, address := range node.Status.Addresses {
 		if address.Type == v1.NodeInternalIP {
