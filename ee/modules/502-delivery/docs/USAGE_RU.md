@@ -67,7 +67,7 @@ git-репозиторий и паттерн Application of Applications нео�
 ресусры Application вручную. Для простоты в примерах ниже мы будем придерживаться ручного управления
 ресурсами Application.
 
-![flow](./internal/werf-bundle-and-argocd.png)
+![flow](./internal/werf-bundle-and-argocd.svg)
 
 ## Конфигурация с WerfSource CRD
 
