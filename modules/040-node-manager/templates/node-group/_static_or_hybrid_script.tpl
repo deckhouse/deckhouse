@@ -75,5 +75,8 @@ chmod 0600 /var/lib/bashible/bootstrap-token
 touch /var/lib/bashible/first_run
 {{- end }}
 
+checkBashible=$(systemctl is-active bashible.timer)
+{{- if not $checkBashible }}
 /var/lib/bashible/bootstrap.sh
+{{ end }}
 {{ end }}
