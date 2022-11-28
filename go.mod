@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.7-0.20221108074825-ba5d9983d012 // branch: main
 	github.com/flant/kube-client v0.0.6
-	github.com/flant/shell-operator v1.0.13-0.20221018121846-032ccd06522c // branch: main
+	github.com/flant/shell-operator v1.0.13-0.20221128074459-7222dec2222f // branch: feat_build_tag_to_enable_libjq_go
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
