@@ -1254,3 +1254,50 @@ Done
 ```
 
 {% endraw %}
+
+
+### Как использовать NodeGroup с приоритетом?
+
+Вы можете использовать поле `priority` в CRD NodeGroup для того, чтобы указать, в каком порядке заказывать узлы кластера.
+Например, вы можете пытаться заказать сначала spot-node, а если они закончились - регулярные ноды. Или сначала пытаться
+заказать узлы большего размера, а если ресурсы облака исчерпаны - узлы меньшего размера.
+
+Пример с использованием spot-node:
+
+Создаем 2 ng:
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 50
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 30
+  nodeType: CloudEphemeral
+```
+В таком случае, cluster-autoscaler будет пытаться заказать spot-node. Если в течение 15 минут не получается добавить узел в кластер, то
+ng `worker-spot` будет поставлена "на паузу"(на 20 минут) и cluster-autoscaler начнет заказывать узлы из ng `worker`.
+Если через 30 минут для нагрузки в кластере понадобится еще один узел, то он снова попытается заказаться сначала из ng `worker-spot`, а только потом из ng `worker`.
+
+Если ng `worker-spot` достигнет своего максимума(5), то узлы будут заказываться из ng `worker`.
+Шаблоны узлов(labels/taints) для ng `worker` и `worker-spot` должны быть одинаковы или, по крайней мере, должны быть подходящими для той нагрузки, которая запускает процесс увеличения кластера.
