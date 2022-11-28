@@ -1260,6 +1260,7 @@ to order larger nodes first, and if the cloud resources are exhausted, to order 
 An example using a spot-node:
 
 Create 2 ng:
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1
@@ -1290,6 +1291,7 @@ spec:
     priority: 30
   nodeType: CloudEphemeral
 ```
+
 In this case, cluster-autoscaler will try to order a spot-node. If it fails to add a node to the cluster within 15 minutes, then
 ng `worker-spot` will be paused (for 20 minutes) and cluster-autoscaler will start ordering nodes from ng `worker`.
 If another node is needed after 30 minutes for the cluster load, it will again try to order from ng `worker-spot` first and only then from ng `worker`.
