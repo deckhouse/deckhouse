@@ -47,11 +47,11 @@ spec:
   imageRepo: cr.example.com/the/path
 `,
 				werfSource{
-					name:   "minimal",
-					repo:   "cr.example.com/the/path",
-					apiURL: "https://cr.example.com",
-					argocdRepo: &argocdRepoConfig{
-						project: "default",
+					Name:   "minimal",
+					Repo:   "cr.example.com/the/path",
+					APIURL: "https://cr.example.com",
+					ArgocdRepo: &argocdRepoConfig{
+						Project: "default",
 					},
 				}),
 
@@ -70,13 +70,13 @@ spec:
 
 `,
 				werfSource{
-					name:   "full-object",
-					repo:   "cr.example.com/the/path",
-					apiURL: "https://different.example.com",
+					Name:   "full-object",
+					Repo:   "cr.example.com/the/path",
+					APIURL: "https://different.example.com",
 
-					pullSecretName: "registry-credentials",
-					argocdRepo: &argocdRepoConfig{
-						project: "ecommerce",
+					PullSecretName: "registry-credentials",
+					ArgocdRepo: &argocdRepoConfig{
+						Project: "ecommerce",
 					},
 				}),
 
@@ -90,9 +90,9 @@ spec:
   argocdRepoEnabled: false
 `,
 				werfSource{
-					name:   "repo-off",
-					repo:   "cr.example.com/the/path",
-					apiURL: "https://cr.example.com",
+					Name:   "repo-off",
+					Repo:   "cr.example.com/the/path",
+					APIURL: "https://cr.example.com",
 				}),
 
 			table.Entry("argocdRepoEnabled=false omits the repo config for Argo even when repo options are specified ", `
@@ -107,9 +107,9 @@ spec:
     project: actually-skipped
 `,
 				werfSource{
-					name:   "repo-off-yet-specified",
-					repo:   "cr.example.com/the/path",
-					apiURL: "https://cr.example.com",
+					Name:   "repo-off-yet-specified",
+					Repo:   "cr.example.com/the/path",
+					APIURL: "https://cr.example.com",
 				}),
 
 			table.Entry("Argo CD non-defaul project", `
@@ -123,11 +123,11 @@ spec:
     project: greater-good
 `,
 				werfSource{
-					name:   "not-default-project",
-					repo:   "cr.example.com/the/path",
-					apiURL: "https://cr.example.com",
-					argocdRepo: &argocdRepoConfig{
-						project: "greater-good",
+					Name:   "not-default-project",
+					Repo:   "cr.example.com/the/path",
+					APIURL: "https://cr.example.com",
+					ArgocdRepo: &argocdRepoConfig{
+						Project: "greater-good",
 					},
 				}),
 		)
@@ -135,37 +135,37 @@ spec:
 
 	Context("Converting werf sources to configs ", func() {
 		ws1 := werfSource{
-			name:           "ws1",
-			repo:           "cr-1.example.com/the/path",
-			apiURL:         "https://cr.example.com",
-			pullSecretName: "registry-credentials-1",
-			argocdRepo: &argocdRepoConfig{
-				project: "default",
+			Name:           "ws1",
+			Repo:           "cr-1.example.com/the/path",
+			APIURL:         "https://cr.example.com",
+			PullSecretName: "registry-credentials-1",
+			ArgocdRepo: &argocdRepoConfig{
+				Project: "default",
 			},
 		}
 
 		ws2 := werfSource{
-			name:           "ws2",
-			repo:           "cr-2.example.com/the/path",
-			apiURL:         "https://registry-api.other.com",
-			pullSecretName: "registry-credentials-2",
-			argocdRepo: &argocdRepoConfig{
-				project: "top-secret",
+			Name:           "ws2",
+			Repo:           "cr-2.example.com/the/path",
+			APIURL:         "https://registry-api.other.com",
+			PullSecretName: "registry-credentials-2",
+			ArgocdRepo: &argocdRepoConfig{
+				Project: "top-secret",
 			},
 		}
 
 		ws3 := werfSource{
-			name: "ws3-no-creds",
-			repo: "open.example.com/the/path",
-			argocdRepo: &argocdRepoConfig{
-				project: "default",
+			Name: "ws3-no-creds",
+			Repo: "open.example.com/the/path",
+			ArgocdRepo: &argocdRepoConfig{
+				Project: "default",
 			},
 		}
 
 		ws4 := werfSource{
-			name:           "ws4-no-repo",
-			repo:           "cr-4.example.com/the/path",
-			pullSecretName: "registry-credentials-4",
+			Name:           "ws4-no-repo",
+			Repo:           "cr-4.example.com/the/path",
+			PullSecretName: "registry-credentials-4",
 		}
 
 		configsBySecretName := map[string]dockerFileConfig{

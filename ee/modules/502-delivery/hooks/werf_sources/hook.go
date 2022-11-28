@@ -25,26 +25,26 @@ const namespace = "d8-delivery"
 // werfSource is a DTO for the WerfSource CRD, used to pass the data to ArgoCD repos and ArgoCD
 // Image Updater registries.
 type werfSource struct {
-	// object name that will be shared with argocd repo and image updater registry
-	name string
+	// object Name that will be shared with argocd repo and image updater registry
+	Name string
 
 	// container image repository: cr.example.com/path/to(/image)
-	repo string
+	Repo string
 
 	// container image registry API URL if the hostname is not the same as repository first segment
-	apiURL string
+	APIURL string
 
 	// name of creadentials secret in d8-delivery namespace, the secret is expected to have
 	// dockerconfigjson format
-	pullSecretName string
+	PullSecretName string
 
 	// ArgoCD repository settings; skipped if the value is nil
-	argocdRepo *argocdRepoConfig
+	ArgocdRepo *argocdRepoConfig
 }
 
 // argocdRepoConfig is the set of options for ArgoCD repository configuration.
 type argocdRepoConfig struct {
-	project string
+	Project string
 }
 
 // imageUpdaterRegistry reflects container registries that the ArgoCD Image Updater will track, the
@@ -156,19 +156,19 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 	var registries []imageUpdaterRegistry
 	for _, ws := range werfSources {
 
-		url := ws.apiURL
+		url := ws.APIURL
 		if url == "" {
-			url = "https://" + firstSegment(ws.repo)
+			url = "https://" + firstSegment(ws.Repo)
 		}
 
 		var pullCreds string
-		if ws.pullSecretName != "" {
-			pullCreds = "pullsecret:d8-delivery/" + ws.pullSecretName
+		if ws.PullSecretName != "" {
+			pullCreds = "pullsecret:d8-delivery/" + ws.PullSecretName
 		}
 
 		registries = append(registries, imageUpdaterRegistry{
-			Name:        ws.name,
-			Prefix:      firstSegment(ws.repo),
+			Name:        ws.Name,
+			Prefix:      firstSegment(ws.Repo),
 			APIURL:      url,
 			Credentials: pullCreds,
 			Default:     false,
@@ -180,18 +180,18 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) []argocdHelmOCIRepository {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
-		if ws.argocdRepo == nil {
+		if ws.ArgocdRepo == nil {
 			continue
 		}
-		registry := firstSegment(ws.repo)
-		username, password := extractCredentials(credentialsBySecretName, ws.pullSecretName, registry)
+		registry := firstSegment(ws.Repo)
+		username, password := extractCredentials(credentialsBySecretName, ws.PullSecretName, registry)
 
 		argoRepos = append(argoRepos, argocdHelmOCIRepository{
-			Name:     ws.name,
+			Name:     ws.Name,
 			Username: username,
 			Password: password,
-			Project:  ws.argocdRepo.project,
-			URL:      ws.repo,
+			Project:  ws.ArgocdRepo.Project,
+			URL:      ws.Repo,
 		})
 	}
 	return argoRepos
@@ -228,9 +228,9 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		ok  bool
 	)
 
-	ws.name = obj.GetName()
+	ws.Name = obj.GetName()
 
-	ws.repo, ok, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
+	ws.Repo, ok, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
 	if err != nil {
 		return nil, err
 	}
@@ -238,15 +238,15 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("spec.imageRepo field expected")
 	}
 
-	ws.apiURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
+	ws.APIURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
-		ws.apiURL = "https://" + firstSegment(ws.repo)
+		ws.APIURL = "https://" + firstSegment(ws.Repo)
 	}
 
-	ws.pullSecretName, _, err = unstructured.NestedString(obj.Object, "spec", "pullSecretName")
+	ws.PullSecretName, _, err = unstructured.NestedString(obj.Object, "spec", "pullSecretName")
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +274,8 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		}
 	}
 	if repoEnabled {
-		ws.argocdRepo = &argocdRepoConfig{
-			project: project,
+		ws.ArgocdRepo = &argocdRepoConfig{
+			Project: project,
 		}
 	}
 
