@@ -43,5 +43,5 @@ properties:
     type: boolean
     default: true
     description: |
-      Option for workload redeployment after related config map/secret will be changed.
+      Rollout the workload when config map/secret changes by recreation.
     x-examples: [true, false]
