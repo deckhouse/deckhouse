@@ -34,11 +34,12 @@ spec:
               properties:
                 imageRepo:
                   type: string
-                  description: Image repository name.
-                  minLength: 1
+                  description: Image repository.
+                  x-example: registry.example.com/my-project
+                  pattern: ^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*)(/(?:[a-z0-9._-]+))*$
                 apiURL:
                   type: string
-                  minLength: 5
+                  pattern: ^https?://(?:[a-z0-9]+(?:[.-][a-z0-9]+)*)$
                   description: |
                     URL of the registry API. It is automatically derived from `imageRepo` if not specified.
                     E.g. if `imageRepo=cr.example.com/myproject`, then `apiURL` is derived as
