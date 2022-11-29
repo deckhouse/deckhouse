@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", function() {
       this.form = this.wrapper.querySelector('[data-form]');
       this.url = this.form.getAttribute('action');
       this.intro = this.wrapper.querySelector('[data-header-form]');
-      this.trick = this.wrapper.querySelector('[data-h0n3y]');
       this.closeBtn = this.wrapper.querySelector('[data-close-btn]')
       this.closeBg = this.wrapper.querySelector('[data-close-bg]');
       this.success = this.wrapper.querySelector('[data-success-message]');
@@ -27,17 +26,13 @@ document.addEventListener("DOMContentLoaded", function() {
     submitForm(e) {
       e.preventDefault();
 
-      if (this.trick.value !== '') {
-        this.errorSubmit();
-      } else {
-        PostData(this.url, this.serializeData()).then(res => {
-          if (res.ok) {
-            this.successSubmit();
-          } else {
-            this.errorSubmit();
-          }
-        });
-      }
+      PostData(this.url, this.serializeData()).then(res => {
+        if (res.ok) {
+          this.successSubmit();
+        } else {
+          this.errorSubmit();
+        }
+      });
     }
 
     serializeData() {
