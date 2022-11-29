@@ -218,10 +218,25 @@ spec:
 ```
 
 ```yaml
+apiVersion: v1
+data:
+  tls.crt: |
+    <tls.crt data>
+  tls.key: |
+    <tls.key data>
+kind: Secret
+metadata:
+  name: wildcard
+  namespace: d8-istio-ingress
+type: kubernetes.io/tls
+```
+
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
   name: gateway-app
+  namespace: app-ns
 spec:
   selector:
     # label selector for using the Istio Ingress Gateway main-hp
@@ -253,6 +268,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: vs-app
+  namespace: app-ns
 spec:
   gateways:
     - gateway-app

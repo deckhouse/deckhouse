@@ -45,7 +45,7 @@ kind: DaemonSet
 metadata:
   name: {{ include "ingress_gateway_name" $controller.name }}
   namespace: d8-{{ $.Chart.Name }}-ingress
-  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name "istio.deckhouse.io/ingress-gateway-class"  $ingressGatewayClass)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "ingress-gateway-controller" "instance" $controller.name "istio.deckhouse.io/ingress-gateway-class"  $ingressGatewayClass)) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -65,11 +65,15 @@ spec:
       serviceAccountName: ingress-gateway-controller
   {{- if $controller.spec.nodeSelector }}
       nodeSelector:
-        {{- $controller.spec.nodeSelector | toYaml | nindent 8 }}
+      {{- $controller.spec.nodeSelector | toYaml | nindent 6 }}
+  {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $ "frontend") | nindent 6 }}
   {{- end }}
   {{- if $controller.spec.tolerations }}
       tolerations:
-        {{- $controller.spec.tolerations | toYaml | nindent 8 }}
+      {{- $controller.spec.tolerations | toYaml | nindent 6 }}
+  {{- else }}
+      {{- include "helm_lib_tolerations" (tuple $ "frontend") | nindent 6 }}
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
