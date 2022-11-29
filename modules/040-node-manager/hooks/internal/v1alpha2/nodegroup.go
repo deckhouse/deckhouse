@@ -195,6 +195,7 @@ func (c Chaos) IsEmpty() bool {
 
 type OperatingSystem struct {
 	// Enable kernel maintenance from bashible (default true).
+	// Deprecated
 	ManageKernel *bool `json:"manageKernel,omitempty"`
 }
 

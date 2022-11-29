@@ -244,8 +244,6 @@ Create a `NodeGroup` with the following parameters:
 ```yaml
 cri:
   type: NotManaged
-operatingSystem:
-  manageKernel: false
 ```
 
 Then put the node under the control of `node-manager`.
@@ -254,7 +252,6 @@ Then put the node under the control of `node-manager`.
 
 | The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
@@ -487,16 +484,6 @@ When changing the CRI in the cluster, additional steps are required for the mast
 ## How to add node configuration step?
 
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
-
-## how to update linux kernel on node to desired version ?
-
-Annotate node with special annotation `update.node.deckhouse.io/force-install-desired-kernel`.
-
-```shell
-kubectl annotate node <node name> update.node.deckhouse.io/force-install-desired-kernel=
-```
-
-> The desired version of the Linux kernel can be viewed [here](../candi/version_map.yml)
 
 ## How to use containerd with Nvidia GPU support?
 

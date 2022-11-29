@@ -244,8 +244,6 @@ journalctl -fu bashible
 ```yaml
 cri:
   type: NotManaged
-operatingSystem:
-  manageKernel: false
 ```
 
 После чего добавить узел под управление `node-manager`.
@@ -254,7 +252,6 @@ operatingSystem:
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
@@ -490,17 +487,6 @@ spec:
 ## Как добавить шаг для конфигурации узлов?
 
 Дополнительные шаги для конфигурации узлов задаются при помощи custom resource `NodeGroupConfiguration`.
-
-## Как обновить ядро линукс на узлах до предпочитаемой версии ?
-
-Установить для ноды аннотацию `update.node.deckhouse.io/force-install-desired-kernel`.
-
-```shell
-kubectl annotate node <имя узла> update.node.deckhouse.io/force-install-desired-kernel=
-
-```
-
-> Предпочитаемую версию ядра линукс можно посмотреть [здесь](../candi/version_map.yml)
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 

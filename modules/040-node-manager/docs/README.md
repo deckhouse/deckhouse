@@ -11,7 +11,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
 2. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 3. Installing, updating, and configuring the node software (docker, kubelet, etc.), connecting the node to the cluster:
     * Support for `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` regardless of the infrastructure used (any cloud/any hardware).
-    * The operating system's basic setup (installing a verified and well-tested kernel version, disabling auto-update, installing the necessary packages, configuring logging parameters, configuring iptables, etc.).
+    * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, configuring iptables, etc.).
     * Configuring nginx (and the system for automatically updating the lsit of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring Docker and Kubernetes, adding the node to the cluster.
     * Managing node updates and their downtime (disruptions):
@@ -60,7 +60,6 @@ The supported Kubernetes version is specified in parameters right down to the mi
 
 Deckhouse automatically deploys cluster nodes by performing the following **idempotent** operations:
 - Configuring the OS and optimizing it for Docker and Kubernetes:
-  - Installing the thoroughly tested and proven kernel version.
   - Installing the needed packages from the distribution's repository.
   - Configuring kernel parameters, iptables, logging, log rotation, and other system parameters.
 - Installing the appropriate versions of Docker and kubelet; adding the node to the Kubernetes cluster.
