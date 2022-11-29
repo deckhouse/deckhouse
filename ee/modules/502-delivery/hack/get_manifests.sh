@@ -19,19 +19,33 @@
 #
 
 set -euo pipefail
+# set -x
 
 # TODO check for the presence of yq
 
+VENDOR_ROOT=./hack/vendor
+pushd $VENDOR_ROOT
 ARGOCD_VERSION="2.5.2"
 # the path in the arhived repo
 ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/install.yaml"
 # ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/ha/install.yaml" # HA
-curl -LfsS "https://github.com/argoproj/argo-cd/archive/refs/tags/v${ARGOCD_VERSION}.tar.gz" | tar xzvf - "${ARGO_MANIFESTS}"
+curl -LfsS "https://github.com/argoproj/argo-cd/archive/refs/tags/v${ARGOCD_VERSION}.tar.gz" | tar -xzvf - "${ARGO_MANIFESTS}"
 
 # NOTE we are on master branch
 IMAGE_UPDATER_MANIFESTS="3p-argocd-image-updater-master/manifests/install.yaml"
-curl -LfsS https://github.com/werf/3p-argocd-image-updater/archive/refs/heads/master.tar.gz | tar xzvf - "${IMAGE_UPDATER_MANIFESTS}"
+curl -LfsS https://github.com/werf/3p-argocd-image-updater/archive/refs/heads/master.tar.gz | tar -xzvf - "${IMAGE_UPDATER_MANIFESTS}"
+popd
 
+# target dirs
+CRD_ROOT=crds
+ARGOCD_MANIFESTS_ROOT=templates/argocd
+
+# clean existing manifests
+mkdir -p $CRD_ROOT
+mkdir -p $ARGOCD_MANIFESTS_ROOT
+rm -rf ${ARGOCD_MANIFESTS_ROOT}/argocd-* ${ARGOCD_MANIFESTS_ROOT}/*/argocd-* crds/argocd-*
+
+# extract manifests
 split_manifests() {
   MANIFESTS=$1
 
@@ -44,21 +58,10 @@ split_manifests() {
   # .yml -> .yaml
   rename -s yml yaml *.yml
 }
+split_manifests "${VENDOR_ROOT}/${ARGO_MANIFESTS}"
+split_manifests "${VENDOR_ROOT}/${IMAGE_UPDATER_MANIFESTS}"
 
-# target dirs
-CRD_ROOT=crds
-ARGOCD_MANIFESTS_ROOT=templates/argocd
-
-# clean existing manifests
-mkdir -p $CRD_ROOT
-mkdir -p $ARGOCD_MANIFESTS_ROOT
-rm -rf ${ARGOCD_MANIFESTS_ROOT}/argocd-* ${ARGOCD_MANIFESTS_ROOT}/*/argocd-* crds/argocd-*
-
-# pull fresh manifests
-split_manifests "${ARGO_MANIFESTS}"
-split_manifests "${IMAGE_UPDATER_MANIFESTS}"
-
-# remove network policies
+# remove network policies as we don't need them in Deckhouse
 rm *-networkpolicy.yaml
 
 # Move CRDs
