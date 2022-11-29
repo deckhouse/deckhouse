@@ -42,6 +42,9 @@ properties:
   udpTunnelNetwork:
     description: |
       Подсеть используемая для UDP-туннеля OpenVPN сервера.
+  pushDefaultGatewayToClient:
+    description: |
+      Направить весь трафик клиентов через VPN. У клиентов при подключении будет добавлен маршрут по умолчанию через VPN-туннель.
   pushToClientRoutes:
     description: |
       Список маршрутов, которые отправляются клиентам при подключении.
