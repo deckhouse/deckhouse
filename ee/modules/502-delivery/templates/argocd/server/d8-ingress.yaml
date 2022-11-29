@@ -9,10 +9,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "ArgoCD"
     web.deckhouse.io/export-icon: "/public/img/argocd.svg"
-    # TODO basic auth if d8-user-authn is off
-  {{- if .Values.delivery.auth.whitelistSourceRanges }}
-    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.delivery.auth.whitelistSourceRanges | join "," }}
-  {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     # Suggestions from ArgoCD
     # https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ssl-passthrough-with-cert-manager-and-lets-encrypt
