@@ -25,7 +25,7 @@ set -euo pipefail
 
 VENDOR_ROOT=./hack/vendor
 pushd $VENDOR_ROOT
-ARGOCD_VERSION="2.5.2"
+ARGOCD_VERSION="2.5.3"
 # the path in the arhived repo
 ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/install.yaml"
 # ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/ha/install.yaml" # HA
