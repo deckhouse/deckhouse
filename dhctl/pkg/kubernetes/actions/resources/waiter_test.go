@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -152,7 +154,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
-		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min not zero and max not zero", func(t *testing.T) {
@@ -166,7 +168,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
-		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -180,13 +182,12 @@ spec:
 
 		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 2, "should get all check")
+		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
-		require.Equal(t, checkers[1].Name(), "NodeGroup node readiness check")
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
 	})
 
-	t.Run("with multiple cloud ephemeral nodegroup but skip one", func(t *testing.T) {
+	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
 		content := resourcesContentWithoutNg +
 			ngTemplate("system", 0, 2) +
 			ngTemplate("node", 1, 2)
@@ -195,11 +196,78 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 4)
 
-		checkers, err := GetCheckers(nil, resources, []string{"node"})
+		checkers, err := GetCheckers(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get onecheck")
+		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "NodeGroup system readiness check")
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+	})
+
+	t.Run("with one terra node without replicas", func(t *testing.T) {
+		content := resourcesContentWithoutNg
+
+		resources, err := template.ParseResourcesContent(content, nil)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		cnf := &config.MetaConfig{
+			TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+				{Replicas: 0, Name: "terra"},
+			},
+		}
+
+		checkers, err := GetCheckers(nil, resources, cnf)
+		require.NoError(t, err)
+		require.Len(t, checkers, 0, "should not get check")
+	})
+
+	t.Run("with one terra node with replicas", func(t *testing.T) {
+		cnf := &config.MetaConfig{
+			TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+				{Replicas: 1, Name: "terra"},
+			},
+		}
+
+		checkers, err := GetCheckers(nil, nil, cnf)
+		require.NoError(t, err)
+		require.Len(t, checkers, 1, "should get one check")
+
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+	})
+
+	t.Run("with multiple terra node with replicas", func(t *testing.T) {
+		cnf := &config.MetaConfig{
+			TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+				{Replicas: 1, Name: "terra"},
+				{Replicas: 1, Name: "terra-1"},
+			},
+		}
+
+		checkers, err := GetCheckers(nil, nil, cnf)
+		require.NoError(t, err)
+		require.Len(t, checkers, 1, "should get one check")
+
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+	})
+
+	t.Run("with one terra node with replicas an ephemeral node group", func(t *testing.T) {
+		content := resourcesContentWithoutNg + ngTemplate("system", 0, 2)
+
+		resources, err := template.ParseResourcesContent(content, nil)
+		require.NoError(t, err)
+		require.Len(t, resources, 3)
+
+		cnf := &config.MetaConfig{
+			TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+				{Replicas: 1, Name: "terra"},
+			},
+		}
+
+		checkers, err := GetCheckers(nil, resources, cnf)
+		require.NoError(t, err)
+
+		require.Len(t, checkers, 1, "should get one check")
+		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
 	})
 }
 

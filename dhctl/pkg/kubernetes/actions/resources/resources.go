@@ -217,7 +217,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources) error {
+func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker) error {
 	timeout, err := time.ParseDuration(app.ResourcesTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot parse timeout to create resources: %v", err)
@@ -228,11 +228,6 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 	defer ticker.Stop()
 
 	resourceCreator := NewCreator(kubeCl, resources)
-
-	checkers, err := GetCheckers(kubeCl, resources, app.SkipNodeGroupsReadiness)
-	if err != nil {
-		return err
-	}
 
 	waiter := NewWaiter(checkers)
 

@@ -17,6 +17,8 @@ package resources
 import (
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -30,13 +32,21 @@ type Checker interface {
 	Name() string
 }
 
-func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, skipNGs []string) ([]Checker, error) {
+func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
+	if metaConfig != nil {
+		for _, terraNg := range metaConfig.GetTerraNodeGroups() {
+			if terraNg.Replicas > 0 {
+				checker := newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl)
+				return []Checker{checker}, nil
+			}
+		}
+	}
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
 
 	for _, r := range resources {
-		check, err := tryToGetEphemeralNodeGroupChecker(kubeCl, r, skipNGs)
+		check, err := tryToGetClusterIsBootstrappedChecker(kubeCl, r)
 		if err != nil {
 			errRes = multierror.Append(errRes, err)
 			continue
@@ -44,6 +54,10 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 		if check != nil {
 			checkers = append(checkers, check)
+			// while we use one checker, we should break because
+			// cluster is bootstrap checker should be in single instance
+			// and should be single checker
+			break
 		}
 	}
 

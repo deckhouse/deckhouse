@@ -319,8 +319,14 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		if resourcesToCreate != nil {
+
 			err = log.Process("bootstrap", "Create Resources", func() error {
-				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
+				checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+				if err != nil {
+					return err
+				}
+
+				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
 			})
 			if err != nil {
 				return err

@@ -143,6 +143,18 @@ func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstr
 	return ng, nil
 }
 
+func GetNodeGroups(kubeCl *client.KubernetesClient) ([]unstructured.Unstructured, error) {
+	ngs, err := kubeCl.Dynamic().
+		Resource(nodeGroupResource).
+		List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ngs.Items, err
+}
+
 func UpdateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, ng *unstructured.Unstructured) error {
 	err := retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 45, 15*time.Second).
 		BreakIf(errors.IsConflict).

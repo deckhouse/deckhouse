@@ -85,9 +85,7 @@ func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 		cmd.GetFlag("resources").Required()
 	}
 
-	cmd.Flag("skip-node-group-readiness-check", `Do not wait while node group(s)
-become ready (all nodes will be bootstrapped in the cluster).
-`).
+	cmd.Flag("skip-cluster-bootstrap-check", `Do not wait while cluster become in bootstrapped state.`).
 		Envar(configEnvName("SKIP_NODE_GROUPS")).
 		StringsVar(&SkipNodeGroupsReadiness)
 }

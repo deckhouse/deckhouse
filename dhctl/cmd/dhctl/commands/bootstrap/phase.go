@@ -157,7 +157,12 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 				return err
 			}
 
-			return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
+			checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
+			if err != nil {
+				return err
+			}
+
+			return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
 		})
 	}
 
