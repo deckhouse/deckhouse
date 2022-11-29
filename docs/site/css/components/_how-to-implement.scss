@@ -17,6 +17,13 @@
     }
   }
 
+  &__detailed-analysis {
+    & ul p {
+      width: 100%;
+    }
+  }
+
+  &__detailed-analysis,
   &__joint-defense,
   &__support-options,
   &__production {
