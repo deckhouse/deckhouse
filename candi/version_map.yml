@@ -10,10 +10,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.4.6-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "4.18.0-*-generic"
-          allowedPattern: "4.18"
     '18.04':
       docker:
         desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
@@ -24,19 +20,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.3.0-*-generic"
-          allowedPattern: "5.3"
-        aws:
-          desiredVersion: "5.3.0-*-aws"
-          allowedPattern: "5.3"
-        azure:
-          desiredVersion: "5.4.0-*-azure"
-          allowedPattern: "5.3"
-        gcp:
-          desiredVersion: "5.3.0-*-gcp"
-          allowedPattern: "5.3"
     '20.04':
       docker:
         desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
@@ -47,19 +30,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.11.0-*-generic"
-          allowedPattern: "5.4|5.11"
-        aws:
-          desiredVersion: "5.11.0-*-aws"
-          allowedPattern: "5.4|5.11"
-        azure:
-          desiredVersion: "5.11.0-*-azure"
-          allowedPattern: "5.4|5.11"
-        gcp:
-          desiredVersion: "5.11.0-*-gcp"
-          allowedPattern: "5.4|5.11"
     '22.04':
       docker:
         desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
@@ -70,19 +40,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.15.0-*-generic"
-          allowedPattern: "5.15"
-        aws:
-          desiredVersion: "5.15.0-*-aws"
-          allowedPattern: "5.15"
-        azure:
-          desiredVersion: "5.15.0-*-azure"
-          allowedPattern: "5.15"
-        gcp:
-          desiredVersion: "5.15.0-*-gcp"
-          allowedPattern: "5.15"
   debian:
     '9': &debian9
       docker:
@@ -94,10 +51,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.4.3-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "4.9.0-*-amd64"
-          allowedPattern: "4.9|4.15|4.19|5.4|5.10"
     '10':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
@@ -108,10 +61,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "4.19.0-*-amd64"
-          allowedPattern: "4.19"
     '11':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
@@ -122,10 +71,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.10.0-*-amd64"
-          allowedPattern: "5.10"
   centos:
     '7':
       docker:
@@ -137,10 +82,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "3.10.0-*"
-          allowedPattern: "3.10|5.[014]"
     '8':
       docker:
         desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
@@ -151,10 +92,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el8.x86_64"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "4.18.0-*"
-          allowedPattern: "4.18|5.[014]"
     '9':
       docker:
         desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
@@ -165,10 +102,6 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.14.0-*"
-          allowedPattern: "5.14"
 k8s:
   '1.20':
     status: available
@@ -188,19 +121,6 @@ k8s:
           containerd:
             desiredVersion: "containerd.io=1.5.11-1"
             allowedPattern: ""
-          kernel:
-            generic:
-              desiredVersion: "5.3.0-*-generic"
-              allowedPattern: "5.3"
-            aws:
-              desiredVersion: "5.3.0-*-aws"
-              allowedPattern: "5.3"
-            azure:
-              desiredVersion: "5.4.0-*-azure"
-              allowedPattern: "5.3"
-            gcp:
-              desiredVersion: "5.3.0-*-gcp"
-              allowedPattern: "5.3"
     ccm:
       openstack: v1.20.1
       yandex: v0.21.3

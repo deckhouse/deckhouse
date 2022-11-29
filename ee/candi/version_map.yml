@@ -10,10 +10,6 @@ bashible:
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.15.72-*"
-          allowedPattern: "5.15"
   alteros: &alteros
     '7':
       docker:
@@ -25,10 +21,6 @@ bashible:
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.16.2-*"
-          allowedPattern: "5.16"
   astra: &astra
     '1.7':
       docker:
@@ -40,10 +32,6 @@ bashible:
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: ""
-      kernel:
-        generic:
-          desiredVersion: "5.15.0-*-generic"
-          allowedPattern: "5.15"
 k8s:
   '1.20':
     bashible:

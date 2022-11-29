@@ -425,11 +425,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
+                  deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
+                      deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
