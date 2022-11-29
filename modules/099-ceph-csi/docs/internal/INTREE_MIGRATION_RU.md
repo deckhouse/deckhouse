@@ -1,11 +1,12 @@
 ## Миграция с in-tree RBD драйвера на CSI (Ceph CSI)
 
 Для упрощения процесса миграции был написан скрипт [rbd-in-tree-to-ceph-csi-migration-helper.sh](../../tools/rbd-in-tree-to-ceph-csi-migration-helper.sh).
-Перед запуском необходимо удалить Pod использующий PVC. В процессе миграции будет необходимо вручную выполнить команду в ceph-кластере для переименования rbd-образа (Ceph CSI использует другой формат имени).
+Перед запуском необходимо удалить Pod (поскейлить в 0 StatefulSet/Deployment) использующий PVC. В процессе миграции будет необходимо вручную выполнить команду в ceph-кластере для переименования rbd-образа (Ceph CSI использует другой формат имени).
 
 Во время работы скрипта будет сделан бэкап манифестов мигрируемых PVC и PV, далее они будут удалены и в итоге будут созданы новые PVC и PV. Удаление PV не приведет к удалению rbd-образа в ceph-кластере, т.к. перед удалением PV он будет переименован.
 
 Для работы скрипта небходимы PVC и PV, из манифестов которых будут позаимствованы параметры характерные для Ceph CSI. Можно создать их используя следующий манифест:
+
 ```yaml
 kubectl create -f - <<"END"
 apiVersion: v1
@@ -19,13 +20,14 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: new-rbd
+  storageClassName: ceph-csi-rbd
 END
 ```
 
 Пример работы скрипта:
+
 ```bash
-root@kube-master-0:~# ./rbd-migrator.sh default/sample default/data-test-0
+root@kube-master-0:~# ./rbd-in-tree-to-ceph-csi-migration-helper.sh default/sample default/data-test-0
 Rename the rbd image in your ceph cluster using the following command:
 >rbd mv kube/kubernetes-dynamic-pvc-162a2c43-568e-40ab-aedb-a4632a613ecd kube/csi-vol-162a2c43-568e-40ab-aedb-a4632a613ecd
 After renaming, enter yes to confirm: yes
@@ -182,6 +184,7 @@ status:
     storage: 1Gi
   phase: Bound
 ```
+
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
@@ -251,7 +254,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: new-rbd
+  storageClassName: ceph-csi-rbd
   volumeMode: Filesystem
   volumeName: pvc-abdbb7ea-5da6-47f3-8b76-b968a93b7bc1
 status:
@@ -308,7 +311,7 @@ spec:
   mountOptions:
   - discard
   persistentVolumeReclaimPolicy: Delete
-  storageClassName: new-rbd
+  storageClassName: ceph-csi-rbd
   volumeMode: Filesystem
 status:
   phase: Bound
@@ -316,10 +319,14 @@ status:
 
 ### Переименование RBD-образа в ceph-кластере
 
-Необходимо, поскольку Ceph CSI драйвер использует другой формат имени rbd-образа.
+Переименование необходимо, поскольку Ceph CSI драйвер использует другой формат имени rbd-образа.
+
+Команда выполняется в Ceph-кластере:
+
 ```shell
 rbd mv kube/kubernetes-dynamic-pvc-<rbd-image-uid> kube/csi-vol-<rbd-image-uid>
 ```
+
 * `kube` - имя пула в ceph-кластере;
 * `kubernetes-dynamic-pvc-<uid>` - формат имени rbd-образа используемый in-tree драйвером;
 * `csi-vol-<uid>` - формат имени rbd-образа используемый Ceph CSI.
@@ -331,6 +338,7 @@ rbd mv kube/kubernetes-dynamic-pvc-<rbd-image-uid> kube/csi-vol-<rbd-image-uid>
 kubectl -n default delete pvc data-test-0
 kubectl delete pv pvc-cd6f7b26-d768-4cab-88a4-baca5b242cc5
 ```
+
 Т.к. на предыдущем шаге мы переименовали rbd-образ в ceph-кластере, то удаление PersistentVolume не повлечет удаление образа.
 
 ### Генерация нового манифеста PVC и создание объекта в кластере
