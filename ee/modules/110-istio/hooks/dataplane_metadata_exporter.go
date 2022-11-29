@@ -568,11 +568,6 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 
 	// go through the whole list of candidates and patch the controller where required
 	// patch one controller per iteration
-
-	fmt.Println(ignoredNamespace)
-	fmt.Println(upgradeCandidates)
-	fmt.Println(upgradeCandidatesMap)
-
 	for _, candidate := range upgradeCandidates {
 		if _, ok := ignoredNamespace[candidate.namespace]; ok {
 			continue

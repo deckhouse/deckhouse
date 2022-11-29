@@ -1047,13 +1047,14 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			AutoUpgrade:         true,
 		})
 
+		// need to be updated
 		istioRsYAML := generateIstioReplicaSetYAML(rsParams{
 			OwnerKind: "Deployment",
 			OwnerName: deployName,
 			Replicas:  2,
 		})
 
-		istioRSPod0 := generateIstioPodYAML(podParams{
+		istioRSPod0YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-0",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.00",
@@ -1061,7 +1062,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "ReplicaSet",
 		})
 
-		istioRSPod1 := generateIstioPodYAML(podParams{
+		istioRSPod1YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-1",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1069,7 +1070,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "ReplicaSet",
 		})
 
-		istioRSPod2 := generateIstioPodYAML(podParams{
+		istioRSPod2YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-2",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1081,7 +1082,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsYAML, istioDeployWithAutoupgradeYAML, istioRsYAML, istioRSPod0, istioRSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsYAML, istioDeployWithAutoupgradeYAML, istioRsYAML, istioRSPod0YAML, istioRSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1104,7 +1105,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployYAML, istioRsYAML, istioRSPod0, istioRSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployYAML, istioRsYAML, istioRSPod0YAML, istioRSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1127,7 +1128,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployYAML, istioRsYAML, istioRSPod1, istioRSPod2}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployYAML, istioRsYAML, istioRSPod1YAML, istioRSPod2YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1149,7 +1150,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployWithUnavailableYAML, istioRsYAML, istioRSPod0, istioRSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeployWithUnavailableYAML, istioRsYAML, istioRSPod0YAML, istioRSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1182,7 +1183,8 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			NumberUnavailable: 1,
 		})
 
-		istioDsPod0 := generateIstioPodYAML(podParams{
+		// need to be updated
+		istioDsPod0YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-0",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.00",
@@ -1190,7 +1192,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "DaemonSet",
 		})
 
-		istioDsPod1 := generateIstioPodYAML(podParams{
+		istioDsPod1YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-1",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1198,7 +1200,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "DaemonSet",
 		})
 
-		istioDsPod2 := generateIstioPodYAML(podParams{
+		istioDsPod2YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-2",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1210,7 +1212,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsYAML, istioDsWithAutoupgradeYAML, istioDsPod0, istioDsPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsYAML, istioDsWithAutoupgradeYAML, istioDsPod0YAML, istioDsPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1232,7 +1234,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsYAML, istioDsPod0, istioDsPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsYAML, istioDsPod0YAML, istioDsPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1254,7 +1256,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsYAML, istioDsPod1, istioDsPod2}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsYAML, istioDsPod1YAML, istioDsPod2YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1275,7 +1277,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsWithAutoupgradeNotReadyYAML, istioDsPod0, istioDsPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDsWithAutoupgradeNotReadyYAML, istioDsPod0YAML, istioDsPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1310,7 +1312,8 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			ReadyReplicas: 1,
 		})
 
-		istioSTSPod0 := generateIstioPodYAML(podParams{
+		// need to be updated
+		istioSTSPod0YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-0",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.00",
@@ -1318,7 +1321,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "StatefulSet",
 		})
 
-		istioSTSPod1 := generateIstioPodYAML(podParams{
+		istioSTSPod1YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-1",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1326,7 +1329,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "StatefulSet",
 		})
 
-		istioSTSPod2 := generateIstioPodYAML(podParams{
+		istioSTSPod2YAML := generateIstioPodYAML(podParams{
 			Name:            "pod-2",
 			CurrentRevision: "v1x42",
 			FullVersion:     "1.42.42",
@@ -1338,7 +1341,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsYAML, istioStsWithAutoupgradeYAML, istioSTSPod0, istioSTSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsYAML, istioStsWithAutoupgradeYAML, istioSTSPod0YAML, istioSTSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1360,7 +1363,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsYAML, istioSTSPod0, istioSTSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsYAML, istioSTSPod0YAML, istioSTSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1382,7 +1385,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsYAML, istioSTSPod1, istioSTSPod2}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsYAML, istioSTSPod1YAML, istioSTSPod2YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1403,7 +1406,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsWithAutoupgradeNotReadyYAML, istioSTSPod0, istioSTSPod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioStsWithAutoupgradeNotReadyYAML, istioSTSPod0YAML, istioSTSPod1YAML}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1423,15 +1426,16 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 	Context("Mixed test", func() {
 		// deployment is not patched and ready
-		d1 := generateIstioDeploymentYAML(deployParams{
-			Name:                "d1",
+		istioDeploymentNotPatchedAndReadyYAML := generateIstioDeploymentYAML(deployParams{
+			Name:                "istioDeploymentNotPatchedAndReady",
 			Replicas:            2,
 			UnavailableReplicas: 0,
 			AutoUpgrade:         false,
 		})
 		// deployment is patched but not ready
-		d2 := generateIstioDeploymentYAML(deployParams{
-			Name:                  "d2",
+
+		istioDeploymentPatchedAndNotReadyYAML := generateIstioDeploymentYAML(deployParams{
+			Name:                  "istioDeploymentPatchedAndNotReady",
 			Replicas:              2,
 			UnavailableReplicas:   1,
 			AutoUpgrade:           false,
@@ -1441,17 +1445,18 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 		rs1 := generateIstioReplicaSetYAML(rsParams{
 			Name:      "rs1",
 			OwnerKind: "Deployment",
-			OwnerName: "d1",
+			OwnerName: "istioDeploymentNotPatchedAndReady",
 			Replicas:  2,
 		})
 
 		rs2 := generateIstioReplicaSetYAML(rsParams{
 			Name:      "rs2",
 			OwnerKind: "Deployment",
-			OwnerName: "d2",
+			OwnerName: "istioDeploymentPatchedAndNotReady",
 			Replicas:  2,
 		})
 
+		// need to be updated
 		rs1pod1 := generateIstioPodYAML(podParams{
 			Name:            "rs1pod1",
 			CurrentRevision: "v1x42",
@@ -1460,6 +1465,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "ReplicaSet",
 		})
 
+		// need to be updated
 		rs1pod2 := generateIstioPodYAML(podParams{
 			Name:            "rs1pod2",
 			CurrentRevision: "v1x42",
@@ -1476,11 +1482,11 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 			OwnerKind:       "ReplicaSet",
 		})
 
-		FContext("Mixed test", func() {
+		Context("Mixed test", func() {
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
 
-				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, d1, d2, rs1, rs2, rs1pod1, rs1pod2, rs2pod1}, "---\n")
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, istioDeploymentNotPatchedAndReadyYAML, istioDeploymentPatchedAndNotReadyYAML, rs1, rs2, rs1pod1, rs1pod2, rs2pod1}, "---\n")
 				f.BindingContexts.Set(f.KubeStateSet(clusterState))
 
 				f.RunHook()
@@ -1491,10 +1497,10 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
 
-				d1 := f.KubernetesResource("Deployment", nsName, "d1")
+				d1 := f.KubernetesResource("Deployment", nsName, "istioDeploymentNotPatchedAndReady")
 				Expect(d1.Exists()).Should(BeTrue())
 
-				d2 := f.KubernetesResource("Deployment", nsName, "d2")
+				d2 := f.KubernetesResource("Deployment", nsName, "istioDeploymentPatchedAndNotReady")
 				Expect(d1.Exists()).Should(BeTrue())
 
 				Expect(d1.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
