@@ -76,6 +76,7 @@ properties:
     x-doc-default: false
     description: |
       Routing all client traffic through the VPN. A default route will be added to clients.
+    x-examples: [false, true]
   pushToClientRoutes:
     type: array
     items:
