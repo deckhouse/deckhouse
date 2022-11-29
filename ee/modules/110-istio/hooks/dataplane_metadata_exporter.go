@@ -216,6 +216,9 @@ type Owner struct {
 }
 
 type Candidate struct {
+	kind               string
+	name               string
+	namespace          string
 	desiredFullVersion string
 	needUpgrade        bool
 }
@@ -371,8 +374,9 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		istioNamespaceMap[nsInfo.Name] = nsInfo
 	}
 
-	// upgradeCandidates[kind][namespace][name]Candidate{}
-	upgradeCandidates := make(map[string]map[string]map[string]Candidate)
+	// upgradeCandidatesMap[kind][namespace][name]Candidate{}
+	upgradeCandidatesMap := make(map[string]map[string]map[string]*Candidate)
+	upgradeCandidates := make([]Candidate, 0)
 
 	k8sControllers := make([]go_hook.FilterResult, 0)
 	k8sControllers = append(k8sControllers, input.Snapshots["deployment"]...)
@@ -389,26 +393,31 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		}
 
 		// if an istio.deckhouse.io/auto-upgrade Label exists in the namespace or in the controller
-		// and the controller is available for upgrade -> add to upgradeCandidates map
+		// and the controller is available for upgrade -> add to upgradeCandidatesMap map
 		if (namespaceAutoUpgradeLabelExists || k8sController.AutoUpgradeLabelExists) && k8sController.AvailableForUpgrade {
-			if _, ok := upgradeCandidates[k8sController.Kind]; !ok {
-				upgradeCandidates[k8sController.Kind] = make(map[string]map[string]Candidate)
+			upgradeCandidates = append(upgradeCandidates, Candidate{
+				kind:      k8sController.Kind,
+				name:      k8sController.Name,
+				namespace: k8sController.Namespace,
+			})
+			if _, ok := upgradeCandidatesMap[k8sController.Kind]; !ok {
+				upgradeCandidatesMap[k8sController.Kind] = make(map[string]map[string]*Candidate)
 			}
-			if _, ok := upgradeCandidates[k8sController.Kind][k8sController.Namespace]; !ok {
-				upgradeCandidates[k8sController.Kind][k8sController.Namespace] = make(map[string]Candidate)
+			if _, ok := upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace]; !ok {
+				upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace] = make(map[string]*Candidate)
 			}
-			upgradeCandidates[k8sController.Kind][k8sController.Namespace][k8sController.Name] = Candidate{}
+			upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace][k8sController.Name] = &upgradeCandidates[len(upgradeCandidates)-1]
 		}
 	}
 
 	// replicaSets[namespace][replicaset-name]owner
 	replicaSets := make(map[string]map[string]Owner)
 
-	// create a map of the replica sets depending on the deployments from upgradeCandidates map
+	// create a map of the replica sets depending on the deployments from upgradeCandidatesMap map
 	for _, rs := range input.Snapshots["replicaset"] {
 		rsInfo := rs.(K8SControllerFilterResult)
 		if rsInfo.Owner.Kind == "Deployment" {
-			if _, ok := upgradeCandidates["Deployment"][rsInfo.Namespace][rsInfo.Owner.Name]; ok {
+			if _, ok := upgradeCandidatesMap["Deployment"][rsInfo.Namespace][rsInfo.Owner.Name]; ok {
 				if _, ok := replicaSets[rsInfo.Namespace]; !ok {
 					replicaSets[rsInfo.Namespace] = make(map[string]Owner)
 				}
@@ -487,19 +496,15 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			switch istioPod.Owner.Kind {
 			case "ReplicaSet":
 				if rs, ok := replicaSets[istioPod.Namespace][istioPod.Owner.Name]; ok {
-					if _, ok := upgradeCandidates[rs.Kind][istioPod.Namespace][rs.Name]; ok {
-						upgradeCandidates[rs.Kind][istioPod.Namespace][rs.Name] = Candidate{
-							desiredFullVersion: desiredFullVersion,
-							needUpgrade:        true,
-						}
+					if _, ok := upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name]; ok {
+						upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name].needUpgrade = true
+						upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name].desiredFullVersion = desiredFullVersion
 					}
 				}
 			case "StatefulSet", "DaemonSet":
-				if _, ok := upgradeCandidates[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name]; ok {
-					upgradeCandidates[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name] = Candidate{
-						desiredFullVersion: desiredFullVersion,
-						needUpgrade:        true,
-					}
+				if _, ok := upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name]; ok {
+					upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name].needUpgrade = true
+					upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name].desiredFullVersion = desiredFullVersion
 				}
 			}
 		}
@@ -516,18 +521,16 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	}
 
 	// update all candidates to update that require a sidecar update
-kind: // patch one controller per iteration
-	for kind, namespaces := range upgradeCandidates {
-		for namespace, resources := range namespaces {
-			for name, candidate := range resources {
-				if candidate.needUpgrade {
-					input.LogEntry.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", kind, name, namespace, candidate.desiredFullVersion)
-					input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", kind, namespace, name)
-					break kind
-				}
-			}
+	// patch one controller per iteration
+	for _, candidate := range upgradeCandidates {
+		if candidate.needUpgrade {
+			input.LogEntry.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
+			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
+			break
 		}
 	}
+
+	fmt.Println(upgradeCandidates)
 
 	return nil
 }
