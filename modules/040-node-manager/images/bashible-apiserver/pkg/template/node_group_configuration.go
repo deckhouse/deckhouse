@@ -17,6 +17,8 @@ limitations under the License.
 package template
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,6 +37,11 @@ type NodeGroupConfiguration struct {
 	// Populated by the system.
 
 	Status NodeGroupConfigurationStatus `json:"status,omitempty"`
+}
+
+// GenerateScriptName generates name for a bash script like xxx_some_name.sh, We have to specify integer part with 3 digits
+func (ng NodeGroupConfiguration) GenerateScriptName() string {
+	return fmt.Sprintf("%03d_%s", ng.Spec.Weight, ng.Name)
 }
 
 type NodeGroupConfigurationSpec struct {

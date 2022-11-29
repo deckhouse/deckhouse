@@ -252,7 +252,7 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 }
 
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%03d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
 	klog.Infof("Adding NodeGroupConfiguration %s to context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
@@ -274,7 +274,7 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 }
 
 func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
 	klog.Infof("Removing NodeGroupConfiguration %s from context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
