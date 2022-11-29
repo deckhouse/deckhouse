@@ -46,7 +46,22 @@ spec:
 1. Создайте `ServiceAccount` в namespace `d8-service-accounts` (имя можно изменить):
 
    ```shell
-   kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: gitlab-runner-deploy
+     namespace: d8-service-accounts
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: gitlab-runner-deploy-token
+     namespace: d8-service-accounts
+     annotations:
+       kubernetes.io/service-account.name: gitlab-runner-deploy
+   type: kubernetes.io/service-account-token
+   EOF
    ```
 
 2. Дайте необходимые `ServiceAccount` права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
@@ -84,16 +99,14 @@ spec:
        1. Получите CA кластера Kubernetes:
 
           ```shell
-          cat /etc/kubernetes/kubelet.conf \
-            | grep certificate-authority-data | awk '{ print $2 }' \
-            | base64 -d > /tmp/ca.crt
+          kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
           ```
 
        2. Сгенерируйте секцию с IP API-сервера:
 
           ```shell
           kubectl config set-cluster $cluster_name --embed-certs=true \
-            --server=https://<API_SERVER_IP>:6443 \
+            --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
             --certificate-authority=/tmp/ca.crt \
             --kubeconfig=$file_name
           ```
@@ -122,7 +135,7 @@ spec:
 
      ```shell
      kubectl config set-credentials $user_name \
-       --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
+       --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy -o json |jq -r '.data["token"]' | base64 -d) \
        --kubeconfig=$file_name
      ```
 
@@ -132,6 +145,12 @@ spec:
      kubectl config set-context $context_name \
        --cluster=$cluster_name --user=$user_name \
        --kubeconfig=$file_name
+     ```
+
+   * Установите контекст по умолчанию для только что созданного kubeconfig файла:
+
+     ```shell
+     kubectl config use-context $context_name --kubeconfig=$file_name
      ```
 
 ### Создание пользователя с помощью клиентского сертификата
@@ -154,7 +173,7 @@ spec:
 * Подпишите CSR корневым сертификатом кластера:
 
   ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10000
+  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
   ```
 
 * Теперь полученный сертификат можно указывать в конфиг-файле:
