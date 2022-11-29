@@ -1,4 +1,4 @@
-## Миграция с in-tree RBD драйвера на CSI (Ceph CSI)
+# Миграция с in-tree RBD драйвера на CSI (Ceph CSI)
 
 Для упрощения процесса миграции был написан скрипт [rbd-in-tree-to-ceph-csi-migration-helper.sh](../../tools/rbd-in-tree-to-ceph-csi-migration-helper.sh).
 Перед запуском необходимо удалить Pod (поскейлить в 0 StatefulSet/Deployment) использующий PVC. В процессе миграции будет необходимо вручную выполнить команду в ceph-кластере для переименования rbd-образа (Ceph CSI использует другой формат имени).
@@ -136,10 +136,9 @@ Apply this manifest in the cluster? (Type yes to confirm): yes
 persistentvolume/pvc-4a77a995-ce1e-463c-9726-d05966d3c5ef created
 ```
 
-
 ## Описание процесса миграции
 
-### Оглавление:
+### Оглавление
 
 * [Манифесты мигрируемых PVC и PV используемые для демонстрации процесса](#%D0%BC%D0%B0%D0%BD%D0%B8%D1%84%D0%B5%D1%81%D1%82%D1%8B-%D0%BC%D0%B8%D0%B3%D1%80%D0%B8%D1%80%D1%83%D0%B5%D0%BC%D1%8B%D1%85-pvc-%D0%B8-pv)
 * [Манифесты PVC и PV из которых будут заимствованы параметры характерные для Ceph CSI](#%D0%BC%D0%B0%D0%BD%D0%B8%D1%84%D0%B5%D1%81%D1%82%D1%8B-pvc-%D0%B8-pv-%D0%B8%D0%B7-%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D1%85-%D0%B1%D1%83%D0%B4%D1%83%D1%82-%D0%B7%D0%B0%D0%B8%D0%BC%D1%81%D1%82%D0%B2%D0%BE%D0%B2%D0%B0%D0%BD%D1%8B-%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B-%D1%85%D0%B0%D1%80%D0%B0%D0%BA%D1%82%D0%B5%D1%80%D0%BD%D1%8B%D0%B5-%D0%B4%D0%BB%D1%8F-ceph-csi)
@@ -148,8 +147,7 @@ persistentvolume/pvc-4a77a995-ce1e-463c-9726-d05966d3c5ef created
 * [Генерация нового манифеста PVC и создание объекта в кластере](#%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F-%D0%BD%D0%BE%D0%B2%D0%BE%D0%B3%D0%BE-%D0%BC%D0%B0%D0%BD%D0%B8%D1%84%D0%B5%D1%81%D1%82%D0%B0-pvc-%D0%B8-%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BE%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5)
 * [Генерация нового манифеста PV и создание объекта в кластере](#%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F-%D0%BD%D0%BE%D0%B2%D0%BE%D0%B3%D0%BE-%D0%BC%D0%B0%D0%BD%D0%B8%D1%84%D0%B5%D1%81%D1%82%D0%B0-pv-%D0%B8-%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BE%D0%B1%D1%8A%D0%B5%D0%BA%D1%82%D0%B0-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B5)
 
-
-### Манифесты мигрируемых PVC и PV:
+### Манифесты мигрируемых PVC и PV
 
 ```yaml
 apiVersion: v1
@@ -229,7 +227,7 @@ status:
   phase: Bound
 ```
 
-### Манифесты PVC и PV из которых будут заимствованы параметры характерные для Ceph CSI.
+### Манифесты PVC и PV из которых будут заимствованы параметры характерные для Ceph CSI
 
 Используется StorageClass соданный модулем ceph-csi.
 
@@ -330,7 +328,6 @@ rbd mv kube/kubernetes-dynamic-pvc-<rbd-image-uid> kube/csi-vol-<rbd-image-uid>
 * `kube` - имя пула в ceph-кластере;
 * `kubernetes-dynamic-pvc-<uid>` - формат имени rbd-образа используемый in-tree драйвером;
 * `csi-vol-<uid>` - формат имени rbd-образа используемый Ceph CSI.
-
 
 ### Удаление PVC и PV из кластера
 
@@ -546,5 +543,3 @@ spec:
 | ---------- | ----------- | -----------------------|
 | Docker     | JSON        | `/var/log/containers/` |
 | Containerd | Plain Text  | `/var/log/pods/`       |
-
-
