@@ -36,7 +36,8 @@ var _ = Describe("Modules :: upmeter :: hooks :: dynamic_probes ::", func() {
 
 		ingressControllerValuesPath = valuesPrefix + "." + "ingressControllerNames"
 		nodegroupValuesPath         = valuesPrefix + "." + "cloudEphemeralNodeGroupNames"
-		zoneValuesPath              = valuesPrefix + "." + "zones"
+		zonesValuesPath             = valuesPrefix + "." + "zones"
+		zonePrefixValuesPath        = valuesPrefix + "." + "zonePrefix"
 
 		f = HookExecutionConfigInit(initValues, `{}`)
 	)
@@ -54,7 +55,8 @@ var _ = Describe("Modules :: upmeter :: hooks :: dynamic_probes ::", func() {
 			got := &names{
 				IngressControllerNames:       f.ValuesGet(ingressControllerValuesPath).AsStringSlice(),
 				CloudEphemeralNodeGroupNames: f.ValuesGet(nodegroupValuesPath).AsStringSlice(),
-				Zones:                        f.ValuesGet(zoneValuesPath).AsStringSlice(),
+				Zones:                        f.ValuesGet(zonesValuesPath).AsStringSlice(),
+				ZonePrefix:                   f.ValuesGet(zonePrefixValuesPath).String(),
 			}
 
 			Expect(got).To(Equal(want))
@@ -77,7 +79,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: dynamic_probes ::", func() {
 		Entry(
 			"Single nodegroup",
 			[]string{
-				clodProviderSecretYAML("zone"),
+				clodProviderSecretWithZonesYAML("zone"),
 				discoveredNodeGroups("worker"),
 			},
 			emptyNames().WithNodeGroups("worker").WithZones("zone"),
@@ -85,7 +87,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: dynamic_probes ::", func() {
 		Entry(
 			"Two nodegroups",
 			[]string{
-				clodProviderSecretYAML("zone"),
+				clodProviderSecretWithZonesYAML("zone"),
 				discoveredNodeGroups("frontend", "system"),
 			},
 			emptyNames().WithNodeGroups("frontend", "system").WithZones("zone"),
@@ -102,12 +104,29 @@ var _ = Describe("Modules :: upmeter :: hooks :: dynamic_probes ::", func() {
 			[]string{
 				discoveredIngressControllers("ing-b", "ing-a"),
 				discoveredNodeGroups("ng-b", "ng-a"),
-				clodProviderSecretYAML("aaa", "ccc", "bbb"),
+				clodProviderSecretWithZonesYAML("aaa", "ccc", "bbb"),
 			},
 			emptyNames().
 				WithIngressControllers("ing-a", "ing-b").
 				WithNodeGroups("ng-a", "ng-b").
 				WithZones("aaa", "bbb", "ccc"),
+		),
+		Entry(
+			"Region is empty in case of non-Azure cloud",
+			[]string{
+				clodProviderSecretWithRegionAndZonesYAML("gcp", "west", "aaa", "bbb"),
+			},
+			emptyNames().
+				WithZones("aaa", "bbb"),
+		),
+		Entry(
+			"Region is parsed and appended to zones in case of Azure cloud",
+			[]string{
+				clodProviderSecretWithRegionAndZonesYAML("azure", "west", "aaa", "bbb"),
+			},
+			emptyNames().
+				WithZones("west-aaa", "west-bbb").
+				WithZonePrefix("west"),
 		),
 	)
 })
@@ -146,7 +165,7 @@ data:
 	return fmt.Sprintf(tpl, namesJSON)
 }
 
-func clodProviderSecretYAML(zones ...string) string {
+func clodProviderSecretWithZonesYAML(zones ...string) string {
 	tpl := `
 apiVersion: v1
 data:
@@ -163,4 +182,28 @@ type: Opaque
 	}
 	b64 := base64.StdEncoding.EncodeToString(zz)
 	return fmt.Sprintf(tpl, b64)
+}
+
+func clodProviderSecretWithRegionAndZonesYAML(provider, region string, zones ...string) string {
+	tpl := `
+apiVersion: v1
+data:
+  type: %s
+  region: %s
+  zones: %s
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+type: Opaque
+`
+	zz, err := json.Marshal(zones)
+	if err != nil {
+		panic("marshalling zones to YAML: " + err.Error())
+	}
+	return fmt.Sprintf(tpl,
+		base64.StdEncoding.EncodeToString([]byte(provider)),
+		base64.StdEncoding.EncodeToString([]byte(region)),
+		base64.StdEncoding.EncodeToString(zz),
+	)
 }

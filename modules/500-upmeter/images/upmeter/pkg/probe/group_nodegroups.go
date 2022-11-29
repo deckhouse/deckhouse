@@ -27,7 +27,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer, nodeGroupNames, knownZones []string) []runnerConfig {
+func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer, nodeGroupNames, knownZones []string, zonePrefix string) []runnerConfig {
 	const (
 		groupNodeGroups     = "nodegroups"
 		controlPlaneTimeout = 5 * time.Second
@@ -38,7 +38,7 @@ func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight 
 
 	for _, ngName := range nodeGroupNames {
 		configs = append(configs,
-			nodeGroupChecker(access, nodeLister, groupNodeGroups, controlPlanePinger, controlPlaneTimeout, ngName, knownZones),
+			nodeGroupChecker(access, nodeLister, groupNodeGroups, controlPlanePinger, controlPlaneTimeout, ngName, knownZones, zonePrefix),
 		)
 	}
 	return configs
@@ -52,6 +52,7 @@ func nodeGroupChecker(
 	controlPlaneTimeout time.Duration,
 	ngName string,
 	zones []string,
+	zonePrefix string,
 ) runnerConfig {
 	ngLister := &nodeGroupLister{
 		name:     ngName,
@@ -72,6 +73,7 @@ func nodeGroupChecker(
 
 			Name:       ngName,
 			KnownZones: zones,
+			ZonePrefix: zonePrefix,
 		},
 	}
 }
