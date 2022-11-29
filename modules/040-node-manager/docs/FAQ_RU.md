@@ -250,8 +250,8 @@ cri:
 
 ## Как обновить ядро на узлах ?
 
-### Для дистрибутивов, основанных на Debian:
- 
+### Для дистрибутивов, основанных на Debian
+
 Примените ресурс `NodeGroupConfiguration`, поле `desired_version` должно содержать желаемую версию ядра:
 
 ```yaml
@@ -300,7 +300,7 @@ spec:
     bb-apt-install "linux-image-${desired_version}"
 ```
 
-### Для дистрибутивов, основанных на Centos:
+### Для дистрибутивов, основанных на Centos
 
 Примените ресурс `NodeGroupConfiguration`, поле `desired_version` должно содержать желаемую версию ядра:
 

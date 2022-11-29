@@ -250,9 +250,9 @@ Then put the node under the control of `node-manager`.
 
 ## How do I update kernel on nodes ?
 
-### Debian-based distros:
+### Debian-based distros
 
-Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version: 
+Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -300,7 +300,7 @@ spec:
     bb-apt-install "linux-image-${desired_version}"
 ```
 
-### Centos-based distros:
+### Centos-based distros
 
 Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version:
 

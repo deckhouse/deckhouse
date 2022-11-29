@@ -145,9 +145,9 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        --cluster=$cluster_name --user=$user_name \
        --kubeconfig=$file_name
      ```
-     
+
    * Set default context of your newly created kubeconfig file:
-     
+
      ```shell
      kubectl config use-context $context_name --kubeconfig=$file_name
      ```
