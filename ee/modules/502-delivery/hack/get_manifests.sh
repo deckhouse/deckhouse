@@ -58,6 +58,9 @@ rm -rf ${ARGOCD_MANIFESTS_ROOT}/argocd-* ${ARGOCD_MANIFESTS_ROOT}/*/argocd-* crd
 split_manifests "${ARGO_MANIFESTS}"
 split_manifests "${IMAGE_UPDATER_MANIFESTS}"
 
+# remove network policies
+rm *-networkpolicy.yaml
+
 # Move CRDs
 mv crd-*.yaml ${CRD_ROOT} &&
   pushd ${CRD_ROOT} &&
