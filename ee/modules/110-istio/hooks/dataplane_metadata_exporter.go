@@ -29,7 +29,7 @@ const (
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
 	metadataExporterMetricsGroup = "metadata"
 	autoUpgradeLabelName         = "istio.deckhouse.io/auto-upgrade"
-	patchTemplate                = `{ "spec": { "template": { "metadata": { "annotations": { "istio.deckhouse.io/version": "%s" } } } } }`
+	patchTemplate                = `{ "spec": { "template": { "metadata": { "annotations": { "istio.deckhouse.io/full-version": "%s" } } } } }`
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

@@ -1054,7 +1054,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
 				Expect(f.KubernetesResource("ReplicaSet", nsName, rsName).Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
@@ -1077,7 +1077,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
 				Expect(f.KubernetesResource("ReplicaSet", nsName, rsName).Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
@@ -1182,7 +1182,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
@@ -1204,7 +1204,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
@@ -1310,7 +1310,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
@@ -1332,7 +1332,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/version": "1.42.42"}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
 
