@@ -61,6 +61,11 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: argocd-image-updater
+      annotations:
+        # Argo CD Image Updater pod must be restarted to apply updated configuration updates. There
+        # are plans to add this behaviour in the upstream.
+        # https://argocd-image-updater.readthedocs.io/en/v0.6.2/configuration/registries/#specifying-credentials-for-accessing-container-registries
+        checksum/config: {{ include (print $.Template.BasePath "/argocd/image-updater/argocd-image-updater-config-configmap.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

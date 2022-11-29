@@ -1,9 +1,3 @@
-# TODO restart image updater pod with the change of this CM (change the config hash in the template)
-#
-# Argo CD Image Updater pod must be restarted for changes to the registries configuration to take
-# effect. There are plans to change this behaviour so that changes will be reload automatically in a
-# future release.
-# https://argocd-image-updater.readthedocs.io/en/v0.6.2/configuration/registries/#specifying-credentials-for-accessing-container-registries
 apiVersion: v1
 kind: ConfigMap
 metadata:
