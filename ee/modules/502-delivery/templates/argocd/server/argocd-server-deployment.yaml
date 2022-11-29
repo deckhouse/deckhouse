@@ -168,6 +168,18 @@ spec:
                   key: server.repo.server.strict.tls
                   name: argocd-cmd-params-cm
                   optional: true
+            - name: ARGOCD_SERVER_DEX_SERVER_PLAINTEXT
+              valueFrom:
+                configMapKeyRef:
+                  key: server.dex.server.plaintext
+                  name: argocd-cmd-params-cm
+                  optional: true
+            - name: ARGOCD_SERVER_DEX_SERVER_STRICT_TLS
+              valueFrom:
+                configMapKeyRef:
+                  key: server.dex.server.strict.tls
+                  name: argocd-cmd-params-cm
+                  optional: true
             - name: ARGOCD_TLS_MIN_VERSION
               valueFrom:
                 configMapKeyRef:
@@ -222,6 +234,12 @@ spec:
                   key: redis.server
                   name: argocd-cmd-params-cm
                   optional: true
+            - name: REDIS_COMPRESSION
+              valueFrom:
+                configMapKeyRef:
+                  key: redis.compression
+                  name: argocd-cmd-params-cm
+                  optional: true
             - name: REDISDB
               valueFrom:
                 configMapKeyRef:
@@ -244,6 +262,12 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   key: otlp.address
+                  name: argocd-cmd-params-cm
+                  optional: true
+            - name: ARGOCD_APPLICATION_NAMESPACES
+              valueFrom:
+                configMapKeyRef:
+                  key: application.namespaces
                   name: argocd-cmd-params-cm
                   optional: true
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
@@ -274,9 +298,11 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - all
+                - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - mountPath: /app/config/ssh
               name: ssh-known-hosts
@@ -284,6 +310,8 @@ spec:
               name: tls-certs
             - mountPath: /app/config/server/tls
               name: argocd-repo-server-tls
+            - mountPath: /app/config/dex/tls
+              name: argocd-dex-server-tls
             - mountPath: /home/argocd
               name: plugins-home
             - mountPath: /tmp
@@ -311,3 +339,12 @@ spec:
                 path: ca.crt
             optional: true
             secretName: argocd-repo-server-tls
+        - name: argocd-dex-server-tls
+          secret:
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: ca.crt
+                path: ca.crt
+            optional: true
+            secretName: argocd-dex-server-tls

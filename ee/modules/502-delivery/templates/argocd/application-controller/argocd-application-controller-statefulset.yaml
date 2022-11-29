@@ -159,6 +159,12 @@ spec:
                   key: controller.repo.server.strict.tls
                   name: argocd-cmd-params-cm
                   optional: true
+            - name: ARGOCD_APPLICATION_CONTROLLER_PERSIST_RESOURCE_HEALTH
+              valueFrom:
+                configMapKeyRef:
+                  key: controller.resource.health.persist
+                  name: argocd-cmd-params-cm
+                  optional: true
             - name: ARGOCD_APP_STATE_CACHE_EXPIRATION
               valueFrom:
                 configMapKeyRef:
@@ -169,6 +175,12 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   key: redis.server
+                  name: argocd-cmd-params-cm
+                  optional: true
+            - name: REDIS_COMPRESSION
+              valueFrom:
+                configMapKeyRef:
+                  key: redis.compression
                   name: argocd-cmd-params-cm
                   optional: true
             - name: REDISDB
@@ -189,22 +201,29 @@ spec:
                   key: otlp.address
                   name: argocd-cmd-params-cm
                   optional: true
+            - name: ARGOCD_APPLICATION_NAMESPACES
+              valueFrom:
+                configMapKeyRef:
+                  key: application.namespaces
+                  name: argocd-cmd-params-cm
+                  optional: true
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
           imagePullPolicy: Always
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8082
-            initialDelaySeconds: 5
-            periodSeconds: 10
+          ##### liveness probe has been removed in 2.5.2
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: 8082
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 10
           name: argocd-application-controller
           ports:
             - containerPort: 8082
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "resources_argocd-application-controller" . | nindent 14 }}
+              {{- include "resources_argocd-application-controller" . | nindent 14 }}
 {{- end }}
           readinessProbe:
             httpGet:
@@ -216,9 +235,11 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - all
+                - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - mountPath: /app/config/controller/tls
               name: argocd-repo-server-tls

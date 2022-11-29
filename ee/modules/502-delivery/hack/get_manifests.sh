@@ -19,39 +19,18 @@
 #
 
 set -euo pipefail
-set -x
 
-VERSION="v2.4.16"
+# TODO check for the presence of yq
 
-# TODO check for the presence of git and yq
-
-# First, clone the repo
-ARGOCD_REPO="${HOME}/dev/flant/argoproj/argo-cd"
-ARGO_MANIFESTS="${ARGOCD_REPO}/manifests/install.yaml"
-# HA:
-# ARGO_MANIFESTS="${ARGOCD_REPO}/manifests/ha/install.yaml"
-
-mkdir -p "${ARGOCD_REPO}"
-git clone git@github.com:argoproj/argo-cd.git "${ARGOCD_REPO}" || true
-pushd $ARGOCD_REPO &&
-  git clean -df &&
-  git reset --hard &&
-  git fetch --all --prune &&
-  git checkout $VERSION &&
-  popd
+ARGOCD_VERSION="2.5.2"
+# the path in the arhived repo
+ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/install.yaml"
+# ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/ha/install.yaml" # HA
+curl -LfsS "https://github.com/argoproj/argo-cd/archive/refs/tags/v${ARGOCD_VERSION}.tar.gz" | tar xzvf - "${ARGO_MANIFESTS}"
 
 # NOTE we are on master branch
-mkdir -p "${HOME}/dev/flant/werf"
-IMAGE_UPDATER_REPO="${HOME}/dev/flant/werf/3p-argocd-image-updater"
-IMAGE_UPDATER_MANIFESTS="${IMAGE_UPDATER_REPO}/manifests/install.yaml"
-git clone git@github.com:werf/3p-argocd-image-updater.git "${IMAGE_UPDATER_REPO}" || true
-pushd $IMAGE_UPDATER_REPO &&
-  git clean -df &&
-  git reset --hard &&
-  git fetch --all --prune &&
-  git checkout master &&
-  git pull &&
-  popd
+IMAGE_UPDATER_MANIFESTS="3p-argocd-image-updater-master/manifests/install.yaml"
+curl -LfsS https://github.com/werf/3p-argocd-image-updater/archive/refs/heads/master.tar.gz | tar xzvf - "${IMAGE_UPDATER_MANIFESTS}"
 
 split_manifests() {
   MANIFESTS=$1

@@ -89,20 +89,16 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "redis") }}
           imagePullPolicy: Always
           name: redis
-          resources:
-            requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "resources_argocd-redis" . | nindent 14 }}
-{{- end }}
           ports:
             - containerPort: 6379
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - all
-      # securityContext:
-      #   runAsNonRoot: true
-      #   runAsUser: 999
+                - ALL
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: argocd-redis

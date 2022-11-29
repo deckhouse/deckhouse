@@ -1,1 +1,1 @@
-FROM registry.werf.io/werf/werf-argocd-cmp-sidecar:1.2-alpha@sha256:fa35d2354442bd2dd1d255a9b0b85f2cc755a7e6429f266f4c62c78833747f97
+FROM registry.werf.io/werf/werf-argocd-cmp-sidecar:1.2-alpha@sha256:a3f4273a00e9a63dba40e841739a092e6ab841d0964fde0d44ff1b76bf03021f

@@ -89,11 +89,13 @@ spec:
                 - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "resources_argocd-applicationset-controller" . | nindent 14 }}
+              {{- include "resources_argocd-applicationset-controller" . | nindent 14 }}
 {{- end }}
           volumeMounts:
             - mountPath: /app/config/ssh
