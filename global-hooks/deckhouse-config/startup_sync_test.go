@@ -78,7 +78,7 @@ certManagerEnabled: "true"
 			generatedCM := f.KubernetesResource("ConfigMap", "d8-system", "deckhouse-generated-config-do-not-edit")
 			Expect(generatedCM.Exists()).Should(BeTrue())
 			// Note: use literal annotation to test accidental renaming
-			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, "deckhouse.io/should-migrate-to-module-config-objects")
+			annotationJSON := fmt.Sprintf(`{"%s":"true"}`, "deckhouse.io/migration-in-progress")
 			Expect(generatedCM.Field("metadata.annotations").String()).Should(MatchJSON(annotationJSON))
 			Expect(generatedCM.Field("data.global").String()).Should(ContainSubstring("param1: val1"))
 			Expect(generatedCM.Field("data.deckhouse").Exists()).Should(BeTrue())
@@ -120,7 +120,7 @@ certManager: |
 certManagerEnabled: "false"
 unknownModule: |
   paramBool: true
-`, d8config.MigrateToModuleConfigAnnotation)
+`, d8config.AnnoMigrationInProgress)
 				f.KubeStateSet(cm)
 
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
@@ -174,7 +174,7 @@ global: |
 deckhouse: |
   paramStr: 100
   paramNum: "100"
-`, d8config.MigrateToModuleConfigAnnotation)
+`, d8config.AnnoMigrationInProgress)
 				f.KubeStateSet(cm)
 
 				f.BindingContexts.Set(f.GenerateOnStartupContext())

@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	MigrateToModuleConfigAnnotation = "deckhouse.io/should-migrate-to-module-config-objects"
+	AnnoMigrationInProgress = "deckhouse.io/migration-in-progress"
 )
 
 // InitialConfigLoader runs conversions on module sections in the ConfigMap
@@ -97,7 +97,7 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 	// as-is if migration to ModuleConfig resources is still in progress (annotation is present).
 	migrationInProgress := false
 	if len(cm.GetAnnotations()) > 0 {
-		_, migrationInProgress = cm.GetAnnotations()[MigrateToModuleConfigAnnotation]
+		_, migrationInProgress = cm.GetAnnotations()[AnnoMigrationInProgress]
 	}
 
 	if cmName == GeneratedConfigMapName && !migrationInProgress {
