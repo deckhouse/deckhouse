@@ -14,7 +14,7 @@ properties:
           enabled:
             type: boolean
             default: false
-            description: "Enable ArgoCD admin user"
+            description: "Enable ArgoCD admin user. Might be helpful when Dex is not used for authentication."
   storageClass:
     oneOf:
       - type: string
