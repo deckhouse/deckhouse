@@ -32,7 +32,7 @@ data:
     group nogroup
     push "topology subnet"
     push "route-metric 9999"
-    {{- if hasKey .Values.openvpn.internal "pushDefaultGatewayToClient" }}
+    {{- if .Values.openvpn.pushDefaultGatewayToClient }}
     push "redirect-gateway def1"
     {{- end }}
     {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
