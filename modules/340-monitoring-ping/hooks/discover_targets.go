@@ -43,8 +43,8 @@ type targets struct {
 }
 
 type nodeTargetFilterResult struct {
-	enabled bool
-	target  nodeTarget
+	Enabled bool
+	Target  nodeTarget
 }
 
 func newTargets() *targets {
@@ -61,7 +61,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
-	result := nodeTargetFilterResult{enabled: false}
+	result := nodeTargetFilterResult{Enabled: false}
 	if node.Spec.Unschedulable {
 		return result, nil
 	}
@@ -73,8 +73,8 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 			break
 		}
 	}
-	result.enabled = true
-	result.target = target
+	result.Enabled = true
+	result.Target = target
 
 	return result, nil
 }
@@ -101,8 +101,8 @@ func discoverNodes(input *go_hook.HookInput) error {
 
 	for _, address := range input.Snapshots["addresses"] {
 		convertedAddress := address.(nodeTargetFilterResult)
-		if convertedAddress.enabled {
-			combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress.target)
+		if convertedAddress.Enabled {
+			combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress.Target)
 		}
 	}
 
