@@ -220,16 +220,16 @@ spec:
 
 ```yaml
 apiVersion: v1
+kind: Secret
+metadata:
+  name: app-tls-secert
+  namespace: d8-istio-ingress # обратите внимание, что namespace не является app-ns
+type: kubernetes.io/tls
 data:
   tls.crt: |
     <tls.crt data>
   tls.key: |
     <tls.key data>
-kind: Secret
-metadata:
-  name: wildcard
-  namespace: d8-istio-ingress
-type: kubernetes.io/tls
 ```
 
 ```yaml

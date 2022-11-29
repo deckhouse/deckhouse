@@ -17,6 +17,7 @@ spec:
                     * `LoadBalancer` — устанавливается Ingress-контроллер и заказывается Service с типом `LoadBalancer`.
                     * `NodePort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `nodePort`.
                     * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`.
+                    **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
