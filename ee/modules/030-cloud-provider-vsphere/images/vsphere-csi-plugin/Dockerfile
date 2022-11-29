@@ -1,5 +1,5 @@
 ARG BASE_GOLANG_16_ALPINE
-ARG BASE_DEBIAN
+ARG BASE_UBUNTU
 
 FROM $BASE_GOLANG_16_ALPINE as csi
 WORKDIR /src/
@@ -7,6 +7,6 @@ RUN wget https://github.com/kubernetes-sigs/vsphere-csi-driver/archive/refs/tags
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
 
 # support every standard Linux disk/mount utility so that CSI components won't complain
-FROM $BASE_DEBIAN
+FROM $BASE_UBUNTU
 COPY --from=csi /src/vsphere-csi /bin/vsphere-csi
 ENTRYPOINT [ "/bin/vsphere-csi" ]

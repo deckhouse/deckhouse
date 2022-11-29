@@ -1,7 +1,7 @@
 ARG BASE_ALPINE
 ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
-ARG BASE_DEBIAN
+ARG BASE_UBUNTU
 ARG GRAFANA_VERSION="8.5.13"
 ARG STATUSMAP_VERSION="0.5.1"
 ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
@@ -74,7 +74,7 @@ RUN go run build.go build
 # - Install additional plugins
 # - Install statusmap plugin
 # - Use debian because of grafana-image-renderer plugin: plugin_start_linux_amd64 binary is not working in musl environment.
-FROM $BASE_DEBIAN
+FROM $BASE_UBUNTU
 
 ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \

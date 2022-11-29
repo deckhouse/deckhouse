@@ -1,7 +1,7 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_UBUNTU_JAMMY as linstor-builder
+FROM $BASE_UBUNTU as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
 ARG LINSTOR_VERSION=1.20.0
@@ -27,7 +27,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY as client-builder
+FROM $BASE_UBUNTU as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
 ARG API_VERSION=1.15.1
@@ -76,7 +76,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY as utils-builder
+FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
 ARG UTILS_VERSION=9.22.0
@@ -119,7 +119,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
 ARG PIRAEUS_COMMIT_REF=0254e4a7ab1e23e8c5f683952aaa7fb798d0b001
 

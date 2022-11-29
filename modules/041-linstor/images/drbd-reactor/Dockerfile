@@ -1,6 +1,6 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 
-FROM $BASE_UBUNTU_JAMMY as utils-builder
+FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
 ARG UTILS_VERSION=9.22.0
@@ -31,7 +31,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY as reactor-builder
+FROM $BASE_UBUNTU as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
 ARG REACTOR_VERSION=0.9.0
@@ -54,7 +54,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=reactor-builder /drbd-reactor_*.deb /packages/

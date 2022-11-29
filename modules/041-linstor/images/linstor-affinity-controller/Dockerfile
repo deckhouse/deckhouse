@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -20,6 +20,6 @@ RUN git clone ${LINSTOR_AFFINITY_CONTROLLER_GITREPO} /usr/local/go/linstor-affin
  && go build -ldflags="-X github.com/piraeusdatastore/linstor-affinity-controller/pkg/consts.Version=v${LINSTOR_SCHEDULER_EXTENDER_VERSION}" \
  && mv ./linstor-affinity-controller /
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 COPY --from=builder /linstor-affinity-controller /linstor-wait-until /
 ENTRYPOINT ["/linstor-affinity-controller"]

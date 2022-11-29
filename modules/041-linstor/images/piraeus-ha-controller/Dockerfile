@@ -1,7 +1,7 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_UBUNTU_JAMMY as utils-builder
+FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
 ARG UTILS_VERSION=9.22.0
@@ -45,7 +45,7 @@ RUN git clone ${PIRAEUS_HA_CONTROLLER_GITREPO} /usr/local/go/piraeus-ha-controll
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /packages/
 COPY --from=builder /agent /
 

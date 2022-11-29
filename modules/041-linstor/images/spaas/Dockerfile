@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -28,7 +28,7 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 #  && cd /drbd
 #  && wget ${DRBD_PKG}
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       gcc \

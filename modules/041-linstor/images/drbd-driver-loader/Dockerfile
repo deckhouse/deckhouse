@@ -1,6 +1,6 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 
-FROM $BASE_UBUNTU_JAMMY as builder
+FROM $BASE_UBUNTU as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
 ARG DRBD_VERSION=9.2.0
 
@@ -23,7 +23,7 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.sh' \
  && chmod +x /entry.sh
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 
 RUN apt-get update \
  && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev \
