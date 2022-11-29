@@ -65,7 +65,7 @@ spec:
       serviceAccountName: ingress-gateway-controller
   {{- if $controller.spec.nodeSelector }}
       nodeSelector:
-      {{- $controller.spec.nodeSelector | toYaml | nindent 6 }}
+        {{- $controller.spec.nodeSelector | toYaml | nindent 8 }}
   {{- else }}
       {{- include "helm_lib_node_selector" (tuple $ "frontend") | nindent 6 }}
   {{- end }}
