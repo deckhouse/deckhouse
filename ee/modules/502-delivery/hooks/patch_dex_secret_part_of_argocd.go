@@ -43,31 +43,42 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{deliveryNamespace},
 				},
 			},
-			FilterFunc: filterName,
+			FilterFunc: filterArgocdAnnotation,
 		},
 	},
 }, patchSecretWithArgoLabel)
 
-func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+const (
+	annoKey = "app.kubernetes.io/part-of"
+	annoVal = "argocd"
+)
+
+func filterArgocdAnnotation(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret corev1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return "", err
 	}
-	return secret.GetName(), nil
+	hasAnnotation := secret.GetAnnotations()[annoKey] == annoVal
+	return hasAnnotation, nil
 }
 
 func patchSecretWithArgoLabel(input *go_hook.HookInput) error {
-	// We know the name in advance, so we can just check if it exists.
-	names, ok := input.Snapshots[dexClientSecretName]
-	if !ok || len(names) != 1 {
+	// Existence check
+	snaps, _ := input.Snapshots[dexClientSecretName]
+	if len(snaps) != 1 {
+		return nil
+	}
+
+	hasAnnotation := snaps[0].(bool)
+	if hasAnnotation {
 		return nil
 	}
 
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]interface{}{
-				"app.kubernetes.io/part-of": "argocd",
+				annoKey: annoVal,
 			},
 		},
 	}
