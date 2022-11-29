@@ -77,3 +77,5 @@ columns:
         url: '/license.html'
       - title: Блог
         external_url: 'https://blog.deckhouse.io/'
+      - title: Вакансии
+        external_url: 'https://job.flant.ru/vacancies/deckhouse'
