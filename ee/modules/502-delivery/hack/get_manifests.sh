@@ -11,21 +11,19 @@
 #
 # Dependencies:
 #   yq                  https://github.com/mikefarah/yq
-#
-#   argocd repo         https://github.com/argoproj/argo-cd
-#                      (checkout specific tag)
-#
-#   rename             famous perl script
-#
+#   curl
+#   rename
+#   perl
 
 set -euo pipefail
 # set -x
 
 # TODO check for the presence of yq
 
+ARGOCD_VERSION="2.5.3"
+
 VENDOR_ROOT=./hack/vendor
 pushd $VENDOR_ROOT
-ARGOCD_VERSION="2.5.3"
 # the path in the arhived repo
 ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/install.yaml"
 # ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/ha/install.yaml" # HA
@@ -99,11 +97,6 @@ mv argocd-repo-server*.yaml ${ARGOCD_MANIFESTS_ROOT}/repo-server
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/server
 mv argocd-server*.yaml ${ARGOCD_MANIFESTS_ROOT}/server
 
-mkdir -p ${ARGOCD_MANIFESTS_ROOT}/dex
-mv argocd-dex*.yaml ${ARGOCD_MANIFESTS_ROOT}/dex
-# We use our own dex
-rm -rf ${ARGOCD_MANIFESTS_ROOT}/dex
-
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/redis
 mv argocd-redis*.yaml ${ARGOCD_MANIFESTS_ROOT}/redis
 pushd ${ARGOCD_MANIFESTS_ROOT}/redis && rename 's/^(.*)$/ha-$1/g' *-ha* && rename 's/-ha//' *-ha* || true && popd
@@ -111,6 +104,9 @@ pushd ${ARGOCD_MANIFESTS_ROOT}/redis && rename 's/^(.*)$/ha-$1/g' *-ha* && renam
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/image-updater
 mv argocd-image-updater*.yaml ${ARGOCD_MANIFESTS_ROOT}/image-updater
 pushd ${ARGOCD_MANIFESTS_ROOT}/image-updater && rename 's/^(.*)$/ha-$1/g' *-ha* && rename 's/-ha//' *-ha* || true && popd
+
+# We use our own dex
+rm -rf mv argocd-dex*.yaml
 
 # all other manifests
 mv argocd-*.yaml ${ARGOCD_MANIFESTS_ROOT}/
