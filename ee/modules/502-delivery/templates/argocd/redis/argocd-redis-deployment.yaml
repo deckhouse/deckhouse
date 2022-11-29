@@ -96,9 +96,4 @@ spec:
             capabilities:
               drop:
                 - ALL
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 999
-        seccompProfile:
-          type: RuntimeDefault
       serviceAccountName: argocd-redis

@@ -90,11 +90,6 @@ spec:
             - mountPath: /app/config/reposerver/tls
               name: argocd-repo-server-tls
           workingDir: /app
-      # Note: can cause AppArmor issues on some systems + check on centos
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
       serviceAccountName: argocd-notifications-controller
       volumes:
         - configMap:
