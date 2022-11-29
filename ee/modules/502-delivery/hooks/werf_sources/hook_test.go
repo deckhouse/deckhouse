@@ -423,38 +423,78 @@ metadata:
 			Expect(got).To(Equal(want))
 		})
 
-		table.DescribeTable("extracting credentials from the map by secret name and registry", func(secret, registry, wantUsername, wantPassword string) {
-			u, p := extractCredentials(want, secret, registry)
-			Expect(u).To(Equal(wantUsername))
-			Expect(p).To(Equal(wantPassword))
+		table.DescribeTable("extracting credentials from the map by secret name and registry", func(secret, registry string, wantCreds registryCredentials, wantErr bool) {
+			creds, err := extractCredentials(want, secret, registry)
+			if wantErr {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).ToNot(HaveOccurred())
+			}
+			Expect(creds).To(Equal(wantCreds))
 		},
 			table.Entry("registry & secret 1",
 				"registry-credentials-1", "cr-1.example.com",
-				"n-1", "pwd-1"),
+				registryCredentials{
+					username: "n-1",
+					password: "pwd-1",
+				},
+				false,
+			),
 			table.Entry("registry & secret 2",
 				"registry-credentials-2", "cr-2.example.com",
-				"n-2", "pwd-2"),
+				registryCredentials{
+					username: "n-2",
+					password: "pwd-2",
+				},
+				false,
+			),
 			table.Entry("shared registry/secret with same creds",
 				"mixed-registries-1-2", "cr-1.example.com",
-				"n-1", "pwd-1"),
+				registryCredentials{
+					username: "n-1",
+					password: "pwd-1",
+				},
+				false,
+			),
 			table.Entry("shared registry/secret with different creds",
 				"mixed-registries-1-2", "cr-2.example.com",
-				"n-2other", "pwd-2other"),
+				registryCredentials{
+					username: "n-2other",
+					password: "pwd-2other",
+				},
+				false,
+			),
 			table.Entry("shared registry with different creds",
 				"registry-credentials-1-other", "cr-1.example.com",
-				"n-1other", "pwd-1other"),
+				registryCredentials{
+					username: "n-1other",
+					password: "pwd-1other",
+				},
+				false,
+			),
 			table.Entry("auth field",
 				"registry-credentials-3-auth", "cr-3.example.com",
-				"n-3", "pwd-3"),
+				registryCredentials{
+					username: "n-3",
+					password: "pwd-3",
+				},
+				false,
+			),
 			table.Entry("registry and secret unknown",
 				"registry-unknown", "secret-unknown",
-				"", ""),
+				registryCredentials{},
+				false,
+			),
 			table.Entry("registry unknown",
 				"registry-unknown", "cr-1.example.com",
-				"", ""),
+				registryCredentials{},
+				false,
+			),
 			table.Entry("secret unknown",
 				"registry-credentials-1", "cr-0000.example.com",
-				"", ""),
+				registryCredentials{},
+				true,
+			),
 		)
 	})
 

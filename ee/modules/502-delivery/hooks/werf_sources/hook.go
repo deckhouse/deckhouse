@@ -140,11 +140,14 @@ func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func mapWerfSources(werfSources []werfSource, credsBySecret map[string]dockerFileConfig) (vals internalValues, err error) {
-	argoRepos := convArgoCDRepositories(werfSources, credsBySecret)
+func mapWerfSources(werfSources []werfSource, credsBySecret map[string]dockerFileConfig) (internalValues, error) {
+	argoRepos, err := convArgoCDRepositories(werfSources, credsBySecret)
+	if err != nil {
+		return internalValues{}, err
+	}
 	imageUpdaterRegistries := convImageUpdaterRegistries(werfSources)
 
-	vals = internalValues{
+	vals := internalValues{
 		ArgoCD:             internalArgoCDValues{Repositories: argoRepos},
 		ArgoCDImageUpdater: internalUpdaterValues{Registries: imageUpdaterRegistries},
 	}
@@ -177,38 +180,37 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 	return registries
 }
 
-func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) []argocdHelmOCIRepository {
+func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]dockerFileConfig) ([]argocdHelmOCIRepository, error) {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
 		if ws.ArgocdRepo == nil {
 			continue
 		}
 		registry := firstSegment(ws.Repo)
-		username, password := extractCredentials(credentialsBySecretName, ws.PullSecretName, registry)
+		creds, err := extractCredentials(credentialsBySecretName, ws.PullSecretName, registry)
+		if err != nil {
+			return nil, err
+		}
 
 		argoRepos = append(argoRepos, argocdHelmOCIRepository{
 			Name:     ws.Name,
-			Username: username,
-			Password: password,
+			Username: creds.username,
+			Password: creds.password,
 			Project:  ws.ArgocdRepo.Project,
 			URL:      ws.Repo,
 		})
 	}
-	return argoRepos
+	return argoRepos, nil
 }
 
-func extractCredentials(credentialsBySecretName map[string]dockerFileConfig, pullSecretName, registry string) (string, string) {
-	username, password := "", ""
+func extractCredentials(credentialsBySecretName map[string]dockerFileConfig, pullSecretName, registry string) (registryCredentials, error) {
 	config, ok := credentialsBySecretName[pullSecretName]
 	if !ok {
-		return username, password
+		// No credentials is OK for public registries, there can be unspecified pullsecret
+		return registryCredentials{}, nil
 	}
 
-	creds, err := parseDockerConfigJSONCredentials(config, registry)
-	if err != nil {
-		return username, password
-	}
-	return creds.username, creds.password
+	return parseDockerConfigJSONCredentials(config, registry)
 }
 
 // cr.example.com/path/to/image -> cr.example.com
