@@ -248,6 +248,108 @@ cri:
 
 Then put the node under the control of `node-manager`.
 
+## How do I update kernel on nodes ?
+
+### Debian-based distros:
+
+Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version: 
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+  resourceVersion: "7116"
+  uid: a23bf2fc-1466-4556-a00a-346a64d2ba9f
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="5.15.0-53-generic"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-apt-install "linux-image-${desired_version}"
+```
+
+### Centos-based distros:
+
+Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+  resourceVersion: "7116"
+  uid: a23bf2fc-1466-4556-a00a-346a64d2ba9f
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="3.10.0-1160.42.2.el7.x86_64"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-yum-install "kernel-${desired_version}"
+```
+
 ## NodeGroup parameters and their result
 
 | The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
