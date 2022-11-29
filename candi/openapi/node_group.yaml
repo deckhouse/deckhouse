@@ -438,7 +438,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
@@ -1048,7 +1048,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be Manual to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
@@ -1651,7 +1651,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be Manual to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
