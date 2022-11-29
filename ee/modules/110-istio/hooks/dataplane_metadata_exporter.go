@@ -202,7 +202,7 @@ func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 }
 
 func (p *IstioDrivenPod) getIstioFullVersion() string {
-	if istioVersion, ok := p.Annotations["istio.deckhouse.io/version"]; ok {
+	if istioVersion, ok := p.Annotations["istio.deckhouse.io/full-version"]; ok {
 		return istioVersion
 	} else if _, ok := p.Annotations["sidecar.istio.io/status"]; ok {
 		return istioVersionUnknown

@@ -218,7 +218,7 @@ metadata:
   annotations:
     some-annotation: some-value
     {{- if .FullVersion }}
-    istio.deckhouse.io/version: '{{ .FullVersion }}'
+    istio.deckhouse.io/full-version: '{{ .FullVersion }}'
     {{- end }}
     {{- if .CurrentRevision }}
     sidecar.istio.io/status: '{"a":"b", "revision":"{{ .CurrentRevision }}" }'
