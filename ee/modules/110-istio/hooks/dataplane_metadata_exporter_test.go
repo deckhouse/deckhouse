@@ -47,16 +47,19 @@ metadata:
 `
 
 func generateIstioNsYAML(ns nsParams) string {
-	ns.Name = nsName
+	if ns.Name == "" {
+		ns.Name = nsName
+	}
 	return internal.TemplateToYAML(nsTemplate, ns)
 }
 
 type deployParams struct {
-	Name                string
-	Namespace           string
-	Replicas            int32
-	UnavailableReplicas int32
-	AutoUpgrade         bool
+	Name                  string
+	Namespace             string
+	Replicas              int32
+	UnavailableReplicas   int32
+	AutoUpgrade           bool
+	FullVersionAnnotation string
 }
 
 const deployTemplate = `apiVersion: apps/v1
@@ -72,24 +75,36 @@ spec:
   selector:
     matchLabels:
       app: test
-  template: {}
+  template:
+    metadata:
+      {{ if .FullVersionAnnotation }}
+      annotations:
+        istio.deckhouse.io/full-version: {{ .FullVersionAnnotation }}
+      {{ else }}
+      annotations: {}
+      {{ end }}
 status:
   replicas: {{ .Replicas }}
   unavailableReplicas: {{ .UnavailableReplicas }}
 `
 
 func generateIstioDeploymentYAML(deploy deployParams) string {
-	deploy.Namespace = nsName
-	deploy.Name = deployName
+	if deploy.Namespace == "" {
+		deploy.Namespace = nsName
+	}
+	if deploy.Name == "" {
+		deploy.Name = deployName
+	}
 	return internal.TemplateToYAML(deployTemplate, deploy)
 }
 
 type stsParams struct {
-	Name          string
-	Namespace     string
-	Replicas      int32
-	ReadyReplicas int32
-	AutoUpgrade   bool
+	Name                  string
+	Namespace             string
+	Replicas              int32
+	ReadyReplicas         int32
+	AutoUpgrade           bool
+	FullVersionAnnotation string
 }
 
 const stsTemplate = `apiVersion: apps/v1
@@ -107,23 +122,35 @@ spec:
     matchLabels:
       app: test
   serviceName: test
-  template: {}
+  template:
+    metadata:
+      {{ if .FullVersionAnnotation }}
+      annotations:
+        istio.deckhouse.io/full-version: {{ .FullVersionAnnotation }}
+      {{ else }}
+      annotations: {}
+      {{ end }}
 status:
   readyReplicas: {{ .ReadyReplicas }}
   replicas: {{ .Replicas }}
 `
 
 func generateIstioStatefulSetYAML(sts stsParams) string {
-	sts.Namespace = nsName
-	sts.Name = stsName
+	if sts.Namespace == "" {
+		sts.Namespace = nsName
+	}
+	if sts.Name == "" {
+		sts.Name = stsName
+	}
 	return internal.TemplateToYAML(stsTemplate, sts)
 }
 
 type dsParams struct {
-	Name              string
-	Namespace         string
-	NumberUnavailable int32
-	AutoUpgrade       bool
+	Name                  string
+	Namespace             string
+	NumberUnavailable     int32
+	AutoUpgrade           bool
+	FullVersionAnnotation string
 }
 
 const dsTemplate = `apiVersion: apps/v1
@@ -138,14 +165,25 @@ spec:
   selector:
     matchLabels:
       app: test
-  template: {}
+  template:
+    metadata:
+      {{ if .FullVersionAnnotation }}
+      annotations:
+        istio.deckhouse.io/full-version: {{ .FullVersionAnnotation }}
+      {{ else }}
+      annotations: {}
+      {{ end }}
 status:
   numberUnavailable: {{ .NumberUnavailable }}
 `
 
 func generateIstioDaemonSetYAML(ds dsParams) string {
-	ds.Namespace = nsName
-	ds.Name = dsName
+	if ds.Namespace == "" {
+		ds.Namespace = nsName
+	}
+	if ds.Name == "" {
+		ds.Name = dsName
+	}
 	return internal.TemplateToYAML(dsTemplate, ds)
 }
 
@@ -165,7 +203,7 @@ metadata:
   labels:
     app: test
     pod-template-hash: rs
-  {{- if and .Name .OwnerKind }}
+  {{- if and .OwnerName .OwnerKind }}
   ownerReferences:
     - kind: {{ .OwnerKind }}
       name: {{ .OwnerName }}
@@ -182,8 +220,12 @@ status:
 `
 
 func generateIstioReplicaSetYAML(rs rsParams) string {
-	rs.Namespace = nsName
-	rs.Name = rsName
+	if rs.Namespace == "" {
+		rs.Namespace = nsName
+	}
+	if rs.Name == "" {
+		rs.Name = rsName
+	}
 	return internal.TemplateToYAML(rsTemplate, rs)
 }
 
@@ -1099,7 +1141,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
 				Expect(f.KubernetesResource("ReplicaSet", nsName, rsName).Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 
@@ -1121,7 +1163,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
 				Expect(f.KubernetesResource("ReplicaSet", nsName, rsName).Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 	})
@@ -1225,7 +1267,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 
@@ -1246,7 +1288,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 	})
@@ -1353,7 +1395,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 
@@ -1374,8 +1416,92 @@ var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", 
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
-				Expect(d.Field("spec.template").String()).To(MatchJSON(`{}`))
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 	})
+
+	Context("Mixed test", func() {
+		// deployment is not patched and ready
+		d1 := generateIstioDeploymentYAML(deployParams{
+			Name:                "d1",
+			Replicas:            2,
+			UnavailableReplicas: 0,
+			AutoUpgrade:         false,
+		})
+		// deployment is patched but not ready
+		d2 := generateIstioDeploymentYAML(deployParams{
+			Name:                  "d2",
+			Replicas:              2,
+			UnavailableReplicas:   1,
+			AutoUpgrade:           false,
+			FullVersionAnnotation: "1.42.42",
+		})
+
+		rs1 := generateIstioReplicaSetYAML(rsParams{
+			Name:      "rs1",
+			OwnerKind: "Deployment",
+			OwnerName: "d1",
+			Replicas:  2,
+		})
+
+		rs2 := generateIstioReplicaSetYAML(rsParams{
+			Name:      "rs2",
+			OwnerKind: "Deployment",
+			OwnerName: "d2",
+			Replicas:  2,
+		})
+
+		rs1pod1 := generateIstioPodYAML(podParams{
+			Name:            "rs1pod1",
+			CurrentRevision: "v1x42",
+			FullVersion:     "1.42.00",
+			OwnerName:       "rs1",
+			OwnerKind:       "ReplicaSet",
+		})
+
+		rs1pod2 := generateIstioPodYAML(podParams{
+			Name:            "rs1pod2",
+			CurrentRevision: "v1x42",
+			FullVersion:     "1.42.00",
+			OwnerName:       "rs2",
+			OwnerKind:       "ReplicaSet",
+		})
+
+		rs2pod1 := generateIstioPodYAML(podParams{
+			Name:            "rs2pod1",
+			CurrentRevision: "v1x42",
+			FullVersion:     "1.42.42",
+			OwnerName:       "rs2",
+			OwnerKind:       "ReplicaSet",
+		})
+
+		FContext("Mixed test", func() {
+			BeforeEach(func() {
+				f.ValuesSet("istio.internal.globalVersion", "1.42")
+
+				clusterState := strings.Join([]string{istioNsWithAutoupgradeYAML, d1, d2, rs1, rs2, rs1pod1, rs1pod2, rs2pod1}, "---\n")
+				f.BindingContexts.Set(f.KubeStateSet(clusterState))
+
+				f.RunHook()
+			})
+
+			It("Hook must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+
+				d1 := f.KubernetesResource("Deployment", nsName, "d1")
+				Expect(d1.Exists()).Should(BeTrue())
+
+				d2 := f.KubernetesResource("Deployment", nsName, "d2")
+				Expect(d1.Exists()).Should(BeTrue())
+
+				Expect(d1.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
+				Expect(d2.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
+			})
+		})
+
+	})
+
 })

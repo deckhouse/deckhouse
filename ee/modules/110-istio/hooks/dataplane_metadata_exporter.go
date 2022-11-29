@@ -215,12 +215,18 @@ type Owner struct {
 	Kind string
 }
 
-type Candidate struct {
-	kind               string
-	name               string
-	namespace          string
-	desiredFullVersion string
-	needUpgrade        bool
+type upgradeCandidate struct {
+	kind                              string
+	name                              string
+	namespace                         string
+	specTemplateAnnotationFullVersion string
+	desiredFullVersion                string
+	isReady                           bool
+	needUpgrade                       bool
+}
+
+type upgradeCandidateRS struct {
+	owner Owner
 }
 
 type IstioDrivenPodFilterResult struct {
@@ -260,12 +266,13 @@ func applyIstioDrivenPodFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 type K8SControllerFilterResult struct {
-	Name                   string
-	Kind                   string
-	Namespace              string
-	AvailableForUpgrade    bool
-	AutoUpgradeLabelExists bool
-	Owner                  Owner
+	Name                              string
+	Kind                              string
+	Namespace                         string
+	IsReady                           bool   // if the controller is ready
+	AutoUpgradeLabelExists            bool   // the label can be installed either on the controller or on the namespace
+	SpecTemplateAnnotationFullVersion string // value of .spec.template.annotations["istio.deckhouse.io/full-version"]
+	Owner                             Owner
 }
 
 func applyDeploymentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -275,11 +282,17 @@ func applyDeploymentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("cannot convert deployment object to deployment: %v", err)
 	}
 
+	specTemplateAnnotationFullVersion := ""
+	if a, ok := deploy.Spec.Template.Annotations["istio.deckhouse.io/full-version"]; ok {
+		specTemplateAnnotationFullVersion = a
+	}
+
 	result := K8SControllerFilterResult{
-		Name:                deploy.Name,
-		Kind:                deploy.Kind,
-		Namespace:           deploy.Namespace,
-		AvailableForUpgrade: deploy.Status.UnavailableReplicas == 0,
+		Name:                              deploy.Name,
+		Kind:                              deploy.Kind,
+		Namespace:                         deploy.Namespace,
+		IsReady:                           deploy.Status.UnavailableReplicas == 0,
+		SpecTemplateAnnotationFullVersion: specTemplateAnnotationFullVersion,
 	}
 
 	if _, ok := deploy.Labels[autoUpgradeLabelName]; ok {
@@ -296,11 +309,17 @@ func applyStatefulSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, fmt.Errorf("cannot convert statefulset object to statefulset: %v", err)
 	}
 
+	specTemplateAnnotationFullVersion := ""
+	if a, ok := sts.Spec.Template.Annotations["istio.deckhouse.io/full-version"]; ok {
+		specTemplateAnnotationFullVersion = a
+	}
+
 	result := K8SControllerFilterResult{
-		Name:                sts.Name,
-		Kind:                sts.Kind,
-		Namespace:           sts.Namespace,
-		AvailableForUpgrade: sts.Status.Replicas == sts.Status.ReadyReplicas,
+		Name:                              sts.Name,
+		Kind:                              sts.Kind,
+		Namespace:                         sts.Namespace,
+		IsReady:                           sts.Status.Replicas == sts.Status.ReadyReplicas,
+		SpecTemplateAnnotationFullVersion: specTemplateAnnotationFullVersion,
 	}
 
 	if _, ok := sts.Labels[autoUpgradeLabelName]; ok {
@@ -317,11 +336,17 @@ func applyDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, fmt.Errorf("cannot convert deployment object to deployment: %v", err)
 	}
 
+	specTemplateAnnotationFullVersion := ""
+	if a, ok := ds.Spec.Template.Annotations["istio.deckhouse.io/full-version"]; ok {
+		specTemplateAnnotationFullVersion = a
+	}
+
 	result := K8SControllerFilterResult{
-		Name:                ds.Name,
-		Kind:                ds.Kind,
-		Namespace:           ds.Namespace,
-		AvailableForUpgrade: ds.Status.NumberUnavailable == 0,
+		Name:                              ds.Name,
+		Kind:                              ds.Kind,
+		Namespace:                         ds.Namespace,
+		IsReady:                           ds.Status.NumberUnavailable == 0,
+		SpecTemplateAnnotationFullVersion: specTemplateAnnotationFullVersion,
 	}
 
 	if _, ok := ds.Labels[autoUpgradeLabelName]; ok {
@@ -339,9 +364,9 @@ func applyReplicaSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}
 
 	result := K8SControllerFilterResult{
-		Name:                rs.Name,
-		Namespace:           rs.Namespace,
-		AvailableForUpgrade: rs.Status.Replicas == rs.Status.ReadyReplicas,
+		Name:      rs.Name,
+		Namespace: rs.Namespace,
+		IsReady:   rs.Status.Replicas == rs.Status.ReadyReplicas,
 	}
 
 	if len(rs.OwnerReferences) == 1 {
@@ -374,15 +399,16 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		istioNamespaceMap[nsInfo.Name] = nsInfo
 	}
 
-	// upgradeCandidatesMap[kind][namespace][name]Candidate{}
-	upgradeCandidatesMap := make(map[string]map[string]map[string]*Candidate)
-	upgradeCandidates := make([]Candidate, 0)
+	upgradeCandidates := make([]upgradeCandidate, 0)
+	// upgradeCandidatesMap[kind][namespace][name]upgradeCandidate{}
+	upgradeCandidatesMap := make(map[string]map[string]map[string]*upgradeCandidate)
 
 	k8sControllers := make([]go_hook.FilterResult, 0)
 	k8sControllers = append(k8sControllers, input.Snapshots["deployment"]...)
 	k8sControllers = append(k8sControllers, input.Snapshots["statefulset"]...)
 	k8sControllers = append(k8sControllers, input.Snapshots["daemonset"]...)
 
+	// fill in upgradeCandidates and upgradeCandidatesMap
 	for _, k8sControllerRaw := range k8sControllers {
 		k8sController := k8sControllerRaw.(K8SControllerFilterResult)
 
@@ -393,25 +419,26 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		}
 
 		// if an istio.deckhouse.io/auto-upgrade Label exists in the namespace or in the controller
-		// and the controller is available for upgrade -> add to upgradeCandidatesMap map
-		if (namespaceAutoUpgradeLabelExists || k8sController.AutoUpgradeLabelExists) && k8sController.AvailableForUpgrade {
-			upgradeCandidates = append(upgradeCandidates, Candidate{
-				kind:      k8sController.Kind,
-				name:      k8sController.Name,
-				namespace: k8sController.Namespace,
+		if namespaceAutoUpgradeLabelExists || k8sController.AutoUpgradeLabelExists {
+			upgradeCandidates = append(upgradeCandidates, upgradeCandidate{
+				kind:                              k8sController.Kind,
+				name:                              k8sController.Name,
+				namespace:                         k8sController.Namespace,
+				isReady:                           k8sController.IsReady,
+				specTemplateAnnotationFullVersion: k8sController.SpecTemplateAnnotationFullVersion,
 			})
 			if _, ok := upgradeCandidatesMap[k8sController.Kind]; !ok {
-				upgradeCandidatesMap[k8sController.Kind] = make(map[string]map[string]*Candidate)
+				upgradeCandidatesMap[k8sController.Kind] = make(map[string]map[string]*upgradeCandidate)
 			}
 			if _, ok := upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace]; !ok {
-				upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace] = make(map[string]*Candidate)
+				upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace] = make(map[string]*upgradeCandidate)
 			}
 			upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace][k8sController.Name] = &upgradeCandidates[len(upgradeCandidates)-1]
 		}
 	}
 
 	// replicaSets[namespace][replicaset-name]owner
-	replicaSets := make(map[string]map[string]Owner)
+	replicaSets := make(map[string]map[string]upgradeCandidateRS)
 
 	// create a map of the replica sets depending on the deployments from upgradeCandidatesMap map
 	for _, rs := range input.Snapshots["replicaset"] {
@@ -419,11 +446,13 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		if rsInfo.Owner.Kind == "Deployment" {
 			if _, ok := upgradeCandidatesMap["Deployment"][rsInfo.Namespace][rsInfo.Owner.Name]; ok {
 				if _, ok := replicaSets[rsInfo.Namespace]; !ok {
-					replicaSets[rsInfo.Namespace] = make(map[string]Owner)
+					replicaSets[rsInfo.Namespace] = make(map[string]upgradeCandidateRS)
 				}
-				replicaSets[rsInfo.Namespace][rsInfo.Name] = Owner{
-					Kind: rsInfo.Owner.Kind,
-					Name: rsInfo.Owner.Name,
+				replicaSets[rsInfo.Namespace][rsInfo.Name] = upgradeCandidateRS{
+					owner: Owner{
+						Kind: rsInfo.Owner.Kind,
+						Name: rsInfo.Owner.Name,
+					},
 				}
 			}
 		}
@@ -431,6 +460,9 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 
 	var istioDrivenPodsCount float64
 	podsByFullVersion := make(map[string]float64)
+
+	// map of namespace, which will be ignored when selecting controllers to update
+	ignoredNamespace := make(map[string]struct{})
 
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPod := pod.(IstioDrivenPodFilterResult)
@@ -496,23 +528,37 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			switch istioPod.Owner.Kind {
 			case "ReplicaSet":
 				if rs, ok := replicaSets[istioPod.Namespace][istioPod.Owner.Name]; ok {
-					if _, ok := upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name]; ok {
-						upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name].needUpgrade = true
-						upgradeCandidatesMap[rs.Kind][istioPod.Namespace][rs.Name].desiredFullVersion = desiredFullVersion
+					if _, ok := upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name]; ok {
+						upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name].needUpgrade = true
+						upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name].desiredFullVersion = desiredFullVersion
+
+						c := upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name]
+						// if controller is not ready and desired full version annotation already exists -> controller is updating -> namespace will be skipped for upgrade
+						if !c.isReady && c.specTemplateAnnotationFullVersion == c.desiredFullVersion {
+							ignoredNamespace[istioPod.Namespace] = struct{}{}
+						}
 					}
 				}
 			case "StatefulSet", "DaemonSet":
 				if _, ok := upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name]; ok {
 					upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name].needUpgrade = true
 					upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name].desiredFullVersion = desiredFullVersion
+
+					c := upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name]
+					// if controller is not ready and desired full version annotation already exists -> controller is updating -> namespace will be skipped for upgrade
+					if !c.isReady && c.specTemplateAnnotationFullVersion == c.desiredFullVersion {
+						ignoredNamespace[istioPod.Namespace] = struct{}{}
+					}
 				}
 			}
 		}
 
+		// istio telemetry stats
 		istioDrivenPodsCount++
 		podsByFullVersion[istioPod.FullVersion]++
 	}
 
+	// istio telemetry
 	input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_total"), istioDrivenPodsCount, nil)
 	for v, c := range podsByFullVersion {
 		input.MetricsCollector.Set(telemetry.WrapName("istio_driven_pods_group_by_full_version_total"), c, map[string]string{
@@ -520,17 +566,21 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		})
 	}
 
-	// update all candidates to update that require a sidecar update
+	// go through the whole list of candidates and patch the controller where required
 	// patch one controller per iteration
+
+	fmt.Println(ignoredNamespace)
+	fmt.Println(upgradeCandidates)
+	fmt.Println(upgradeCandidatesMap)
+
 	for _, candidate := range upgradeCandidates {
-		if candidate.needUpgrade {
+		if _, ok := ignoredNamespace[candidate.namespace]; ok {
+			continue
+		}
+		if candidate.needUpgrade && candidate.isReady {
 			input.LogEntry.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
 			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
-			break
 		}
 	}
-
-	fmt.Println(upgradeCandidates)
-
 	return nil
 }
