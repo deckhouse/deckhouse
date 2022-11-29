@@ -19,7 +19,7 @@
 
   &__joint-defense,
   &__support-options,
-  &__live-after {
+  &__production {
     & ul p {
       margin-bottom: 30px;
     }
@@ -32,6 +32,10 @@
   }
 
   &__our-partners {
+    & .features__item-list > li ul li {
+      margin-bottom: 7px;
+    }
+
     & sup {
       line-height: 1.2;
     }
