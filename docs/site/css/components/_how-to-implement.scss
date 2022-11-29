@@ -1,0 +1,39 @@
+.how-to-implement {
+  &__intro {
+    &.intro {
+      padding-bottom: 0;
+    }
+
+    & .intro__wrap {
+      display: flex;
+    }
+
+    & .intro__row > div {
+      width: 55%;
+    }
+
+    & .intro__pic {
+      width: 45%;
+    }
+  }
+
+  &__joint-defense,
+  &__support-options,
+  &__live-after {
+    & ul p {
+      margin-bottom: 30px;
+    }
+  }
+
+  &__support-options {
+    & ul p:last-child {
+      margin: 0;
+    }
+  }
+
+  &__our-partners {
+    & sup {
+      line-height: 1.2;
+    }
+  }
+}
