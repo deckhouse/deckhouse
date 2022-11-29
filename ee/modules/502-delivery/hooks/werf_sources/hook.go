@@ -204,13 +204,37 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 }
 
 func extractCredentials(credentialsBySecretName map[string]dockerFileConfig, pullSecretName, registry string) (registryCredentials, error) {
-	config, ok := credentialsBySecretName[pullSecretName]
-	if !ok {
+	creds := registryCredentials{}
+	if pullSecretName == "" {
 		// No credentials is OK for public registries, there can be unspecified pullsecret
-		return registryCredentials{}, nil
+		return creds, nil
 	}
 
-	return parseDockerConfigJSONCredentials(config, registry)
+	config, ok := credentialsBySecretName[pullSecretName]
+	if !ok {
+		return creds, fmt.Errorf("unknown pull secret %q", pullSecretName)
+	}
+
+	cfg, ok := config.Auths[registry]
+	if !ok {
+		return creds, fmt.Errorf("no credentials")
+	}
+
+	if cfg.Auth != "" {
+		auth, err := base64.StdEncoding.DecodeString(cfg.Auth)
+		if err != nil {
+			return creds, fmt.Errorf(`cannot decode base64 "auth" field`)
+		}
+		parts := strings.Split(string(auth), ":")
+		if len(parts) != 2 {
+			return creds, fmt.Errorf(`unexpected format of "auth" field, expected "username:password"`)
+		}
+		creds.username, creds.password = parts[0], parts[1]
+		return creds, nil
+	}
+
+	creds.username, creds.password = cfg.Username, cfg.Password
+	return creds, nil
 }
 
 // cr.example.com/path/to/image -> cr.example.com
@@ -299,31 +323,6 @@ func parseWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
 type registryCredentials struct {
 	username string
 	password string
-}
-
-func parseDockerConfigJSONCredentials(config dockerFileConfig, registry string) (registryCredentials, error) {
-	creds := registryCredentials{}
-
-	cfg, ok := config.Auths[registry]
-	if !ok {
-		return creds, fmt.Errorf("no credentials")
-	}
-
-	if cfg.Auth != "" {
-		auth, err := base64.StdEncoding.DecodeString(cfg.Auth)
-		if err != nil {
-			return creds, fmt.Errorf(`cannot decode base64 "auth" field`)
-		}
-		parts := strings.Split(string(auth), ":")
-		if len(parts) != 2 {
-			return creds, fmt.Errorf(`unexpected format of "auth" field, expected "username:password"`)
-		}
-		creds.username, creds.password = parts[0], parts[1]
-		return creds, nil
-	}
-
-	creds.username, creds.password = cfg.Username, cfg.Password
-	return creds, nil
 }
 
 /*
