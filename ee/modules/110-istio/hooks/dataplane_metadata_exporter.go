@@ -388,6 +388,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(metadataExporterMetricsGroup)
 
+	// create istio namespace map to find out needed revisions and versions
 	istioNamespaceMap := make(map[string]IstioNamespaceFilterResult)
 	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
 		nsInfo := ns.(IstioNamespaceFilterResult)
@@ -399,8 +400,11 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 		istioNamespaceMap[nsInfo.Name] = nsInfo
 	}
 
-	upgradeCandidates := make([]upgradeCandidate, 0)
-	// upgradeCandidatesMap[kind][namespace][name]upgradeCandidate{}
+	// controllers are potential candidates for updating sidecar versions
+	upgradeCandidates := make([]*upgradeCandidate, 0)
+
+	// index for upgradeCandidates
+	// upgradeCandidatesMap[kind][namespace][name]*upgradeCandidate{}
 	upgradeCandidatesMap := make(map[string]map[string]map[string]*upgradeCandidate)
 
 	k8sControllers := make([]go_hook.FilterResult, 0)
@@ -418,26 +422,28 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			namespaceAutoUpgradeLabelExists = k8sControllerNS.AutoUpgradeLabelExists
 		}
 
-		// if an istio.deckhouse.io/auto-upgrade Label exists in the namespace or in the controller
+		// if an istio.deckhouse.io/auto-upgrade Label exists in the namespace or in the controller -> add to upgradeCandidates, upgradeCandidatesMap
 		if namespaceAutoUpgradeLabelExists || k8sController.AutoUpgradeLabelExists {
-			upgradeCandidates = append(upgradeCandidates, upgradeCandidate{
+			uc := &upgradeCandidate{
 				kind:                              k8sController.Kind,
 				name:                              k8sController.Name,
 				namespace:                         k8sController.Namespace,
 				isReady:                           k8sController.IsReady,
 				specTemplateAnnotationFullVersion: k8sController.SpecTemplateAnnotationFullVersion,
-			})
+			}
+			upgradeCandidates = append(upgradeCandidates, uc)
 			if _, ok := upgradeCandidatesMap[k8sController.Kind]; !ok {
 				upgradeCandidatesMap[k8sController.Kind] = make(map[string]map[string]*upgradeCandidate)
 			}
 			if _, ok := upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace]; !ok {
 				upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace] = make(map[string]*upgradeCandidate)
 			}
-			upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace][k8sController.Name] = &upgradeCandidates[len(upgradeCandidates)-1]
+			// add pointer to last added candidate
+			upgradeCandidatesMap[k8sController.Kind][k8sController.Namespace][k8sController.Name] = uc
 		}
 	}
 
-	// replicaSets[namespace][replicaset-name]owner
+	// replicaSets[namespace][replicaset-name]upgradeCandidateRS
 	replicaSets := make(map[string]map[string]upgradeCandidateRS)
 
 	// create a map of the replica sets depending on the deployments from upgradeCandidatesMap map
@@ -528,12 +534,13 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			switch istioPod.Owner.Kind {
 			case "ReplicaSet":
 				if rs, ok := replicaSets[istioPod.Namespace][istioPod.Owner.Name]; ok {
+					// if owner of replica set exists -> process it
 					if _, ok := upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name]; ok {
 						upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name].needUpgrade = true
 						upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name].desiredFullVersion = desiredFullVersion
 
 						c := upgradeCandidatesMap[rs.owner.Kind][istioPod.Namespace][rs.owner.Name]
-						// if controller is not ready and desired full version annotation already exists -> controller is updating -> namespace will be skipped for upgrade
+						// if controller is not ready and desired full version annotation already exists, so controller is updating -> namespace will be skipped for upgrade
 						if !c.isReady && c.specTemplateAnnotationFullVersion == c.desiredFullVersion {
 							ignoredNamespace[istioPod.Namespace] = struct{}{}
 						}
@@ -545,7 +552,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 					upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name].desiredFullVersion = desiredFullVersion
 
 					c := upgradeCandidatesMap[istioPod.Owner.Kind][istioPod.Namespace][istioPod.Owner.Name]
-					// if controller is not ready and desired full version annotation already exists -> controller is updating -> namespace will be skipped for upgrade
+					// if controller is not ready and desired full version annotation already exists, so controller is updating -> namespace will be skipped for upgrade
 					if !c.isReady && c.specTemplateAnnotationFullVersion == c.desiredFullVersion {
 						ignoredNamespace[istioPod.Namespace] = struct{}{}
 					}
@@ -567,14 +574,16 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	}
 
 	// go through the whole list of candidates and patch the controller where required
-	// patch one controller per iteration
 	for _, candidate := range upgradeCandidates {
+		// some controllers in this namespace are in the process of updating now -> skip namespace
 		if _, ok := ignoredNamespace[candidate.namespace]; ok {
 			continue
 		}
 		if candidate.needUpgrade && candidate.isReady {
 			input.LogEntry.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
 			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
+			// skip this namespace on next iteration
+			ignoredNamespace[candidate.namespace] = struct{}{}
 		}
 	}
 	return nil
