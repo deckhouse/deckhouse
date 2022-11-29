@@ -76,8 +76,9 @@ touch /var/lib/bashible/first_run
 {{- end }}
 
 checkBashible=$(systemctl is-active bashible.timer)
-if [[ $checkBashible -ne 0 ]]; then
+if [[ "$checkBashible" == "inactive" ]]; then
   /var/lib/bashible/bootstrap.sh
-else echo "The node already exists in the cluster and under bashible"
+else
+  echo "The node already exists in the cluster and under bashible."
 fi
 {{ end }}
