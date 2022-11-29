@@ -22,6 +22,7 @@ const (
 	DestLoki          = "Loki"
 	DestVector        = "Vector"
 	DestKafka         = "Kafka"
+	DestSplunk        = "Splunk"
 )
 
 const (

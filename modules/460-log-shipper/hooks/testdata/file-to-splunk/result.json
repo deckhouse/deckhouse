@@ -1,0 +1,42 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/kube-audit/audit.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/source/test-source/00_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/test-splunk-dest": {
+      "type": "splunk_hec_logs",
+      "inputs": [
+        "transform/source/test-source/00_clean_up"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "only_fields": [
+          "message"
+        ],
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "compression": "gzip",
+      "default_token": "test-token",
+      "endpoint": "192.168.1.1:9200",
+      "index": "{{ test }}"
+    }
+  }
+}
