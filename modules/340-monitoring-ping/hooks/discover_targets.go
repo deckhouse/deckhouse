@@ -42,6 +42,11 @@ type targets struct {
 	External []externalTarget `json:"external_targets"`
 }
 
+type nodeTargetFilterResult struct {
+	enabled bool
+	target  nodeTarget
+}
+
 func newTargets() *targets {
 	return &targets{
 		Cluster:  make([]nodeTarget, 0),
@@ -56,8 +61,9 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
+	result := nodeTargetFilterResult{enabled: false}
 	if node.Spec.Unschedulable {
-		return nil, nil
+		return result, nil
 	}
 
 	target := nodeTarget{Name: node.Name}
@@ -67,8 +73,10 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 			break
 		}
 	}
+	result.enabled = true
+	result.target = target
 
-	return target, nil
+	return result, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -92,8 +100,10 @@ func discoverNodes(input *go_hook.HookInput) error {
 	combinedTargets := newTargets()
 
 	for _, address := range input.Snapshots["addresses"] {
-		convertedAddress := address.(nodeTarget)
-		combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
+		convertedAddress := address.(nodeTargetFilterResult)
+		if convertedAddress.enabled {
+			combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress.target)
+		}
 	}
 
 	for _, target := range input.Values.Get(externalTargetsPath).Array() {
