@@ -189,7 +189,7 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 		registry := firstSegment(ws.Repo)
 		creds, err := extractCredentials(credentialsBySecretName, ws.PullSecretName, registry)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("extracting credentials for registry %q in secret %q: %v", registry, ws.PullSecretName, err)
 		}
 
 		argoRepos = append(argoRepos, argocdHelmOCIRepository{
