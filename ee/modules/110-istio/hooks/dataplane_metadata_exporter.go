@@ -394,7 +394,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			if _, ok := upgradeCandidates[k8sController.Kind]; !ok {
 				upgradeCandidates[k8sController.Kind] = make(map[string]map[string]Candidate)
 			}
-			if _, ok := upgradeCandidates[k8sController.Namespace]; !ok {
+			if _, ok := upgradeCandidates[k8sController.Kind][k8sController.Namespace]; !ok {
 				upgradeCandidates[k8sController.Kind][k8sController.Namespace] = make(map[string]Candidate)
 			}
 			upgradeCandidates[k8sController.Kind][k8sController.Namespace][k8sController.Name] = Candidate{}
@@ -516,7 +516,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	}
 
 	// update all candidates to update that require a sidecar update
-kind: // kill one resource per iteration
+kind: // patch one controller per iteration
 	for kind, namespaces := range upgradeCandidates {
 		for namespace, resources := range namespaces {
 			for name, candidate := range resources {
