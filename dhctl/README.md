@@ -58,7 +58,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/fe
-  registryDockerCfg: | # base64 encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
+  registryDockerCfg: | # Base64-encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
     eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6Im9hdXRoMiIsInBhc3N3b3JkIjoidG9rZW4ifX19Cg==
   releaseChannel: Stable
   configOverrides:
