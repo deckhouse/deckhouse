@@ -9,8 +9,6 @@ import (
 	"context"
 	"strings"
 
-	. "github.com/deckhouse/deckhouse/testing/helm"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/google/go-containerregistry/pkg/authn"
 	. "github.com/onsi/ginkgo"
@@ -20,6 +18,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yamlSrlzr "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"sigs.k8s.io/yaml"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: delivery :: hooks :: werf_sources ::", func() {
