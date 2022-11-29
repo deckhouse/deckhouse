@@ -65,7 +65,7 @@ func filterArgocdAnnotation(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 func patchSecretWithArgoLabel(input *go_hook.HookInput) error {
 	// Existence check
-	snaps, _ := input.Snapshots[dexClientSecretName]
+	snaps := input.Snapshots[dexClientSecretName]
 	if len(snaps) != 1 {
 		return nil
 	}
