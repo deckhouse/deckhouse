@@ -43,6 +43,10 @@ properties:
       Имена дополнительных сетей, которые могут быть подключены к виртуальной машине и использованы в `cloud-controller-manager` для проставления `ExternalIP` в `.status.addresses` в Node API объект.
 
       Если в кластере есть инстансы, для которых будут использоваться External Networks, отличные от указанных в схеме размещения, то их следует передавать в параметре `additionalExternalNetworkNames`.
+  ignoreVolumeMicroversion:
+    type: boolean
+    description: |
+      Настройка для обратной совместимости. Включите, если версия OpenStack в облаке меньше 3.34, и вы получаете ошибку "Version 3.34 is not supported by the API. Minimum is 3.0 and maximum is 3.x" при заказе PV. Это отключит изменения размеров томов "на лету", но вернет возможность заказа новых PV. (оригинальный PR https://github.com/kubernetes/cloud-provider-openstack/pull/1986/)
   podNetworkMode:
     description: |
       Способ организации трафика в той сети, которая используется для коммуникации между Pod'ами (обычно это internal сеть, но бывают исключения):

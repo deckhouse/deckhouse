@@ -67,6 +67,11 @@ properties:
       - ["some-bgp-network"]
     items:
       type: string
+  ignoreVolumeMicroversion:
+    type: boolean
+    description: |
+      Setting for backwards compatibility. Enable if the cloud OpenStack version is less than 3.34 and you get error "Version 3.34 is not supported by the API. Minimum is 3.0 and maximum is 3.x" when ordering a PV. This will disable volumes online resize, but will restore ability to order new PVs. (original PR https://github.com/kubernetes/cloud-provider-openstack/pull/1986/)
+    default: false
   podNetworkMode:
     type: string
     description: |
