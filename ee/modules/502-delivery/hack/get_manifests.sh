@@ -92,6 +92,8 @@ mkdir -p ${ARGOCD_MANIFESTS_ROOT}/notifications-controller
 mv argocd-notifications*.yaml ${ARGOCD_MANIFESTS_ROOT}/notifications-controller
 
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/repo-server
+# No need to keep this SA, see https://github.com/argoproj/argo-cd/pull/9301
+rm argocd-repo-server-serviceaccount.yaml
 mv argocd-repo-server*.yaml ${ARGOCD_MANIFESTS_ROOT}/repo-server
 
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/server
