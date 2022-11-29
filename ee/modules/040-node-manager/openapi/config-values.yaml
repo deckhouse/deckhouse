@@ -40,8 +40,6 @@ properties:
       enum: [ubuntu-lts, centos, debian, redos, alteros, astra]
     description: |
       Names of available bashible OS bundles to reduce Helm release size.
-
-      > **Warning!** This is a temporary workaround until proper solution is implemented.
   allowedKubernetesVersions:
     type: array
     default:
@@ -56,5 +54,3 @@ properties:
       type: string
     description: |
       Names of available Kubernetes versions to reduce Helm release size.
-
-      > **Warning!** This is a temporary workaround until proper solution is implemented.
