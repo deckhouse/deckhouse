@@ -17,14 +17,12 @@ package resources
 import (
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-
 	"github.com/hashicorp/go-multierror"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type Checker interface {

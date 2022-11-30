@@ -83,7 +83,6 @@ func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
-
 }
 
 func DefineAbortFlags(cmd *kingpin.CmdClause) {

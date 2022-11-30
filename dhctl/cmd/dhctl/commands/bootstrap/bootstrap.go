@@ -139,6 +139,21 @@ func setBastionHostFromCloudProvider(host string, sshClient *ssh.Client) {
 	}
 }
 
+func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig) error {
+	if resourcesToCreate == nil {
+		return nil
+	}
+
+	return log.Process("bootstrap", "Create Resources", func() error {
+		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+		if err != nil {
+			return err
+		}
+
+		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
+	})
+}
+
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
 	app.DefineSSHFlags(cmd)
@@ -318,19 +333,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		if resourcesToCreate != nil {
-
-			err = log.Process("bootstrap", "Create Resources", func() error {
-				checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
-				if err != nil {
-					return err
-				}
-
-				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
-			})
-			if err != nil {
-				return err
-			}
+		err = createResources(kubeCl, resourcesToCreate, metaConfig)
+		if err != nil {
+			return err
 		}
 
 		if app.PostBootstrapScriptPath != "" {

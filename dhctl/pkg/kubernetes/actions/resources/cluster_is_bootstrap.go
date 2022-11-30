@@ -66,7 +66,7 @@ func (n *kubeNgGetter) MachineFailedEvents() ([]eventsv1.Event, error) {
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
 		var err error
 		list, err = n.kubeCl.EventsV1().Events("default").List(context.TODO(), metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("reason=MachineFailed"),
+			FieldSelector: "reason=MachineFailed",
 			TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
 		})
 
@@ -190,7 +190,6 @@ func (n *clusterIsBootstrapCheck) outputMachineFailures() bool {
 	n.logger.LogErrorF("\nMachine Failures:\n")
 	for _, e := range events {
 		n.logger.LogErrorF("\t%s\n", e.Note)
-
 	}
 
 	return true

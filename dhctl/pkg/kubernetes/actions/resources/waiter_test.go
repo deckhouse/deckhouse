@@ -18,10 +18,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -288,7 +287,7 @@ func (n *testChecker) IsReady() (bool, error) {
 }
 
 func (n *testChecker) Name() string {
-	return fmt.Sprintf("Test checker")
+	return "Test checker"
 }
 
 func TestWaiterStep(t *testing.T) {
