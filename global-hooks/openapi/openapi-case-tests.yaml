@@ -217,4 +217,5 @@ negative:
           provider: OpenStack
     # docker cfg not in base64 format
     - modulesImages:
-        registryDockercfg: cfg
+        registry:
+          dockercfg: cfg
