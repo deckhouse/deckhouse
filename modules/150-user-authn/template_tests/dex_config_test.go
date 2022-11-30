@@ -37,7 +37,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
-		hec.ValuesSet("global.modulesImages.registry", "registry.example.com")
+		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 	})

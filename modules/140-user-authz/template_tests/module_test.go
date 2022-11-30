@@ -93,7 +93,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	BeforeEach(func() {
 		// TODO: move to some common function???
 		f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
-		f.ValuesSet("global.modulesImages.registry", "registryAddr")
+		f.ValuesSet("global.modulesImages.registry.base", "registryAddr")
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
 	})
 

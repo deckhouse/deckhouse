@@ -488,7 +488,7 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 }
 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {
-	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
+	repo := input.Values.Get("global.modulesImages.registry.base").String() // host/ns/repo
 
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
 	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)))

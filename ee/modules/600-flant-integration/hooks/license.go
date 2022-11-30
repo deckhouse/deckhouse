@@ -25,7 +25,7 @@ const (
 	revokedCMNamespace = "d8-monitoring"
 	revokedCMBinding   = revokedCMName
 
-	globalRegistryPath     = "global.modulesImages.registry"
+	globalRegistryPath     = "global.modulesImages.registry.base"
 	dockerConfigPath       = "/etc/registrysecret/.dockerconfigjson"
 	internalLicenseKeyPath = "flantIntegration.internal.licenseKey"
 	licenseKeyPath         = "flantIntegration.licenseKey"

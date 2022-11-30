@@ -84,7 +84,7 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 
 	BeforeEach(func() {
 		f.ValuesSet("global.discovery.kubernetesVersion", "1.23.5")
-		f.ValuesSet("global.modulesImages.registry", "registryAddr")
+		f.ValuesSet("global.modulesImages.registry.base", "registryAddr")
 
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", "{}")
 		f.ValuesSet("metallb.speaker.nodeSelector.mylabel", "myvalue")

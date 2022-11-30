@@ -194,7 +194,7 @@ func createJob(input *go_hook.HookInput, annotations map[string]string) {
 	const confDir = "/config"
 	const secretVolumeMountName = "config"
 
-	repo := input.Values.Get("global.modulesImages.registry").String()
+	repo := input.Values.Get("global.modulesImages.registry.base").String()
 	copierTag := input.Values.Get("global.modulesImages.tags.deckhouse.imagesCopier").String()
 
 	podSpec := v1core.PodSpec{
