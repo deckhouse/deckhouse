@@ -28,7 +28,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: metrics ", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
           "modulesImages": {
-			"registry": "my.registry.com/deckhouse"
+			"registry": {
+				"base": "my.registry.com/deckhouse"
+			}
 		  }
         },
 		"deckhouse": {

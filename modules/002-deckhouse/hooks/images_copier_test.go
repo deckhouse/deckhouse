@@ -33,8 +33,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: images_copier ::", func() {
 global:
   deckhouseVersion: "12345"
   modulesImages:
-    registryDockercfg: eyJhdXRocyI6IHsicmVnaXN0cnkuZGVja2hvdXNlLmlvIjogeyJhdXRoIjogImRUcHdZWE56Q2c9PSJ9fX0=
-    registry: registry.deckhouse.io/deckhouse/fe
+    registry:
+      dockercfg: eyJhdXRocyI6IHsicmVnaXN0cnkuZGVja2hvdXNlLmlvIjogeyJhdXRoIjogImRUcHdZWE56Q2c9PSJ9fX0=
+      base: registry.deckhouse.io/deckhouse/fe
     tags:
       module_1:
         image_1: "image-1-latest"
