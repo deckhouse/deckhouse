@@ -1253,7 +1253,7 @@ Done
 
 ### How to use NodeGroup's priority feature
 
-The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup' CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
+The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup` CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
 
 Here is an example of creating two `NodeGroups` using spot-node nodes:
 
@@ -1288,7 +1288,7 @@ spec:
   nodeType: CloudEphemeral
 ```
 
-The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup' CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
+The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup` CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
 
 Here is an example of creating two `NodeGroups` using spot-node nodes:
 
