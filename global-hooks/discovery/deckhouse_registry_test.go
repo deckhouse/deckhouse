@@ -88,7 +88,7 @@ data:
 
 		It("Values must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modulesImages.registry.registry").String()).To(Equal("registry.test.com/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("registry.test.com/deckhouse"))
 			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
 			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("CACACA"))
 			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("http"))
@@ -105,7 +105,7 @@ data:
 
 		It("Values must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modulesImages.registry.registry").String()).To(Equal("registry.test.com/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("registry.test.com/deckhouse"))
 			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
 			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(BeEmpty())
 			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
