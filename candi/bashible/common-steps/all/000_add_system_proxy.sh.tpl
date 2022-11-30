@@ -17,30 +17,39 @@ _restart_containerd() {
   bb-flag-set containerd-need-restart
 }
 
-{{- if .modulesProxy }}
-  {{- if .modulesProxy.httpProxy }}
-HTTP_PROXY={{ .modulesProxy.httpProxy | quote }}
-  {{- end }}
-
-  {{- if .modulesProxy.httpsProxy }}
-HTTPS_PROXY={{ .modulesProxy.httpsProxy | quote }}
-  {{- end }}
-
-  {{- if .modulesProxy.noProxy }}
-NO_PROXY={{ .modulesProxy.noProxy | quote }}
-  {{- end }}
-
+{{- if .proxy }}
 bb-event-on 'bb-sync-file-changed' '_restart_containerd'
 
 mkdir -p /etc/systemd/system.conf.d/
 
 bb-sync-file /etc/systemd/system.conf.d/proxy-default-environment.conf - << EOF
 [Manager]
-DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY:-}" "http_proxy=${HTTP_PROXY:-}" "HTTPS_PROXY=${HTTPS_PROXY:-}" "https_proxy=${HTTPS_PROXY:-}" "NO_PROXY=${NO_PROXY:-}" "no_proxy=${NO_PROXY:-}"
+DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
 EOF
+
+bb-sync-file /etc/profile.d/d8-system-proxy.sh - << EOF
+export HTTP_PROXY=${HTTP_PROXY}
+export http_proxy=${HTTP_PROXY}
+export HTTPS_PROXY=${HTTPS_PROXY}
+export https_proxy=${HTTPS_PROXY}
+export NO_PROXY=${NO_PROXY}
+export no_proxy=${NO_PROXY}
+EOF
+
+export HTTP_PROXY=${HTTP_PROXY}
+export http_proxy=${HTTP_PROXY}
+export HTTPS_PROXY=${HTTPS_PROXY}
+export https_proxy=${HTTPS_PROXY}
+export NO_PROXY=${NO_PROXY}
+export no_proxy=${NO_PROXY}
+
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
   _restart_containerd
+fi
+
+if [ -f /etc/profile.d/d8-system-proxy.sh ]; then
+  rm -f /etc/profile.d/d8-system-proxy.sh
 fi
 {{- end }}

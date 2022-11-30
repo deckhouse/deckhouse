@@ -27,10 +27,11 @@ apiVersions:
       cloud:
         prefix: k8s-dev
         provider: Yandex
-      packagesProxy:
-        uri: https://packages-proxy.company.my
-        username: "proxy-username"
-        password: "proxy-p@ssw0rd"
+      proxy:
+        httpProxy: https://proxy.company.my
+        httpsProxy: https://proxy.company.my
+        noProxy:
+        - company.my
     properties:
       apiVersion:
         type: string
@@ -117,36 +118,29 @@ apiVersions:
         - "1.23"
         - "1.24"
         - "Automatic"
-      packagesProxy:
+      proxy:
         type: object
         description: |
-          A proxy server parameters for downloading OS packages (e.g deb or rpm).
+          Global proxy setup (especially for working in air-gapped environments).
         additionalProperties: false
         properties:
-          uri:
+          httpProxy:
             type: string
-            description: The address of the proxy server.
-          username:
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            description: |
+              Proxy URL for HTTP requests.
+          httpsProxy:
             type: string
-            description: The username for authenticating with the proxy server.
-          password:
-            type: string
-            description: The password for authenticating with the proxy server.
-        oneOf:
-          - properties:
-              uri:
-                type: string
-            additionalProperties: false
-            required: [uri]
-          - properties:
-              uri:
-                type: string
-              username:
-                type: string
-              password:
-                type: string
-            additionalProperties: false
-            required: [uri, username, password]
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            description: |
+              Proxy URL for HTTPS requests.
+          noProxy:
+            description: |
+              List of no proxy IP and domain entries. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+            type: array
+            items:
+              type: string
+              pattern: '^[a-z0-9\-\./]+$'
     oneOf:
     - properties:
         clusterType:

@@ -128,24 +128,21 @@ spec:
     cloudProvider:
       {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
     {{- end }}
-    {{- if hasKey $.Values.global.clusterConfiguration "packagesProxy" }}
-    packagesProxy:
-      {{- $.Values.global.clusterConfiguration.packagesProxy | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
+    proxy:
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
+      httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
+      {{- end }}
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpsProxy" }}
+      httpsProxy: {{ $.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
+      {{- end }}
+      {{- $noProxy := list "127.0.0.1" "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "noProxy" }}
+        {{- $noProxy = concat $noProxy $.Values.global.clusterConfiguration.proxy.noProxy }}
+      {{- end }}
+      noProxy:
+        {{- $noProxy | toYaml | nindent 8 }}
     {{- end }}
-  {{- if hasKey $.Values.global.modules "proxy" }}
-    modulesProxy:
-    {{- if hasKey $.Values.global.modules.proxy "httpProxy" }}
-      httpProxy: {{ $.Values.global.modules.proxy.httpProxy | quote }}
-    {{- end }}
-    {{- if hasKey $.Values.global.modules.proxy "httpsProxy" }}
-      httpsProxy: {{ $.Values.global.modules.proxy.httpsProxy | quote }}
-    {{- end }}
-    {{- $noProxy := list "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
-    {{- if hasKey $.Values.global.modules.proxy "noProxy" }}
-      {{- $noProxy = concat $noProxy $.Values.global.modules.proxy.noProxy }}
-      noProxy: {{ $noProxy | join "," | quote }}
-    {{- end }}
-  {{- end }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}

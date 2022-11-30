@@ -7,6 +7,9 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: '${KUBERNETES_VERSION}'
 defaultCRI: '${CRI}'
 clusterDomain: "cluster.local"
+proxy:
+  httpProxy: http://192.168.199.254:8888
+  httpsProxy: http://192.168.199.254:8888
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration

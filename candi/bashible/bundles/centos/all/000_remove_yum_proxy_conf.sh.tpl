@@ -15,6 +15,9 @@
 # If yum-utils is not installed, we will try to install it. In closed environments yum-utils should be preinstalled in distro image
 # We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
 # which will be installed later in 001_install_mandatory_packages.sh step.
+
+# TODO remove on the next release !!!
+
 if ! rpm -q --quiet yum-utils; then
   yum install -y yum-utils
 fi
@@ -26,18 +29,6 @@ fi
 if yum --version | grep -q dnf; then
   proxy=""
 fi
-
-{{- if .packagesProxy.uri }}
-proxy="{{ .packagesProxy.uri }} main"
-{{- end }}
-
-{{- if .packagesProxy.username }}
-proxy_username="{{ .packagesProxy.username }} main"
-{{- end }}
-
-{{- if .packagesProxy.password }}
-proxy_password="{{ .packagesProxy.password }} main"
-{{- end }}
 
 yum-config-manager --save --setopt=proxy=${proxy}
 yum-config-manager --save --setopt=proxy_username=${proxy_username}

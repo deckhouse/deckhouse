@@ -23,6 +23,19 @@ func Test(t *testing.T) {
 const globalValues = `
 deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
+clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: dev
+      provider: OpenStack
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.23"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 discovery:
   prometheusScrapeInterval: 30
   clusterControlPlaneIsHighlyAvailable: true
