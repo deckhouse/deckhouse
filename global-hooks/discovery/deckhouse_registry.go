@@ -17,21 +17,14 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
-	"net/url"
-	"path"
-	"regexp"
-	"strings"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1apps "k8s.io/api/apps/v1"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
-	imageModulesD8RegistrySnap     = "d8_deployment"
 	imageModulesD8RegistryConfSnap = "d8_registry_secret"
 )
 
@@ -45,20 +38,6 @@ type registrySecret struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       imageModulesD8RegistrySnap,
-			ApiVersion: "apps/v1",
-			Kind:       "Deployment",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"deckhouse"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			FilterFunc: applyD8ImageFilter,
-		},
 		{
 			Name:       imageModulesD8RegistryConfSnap,
 			ApiVersion: "v1",
@@ -76,26 +55,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoveryDeckhouseRegistry)
 
-func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var deployment v1apps.Deployment
-	err := sdk.FromUnstructured(obj, &deployment)
-	if err != nil {
-		return nil, err
-	}
-
-	// get werf stages repo
-	// get it from deckhouse image
-	image, err := parseImage(deployment.Spec.Template.Spec.Containers[0].Image)
-	if err != nil {
-		return nil, err
-	}
-
-	return image, nil
-}
-
 func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
-	
+
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return nil, err
@@ -112,7 +74,7 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		scheme = []byte("https")
 	}
 
-	return registrySecret{
+	return &registrySecret{
 		RegistryDockercfg: registryCnf,
 		Address:           string(secret.Data["address"]),
 		Path:              string(secret.Data["path"]),
@@ -122,15 +84,10 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
-	registrySnap := input.Snapshots[imageModulesD8RegistrySnap]
 	registryConfSnap := input.Snapshots[imageModulesD8RegistryConfSnap]
 
-	if len(registrySnap) == 0 {
-		return fmt.Errorf("not found deckhouse deployment")
-	}
-
 	if len(registryConfSnap) == 0 {
-		return fmt.Errorf("not found deckhouse registry conf secret")
+		return fmt.Errorf("not found 'deckhouse-registry' secret")
 	}
 
 	registrySecretRaw := registryConfSnap[0].(*registrySecret)
@@ -138,41 +95,11 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	// construct registry parameter from registryAddress and registryPath, if set.
-	// if registryAddress and registryPath are unset, fill it from d8 deployment image paramater.
-	registry := registrySnap[0].(string)
-
-	if registrySecretRaw.Address == "" {
-		parts := strings.SplitN(registry, "/", 2)
-		registrySecretRaw.Address = parts[0]
-		if len(parts) == 2 {
-			registrySecretRaw.Path = fmt.Sprintf("/%s", parts[1])
-		}
-	}
-
-	// TODO in later releases we can remove `global.modulesImages.registry` and use combination of `registryAddress` and `registryPath`
-	input.Values.Set("global.modulesImages.registry", registry)
+	input.Values.Set("global.modulesImages.registry", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
 	input.Values.Set("global.modulesImages.registryDockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registryScheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registryCA", registrySecretRaw.CA)
 	input.Values.Set("global.modulesImages.registryAddress", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registryPath", registrySecretRaw.Path)
 	return nil
-}
-
-var splitRe = regexp.MustCompile(`[:@]`)
-
-func parseImage(s string) (string, error) {
-	u, err := url.Parse("dummy://" + s)
-	if err != nil {
-		return "", err
-	}
-
-	if idx := splitRe.FindStringIndex(u.Path); idx != nil {
-		// This allows us to retain the @ to signify digests or shortened digests in
-		// the object.
-		u.Path = u.Path[:idx[0]]
-	}
-
-	return path.Join(u.Host, u.Path), nil
 }
