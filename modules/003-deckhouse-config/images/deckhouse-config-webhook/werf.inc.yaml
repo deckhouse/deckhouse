@@ -63,7 +63,7 @@ shell:
     # TODO(future) Create special register file in tools to generate only conversion imports for the webhook, and use go generate here.
     - cp register-settings-conversions.go register-settings-conversions.go~
     - go run ../../../../tools/settings_conversions/main.go -output register-settings-conversions.go
-    - diff -u register-settings-conversions.go~ register-settings-conversions.go
+    - diff -u register-settings-conversions.go~ register-settings-conversions.go || true
     # Build webhook binary.
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /deckhouse-config-webhook
     # Some debug output.
