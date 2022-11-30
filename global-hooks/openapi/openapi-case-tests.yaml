@@ -107,12 +107,13 @@ positive:
           CA
           Multiline
       modulesImages:
-        registry: registry.deckhouse.io/deckhouse/fe
-        registryDockercfg: Y2ZnCg==
-        registryAddress: registry.deckhouse.io
-        registryPath: /deckhouse/fe
-        registryScheme: https
-        registryCA: testCA
+        registry:
+          registry: registry.deckhouse.io/deckhouse/fe
+          dockercfg: Y2ZnCg==
+          address: registry.deckhouse.io
+          path: /deckhouse/fe
+          scheme: https
+          CA: testCA
         tags:
           module:
             image: hash

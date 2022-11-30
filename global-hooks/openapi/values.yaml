@@ -168,43 +168,48 @@ properties:
     type: object
     default: {}
     properties:
-      registryPath:
-        type: string
-        description: |
-          Path part of deckhuse repo
-        x-examples: [ "/deckhouse/fe" ]
-      registryAddress:
-        type: string
-        description: |
-          Domain part of deckhuse repo
-        x-examples: [ "registry.deckhouse.io" ]
-      registryCA:
-        type: string
-        description: |
-          Registry CA certificate
-        x-examples: [ "registry\nCA\nMultiline" ]
-      registryScheme:
-        type: string
-        enum: ["http", "https"]
-        description: |
-          Scheme for registry
-        x-examples: [ "https" ]
-      registryDockercfg:
-        type: string
-        # source https://regex101.com/r/Pj4Ako/1
-        pattern: ^(?:([a-z0-9A-Z+\/]){4})*([a-z0-9A-Z+\/])(?:([a-z0-9A-Z+\/])==|([a-z0-9A-Z+\/]){2}=|([a-z0-9A-Z+\/]){3})$
-        description: |
-          Docker config for registry from secret from d8-system/deckhouse-registry
       registry:
-        type: string
-        # source https://regex101.com/r/7oJe0k/1
-        # based on https://regex101.com/library/a98UqN
-        pattern: ^([\w.\-_]+((:\d+|)(/[a-z0-9._-]+/[a-z0-9._-]+))|)(/|)([a-z0-9.\-_]+(/[a-z0-9.\-_]+|))
-        description: |
-          Deckhouse images repo.
-          It uses in helm teplates for generating container image address.
-          Almost always, concatinateds with tag from modulesImages.tag
-        x-examples: [ "registry.example.com/deckhouse" ]
+        additionalProperties: true
+        type: object
+        default: {}
+        properties:
+          path:
+            type: string
+            description: |
+              Path part of deckhuse repo
+            x-examples: [ "/deckhouse/fe" ]
+          address:
+            type: string
+            description: |
+              Domain part of deckhuse repo
+            x-examples: [ "registry.deckhouse.io" ]
+          CA:
+            type: string
+            description: |
+              Registry CA certificate
+            x-examples: [ "registry\nCA\nMultiline" ]
+          scheme:
+            type: string
+            enum: ["http", "https"]
+            description: |
+              Scheme for registry
+            x-examples: [ "https" ]
+          dockercfg:
+            type: string
+            # source https://regex101.com/r/Pj4Ako/1
+            pattern: ^(?:([a-z0-9A-Z+\/]){4})*([a-z0-9A-Z+\/])(?:([a-z0-9A-Z+\/])==|([a-z0-9A-Z+\/]){2}=|([a-z0-9A-Z+\/]){3})$
+            description: |
+              Docker config for registry from secret from d8-system/deckhouse-registry
+          registry:
+            type: string
+            # source https://regex101.com/r/7oJe0k/1
+            # based on https://regex101.com/library/a98UqN
+            pattern: ^([\w.\-_]+((:\d+|)(/[a-z0-9._-]+/[a-z0-9._-]+))|)(/|)([a-z0-9.\-_]+(/[a-z0-9.\-_]+|))
+            description: |
+              Deckhouse images repo.
+              It uses in helm teplates for generating container image address.
+              Almost always, concatinateds with tag from modulesImages.tag
+            x-examples: [ "registry.example.com/deckhouse" ]
       tags:
         type: object
         default: {}

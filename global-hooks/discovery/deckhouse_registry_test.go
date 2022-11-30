@@ -31,7 +31,7 @@ import (
 
 var _ = Describe("Global hooks :: discovery :: deckhouse_registry ::", func() {
 	const (
-		initValuesString       = `{"global": {"modulesImages": {}}}`
+		initValuesString       = `{"global": {"modulesImages": { "registry": {}}}}`
 		initConfigValuesString = `{}`
 	)
 
@@ -69,7 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	FContext("Cluster is empty", func() {
+	Context("Cluster is empty", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -88,12 +88,12 @@ data:
 
 		It("Values must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modulesImages.registry").String()).To(Equal("registry.test.com/deckhouse"))
-			Expect(f.ValuesGet("global.modulesImages.registryDockercfg").String()).To(Equal("eHl6Cg=="))
-			Expect(f.ValuesGet("global.modulesImages.registryCA").String()).To(Equal("CACACA"))
-			Expect(f.ValuesGet("global.modulesImages.registryScheme").String()).To(Equal("http"))
-			Expect(f.ValuesGet("global.modulesImages.registryAddress").String()).To(Equal("registry.test.com"))
-			Expect(f.ValuesGet("global.modulesImages.registryPath").String()).To(Equal("/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.registry").String()).To(Equal("registry.test.com/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("CACACA"))
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("http"))
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
 		})
 	})
 
@@ -105,12 +105,12 @@ data:
 
 		It("Values must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modulesImages.registry").String()).To(Equal("registry.test.com/deckhouse"))
-			Expect(f.ValuesGet("global.modulesImages.registryDockercfg").String()).To(Equal("eHl6Cg=="))
-			Expect(f.ValuesGet("global.modulesImages.registryCA").String()).To(BeEmpty())
-			Expect(f.ValuesGet("global.modulesImages.registryScheme").String()).To(Equal("https"))
-			Expect(f.ValuesGet("global.modulesImages.registryAddress").String()).To(Equal("registry.test.com"))
-			Expect(f.ValuesGet("global.modulesImages.registryPath").String()).To(Equal("/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.registry").String()).To(Equal("registry.test.com/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(BeEmpty())
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
 		})
 	})
 
