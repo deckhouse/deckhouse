@@ -248,7 +248,7 @@ cri:
 
 Then put the node under the control of `node-manager`.
 
-## How do I update kernel on nodes ?
+## How do I update kernel on nodes?
 
 ### Debian-based distros
 
