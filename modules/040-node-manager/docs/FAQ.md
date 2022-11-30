@@ -1253,13 +1253,9 @@ Done
 
 ### How to use NodeGroup's priority feature
 
-You can use the `priority` field in the NodeGroup CRD to specify how to order the cluster nodes.
-For example, you can try to order the spot-nodes first, and if they run out, the regular nodes. Or you could try to
-to order larger nodes first, and if the cloud resources are exhausted, to order smaller nodes.
+The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup' CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
 
-An example using a spot-node:
-
-Create 2 ng:
+Here is an example of creating two `NodeGroups` using spot-node nodes:
 
 ```yaml
 ---
