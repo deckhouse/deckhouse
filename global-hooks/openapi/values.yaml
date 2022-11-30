@@ -176,12 +176,12 @@ properties:
           path:
             type: string
             description: |
-              Path part of deckhuse repo
+              Path of deckhouse repo
             x-examples: [ "/deckhouse/fe" ]
           address:
             type: string
             description: |
-              Domain part of deckhuse repo
+              Domain of deckhouse repo
             x-examples: [ "registry.deckhouse.io" ]
           CA:
             type: string
@@ -200,14 +200,14 @@ properties:
             pattern: ^(?:([a-z0-9A-Z+\/]){4})*([a-z0-9A-Z+\/])(?:([a-z0-9A-Z+\/])==|([a-z0-9A-Z+\/]){2}=|([a-z0-9A-Z+\/]){3})$
             description: |
               Docker config for registry from secret from d8-system/deckhouse-registry
-          registry:
+          base:
             type: string
             # source https://regex101.com/r/7oJe0k/1
             # based on https://regex101.com/library/a98UqN
             pattern: ^([\w.\-_]+((:\d+|)(/[a-z0-9._-]+/[a-z0-9._-]+))|)(/|)([a-z0-9.\-_]+(/[a-z0-9.\-_]+|))
             description: |
-              Deckhouse images repo.
-              It uses in helm teplates for generating container image address.
+              Deckhouse base for images repo, consist of address and path.
+              It is used in the helm templates to generate the address of the container image.
               Almost always, concatinateds with tag from modulesImages.tag
             x-examples: [ "registry.example.com/deckhouse" ]
       tags:

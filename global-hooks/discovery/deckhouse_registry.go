@@ -95,7 +95,7 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	input.Values.Set("global.modulesImages.registry.registry", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
+	input.Values.Set("global.modulesImages.registry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registry.scheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)
