@@ -95,34 +95,30 @@ func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
-
-	ret := &registrySecret{}
-
+	
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return nil, err
 	}
 
 	registryCnf, ok := secret.Data[".dockerconfigjson"]
-
 	if !ok {
-		return nil, fmt.Errorf("not deckhouse found docker config in secret")
+		return nil, fmt.Errorf("docker config not found in secret 'deckhouse-registry'")
 	}
-	ret.RegistryDockercfg = registryCnf
-
-	ret.Address = string(secret.Data["address"])
-	ret.Path = string(secret.Data["path"])
 
 	var scheme []byte
 	scheme, ok = secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")
 	}
-	ret.Scheme = string(scheme)
 
-	ret.CA = string(secret.Data["ca"])
-
-	return ret, nil
+	return registrySecret{
+		RegistryDockercfg: registryCnf,
+		Address:           string(secret.Data["address"]),
+		Path:              string(secret.Data["path"]),
+		Scheme:            string(scheme),
+		CA:                string(secret.Data["ca"]),
+	}, nil
 }
 
 func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
