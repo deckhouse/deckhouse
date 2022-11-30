@@ -34,10 +34,13 @@
  - **[ingress-nginx]** Fix erroneous redirect to nil://example.com. [#2970](https://github.com/deckhouse/deckhouse/pull/2970)
     Ingress-nginx v1.1 pods will be restarted.
  - **[monitoring-applications]** Fix the discovery hook for the `monitoring-applications` module. [#3044](https://github.com/deckhouse/deckhouse/pull/3044)
+ - **[monitoring-kubernetes]** Fix network-related columns and graphs in Main/Namespace, Main/Namespace/Controller, and Main/Namespace/Controller/Pod dashboards. [#3001](https://github.com/deckhouse/deckhouse/pull/3001)
  - **[monitoring-kubernetes-control-plane]** Port to listen changed to 8008 because it is already used by the ingress-nginx module. [#3019](https://github.com/deckhouse/deckhouse/pull/3019)
  - **[node-local-dns]** Disable `node-local-dns` for cilium installations on nodes with kernel < 5.7 due to problems with `ebpf-socket` and resolved endpoints. [#2995](https://github.com/deckhouse/deckhouse/pull/2995)
     The node-local-dns module stops working for cilium installations on nodes with kernels < 5.7.
+ - **[node-manager]** Increase max failing timeout for cluster-autoscaler. It's required by priority provisioning feature. [#3071](https://github.com/deckhouse/deckhouse/pull/3071)
  - **[node-manager]** Fix `cluster-autoscaler` configMap generation when a few node groups have the same priority. [#3062](https://github.com/deckhouse/deckhouse/pull/3062)
+ - **[upmeter]** Fixed nodegroup probe for clusters in Azure by fixing zone name discovery. [#3109](https://github.com/deckhouse/deckhouse/pull/3109)
 
 ## Chore
 

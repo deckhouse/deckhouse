@@ -1,0 +1,21 @@
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Fix network-related columns and graphs in Main/Namespace, Main/Namespace/Controller, and
+        Main/Namespace/Controller/Pod dashboards.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3001
+node-manager:
+  fixes:
+    - summary: >-
+        Increase max failing timeout for cluster-autoscaler. It's required by priority provisioning
+        feature.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3071
+upmeter:
+  fixes:
+    - summary: Fixed nodegroup probe for clusters in Azure by fixing zone name discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3109
+user-authz:
+  fixes:
+    - summary: Fix kubeconfig doc for Kubernetes `1.24`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3151
+
