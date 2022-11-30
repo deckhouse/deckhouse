@@ -57,6 +57,8 @@ deckhouse-web:
       impact: The deprecated `auth.password` option is removed from the `deckhouse-web` module
 dhctl:
   fixes:
+    - summary: Fix restart bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3165
     - summary: Fix struct_vs_unmarshal test
       pull_request: https://github.com/deckhouse/deckhouse/pull/3101
     - summary: Minor edits of log messages in dhctl.
