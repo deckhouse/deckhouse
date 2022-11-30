@@ -1288,9 +1288,9 @@ spec:
   nodeType: CloudEphemeral
 ```
 
-In this case, cluster-autoscaler will try to order a spot-node. If it fails to add a node to the cluster within 15 minutes, then
-ng `worker-spot` will be paused (for 20 minutes) and cluster-autoscaler will start ordering nodes from ng `worker`.
-If another node is needed after 30 minutes for the cluster load, it will again try to order from ng `worker-spot` first and only then from ng `worker`.
+The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup' CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
+
+Here is an example of creating two `NodeGroups` using spot-node nodes:
 
 If ng `worker-spot` reaches its maximum(5), then nodes will be ordered from ng `worker`.
 The node templates(labels/taints) for ng `worker` and `worker-spot` must be the same or at least must be suitable for the load that triggers the cluster growth process.
