@@ -1292,5 +1292,6 @@ The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `
 
 Here is an example of creating two `NodeGroups` using spot-node nodes:
 
-If ng `worker-spot` reaches its maximum(5), then nodes will be ordered from ng `worker`.
-The node templates(labels/taints) for ng `worker` and `worker-spot` must be the same or at least must be suitable for the load that triggers the cluster growth process.
+Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
+
+Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
