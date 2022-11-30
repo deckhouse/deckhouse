@@ -92,10 +92,11 @@ func discoverNodes(input *go_hook.HookInput) error {
 	combinedTargets := newTargets()
 
 	for _, address := range input.Snapshots["addresses"] {
-		if address != nil {
-			convertedAddress := address.(nodeTarget)
-			combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
-		}
+        if address == nil {
+          continue
+        }  
+        convertedAddress := address.(nodeTarget)
+	    combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
 	}
 
 	for _, target := range input.Values.Get(externalTargetsPath).Array() {
