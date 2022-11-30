@@ -55,20 +55,14 @@ shell:
     - cd {{ $webhookAbsPath }}
     - go mod download
   setup:
-    # Migrate ee/fe internal packages imports
-    - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
-    - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
     - cd {{ $webhookAbsPath }}
     # Re-generate conversion imports for particular edition (CE/EE/FE).
     # TODO(future) Create special register file in tools to generate only conversion imports for the webhook, and use go generate here.
     - cp register-settings-conversions.go register-settings-conversions.go~
     - go run ../../../../tools/settings_conversions/main.go -output register-settings-conversions.go
-    - diff -u register-settings-conversions.go~ register-settings-conversions.go || true
+    - echo "Excluded conversions:" && (diff -u register-settings-conversions.go~ register-settings-conversions.go | grep '^-' || true)
     # Build webhook binary.
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /deckhouse-config-webhook
-    # Some debug output.
-    - ls -la /deckhouse
-    - go version /deckhouse-config-webhook
 
 git:
 - add: /{{ $webhookRelPath }}
