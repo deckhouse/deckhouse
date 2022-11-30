@@ -182,7 +182,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				cm := manifest.(*apiv1.ConfigMap)
 				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
 					Get(context.TODO(), cm.GetName(), metav1.GetOptions{})
-				if err == nil || k8serror.IsNotFound(err) {
+				if k8serror.IsNotFound(err) {
 					_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
 						Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 					return err
