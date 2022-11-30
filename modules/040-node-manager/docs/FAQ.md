@@ -1251,7 +1251,7 @@ Done
 
 {% endraw %}
 
-### How to use NodeGroup with priority?
+### How to use NodeGroup's priority feature
 
 You can use the `priority` field in the NodeGroup CRD to specify how to order the cluster nodes.
 For example, you can try to order the spot-nodes first, and if they run out, the regular nodes. Or you could try to
