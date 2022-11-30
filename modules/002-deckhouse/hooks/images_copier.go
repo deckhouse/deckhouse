@@ -315,7 +315,7 @@ func parseD8RegistryCredentials(input *go_hook.HookInput) (*registry, error) {
 		return nil, err
 	}
 
-	dockerConfigEncoded := input.Values.Get("global.modulesImages.registryDockercfg").String()
+	dockerConfigEncoded := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	dockerConfig, err := base64.StdEncoding.DecodeString(dockerConfigEncoded)
 	if err != nil {
 		return nil, err

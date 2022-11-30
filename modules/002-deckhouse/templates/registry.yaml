@@ -1,4 +1,4 @@
-{{- if $.Values.global.modulesImages.registryDockercfg }}
+{{- if $.Values.global.modulesImages.registry.dockercfg }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,18 +8,18 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
 {{- /* Helm checks changes only in .dockerconfigjson field, so if other field changes, helm don't change secret. Checksum resolve this. */}}
-    checksum: {{ printf $.Values.global.modulesImages.registryDockercfg $.Values.global.modulesImages.registryAddress $.Values.global.modulesImages.registryPath $.Values.global.modulesImages.registryScheme $.Values.global.modulesImages.registryCA | sha256sum }}
+    checksum: {{ printf $.Values.global.modulesImages.registry.dockercfg $.Values.global.modulesImages.registry.address $.Values.global.modulesImages.registry.path $.Values.global.modulesImages.registry.scheme $.Values.global.modulesImages.registry.CA | sha256sum }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
-  address:           {{ $.Values.global.modulesImages.registryAddress | b64enc }}
-  {{- if $.Values.global.modulesImages.registryPath }}
-  path:              {{ $.Values.global.modulesImages.registryPath | b64enc }}
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registry.dockercfg }}
+  address:           {{ $.Values.global.modulesImages.registry.address | b64enc }}
+  {{- if $.Values.global.modulesImages.registry.path }}
+  path:              {{ $.Values.global.modulesImages.registry.path | b64enc }}
   {{- end }}
-  scheme:            {{ $.Values.global.modulesImages.registryScheme | b64enc }}
-  {{- if $.Values.global.modulesImages.registryCA }}
-  ca:                {{ $.Values.global.modulesImages.registryCA | b64enc }}
+  scheme:            {{ $.Values.global.modulesImages.registry.scheme | b64enc }}
+  {{- if $.Values.global.modulesImages.registry.CA }}
+  ca:                {{ $.Values.global.modulesImages.registry.CA | b64enc }}
   {{- end }}
 ---
 apiVersion: v1
@@ -32,7 +32,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registry.dockercfg }}
 ---
 apiVersion: v1
 kind: Secret
@@ -44,5 +44,5 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registry.dockercfg }}
 {{- end }}

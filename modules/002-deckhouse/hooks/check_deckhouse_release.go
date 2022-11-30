@@ -421,11 +421,11 @@ type canarySettings struct {
 }
 
 func getCA(input *go_hook.HookInput) string {
-	return input.Values.Get("global.modulesImages.registryCA").String()
+	return input.Values.Get("global.modulesImages.registry.CA").String()
 }
 
 func isHTTP(input *go_hook.HookInput) bool {
-	registryScheme := input.Values.Get("global.modulesImages.registryScheme").String()
+	registryScheme := input.Values.Get("global.modulesImages.registry.scheme").String()
 	return registryScheme == "http"
 }
 
