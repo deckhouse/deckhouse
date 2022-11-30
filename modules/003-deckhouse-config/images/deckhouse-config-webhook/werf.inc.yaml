@@ -89,6 +89,7 @@ git:
     - dhctl/go.mod
     - dhctl/go.sum
     - go_lib
+    - tools
     - go.mod
     - go.sum
     - modules/*/settings-conversion/**/*.go
