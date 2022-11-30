@@ -33,6 +33,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/2896
 deckhouse-config:
   fixes:
+    - summary: Fix the CE revision build of the `deckhouse-config-webhook`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3181
     - summary: Ignore listing ModuleConfig at start when migration in progress.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3160
     - summary: Ignore ModuleConfig resources with invalid spec.settings.
