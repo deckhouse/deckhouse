@@ -1,11 +1,11 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing the master nodes{% endif %}.
+Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
-Log in on the **[personal computer](step2.html#installation-process)** to the container image registry you specified in the previous step.
+Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
 
-Run the installer on the **[personal computer](step2.html#installation-process)**.
+Run the installer on the **personal computer**.
 
 {%- if revision == 'ee' %}
 
@@ -33,7 +33,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, EE -->
-Log in on the **[personal computer](step2.html#installation-process)** to the container image registry by providing the license key as a password:
+Log in on the **personal computer** to the container image registry by providing the license key as a password:
 {% snippetcut selector="docker-login-windows" %}
 ```text
 docker login -u license-token registry.deckhouse.io
@@ -114,36 +114,37 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`, otherwise leave it empty.
+The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
 {%- else %}
 The `--ssh-user` parameter here refers to the default user for the relevant VM image.
-{%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the images suggested in this guide).
-{%- elsif page.platform_code == "gcp" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the images suggested in this guide).
-{%- else %} It is `ubuntu` for the images suggested in this guide.
+{%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
+{%- elsif page.platform_code == "gcp" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
+{%- else %} It is `ubuntu` for the image suggested in this guide.
 {%- endif %}
 {%- endif %}
 
 {% if page.platform_type == "cloud" %}
-Notes:
-<ul>
-<li>
-<div markdown="1">
-The `-v "$PWD/dhctl-tmp:/tmp/dhctl"` parameter enables saving the state of the Terraform installer to a temporary directory on the startup host. It allows the installation to continue correctly in case of a failure of the installer's container.
-</div>
-</li>
-<li><p>If any problems {% if page.platform_type="cloud" %}on the cloud provider side {% endif %}occur, you can cancel the process of installation and remove all created objects using the following command (the configuration file should be the same you’ve used to initiate the installation):</p>
-<div markdown="0">
-{% snippetcut %}
-```shell
-dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
-```
-{% endsnippetcut %}
-</div></li>
-</ul>
+{% offtopic title="If the installation was interrupted..." %}
+> If the installation was interrupted (there were not enough quotas, network errors, etc.), you can restart it. The installation will continue correctly, no duplicate resources will be created in the cloud.
+>
+> If the installation failed, and you need to delete the resources created in the cloud, run the following command:
+>
+> ```shell
+  dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+  ```
+{%- endofftopic %}
 {%- endif %}
 {%- endif %}
 
-After the installation is complete, you will be returned to the command line.
+The installation process may take about 15-30 minutes with a good connection.
+
+After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
+```
+...
+┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
+│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
+└ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
+```
 
 {%- if page.platform_code == "kind" %}
 
@@ -158,7 +159,7 @@ kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 
-It may take about a minute to start the Ingress controller.
+It may take some time to start the Ingress controller.
 
 To check the status of the Ingress Controller Pod, run the following command:
 {% snippetcut %}

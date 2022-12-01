@@ -2,7 +2,7 @@
 
 ### If something went wrong, and a CI job became canceled/failed.
 
-Example for Yandex.Cloud, but it is also suitable for other clouds:
+Example for Yandex Cloud, but it is also suitable for other clouds:
 ```bash
 docker run \
   -ti \

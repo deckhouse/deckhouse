@@ -26,46 +26,19 @@ Here are some common problems and ways to solve them. Should you run into diffic
 {% offtopic title="There is no Ingress controller in the cluster..." %}
 The `deckhouse-web` module, which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/documentation/v1/modules/402-ingress-nginx/) module:
 <ul>
-  <li>Enable the module using <strong>one the following</strong> options:
-<ul>
-    <li>At the Deckhouse installation step, add the following to the <code>deckhouse.configOverrides</code> section of the <code>config.yml</code> file:
-{% snippetcut selector="ingress-nginx-install-enable" %}
-```yaml
-ingressNginxEnabled: true
-```
-{% endsnippetcut %}
-<p>Example:</p>
-<div markdown="1">
-
-```yaml
-deckhouse:
-  configOverrides:
-    ingressNginxEnabled: true
-```
-</div>
-    </li>
-    <li><p>Once Deckhouse is installed, edit the <code>deckhouse</code> ConfigMap:</p>
-{% snippetcut selector="deckhouse-cm-edit" %}
+  <li><p>Enable the <code>ingress-nginx</code> module, by executing the following command:</p>
+{% snippetcut selector="enable-ingress" %}
 ```shell
-kubectl -n d8-system edit cm deckhouse
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
+EOF
 ```
 {% endsnippetcut %}
-<p>... and add the following to it:</p>
-{% snippetcut selector="ingress-nginx-cm-enable" %}
-```yaml
-ingressNginxEnabled: "true"
-```
-{% endsnippetcut %}
-<p>Example:</p>
-<div markdown="1">
-
-```yaml
-deckhouse:
-  ingressNginxEnabled: "true"
-```
-</div>
-</li>
-</ul>
 </li>
 <li><p>Create an <code>ingress-nginx-controller.yml</code> file with the following contents:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}

@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: схемы размещения"
+title: "Cloud provider — Yandex Cloud: схемы размещения"
 ---
 
 Поддерживаются три схемы размещения. Ниже подробнее о каждой их них.

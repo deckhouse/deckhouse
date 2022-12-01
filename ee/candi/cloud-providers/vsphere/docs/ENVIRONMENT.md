@@ -162,7 +162,7 @@ To build a VM image, follow these steps:
 
 1. Create a file name `vsphere.auto.pkrvars.hcl` with the following contents:
 
-   ```hcl
+   ```text
    vcenter_server = "<hostname or IP of a vCenter>"
    vcenter_username = "<username>"
    vcenter_password = "<password>"

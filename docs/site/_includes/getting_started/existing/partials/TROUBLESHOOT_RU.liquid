@@ -26,46 +26,19 @@
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
 Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/documentation/v1/modules/402-ingress-nginx/) следующим способом:
 <ul>
-  <li>Включите модуль <strong>одним</strong> из следующих способов:
-<ul>
-    <li>На этапе установки Deckhouse добавьте в файл <code>config.yml</code> в секцию <code>deckhouse.configOverrides</code>:
-{% snippetcut selector="ingress-nginx-install-enable" %}
-```yaml
-ingressNginxEnabled: true
-```
-{% endsnippetcut %}
-<p>Пример:</p>
-<div markdown="1">
-
-```yaml
-deckhouse:
-  configOverrides:
-    ingressNginxEnabled: true
-```
-</div>
-    </li>
-    <li><p>После установки Deckhouse, отредактируйте ConfigMap <code>deckhouse</code>:</p>
-{% snippetcut selector="deckhouse-cm-edit" %}
+  <li><p>Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:</p>
+{% snippetcut selector="enable-ingress" %}
 ```shell
-kubectl -n d8-system edit cm deckhouse
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  enabled: true
+EOF
 ```
 {% endsnippetcut %}
-<p>... и добавьте:</p>
-{% snippetcut selector="ingress-nginx-cm-enable" %}
-```yaml
-ingressNginxEnabled: "true"
-```
-{% endsnippetcut %}
-<p>Пример:</p>
-<div markdown="1">
-
-```yaml
-deckhouse:
-  ingressNginxEnabled: "true"
-```
-</div>
-</li>
-</ul>
 </li>
 <li><p>Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}

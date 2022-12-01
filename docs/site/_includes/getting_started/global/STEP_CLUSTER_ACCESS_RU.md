@@ -1,36 +1,92 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["getting-started-finish.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-# Доступ к кластеру через Kubernetes API
-Deckhouse только что завершил процесс установки вашего кластера. Теперь вы можете подключиться к master-узлу, используя ssh.
-Для этого необходимо получить IP-адрес master-узла либо из логов dhctl, либо из web интерфейса/cli утилиты облачного провайдера.
+
+## Подключение к master-узлу
+Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
+
+Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя web-интерфейс или CLI&#8209;утилиты облачного провайдера):
 {% snippetcut %}
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
+
+Проверьте работу kubectl, выведя список узлов кластера:
 {% snippetcut %}
 ```shell
-sudo -i
-kubectl get nodes
+sudo kubectl get nodes
 ```
 {% endsnippetcut %}
 
-# Доступ к кластеру через NGINX Ingress
-[IngressNginxController](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
-Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
-{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
-LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
-В первую очередь необходимо подключиться к master-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo kubectl get nodes
+NAME                                     STATUS   ROLES                  AGE   VERSION
+cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
+cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
+```
+{%- endofftopic %}
 
-Получите IP адрес балансировщика. Для этого, на **master-узле** от пользователя `root` выполните команду:
+Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
+
+{% snippetcut %}
+```shell
+sudo kubectl -n d8-ingress-nginx get po
+```
+{% endsnippetcut %}
+
+Дождитесь перехода Pod'а Ingress-контроллера в статус `Ready`.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo kubectl -n d8-ingress-nginx get po
+NAME                     READY   STATUS    RESTARTS   AGE
+controller-nginx-l2gk6   3/3     Running   0          12m
+```
+{%- endofftopic %}
+
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+Также дождитесь готовности балансировщика:
+{% snippetcut %}
+```shell
+sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+```
+{% endsnippetcut %}
+
+Значение `EXTERNAL-IP` должно быть заполнено публичным IP-адресом или DNS-именем.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
+```
+{%- endofftopic %}
+{% endif %}
+
+## DNS
+
+Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
+- настроить работу DNS
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+
+*Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
+
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
+
+На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
-echo "$BALANCER_HOSTNAME"
+BALANCER_IP=$(dig $(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
+echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -38,91 +94,62 @@ echo "$BALANCER_HOSTNAME"
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip')
-echo "$BALANCER_IP"
+BALANCER_IP=$(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
+echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
 {% endif %}
-{% endif %}
 
-Настройте домен для сервисов Deckhouse, который вы указали на шаге «[Установка кластера](./step3.html)», одним из следующих способов:
-<ul>
-  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
-    <ul>
-      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте
-        {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
-        {%- else %} соответствующую wildcard A-запись со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла, который вы получили выше (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла){% else %}балансировщика (<code>BALANCER_IP</code>), который вы получили выше{% endif %}{%- endif -%}.
-      </li>
-      <li>
-        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
-        то добавьте А или CNAME-записи со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла, который вы получили выше (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла){% else %}балансировщика (<code>BALANCER_IP</code>), который вы получили выше{% endif %}, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
-        <div class="highlight">
-<pre class="highlight">
-<code example-hosts>api.example.com
-dashboard.example.com
-deckhouse.example.com
-dex.example.com
-grafana.example.com
-kubeconfig.example.com
-status.example.com
-upmeter.example.com</code>
-</pre>
-        </div>
-      </li>
-    </ul>
-  </li>
-  <li><p>Если вы не имеете под управлением DNS-сервер, то на компьютере, с которого необходим доступ к сервисам Deckhouse, добавьте статические записи в файл <code>/etc/hosts</code> для Linux или <code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows.</p>
-{% if page.platform_code == 'aws' %}
-  <p>Определить IP-адрес балансировщика можно при помощи следующей команды, выполняемой на <strong>master-узле</strong>:</p>
+Команда также выведет установленный шаблон DNS-имен. Пример вывода:
+```text
+Balancer IP is '1.2.3.4'.
+moduleconfig.deckhouse.io/global patched
 
-<div markdown="1">
+Domain template is '%s.1.2.3.4.sslip.io'.
+```
+
+> Перегенерация сертификатов после изменения шаблона DNS-имен может занять до 5 минут.
+
+{% offtopic title="Другие варианты настройки..." %}
+Вместо сервиса *sslip.io* вы можете использовать другие варианты настройки.
+{% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
+
+Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
+<div markdown="0">
 {% snippetcut %}
-```bash
-BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
 </div>
+{% endofftopic %}
 {% endif %}
 
-  <p>Для добавления записей в файл <code>/etc/hosts</code> на Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующие шаги:</p>
+{% if page.platform_type == 'cloud' and page.platform_code == 'vsphere' %} 
+Настройте DNS для сервисов Deckhouse одним из следующих способов:
 
-<ul>
-{%- if page.platform_code != 'vsphere' %}
-<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес балансировщика:</p>
+{% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
+
+Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
 {% snippetcut %}
-```bash
-export BALANCER_IP="<BALANCER_IP>"
+{% raw %}
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+{% endraw %}
 {% endsnippetcut %}
-</li>
-{%- else %}
-<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес <strong>master-узла</strong> (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла):</p>
-{% snippetcut %}
-```bash
-export BALANCER_IP="<MASTER_OR_FRONT_IP>"
-```
-{% endsnippetcut %}
-</li>
-{%- endif %}
-  <li><p>Добавьте DNS-записи для веб-интерфейсов Deckhouse:</p>
-{% snippetcut selector="example-hosts" %}
-```bash
-sudo -E bash -c "cat <<EOF >> /etc/hosts
-$BALANCER_IP api.example.com
-$BALANCER_IP dashboard.example.com
-$BALANCER_IP deckhouse.example.com
-$BALANCER_IP dex.example.com
-$BALANCER_IP grafana.example.com
-$BALANCER_IP kubeconfig.example.com
-$BALANCER_IP status.example.com
-$BALANCER_IP upmeter.example.com
-EOF
-"
-```
-{% endsnippetcut %}
-</li>
-</ul></li>
-</ul>
+{% endif %}
+
+## Настройте удаленный доступ к кластеру 
+
+На **персональном компьютере** выполните следующие шаги, для того чтобы настроить подключение `kubectl` к кластеру:
+- Откройте веб-интерфейс сервиса *Kubeconfig Generator*. Для него зарезервировано имя `kubeconfig`, и адрес для доступа формируется согласно шаблона DNS-имен (который вы установили ранее). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс *Kubeconfig Generator* будет доступен по адресу `https://kubeconfig.1.2.3.4.sslip.io`.
+- Авторизуйтесь под пользователем `admin@example.com`. Пароль пользователя, сгенерированный на предыдущем шаге, — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `resource.yml`).
+- Выберите вкладку с ОС персонального компьютера.
+- Последовательно скопируйте и выполните команды, приведенные на странице.
+- Проверьте корректную работу `kubectl` (например, выполнив команду `kubectl get no`).

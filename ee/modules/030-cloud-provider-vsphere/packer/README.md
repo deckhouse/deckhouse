@@ -1,6 +1,6 @@
 # How to build base images
 1. Create `./vsphere.auto.pkrvars.hcl` file with the following variables:
-   ```hcl
+   ```text
    vcenter_server = "<Hostname of vSphere API>"
    vcenter_username = "<Username>"
    vcenter_password = "<Password>"

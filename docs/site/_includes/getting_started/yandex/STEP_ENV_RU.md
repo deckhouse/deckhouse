@@ -26,11 +26,3 @@ yc resource-manager folder add-access-binding <folderID> --role editor --subject
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 {% endsnippetcut %}
-
-<script>
-$(document).ready(function() {
-    if (sessionStorage.getItem('dhctl-layout').toLowerCase() === 'standard') {
-        $('#standard-layout-notes').css('display', 'block');
-    }
-})
-</script>

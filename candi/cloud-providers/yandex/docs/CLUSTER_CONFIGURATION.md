@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: provider configuration"
+title: "Cloud provider — Yandex Cloud: provider configuration"
 ---
 
 

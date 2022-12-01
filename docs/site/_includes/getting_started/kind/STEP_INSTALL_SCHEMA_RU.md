@@ -1,45 +1,62 @@
 [kind](https://kind.sigs.k8s.io/) — утилита для запуска локальных кластеров Kubernetes, которая в качестве узлов кластера использует контейнеры. Создана преимущественно для тестирования самого Kubernetes, но может использоваться для локальной разработки или CI.
 
-Установка Deckhouse на kind, рассматриваемая далее, позволит вам за менее чем 10 минут получить кластер Kubernetes с установленным Deckhouse.
+Установка Deckhouse на kind, рассматриваемая далее, позволит вам за менее чем 15 минут получить локальный кластер Kubernetes с установленным Deckhouse. Такой вариант развертывания Deckhouse позволит вам быстро развернуть Deckhouse и познакомиться с основными его возможностями.
 
-Такой вариант развертывания Deckhouse позволит вам быстро развернуть Deckhouse и познакомиться с основными его возможностями.
+Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/documentation/v1/modules/300-prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/documentation/v1/modules/040-node-manager/) и [управление control-plane](/documentation/v1/modules/040-control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io). 
 
-Обратите внимание, что некоторые функции, такие как [управление узлами](/documentation/v1/modules/040-node-manager/) и [управление control-plane](/documentation/v1/modules/040-control-plane-manager/), работать не будут.
+> **Внимание!** Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
 
-Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации с включенным [мониторингом](/documentation/v1/modules/300-prometheus/) на базе Grafana. Для упрощения при работе с DNS используется сервис [nip.io](https://nip.io). 
-
-## Процесс установки
-
-Для установки потребуется персональный компьютер, отвечающий следующим требованиям:
+{% offtopic title="Минимальные требования к компьютеру..." %}
 - Операционная система macOS, Windows или Linux.
-- Не менее чем 4Гб оперативной памяти.
+- Не менее чем 4 Гб оперативной памяти.
 - Установленный container runtime (docker, containerd) и docker-клиент.
 - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.io`.
+{% endofftopic %}
 
-На этом компьютере будет развернут кластер Kubernetes, в который будет установлен Deckhouse. 
+## Установка
 
-Вы можете выбрать следующие варианты установки:
-<ul>
-<li>Самостоятельно пройти этапы руководства.</li>
-<li>Воспользоваться <a href="https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh">скриптом установки</a> для Debian-подобных Linux-дистрибутивов или macOS:
-  <ul>
-  <li>Выполните следующую команду для установки Deckhouse Community Edition:<br/>
-{% snippetcut selector="kind-install" %}
+Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh): 
+- Выполните следующую команду для установки Deckhouse **Community Edition**:
+  {% snippetcut selector="kind-install" %}
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
-{% endsnippetcut %}
-  </li>
-  <li>Либо выполните следующую команду для установки Deckhouse Enterprise Edition, указав лицензионный ключ:<br/>
-{% snippetcut selector="kind-install" %}
+  {% endsnippetcut %}
+- Либо выполните следующую команду для установки Deckhouse **Enterprise Edition**, указав лицензионный ключ:
+  {% snippetcut selector="kind-install" %}
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
-{% endsnippetcut %}
-  </li>
-  <li>Перейдите к <a href="step5.html">финальному шагу</a> руководства.</li>
-  </ul>
-</li>
-</ul>
+  {% endsnippetcut %}
 
-По окончании установки вы сможете самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/documentation/), чтобы получить об этом необходимую информацию. При возникновении вопросов вы можете попросить помощи [сообщества](/community/about.html).
+По окончании установки инсталлятор выведет пароль пользователя `admin` для доступа в Grafana, которая будет доступна по адресу [http://grafana.127.0.0.1.sslip.io](http://grafana.127.0.0.1.sslip.io).
+
+{% offtopic title="Пример вывода..." %}
+```text
+Waiting for the Ingress controller to be ready.........................................
+Ingress controller is running.
+
+You have installed Deckhouse Platform in kind!
+
+Don't forget that the default kubectl context has been changed to 'kind-d8'.
+
+Run 'kubectl --context kind-d8 cluster-info' to see cluster info.
+Run 'kind delete cluster --name d8' to remove cluster.
+
+Provide following credentials to access Grafana at http://grafana.127.0.0.1.sslip.io/ :
+
+    Username: admin
+    Password: LlF7X67BvgRO74LNWXHi
+
+The information above is saved to /home/user/.kind-d8/info.txt file.
+
+Good luck!
+```
+{% endofftopic %}
+
+Пароль пользователя `admin` для Grafana также можно узнать выполнив команду:
+{% snippetcut selector="kind-get-password" %}
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+```
+{% endsnippetcut %}

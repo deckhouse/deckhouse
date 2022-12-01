@@ -32,8 +32,8 @@ sections:
           en: https://deckhouse.io/gs/bm/step2.html
           ru: https://deckhouse.ru/gs/bm/step2.html
       - description:
-          en: Public cloud providers (AWS, Azure, GCP, Yandex.Cloud)
-          ru: Публичные облака (AWS, Azure, GCP, Yandex.Cloud)
+          en: Public cloud providers (AWS, Azure, GCP, Yandex Cloud)
+          ru: Публичные облака (AWS, Azure, GCP, Yandex Cloud)
         revision: ce
       - description:
           en: OpenStack

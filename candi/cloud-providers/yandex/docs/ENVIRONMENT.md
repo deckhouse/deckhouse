@@ -1,8 +1,8 @@
 ---
-title: "Cloud provider — Yandex.Cloud: Preparing environment"
+title: "Cloud provider — Yandex Cloud: Preparing environment"
 ---
 
-You need to create a service account with the editor role with the cloud provider so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Yandex.Cloud are available in the provider's [documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
+You need to create a service account with the editor role with the cloud provider so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available in the provider's [documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
 1. Create a user named `deckhouse`. The command response will contain its parameters:
 

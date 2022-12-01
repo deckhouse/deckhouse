@@ -1,36 +1,89 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-# Access cluster Kubernetes API
-Deckhouse have just finished installation process of your cluster. Now you can connect to master via ssh.
-To do, so you need to get master IP either from dhctl logs or from cloud provider web interface/cli tool.
+## Accessing to the master node
+Deckhouse have finished installation process. It remains to make some settings, for which you need to connect to the **master node**.
+
+Connect to the master node via SSH (the IP address of the master node was printed by the installer upon completion of the installation, but you can also find it using the cloud provider web interface/CLI tool):
 {% snippetcut %}
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) to Kubernetes API later.
+
+Check the kubectl is working by displaying a list of cluster nodes:
 {% snippetcut %}
 ```shell
-sudo -i
-kubectl get nodes
+sudo kubectl get nodes
 ```
 {% endsnippetcut %}
 
-# Access cluster using NGINX Ingress
-[IngressNginxController](/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
-The only thing left is to configure access to web interfaces of components that are already installed in the cluster (Grafana, Prometheus, Dashboard, etc.).
-{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
-LoadBalancer is already created, and you just need to point a DNS domain to it.
-First, you need to connect to your master node as described [previously](#access-cluster-kubernetes-api).
+{% offtopic title="Example of the output..." %}
+```
+$ sudo kubectl get nodes
+NAME                                     STATUS   ROLES                  AGE   VERSION
+cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
+cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
+```
+{%- endofftopic %}
 
-Get the IP address of the load balancer. Run the following command from the root user:
+It may take some time to start the Ingress controller after installing Deckhouse. Make sure that the Ingress controller has started before continuing:
+
+{% snippetcut %}
+```shell
+sudo kubectl -n d8-ingress-nginx get po
+```
+{% endsnippetcut %}
+
+Wait for the Ingress controller Pod to switch to `Ready` state.
+
+{% offtopic title="Example of the output..." %}
+```
+$ sudo kubectl -n d8-ingress-nginx get po
+NAME                     READY   STATUS    RESTARTS   AGE
+controller-nginx-l2gk6   3/3     Running   0          12m
+```
+{%- endofftopic %}
+
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+Also wait for the load balancer to be ready:
+{% snippetcut %}
+```shell
+sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+```
+{% endsnippetcut %}
+
+The `EXTERNAL-IP` value must be filled with a public IP address or DNS name.
+
+{% offtopic title="Example of the output..." %}
+```
+$ sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
+nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
+```
+{%- endofftopic %}
+{% endif %}
+
+## DNS
+
+To access the web interfaces of Deckhouse services, you need to:
+- configure DNS
+- specify [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+
+The *DNS names template* is used to configure Ingress resources of system applications. For example, the name `grafana` is assigned to the Grafana interface. Then, for the template `%s.kube.company.my` Grafana will be available at `grafana.kube.company.my`, etc.
+
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
+
+Run the following command on **the master node** to get the load balancer IP and to configure [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
-echo "$BALANCER_HOSTNAME"
+BALANCER_IP=$(dig $(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
+echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -38,93 +91,62 @@ echo "$BALANCER_HOSTNAME"
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip')
-echo "$BALANCER_IP"
+BALANCER_IP=$(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
+echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
 {% endif %}
-{% endif %}
 
-Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" step to Deckhouse web interfaces in one of the following ways:
-<ul>
-  <li>If you have the DNS server and you can add a DNS records:
-    <ul>
-      <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS</a> (e.g., <code>%s.kube.my</code>), then add
-        {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
-        balancer (<code>BALANCER_HOSTNAME</code>)
-        {%- else %} a corresponding wildcard A record containing the IP of {% if page.platform_code == 'vsphere' %}the master node, you've discovered previously (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node){% else %}the load balancer (<code>BALANCER_IP</code>), you've discovered previously{% endif %}{%- endif -%}.
-      </li>
-      <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
-        then add A or CNAME records containing the IP of {% if page.platform_code == 'vsphere' %}the master node, you've discovered
-        previously (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node){% else %}the load balancer (<code>BALANCER_IP</code>), you've discovered
-        previously{% endif %}, for the following Deckhouse service DNS names:
-        <div class="highlight">
-<pre class="highlight">
-<code example-hosts>api.example.com
-dashboard.example.com
-deckhouse.example.com
-dex.example.com
-grafana.example.com
-kubeconfig.example.com
-status.example.com
-upmeter.example.com</code>
-</pre>
-      </div>
-    </li>
-  </ul>
-</li>
-  <li><p>If you don't have a DNS server, then on the computer from which you need access to Deckhouse services add static records to the file <code>/etc/hosts</code> (for Linux, or <code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
-{% if page.platform_code == 'aws' %}
-    <p>You can determine the IP address of the AWS load balancer using the following command (in the cluster):</p>
+The command will also print the DNS name template set in the cluster. Example output:
+```text
+Balancer IP is '1.2.3.4'.
+moduleconfig.deckhouse.io/global patched
 
-<div markdown="1">
+Domain template is '%s.1.2.3.4.sslip.io'.
+```
+
+> Regenerating certificates after changing the DNS name template can take up to 5 minutes.
+
+{% offtopic title="Other options..." %}
+Instead of using *sslip.io*, you can use other options.
+{% include getting_started/global/partials/DNS_OPTIONS.liquid %}
+
+Then, run the following command on the **master node** (specify the template for DNS names to use in the <code>DOMAIN_TEMPLATE</code> variable):
+<div markdown="0">
 {% snippetcut %}
-```bash
-BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
 </div>
+{% endofftopic %}
 {% endif %}
 
-    <p>To add records to the <code>/etc/hosts</code> file locally, follow these steps:</p>
+{% if page.platform_type == 'cloud' and page.platform_code == 'vsphere' %} 
+Configure DNS for Deckhouse services using one of the following methods:
 
-  <ul>
-{%- if page.platform_code != 'vsphere' %}
-    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
+{% include getting_started/global/partials/DNS_OPTIONS.liquid %}
+
+Then, run the following command on the **master node** (specify the template for DNS names to use in the <code>DOMAIN_TEMPLATE</code> variable):
 {% snippetcut %}
-```bash
-export BALANCER_IP="<BALANCER_IP>"
+{% raw %}
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+{% endraw %}
 {% endsnippetcut %}
-    </li>
-{%- else %}
-    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address of <strong>the master node</strong> you've got (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node):</p>
-{% snippetcut %}
-```bash
-export BALANCER_IP="<MASTER_OR_FRONT_IP>"
-```
-{% endsnippetcut %}
-    </li>
-{%- endif %}
-  <li><p>Add DNS records for the Deckhouse services:</p>
-{% snippetcut selector="example-hosts" %}
-```bash
-sudo -E bash -c "cat <<EOF >> /etc/hosts
-$BALANCER_IP api.example.com
-$BALANCER_IP dashboard.example.com
-$BALANCER_IP deckhouse.example.com
-$BALANCER_IP dex.example.com
-$BALANCER_IP grafana.example.com
-$BALANCER_IP kubeconfig.example.com
-$BALANCER_IP status.example.com
-$BALANCER_IP upmeter.example.com
-EOF
-"
-```
-{% endsnippetcut %}
-</li>
-</ul></li>
-</ul>
+{% endif %}
+
+## Configure remote access to the cluster 
+
+On **a personal computer** follow these steps to configure the connection of `kubectl` to the cluster:
+- Open *Kubeconfig Generator* web interface. The name `kubeconfig` is reserved for it, and the address for access is formed according to the DNS names template (which you set up erlier). For example, for the DNS name template `%s.1.2.3.4.sslip.io`, the *Kubeconfig Generator* web interface will be available at `https://kubeconfig.1.2.3.4.sslip.io`.
+- Log in as a user `admin@example.com`. The user password generated in the previous step is `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `resource.yml` file).
+- Select the tab with the OS of the personal computer.
+- Sequentially copy and execute the commands given on the page.
+- Check that `kubectl` connects to the cluster (for example, execute the command `kubectl get no`).

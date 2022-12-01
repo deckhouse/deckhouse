@@ -84,7 +84,7 @@ properties:
             type: object
             additionalProperties:
               type: string
-            description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex.Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
+            description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
           nodeSelector:
