@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -154,7 +153,3 @@ func parseLicenseKeyFromDockerCredentials(dockerConfig []byte, registry string) 
 type dockerFileConfig struct {
 	Auths map[string]authn.AuthConfig `json:"auths"`
 }
-
-// Define global to mock file reading in tests.
-// TODO Add FS abstraction layer to dependency.Container.
-var readFile = os.ReadFile
