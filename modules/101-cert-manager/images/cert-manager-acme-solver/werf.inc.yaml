@@ -1,9 +1,9 @@
-{{- $version := "1.8.2" }}
+{{- $version := "1.10.1" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
-  add: /build/cert-manager/bazel-bin/cmd/acmesolver/acmesolver_/acmesolver
+  add: /build/cert-manager/_bin/server/acmesolver-linux-amd64
   to: /bin/acmesolver
   before: setup
 shell:
