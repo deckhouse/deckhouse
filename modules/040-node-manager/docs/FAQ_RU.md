@@ -298,7 +298,7 @@ spec:
     bb-apt-install "linux-image-${desired_version}"
 ```
 
-### Для дистрибутивов, основанных на Centos
+### Для дистрибутивов, основанных на CentOS
 
 Примените ресурс `NodeGroupConfiguration`, поле `desired_version` должно содержать желаемую версию ядра:
 
