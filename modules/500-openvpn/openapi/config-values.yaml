@@ -70,6 +70,13 @@ properties:
     x-doc-default: '172.25.176.0/24'
     default: '172.25.176.0/24'
     x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
+  pushDefaultGatewayToClient:
+    type: boolean
+    default: false
+    x-doc-default: false
+    description: |
+      Routing all client traffic through the VPN. A default route will be added to clients.
+    x-examples: [false, true]
   pushToClientRoutes:
     type: array
     items:
