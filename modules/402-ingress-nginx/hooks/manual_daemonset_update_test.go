@@ -60,7 +60,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 1
+  numberAvailable: 1
   desiredNumberScheduled: 1
 ---
 apiVersion: apps/v1
@@ -178,7 +178,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -306,7 +306,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -423,7 +423,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -541,7 +541,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 1
+  numberAvailable: 1
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
