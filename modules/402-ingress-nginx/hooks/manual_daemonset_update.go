@@ -189,7 +189,7 @@ func filterManualDS(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	return manualDSController{
 		CRName:          ds.GetLabels()["name"],
 		DesiredPodCount: ds.Status.DesiredNumberScheduled,
-		CurrentPodCount: ds.Status.CurrentNumberScheduled,
+		CurrentPodCount: ds.Status.NumberAvailable,
 	}, nil
 }
 
