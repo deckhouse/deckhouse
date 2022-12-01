@@ -9,3 +9,6 @@ properties:
     type: number
   paramBool:
     type: boolean
+  paramDef:
+    type: string
+    default: "azaza"

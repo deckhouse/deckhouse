@@ -64,7 +64,7 @@ func SetupConversionTester() *ConversionTester {
 		mm := mock.NewModuleManager(
 			mock.NewModule(moduleName, nil, mock.EnabledByScript),
 		)
-		err := mm.InitModuleValuesValidator(moduleName, modulePath)
+		err := mm.AddOpenAPISchemas(moduleName, modulePath)
 		Expect(err).ShouldNot(HaveOccurred(), "should load openapi schemas for module '%s' from '%s'", moduleName, modulePath)
 		d8config.InitService(mm)
 	})

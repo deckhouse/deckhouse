@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
@@ -41,6 +43,7 @@ func NewConfigValidator(valuesValidator ValuesValidator) *ConfigValidator {
 // ValuesValidator is a part of ValuesValidator from addon-operator with needed
 // methods to validate config values.
 type ValuesValidator interface {
+	GetSchema(schemaType validation.SchemaType, valuesType validation.SchemaType, modName string) *spec.Schema
 	ValidateGlobalConfigValues(values utils.Values) error
 	ValidateModuleConfigValues(moduleName string, values utils.Values) error
 }
@@ -130,6 +133,7 @@ func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) Vali
 			return result
 		}
 		// Clear settings and version if settings convert to an empty object.
+		// Set nil and 0 to not create spec.version and spec.settings fields on migration.
 		if len(newSettings) == 0 {
 			newSettings = nil
 			newVersion = 0
@@ -149,7 +153,7 @@ func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) Vali
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
 func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationResult {
 	result := c.ConvertToLatest(cfg)
-	if result.HasError() {
+	if result.HasError() || !hasVersionedSettings(cfg) {
 		return result
 	}
 
@@ -168,7 +172,7 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationR
 // validateSettings uses ValuesValidator from ModuleManager instance to validate spec.settings.
 // cfgName arg is a kebab-cased name of the ModuleConfig resource.
 // cfgSettings is a content of spec.settings.
-// (Note: cfgValues map is a map with 'plain values', i.e. without camelCased module name as a root key).
+// (Note: cfgSettings map is a map with 'plain values', i.e. without camelCased module name as a root key).
 func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[string]interface{}) error {
 	// Ignore empty validator.
 	if c.valuesValidator == nil {
@@ -176,9 +180,23 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 	}
 
 	valuesKey := valuesKeyFromObjectName(cfgName)
-	values := map[string]interface{}{
-		valuesKey: cfgSettings,
+	schemaType := validation.ModuleSchema
+	if cfgName == "global" {
+		schemaType = validation.GlobalSchema
 	}
+
+	// Instantiate defaults from the OpenAPI schema.
+	defaultSettings := make(map[string]interface{})
+	s := c.valuesValidator.GetSchema(schemaType, validation.ConfigValuesSchema, valuesKey)
+	if s != nil {
+		validation.ApplyDefaults(defaultSettings, s)
+	}
+
+	// Merge defaults with passed settings as addon-operator will do.
+	values := utils.MergeValues(
+		utils.Values{valuesKey: defaultSettings},
+		utils.Values{valuesKey: cfgSettings},
+	)
 
 	if cfgName == "global" {
 		return c.valuesValidator.ValidateGlobalConfigValues(values)
