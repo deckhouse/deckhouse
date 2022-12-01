@@ -248,7 +248,7 @@ spec:
                       description: |
                         Some providers return non-standard claims (eg. mail). Claim mappings are hints for Dex how to map claims to [standard OIDC claims](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
 
-                        Dex can only map a non-standard claim to a standard one if it's not returned in the id_token returned by OIDC provider.
+                        Dex can only map a non-standard claim to a standard one if it's not included in the id_token returned by OIDC provider.
                       properties:
                         email:
                           type: string
