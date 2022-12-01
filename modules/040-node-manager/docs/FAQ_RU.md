@@ -300,7 +300,7 @@ spec:
 
 ### Для дистрибутивов, основанных на CentOS
 
-Примените ресурс `NodeGroupConfiguration`, поле `desired_version` должно содержать желаемую версию ядра:
+Создайте ресурс `NodeGroupConfiguration`, указав в переменной `desired_version` shell-скрипта (параметр content ресурса) желаемую версию ядра:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
