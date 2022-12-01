@@ -23,6 +23,7 @@ set -euo pipefail
 ARGOCD_VERSION="2.5.3"
 
 VENDOR_ROOT=./hack/vendor
+mkdir -p $VENDOR_ROOT
 pushd $VENDOR_ROOT
 # the path in the arhived repo
 ARGO_MANIFESTS="argo-cd-${ARGOCD_VERSION}/manifests/install.yaml"
@@ -90,8 +91,6 @@ mkdir -p ${ARGOCD_MANIFESTS_ROOT}/notifications-controller
 mv argocd-notifications*.yaml ${ARGOCD_MANIFESTS_ROOT}/notifications-controller
 
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/repo-server
-# No need to keep this SA, see https://github.com/argoproj/argo-cd/pull/9301
-rm argocd-repo-server-serviceaccount.yaml
 mv argocd-repo-server*.yaml ${ARGOCD_MANIFESTS_ROOT}/repo-server
 
 mkdir -p ${ARGOCD_MANIFESTS_ROOT}/server

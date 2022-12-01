@@ -301,6 +301,7 @@ spec:
           volumeMounts:
             - mountPath: /var/run/argocd
               name: var-files
+      serviceAccountName: argocd-repo-server
       volumes:
         - configMap:
             name: argocd-ssh-known-hosts-cm
