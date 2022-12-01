@@ -317,10 +317,6 @@ import:
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- artifact: libjq
-  add: /libjq
-  to: /libjq
-  after: setup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
@@ -364,8 +360,6 @@ docker:
     DECKHOUSE_POD: tests
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    CGO_CFLAGS: "-I/libjq/include"
-    CGO_LDFLAGS: "-L/libjq/lib"
 ---
 artifact: deckhouse-controller
 fromImage: base-for-go
@@ -403,11 +397,6 @@ git:
       - modules/**/*.go
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: libjq
-  add: /libjq
-  to: /libjq
-  before: setup
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -427,7 +416,7 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - ./go-build.sh /libjq
+  - ./go-build.sh
   - mv deckhouse-controller /out
 
 ---
@@ -497,26 +486,6 @@ ansible:
       make LDFLAGS=-all-static
       make prefix=/usr install
 
----
-artifact: libjq
-from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "20210527"
-git:
-- url: https://github.com/flant/libjq-go
-  tag: v1.6.2
-  add: /
-  to: /src
-  stageDependencies:
-    install:
-      - "scripts/**"
-    setup:
-      - "modules/**"
-ansible:
-  install:
-  - shell: /src/scripts/install-libjq-dependencies-alpine.sh
-  - raw: rm -rf /var/cache/apk/*
-  setup:
-  - shell: /src/scripts/build-libjq-static.sh /src /libjq
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
