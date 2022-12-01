@@ -252,7 +252,7 @@ Then put the node under the control of `node-manager`.
 
 ### Debian-based distros
 
-Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's content parameter):
+Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -300,7 +300,7 @@ spec:
 
 ### CentOS-based distros
 
-Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's content parameter):
+Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
