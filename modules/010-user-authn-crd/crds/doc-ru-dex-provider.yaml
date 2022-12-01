@@ -169,7 +169,7 @@ spec:
                     userNameKey:
                       description: |
                         [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя.
-                    claimMappings:
+                    claimMapping:
                       description: |
                         Некоторые провайдеры возвращают нестандартные claim'ы (например mail). Claim mappings помогают Dex преобразовать их в [стандартные claim'ы OIDC](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
 

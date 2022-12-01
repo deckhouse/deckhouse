@@ -243,7 +243,7 @@ spec:
                       default: 'name'
                       description: |
                         The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user name.
-                    claimMappings:
+                    claimMapping:
                       type: object
                       description: |
                         Some providers return non-standard claims (eg. mail). Claim mappings are hints for Dex how to map claims to [standard OIDC claims](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
@@ -260,7 +260,7 @@ spec:
                           default: groups
                           description: |
                             The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user groups.
-                        preferredUsername:
+                        preferred_username:
                           type: string
                           default: preferred_username
                           description: |
