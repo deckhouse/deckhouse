@@ -259,8 +259,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
   name: install-kernel.sh
-  resourceVersion: "7116"
-  uid: a23bf2fc-1466-4556-a00a-346a64d2ba9f
 spec:
   bundles:
     - '*'
