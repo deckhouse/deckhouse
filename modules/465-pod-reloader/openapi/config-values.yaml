@@ -43,5 +43,7 @@ properties:
     type: boolean
     default: true
     description: |
-      Rollout the workload when config map/secret changes by recreation.
+      Rollout the workload in case of creating a ConfigMap or Secret.
+      
+      Enabling the parameter will cause the workload to restart not only when changing the corresponding ConfigMap or Secret, but also when creating it.
     x-examples: [true, false]
