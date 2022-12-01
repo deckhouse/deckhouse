@@ -298,7 +298,7 @@ spec:
     bb-apt-install "linux-image-${desired_version}"
 ```
 
-### Centos-based distros
+### CentOS-based distros
 
 Deploy `NodeGroupConfiguration` scripts, fill `desired_version` with desired kernel version:
 
