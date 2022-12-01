@@ -10,13 +10,16 @@ spec:
                   description: |
                     Имя Ingress-gateway класса для обслуживания Istio ingress gateway controller.
 
-                    Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/). Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
+                    Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
+                    
+                    Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
                 inlet:
                   description: |
                     Способ поступления трафика из внешнего мира:
                     * `LoadBalancer` — устанавливается Ingress-контроллер и заказывается Service с типом `LoadBalancer`.
                     * `NodePort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `nodePort`.
                     * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`.
+                    
                     **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
                 nodeSelector:
                   description: |
@@ -84,7 +87,7 @@ spec:
                         Режим управления реквестами ресурсов.
                     vpa:
                       description: |
-                        Настройки VPA режима управления.
+                        Настройки режима работы VPA.
                       properties:
                         mode:
                           description: |
@@ -95,10 +98,10 @@ spec:
                           properties:
                             max:
                               description: |
-                                Максимальное значение, которое может выставить VPA для запроса cpu.
+                                Максимальное значение, которое может выставить VPA для запроса CPU.
                             min:
                               description: |
-                                Минимальное значение, которое может выставить VPA для запроса cpu.
+                                Минимальное значение, которое может выставить VPA для запроса CPU.
                         memory:
                           description: |
                             Значение для запроса memory.

@@ -192,7 +192,7 @@ spec:
 
 ### Istio Ingress Gateway
 
-Exmaple:
+Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
