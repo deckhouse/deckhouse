@@ -169,7 +169,6 @@ properties:
     default: {}
     properties:
       registry:
-        additionalProperties: true
         type: object
         default: {}
         properties:

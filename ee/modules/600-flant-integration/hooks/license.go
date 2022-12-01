@@ -16,7 +16,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/google/go-containerregistry/pkg/authn"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -25,10 +24,10 @@ const (
 	revokedCMNamespace = "d8-monitoring"
 	revokedCMBinding   = revokedCMName
 
-	globalRegistryPath     = "global.modulesImages.registry.base"
-	dockerConfigPath       = "/etc/registrysecret/.dockerconfigjson"
-	internalLicenseKeyPath = "flantIntegration.internal.licenseKey"
-	licenseKeyPath         = "flantIntegration.licenseKey"
+	globalRegistryPath      = "global.modulesImages.registry.base"
+	globalRegistryDockercfg = "global.modulesImages.registry.dockercfg"
+	internalLicenseKeyPath  = "flantIntegration.internal.licenseKey"
+	licenseKeyPath          = "flantIntegration.licenseKey"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -74,7 +73,13 @@ func handle(input *go_hook.HookInput) error {
 
 	// Get license key from docker registry config. License key is the password to access container registry.
 	registry := input.Values.Get(globalRegistryPath).String()
-	licenseKey, err := getLicenseKeyFromDockerConfig(registry, dockerConfigPath)
+
+	dockerCfg, err := base64.StdEncoding.DecodeString(input.Values.Get(globalRegistryDockercfg).String())
+	if err != nil {
+		return err
+	}
+
+	licenseKey, err := getLicenseKeyFromDockerConfig(registry, dockerCfg)
 	if err != nil {
 		return err
 	}
@@ -83,19 +88,13 @@ func handle(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getLicenseKeyFromDockerConfig(registryValue, dockerConfigPath string) (string, error) {
+func getLicenseKeyFromDockerConfig(registryValue string, dockerConfig []byte) (string, error) {
 	registryHost, err := parseRegistryHost(registryValue)
 	if err != nil {
 		return "", fmt.Errorf("empty registry: %v", err)
 	}
 
-	cfg, err := readFile(dockerConfigPath)
-	if err != nil {
-		log.Warnf("cannot open %q: %v", dockerConfigPath, err)
-		return "", fmt.Errorf(`cannot find license key in docker config file; set "flantIntegration.licenseKey" in deckhouse configmap`)
-	}
-
-	return parseLicenseKeyFromDockerCredentials(cfg, registryHost)
+	return parseLicenseKeyFromDockerCredentials(dockerConfig, registryHost)
 }
 
 func parseRegistryHost(repo string) (string, error) {
