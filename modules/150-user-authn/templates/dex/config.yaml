@@ -152,7 +152,7 @@
         claimMapping:
           email: {{ $provider.oidc.claimMapping.email }}
           groups: {{ $provider.oidc.claimMapping.groups }}
-          preferredUsername: {{ $provider.oidc.claimMapping.preferredUsername }}
+          preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
         {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}

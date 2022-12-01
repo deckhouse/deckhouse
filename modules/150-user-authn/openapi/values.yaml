@@ -246,7 +246,7 @@ properties:
               claimMapping:
                 email: mail
                 groups: roles
-                preferredUsername: name
+                preferred_username: name
           - id: bitbucket
             displayName: bitbucket
             type: BitbucketCloud

@@ -181,7 +181,7 @@ spec:
                         groups:
                           description: |
                             [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения групп пользователя.
-                        preferredUsername:
+                        preferred_username:
                           description: |
                             [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения предпочтительного имени пользователя.
                     scopes:
