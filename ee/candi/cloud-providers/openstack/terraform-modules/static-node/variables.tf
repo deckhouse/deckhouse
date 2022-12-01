@@ -42,6 +42,14 @@ locals {
   internal_network_security = (local.layout == "standard" || local.layout == "standardWithNoRouter") ? lookup(var.providerClusterConfiguration[local.layout], "internalNetworkSecurity", true) : false
   internal_network_security_enabled = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled" || local.internal_network_security
   additional_sg_names = lookup(local.instance_class, "additionalSecurityGroups", [])
-  security_group_names = (lookup(var.providerClusterConfiguration.standard, "internalNetworkSecurity", true) && lookup(var.providerClusterConfiguration.standardWithNoRouter, "internalNetworkSecurity", true)) ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
+
+  is_standard = (local.layout == "standard") ? lookup(var.providerClusterConfiguration.standard, "internalNetworkSecurity", true) : false
+  is_standard_with_no_router = (local.layout == "standardWithNoRouter") ? lookup(var.providerClusterConfiguration.standardWithNoRouter, "internalNetworkSecurity", true) : false
+
+  security_group_names = (local.is_standard || local.is_standard_with_no_router) ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
+
+#  security_group_names = (local.layout == "standard" || local.layout == "standardWithNoRouter") ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
+
+
   metadata_tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
 }
