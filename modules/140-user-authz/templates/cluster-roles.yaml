@@ -209,9 +209,14 @@
 - apiGroups:
   - apps
   - extensions
+  - ""
   resources:
   - replicasets
+  - pods
   verbs:
+  - create
+  - patch
+  - update
   - delete
   - deletecollection
 {{- end -}}
