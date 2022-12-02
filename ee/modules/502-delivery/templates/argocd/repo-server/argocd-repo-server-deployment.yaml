@@ -255,15 +255,7 @@ spec:
               port: 8084
             initialDelaySeconds: 5
             periodSeconds: 10
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/ssh
               name: ssh-known-hosts
@@ -289,15 +281,7 @@ spec:
             - /var/run/argocd/argocd-cmp-server
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
           name: copyutil
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
           volumeMounts:
             - mountPath: /var/run/argocd
               name: var-files
