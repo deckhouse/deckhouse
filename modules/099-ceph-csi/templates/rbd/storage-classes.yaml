@@ -13,11 +13,11 @@ parameters:
   clusterID: {{ $cr.spec.clusterID }}
   pool: {{ $sc.pool }}
   imageFeatures: layering
-  csi.storage.k8s.io/provisioner-secret-name: csi-{{ $cr.name }}
+  csi.storage.k8s.io/provisioner-secret-name: csi-rbd-{{ $cr.name }}
   csi.storage.k8s.io/provisioner-secret-namespace: d8-{{ $.Chart.Name }}
-  csi.storage.k8s.io/controller-expand-secret-name: csi-{{ $cr.name }}
+  csi.storage.k8s.io/controller-expand-secret-name: csi-rbd-{{ $cr.name }}
   csi.storage.k8s.io/controller-expand-secret-namespace: d8-{{ $.Chart.Name }}
-  csi.storage.k8s.io/node-stage-secret-name: csi-{{ $cr.name }}
+  csi.storage.k8s.io/node-stage-secret-name: csi-rbd-{{ $cr.name }}
   csi.storage.k8s.io/node-stage-secret-namespace: d8-{{ $.Chart.Name }}
   csi.storage.k8s.io/fstype: {{ $sc.defaultFSType }}
 reclaimPolicy: {{ $sc.reclaimPolicy }}
