@@ -43,22 +43,16 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/name: argocd-applicationset-controller
-    app.kubernetes.io/part-of: argocd-applicationset
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "controller" "app.kubernetes.io/name" "argocd-applicationset-controller" "app.kubernetes.io/part-of" "argocd-applicationset" "app" "argocd-applicationset-controller") | nindent 2 }}
   name: argocd-applicationset-controller
   namespace: d8-{{ .Chart.Name }}
 spec:
-  # No HA implied in upstream
-  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: argocd-applicationset-controller
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: argocd-applicationset-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-applicationset-controller" "app" "argocd-applicationset-controller") | nindent 6 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

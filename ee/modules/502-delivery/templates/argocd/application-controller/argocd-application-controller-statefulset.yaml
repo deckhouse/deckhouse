@@ -43,14 +43,10 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  labels:
-    app.kubernetes.io/component: application-controller
-    app.kubernetes.io/name: argocd-application-controller
-    app.kubernetes.io/part-of: argocd
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller") | nindent 2 }}
   name: argocd-application-controller
   namespace: d8-{{ .Chart.Name }}
 spec:
-  # No HA implied in upstream
   replicas: 1
   selector:
     matchLabels:
@@ -58,8 +54,7 @@ spec:
   serviceName: argocd-application-controller
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: argocd-application-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-application-controller" "app" "argocd-application-controller") | nindent 6 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -209,13 +204,6 @@ spec:
                   optional: true
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
           imagePullPolicy: Always
-          ##### liveness probe has been removed in 2.5.2
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 8082
-          #   initialDelaySeconds: 5
-          #   periodSeconds: 10
           name: argocd-application-controller
           ports:
             - containerPort: 8082

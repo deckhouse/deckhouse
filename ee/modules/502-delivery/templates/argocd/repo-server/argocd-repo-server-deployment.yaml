@@ -54,10 +54,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app.kubernetes.io/component: repo-server
-    app.kubernetes.io/name: argocd-repo-server
-    app.kubernetes.io/part-of: argocd
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "repo-server" "app.kubernetes.io/name" "argocd-repo-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-repo-server") | nindent 2 }}
   name: argocd-repo-server
   namespace: d8-{{ .Chart.Name }}
   annotations:
@@ -69,8 +66,7 @@ spec:
       app.kubernetes.io/name: argocd-repo-server
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: argocd-repo-server
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-repo-server" "app" "argocd-repo-server") | nindent 6 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

@@ -55,8 +55,7 @@ spec:
     type: Recreate
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: argocd-notifications-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-notifications-controller" "app" "argocd-notifications-controller") | nindent 6 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -78,13 +77,13 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "resources_argocd-notifications-controller" . | nindent 14 }}
 {{- end }}
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/tls
               name: tls-certs
             - mountPath: /app/config/reposerver/tls
               name: argocd-repo-server-tls
           workingDir: /app
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
       serviceAccountName: argocd-notifications-controller
       volumes:
         - configMap:
