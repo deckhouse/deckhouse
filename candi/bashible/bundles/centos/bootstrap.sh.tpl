@@ -159,8 +159,10 @@ bb-rp-install() {
 */}}
 export PATH="/usr/local/bin:$PATH"
 export LANG=C
+yum updateinfo
 until yum install nc curl wget -y; do
   echo "Error installing packages"
+  yum updateinfo
   sleep 10
 done
 {{- /*
@@ -168,5 +170,4 @@ done
 # When we will move to Centos 8, we should install jq from main repo.
 */}}
 yum install jq -y || bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
-
 mkdir -p /var/lib/bashible/
