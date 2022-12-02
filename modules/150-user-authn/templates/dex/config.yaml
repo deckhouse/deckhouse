@@ -148,6 +148,12 @@
         {{- end }}
         userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
+        {{- if $provider.oidc.claimMapping }}
+        claimMapping:
+          email: {{ $provider.oidc.claimMapping.email }}
+          groups: {{ $provider.oidc.claimMapping.groups }}
+          preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
+        {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}
            {{- range $scope := $provider.oidc.scopes }}
