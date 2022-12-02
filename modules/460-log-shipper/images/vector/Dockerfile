@@ -8,8 +8,10 @@ RUN apt-get update \
       ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
 
 WORKDIR /vector
+COPY patches/kafka-pem-tls.patch /
 RUN git clone --depth 1 --branch v0.24.2 https://github.com/vectordotdev/vector.git \
-    && cd vector
+    && cd vector \
+    && git apply /kafka-pem-tls.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector

@@ -61,6 +61,9 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	if spec.TLS.VerifyHostname != nil {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
+	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
+		tls.Enabled = true
+	}
 
 	return &Vector{
 		CommonSettings: CommonSettings{

@@ -55,7 +55,6 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		VerifyCertificate: true,
 		VerifyHostname:    true,
 	}
-
 	if spec.TLS.VerifyCertificate != nil {
 		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
 	}
