@@ -209,16 +209,19 @@
 - apiGroups:
   - apps
   - extensions
-  - ""
   resources:
   - replicasets
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - create
   - patch
   - update
-  - delete
-  - deletecollection
 {{- end -}}
 
 {{- define "user_authz_cluster_editor_rules" }}
