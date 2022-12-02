@@ -53,8 +53,8 @@ columns:
         url: '/community/community_edition.html'
       - title: Deckhouse Platform EE
         url: '/products/enterprise_edition.html'
-      - title: Как купить?
-        url: '/products/enterprise_edition.html#how-to-buy'
+      - title: Как купить
+        url: '/how_to_buy.html'
   - title: Услуги
     items:
       - title: Managed Kubernetes
