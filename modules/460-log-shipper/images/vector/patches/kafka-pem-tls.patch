@@ -1,5 +1,5 @@
 diff --git a/src/kafka.rs b/src/kafka.rs
-index b2f9353cf..13c50296e 100644
+index b2f9353cf..16ea6fee4 100644
 --- a/src/kafka.rs
 +++ b/src/kafka.rs
 @@ -7,6 +7,8 @@ use vector_config::configurable_component;
@@ -16,7 +16,7 @@ index b2f9353cf..13c50296e 100644
              let tls = self.tls.as_ref().unwrap();
              if let Some(path) = &tls.options.ca_file {
 -                client.set("ssl.ca.location", pathbuf_to_string(path)?);
-+                text = pathbuf_to_string(path)?;
++                let text = pathbuf_to_string(path)?;
 +                match text.find(PEM_START_MARKER) {
 +                    Some(_) => client.set("ssl.ca.pem", text),
 +                    None => client.set("ssl.ca.location", text),
@@ -25,7 +25,7 @@ index b2f9353cf..13c50296e 100644
 +
              if let Some(path) = &tls.options.crt_file {
 -                client.set("ssl.certificate.location", pathbuf_to_string(path)?);
-+                text = pathbuf_to_string(path)?;
++                let text = pathbuf_to_string(path)?;
 +                match text.find(PEM_START_MARKER) {
 +                    Some(_) => client.set("ssl.certificate.pem", text),
 +                    None => client.set("ssl.certificate.location", text),
@@ -34,7 +34,7 @@ index b2f9353cf..13c50296e 100644
 +
              if let Some(path) = &tls.options.key_file {
 -                client.set("ssl.key.location", pathbuf_to_string(path)?);
-+                text = pathbuf_to_string(path)?;
++                let text = pathbuf_to_string(path)?;
 +                match text.find(PEM_START_MARKER) {
 +                    Some(_) => client.set("ssl.key.pem", text),
 +                    None => client.set("ssl.key.location", text),
