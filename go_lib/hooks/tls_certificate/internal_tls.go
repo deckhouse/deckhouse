@@ -170,9 +170,9 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 	var usages []string
 	if conf.Usages == nil {
 		usages = []string{
-			string(certificatesv1.UsageDigitalSignature),
-			string(certificatesv1.UsageKeyEncipherment),
-			string(certificatesv1.UsageClientAuth),
+			"signing",
+			"key encipherment",
+			"requestheader-client",
 		}
 	} else {
 		for _, v := range conf.Usages {
