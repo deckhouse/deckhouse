@@ -40,7 +40,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.certificate", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
 	})
 	Context("With gitlab provider in config values", func() {
