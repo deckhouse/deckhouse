@@ -136,6 +136,12 @@ spec:
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
+        - name: PROMETHEUS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: prometheus-token
+              key: token
+              optional: false
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data

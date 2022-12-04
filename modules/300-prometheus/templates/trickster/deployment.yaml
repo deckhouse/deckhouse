@@ -62,9 +62,6 @@ spec:
         - mountPath: /etc/trickster/trickster.conf
           name: trickster-config
           subPath: trickster.conf
-        - mountPath: /etc/trickster/ssl/
-          name: prometheus-api-client-tls
-          readOnly: true
         livenessProbe:
           httpGet:
             path: /trickster/trickster/ping
@@ -132,8 +129,5 @@ spec:
       - name: trickster-config
         configMap:
           name: trickster-config
-      - name: prometheus-api-client-tls
-        secret:
-          secretName: prometheus-api-client-tls
       imagePullSecrets:
       - name: deckhouse-registry

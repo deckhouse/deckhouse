@@ -28,8 +28,6 @@ data:
 
             [origins.main.tls]
               insecure_skip_verify = true
-              client_cert_path = '/etc/trickster/ssl/tls.crt'
-              client_key_path = '/etc/trickster/ssl/tls.key'
 
         [origins.longterm]
           origin_type = 'prometheus'
@@ -40,8 +38,6 @@ data:
 
             [origins.longterm.tls]
               insecure_skip_verify = true
-              client_cert_path = '/etc/trickster/ssl/tls.crt'
-              client_key_path = '/etc/trickster/ssl/tls.key'
 
       [metrics]
         listen_port = 8001

@@ -45,9 +45,8 @@ scrape_configs:
   honor_labels: true
   metrics_path: '/federate'
   scheme: https
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   tls_config:
-    cert_file: /etc/prometheus/secrets/prometheus-api-client-tls/tls.crt
-    key_file: /etc/prometheus/secrets/prometheus-api-client-tls/tls.key
     insecure_skip_verify: true
   params:
     'match[]':
