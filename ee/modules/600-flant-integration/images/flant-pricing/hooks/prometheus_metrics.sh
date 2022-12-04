@@ -23,7 +23,8 @@ EOF
 # Makes query to prometheus and returns resulting json.
 # $1 - promql
 function prometheus_query() {
-  curl_args=(-s -f --connect-timeout 10 --max-time 10 -k -XGET -G -k --cert /etc/ssl/prometheus-api-client-tls/tls.crt --key /etc/ssl/prometheus-api-client-tls/tls.key)
+  prom_token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+  curl_args=(-s -f --connect-timeout 10 --max-time 10 -k -XGET -G -k -H "Authorization: Bearer $prom_token")
   prom_url="https://prometheus.d8-monitoring:9090/api/v1/query"
   if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode "query=${1}")"; then
     prom_result=""
