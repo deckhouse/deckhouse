@@ -58,13 +58,15 @@ properties:
         type: object
         default: {}
         x-examples:
-        - certificate: test
+        - ca: test
+          crt: test
           key: test
-          certificate_updated: true
         properties:
-          certificate:
+          crt:
             type: string
           key:
+            type: string
+          ca:
             type: string
           certificate_updated:
             type: boolean

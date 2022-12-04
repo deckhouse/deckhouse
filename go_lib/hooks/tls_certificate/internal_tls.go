@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/net"
@@ -80,6 +81,11 @@ type GenSelfSignedTLSHookConf struct {
 	// secret must be TLS secret type https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets
 	// CA certificate MUST set to ca.crt key
 	TLSSecretName string
+
+	// Usages specifies valid usage contexts for keys.
+	// See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3
+	//      https://tools.ietf.org/html/rfc5280#section-4.2.1.12
+	Usages []certificatesv1.KeyUsage
 
 	// FullValuesPathPrefix - prefix full path to store CA certificate TLS private key and cert
 	// full paths will be
@@ -161,6 +167,19 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
 	caPath, certPath, keyPath := conf.generatePaths()
 
+	var usages []string
+	if conf.Usages == nil {
+		usages = []string{
+			string(certificatesv1.UsageDigitalSignature),
+			string(certificatesv1.UsageKeyEncipherment),
+			string(certificatesv1.UsageClientAuth),
+		}
+	} else {
+		for _, v := range conf.Usages {
+			usages = append(usages, string(v))
+		}
+	}
+
 	return func(input *go_hook.HookInput) error {
 		if conf.BeforeHookCheck != nil {
 			passed := conf.BeforeHookCheck(input)
@@ -177,7 +196,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		if len(input.Snapshots["secret"]) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewSelfSignedTLS(input, cn, sans)
+			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
 			if err != nil {
 				return err
 			}
@@ -196,7 +215,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 
 			if caOutdated || certOutdated {
-				cert, err = generateNewSelfSignedTLS(input, cn, sans)
+				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
 				if err != nil {
 					return err
 				}
@@ -260,7 +279,7 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans []string) (certificate.Certificate, error) {
+func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.LogEntry,
 		cn,
 		certificate.WithKeyAlgo(keyAlgorithm),
@@ -277,11 +296,7 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans []string
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
 		certificate.WithSigningDefaultExpiry(certExpiryDuration),
-		certificate.WithSigningDefaultUsage([]string{
-			"signing",
-			"key encipherment",
-			"requestheader-client",
-		}),
+		certificate.WithSigningDefaultUsage(usages),
 	)
 }
 
