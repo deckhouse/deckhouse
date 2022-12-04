@@ -1,5 +1,5 @@
 diff --git a/src/kafka.rs b/src/kafka.rs
-index b2f9353cf..16ea6fee4 100644
+index b2f9353cf..f71f0a000 100644
 --- a/src/kafka.rs
 +++ b/src/kafka.rs
 @@ -7,6 +7,8 @@ use vector_config::configurable_component;
@@ -11,33 +11,38 @@ index b2f9353cf..16ea6fee4 100644
  #[derive(Debug, Snafu)]
  enum KafkaError {
      #[snafu(display("invalid path: {:?}", path))]
-@@ -101,14 +103,29 @@ impl KafkaAuthConfig {
+@@ -100,15 +102,34 @@ impl KafkaAuthConfig {
+
          if tls_enabled {
              let tls = self.tls.as_ref().unwrap();
++
              if let Some(path) = &tls.options.ca_file {
 -                client.set("ssl.ca.location", pathbuf_to_string(path)?);
 +                let text = pathbuf_to_string(path)?;
-+                match text.find(PEM_START_MARKER) {
-+                    Some(_) => client.set("ssl.ca.pem", text),
-+                    None => client.set("ssl.ca.location", text),
++                if text.contains(PEM_START_MARKER) {
++                    client.set("ssl.ca.pem", text);
++                } else {
++                    client.set("ssl.ca.location", text);
 +                }
              }
 +
              if let Some(path) = &tls.options.crt_file {
 -                client.set("ssl.certificate.location", pathbuf_to_string(path)?);
 +                let text = pathbuf_to_string(path)?;
-+                match text.find(PEM_START_MARKER) {
-+                    Some(_) => client.set("ssl.certificate.pem", text),
-+                    None => client.set("ssl.certificate.location", text),
++                if text.contains(PEM_START_MARKER) {
++                    client.set("ssl.certificate.pem", text);
++                } else {
++                    client.set("ssl.certificate.location", text);
 +                }
              }
 +
              if let Some(path) = &tls.options.key_file {
 -                client.set("ssl.key.location", pathbuf_to_string(path)?);
 +                let text = pathbuf_to_string(path)?;
-+                match text.find(PEM_START_MARKER) {
-+                    Some(_) => client.set("ssl.key.pem", text),
-+                    None => client.set("ssl.key.location", text),
++                if text.contains(PEM_START_MARKER) {
++                    client.set("ssl.key.pem", text);
++                } else {
++                    client.set("ssl.key.location", text);
 +                }
              }
 +
