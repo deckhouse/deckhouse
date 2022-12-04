@@ -1896,7 +1896,7 @@
         "options": [],
         "query": {
           "query": "label_values(node_group_info, name)",
-          "refId": "main-node-Variable-Query"
+          "refId": "main-node_group-Variable-Query"
         },
         "refresh": 2,
         "regex": "",
