@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema: &schema
+      schema:
         openAPIV3Schema:
           properties:
             spec:
@@ -11,7 +11,7 @@ spec:
                     Имя Ingress-gateway класса для обслуживания Istio ingress gateway controller.
 
                     Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
-                    
+
                     Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
                 inlet:
                   description: |
@@ -19,7 +19,7 @@ spec:
                     * `LoadBalancer` — устанавливается Ingress-контроллер и заказывается Service с типом `LoadBalancer`.
                     * `NodePort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `nodePort`.
                     * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`.
-                    
+
                     **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
                 nodeSelector:
                   description: |
