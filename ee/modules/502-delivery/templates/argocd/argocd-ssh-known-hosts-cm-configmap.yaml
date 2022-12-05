@@ -12,6 +12,6 @@ data:
     github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
 kind: ConfigMap
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-ssh-known-hosts-cm" "app.kubernetes.io/part-of" "argocd" "app" "argocd-ssh-known-hosts-cm") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-ssh-known-hosts-cm" "app.kubernetes.io/part-of" "argocd" "app" "argocd-ssh-known-hosts-cm")) | nindent 2 }}
   name: argocd-ssh-known-hosts-cm
   namespace: d8-{{ .Chart.Name }}

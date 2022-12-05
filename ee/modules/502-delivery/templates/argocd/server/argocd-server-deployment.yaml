@@ -43,7 +43,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
   namespace: d8-{{ .Chart.Name }}
 spec:
@@ -52,7 +52,7 @@ spec:
       app.kubernetes.io/name: argocd-server
   template:
     metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-server" "app" "argocd-server") | nindent 6 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-server" "app" "argocd-server")) | nindent 6 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

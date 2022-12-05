@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
 rules:
   - apiGroups:
@@ -37,7 +37,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -51,7 +51,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
   namespace: d8-{{ .Chart.Name }}
 rules:
@@ -93,7 +93,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
   namespace: d8-{{ .Chart.Name }}
 roleRef:
@@ -107,6 +107,6 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "server" "app.kubernetes.io/name" "argocd-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-server")) | nindent 2 }}
   name: argocd-server
   namespace: d8-{{ .Chart.Name }}

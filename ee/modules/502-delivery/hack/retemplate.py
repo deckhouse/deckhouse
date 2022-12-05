@@ -37,7 +37,7 @@ def re_template(filepath):
                 labels_s = " ".join([f'"{k}" "{v}"' for k, v in labels.items()])
                 labels_template = (
                     "  {{- "
-                    + f'include "helm_lib_module_labels" (list . (dict {labels_s}) | nindent {l_indent}'
+                    + f'include "helm_lib_module_labels" (list . (dict {labels_s})) | nindent {l_indent}'
                     + " }}\n"
                 )
                 print(f"Labels end at {i}")

@@ -56,6 +56,6 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "notifications-controller" "app.kubernetes.io/name" "argocd-notifications-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-notifications-controller") | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "notifications-controller" "app.kubernetes.io/name" "argocd-notifications-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-notifications-controller")) | nindent 2 }}
   name: argocd-notifications-controller
   namespace: d8-{{ .Chart.Name }}
