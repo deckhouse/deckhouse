@@ -112,7 +112,10 @@ It may be required to give your machine static access to the Kubernetes API, e.g
           ```
 
      * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
-       1. Get the CA from the secret containing the `api.%s` domain's certificate:
+
+       * If the CA is non-public:
+
+         1. Get the CA from the secret containing the `api.%s` domain's certificate:
 
           ```shell
           kubectl -n d8-user-authn get secrets -o json \
@@ -121,12 +124,20 @@ It may be required to give your machine static access to the Kubernetes API, e.g
             | base64 -d > /tmp/ca.crt
           ```
 
-       2. Generate a section with the external domain:
+         2. Generate a section with the external domain and CA:
 
           ```shell
           kubectl config set-cluster $cluster_name --embed-certs=true \
             --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
             --certificate-authority=/tmp/ca.crt \
+            --kubeconfig=$file_name
+          ```
+
+       * If the CA is public, generate a section with just the external domain:
+
+          ```shell
+          kubectl config set-cluster $cluster_name \
+            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
             --kubeconfig=$file_name
           ```
 
