@@ -1,5 +1,5 @@
 # [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -18,13 +18,13 @@ spec:
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры группы узлов worker
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -68,6 +68,9 @@ spec:
   # [<en>] the name of the Ingress class to use with the Ingress nginx controller
   # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer

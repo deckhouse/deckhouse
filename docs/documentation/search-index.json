@@ -6,11 +6,11 @@ sitemap_include: false
 ---
 
 [
+{%- unless jekyll.environment == "development" %}
 {%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
 {%- unless page.searchable == false %}
 {
-{%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 "title": "{{ page.title | escape }}",
 "url": "{{ site.url }}/{{ page.lang}}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": "{{ page.search | strip }}",
@@ -20,4 +20,5 @@ sitemap_include: false
 {%- unless forloop.last %},{% endunless %}
 {%- endunless %}
 {%- endfor %}
+{%- endunless %}
 ]

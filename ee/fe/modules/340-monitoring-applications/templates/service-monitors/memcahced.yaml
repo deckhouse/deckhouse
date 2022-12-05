@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "memcached" }}
-{{ include "base_application_monitor" (list . "memcached" 2500) }}
-{{- end }}

@@ -21,79 +21,110 @@ import (
 
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initControlPlane(access kubernetes.Access) []runnerConfig {
+func initControlPlane(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
 	const (
-		groupName = "control-plane"
-		namespace = "d8-upmeter"
-		gcTimeout = 10 * time.Second
-		cpTimeout = 5 * time.Second
+		groupControlPlane = "control-plane"
+		namespace         = "d8-upmeter"
+		gcTimeout         = 10 * time.Second
+		cpTimeout         = 5 * time.Second
 	)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
-			probe:  "access",
+			group:  groupControlPlane,
+			probe:  "apiserver",
 			check:  "_",
 			period: 5 * time.Second,
 			config: checker.ControlPlaneAvailable{
-				Access:  access,
-				Timeout: cpTimeout,
+				VersionGetter: preflight,
+				Timeout:       cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "basic-functionality",
 			check:  "_",
 			period: 5 * time.Second,
 			config: checker.ConfigMapLifecycle{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 namespace,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:    access,
+				Preflight: preflight,
+				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-basic"),
+
+				Timeout: 5 * time.Second,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "namespace",
 			check:  "_",
 			period: time.Minute,
 			config: checker.NamespaceLifecycle{
-				Access:                    access,
-				CreationTimeout:           5 * time.Second,
-				DeletionTimeout:           time.Minute,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:    access,
+				Preflight: preflight,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-namespace"),
+
+				CreationTimeout: 5 * time.Second,
+				DeletionTimeout: time.Minute,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "controller-manager",
 			check:  "_",
 			period: time.Minute,
-			config: checker.DeploymentLifecycle{
-				Access:                    access,
-				Namespace:                 namespace,
-				DeploymentCreationTimeout: 5 * time.Second,
-				DeploymentDeletionTimeout: 5 * time.Second,
-				PodAppearTimeout:          10 * time.Second,
-				PodDisappearTimeout:       10 * time.Second,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.StatefulSetPodLifecycle{
+				Access:    access,
+				Preflight: preflight,
+				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-controller-manager"),
+
+				CreationTimeout:      5 * time.Second,
+				DeletionTimeout:      5 * time.Second,
+				PodTransitionTimeout: 10 * time.Second,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "scheduler",
 			check:  "_",
 			period: time.Minute,
-			config: checker.PodLifecycle{
-				Access:                    access,
-				Namespace:                 namespace,
-				Node:                      access.SchedulerProbeNode(),
-				CreationTimeout:           5 * time.Second,
-				SchedulingTimeout:         20 * time.Second,
-				DeletionTimeout:           20 * time.Second,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.PodScheduling{
+				Access:    access,
+				Preflight: preflight,
+				Namespace: namespace,
+
+				Node:  access.SchedulerProbeNode(),
+				Image: access.SchedulerProbeImage(),
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-scheduler"),
+
+				CreationTimeout: 5 * time.Second,
+				DeletionTimeout: 5 * time.Second,
+				ScheduleTimeout: 20 * time.Second,
+			},
+		}, {
+			group:  groupControlPlane,
+			probe:  "cert-manager",
+			check:  "_",
+			period: time.Minute,
+			config: checker.CertificateSecretLifecycle{
+				Access:    access,
+				Preflight: preflight,
+				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-cert-manager"),
+
+				CreationTimeout:         5 * time.Second,
+				DeletionTimeout:         5 * time.Second,
+				SecretTransitionTimeout: time.Minute,
 			},
 		},
 	}

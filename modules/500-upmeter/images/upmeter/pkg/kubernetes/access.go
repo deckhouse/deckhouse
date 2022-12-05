@@ -20,8 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	kube "github.com/flant/kube-client/client"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -29,8 +28,9 @@ const DefaultAlpineImage = "alpine:3.12"
 
 // Access provides Kubernetes access
 type Access interface {
-	Kubernetes() kube.KubernetesClient
+	Kubernetes() kube.Client
 	ServiceAccountToken() string
+	UserAgent() string
 
 	// probe-specific
 
@@ -89,8 +89,9 @@ type Config struct {
 
 // Accessor provides Kubernetes access in pod
 type Accessor struct {
-	client  kube.KubernetesClient
-	saToken string
+	client    kube.Client
+	saToken   string
+	userAgent string
 
 	schedulerProbeImage *ProbeImage
 	schedulerProbeNode  string
@@ -100,13 +101,13 @@ type Accessor struct {
 	kubernetesDomain string
 }
 
-func (a *Accessor) Init(config *Config) error {
+func (a *Accessor) Init(config *Config, userAgent string) error {
 	// Kubernetes client
-	a.client = kube.NewKubernetesClient()
+	a.client = kube.New()
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
 	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
-	a.client.WithMetricStorage(metric_storage.NewMetricStorage())
+	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
 	if err != nil {
 		return fmt.Errorf("cannot init kuberbetes client: %v", err)
@@ -124,17 +125,22 @@ func (a *Accessor) Init(config *Config) error {
 
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
-	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain
+	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain + "." // Trailing dot to avoid domain search
+	a.userAgent = userAgent
 
 	return nil
 }
 
-func (a *Accessor) Kubernetes() kube.KubernetesClient {
+func (a *Accessor) Kubernetes() kube.Client {
 	return a.client
 }
 
 func (a *Accessor) ServiceAccountToken() string {
 	return a.saToken
+}
+
+func (a *Accessor) UserAgent() string {
+	return a.userAgent
 }
 
 func (a *Accessor) SchedulerProbeImage() *ProbeImage {
@@ -151,4 +157,10 @@ func (a *Accessor) CloudControllerManagerNamespace() string {
 
 func (a *Accessor) ClusterDomain() string {
 	return a.kubernetesDomain
+}
+
+func FakeAccessor() *Accessor {
+	return &Accessor{
+		client: kube.NewFake(nil),
+	}
 }

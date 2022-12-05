@@ -41,5 +41,7 @@ for NTP_SERVER in ${NTP_SERVERS}; do
   echo "pool ${NTP_SERVER} iburst" >> /var/run/chrony/chrony.conf
 done
 
+# remove stale pidfile
+rm -f /run/chrony/chronyd.pid
 # Run Chrony Daemon
 chronyd -d -s -f /var/run/chrony/chrony.conf

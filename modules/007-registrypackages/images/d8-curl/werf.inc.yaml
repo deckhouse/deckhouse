@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -12,9 +12,14 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    curl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -25,5 +30,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sL https://github.com/moparisthebest/static-curl/releases/download/v{{ $version }}/curl-amd64 --output /d8-curl
+  - curl -sfL https://github.com/moparisthebest/static-curl/releases/download/v{{ $version }}/curl-amd64 --output /d8-curl
   - chmod +x /d8-curl /install /uninstall

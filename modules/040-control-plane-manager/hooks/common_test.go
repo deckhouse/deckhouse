@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
 	"context"
 	"testing"
+	"text/template"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -83,6 +85,62 @@ func testHelperRegisterEtcdMemberUpdate() {
 	})
 
 	dependency.TestDC.EtcdClient.CloseMock.Return(nil)
+}
+
+func etcdPodManifest(data map[string]interface{}) string {
+	podTpl := `
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    component: etcd
+    tier: control-plane
+  name: {{ .name }}
+  namespace: kube-system
+spec:
+  {{- if .nodeName }}
+  nodeName: {{ .nodeName }}
+  {{- end }}
+  containers:
+  - command:
+    - etcd
+    {{- if .maxDbSize }}
+    - --quota-backend-bytes={{ .maxDbSize }}
+    {{- end }}
+    image: registry.deckhouse.io/deckhouse/ce:etcd-image
+    name: etcd
+  {{- if not .podIP }}
+  hostNetwork: true
+  {{- end }}
+status:
+  hostIP: {{ .hostIP }}
+  phase: Running
+  {{- if .podIP }}
+  podIP: {{ .podIP }}
+  {{- else }}
+  podIP: {{ .hostIP }}
+  {{- end }}
+  podIPs:
+  {{- if .podIP }}
+  - ip: {{ .podIP }}
+  {{- else }}
+  - ip: {{ .hostIP }}
+  {{- end }}
+`
+	t := template.New("testetcd_pod_template")
+	t, err := t.Parse(podTpl)
+	if err != nil {
+		panic(err)
+	}
+
+	var tpl bytes.Buffer
+
+	err = t.Execute(&tpl, data)
+	if err != nil {
+		panic(err)
+	}
+
+	return tpl.String()
 }
 
 const testETCDSecret = `

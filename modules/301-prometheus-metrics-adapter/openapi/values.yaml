@@ -9,41 +9,25 @@ properties:
     additionalProperties: false
     default: {}
     x-required-for-helm:
-    - adapterPem
-    - adapterKey
-    - adapterCA
-    - prometheusAPIClientTLS
+    - adapterCert
     properties:
-      adapterPem:
-        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-        type: string
-
-      adapterCA:
-        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-        type: string
-
-      adapterKey:
-        x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-        type: string
-
-      prometheusAPIClientTLS:
-        default: {}
-        additionalProperties: false
-        x-required-for-helm:
-          - certificate
-          - key
+      adapterCert:
         type: object
+        default: {}
+        x-required-for-helm:
+          - ca
+          - crt
+          - key
         properties:
-          certificate:
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
             type: string
-          certificate_updated:
-            x-examples: [ false ]
-            type: boolean
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
           key:
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
             type: string
-
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       customMetrics:
         type: object
         default: {}

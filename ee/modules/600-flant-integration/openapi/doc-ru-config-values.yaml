@@ -16,7 +16,7 @@ properties:
       Задаёт тип кластера в экспортируемых метриках, отключая автоматическое определение.
   nodesDiscount:
     description: |
-      Скидка за ноды в процентах, без символа %. Например: 10, 20, 30.
+      Скидка за узлы в процентах, без символа %. Например: 10, 20, 30.
   metrics:
     properties:
       url:
@@ -26,7 +26,14 @@ properties:
       Параметры отправки метрик или `false` для отключения их отправки.
   madisonAuthKey:
     description: |
-      Ключ для доступа в алертменеджер Madison или `false` для отключения интеграции.
+      Ключ для доступа в алертменеджер Madison или `false` для отключения интеграции. Если пусто, то ключ будет сгенерирован во время регистрации.
+
+      Сгенерированный ключ можно получить командой:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
+      ```
+
   licenseKey:
     type: string
     description: |
@@ -45,9 +52,6 @@ properties:
     description: |
       Параметры для формирования kubeall реестра.
     properties:
-      team:
-        description: |
-          **Не используется.** Команда, обслуживающая этот кластер.
       host:
         description: |
           Имя хоста, на котором запускать `kubectl`.

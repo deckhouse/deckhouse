@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "0.25", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -48,7 +48,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "0.26"
+  controllerVersion: "1.1"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -65,7 +65,7 @@ spec:
 "spec": {
   "config": {},
   "ingressClass": "nginx",
-  "controllerVersion": "0.26",
+  "controllerVersion": "1.1",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
   "hstsOptions": {},
@@ -89,6 +89,29 @@ spec:
 }
 }]`))
 			})
+		})
+	})
+
+	Context("IngressNginxContorller without explicitly controllerVersion", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: testd
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+`))
+			f.RunHook()
+		})
+
+		It("Shouldn't fill controller version with default value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.controllerVersion").Exists()).To(BeFalse())
 		})
 	})
 
@@ -145,7 +168,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "nginx",
-"controllerVersion": "0.25",
 "inlet": "LoadBalancer",
 "hstsOptions": {},
 "geoIP2": {},
@@ -165,7 +187,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.25",
 "inlet": "HostPortWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},
@@ -185,7 +206,6 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.25",
 "inlet": "LoadBalancerWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},

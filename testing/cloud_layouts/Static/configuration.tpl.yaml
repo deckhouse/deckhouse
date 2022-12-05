@@ -17,6 +17,7 @@ deckhouse:
   configOverrides:
     cniFlannelEnabled: true
     flantIntegrationEnabled: false
+    linstorEnabled: true
     global:
       modules:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"

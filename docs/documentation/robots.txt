@@ -1,16 +1,9 @@
 ---
 layout: none
-permalink: /robots.txt
+permalink: en/robots.txt
 searchable: false
 sitemap_include: false
+lang: en
 ---
 
-User-agent: *
-Disallow: *.js
-Disallow: *?*
-Disallow: search*.json
-Disallow: */compare/*
-Allow: /
-
-Sitemap: {{ site.url }}/sitemap.xml
-Host: {{ site.url }}
+{% include robots.txt.liquid %}

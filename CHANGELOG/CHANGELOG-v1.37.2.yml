@@ -1,0 +1,5 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: 'Reverted changes in the YandexClusterConfiguration (removed `additionalProperties: false`).'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2649
+

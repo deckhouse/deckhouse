@@ -10,7 +10,7 @@
   │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
   ```
 
-  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/master: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
+  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/control-plane: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
 
   Варианты решения:
   - Отредактировать deployment `deckhouse` и указать нужный `nodeSelector`:
@@ -24,7 +24,7 @@
 {% endofftopic %}
 
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
-Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/) следующим способом:
+Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/documentation/v1/modules/402-ingress-nginx/) следующим способом:
 <ul>
   <li>Включите модуль <strong>одним</strong> из следующих способов:
 <ul>
@@ -112,7 +112,7 @@ deckhouse:
 ```
 </div>
 </li>
-<li><p>В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits подам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.</p>
+<li><p>В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits Pod'ам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.</p>
 <p>При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:</p>
 <div class="highlight"><pre><code>admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...</code></pre></div>
 

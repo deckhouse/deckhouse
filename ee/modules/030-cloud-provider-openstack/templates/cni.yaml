@@ -6,9 +6,13 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-  cni: {{ b64enc "flannel" | quote }}
-  {{- if eq .Values.cloudProviderOpenstack.internal.podNetworkMode "VXLAN" }}
-  flannel: {{ b64enc "{\"podNetworkMode\":\"vxlan\"}" | quote }}
-  {{- else }}
-  flannel: {{ b64enc "{\"podNetworkMode\":\"host-gw\"}" | quote }}
+{{- if hasKey .Values.cloudProviderOpenstack.internal "cniSecretData" }}
+  {{- .Values.cloudProviderOpenstack.internal.cniSecretData | b64dec | nindent 2 }}
+{{- else }}
+  cni: {{ b64enc "cilium" | quote }}
+  {{- if or (eq .Values.cloudProviderOpenstack.internal.podNetworkMode "DirectRouting") (eq .Values.cloudProviderOpenstack.internal.podNetworkMode "DirectRoutingWithPortSecurityEnabled") }}
+  cilium: {{ b64enc "{\"mode\": \"DirectWithNodeRoutes\", \"masqueradeMode\": \"Netfilter\"}" | quote }}
+  {{- else if eq .Values.cloudProviderOpenstack.internal.podNetworkMode "VXLAN" }}
+  cilium: {{ b64enc "{\"mode\": \"VXLAN\", \"masqueradeMode\": \"BPF\"}" | quote }}
   {{- end }}
+{{- end }}

@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix errors in withNAT layout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1554
+

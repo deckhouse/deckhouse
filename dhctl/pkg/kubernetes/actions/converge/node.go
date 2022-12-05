@@ -32,29 +32,38 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+var (
+	nodeGroupResource   = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+	ErrNodeGroupChanged = fmt.Errorf("Node group was changed during accept diff.")
+)
 
-func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
+const HideDeckhouseLogs = false
+const ShowDeckhouseLogs = true
+
+func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 	err := log.Process("default", name, func() error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		if showDeckhouseLogs {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+					}
 				}
-			}
-		}()
+			}()
+		}
 
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).Run(func() error {
 			secret, err := kubeCl.CoreV1().
@@ -107,6 +116,41 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 
 		return err
 	})
+}
+func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstructured.Unstructured, error) {
+	var ng *unstructured.Unstructured
+	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
+		var err error
+		ng, err = kubeCl.Dynamic().
+			Resource(nodeGroupResource).
+			Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ng, nil
+}
+
+func UpdateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, ng *unstructured.Unstructured) error {
+	err := retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 45, 15*time.Second).
+		BreakIf(errors.IsConflict).
+		Run(func() error {
+			_, err := kubeCl.Dynamic().
+				Resource(nodeGroupResource).
+				Update(context.TODO(), ng, metav1.UpdateOptions{})
+
+			return err
+		})
+
+	if errors.IsConflict(err) {
+		return ErrNodeGroupChanged
+	}
+
+	return err
 }
 
 func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName string) error {
@@ -165,7 +209,7 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 	})
 }
 
-func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string) error {
+func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).Run(func() error {
 		desiredReadyNodes := len(nodes)
 		var nodesList apiv1.NodeList
@@ -184,7 +228,20 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 			for _, c := range node.Status.Conditions {
 				if c.Type == apiv1.NodeReady {
 					if c.Status == apiv1.ConditionTrue {
-						readyNodes[node.Name] = struct{}{}
+						ready := true
+						if checker != nil {
+							var err error
+							ready, err = checker.IsReady(node.Name)
+							if err != nil {
+								log.WarnF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+							} else if !ready {
+								log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
+							}
+						}
+
+						if ready {
+							readyNodes[node.Name] = struct{}{}
+						}
 					}
 				}
 			}

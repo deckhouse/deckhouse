@@ -4,12 +4,11 @@
  * - change linear-gradient for hover
  */
 
-
-import React, { memo } from 'react';
-import { css } from 'emotion';
-import { GrafanaTheme, TimeOption } from '@grafana/data';
-import { useTheme, stylesFactory, selectThemeVariant } from '@grafana/ui';
-import { Icon } from '../../Icon';
+import React, { memo } from "react"
+import { css } from "emotion"
+import { GrafanaTheme, TimeOption } from "@grafana/data"
+import { useTheme, stylesFactory, selectThemeVariant } from "@grafana/ui"
+import { Icon } from "../../Icon"
 
 const getStyles = stylesFactory((theme: GrafanaTheme) => {
   const background = selectThemeVariant(
@@ -17,8 +16,8 @@ const getStyles = stylesFactory((theme: GrafanaTheme) => {
       light: theme.palette.gray7,
       dark: theme.palette.dark3,
     },
-    theme.type
-  );
+    theme.type,
+  )
 
   return {
     container: css`
@@ -40,23 +39,23 @@ const getStyles = stylesFactory((theme: GrafanaTheme) => {
         cursor: pointer;
       }
     `,
-  };
-});
+  }
+})
 
 interface Props {
-  value: TimeOption;
-  selected?: boolean;
-  onSelect: (option: TimeOption) => void;
+  value: TimeOption
+  selected?: boolean
+  onSelect: (option: TimeOption) => void
 }
 
 export const TimeRangeOption = memo<Props>(({ value, onSelect, selected = false }) => {
-  const theme = useTheme();
-  const styles = getStyles(theme);
+  const theme = useTheme()
+  const styles = getStyles(theme)
 
   return (
     <div className={styles.container} onClick={() => onSelect(value)} tabIndex={-1}>
       <span>{value.display}</span>
       {selected ? <Icon name="check" /> : null}
     </div>
-  );
-});
+  )
+})

@@ -1,0 +1,10 @@
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: Config
+metadata:
+  name: config
+  namespace: d8-{{.Chart.Name}}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+spec:
+  match:
+    - excludedNamespaces: ["d8-*", "kube-system"]
+      processes: ["*"]

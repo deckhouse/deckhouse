@@ -1,0 +1,141 @@
+- name: kubernetes.extended-monitoring.node
+  rules:
+  - alert: NodeDiskBytesUsage
+    expr: |
+      (
+        max by (node, mountpoint) (
+          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          /
+          node_filesystem_size_bytes
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
+      > on (node) group_left()
+      (
+        max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
+      )
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      summary: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Currently at: {{ .Value }}%
+
+  - alert: NodeDiskBytesUsage
+    expr: |
+      (
+        max by (node, mountpoint) (
+          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          /
+          node_filesystem_size_bytes
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
+      > on (node) group_left()
+      (
+        max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
+      )
+    for: 2m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      summary: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Currently at: {{ .Value }}%
+
+  - alert: NodeDiskInodesUsage
+    expr: |
+      (
+        max by (node, mountpoint) (
+          (node_filesystem_files - node_filesystem_files_free)
+          /
+          node_filesystem_files
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
+      > on (node) group_left()
+      (
+        max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
+      )
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      summary: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Currently at: {{ .Value }}%
+
+  - alert: NodeDiskInodesUsage
+    expr: |
+      (
+        max by (node, mountpoint) (
+          (node_filesystem_files - node_filesystem_files_free)
+          /
+          node_filesystem_files
+        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
+      > on (node) group_left()
+      (
+        max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})
+      )
+    for: 2m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      summary: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Currently at: {{ .Value }}%
+
+  - alert: LoadAverageHigh
+    expr: >-
+      (
+        sum by (node) (avg_over_time(node_load1[30m]))
+        /
+        count by (node) (node_cpu_seconds_total{mode="idle"})
+      ) > on (node) group_left() (
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-warning"})
+      )
+    for: 30m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      description: |-
+        For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      summary: >
+        The load average on the {{ $labels.node }} Node is too high.
+
+  - alert: LoadAverageHigh
+    expr: >-
+      (
+        sum by (node) (avg_over_time(node_load1[5m]))
+        /
+        count by (node) (node_cpu_seconds_total{mode="idle"})
+      ) > on (node) group_left() (
+        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-critical"})
+      )
+    for: 5m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      description: |-
+        For the last 5 minutes, the load average on the {{ $labels.node }} Node has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      summary: >
+        The load average on the {{ $labels.node }} Node is too high.

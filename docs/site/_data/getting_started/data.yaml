@@ -4,8 +4,8 @@ global:
     - ee
   step1:
     name:
-      ru: Выбор инфраструктуры
       en: Selecting infrastructure
+      ru: Выбор инфраструктуры
   layout: page-nosidebar-notitle
   step:
     header: getting_started/global/HEADER.md
@@ -68,6 +68,7 @@ presets:
 
 installTypes:
   aws:
+    iconPath: images/icons/platforms/amazon_aws.png
     layouts:
       without_nat:
         name: WithoutNAT
@@ -84,35 +85,36 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   gcp:
+    iconPath: images/icons/platforms/google_cloude_engine.png
     layouts:
       without_nat:
         name: WithoutNAT
@@ -129,35 +131,36 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   azure:
+    iconPath: images/icons/platforms/microsoft_azure.png
     layouts:
       standard:
         name: Standard
@@ -172,35 +175,36 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   openstack:
+    iconPath: images/icons/platforms/corp_cloud_open_stack.png
     ee_only: true
     layouts:
       standard:
@@ -218,35 +222,36 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   vsphere:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true
     type: cloud
     name:
@@ -262,41 +267,40 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   yandex:
+    iconPath: images/icons/platforms/yandex_cloud.png
     layouts:
       without_nat:
         name: WithoutNAT
         recommended: true
-      standard:
-        name: Standard
       with_nat_instance:
         name: WithNATInstance
     pages_title:
@@ -304,40 +308,41 @@ installTypes:
       ru: "Deckhouse Platform в Яндекс.Облаке"
     type: cloud
     name:
-      en: Yandex.Cloud
-      ru: Яндекс.Облако
+      en: "Yandex Cloud"
+      ru: "Яндекс Облако"
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Подготовка окружения
           en: Preparing environment
+          ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
       step5:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step6:
         name:
-          ru: Получаем доступ к кластеру
           en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step7:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   existing:
+    iconPath: images/icons/platforms/kubernetes.svg
     layouts:
       default:
         name: Default
@@ -352,30 +357,31 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step5:
         name:
-          ru: Завершение установки
           en: Finishing installation
+          ru: Завершение установки
         template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
       step6:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   kind:
+    iconPath: images/icons/platforms/kind.png
     layouts:
       default:
         name: Default
@@ -390,25 +396,66 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Подготовка кластера
           en: Preparing cluster
+          ru: Подготовка кластера
         template: getting_started/<INSTALL_CODE>/STEP_PREPARE.md
       step4:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step5:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
+  bm-private:
+    iconPath: images/icons/platforms/lock.png
+    ce_only: true
+    layouts:
+      default:
+        name: Default
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in a private environment"
+      ru: "Deckhouse Platform в закрытом окружении"
+    type: baremetal
+    name:
+      en: Private environment
+      ru: Закрытое окружение
+    steps:
+      step2:
+        name:
+          en: A brief overview of installation
+          ru: Как будет происходить установка?
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing for installation
+          ru: Подготовка к установке
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/bm/STEP_FINALIZE.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   bm:
+    iconPath: images/icons/platforms/bare_metal.png
     layouts:
       default:
         name: Default
@@ -423,26 +470,26 @@ installTypes:
     steps:
       step2:
         name:
-          ru: Как будет происходить установка?
           en: A brief overview of installation
+          ru: Как будет происходить установка?
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Настройка кластера
           en: Setting up cluster
+          ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          ru: Установка
           en: Installation
+          ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step5:
         name:
-          ru: Завершение установки
           en: Finishing installation
+          ru: Завершение установки
         template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
       step6:
         name:
-          ru: Куда двигаться дальше?
           en: What can I do next?
+          ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md

@@ -1,4 +1,6 @@
-Для управления ресурсами в Яндекс.Облаке, необходимо создать сервисный аккаунт с правами на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-yandex/environment.html). Ниже краткая версия:
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
+Для управления ресурсами в Яндекс.Облаке, необходимо создать сервисный аккаунт с правами на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации](/documentation/v1/modules/030-cloud-provider-yandex/environment.html). Ниже краткая версия:
 
 Создайте пользователя с именем `deckhouse`. В ответ вернутся параметры пользователя:
 {% snippetcut %}
@@ -14,7 +16,7 @@ name: deckhouse
 Назначьте роль `editor` вновь созданному пользователю для своего облака:
 {% snippetcut %}
 ```yaml
-yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
 ```
 {% endsnippetcut %}
 
@@ -25,8 +27,6 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 ```
 {% endsnippetcut %}
 
-Обратите внимание, что на следующем этапе, когда потребуется скопировать содержимое этого файла в YAML-манифест (через параметр `serviceAccountJSON`), его потребуется предварительно привести в компактный вид с помощью команды `cat deckhouse-sa-key.json | jq -c`.
-
 <div id="standard-layout-notes" style="display:none" markdown="1">
 **Внимание!**
 
@@ -36,7 +36,7 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 
 Пример:
 
-![Включение NAT](/{{ page.lang }}/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat_ru.png)
+![Включение NAT](/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat_ru.png)
 </div>
 
 <script>

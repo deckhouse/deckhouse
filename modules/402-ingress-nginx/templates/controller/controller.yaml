@@ -71,18 +71,17 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
-      maxAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
       minAllowed:
         cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
         memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
+      maxAllowed:
+        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"
     {{- end }}
 {{- end }}
-
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -101,10 +100,14 @@ metadata:
     ingress-nginx-manual-update: "true"
   {{- end }}
   annotations:
-    ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
+    ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
+  revisionHistoryLimit: 3
+  {{- if $loadBalancer }}
+  minReadySeconds: 30
+  {{- end }}
   updateStrategy:
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if not $failover }}
@@ -134,17 +137,15 @@ spec:
   template:
     metadata:
       labels:
+      {{- if $crd.spec.enableIstioSidecar }}
+        sidecar.istio.io/inject: "true"
+      {{- end }}
         app: controller
         name: {{ $name }}
-      {{- if include "is_istio_in_use" $context }}
+      {{- if $crd.spec.enableIstioSidecar }}
       annotations:
-        {{- if $crd.spec.enableIstioSidecar }}
-        sidecar.istio.io/inject: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
-        {{- else }}
-        sidecar.istio.io/inject: "false"
-        {{- end }}
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
@@ -172,7 +173,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}"
+      - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
         env:
         - name: POD_NAME
@@ -185,16 +186,10 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
-        {{- if semverCompare "=0.33" $controllerVersion }}
-        - name: SHUTDOWN_GRACE_PERIOD
-          value: {{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod | quote }}
-        {{- end }}
-  {{- if semverCompare ">=0.33" $controllerVersion }}
-    {{- if $geoIP2.maxmindLicenseKey }}
+        {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
           value: "true"
-    {{- end }}
-  {{- end }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /controller/healthz
@@ -221,10 +216,11 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
-        {{- if semverCompare ">=0.46" $controllerVersion }}
+        {{- if $loadBalancer }}
+        - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
+        {{- end }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
-        {{- end }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
@@ -234,24 +230,21 @@ spec:
         {{- if $defaultSSLCertificateSecretRef.name }}
         - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
         {{- end }}
+        - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}
+        {{- if eq "nginx" $crd.spec.ingressClass }}
+        - --watch-ingress-without-class=true
+        {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
-  {{- if semverCompare ">=0.33" $controllerVersion }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
       {{- if $geoIP2.maxmindEditionIDs }}
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
       {{- end }}
     {{- end }}
-    {{- if semverCompare ">=1.0" $controllerVersion }}
-        # Starting from v1.0 we dropped `pod-ip.patch` in favor of the existing argument.
         - --healthz-host=127.0.0.1
-        # Starting from v1.0 we need explicitly define the ConfigMap name for leader election.
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
-    {{- end }}
-  {{- end }}
-  {{- if semverCompare ">=0.26" $controllerVersion }}
         lifecycle:
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
@@ -265,7 +258,6 @@ spec:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
   {{- end }}
         resources:
           requests:
@@ -322,15 +314,18 @@ spec:
         - mountPath: /etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
-      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}"
+      - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
           requests:
             memory: 20Mi
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /var/files
+            name: telemetry-config-file
       - name: kube-rbac-proxy
-        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+        image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -392,6 +387,9 @@ spec:
       - name: webhook-cert
         secret:
           secretName: ingress-admission-certificate
+      - name: telemetry-config-file
+        configMap:
+          name: d8-ingress-telemetry-config
 {{- end }}
 
 {{- $context := . }}

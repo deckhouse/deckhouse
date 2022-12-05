@@ -1,0 +1,6 @@
+node-local-dns:
+  fixes:
+    - summary: Correct check on coredns startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2120
+      impact: The `node-local-dns` will restart.
+

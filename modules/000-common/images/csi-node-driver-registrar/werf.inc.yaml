@@ -4,7 +4,7 @@
   {{- if $value.csi.registrar }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /
@@ -16,6 +16,6 @@ docker:
   ENTRYPOINT: ["/csi-node-driver-registrar"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/sig-storage/csi-node-driver-registrar:{{ $value.csi.registrar }}
+from: registry.k8s.io/sig-storage/csi-node-driver-registrar:{{ $value.csi.registrar }}
   {{- end }}
 {{- end }}

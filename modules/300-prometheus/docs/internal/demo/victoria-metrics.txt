@@ -1,0 +1,5 @@
+https://github.com/VictoriaMetrics/helm-charts
+
+$ helm repo add vm https://victoriametrics.github.io/helm-charts/
+$ helm repo update
+$ helm upgrade --install victoria-metrics vm/victoria-metrics-single --namespace victoria-metrics-test --create-namespace

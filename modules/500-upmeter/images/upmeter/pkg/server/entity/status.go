@@ -17,37 +17,38 @@ limitations under the License.
 package entity
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/server/ranges"
-	utime "d8.io/upmeter/pkg/time"
-	"d8.io/upmeter/pkg/util"
 )
 
 type EpisodeSummary struct {
-	TimeSlot  int64                    `json:"ts"`
-	StartDate string                   `json:"start"`
-	EndDate   string                   `json:"end"`
-	Up        time.Duration            `json:"up"`
-	Down      time.Duration            `json:"down"`
-	Unknown   time.Duration            `json:"unknown"`
-	Muted     time.Duration            `json:"muted"`
-	NoData    time.Duration            `json:"nodata"`
+	TimeSlot int64 `json:"ts"`
+
+	StartDate string `json:"start"`
+	EndDate   string `json:"end"`
+
+	Up       time.Duration `json:"up"`
+	Down     time.Duration `json:"down"`
+	Unknown  time.Duration `json:"unknown"`
+	Muted    time.Duration `json:"muted"`
+	NoData   time.Duration `json:"nodata"`
+	SlotSize time.Duration `json:"slot_size"`
+
 	Downtimes []check.DowntimeIncident `json:"downtimes"`
 }
 
-func newEpisodeSummary(stepRange ranges.Range) *EpisodeSummary {
+func newEpisodeSummary(rng ranges.Range) *EpisodeSummary {
 	return &EpisodeSummary{
-		TimeSlot:  stepRange.From,
-		StartDate: time.Unix(stepRange.From, 0).Format(time.RFC3339),
-		EndDate:   time.Unix(stepRange.To, 0).Format(time.RFC3339),
-		NoData:    stepRange.Diff(),
+		TimeSlot:  rng.From,
+		SlotSize:  rng.Dur(),
+		StartDate: time.Unix(rng.From, 0).Format(time.RFC3339),
+		EndDate:   time.Unix(rng.To, 0).Format(time.RFC3339),
+		NoData:    rng.Dur(),
 	}
 }
 
@@ -74,6 +75,11 @@ func (s *EpisodeSummary) Avail() time.Duration {
 	return s.Up + s.Down + s.Unknown
 }
 
+func (s *EpisodeSummary) Complete() bool {
+	// muted and downtimes cannot affect this
+	return s.Up+s.Down+s.Unknown+s.NoData == s.SlotSize
+}
+
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
 type ByTimeSlot []EpisodeSummary
 
@@ -89,58 +95,56 @@ func (a ByTimeSlot) Less(i, j int) bool {
 	return a[i].TimeSlot < a[j].TimeSlot
 }
 
-const TotalProbeName = "__total__"
+type RangeEpisodeLister interface {
+	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
+}
 
-func FetchStatuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
-	daoCtx := dbctx.Start()
-	defer daoCtx.Stop()
-
-	dao5m := dao.NewEpisodeDao5m(daoCtx)
-	episodes, err := dao5m.ListEpisodeSumsForRanges(rng, ref)
+func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+	episodes, err := lister.ListEpisodeSumsForRanges(srng, ref)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing episodes for range %s: %w", srng, err)
 	}
 
-	statuses := calculateStatuses(episodes, incidents, rng.Subranges, ref)
+	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref)
 	return statuses, nil
 }
 
-/**
+/*
+*
 calculateStatuses returns arrays of EpisodeSummary objects for each group and probe.
 Each EpisodeSummary object is combined from Episodes for a step range.
-If grouping is "group", then all probes in group are summed up and
-probe name is "__total__".
 
-Method considers that there is only one Episode for probe and Start.
+It is expected that there is only one Episode for probe and Start.
+
+Returned structure is map[group][probe][dataByTime]
 
 Example output:
+aGroup:
 
-testGroup:
-  testProbe:
-  - timeslot: 0
-    up: 300
-    down: 0
-  - timeslot: 300
-    up: 300
-    down: 0
-  - timeslot: 900
-    up: 300
-    down: 0
+	aProbe:
+	- timeslot: 0
+	  up: 300
+	  down: 0
+	- timeslot: 300
+	  up: 300
+	  down: 0
+	- timeslot: 900
+	  up: 300
+	  down: 0
 */
-func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
-	episodes = filterDisabledProbesFromEpisodes(episodes)
-
-	// Combine multiple episodes for the same probe and timeslot.
-	episodes = combineEpisodesByTimeslot(episodes)
+func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
+	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
+	// one single episode from possible alternatives.
+	episodes = combineEpisodesByTimeslot(episodes, rangeList[0].Dur())
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
 	// map[string]map[string]map[int64]*EpisodeSummary
-	statuses := newSummaryTable(episodes, stepRanges, ref)
+	statuses := newSummaryTable(episodes, rangeList)
 
 	// Sum up episodes for each probe by Start within each step range.
 	// TODO various optimizations can be applied here.
-	for _, stepRange := range stepRanges {
+	for _, stepRange := range rangeList {
 		for _, episode := range episodes {
 			if !episode.IsInRange(stepRange.From, stepRange.To) {
 				continue
@@ -148,19 +152,20 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 			statuses[episode.ProbeRef.Group][episode.ProbeRef.Probe][stepRange.From].addEpisode(episode)
 		}
-		calculateTotalForStepRange(statuses, stepRange)
 	}
 
-	updateMute(statuses, incidents, stepRanges)
+	updateMute(statuses, incidents, rangeList)
 
 	// Calculate group-level summaries including __total__
-	calculateTotalForPeriod(statuses, stepRanges)
+	calculateTotalForPeriod(statuses, rangeList)
 
 	return transformTimestampedMapsToSortedArrays(statuses, ref)
 }
 
 // Each group/probe should have only 1 Episode per Start.
-func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
+func combineEpisodesByTimeslot(episodes []check.Episode, slotSize time.Duration) []check.Episode {
+	// It could have been a more shallow map map[string][]check.Episode, the key being
+	//           fmt.Sprintf("%s-%d", probeId, start)
 	idx := make(map[string]map[int64][]int)
 	for i, episode := range episodes {
 		probeId := episode.ProbeRef.Id()
@@ -179,65 +184,13 @@ func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]
 			for _, index := range indices {
-				ep = ep.Combine(episodes[index], 5*time.Minute)
+				ep = ep.Combine(episodes[index], slotSize)
 			}
 			newEpisodes = append(newEpisodes, ep)
 		}
 	}
 
 	return newEpisodes
-}
-
-// calculateTotalForStepRange calculates a group episode for a range. It combines group's probes
-// into one "__total__" probe. In webui it is presented as a cloumn summary for probes in a group.
-//
-// The total episode calculation statuses:
-//      - up      - min uptime within probes
-//      - down    - longest possible downtime
-//      - unknown - max measured time excluding up and down calculated above
-//      - nodata  - unoccupied time left after other three calculations
-//
-// NOTE: this episode summary is just a representation. It cannot be used for further uptime
-// calculation of a group in a given timerange. Total summary varies depending on the chosen set of
-// steps within the same time period.
-func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*EpisodeSummary, stepRange ranges.Range) {
-	for group, probes := range statuses {
-		totalStatusInfo := newEpisodeSummary(stepRange)
-
-		var (
-			uptimes, downtimes []time.Duration
-			maxKnown, maxAvail time.Duration
-		)
-
-		for probe, infos := range probes {
-			if probe == TotalProbeName {
-				continue
-			}
-			if _, ok := infos[stepRange.From]; !ok {
-				log.Errorf("Runner %s/%s has no timestamp %d!", group, probe, stepRange.From)
-			}
-
-			info := infos[stepRange.From]
-
-			uptimes = append(uptimes, info.Up)
-			downtimes = append(downtimes, info.Down)
-
-			maxKnown = utime.Longest(maxKnown, info.Known())
-			maxAvail = utime.Longest(maxAvail, info.Avail())
-		}
-
-		totalStatusInfo.Up = utime.Shortest(uptimes...)
-		// down should not be less then known and not more then avail.
-		totalStatusInfo.Down = utime.ClampToRange(utime.Longest(downtimes...), 0, maxAvail-totalStatusInfo.Up)
-		totalStatusInfo.Unknown = maxAvail - totalStatusInfo.Up - totalStatusInfo.Down
-		totalStatusInfo.NoData = stepRange.Diff() - maxAvail
-
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
-		}
-
-		statuses[group][TotalProbeName][stepRange.From] = totalStatusInfo
-	}
 }
 
 // MuteDuration returns the count of seconds between 'from' and 'to'
@@ -261,36 +214,40 @@ func calcMuteDuration(inc check.DowntimeIncident, rng ranges.Range, group string
 
 	// Calculate mute duration for range [from; to]
 	var (
-		start = util.Max(inc.Start, rng.From)
-		end   = util.Min(inc.End, rng.To)
+		start = maxInt64(inc.Start, rng.From)
+		end   = minInt64(inc.End, rng.To)
 	)
 
 	return time.Duration(end-start) * time.Second
 }
 
 // updateMute applies muting to a EpisodeSummary based on intervals described by incidents.
-func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incidents []check.DowntimeIncident, stepRanges []ranges.Range) {
+func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incidents []check.DowntimeIncident, rangeList []ranges.Range) {
+	if len(incidents) == 0 || len(rangeList) == 0 {
+		return
+	}
+
 	for group := range statuses {
-		for _, stepRange := range stepRanges {
+		for _, rng := range rangeList {
 			var (
-				step             = stepRange.Diff()
+				step             = rng.Dur()
 				muted            time.Duration
 				relatedDowntimes []check.DowntimeIncident
 			)
 
 			// calculate maximum known mute duration
 			for _, incident := range incidents {
-				m := calcMuteDuration(incident, stepRange, group)
+				m := calcMuteDuration(incident, rng, group)
 				if m == 0 {
 					continue
 				}
-				muted = utime.Longest(muted, m)
+				muted = longest(muted, m)
 				relatedDowntimes = append(relatedDowntimes, incident)
 			}
 
 			// Apply `muted` to all probes in group.
 			for probeName := range statuses[group] {
-				status := statuses[group][probeName][stepRange.From]
+				status := statuses[group][probeName][rng.From]
 
 				status.Downtimes = relatedDowntimes
 
@@ -366,7 +323,7 @@ func calculateTotalForPeriod(statuses map[string]map[string]map[int64]*EpisodeSu
 
 // Create empty statuses for each probe.
 // Group -> Probe -> Slot -> *EpisodeSummary
-func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string]map[int64]*EpisodeSummary {
+func newSummaryTable(episodes []check.Episode, rangeList []ranges.Range) map[string]map[string]map[int64]*EpisodeSummary {
 	statuses := map[string]map[string]map[int64]*EpisodeSummary{}
 
 	for _, episode := range episodes {
@@ -383,32 +340,15 @@ func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref ch
 			statuses[group][probe] = map[int64]*EpisodeSummary{}
 		}
 
-		for _, stepRange := range stepRanges {
-			statuses[group][probe][stepRange.From] = newEpisodeSummary(stepRange)
-		}
-	}
-
-	// Create empty statuses for groupName and probeName if there are no episodes and probeName is __total__.
-	if ref.Probe == TotalProbeName {
-		group := ref.Group
-
-		if _, ok := statuses[group]; !ok {
-			statuses[group] = map[string]map[int64]*EpisodeSummary{}
-		}
-
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
-		}
-
-		for _, stepRange := range stepRanges {
-			statuses[group][TotalProbeName][stepRange.From] = newEpisodeSummary(stepRange)
+		for _, rng := range rangeList {
+			statuses[group][probe][rng.From] = newEpisodeSummary(rng)
 		}
 	}
 
 	return statuses
 }
 
-// transformTimestampedMapsToSortedArrays transforms each map timestamp -> EpisodeSummary into sorted array.
+// transformTimestampedMapsToSortedArrays transforms each map[timestamp]EpisodeSummary into sorted array.
 // TODO can be splited into SelectTotal|Probes and TransformToSortedArrays
 func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[int64]*EpisodeSummary, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Transform maps "step->EpisodeSummary" in statuses to sorted arrays in StatusResponse
@@ -417,15 +357,17 @@ func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 		if _, ok := res[group]; !ok {
 			res[group] = map[string][]EpisodeSummary{}
 		}
-		if ref.Probe == TotalProbeName {
-			res[group][TotalProbeName] = make([]EpisodeSummary, 0)
-			for _, info := range statuses[group][TotalProbeName] {
-				res[group][TotalProbeName] = append(res[group][TotalProbeName], *info)
+		if ref.Probe == dao.GroupAggregation {
+			// Only group stats were requested
+			res[group][dao.GroupAggregation] = make([]EpisodeSummary, 0)
+			for _, info := range statuses[group][dao.GroupAggregation] {
+				res[group][dao.GroupAggregation] = append(res[group][dao.GroupAggregation], *info)
 			}
-			sort.Sort(ByTimeSlot(res[group][TotalProbeName]))
+			sort.Sort(ByTimeSlot(res[group][dao.GroupAggregation]))
 		} else {
+			// All probes in detail were requested
 			for probe, infos := range probes {
-				if probe == TotalProbeName {
+				if probe == dao.GroupAggregation {
 					continue
 				}
 				if _, ok := res[group][probe]; !ok {
@@ -441,14 +383,23 @@ func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 	return res
 }
 
-func filterDisabledProbesFromEpisodes(episodes []check.Episode) []check.Episode {
-	res := make([]check.Episode, 0)
-
-	for _, episode := range episodes {
-		if check.IsProbeEnabled(episode.ProbeRef.Id()) {
-			res = append(res, episode)
-		}
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
 	}
+	return b
+}
 
-	return res
+func maxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func longest(a, b time.Duration) time.Duration {
+	if a > b {
+		return a
+	}
+	return b
 }

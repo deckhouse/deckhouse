@@ -1,7 +1,7 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-The in-cluster [documentation module](/{{ page.lang }}/documentation/v1/modules/810-deckhouse-web/) will be the only module with a WEB interface that runs after completing the Deckhouse installation (unless you have enabled other modules in the Deckhouse configuration). If you do not use [nip.io](https://nip.io) or similar services, you must add the appropriate DNS record to access the module’s WEB interface.
+The in-cluster [documentation module](/documentation/v1/modules/810-deckhouse-web/) will be the only module with a WEB interface that runs after completing the Deckhouse installation (unless you have enabled other modules in the Deckhouse configuration). If you do not use [nip.io](https://nip.io) or similar services, you must add the appropriate DNS record to access the module’s WEB interface.
 
 Create a DNS record to access a WEB interface of the documentation module:
 <ul>
@@ -11,7 +11,7 @@ Create a DNS record to access a WEB interface of the documentation module:
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
     </li>
     <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add А or CNAME record containing the public IP, you've discovered previously, for the <code example-hosts>deckhouse.example.com</code> service DNS name:
+            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add A or CNAME record containing the public IP, you've discovered previously, for the <code example-hosts>deckhouse.example.com</code> service DNS name:
       </li>
     </ul>
   </li>

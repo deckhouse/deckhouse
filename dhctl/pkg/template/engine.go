@@ -39,7 +39,7 @@ func (e Engine) Render(tmpl []byte) (out *bytes.Buffer, err error) {
 func (e Engine) initFunMap(t *template.Template) {
 	funcMap := FuncMap()
 
-	// include function doesn't required in candi templates
+	// include function isn't required in candi templates
 	funcMap["include"] = func(name string, data interface{}) (string, error) {
 		return "NotImplemented", nil
 	}

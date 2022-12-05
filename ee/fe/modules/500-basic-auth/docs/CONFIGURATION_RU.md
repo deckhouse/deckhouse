@@ -2,16 +2,10 @@
 title: "Модуль basic-auth: настройки"
 ---
 
-Модуль по умолчанию **выключен**. Для включения добавьте в CM `deckhouse`:
+{% include module-bundle.liquid %}
 
-```yaml
-data:
-  basicAuthEnabled: "true"
-```
+У модуля нет обязательных настроек.
 
-Обязательных настроек нет.
 По умолчанию создается location `/` с пользователем `admin`.
 
-## Параметры
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}

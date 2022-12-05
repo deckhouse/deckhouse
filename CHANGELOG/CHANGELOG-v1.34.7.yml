@@ -1,0 +1,39 @@
+docs:
+  fixes:
+    - summary: Fix search result rendering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2108
+extended-monitoring:
+  fixes:
+    - summary: Refactoring groups for node disk usage alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2098
+ingress-nginx:
+  fixes:
+    - summary: Update the `D8IngressNginxControllerVersionDeprecated` alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2088
+    - summary: Fix debug instructions in the `NginxIngressConfigTestFailed` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2087
+istio:
+  fixes:
+    - summary: Fixed `D8IstioDataPlanePatchVersionMismatch` alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2048
+monitoring-kubernetes:
+  fixes:
+    - summary: Ignore containers rootfs mount point for node-exporter in GKE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2100
+    - summary: Refactoring groups for node disk usage alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2098
+node-local-dns:
+  fixes:
+    - summary: >-
+        Reverted the `node-local-dns` ConfigMap, to prevent the `node-local-dns` Pods from getting
+        stuck in the Terminating state during moving to `kube-system`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2093
+prometheus:
+  fixes:
+    - summary: Rollback prometheus-module ServiceMonitor label selector to `app=prometheus`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2107
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fix description of custom resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2099
+

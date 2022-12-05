@@ -34,7 +34,6 @@ func assertBashibleAPIServerTLSSecret(f *Config, namespace string) {
 	Expect(ca).To(BeEquivalentTo(bashibleAPIServerCA))
 	Expect(crt).To(BeEquivalentTo(bashibleAPIServerCrt))
 	Expect(key).To(BeEquivalentTo(bashibleAPIServerKey))
-
 }
 
 func assertBashibleAPIServerCaBundle(f *Config) {
@@ -44,7 +43,7 @@ func assertBashibleAPIServerCaBundle(f *Config) {
 	Expect(caBundle).To(BeEquivalentTo(bashibleAPIServerCA))
 }
 
-func assertBashibleAPIServerTLS(f *Config, namespace string) {
-	assertBashibleAPIServerTLSSecret(f, namespace)
+func assertBashibleAPIServerTLS(f *Config) {
+	assertBashibleAPIServerTLSSecret(f, nodeManagerNamespace)
 	assertBashibleAPIServerCaBundle(f)
 }

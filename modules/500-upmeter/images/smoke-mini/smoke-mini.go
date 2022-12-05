@@ -33,18 +33,24 @@ import (
 )
 
 var (
-	listenHost              = "0.0.0.0"
-	listenPort              = "8080"
+	listenHost = "0.0.0.0"
+	listenPort = "8080"
+
+	// targetServices is the list of neighbor indexes, e.g. for "c" it is []string{"a", "b", "d", "e"}
+	targetServices      = strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
+	clusterIpServiceUrl = "http://smoke-mini-cluster-ip:8080"
+
 	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	ready                   = true
-	serviceURL              = "http://smoke-mini:8080"
+
+	// state for shutdown
+	ready = true
 )
 
 func podHost(x string) string {
 	return fmt.Sprintf("smoke-mini-%s-0", x)
 }
 
-func podURL(x string) string {
+func singleTargetServiceURL(x string) string {
 	return fmt.Sprintf("http://smoke-mini-%s:%s/", x, listenPort)
 }
 
@@ -89,14 +95,18 @@ func main() {
 func setupHandlers() *http.ServeMux {
 	mux := http.NewServeMux()
 
+	// k8s
 	mux.HandleFunc("/ready", readyHandler)
+
+	// upmeter probes
 	mux.HandleFunc("/", rootHandler)
-	mux.HandleFunc("/error", errorHandler)
-	mux.HandleFunc("/api", apiHandler)
-	mux.HandleFunc("/disk", diskHandler)
 	mux.HandleFunc("/dns", dnsHandler)
 	mux.HandleFunc("/neighbor", neighborHandler)
 	mux.HandleFunc("/neighbor-via-service", neighborViaServiceHandler)
+
+	// deckhouse e2e tests
+	mux.HandleFunc("/api", apiHandler)
+	mux.HandleFunc("/disk", diskHandler)
 	mux.HandleFunc("/prometheus", prometheusHandler)
 
 	return mux
@@ -112,6 +122,7 @@ func readyHandler(w http.ResponseWriter, r *http.Request) {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(os.Getenv("HOSTNAME"), r.RemoteAddr, r.RequestURI)
+
 	if r.RequestURI != "/" {
 		w.WriteHeader(404)
 		fmt.Fprintf(w, "404 Not Found %s\n", r.RequestURI)
@@ -120,9 +131,84 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
 
-func errorHandler(w http.ResponseWriter, r *http.Request) {
+func dnsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
-	w.WriteHeader(500)
+	_, err := net.LookupIP("kubernetes.default")
+	if err != nil {
+		w.WriteHeader(500)
+		log.Error(err)
+		return
+	}
+	fmt.Fprintf(w, "ok")
+}
+
+// neighborHandler checks other smoke-mini pods availabilty. It gets responses from pods via
+// headless single-instance service URL, e.g. for "c" it would be "http://smoke-mini-c:<port>", which
+// targets single pod "smoke-mini-c-0".
+func neighborHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info(r.RemoteAddr, r.RequestURI)
+	for i := len(targetServices) - 1; i >= 0; i-- {
+		if podHost(targetServices[i]) == os.Getenv("HOSTNAME") {
+			targetServices = append(targetServices[:i], targetServices[i+1:]...)
+		}
+	}
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	errorCount := 0
+	for i := 0; i < len(targetServices); i++ {
+		if errorCount <= 2 {
+			resp, err := client.Get(singleTargetServiceURL(targetServices[i]))
+			if err != nil {
+				log.Error(err)
+				errorCount++
+				continue
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil || string(body) != "ok" {
+				log.Error(err)
+				errorCount++
+			}
+		} else {
+			w.WriteHeader(500)
+			return
+		}
+	}
+	fmt.Fprintf(w, "ok")
+}
+
+// neighborViaServiceHandler checks the availabilty of any smoke-mini pod including themselves via
+// service "cluster IP", i.e. via iptables rules. In worst case, the pod gets all responses from
+// itself.
+func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
+	maxErrors := 2
+
+	log.Info(r.RemoteAddr, r.RequestURI)
+	client := http.Client{Timeout: 2 * time.Second}
+
+	errorCount := 0
+	for i := 0; i < len(targetServices)-1; i++ {
+		if errorCount <= maxErrors {
+			resp, err := client.Get(clusterIpServiceUrl)
+			if err != nil {
+				log.Error(err)
+				errorCount++
+				continue
+			}
+			defer resp.Body.Close()
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil || string(body) != "ok" {
+				log.Error(err)
+				errorCount++
+			}
+		} else {
+			w.WriteHeader(500)
+			return
+		}
+	}
+
 	fmt.Fprintf(w, "ok")
 }
 
@@ -201,17 +287,6 @@ func diskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func dnsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, r.RequestURI)
-	_, err := net.LookupIP("kubernetes.default")
-	if err != nil {
-		w.WriteHeader(500)
-		log.Error(err)
-		return
-	}
-	fmt.Fprintf(w, "ok")
-}
-
 func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
 	prometheusEndpoint := "https://prometheus.d8-monitoring:9090/api/v1/metadata?metric=prometheus_build_info"
@@ -240,70 +315,6 @@ func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		w.WriteHeader(500)
 		return
-	}
-	fmt.Fprintf(w, "ok")
-}
-
-func neighborHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, r.RequestURI)
-	targetServices := strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
-	for i := len(targetServices) - 1; i >= 0; i-- {
-		if podHost(targetServices[i]) == os.Getenv("HOSTNAME") {
-			targetServices = append(targetServices[:i], targetServices[i+1:]...)
-		}
-	}
-	client := http.Client{
-		Timeout: 2 * time.Second,
-	}
-	errorCount := 0
-	for i := 0; i < len(targetServices); i++ {
-		if errorCount <= 2 {
-			resp, err := client.Get(podURL(targetServices[i]))
-			if err != nil {
-				log.Error(err)
-				errorCount++
-				continue
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil || string(body) != "ok" {
-				log.Error(err)
-				errorCount++
-			}
-		} else {
-			w.WriteHeader(500)
-			return
-		}
-	}
-	fmt.Fprintf(w, "ok")
-}
-
-func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, r.RequestURI)
-	targetsCount := len(strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")) - 1
-	client := http.Client{
-		Timeout: 2 * time.Second,
-	}
-	errorCount := 0
-	maxErrors := 2
-	for i := 0; i < targetsCount; i++ {
-		if errorCount <= maxErrors {
-			resp, err := client.Get(serviceURL)
-			if err != nil {
-				log.Error(err)
-				errorCount++
-				continue
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil || string(body) != "ok" {
-				log.Error(err)
-				errorCount++
-			}
-		} else {
-			w.WriteHeader(500)
-			return
-		}
 	}
 	fmt.Fprintf(w, "ok")
 }

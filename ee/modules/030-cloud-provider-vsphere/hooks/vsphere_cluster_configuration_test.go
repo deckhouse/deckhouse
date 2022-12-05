@@ -43,6 +43,22 @@ cloudProviderVsphere:
   region: override
   zones: [override1, override2]
 `
+		filledValuesWithoutSomeFields = `
+global:
+  discovery: {}
+cloudProviderVsphere:
+  internal: {}
+  host: override
+  username: override
+  password: override
+  insecure: true
+  internalNetworkNames: [override1, override2]
+  externalNetworkNames: [override1, override2]
+  disableTimesync: false
+  vmFolderPath: override
+  sshKeys: [override1, override2]
+  region: override
+`
 		filledValuesWithNSXT = filledValues + `
   nsxt:
     defaultIpPoolName: pool1
@@ -79,7 +95,7 @@ vmFolderPath: test
 regionTagCategory: test
 zoneTagCategory: test
 region: test
-internalNetworkCIDR: test
+internalNetworkCIDR: 192.168.199.0/24
 sshPublicKey: test
 internalNetworkNames: [test1, test2]
 externalNetworkNames: [test1, test2]
@@ -134,7 +150,7 @@ disableTimesync: false
 externalNetworkNames:
 - override1
 - override2
-internalNetworkCIDR: test
+internalNetworkCIDR: 192.168.199.0/24
 internalNetworkNames:
 - override1
 - override2
@@ -174,6 +190,27 @@ zoneTagCategory: override
 zones:
 - override1
 - override2
+`
+		stateAClusterConfiguration4 = `
+disableTimesync: false
+externalNetworkNames:
+- override1
+- override2
+internalNetworkNames:
+- override1
+- override2
+provider:
+  insecure: true
+  password: override
+  server: override
+  username: override
+region: override
+regionTagCategory: k8s-region
+sshPublicKey: override1
+vmFolderPath: override
+zoneTagCategory: k8s-zone
+zones:
+- test
 `
 		nsxt = `
 nsxt:
@@ -345,6 +382,31 @@ data: {}
 			Expect(c).To(ExecuteSuccessfully())
 			Expect(c.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration3 + nsxt))
 			Expect(c.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
+		})
+	})
+
+	d := HookExecutionConfigInit(filledValuesWithoutSomeFields, `{}`)
+	Context("Cluster with module configuration without zones, with empty secret", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(emptyProviderClusterConfigurationState))
+			d.RunHook()
+		})
+
+		It("Should fail", func() {
+			Expect(d).To(Not(ExecuteSuccessfully()))
+		})
+	})
+	Context("Cluster with module configuration with zones, but without zoneTagCategory and regionTagCategory, with empty secret", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(emptyProviderClusterConfigurationState))
+			d.ValuesSet("cloudProviderVsphere.zones", []string{"test"})
+			d.RunHook()
+		})
+
+		It("Should fill values from module configuration", func() {
+			Expect(d).To(ExecuteSuccessfully())
+			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration4))
+			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
 		})
 	})
 })

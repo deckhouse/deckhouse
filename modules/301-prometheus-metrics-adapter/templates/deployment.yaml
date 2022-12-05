@@ -1,3 +1,12 @@
+{{- define "prometheus_metrics_adapter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+{{- define "prometheus_reverse_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -12,7 +21,21 @@ spec:
     kind: Deployment
     name: prometheus-metrics-adapter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus-metrics-adapter"
+      minAllowed:
+        {{- include "prometheus_metrics_adapter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "prometheus-reverse-proxy"
+      minAllowed:
+        {{- include "prometheus_reverse_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -23,6 +46,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: prometheus-metrics-adapter
@@ -47,14 +71,14 @@ spec:
       containers:
       - name: prometheus-metrics-adapter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}"
+        image: {{ include "helm_lib_module_image" (list . "k8sPrometheusAdapter") }}
         args:
         - --secure-port=6443
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
         - --logtostderr=true
         - --prometheus-url=http://127.0.0.1:8000/trickster/main/
-        - --metrics-relist-interval=30s
+        - --metrics-relist-interval={{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
         ports:
@@ -77,12 +101,19 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "prometheus_metrics_adapter_resources" . | nindent 12 }}
+{{- end }}
       - name: prometheus-reverse-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}"
+        image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
         env:
         - name: PROMETHEUS_URL
           value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+        volumeMounts:
+        - mountPath: /etc/prometheus-reverse-proxy/
+          name: prometheus-metrics-adapter-config
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz
@@ -91,16 +122,12 @@ spec:
           httpGet:
             path: /healthz
             port: 8000
-        volumeMounts:
-        - mountPath: /etc/prometheus-reverse-proxy/
-          name: prometheus-metrics-adapter-config
-          readOnly: true
-        - mountPath: /etc/ssl/prometheus-api-client-tls/
-          name: prometheus-metrics-adapter-prometheus-api-client-tls
-          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "prometheus_reverse_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: adapter-cert
         secret:
@@ -111,8 +138,5 @@ spec:
       - name: apiserver-proxy-client-ca
         configMap:
           name: prometheus-metrics-adapter-apiserver-proxy-client-ca
-      - name: prometheus-metrics-adapter-prometheus-api-client-tls
-        secret:
-          secretName: prometheus-metrics-adapter-prometheus-api-client-tls
       - name: tmp
         emptyDir: {}

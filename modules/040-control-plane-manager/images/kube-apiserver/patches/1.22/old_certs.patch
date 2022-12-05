@@ -1,6 +1,6 @@
 diff --git a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
---- staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
-+++ staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
+--- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
++++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go
 @@ -21,6 +21,7 @@
  	"crypto/x509/pkix"
  	"encoding/hex"

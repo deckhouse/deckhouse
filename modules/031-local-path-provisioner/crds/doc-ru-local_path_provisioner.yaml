@@ -15,7 +15,7 @@ spec:
                   nodeGroup'ы, в которых работает данный storageClass.
               path:
                 description: |
-                  Корневой путь на ноде к директории для хранения PV.
+                  Корневой путь на узле к директории для хранения PV.
               reclaimPolicy:
                 description: |
                   Сохранять ли PV после удаления PVC.

@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-config
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  identity-allocation-mode: crd
+  cluster-name: default # make sense only for cluster mesh
+
+  debug: {{ .Values.cniCilium.debugLogging | quote }}
+
+  metrics: "+cilium_bpf_map_pressure"
+
+  agent-health-port: "9876"
+  prometheus-serve-addr: "127.0.0.1:9092"
+  operator-prometheus-serve-addr: "127.0.0.1:9094"
+  operator-api-serve-addr: "127.0.0.1:9234"
+  enable-metrics: "true"
+
+  enable-ipv4: "true"
+  enable-ipv6: "false"
+
+  clean-cilium-state: {{ .Values.cniCilium.cleanState | quote }}
+  enable-bpf-tproxy: "true"
+
+  bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
+
+  {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
+  tunnel: "vxlan"
+  {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
+  tunnel: "disabled"
+  auto-direct-node-routes: "true"
+  {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
+  tunnel: "disabled"
+  {{- else }}
+    {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
+  {{- end }}
+
+  {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
+  enable-bpf-masquerade: "true"
+  enable-ipv4-egress-gateway: "true"
+    {{- if or (eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes") (eq .Values.cniCilium.internal.mode "Direct") }}
+  # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
+  install-no-conntrack-iptables-rules: "true"
+    {{- end }}
+  {{- end }}
+
+  enable-ipv4-masquerade: "true"
+
+  enable-xt-socket-fallback: "true"
+  install-iptables-rules: "true"
+  enable-bandwidth-manager: "true"
+
+  enable-local-redirect-policy: "true"
+
+  ipv4-native-routing-cidr: {{ .Values.global.discovery.podSubnet }}
+
+  enable-host-firewall: "true"
+
+  kube-proxy-replacement: "strict"
+  kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
+
+  enable-host-reachable-services: "true"
+  bpf-lb-sock-hostns-only: "true"
+  enable-health-check-nodeport: "true"
+  node-port-bind-protection: "true"
+  enable-auto-protect-node-port-range: "true"
+  bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
+  bpf-lb-algorithm: "random"
+  enable-service-topology: "true"
+  netfilter-compatible-mode: "true"
+
+  enable-session-affinity: "true"
+  enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
+
+  sockops-enable: "false"
+  enable-icmp-rules: "true"
+  enable-endpoint-health-checking: "true"
+  enable-health-checking: "true"
+  policy-audit-mode: {{ .Values.cniCilium.policyAuditMode | quote }}
+
+  ipam: kubernetes
+  k8s-require-ipv4-pod-cidr: "true"
+
+  enable-k8s-endpoint-slice: "true"
+
+  enable-cilium-endpoint-slice: "true"
+
+  enable-k8s-terminating-endpoint: "true"
+  enable-remote-node-identity: "true"
+
+  bpf-map-dynamic-size-ratio: "0.005"
+  bpf-policy-map-max: "65536"
+
+  # Local hubble sever section
+{{- if has "cilium-hubble" .Values.global.enabledModules }}
+  enable-hubble: "true"
+{{- else }}
+  enable-hubble: "false"
+{{- end }}
+  hubble-socket-path: "/var/run/cilium/hubble.sock"
+  hubble-listen-address: ":4244"
+
+  hubble-disable-tls: "false"
+  hubble-tls-cert-file: /var/lib/cilium/tls/hubble/server.crt
+  hubble-tls-key-file: /var/lib/cilium/tls/hubble/server.key
+  hubble-tls-client-ca-files: /var/lib/cilium/tls/hubble/client-ca.crt
+
+  # https://docs.cilium.io/en/v1.12/policy/language/#alpine-musl-deployments-and-dns-refused
+  tofqdns-dns-reject-response-code: nameError
+
+  # disabled since they may generate absurd amount of requests in count and size
+  # we've found no use for status field of CNP and CCNP
+  disable-cnp-status-updates: "true"

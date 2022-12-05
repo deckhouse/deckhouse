@@ -1,7 +1,15 @@
 {{- $options := dict -}}
 {{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
 {{- $_ := set $options "memory" (add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4)) -}}
-{{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
+
+{{- $rootDiskSize := .nil }}
+{{- if hasKey .nodeGroup.instanceClass "rootDiskSize" }}
+  {{- if ne .nodeGroup.instanceClass.rootDiskSize 20.0 }}
+    {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSize }}
+  {{- end }}
+{{- end }}
+
+{{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
 {{- if hasKey .nodeGroup.instanceClass "resourcePool" -}}
   {{- $_ := set $options "resourcePool" .nodeGroup.instanceClass.resourcePool -}}

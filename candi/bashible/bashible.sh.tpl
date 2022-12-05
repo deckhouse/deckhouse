@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+export LANG=C
 set -Eeo pipefail
 
 function kubectl_exec() {
@@ -147,12 +147,18 @@ function main() {
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
     fi
+    read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
+    if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
+      >&2 echo "ERROR: $BOOTSTRAP_DIR/bashible-new.sh is not a bash script."
+      exit 1
+    fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
     $BOOTSTRAP_DIR/bashible-new.sh --no-lock
 
     # At this step we already know that new version is functional
     mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
+    sync $BOOTSTRAP_DIR/bashible.sh
     exit 0
   fi
 
@@ -233,7 +239,8 @@ function main() {
     echo === Step: $step
     echo ===
     attempt=0
-    until /bin/bash -eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
+    sx=""
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -245,6 +252,11 @@ function main() {
       echo ===
       echo === Step: $step
       echo ===
+      {{- if eq .runType "ClusterBootstrap" }}
+      if [ "$attempt" -gt 2 ]; then
+        sx=x
+      fi
+      {{- end }}
     done
   done
 

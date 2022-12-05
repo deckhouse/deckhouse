@@ -215,6 +215,17 @@ func appendBasicPolicyRules(policy *audit.Policy) {
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+	// Collect all LIST operations for all namespaces since they consume a lot of
+	// apiserver memory sometimes and are a mean to debug OOMs.
+	{
+		rule := audit.PolicyRule{
+			Level:      audit.LevelMetadata,
+			Verbs:      []string{"list"},
+			Namespaces: []string{}, // every namespace
+			// no stage omitted, since apiserver might crash with OOM before it responds, and we want to catch it
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
 }
 
 func appendAdditionalPolicyRules(policy *audit.Policy, data *[]byte) error {

@@ -3,7 +3,9 @@ title: "The prometheus-metrics-adapter module: configuration"
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 
-By default, the module is **enabled** in clusters starting with version 1.9 if the `prometheus` module is enabled. Generally, no configuration is required.
+{% include module-bundle.liquid %}
+
+The module works if the `prometheus` module is enabled. Generally, no configuration is required.
 
 ## Parameters
 

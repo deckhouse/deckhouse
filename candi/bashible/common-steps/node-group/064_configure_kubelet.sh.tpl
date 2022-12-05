@@ -27,6 +27,12 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
 cgroup_driver="systemd"
+{{- if eq .cri "Containerd" }}
+# Overriding cgroup type from external config file
+if [ -f /var/lib/bashible/cgroup_config ]; then
+  cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
+fi
+{{- end }}
 
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
@@ -57,10 +63,7 @@ cri_type="Containerd"
 {{- end }}
 
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
-# Debian 11 docker uses only systemd as cgroup driver
-  if ! bb-is-debian-version? 11; then
-    cgroup_driver="cgroupfs"
-  fi
+  cgroup_driver="cgroupfs"
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
   if [ -d "${criDir}/overlay2" ]; then
     criDir="${criDir}/overlay2"
@@ -134,6 +137,20 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
+shutdownGracePeriod="2m"
+shutdownGracePeriodCriticalPods="15s"
+
+if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
+  source /var/lib/bashible/cloud-provider-variables
+
+  if [[ -n "$shutdown_grace_period" ]]; then
+    shutdownGracePeriod="$shutdown_grace_period"
+  fi
+  if [[ -n "$shutdown_grace_period_critical_pods" ]]; then
+    shutdownGracePeriodCriticalPods="$shutdown_grace_period_critical_pods"
+  fi
+fi
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -201,10 +218,16 @@ serverTLSBootstrap: true
 {{- end }}
 featureGates:
   ExpandCSIVolumes: true
+{{- if semverCompare "=1.20" .kubernetesVersion }}
+  GracefulNodeShutdown: true
+{{- end }}
+{{- if semverCompare "<1.23" .kubernetesVersion }}
+  EphemeralContainers: true
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
-imageGCHighThresholdPercent: 50
-imageGCLowThresholdPercent: 40
+imageGCHighThresholdPercent: 70
+imageGCLowThresholdPercent: 65
 kubeAPIBurst: 50
 kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
@@ -230,9 +253,11 @@ volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
-{{- if eq .cri "Containerd" }}
+{{- if or (eq .cri "Containerd") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
 allowedUnsafeSysctls:  ["net.*"]
+shutdownGracePeriod: ${shutdownGracePeriod}
+shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 EOF

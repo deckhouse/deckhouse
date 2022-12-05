@@ -1,3 +1,5 @@
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
 ## Список необходимых ресурсов vSphere
 
 * **User** пользователь с необходимым [набором прав](#права).
@@ -60,22 +62,24 @@ govc tags.attach -c k8s-zone test_zone /DC/datastore/test_lun
 
 #### Datastore тэги
 
-При наличии Datastore'ов на **всех** ESXi, где будут размещаться виртуальные машины нод кластера, возможно использовать динамический заказ PV.
+При наличии Datastore'ов на **всех** ESXi, где будут размещаться виртуальные машины узлов кластера, возможно использовать динамический заказ PV.
 Для автоматического создания StorageClass'ов в Kubernetes кластере, повесьте тэг региона и зоны, созданные ранее, на выбранные Datastore'ы.
 
 ### Права
 
 > Ввиду разнообразия подключаемых к vSphere SSO-провайдеров, шаги по созданию пользователя в данной статье не рассматриваются.
 
-Необходимо создать роль (Role) с указанными правами и прикрепить её к одному или нескольким Datacenter'ам, где нужно развернуть кластер Kubernetes.
+Необходимо создать роль (Role) с указанными правами и прикрепить её к **vCenter**, где нужно развернуть кластер
+Kubernetes.
 
 {% snippetcut %}
 ```shell
 govc role.create kubernetes \
-Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Global.GlobalTag Global.SystemTag \
+Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
 InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
 InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
 InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \
+InventoryService.Tagging.ObjectAttachable \
 Network.Assign Resource.AssignVMToPool Resource.ColdMigrate Resource.HotMigrate Resource.CreatePool \
 Resource.DeletePool Resource.RenamePool Resource.EditPool Resource.MovePool StorageProfile.View System.Anonymous System.Read System.View \
 VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice \
@@ -108,7 +112,8 @@ VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate
 VirtualMachine.Provisioning.DiskRandomRead VirtualMachine.Provisioning.FileRandomAccess VirtualMachine.Provisioning.GetVmFiles \
 VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM VirtualMachine.Provisioning.ModifyCustSpecs \
 VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
-VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
+VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot \
+Cns.Searchable StorageProfile.View
 
 govc permissions.set  -principal имя_пользователя -role kubernetes /DC
 ```
@@ -134,7 +139,7 @@ cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
 1. Создать файл `vsphere.auto.pkrvars.hcl` со следующим содержимым:
    {% snippetcut %}
 ```hcl
-vcenter_server = "<хостнейм или IP vCenter>"
+vcenter_server = "<hostname или IP vCenter>"
 vcenter_username = "<имя пользователя>"
 vcenter_password = "<пароль>"
 vcenter_cluster = "<имя ComputeCluster, где будет создан образ>"

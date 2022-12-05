@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Remove outdated kiali's MonitoringDashboard resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1956
+

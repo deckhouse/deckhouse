@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: Custom Resources"
+title: "Cloud provider — VMware vSphere: Custom Resources"
 ---
 
 <!-- SCHEMA -->

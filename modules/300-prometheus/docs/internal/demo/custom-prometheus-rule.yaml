@@ -1,0 +1,15 @@
+---
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  name: always-firing-alert
+spec:
+  groups:
+  - name: cluster-state-alert.rules
+    rules:
+      - alert: PrometheusCanScrapeTragets
+        annotations:
+          description: This is a fake alert only for a demo.
+          summary: Prometheus can scrape tragets
+        expr: |
+          up

@@ -1,0 +1,11 @@
+flant-integration:
+  fixes:
+    - summary: Minor doc fixes in the flant-integration module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2302
+    - summary: Fix expression for `D8PrometheusMadisonErrorSendingAlertsToBackend`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2298
+go_lib:
+  fixes:
+    - summary: Fixed `copy_custom_certificate` value priority.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2299
+

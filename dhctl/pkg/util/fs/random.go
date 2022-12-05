@@ -23,14 +23,18 @@ import (
 	"time"
 )
 
-func RandomFileName() string {
+func RandomTmpFileName() string {
+	fileName := RandomNumberSuffix("dhctl-tst-touch")
+	return filepath.Join(os.TempDir(), fileName)
+}
+
+func RandomNumberSuffix(name string) string {
 	// we silent gosec linter here
 	// because we do not need security random number
 	s := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(s) //nolint:gosec
 
 	rndSuf := strconv.FormatUint(r.Uint64(), 10)
-	fileName := fmt.Sprintf("dhctl-tst-touch-%s", rndSuf)
 
-	return filepath.Join(os.TempDir(), fileName)
+	return fmt.Sprintf("%s-%s", name, rndSuf)
 }

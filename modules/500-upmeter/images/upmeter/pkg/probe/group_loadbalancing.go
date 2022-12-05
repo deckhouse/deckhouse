@@ -23,48 +23,50 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initLoadBalancing(access kubernetes.Access) []runnerConfig {
+func initLoadBalancing(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
 	const (
-		groupName = "load-balancing"
-		cpTimeout = 5 * time.Second
+		groupLoadBalancing  = "load-balancing"
+		controlPlaneTimeout = 5 * time.Second
 	)
+
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "load-balancer-configuration",
 			check:  "cloud-controller-manager",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 access.CloudControllerManagerNamespace(),
-				LabelSelector:             "app=cloud-controller-manager",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        access.CloudControllerManagerNamespace(),
+				LabelSelector:    "app=cloud-controller-manager",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "metallb",
 			check:  "controller",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-metallb",
-				LabelSelector:             "app=controller",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-metallb",
+				LabelSelector:    "app=controller",
+				PreflightChecker: controlPlanePinger,
 			},
 		}, {
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "metallb",
 			check:  "speaker",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 "d8-metallb",
-				LabelSelector:             "app=speaker",
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-metallb",
+				LabelSelector:    "app=speaker",
+				PreflightChecker: controlPlanePinger,
 			},
 		},
 	}

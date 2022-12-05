@@ -1,0 +1,33 @@
+candi:
+  fixes:
+    - summary: fix aws terraform lookup bastion_instance
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1539
+ceph-csi:
+  fixes:
+    - summary: Fixed nodeSelector for csi-node pods in helm_lib
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1522
+cloud-provider-azure:
+  fixes:
+    - summary: >-
+        Updated CSI to v1.17.0. Fixes a problem with missing CSI GetVolumeStats calls, which result
+        in missing PV metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1512
+deckhouse:
+  fixes:
+    - summary: Fix global values OpenAPI specification
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1520
+docs:
+  fixes:
+    - summary: Global values minor updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1543
+openvpn:
+  fixes:
+    - summary: Improved migration to secrets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1521
+    - summary: Removing of openvpn.storageClass parameter from deckhouse configmap
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1493
+upmeter:
+  fixes:
+    - summary: Fix non-working upmeter server on emptyDirs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1524
+

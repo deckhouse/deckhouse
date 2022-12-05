@@ -67,7 +67,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setDNSImplementation)
 
 func setDNSImplementation(input *go_hook.HookInput) error {
-
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
 	if enabledModules.Has("kube-dns") {

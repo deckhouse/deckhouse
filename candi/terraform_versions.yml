@@ -1,0 +1,31 @@
+version: 0.13.4
+
+aws:
+  namespace: hashicorp
+  type: aws
+  version: 4.16.0
+
+azure:
+  namespace: hashicorp
+  type: azurerm
+  version: 2.36.0
+
+gcp:
+  namespace: hashicorp
+  type: google
+  version: 3.48.0
+
+openstack:
+  namespace: terraform-provider-openstack
+  type: openstack
+  version: 1.32.0
+
+vsphere:
+  namespace: hashicorp
+  type: vsphere
+  version: 2.0.2
+
+yandex:
+  namespace: yandex-cloud
+  type: yandex
+  version: 0.74.0

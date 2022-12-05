@@ -64,7 +64,11 @@ apiVersion: v1
 kind: Node
 metadata:
   name: node-4
-spec: {}
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node.deckhouse.io/csi-not-bootstrapped
+    value: ""
 ---
 apiVersion: v1
 kind: Node
@@ -78,6 +82,9 @@ apiVersion: storage.k8s.io/v1
 kind: CSINode
 metadata:
   name: node-1
+spec:
+  drivers:
+  - name: test
 `
 		stateCSINode2 = `
 ---
@@ -85,6 +92,9 @@ apiVersion: storage.k8s.io/v1
 kind: CSINode
 metadata:
   name: node-2
+spec:
+  drivers:
+  - name: test
 `
 		stateCSINode4 = `
 ---
@@ -146,7 +156,7 @@ metadata:
 				Expect(f.KubernetesGlobalResource("Node", "node-1").Field("spec.taints").String()).To(MatchJSON(`[{"effect": "PreferNoSchedule","key":"somekey-1"}]`))
 				Expect(f.KubernetesGlobalResource("Node", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"effect": "PreferNoSchedule","key": "somekey-2"},{"effect": "NoSchedule","key": "node.deckhouse.io/csi-not-bootstrapped","value": ""}]`))
 				Expect(f.KubernetesGlobalResource("Node", "node-3").Field("spec.taints").String()).To(MatchJSON(`[{"effect": "PreferNoSchedule","key":"somekey-3"}]`))
-				Expect(f.KubernetesGlobalResource("Node", "node-4").Field("spec.taints").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("Node", "node-4").Field("spec.taints").String()).To(MatchJSON(`[{"effect":"NoSchedule","key":"node.deckhouse.io/csi-not-bootstrapped","value":""}]`))
 			})
 		})
 

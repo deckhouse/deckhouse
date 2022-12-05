@@ -1,3 +1,17 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 {!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
 {!{- $ctx := coll.Merge $pullRequestContext . -}!}
 
@@ -9,17 +23,12 @@ on:
       - opened
       - synchronize
       - reopened
-
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.event.number }}-dev
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -63,12 +72,20 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
   build_deckhouse:
     name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
@@ -90,46 +107,51 @@ jobs:
 {!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
 
   tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
     needs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_deckhouse") | strings.Indent 4 }!}
 
   matrix_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Matrix tests
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
   dhctl_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Dhctl Tests
     needs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
 
   golangci_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: GolangCI Lint
     needs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
 
   openapi_test_cases:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: OpenAPI Test Cases
     needs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
 
   web_links_test:
+    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' }}
     name: Web links test
     needs:
       - git_info
@@ -140,9 +162,39 @@ jobs:
 {!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
 
   validators:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Validators
     needs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
+
+  set_e2e_requirement_status:
+    # if previous jobs were failed we do not need set status, because checks will be failed
+    if: ${{ success() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Set 'waiting for e2e' commit status
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+      - validators
+      - openapi_test_cases
+      - golangci_lint
+      - dhctl_tests
+      - matrix_tests
+      - tests
+    runs-on: [ self-hosted, regular ]
+    steps:
+    - name: Set commit status after e2e run
+      id: set_e2e_requirement_status
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      env:
+        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+      with:
+        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        script: |
+          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+          await e2eStatus.setInitialStatus({github, context, core});

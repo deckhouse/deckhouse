@@ -1,0 +1,21 @@
+- name: d8.okmeter.availability
+  rules:
+    - alert: D8OkmeterAgentPodIsNotReady
+      expr: |
+        min by (pod) (
+          kube_controller_pod{namespace="d8-okmeter", controller_type="DaemonSet", controller_name="okmeter"}
+          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-okmeter"}
+        ) != 1
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: okmeter
+        d8_component: agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_okmeter_unavailable: "D8OkmeterUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_okmeter_unavailable: "D8OkmeterUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Okmeter agent is not Ready

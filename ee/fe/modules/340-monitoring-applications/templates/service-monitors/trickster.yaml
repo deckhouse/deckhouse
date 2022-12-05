@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "trickster" }}
-{{ include "base_application_monitor" (list . "trickster" 1000) }}
-{{- end }}

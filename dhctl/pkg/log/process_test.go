@@ -30,14 +30,14 @@ func TestProcessStack(t *testing.T) {
 		Msg:       "process1",
 	})
 
-	require.Len(t, s.activeProcesses, 1, "process1 does not added to stack")
+	require.Len(t, s.activeProcesses, 1, "process1 is not added to stack")
 
 	s.push(&logProcessDescriptor{
 		StartedAt: time.Now(),
 		Msg:       "process2",
 	})
 
-	require.Len(t, s.activeProcesses, 2, "process2 does not added to stack")
+	require.Len(t, s.activeProcesses, 2, "process2 is not added to stack")
 
 	assertPop := func(t *testing.T, len int, process string) {
 		p := s.pop()

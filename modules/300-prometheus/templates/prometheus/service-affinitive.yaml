@@ -14,6 +14,6 @@ spec:
     port: 9090
     targetPort: https
   selector:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: main
 {{- end }}

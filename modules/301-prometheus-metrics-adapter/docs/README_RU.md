@@ -5,7 +5,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 Позволяет работать [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)- и [VPA](../../modules/302-vertical-pod-autoscaler/)- автоскейлерам по «любым» метрикам.
 
-Устанавливает в кластер [имплементацию](https://github.com/DirectXMan12/k8s-prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/custom-metrics-api.md) и [external metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/external-metrics-api.md) для получения метрик из Prometheus.
+Устанавливает в кластер [имплементацию](https://github.com/DirectXMan12/k8s-prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md) и [external metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md) для получения метрик из Prometheus.
 
 Это позволяет:
 - `kubectl top` брать метрики из Prometheus, через адаптер;
@@ -23,4 +23,3 @@ search: autoscaler, HorizontalPodAutoscaler
 ## Как работает
 
 Данный модуль регистрирует `k8s-prometheus-adapter` в качестве external API-сервиса, который расширяет возможности Kubernetes API. Когда какому-то из компонентов Kubernetes (VPA, HPA) требуется информация об используемых ресурсах, он делает запрос в Kubernetes API, а тот, в свою очередь, проксирует запрос в адаптер. Адаптер на основе своего [конфигурационного файла](https://github.com/deckhouse/deckhouse/blob/main/modules/301-prometheus-metrics-adapter/templates/config-map.yaml) выясняет, как посчитать метрику и отправляет запрос в Prometheus.
-

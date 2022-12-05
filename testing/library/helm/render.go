@@ -46,7 +46,6 @@ func (r Renderer) RenderChartFromDir(dir string, values string) (files map[strin
 }
 
 func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]string, err error) {
-	// prepare values
 	vals, err := chartutil.ReadValues([]byte(values))
 	if err != nil {
 		return nil, fmt.Errorf("helm chart read raw values: %v", err)
@@ -67,22 +66,25 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 		IsUpgrade: true,
 	}
 
-	// TODO is it needed here for tests?
-	cvals, err := chartutil.CoalesceValues(c, vals.AsMap())
-	if err != nil {
-		return nil, fmt.Errorf("helm chart coalesce values: %v", err)
-	}
+	caps := chartutil.DefaultCapabilities
+	vers := []string(caps.APIVersions)
+	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	caps.APIVersions = vers
 
-	valuesToRender, err := chartutil.ToRenderValues(c, cvals, releaseOptions, nil)
+	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart prepare render values: %v", err)
 	}
 
+	return r.RenderChartFromRawValues(c, valuesToRender)
+}
+
+func (r Renderer) RenderChartFromRawValues(c *chart.Chart, values chartutil.Values) (files map[string]string, err error) {
 	// render chart with prepared values
 	var e engine.Engine
 	e.LintMode = r.LintMode
 
-	out, err := e.Render(c, valuesToRender)
+	out, err := e.Render(c, values)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart render: %v", err)
 	}

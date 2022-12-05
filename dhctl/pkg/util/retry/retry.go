@@ -111,7 +111,7 @@ func (l *Loop) Run(task func() error) error {
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogInfoLn("Client break loop with %v", err)
+				l.logger.LogDebugF("Client break loop with %v\n", err)
 				return err
 			}
 

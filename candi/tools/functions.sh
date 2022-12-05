@@ -18,21 +18,21 @@ set -Eeo pipefail
 
 function check_jq() {
     if ! jq --version &>/dev/null; then
-      >&2 echo "ERROR: jq is not installed"
+      >&2 echo "ERROR: jq is not installed. Please install it from https://stedolan.github.io/jq/download"
       return 1
     fi
 }
 
 function check_crane() {
     if ! crane version &>/dev/null; then
-      >&2 echo "ERROR: crane is not installed"
+      >&2 echo "ERROR: crane is not installed. Please install it from https://github.com/google/go-containerregistry/tree/main/cmd/crane"
       return 1
     fi
 }
 
 function check_yq() {
     if ! yq --version &>/dev/null; then
-      >&2 echo "ERROR: yq is not installed"
+      >&2 echo "ERROR: yq is not installed. Please install it from https://github.com/mikefarah/yq/releases"
       return 1
     fi
 

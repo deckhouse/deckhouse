@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Automatically discover zone for volumes in OpenStack
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1104
+

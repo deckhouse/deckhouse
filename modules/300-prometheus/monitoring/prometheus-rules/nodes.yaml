@@ -10,7 +10,6 @@
       severity_level: "7"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       description: Cluster is running {{ `{{ $value }}` }} nodes, close
         to the maximum amount of {{ `{{ print "d8_max_nodes_amount" | query | first | value }}` }} nodes.
       summary: Nodes amount is close to the maximum allowed amount.

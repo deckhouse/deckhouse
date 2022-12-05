@@ -62,6 +62,9 @@ spec:
   # [<en>] the name of the Ingress class to use with the Ingress nginx controller
   # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: HostPort
@@ -70,7 +73,7 @@ spec:
     httpsPort: 443
     realIPHeader: X-Forwarded-For
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
   - operator: Exists
 ---

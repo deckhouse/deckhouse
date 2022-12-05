@@ -9,4 +9,4 @@ properties:
       activated:
         type: boolean
         default: false
-        description: Internal switch for DaemonSet deploy only if correct log-pipeline created.
+        x-examples: [false, true]

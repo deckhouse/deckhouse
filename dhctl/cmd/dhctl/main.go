@@ -59,6 +59,7 @@ func main() {
 		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
 		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
 		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
+		bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
 	}
 
 	commands.DefineConvergeCommand(kpApp)
@@ -89,13 +90,12 @@ func main() {
 		{
 			commands.DefineRenderBashibleBundle(renderCmd)
 			commands.DefineRenderKubeadmConfig(renderCmd)
+			commands.DefineRenderMasterBootstrap(renderCmd)
 		}
 
 		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 		{
-			commands.DefineEditClusterConfigurationCommand(editCmd)
-			commands.DefineEditProviderClusterConfigurationCommand(editCmd)
-			commands.DefineEditStaticClusterConfigurationCommand(editCmd)
+			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
 		}
 	}
 

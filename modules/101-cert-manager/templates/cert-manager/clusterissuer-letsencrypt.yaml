@@ -1,3 +1,4 @@
+{{- if not .Values.certManager.disableLetsencrypt }}
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -15,11 +16,17 @@ spec:
     solvers:
     - http01:
         ingress:
+          {{- if hasKey .Values.global.modules "ingressClass" }}
+          class: {{ .Values.global.modules.ingressClass }}
+          {{- end }}
           podTemplate:
             spec:
               serviceAccountName: acme-solver-deckhouse-sa
               tolerations:
                 - key: "node-role.kubernetes.io/master"
+                  operator: "Exists"
+                  effect: "NoSchedule"
+                - key: "node-role.kubernetes.io/control-plane"
                   operator: "Exists"
                   effect: "NoSchedule"
                 - key: "dedicated.deckhouse.io"
@@ -28,3 +35,5 @@ spec:
                 - key: "dedicated.deckhouse.io"
                   operator: "Equal"
                   value: "cert-manager"
+{{- end }}
+

@@ -28,11 +28,11 @@ lang: ru
 <div class="releases__menu">
 {%- for channel in channels_sorted_reverse %}
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
-        <div class="releases__menu-item-header">            
+        <div class="releases__menu-item-header">
             <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
                 {{ channel.title }}
             </div>
-        </div>        
+        </div>
         <div class="releases__menu-item-description">
             {{ channel.description[page.lang] }}
         </div>
@@ -43,4 +43,4 @@ lang: ru
 </div>
 {::options parse_block_html="true" /}
 
-Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/020-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/020-deckhouse/configuration.html#parameters-releasechannel).
+Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel).

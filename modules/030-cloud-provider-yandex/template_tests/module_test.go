@@ -50,36 +50,18 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.23"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
-        resolvWatcher: imagehash
-      cloudProviderYandex:
-        cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
-        yandexCsiPlugin: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.23.0
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
@@ -104,6 +86,7 @@ const moduleValues = `
       shouldAssignPublicIPAddress: true
       routeTableID: testest
       region: myreg
+      natInstanceName: ""
     providerClusterConfiguration:
       apiVersion: deckhouse.io/v1
       existingNetworkID: enpma5uvcfbkuac1i1jb
@@ -131,10 +114,124 @@ const moduleValues = `
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
+	})
+
+	Context("Yandex exporter", func() {
+		assertExporterDeploymentSecret := func(h *Config, exists bool) {
+			deployment := h.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-metrics-exporter")
+			Expect(deployment.Exists()).To(Equal(exists))
+
+			secret := h.KubernetesResource("Secret", "d8-cloud-provider-yandex", "cloud-metrics-exporter-app-creds")
+			Expect(secret.Exists()).To(Equal(exists))
+			if exists {
+				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))
+				Expect(secret.Field("data.folder-id").String()).To(Equal("bXlmb2xkaWQ="))
+			}
+		}
+
+		assertDeployNatInstanceMonitoring := func(h *Config, exists bool) {
+			prometheusRuleExists := h.KubernetesResource("PrometheusRule", "d8-cloud-provider-yandex", "cloud-provider-yandex-nat-instance").Exists()
+			grafanaDashboardExists := h.KubernetesResource("GrafanaDashboardDefinition", "", "d8-cloud-provider-yandex-kubernetes-cluster-nat-instance").Exists()
+			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
+
+			Expect(monitor.Exists()).To(Equal(exists))
+			Expect(prometheusRuleExists).To(Equal(exists))
+			Expect(grafanaDashboardExists).To(Equal(exists))
+		}
+
+		Context("monitoring api-key does not set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "")
+			})
+
+			Context("without NAT-instance", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("Should not create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, false)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+
+			Context("with NAT-instance", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.HelmRender()
+				})
+
+				It("Should not create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, false)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+		})
+
+		Context("monitoring api-key sets", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "api-key")
+			})
+
+			Context("without NAT-instance", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("Should create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, true)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+
+			Context("with NAT-instance", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.HelmRender()
+				})
+
+				It("Should create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, true)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, true)
+				})
+			})
+		})
+	})
+
 	Context("Yandex", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.HelmRender()
 		})
 
@@ -230,6 +327,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()
@@ -246,6 +344,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Yabdex with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderYandex.internal.defaultStorageClass", `network-ssd`)
 			f.HelmRender()

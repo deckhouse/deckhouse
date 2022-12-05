@@ -12,7 +12,7 @@ spec:
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
-                    **Важно!** Если указать значение "nginx", то дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class`.
+                    **Важно!** Если указать значение "nginx", то дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class` или поля `spec.ingressClassName`.
                 inlet:
                   description: |
                     Способ поступления трафика из внешнего мира:
@@ -35,10 +35,10 @@ spec:
                 enableIstioSidecar:
                   description: |
                     Добавить к Pod'ам контроллера аннотации для автоматического инжекта istio-сайдкаров.
-                    При включении этого параметра, к подам ingress-контроллера добавляются аннотации `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`. При создании таких подов, к ним автоматически будут добавлены сайдкары Istio при помощи mutating webhook. После этого, весь трафик в сторону Service CIDR будет перехватываться сайдкаром.
+                    При включении этого параметра, к Pod'ам Ingress-контроллера добавляются аннотации `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`. При создании таких подов, к ним автоматически будут добавлены сайдкары Istio при помощи mutating webhook. После этого, весь трафик в сторону Service CIDR будет перехватываться сайдкаром.
 
                      Чтобы воспользоваться этой функцией, необходимо доработать прикладные Ingress-ресурсы, добавив аннотации:
-                     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
+                     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
                      * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
                 waitLoadBalancerOnTerminating:
                   description: |
@@ -47,12 +47,10 @@ spec:
                   description: |
                     Инструмент, позволяющий систематически вызывать случайные прерывания работы Pod'ов контроллера.
 
-                    Предназначен для проверки ingress контроллера на реальную работу отказоустойчивости.
+                    Предназначен для проверки Ingress-контроллера на реальную работу отказоустойчивости.
                 validationEnabled:
                   description: |
                     Включить валидацию Ingress-правил.
-
-                    **Внимание!**: Данная функция не работает для контроллеров версии <0.33.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
@@ -182,7 +180,7 @@ spec:
                         Применять ли настройки `hsts` ко всем поддоменам сайта.
                 geoIP2:
                   description: |
-                    Опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше).
+                    Опции для включения GeoIP2.
                   properties:
                     maxmindLicenseKey:
                       description: |

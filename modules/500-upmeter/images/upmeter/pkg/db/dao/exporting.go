@@ -26,7 +26,6 @@ import (
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/util"
 )
 
 const originsSep = ":"
@@ -267,7 +266,7 @@ func getEarliestExportEpisodes(ctx *dbcontext.DbContext, syncID string, originsC
 // - the table contains fulfilled origin counts for the syncID
 // - there are expired (more than 24h ago) episodes.
 //
-//  Otherwise, this function returns ErrNotFound.
+//	Otherwise, this function returns ErrNotFound.
 //
 // Consider unfulfilled episodes to be fulfilled even if they are found with earlier timeslots that the desired
 // origins_count have reached. By the limitation of timeseries storages, we can only export the earliest episodes.
@@ -275,33 +274,30 @@ func getEarliestExportEpisodes(ctx *dbcontext.DbContext, syncID string, originsC
 // of thee slot range is the mark that earlier episodes will never be fulfilled. Thus it is better to send them
 // than to skip them.
 //
-//
 // Case #1, we have unfulfilled episodes earlier than a fulfilled one
 //
-//     N = origins count
-//     D = desired origins count
+//	 N = origins count
+//	 D = desired origins count
 //
-//          Fresh episode fulfilled by the Dth agent, making N=D
-//                         ↓
-//      N<D   N<D   N<D   N=D   N<D   N<D   ...
-//    |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|--> time (slots)
-//       ↑
-//      Send this anyway, because
-//              - there is no hope it will ever reach D
-//              - timeseries storage accept only newer samples related to existing ones
-//
+//	      Fresh episode fulfilled by the Dth agent, making N=D
+//	                     ↓
+//	  N<D   N<D   N<D   N=D   N<D   N<D   ...
+//	|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|--> time (slots)
+//	   ↑
+//	  Send this anyway, because
+//	          - there is no hope it will ever reach D
+//	          - timeseries storage accept only newer samples related to existing ones
 //
 // Case #2, all episodes are unfulfilled, and we have 24h-old among them
 //
-//       24h ago
-//          ↓
-//      N<D ↓ N<D   N<D   N<D   N<D   N<D   ...
-//    |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|--> time (slots)
-//       ↑
-//      Send this anyway, because
-//              - it will never reach D, because upmeter server skips episodes that are older than 24h
-//              - again, timeseries storage accept only newer samples related to existing ones
-//
+//	   24h ago
+//	      ↓
+//	  N<D ↓ N<D   N<D   N<D   N<D   N<D   ...
+//	|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|--> time (slots)
+//	   ↑
+//	  Send this anyway, because
+//	          - it will never reach D, because upmeter server skips episodes that are older than 24h
+//	          - again, timeseries storage accept only newer samples related to existing ones
 func getEarliestTimeSlot(ctx *dbcontext.DbContext, syncID string, originsCount int) (int64, error) {
 	commonSlot, err := getEarliestCommonTimeSlot(ctx, syncID)
 	if err != nil {
@@ -324,7 +320,7 @@ func getEarliestTimeSlot(ctx *dbcontext.DbContext, syncID string, originsCount i
 	}
 
 	// Slots are numbers there because this is not public interface
-	minSlot := util.Min(fulfilledSlot, commonSlot)
+	minSlot := minInt64(fulfilledSlot, commonSlot)
 	return minSlot, nil
 }
 
@@ -416,4 +412,11 @@ func getExportEpisodesBySyncIDAndSlot(ctx *dbcontext.DbContext, syncID string, s
 	defer rows.Close()
 
 	return parseExportEpisodeEntities(rows)
+}
+
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -45,16 +45,31 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
-	cmd.Flag("db-migrations-path", "Migrations dir.").
-		Envar("UPMETER_DB_MIGRATIONS_PATH").
-		Default(".").
-		StringVar(&config.DatabaseMigrationsPath)
-
 	// Origins count
 	cmd.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
 		Required().
 		Envar("UPMETER_ORIGINS").
 		IntVar(&config.OriginsCount)
+
+	// Disabled probes to omit from showing by default. On the server side, it makes sense for
+	// UI only. The list of probes can be passed as a repeated command-line argument.
+	cmd.Flag("disable-probe", "Group or probe to omit by default.").
+		StringsVar(&config.DisabledProbes)
+
+	// IngressNginxController name for dynamic probes
+	cmd.Flag("dynamic-probe-nginx-controller", "Ingress Controller name tracked by probes").
+		StringsVar(&config.DynamicProbes.IngressControllers)
+
+	// NodeGroup name for dynamic probes
+	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
+		StringsVar(&config.DynamicProbes.NodeGroups)
+
+	// User-Agent
+	// TODO generate from CI?
+	cmd.Flag("user-agent", "User Agent for HTTP client").
+		Envar("UPMETER_USER_AGENT").
+		Default("Upmeter/1.0").
+		StringVar(&config.UserAgent)
 }
 
 func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
@@ -79,10 +94,15 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("false").
 		BoolVar(&config.ClientConfig.TLS)
 
-	cmd.Flag("period", "The period of episodes sending to server, and at the same the client timeout.").
-		Envar("UPMETER_PERIOD").
+	cmd.Flag("export-interval", "Exporting interval when sending from WAL.").
+		Envar("UPMETER_EXPORT_INTERVAL").
 		Default("1s").
-		DurationVar(&config.Period)
+		DurationVar(&config.Interval)
+
+	cmd.Flag("export-timeout", "Exporting response timeout before retry.").
+		Envar("UPMETER_EXPORT_TIMEOUT").
+		Default("5s").
+		DurationVar(&config.ClientConfig.Timeout)
 
 	// Database
 	cmd.Flag("db-path", "SQLite file path.").
@@ -90,10 +110,33 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
-	cmd.Flag("db-migrations-path", "Migrations dir.").
-		Envar("UPMETER_DB_MIGRATIONS_PATH").
-		Default(".").
-		StringVar(&config.DatabaseMigrationsPath)
+	// Probes or even groups to skip for probing. The list of probes can be passed as a repeated
+	// command-line argument.
+	cmd.Flag("disable-probe", "Group or probe to disable.").
+		StringsVar(&config.DisabledProbes)
+
+	// IngressNginxController name for dynamic probes
+	cmd.Flag("dynamic-probe-nginx-controller", "Ingress Controller name to track by probes").
+		StringsVar(&config.DynamicProbes.IngressControllers)
+
+	// NodeGroup name for dynamic probes
+	cmd.Flag("dynamic-probe-nodegroup", "Node Group name to track by probes").
+		StringsVar(&config.DynamicProbes.NodeGroups)
+
+	// Known availability zones
+	cmd.Flag("dynamic-probe-known-zone", "A known zone for node group").
+		StringsVar(&config.DynamicProbes.Zones)
+
+	// Zone prefix that can be used in some cloud providers
+	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
+		StringVar(&config.DynamicProbes.ZonePrefix)
+
+	// User-Agent
+	// TODO generate from CI?
+	cmd.Flag("user-agent", "User Agent for HTTP client").
+		Envar("UPMETER_USER_AGENT").
+		Default("UpmeterAgent/1.0").
+		StringVar(&config.UserAgent)
 }
 
 func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {

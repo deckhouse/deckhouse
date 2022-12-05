@@ -6,7 +6,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
           Настройки для схемы размещения [`Standard`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
@@ -14,10 +14,16 @@ apiVersions:
           natGatewayPublicIpCount:
             description: |
               Количество IP-адресов для [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
-              `NAT Gateway` не используется если установлено `0`.
+
+              NAT Gateway не используется, если установлено `0`.
       sshPublicKey:
         description: |
           Публичный ключ для доступа на узлы под пользователем `azureuser`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по ssh.
+
+          По умолчанию, `*`.
       vNetCIDR:
         description: |
           Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
@@ -26,9 +32,9 @@ apiVersions:
           Подсеть из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
       peeredVNets:
         description: |
-          Массив `VNet's`, с которыми будет объединена сеть кластера.
+          Массив VNet, с которыми будет объединена сеть кластера.
 
-          Сервис-аккаунт должен иметь доступ ко всем перечисленным `VNet`. Если доступа нет, то пиринг необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
+          Service account должен иметь доступ ко всем перечисленным VNet. Если доступа нет, то пиринговое соединение необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
         items:
           properties:
             resourceGroupName:
@@ -38,11 +44,14 @@ apiVersions:
               description: |
                 Имя VNet.
       masterNodeGroup:
-        description: Спецификация для описания NodeGroup master-узлов.
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: |
-              Сколько master-узлов создать.
+              Количество создаваемых master-узлов.
           zones:
             description: |
               Список зон, в которых допустимо создавать master-узлы.
@@ -59,7 +68,7 @@ apiVersions:
                 description: |
                   Тип заказываемых инстансов.
 
-                  Получение всех доступных типов в регионе с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Узнать все доступные типы в регионе можно с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
 
                   ```shell
                   az vm list-sizes --location westeurope -o table
@@ -76,14 +85,14 @@ apiVersions:
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
                   ```
 
-                  **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
+                  **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан master при развертывании кластера).
 
-                  **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
+                  > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
               enableExternalIP:
                 description: |
-                  Доступен только для layout `Standard`.
-                  * `false` —  узлы не имеют публичных адресов, доступ в интернет осуществляется через NAT.
-                  * `true` — для узлов создаются статические публичные адреса.
+                  Разрешение назначения внешнего IP-адреса для инстанса.
+
+                  Параметр доступен только для layout `Standard`.
               diskSizeGb:
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
@@ -91,7 +100,7 @@ apiVersions:
                 description: |
                   Тип созданного диска.
 
-                  Список доступных типов дисков, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
 
                   ```shell
                   az vm list-skus -l westeurope --zone
@@ -99,15 +108,21 @@ apiVersions:
               additionalTags:
                 description: |
                   Список дополнительных тегов в формате `key: value`, которые будут назначены инстансам.
+              acceleratedNetworking:
+                default: false
+                description: |
+                  Accelerated Networking обеспечивает пропускную способность сети до 30 Гбит/с.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
         items:
           properties:
             name:
-              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
             replicas:
-              description: Количество узлов.
+              description: |
+                Количество узлов.
             zones:
               description: |
                 Список зон, в которых допустимо создавать узлы.
@@ -123,13 +138,11 @@ apiVersions:
               properties:
                 labels:
                   description: |
-                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
-
-                    Формат — `key: value`.
+                    Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
@@ -137,7 +150,7 @@ apiVersions:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
-                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
                 Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
@@ -147,7 +160,7 @@ apiVersions:
         description: |
           Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
 
-          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+          Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
           [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
@@ -167,9 +180,10 @@ apiVersions:
               Идентификатор клиента.
           clientSecret:
             description: |
-              Секрет клиента.
+              Secret клиента.
           tenantId:
             description: |
-              Идентификатор тенанта.
+              Идентификатор tenant'а.
       zones:
-        description: Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.

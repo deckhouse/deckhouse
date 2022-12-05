@@ -24,7 +24,7 @@ spec:
 
     # Chrony module synchronizes the time on all nodes, so systemd-timesyncd system unit isn't used and must be disabled.
 
-    for ntp_service in systemd-timesyncd.service ntp.service ntpd.service openntpd.service time-sync.target; do
+    for ntp_service in systemd-timesyncd.service ntp.service ntpd.service openntpd.service chronyd.service chrony.service time-sync.target; do
       if systemctl --no-legend --plain --no-pager | awk '{print $1}' | grep -q "^${ntp_service}$"; then
         systemctl stop $ntp_service
         systemctl disable $ntp_service

@@ -1,0 +1,14 @@
+deckhouse-controller:
+  fixes:
+    - summary: Set debug level for snapshot info messages
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1160
+linstor:
+  fixes:
+    - summary: fix indents for multipath conf
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1184
+    - summary: >-
+        Add DRBD devices to blacklist on nodes. DRBD devices should not be queried by LVM and
+        multipath commands So we add DRBD devices into blacklist for multipath and configure
+        global_filter in lvm.conf for them.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1153
+

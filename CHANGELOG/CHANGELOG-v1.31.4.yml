@@ -1,0 +1,5 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix handle of compatibilityFlag in Deckhouse config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1156
+

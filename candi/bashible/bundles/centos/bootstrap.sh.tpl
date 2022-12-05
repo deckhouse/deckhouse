@@ -78,8 +78,12 @@ bb-rp-get-token() {
   fi
 
   AUTH_HEADER="$(curl --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
-  AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
-  AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
+  AUTH_REALM="$(grep -oE 'Bearer realm="http[s]{0,1}://[a-z0-9\.\:\/\-]+"' <<< ${AUTH_HEADER} | cut -d '"' -f2)"
+  AUTH_SERVICE="$(grep -oE 'service="[[:print:]]+"' <<< "${AUTH_HEADER}" | cut -d '"' -f2 | sed 's/ /+/g')"
+  if [ -z ${AUTH_REALM} ]; then
+    >&2 echo "couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header: ${AUTH_HEADER}"
+    return 1
+  fi
 {{- /*
   # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
 */}}
@@ -154,11 +158,11 @@ bb-rp-install() {
 # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
 */}}
 export PATH="/usr/local/bin:$PATH"
-
-. /etc/os-release
-
+export LANG=C
+yum updateinfo
 until yum install nc curl wget -y; do
   echo "Error installing packages"
+  yum updateinfo
   sleep 10
 done
 {{- /*
@@ -166,5 +170,4 @@ done
 # When we will move to Centos 8, we should install jq from main repo.
 */}}
 yum install jq -y || bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
-
 mkdir -p /var/lib/bashible/

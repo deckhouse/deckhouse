@@ -1,7 +1,3 @@
-# Prometheus
-
-Image with patched Prometheus v2.28.0.
-
 ## Patches
 
 ### Sample limit annotation

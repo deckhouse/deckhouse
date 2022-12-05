@@ -100,7 +100,7 @@ func (s *StepsStorage) Render(target, bundle, provider string, templateContext m
 	return steps, nil
 }
 
-func (s *StepsStorage) OnNodeConfigurationsChanged() chan struct{} {
+func (s *StepsStorage) OnNodeGroupConfigurationsChanged() chan struct{} {
 	return s.configurationsChanged
 }
 
@@ -120,6 +120,7 @@ func (s *StepsStorage) subscribeOnCRD(ctx context.Context, ngConfigFactory dynam
 	})
 
 	informer := ginformer.Informer()
+	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -251,7 +252,8 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 }
 
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%03d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
+	klog.Infof("Adding NodeGroupConfiguration %s to context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	sc := nodeConfigurationScript{
@@ -272,7 +274,8 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 }
 
 func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
+	klog.Infof("Removing NodeGroupConfiguration %s from context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	s.m.Lock()

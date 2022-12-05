@@ -17,11 +17,10 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
+	"context"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
 )
 
 // Config is basically a checker constructor with verbose arguments
@@ -43,10 +42,6 @@ func sequence(first check.Checker, others ...check.Checker) check.Checker {
 	return &sequenceChecker{checkers: checkers}
 }
 
-func (c *sequenceChecker) BusyWith() string {
-	return c.checkers[c.current].BusyWith()
-}
-
 func (c *sequenceChecker) Check() check.Error {
 	for i, checker := range c.checkers {
 		c.current = i
@@ -65,10 +60,6 @@ type FailChecker struct {
 
 func failOnError(checker check.Checker) check.Checker {
 	return &FailChecker{checker}
-}
-
-func (c *FailChecker) BusyWith() string {
-	return c.checker.BusyWith()
 }
 
 func (c *FailChecker) Check() check.Error {
@@ -93,18 +84,14 @@ func withTimeout(checker check.Checker, timeout time.Duration) check.Checker {
 	}
 }
 
-func (c *timeoutChecker) BusyWith() string {
-	return c.checker.BusyWith()
-}
-
 func (c *timeoutChecker) Check() check.Error {
 	var err check.Error
-	util.DoWithTimer(c.timeout,
+	withTimer(c.timeout,
 		func() {
 			err = c.checker.Check()
 		},
 		func() {
-			err = check.ErrUnknown("timed out: %s", c.checker.BusyWith())
+			err = check.ErrUnknown("timed out")
 		},
 	)
 	return err
@@ -127,10 +114,6 @@ func withRetryEachSeconds(checker check.Checker, timeout time.Duration) check.Ch
 	}
 }
 
-func (c *retryChecker) BusyWith() string {
-	return fmt.Sprintf("retrying %s", c.checker.BusyWith())
-}
-
 func (c *retryChecker) Check() check.Error {
 	var err check.Error
 
@@ -147,3 +130,96 @@ func (c *retryChecker) Check() check.Error {
 
 	return err
 }
+
+// withTimer runs jobCb in background and waits until it is done. When timerDuration
+// is passed and job is not done yet, onTimerCb is executed.
+func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+
+	// Start job in background
+	doneCh := make(chan struct{})
+	go func() {
+		jobCb()
+		close(doneCh)
+	}()
+
+	// Wait for closed doneCh or for timeout signal.
+	for {
+		select {
+		case <-timer.C:
+			onTimerCb()
+		case <-doneCh:
+			return
+		}
+	}
+}
+
+// Doer is for wrapping k8s api calls and easier mocking them in tests
+type Doer interface {
+	Do(context.Context) error
+}
+
+// unknownCheckWrapper wraps any doer error with check.ErrUnknown
+type unknownCheckWrapper struct {
+	doer Doer
+}
+
+func (c *unknownCheckWrapper) Check() check.Error {
+	if err := c.doer.Do(context.TODO()); err != nil {
+		return check.ErrUnknown(err.Error())
+	}
+	return nil
+}
+
+// failCheckWrapper wraps any doer error with check.ErrFail
+type failCheckWrapper struct {
+	doer Doer
+}
+
+func (c *failCheckWrapper) Check() check.Error {
+	if err := c.doer.Do(context.TODO()); err != nil {
+		return check.ErrFail(err.Error())
+	}
+	return nil
+}
+
+// doOrFail is a handy wrapper. It wraps timeout checker and Doer interface,
+// if time is out or doer returns error, the checker returns check.ErrFail
+func doOrFail(timeout time.Duration, doer Doer) check.Checker {
+	return withTimeout(&failCheckWrapper{doer}, timeout)
+}
+
+// DoOrUnknown is a handy wrapper. It wraps timeout checker and Doer interface,
+// if time is out or doer returns error, the checker returns check.ErrUnknown
+func DoOrUnknown(timeout time.Duration, doer Doer) check.Checker {
+	return withTimeout(&unknownCheckWrapper{doer}, timeout)
+}
+
+// doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
+func doWithTimeout(doer Doer, timeout time.Duration, err error) Doer {
+	return &timeoutDoer{
+		doer:    doer,
+		err:     err,
+		timeout: timeout,
+	}
+}
+
+type timeoutDoer struct {
+	doer    Doer
+	err     error
+	timeout time.Duration
+}
+
+func (d *timeoutDoer) Do(ctx context.Context) error {
+	var err error
+	withTimer(
+		d.timeout,
+		func() { err = d.doer.Do(ctx) },
+		func() { err = d.err })
+	return err
+}
+
+type NoopDoer struct{}
+
+func (d NoopDoer) Do(_ context.Context) error { return nil }

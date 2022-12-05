@@ -470,7 +470,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -479,6 +479,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -494,7 +508,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -503,6 +517,20 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "hostNet",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -640,7 +668,7 @@
           "refId": "D"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -658,7 +686,7 @@
           "refId": "F"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    -\n    sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n  ) > 0\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    -\n    sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n  ) > 0\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -667,7 +695,7 @@
           "refId": "G"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) \n  (\n    (\n      (\n        sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) or sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n    ) > 0\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) \n  (\n    (\n      (\n        sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) or sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n    ) > 0\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -676,7 +704,7 @@
           "refId": "H"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (\n    sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    /\n    sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    * on (pod)\n    sum by (pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (\n    sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    /\n    sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    * on (pod)\n    sum by (pod) (avg_over_time(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -693,7 +721,7 @@
           "refId": "J"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -709,7 +737,7 @@
           "refId": "L"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    (\n      (\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    (\n      (\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) > 0\n    )\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -717,7 +745,7 @@
           "refId": "M"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    (\n      (\n        sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) or sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n    ) > 0\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod)\n  (\n    (\n      (\n        sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n        -\n        sum by (namespace, pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n      ) or sum by (namespace, pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__range]))\n    ) > 0\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -725,7 +753,7 @@
           "refId": "N"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n  -\n  (\n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__range]))\n    *  \n    sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  # Select data rates if Pod had 'hostNetwork: false' during the selected period.\n  max_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  max_over_time(kube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  # Sum data rates for all interfaces of the Pod.\n  sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n) or (\n  # Return -1 if the Pod had 'hostNetwork: false' during the selected period.\n  max_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  max_over_time(kube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=~\"$pod\"}[$__range])\n  * -1\n)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -733,7 +761,7 @@
           "refId": "O"
         },
         {
-          "expr": "(\n  sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])) \n  * on (pod)\n  (\n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n    -\n    (\n      sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__range]))\n      *  \n      sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n    )\n  )\n)\nor\nsum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) * 0)",
+          "expr": "(\n  # Select data rates if Pod had 'hostNetwork: false' during the selected period.\n  max_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  max_over_time(kube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  # Sum data rates for all interfaces of the Pod.\n  sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))\n) or (\n  # Return -1 if the Pod had 'hostNetwork: false' during the selected period.\n  max_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range])\n  * on(pod)\n  max_over_time(kube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=~\"$pod\"}[$__range])\n  * -1\n)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -1402,14 +1430,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (pod)\n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n    ) > 0\n  )",
+          "expr": "sum by (pod)\n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum\n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx4]))\n    ) > 0\n  )",
+          "expr": "sum\n  (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx4]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1517,7 +1545,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "    (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)\n  sum by (pod) (\n    (\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))\n    )\n    or\n    sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n  )\n) > 0",
+          "expr": "    (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)\n  sum by (pod) (\n    (\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))\n    )\n    or\n    sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n  )\n) > 0",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1525,7 +1553,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum  (\n    (\n      kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n      * on (pod)\n      sum by (pod) (\n        (\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))\n        )\n        or\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      )\n    ) > 0\n  )",
+          "expr": "sum  (\n    (\n      kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n      * on (pod)\n      sum by (pod) (\n        (\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))\n        )\n        or\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      )\n    ) > 0\n  )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1636,14 +1664,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(\n  sum by (pod) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))) \n    / \n    sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n) \n* \nsum by (pod) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"})",
+          "expr": "(\n  sum by (pod) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n    * on (pod)\n    sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))) \n    / \n    sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n) \n* \nsum by (pod) (kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  (\n    sum by (pod) (\n      kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n      * on (pod)\n      sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))) \n      / \n      sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n  ) \n  * \n  sum by (pod) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"})\n)",
+          "expr": "sum (\n  (\n    sum by (pod) (\n      kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n      * on (pod)\n      sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))) \n      / \n      sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n  ) \n  * \n  sum by (pod) (kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"})\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1769,7 +1797,7 @@
               "refId": "A"
             },
             {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
+              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Requests",
@@ -1783,7 +1811,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
+              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Limits",
@@ -2305,14 +2333,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
+          "expr": "(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
+          "expr": "sum\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -2421,14 +2449,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
+          "expr": "(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
+          "expr": "sum\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod) group_left()\n  sum by (pod)\n    (\n      (\n        (\n          sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n          -\n          sum by (namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n        ) or sum by (namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))\n      ) > 0\n    )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -2611,14 +2639,14 @@
               "refId": "E"
             },
             {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "F"
             },
             {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Requests",
@@ -2692,234 +2720,290 @@
       "type": "row"
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "description": "This graph shows Network Receive (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "-1": {
+                  "color": "transparent",
+                  "index": 0,
+                  "text": "Network graph for Pod with hostNetwork: true is meaningless"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 0
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
+      "datasource": {
+        "uid": "${ds_prometheus}",
+        "type": "prometheus"
+      },
+      "description": "This graph shows Network Receive (except for the hostNetwork Pods)",
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 0,
         "y": 64
       },
-      "hiddenSeries": false,
       "id": 41,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
       "links": [],
-      "nullPointMode": "null as zero",
       "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "bars": false,
-          "stack": false
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
         }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
+      },
+      "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by (pod) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n    -\n    (\n      sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      *  \n      sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n    )\n  )\n)",
+          "expr": "kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n* on(pod)\nkube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}\n* on(pod)\nsum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (pod) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n    * on (pod) group_left() \n    (\n      sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      -\n      (\n        sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n        *  \n        sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n      )\n    )\n  )\n)",
+          "expr": "sum (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n  * on(pod)\n  kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}\n  * on(pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Recieve",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
+          "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n* on (pod)\nkube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=~\"$pod\"} \n*\n-1",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ pod }}",
+          "refId": "C"
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Receive",
+      "transformations": [],
+      "type": "timeseries"
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$ds_prometheus",
-      "description": "This graph shows Network Transmit (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "-1": {
+                  "color": "transparent",
+                  "index": 0,
+                  "text": "Network graph for Pod with hostNetwork: true is meaningless"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 0
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "transparent"
+                }
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
+      "datasource": {
+        "uid": "${ds_prometheus}",
+        "type": "prometheus"
+      },
+      "description": "This graph shows Network Transmit (except for the hostNetwork Pods)",
       "gridPos": {
         "h": 9,
         "w": 12,
         "x": 12,
         "y": 64
       },
-      "hiddenSeries": false,
       "id": 57,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
       "links": [],
-      "nullPointMode": "null as zero",
       "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.2.6",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total",
-          "bars": false,
-          "stack": false
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
         }
-      ],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
+      },
+      "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by (pod) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n  * on (pod) group_left() \n  (\n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n    -\n    (\n      sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      *  \n      sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n    )\n  )\n)",
+          "expr": "kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n* on(pod)\nkube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}\n* on(pod)\nsum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (pod) (\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n    * on (pod) group_left() \n    (\n      sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n      -\n      (\n        sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n        *  \n        sum by (pod) (kube_pod_spec_host_network{namespace=~\"$namespace\", pod=~\"$pod\"})\n      )\n    )\n  )\n)",
+          "expr": "sum (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n  * on(pod)\n  kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Transmit",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bps",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
+          "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"} \n* on (pod)\nkube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=~\"$pod\"} \n*\n-1",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ pod }}",
+          "refId": "C"
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Transmit",
+      "transformations": [],
+      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -3345,7 +3429,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_used_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)",
+          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)  group_right(persistentvolumeclaim)\n  (\n    (avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]))\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Usage {{ persistentvolumeclaim }}",
@@ -3454,7 +3538,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_used_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)\n/\n(\nsum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)  group_left(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])\n      *     on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)))",
+          "expr": "sum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (pod)  group_right(persistentvolumeclaim) (\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3])\n    ) * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)\n/\n(\nsum by (pod, persistentvolumeclaim)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\"}\n  * on (pod)  group_right(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__interval_sx3])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])\n      *     on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__interval_sx3])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__interval_sx3]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__interval_sx3])\n    )\n  )\n)))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Usage {{ persistentvolumeclaim }}",
@@ -3846,7 +3930,7 @@
               "refId": "D"
             },
             {
-              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n)",
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n)",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -3862,7 +3946,7 @@
               "refId": "F"
             },
             {
-              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n  /\n  avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  (avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n  /\n  avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"} \n)",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -3988,7 +4072,7 @@
               "refId": "A"
             },
             {
-              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_used_bytes{namespace=\"$namespace\"}[$__interval_sx3])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"} \n)",
+              "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__interval_sx3]) - avg_over_time(kubelet_volume_stats_available_bytes{namespace=\"$namespace\"}[$__interval_sx3])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"} \n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Used bytes",

@@ -1,4 +1,10 @@
 positive:
-  values: []
+  values:
+  - kubeconfigGenerator:
+    - id: abc-1
+      masterURI: example.com
 negative:
-  values: []
+  values:
+  - kubeconfigGenerator:
+    - id: ABC-1
+      masterURI: example.com

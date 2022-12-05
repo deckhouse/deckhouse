@@ -16,6 +16,10 @@ variable "prefix" {
   type = string
 }
 
+variable "ssh_allow_list" {
+  type = list(string)
+}
+
 variable "network_self_link" {
   type = string
 }

@@ -4,6 +4,8 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 Для работы `cloud-provider` и `machine-controller-manager` требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.
 
+> Убедитесь в наличии доступа к нужному региону и наличии необходимых квот.
+
 ## JSON-спецификация Policy
 
 Сначала подготовьте JSON-файл с конфигурацией необходимых прав:
@@ -83,6 +85,10 @@ title: "Cloud provider — AWS: подготовка окружения"
                 "ec2:RevokeSecurityGroupIngress",
                 "ec2:RunInstances",
                 "ec2:TerminateInstances",
+                "ec2:DescribeVpcPeeringConnections",
+                "ec2:CreateVpcPeeringConnection",
+                "ec2:DeleteVpcPeeringConnection",
+                "ec2:AcceptVpcPeeringConnection",
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -166,6 +172,16 @@ title: "Cloud provider — AWS: подготовка окружения"
 1. Нажмите `Create user`.
 
 Сохраните полученные `Access key ID` и `Secret access key`.
+
+> Проверьте есть ли у вашей учетной записи (и, соответственно, у созданного пользователя) доступ к нужным регионам. Для этого выберите необходимый регион в выпадающем списке в правом верхнем углу.
+>
+> Если произойдет переключение в выбранный регион, то доступ к региону есть.
+>
+> Если доступа к региону нет, то вы получите следующее сообщение (может отличаться):
+>
+> ![Разрешить использование региона](../../images/030-cloud-provider-aws/region_enable.png)
+>
+> В этом случае нажмите `Continue` для того, чтобы разрешить использование региона.
 
 ## Настройка IAM через CLI
 

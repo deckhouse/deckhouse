@@ -2,6 +2,21 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 name: 'Deploy to stable'
 
 on:
@@ -19,28 +34,22 @@ on:
       editions:
         description: 'Comma separated editions to deploy. Example: ee,fe,ce'
         required: false
+      cooldown:
+        description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
+        required: false
 
 env:
 
   # <template: werf_envs>
-  # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
-  # We use stapel image from own registry due to docker hub pull amount limitation.
-  # To re-push stapel image from docker hub use command:
-  # `skopeo copy docker://flant/werf-stapel:0.6.1 docker://registry-write.deckhouse.io/flant/werf-stapel:0.6.1`
-  WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
-  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
-  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
-
-  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
-
-# Note: no concurrency section for deploy workflows.
 
 jobs:
 
@@ -54,7 +63,7 @@ jobs:
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
-      ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
@@ -64,22 +73,24 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
 
-            let githubBranch = '';
-            let githubTag = '';
-            let githubSHA = '';
-            let refName = '';
-            let refSlug = '';
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
-              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNum}`
               refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
               githubSHA     = context.payload.inputs.pull_request_sha
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-              refSlug       = `pr${prNum}`;
               core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
             } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
@@ -89,40 +100,102 @@ jobs:
 
               refSlug = `pr${context.issue.number}`;
               refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
             } else {
-              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
               refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
               githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
               githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
               githubSHA     = context.sha
-              // refName is 'main' or tag name, so slugification is not necessary.
-              refSlug       = refName
               core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
-            core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
-            core.info(`output.ci_commit_ref_name: '${refName}'`)
-            core.info(`output.ci_commit_tag:      '${githubTag}'`)
-            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
-            core.info(`output.github_sha:         '${githubSHA}'`)
-
+            core.setCommandEcho(true)
             core.setOutput('ci_commit_ref_slug', refSlug)
             core.setOutput('ci_commit_ref_name', refName)
             core.setOutput(`ci_commit_tag`, githubTag)
             core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setCommandEcho(false)
 
   # </template: git_info_job>
 
+  detect_editions:
+    name: Detect editions
+    runs-on: ubuntu-latest
+    outputs:
+      DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
+      DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
+      DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
+    steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          RESTRICTED=no
+
+          for edition in CE EE FE ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "::set-output name=DEPLOY_${edition}::true"
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE ; do
+              echo "::set-output name=DEPLOY_${edition}::true"
+            done
+          fi
+
+
+
+  enable_CE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
+    name: Enable CE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable CE"
+
+  enable_EE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
+    name: Enable EE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable EE"
+
+  enable_FE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
+    name: Enable FE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable FE"
+
+
   run_deploy:
-    name: Deploy deckhouse to stable channel
+    name: Deploy ${{needs.git_info.outputs.ci_commit_tag}} to stable
     environment:
       name: stable
     needs:
       - git_info
+      - detect_editions
     runs-on: [self-hosted, regular]
     steps:
 
@@ -156,8 +229,15 @@ jobs:
       # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -166,8 +246,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -176,371 +263,503 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
       # </template: login_rw_registry_step>
 
-      - name: Filter editions
-        id: filter_editions
+      - name: Check push enabled
+        id: check_push
         env:
-          EDITIONS: ${{ github.event.inputs.editions }}
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          REPO: ${{github.repository}}
         run: |
-          echo "Input allowed editions: '${EDITIONS}'"
-
-          RESTRICTED=no
-
-          for edition in CE EE FE ; do
-            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
-              echo "  - enable deploy of ${edition} edition."
-              echo "::set-output name=DEPLOY_${edition}::yes"
-              RESTRICTED=yes
-            fi
-          done
-
-          if [[ $RESTRICTED == "no" ]] ; then
-            echo "No restrictions. Enable deploy to all editions."
-            for edition in CE EE FE ; do
-              echo "::set-output name=DEPLOY_${edition}::yes"
-            done
+          if [[ ${REPO} == "deckhouse/deckhouse" ]]; then
+            echo "::set-output name=enable::true"
+          fi
+          if [[ ${SKIP_PUSH_FOR_DEPLOY} != "true" ]]; then
+            echo "::set-output name=enable::true"
           fi
 
 
-
-      - name: Publish release images for CE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_CE == 'yes' }}
+      - name: Set cooldown for release (CE)
+        if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: CE
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
-
-          echo Publish CE edition.
-
-          # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
-            exit 1
-          fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
-          # Variables
-          #   1. CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
 
-          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
-          RELEASE_CHANNEL=stable
-          echo "Release channel - ${RELEASE_CHANNEL}"
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label cooldown="${COOLDOWN}" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
 
-          #   3. Source images from rw registry or from registry.
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            SOURCE_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          else
-            SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          fi
-
-          docker image pull ${SOURCE_IMAGE}
-          docker image pull ${SOURCE_INSTALL_IMAGE}
-          docker image pull ${SOURCE_RELEASE_VERSION_IMAGE}
-
-          #   4. Publish dev images to dev registry
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            DEV_DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
-            DEV_DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
-
-            echo "Push 'dev' image ${SOURCE_IMAGE} to ${DEV_DESTINATION_IMAGE}"
-            docker image tag ${SOURCE_IMAGE} ${DEV_DESTINATION_IMAGE}
-            docker image push ${DEV_DESTINATION_IMAGE}
-
-            echo "Delete local 'dev' image ${DEV_DESTINATION_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_IMAGE} || true;
-
-            echo "Push 'dev install' ${SOURCE_INSTALL_IMAGE} to image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image tag ${SOURCE_INSTALL_IMAGE} ${DEV_DESTINATION_INSTALL_IMAGE}
-            docker image push ${DEV_DESTINATION_INSTALL_IMAGE}
-
-            echo "Delete local 'dev install' image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_INSTALL_IMAGE} || true;
-          fi
-
-          #   5. Publish prod images to rw registry
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          else
-            DECKHOUSE_DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          fi
-
-          echo "Push 'prod' image ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_IMAGE}
-          echo "Delete local 'prod' image ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-
-          echo "Push 'prod install' image ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          echo "Delete local 'prod install' image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-
-          echo "Push 'release version'  ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
-
-          echo "Delete local source image ${SOURCE_IMAGE}"
-          docker image rmi ${SOURCE_IMAGE} || true
-          echo "Delete local 'install' source image ${SOURCE_INSTALL_IMAGE}"
-          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
-          echo "Delete local 'release version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
-
-          echo "Deckhouse images published:"
-          echo "  Source: ${SOURCE_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_IMAGE}"
-          echo "Install images published:"
-          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-      - name: Publish release images for EE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_EE == 'yes' }}
+          echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set cooldown for release (EE)
+        if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: EE
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
-
-          echo Publish EE edition.
-
-          # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
-            exit 1
-          fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
-          # Variables
-          #   1. CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
 
-          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
-          RELEASE_CHANNEL=stable
-          echo "Release channel - ${RELEASE_CHANNEL}"
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label cooldown="${COOLDOWN}" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
 
-          #   3. Source images from rw registry or from registry.
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            SOURCE_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          else
-            SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          fi
-
-          docker image pull ${SOURCE_IMAGE}
-          docker image pull ${SOURCE_INSTALL_IMAGE}
-          docker image pull ${SOURCE_RELEASE_VERSION_IMAGE}
-
-          #   4. Publish dev images to dev registry
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            DEV_DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
-            DEV_DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
-
-            echo "Push 'dev' image ${SOURCE_IMAGE} to ${DEV_DESTINATION_IMAGE}"
-            docker image tag ${SOURCE_IMAGE} ${DEV_DESTINATION_IMAGE}
-            docker image push ${DEV_DESTINATION_IMAGE}
-
-            echo "Delete local 'dev' image ${DEV_DESTINATION_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_IMAGE} || true;
-
-            echo "Push 'dev install' ${SOURCE_INSTALL_IMAGE} to image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image tag ${SOURCE_INSTALL_IMAGE} ${DEV_DESTINATION_INSTALL_IMAGE}
-            docker image push ${DEV_DESTINATION_INSTALL_IMAGE}
-
-            echo "Delete local 'dev install' image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_INSTALL_IMAGE} || true;
-          fi
-
-          #   5. Publish prod images to rw registry
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          else
-            DECKHOUSE_DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          fi
-
-          echo "Push 'prod' image ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_IMAGE}
-          echo "Delete local 'prod' image ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-
-          echo "Push 'prod install' image ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          echo "Delete local 'prod install' image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-
-          echo "Push 'release version'  ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
-
-          echo "Delete local source image ${SOURCE_IMAGE}"
-          docker image rmi ${SOURCE_IMAGE} || true
-          echo "Delete local 'install' source image ${SOURCE_INSTALL_IMAGE}"
-          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
-          echo "Delete local 'release version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
-
-          echo "Deckhouse images published:"
-          echo "  Source: ${SOURCE_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_IMAGE}"
-          echo "Install images published:"
-          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-      - name: Publish release images for FE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_FE == 'yes' }}
+          echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set cooldown for release (FE)
+        if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: FE
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
 
-          echo Publish FE edition.
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label cooldown="${COOLDOWN}" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+
+
+
+      - name: Publish release images for CE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          WERF_ENV: CE
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function pull_push_rmi() {
+            SRC_NAME=$1
+            SRC=$2
+            DST=$3
+            echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+            docker pull ${SRC}
+            echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+            docker image tag ${SRC} ${DST}
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_DEPLOY=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
 
           # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
-          fi
+
+          echo "Publish CE edition".
 
           # Variables
-          #   1. CE/EE/FE -> ce/ee/fe
+          #   1. Edition and channel.
+          # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
-
-          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
           RELEASE_CHANNEL=stable
-          echo "Release channel - ${RELEASE_CHANNEL}"
 
-          #   3. Source images from rw registry or from registry.
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
+          #   to RELEASE_CHANNEL tag image in prod registry.
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
+          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
+          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+
+          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
           if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            SOURCE_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          else
-            SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
-            SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
-            SOURCE_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
+
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
           fi
 
-          docker image pull ${SOURCE_IMAGE}
-          docker image pull ${SOURCE_INSTALL_IMAGE}
-          docker image pull ${SOURCE_RELEASE_VERSION_IMAGE}
+          #   5. Publish prod images to rw registry.
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
-          #   4. Publish dev images to dev registry
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            DEV_DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
-            DEV_DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${PROD_INSTALL_IMAGE}
 
-            echo "Push 'dev' image ${SOURCE_IMAGE} to ${DEV_DESTINATION_IMAGE}"
-            docker image tag ${SOURCE_IMAGE} ${DEV_DESTINATION_IMAGE}
-            docker image push ${DEV_DESTINATION_IMAGE}
+          echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
-            echo "Delete local 'dev' image ${DEV_DESTINATION_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_IMAGE} || true;
-
-            echo "Push 'dev install' ${SOURCE_INSTALL_IMAGE} to image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image tag ${SOURCE_INSTALL_IMAGE} ${DEV_DESTINATION_INSTALL_IMAGE}
-            docker image push ${DEV_DESTINATION_INSTALL_IMAGE}
-
-            echo "Delete local 'dev install' image ${DEV_DESTINATION_INSTALL_IMAGE}"
-            docker image rmi ${DEV_DESTINATION_INSTALL_IMAGE} || true;
-          fi
-
-          #   5. Publish prod images to rw registry
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          else
-            DECKHOUSE_DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${RELEASE_CHANNEL};
-            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
-          fi
-
-          echo "Push 'prod' image ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_IMAGE}
-          echo "Delete local 'prod' image ${DECKHOUSE_DESTINATION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-
-          echo "Push 'prod install' image ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-          echo "Delete local 'prod install' image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-
-          echo "Push 'release version'  ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
-
-          echo "Delete local source image ${SOURCE_IMAGE}"
+          echo "⚓️  [$(date -u)] Remove local source images."
+          echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
-          echo "Delete local 'install' source image ${SOURCE_INSTALL_IMAGE}"
+
+          echo "  Delete local 'dev/install' source image ${SOURCE_INSTALL_IMAGE}"
           docker image rmi ${SOURCE_INSTALL_IMAGE} || true
-          echo "Delete local 'release version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+
+          echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
+          #   6. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_IMAGE}"
+          echo "  Prod: ${PROD_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_IMAGE}"
+          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
-          echo "  Prod: ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-          echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          echo "  Prod: ${PROD_INSTALL_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_INSTALL_IMAGE}"
+          fi
+          echo "Release version image:"
+          echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
+          echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
+      - name: Publish release images for EE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          WERF_ENV: EE
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function pull_push_rmi() {
+            SRC_NAME=$1
+            SRC=$2
+            DST=$3
+            echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+            docker pull ${SRC}
+            echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+            docker image tag ${SRC} ${DST}
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_DEPLOY=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Publish EE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=stable
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
+          #   to RELEASE_CHANNEL tag image in prod registry.
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
+          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
+          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+
+          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
+
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
+          fi
+
+          #   5. Publish prod images to rw registry.
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${PROD_INSTALL_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
+
+          echo "⚓️  [$(date -u)] Remove local source images."
+          echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
+          docker image rmi ${SOURCE_IMAGE} || true
+
+          echo "  Delete local 'dev/install' source image ${SOURCE_INSTALL_IMAGE}"
+          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
+
+          echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
+
+          #   6. Report.
+          echo "Deckhouse images published:"
+          echo "  Source: ${SOURCE_IMAGE}"
+          echo "  Prod: ${PROD_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_IMAGE}"
+          fi
+          echo "Install images published:"
+          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
+          echo "  Prod: ${PROD_INSTALL_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_INSTALL_IMAGE}"
+          fi
+          echo "Release version image:"
+          echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
+          echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
+      - name: Publish release images for FE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          WERF_ENV: FE
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function pull_push_rmi() {
+            SRC_NAME=$1
+            SRC=$2
+            DST=$3
+            echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+            docker pull ${SRC}
+            echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+            docker image tag ${SRC} ${DST}
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_DEPLOY=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Publish FE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=stable
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
+          #   to RELEASE_CHANNEL tag image in prod registry.
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
+          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
+          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+
+          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
+
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
+          fi
+
+          #   5. Publish prod images to rw registry.
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${PROD_INSTALL_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
+
+          echo "⚓️  [$(date -u)] Remove local source images."
+          echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
+          docker image rmi ${SOURCE_IMAGE} || true
+
+          echo "  Delete local 'dev/install' source image ${SOURCE_INSTALL_IMAGE}"
+          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
+
+          echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
+
+          #   6. Report.
+          echo "Deckhouse images published:"
+          echo "  Source: ${SOURCE_IMAGE}"
+          echo "  Prod: ${PROD_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_IMAGE}"
+          fi
+          echo "Install images published:"
+          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
+          echo "  Prod: ${PROD_INSTALL_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_INSTALL_IMAGE}"
+          fi
+          echo "Release version image:"
+          echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
+          echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
 
       - name: Update release branch
         if: ${{ success() }}

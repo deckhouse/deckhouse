@@ -1,0 +1,13 @@
+{{- if .Values.ingressNginx.internal.upmeterDiscovery}}
+  {{- if len .Values.ingressNginx.internal.upmeterDiscovery.controllerNames}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: upmeter-discovery-controllers
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2}}
+data:
+  names: |
+    {{ .Values.ingressNginx.internal.upmeterDiscovery.controllerNames | toJson }}
+  {{- end}}
+{{- end}}

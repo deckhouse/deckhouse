@@ -19,6 +19,14 @@ apiVersions:
       sshKey:
         type: string
         description: A public key to access nodes as `user`.
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via ssh.
+
+          By default, from any.
       labels:
         type: object
         description: |
@@ -42,7 +50,10 @@ apiVersions:
       masterNodeGroup:
         type: object
         required: [replicas, instanceClass]
-        description: Parameters of the master's NodeGroup.
+        description: |
+          Parameters of the master's NodeGroup.
+
+          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         properties:
           replicas:
             type: integer
@@ -80,7 +91,7 @@ apiVersions:
                 description: |
                   Machine type of GCP instance.
 
-                  **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
+                  > **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
                   GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
               image:
@@ -91,7 +102,7 @@ apiVersions:
 
                   You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
               diskSizeGb:
                 description: Instance disk size in gigabytes.
                 example: 20

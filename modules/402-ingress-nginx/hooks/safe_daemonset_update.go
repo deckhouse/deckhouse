@@ -194,7 +194,6 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil

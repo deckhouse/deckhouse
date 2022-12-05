@@ -34,4 +34,4 @@ EOF
 
 cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
 
-exec /sbin/tini -- /usr/bin/deckhouse-controller "$@"
+exec /sbin/tini -- /usr/bin/deckhouse-controller start

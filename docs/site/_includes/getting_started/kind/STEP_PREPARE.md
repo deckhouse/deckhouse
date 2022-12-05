@@ -1,6 +1,6 @@
 Install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), if it is not already installed.
 
-> This guide provides a minimal `kind` cluster configuration required for a Deckhouse installation. The configuration includes installing a single-node Kubernetes cluster and exporting two ports required for a cluster Ingress controller. You can use your cluster configuration in `kind`, [increase](https://kind.sigs.k8s.io/docs/user/configuration/#nodes) the number of nodes or [configure](https://kind.sigs.k8s.io/docs/user/local-registry/) a local container registry. 
+> This guide provides a minimal `kind` cluster configuration required for a Deckhouse installation. The configuration includes installing a single-node Kubernetes cluster and exporting two ports required for a cluster Ingress controller. You can use your cluster configuration in `kind`, [increase](https://kind.sigs.k8s.io/docs/user/configuration/#nodes) the number of nodes or [configure](https://kind.sigs.k8s.io/docs/user/local-registry/) a local container registry.
 
 Create a cluster configuration file for kind:
 {% snippetcut selector="create-kind-cfg" %}
@@ -28,15 +28,16 @@ EOF
 Create cluster with kind:
 {% snippetcut selector="create-kind-cluster" %}
 ```shell
-kind create cluster --config kind.cfg
+kind create cluster --image "kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5" --config kind.cfg
 ```
 {% endsnippetcut %}
 
 Example of creation command output:
-```
-$ kind create cluster --config kind.cfg
+
+```shell
+$ kind create cluster --image "kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5" --config kind.cfg
 Creating cluster "kind" ...
- ✓ Ensuring node image (kindest/node:v1.21.1) 🖼
+ ✓ Ensuring node image (kindest/node:v1.23.6) 🖼
  ✓ Preparing nodes 📦  
  ✓ Writing configuration 📜 
  ✓ Starting control-plane 🕹️ 

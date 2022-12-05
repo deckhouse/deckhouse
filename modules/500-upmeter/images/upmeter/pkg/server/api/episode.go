@@ -41,8 +41,6 @@ type AddEpisodesHandler struct {
 }
 
 func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Infoln("Downtime", r.RemoteAddr, r.RequestURI)
-
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "%d POST is required\n", http.StatusBadRequest)
@@ -90,7 +88,7 @@ func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data Epi
 
 	// Send episodes to metrics storage
 
-	log.Debugf("exporting 30s episodes by agent=%s", origin)
+	log.Debugf("Storing for export 30s episodes by agent=%s", origin)
 
 	err := remoteWrite.Export(origin, saved30s, 30*time.Second)
 	if err != nil {
@@ -102,7 +100,7 @@ func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data Epi
 		return nil
 	}
 
-	log.Debugf("exporting 5m episodes by agent=%s", origin)
+	log.Debugf("Storing for export 5m episodes by agent=%s", origin)
 
 	err = remoteWrite.Export(origin, fulfilled5m, 5*time.Minute)
 	if err != nil {

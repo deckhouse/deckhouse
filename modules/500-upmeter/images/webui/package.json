@@ -10,7 +10,8 @@
     "build": "./node_modules/.bin/webpack --config webpack.prod.js",
     "chunks": "./node_modules/.bin/webpack --config webpack.prod.js --display-chunks",
     "analyze": "mkdir -p dist && webpack --profile --json --config webpack.prod.js > dist/stats.json && npx webpack-bundle-analyzer dist/stats.json dist/",
-    "analyze:dev": "mkdir -p dist && webpack --profile --json --config webpack.dev.js > dist/stats.json && npx webpack-bundle-analyzer dist/stats.json dist/"
+    "analyze:dev": "mkdir -p dist && webpack --profile --json --config webpack.dev.js > dist/stats.json && npx webpack-bundle-analyzer dist/stats.json dist/",
+    "fmt": "prettier -u --write ./src *.md *.js *.json *.yaml"
   },
   "keywords": [
     "upmeter"
@@ -31,6 +32,7 @@
     "@fortawesome/free-solid-svg-icons": "^5.15.1",
     "@rtsao/plugin-proposal-class-properties": "^7.0.1-patch.1",
     "@types/classnames": "2.2.9",
+    "@types/d3": "^7.1.0",
     "@types/d3-fetch": "^2.0.0",
     "@types/d3-format": "^2.0.0",
     "@types/d3-scale": "3",
@@ -62,6 +64,7 @@
     "mini-css-extract-plugin": "^1.1.2",
     "node-sass": "4.13.1",
     "null-loader": "^4.0.1",
+    "prettier": "^2.6.2",
     "purgecss-webpack-plugin": "^3.0.0",
     "sass-loader": "8.0.2",
     "style-loader": "^2.0.0",
@@ -79,6 +82,7 @@
     "@torkelo/react-select": "3.0.8",
     "bootstrap": "4.5.3",
     "classnames": "2.2.6",
+    "d3": "^7.4.4",
     "d3-axis": "2",
     "d3-fetch": "2",
     "d3-format": "2",
@@ -103,7 +107,8 @@
     "react-popper": "1.3.3",
     "react-transition-group": "4.3.0",
     "react-use": "13.27.0",
-    "tinycolor2": "1.4.1"
+    "tinycolor2": "1.4.1",
+    "tslib": "^2.3.1"
   },
   "resolutions": {
     "react": "16.12.0",

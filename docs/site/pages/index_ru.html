@@ -28,8 +28,8 @@ anchors_disabled: true
         Deckhouse Platform позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью,
         «автомагически» управляет ими.
         Обеспечивает их всеми необходимыми дополнениями для автомасштабирования, observability, безопасности и service
-        mesh.
-        Deckhouse — <a href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&amp;grouping=category&amp;selected=flant-deckhouse" title="По Certified Kubernetes Conformance Program от CNCF" target="_blank">сертифицированный Kubernetes</a>.
+        mesh.<br /><br />
+        Deckhouse — <a href="https://reestr.digital.gov.ru/reestr/490559/" title="Первый Kubernetes от российского производителя, запись в реестре от 21.12.2021" target="_blank">в реестре российского ПО</a> и <a href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&amp;grouping=category&amp;selected=flant-deckhouse" title="Официальный статус Certified Kubernetes Distribution" target="_blank">сертифицирована в CNCF</a>.
       </div>
       <ul class="product-intro__features">
         <li class="text_base text_bold">
@@ -47,26 +47,44 @@ anchors_disabled: true
       </ul>
       <div class="product-intro__actions button-group">
         {% unless site.mode == "local" %}
-        <a href="/{{ page.lang }}/gs/" class="button button_alt">Быстрый старт</a>
+        <a href="/gs/" class="button button_alt">Быстрый старт</a>
         {% endunless %}
-        <a href="/{{ page.lang }}/documentation/v1/" class="button button_default">Документация</a>
+        <a href="/documentation/v1/" class="button button_default">Документация</a>
         <a href="https://github.com/deckhouse/deckhouse" target="_blank" class="button button_default">GitHub</a>
+        <a href="https://deckhouse.ru/substitution.html" class="button button_default">Импортозамещение</a>
       </div>
     </div>
   </div>
   <div class="product-intro__certificate--block">
-    <a class="product-intro__certificate--link" href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse" target="_blank">
-      <div class="product-intro__certificate">
-        <div class="product-intro__certificate--pic">
-          <svg class="certificate__icon">
-            <use xlink:href="../images/sprite.svg#certificate"></use>
-          </svg>
+    <div class="product-intro__certificate--wrap">
+      <a class="product-intro__certificate--link" href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse" target="_blank">
+        <div class="product-intro__certificate">
+          <div class="product-intro__certificate--pic">
+            <svg class="certificate__icon">
+              <use xlink:href="../images/sprite.svg#certificate"></use>
+            </svg>
+          </div>
+          <div class="product-intro__certificate--text">
+            <span>Сертифицирована в CNCF</span>для Kubernetes 1.19—1.24
+          </div>
         </div>
-        <div class="product-intro__certificate--text">
-          <span>Сертифицирован в CNCF</span>для Kubernetes 1.19, 1.20, 1.21
+      </a>
+    </div>
+    <div class="product-intro__certificate--wrap">
+      <a class="product-intro__certificate--link" href="https://reestr.digital.gov.ru/request/473248/" target="_blank">
+        <div class="product-intro__certificate">
+          <div class="product-intro__certificate--pic">
+            <svg class="certificate__icon certificate__icon--ru">
+              <use xlink:href="../images/sprite.svg#coat-of-arms"></use>
+            </svg>
+          </div>
+          <div class="product-intro__certificate--text">
+            <span>Внесена в единый реестр</span>российского ПО 21.12.2021
+            <small>запись №12338</small>
+          </div>
         </div>
-      </div>
-    </a>
+      </a>
+    </div>
   </div>
 </section>
 
@@ -224,7 +242,7 @@ anchors_disabled: true
               </li>
               <li>
                 * Гарантии распространяются только на <a
-                  href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise Edition</a>.
+                  href="/products/enterprise_edition.html">Enterprise Edition</a>.
               </li>
             </ul>
           </li>
@@ -251,7 +269,7 @@ anchors_disabled: true
             Частные облачные платформы (OpenStack и vSphere) тоже поддерживаются*.
             <ul>
               <li>
-                * Доступно только в <a href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise Edition</a>.
+                * Доступно только в <a href="/products/enterprise_edition.html">Enterprise Edition</a>.
               </li>
             </ul>
           </li>
@@ -289,7 +307,7 @@ anchors_disabled: true
             <ul>
               <li>
                 Процесс разработки редакции EE тоже является публичным (на GitHub). Её исходный код тоже открыт (однако
-                <a href="/{{ page.lang }}/products/enterprise_edition.html">не бесплатен</a>).
+                <a href="/products/enterprise_edition.html">не бесплатен</a>).
               </li>
             </ul>
           </li>
@@ -339,7 +357,7 @@ anchors_disabled: true
             <ul>
               <li>
                 Более подробное представление о доступных модулях можно получить в <a
-                  href="/{{ page.lang }}/documentation/v1/">документации Deckhouse</a>.
+                  href="/documentation/v1/">документации Deckhouse</a>.
               </li>
             </ul>
           </li>
@@ -356,7 +374,7 @@ anchors_disabled: true
           <li>
             Подробнее о преимуществах ​​Deckhouse перед EKS, GKE, AKS и другими KaaS
             <br><br>
-            <a href="/{{ page.lang }}/deckhouse_vs_kaas.html" class="button button_alt">
+            <a href="/deckhouse_vs_kaas.html" class="button button_alt">
               Deckhouse vs KaaS
             </a>
           </li>
@@ -378,7 +396,7 @@ anchors_disabled: true
           <li>
             Deckhouse предоставляет расширенный набор инструментов для создания действительно безопасного production-окружения.
             <br><br>
-            <a href="/{{ page.lang }}/security.html" class="button button_alt">
+            <a href="/security.html" class="button button_alt">
               Подробнее о безопасности
             </a>
           </li>

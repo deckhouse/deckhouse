@@ -61,6 +61,10 @@ module GSGenerator
         self.data['ee_only'] = true
       end
 
+      if @installData['ce_only'] then
+        self.data['ce_only'] = true
+      end
+
       self.content = "{% include #{globalData['step']['header']} %}\n\n"
 
       if @stepData['template'] then

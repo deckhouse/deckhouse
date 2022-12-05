@@ -1,0 +1,13 @@
+docs:
+  fixes:
+    - summary: Fix a typo in the NodeGroup example.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2344
+prometheus:
+  fixes:
+    - summary: Fix Grafana dashboard provisioned — avoid missing all dashboards on update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2384
+user-authn:
+  fixes:
+    - summary: Add links on how to register OIDC client in Okta, Keycloak, Gluu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2381
+

@@ -17,6 +17,7 @@ limitations under the License.
 package storage
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"strings"
@@ -45,6 +46,7 @@ func (g *ResourceIndex) AsString() string {
 
 type StoreObject struct {
 	Path         string
+	Hash         string
 	Unstructured unstructured.Unstructured
 }
 
@@ -54,6 +56,69 @@ func GetResourceIndex(object StoreObject) ResourceIndex {
 		Name:      object.Unstructured.GetName(),
 		Namespace: object.Unstructured.GetNamespace(),
 	}
+}
+
+func (s *StoreObject) GetInitContainers() ([]v1.Container, error) {
+	var containers []v1.Container
+	converter := runtime.DefaultUnstructuredConverter
+
+	switch s.Unstructured.GetKind() {
+	case "Deployment":
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to Deployment failed: %v", err)
+		}
+
+		containers = deployment.Spec.Template.Spec.InitContainers
+	case "DaemonSet":
+		daemonSet := new(appsv1.DaemonSet)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), daemonSet)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to DaemonSet failed: %v", err)
+		}
+
+		containers = daemonSet.Spec.Template.Spec.InitContainers
+	case "StatefulSet":
+		statefulSet := new(appsv1.StatefulSet)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), statefulSet)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to StatefulSet failed: %v", err)
+		}
+
+		containers = statefulSet.Spec.Template.Spec.InitContainers
+	case "Pod":
+		pod := new(v1.Pod)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), pod)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to Pod failed: %v", err)
+		}
+
+		containers = pod.Spec.InitContainers
+	case "Job":
+		job := new(batchv1.Job)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), job)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to Job failed: %v", err)
+		}
+
+		containers = job.Spec.Template.Spec.InitContainers
+	case "CronJob":
+		cronJob := new(batchv1beta1.CronJob)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to CronJob failed: %v", err)
+		}
+
+		containers = cronJob.Spec.JobTemplate.Spec.Template.Spec.InitContainers
+	}
+	return containers, nil
 }
 
 func (s *StoreObject) GetContainers() ([]v1.Container, error) {
@@ -262,16 +327,15 @@ type UnstructuredObjectStore struct {
 	Storage map[ResourceIndex]StoreObject
 }
 
-func NewUnstructuredObjectStore() UnstructuredObjectStore {
-	return UnstructuredObjectStore{Storage: make(map[ResourceIndex]StoreObject)}
+func NewUnstructuredObjectStore() *UnstructuredObjectStore {
+	return &UnstructuredObjectStore{Storage: make(map[ResourceIndex]StoreObject)}
 }
 
-// Put object into unstructured store
-func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}) error {
+func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}, raw []byte) error {
 	var u unstructured.Unstructured
 	u.SetUnstructuredContent(object)
 
-	storeObject := StoreObject{Path: path, Unstructured: u}
+	storeObject := StoreObject{Path: path, Unstructured: u, Hash: NewSHA256(raw)}
 
 	index := GetResourceIndex(storeObject)
 	if _, ok := s.Storage[index]; ok {
@@ -287,7 +351,6 @@ func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}
 	return nil
 }
 
-// Get object from unstructured store
 func (s *UnstructuredObjectStore) Get(key ResourceIndex) StoreObject {
 	return s.Storage[key]
 }
@@ -298,5 +361,13 @@ func (s *UnstructuredObjectStore) Exists(key ResourceIndex) bool {
 }
 
 func (s *UnstructuredObjectStore) Close() {
-	s.Storage = nil
+	for k := range s.Storage {
+		delete(s.Storage, k)
+	}
+}
+
+func NewSHA256(data []byte) string {
+	h := sha256.New()
+	h.Write(data)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

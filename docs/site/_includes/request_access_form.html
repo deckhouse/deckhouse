@@ -1,14 +1,10 @@
-<div id="request_access_intro">
-  {%- if page.lang == "ru" %}
-    <h3 class="text text_h3">Запросить лицензионный ключ</h3>
-    <p class="text">Заполните форму и мы отправим данные для доступа вам на почту.</p>
-  {%- else %}
-    <h3 class="text text_h3">Request access</h3>
-    <p class="text">Fill out this form and we will send you access credentials via email.</p>
-  {%- endif %}
-  <form class="form" id="request_access_form">
-    <input id="h0n3y" class="form__h0n3y" autocomplete="off" type="text" name="comment" placeholder="Comment">
+<div id="request_access_intro" data-header-form>
+  <h3 class="text text_h3">{{ site.data.modal['request-access']['header'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-access']['header'][page.lang]['text']}}</p>
+  <form class="form" action="https://license.deckhouse.io/api/license/request" id="request_access_form" data-form>
+    <input class="form__h0n3y" autocomplete="off" type="text" name="_hp" placeholder="Comment">
     {%- if page.lang == "ru" %}
+    <input type="hidden" id="language_ru" name="language" value="ru">
     <div class="form__row">
       <input
         class="textfield"
@@ -45,11 +41,22 @@
         autocomplete="off" required="required" />
     </div>
     <div class="form__row">
+      <label class="license-checkbox">
+        <input
+          class="checkbox"
+          type="checkbox" name="license"
+          autocomplete="off" required="required" />
+        <span class="fake-checkbox"></span>
+        <span>Подтверждаю согласие с <a href="https://legal.flant.ru/deckhouse_trialeula_ru" class="license-link" target="_blank">Лицензионным соглашением на пробный период</a></span>
+      </label>
+    </div>
+    <div class="form__row">
       <button class="button button_alt" type="submit">
         Отправить
       </button>
     </div>
     {%- else %}
+    <input type="hidden" id="language_en" name="language" value="en">
     <div class="form__row">
       <input
         class="textfield"
@@ -93,37 +100,11 @@
     {%- endif %}
   </form>
 </div>
-<div id="request_access_success" style="display: none;">
-  {%- if page.lang == "ru" %}
-    <h3 class="text text_h3 text_alt">
-      Запрос получен
-    </h3>
-    <p class="text">
-      Мы отправили инструкцию с дальнейшими шагами вам на почту.
-    </p>
-  {%- else %}
-    <h3 class="text text_h3 text_alt">
-      Thank you
-    </h3>
-    <p class="text">
-      Check your email for details.
-    </p>
-  {%- endif %}
+<div id="request_access_success" data-success-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-access']['success-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-access']['success-message'][page.lang]['text']}}</p>
 </div>
-<div id="request_access_error" style="display: none;">
-  {%- if page.lang == "ru" %}
-    <h3 class="text text_h3 text_alt">
-      Ошибка
-    </h3>
-    <p class="text">
-      Что-то пошло не так
-    </p>
-  {%- else %}
-    <h3 class="text text_h3 text_alt">
-      Error
-    </h3>
-    <p class="text">
-      Something went wrong...
-    </p>
-  {%- endif %}
+<div id="request_access_error" data-error-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-access']['error-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-access']['error-message'][page.lang]['text']}}</p>
 </div>

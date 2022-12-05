@@ -3,6 +3,24 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    x-examples:
+      - layout: Standard
+        apiVersion: deckhouse.io/v1
+        kind: AzureClusterConfiguration
+        sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+        vNetCIDR: 10.0.0.0/16
+        subnetCIDR: 10.0.0.0/24
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            machineSize: Standard_D4ds_v4
+            urn: Canonical:UbuntuServer:18.04-LTS:18.04.202207120
+        provider:
+          location: "westeurope"
+          subscriptionId: "<SUBSCRIPTION_ID>"
+          clientId: "<CLIENT_ID>"
+          clientSecret: "<CLIENT_SECRET>"
+          tenantId: "<TENANT_ID>"
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, vNetCIDR, subnetCIDR, masterNodeGroup, sshPublicKey]
     properties:
@@ -34,6 +52,14 @@ apiVersions:
         description: |
           Public key to access nodes as `azureuser`.
         type: string
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via ssh.
+
+          By default, `*`.
       vNetCIDR:
         description: |
           An address space of the virtual network in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
@@ -67,6 +93,8 @@ apiVersions:
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
+
+          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
         properties:
           replicas:
@@ -120,13 +148,13 @@ apiVersions:
 
                   **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
                 type: string
               enableExternalIP:
                 description: |
+                  Defines whether to enable external IP for an instance or not.
+
                   Only available for the `Standard` layout.
-                  * `false` — the nodes do not have public addresses and access the Internet over NAT.
-                  * `true` — static public addresses are created for nodes.
                 type: boolean
                 enum: [true, false]
                 x-doc-default: false
@@ -157,6 +185,11 @@ apiVersions:
                 type: object
                 additionalProperties:
                   type: string
+              acceleratedNetworking:
+                type: boolean
+                default: false
+                description: |
+                  Accelerated Networking provides up to 30Gbps in networking throughput.
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
@@ -170,7 +203,8 @@ apiVersions:
                 The name of the NodeGroup to use for generating node names.
               type: string
             replicas:
-              description: The number of nodes to create.
+              description: |
+                The number of nodes to create.
               type: integer
             zones:
               description: |
@@ -224,7 +258,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -289,7 +323,8 @@ apiVersions:
               The ID of the tenant.
             type: string
       zones:
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: |
+          The globally restricted set of zones that this Cloud Provider works with.
         type: array
         items:
           type: string

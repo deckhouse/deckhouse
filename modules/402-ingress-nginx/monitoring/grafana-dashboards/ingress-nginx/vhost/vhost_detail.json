@@ -10013,9 +10013,8 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
-          "text": "grafana.sandbox.n-mitrofanov.hf.flant.com",
-          "value": "grafana.sandbox.n-mitrofanov.hf.flant.com"
+          "text": "example.com",
+          "value": "example.com"
         },
         "datasource": "$ds_prometheus",
         "definition": "",
@@ -10045,10 +10044,10 @@
         "current": {
           "selected": true,
           "text": [
-            "/"
+            "All"
           ],
           "value": [
-            "/"
+            "$__all"
           ]
         },
         "datasource": "$ds_prometheus",

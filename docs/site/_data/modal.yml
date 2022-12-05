@@ -1,0 +1,66 @@
+request-access:
+  header:
+    ru:
+      title: "Запросить пробный доступ на 30 дней"
+      text: "Заполните форму и мы отправим данные для доступа вам на почту."
+    en:
+      title: "Request 30 days access"
+      text: "Fill out this form and we will send you access credentials via email."
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Мы отправили инструкцию с дальнейшими шагами вам на почту."
+    en:
+      title: "Thank you"
+      text: "Check your email for details."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+request-callback:
+  header:
+    ru:
+      title: "Запросить обратный звонок"
+      text: "Оставьте ваши данные, и мы свяжемся с вами."
+    en:
+      title: "Request callback"
+      text: "Fill out this form, and we will contact you soon."
+  success-message:
+    ru:
+      title: "Заявка отправлена"
+      text: "Мы свяжемся с вами в течении рабочего дня"
+    en:
+      title: "Thank you"
+      text: "We will contact you on this or the next business day"
+  error-message:
+    ru:
+      title: "Возникла ошибка отправки формы"
+      text: "Попробуйте еще раз"
+    en:
+      title: "Something went wrong"
+      text: "Please try again later"
+request-education:
+  header:
+    ru:
+      title: "Запросить обучение"
+      text: "Заполните форму, и мы свяжемся с вами, чтобы обсудить детали."
+    en:
+      title: "Book your sessions"
+      text: "Fill out this form, and we will contact you to discuss the details"
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Мы отправили инструкцию с дальнейшими шагами вам на почту."
+    en:
+      title: "Thank you"
+      text: "Check your email for details."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."

@@ -1,3 +1,13 @@
+{{- define "grafana_resources" }}
+cpu: 35m
+memory: 140Mi
+{{- end }}
+
+{{- define "dashboard_provisioner_resources" }}
+cpu: 10m
+memory: 60Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +23,21 @@ spec:
     name: grafana
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: grafana
+      minAllowed:
+        {{- include "grafana_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 70m
+        memory: 280Mi
+    - containerName: dashboard-provisioner
+      minAllowed:
+        {{- include "dashboard_provisioner_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -23,6 +48,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: grafana
@@ -47,7 +73,7 @@ spec:
       containers:
       - name: grafana
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}"
+        image: {{ include "helm_lib_module_image" (list . "grafana") }}
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
         - name: GF_SERVER_ROOT_URL
@@ -99,6 +125,11 @@ spec:
           value: "127.0.0.1"
         - name: GF_METRICS_ENABLED
           value: "true"
+        # TODO(nabokihms): enable legacy alerting, because our operator does not work with new alerts system
+        - name: GF_ALERTING_ENABLED
+          value: "true"
+        - name: GF_UNIFIED_ALERTING_ENABLED
+          value: "false"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
@@ -124,6 +155,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "grafana_resources" . | nindent 12 }}
+{{- end }}
         readinessProbe:
           httpGet:
             path: /api/health
@@ -132,13 +166,17 @@ spec:
           initialDelaySeconds: 10
       - name: dashboard-provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}"
+        image: {{ include "helm_lib_module_image" (list . "grafanaDashboardProvisioner") }}
         env:
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dashboard_provisioner_resources" . | nindent 12 }}
+{{- end }}
+
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
@@ -146,9 +184,18 @@ spec:
           mountPath: /etc/grafana/dashboards
         - name: tmp
           mountPath: /tmp
+        # Check that dashboard provisioner uploaded all dashboards successfully
+        readinessProbe:
+          exec:
+            command:
+              - cat
+              - /tmp/ready
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -195,6 +242,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: shared-dashboards-folder
         emptyDir: {}

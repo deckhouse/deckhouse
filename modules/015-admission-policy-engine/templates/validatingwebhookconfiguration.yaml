@@ -1,0 +1,42 @@
+{{- if gt (len .Values.admissionPolicyEngine.internal.trackedResources) 0 }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-admission-policy-engine-config
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
+    service:
+      name: gatekeeper-webhook-service
+      namespace: d8-admission-policy-engine
+      path: /v1/admit
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
+  objectSelector: {}
+  rules:
+  {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedResources }}
+  - apiGroups:
+      {{- $trackResource.apiGroups | toYaml | nindent 6 }}
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+      {{- $trackResource.resources | toYaml | nindent 6 }}
+  {{- end }}
+  sideEffects: None
+  timeoutSeconds: 3
+{{- end }}

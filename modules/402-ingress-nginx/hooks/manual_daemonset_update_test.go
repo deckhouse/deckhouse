@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: manual_daemonset_update ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "0.33", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.1", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	Context("DS has same generation as pods", func() {
@@ -60,7 +60,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 1
+  numberAvailable: 1
   desiredNumberScheduled: 1
 ---
 apiVersion: apps/v1
@@ -178,7 +178,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -306,7 +306,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -423,7 +423,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 3
+  numberAvailable: 3
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1
@@ -541,7 +541,7 @@ spec:
   updateStrategy:
     type: OnDelete
 status:
-  currentNumberScheduled: 1
+  numberAvailable: 1
   desiredNumberScheduled: 3
 ---
 apiVersion: apps/v1

@@ -1,0 +1,9 @@
+deckhouse:
+  fixes:
+    - summary: Fix cleanup DeckhouseReleases hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1168
+deckhouse-controller:
+  fixes:
+    - summary: Update addon-operator for working with FeatureGates helm validation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1169
+

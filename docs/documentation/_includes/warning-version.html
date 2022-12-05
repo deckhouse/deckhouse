@@ -1,5 +1,10 @@
-{%- if page.versionType %}
+{%- if page.d8Revision %}
 <div class="docs__information warning active">
-{{ site.data.i18n.features[page.versionType][page.lang] }}
+{{ site.data.i18n.features[page.d8Revision][page.lang] }}
+</div>
+{%- endif %}
+{%- if page.featureStatus %}
+<div class="docs__information warning active">
+{{ site.data.i18n.features[page.featureStatus][page.lang] }}
 </div>
 {%- endif %}

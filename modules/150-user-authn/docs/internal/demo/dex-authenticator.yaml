@@ -1,0 +1,12 @@
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: echoserver
+  namespace: openldap-demo
+spec:
+  applicationDomain: echo.{{ __cluster__domain__ }}
+  sendAuthorizationHeader: false
+  applicationIngressClassName: "nginx"
+  allowedGroups:
+  - developers

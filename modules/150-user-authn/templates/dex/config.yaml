@@ -9,6 +9,8 @@
     https: 0.0.0.0:5556
     tlsKey: /etc/dex/certs/tls.key
     tlsCert: /etc/dex/certs/tls.crt
+  telemetry:
+    http: 127.0.0.1:5558
   frontend:
     issuer: "Kubernetes Dex"
     logoUrl: "https://kubernetes.io/images/favicon.png"
@@ -101,6 +103,9 @@
         {{- if $provider.ldap.insecureSkipVerify }}
         insecureSkipVerify: true
         {{- end }}
+        {{- if $provider.ldap.insecureNoSSL }}
+        insecureNoSSL: true
+        {{- end }}
         {{- if $provider.ldap.rootCAData }}
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
@@ -108,7 +113,7 @@
         bindDN: {{ $provider.ldap.bindDN | quote }}
         {{- end }}
         {{- if $provider.ldap.bindPW  }}
-        bindPW: {{ $provider.ldap.bindPW | quote }}
+        bindPW: '{{ $provider.ldap.bindPW }}'
         {{- end }}
         {{- if $provider.ldap.startTLS }}
         startTLS: true
@@ -143,6 +148,12 @@
         {{- end }}
         userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
+        {{- if $provider.oidc.claimMapping }}
+        claimMapping:
+          email: {{ $provider.oidc.claimMapping.email }}
+          groups: {{ $provider.oidc.claimMapping.groups }}
+          preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
+        {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}
            {{- range $scope := $provider.oidc.scopes }}
@@ -157,6 +168,13 @@
         {{- end }}
         {{- if $provider.oidc.promptType }}
         promptType: {{ $provider.oidc.promptType | quote }}
+        {{- end }}
+        {{- if $provider.oidc.insecureSkipVerify }}
+        insecureSkipVerify: true
+        {{- end }}
+        {{- if $provider.oidc.rootCAData }}
+        rootCAs:
+        - {{ $provider.oidc.rootCAData | quote }}
         {{- end }}
       {{- end }}
 

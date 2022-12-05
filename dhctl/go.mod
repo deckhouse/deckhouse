@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.2.2
+	github.com/alessio/shellescape v1.4.1
 	github.com/fatih/color v1.9.0
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/logboek v0.3.4
@@ -12,6 +13,7 @@ require (
 	github.com/go-openapi/spec v0.19.8
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
+	github.com/google/go-cmp v0.5.8
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
@@ -31,6 +33,7 @@ require (
 	k8s.io/apimachinery v0.19.11
 	k8s.io/client-go v0.19.11
 	k8s.io/klog v1.0.0
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/yaml v1.2.0
 )
 

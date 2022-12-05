@@ -24,7 +24,9 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"helm.sh/helm/v3/pkg/chart/loader"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
@@ -32,8 +34,6 @@ import (
 const (
 	ChartConfigFilename  = "Chart.yaml"
 	ValuesConfigFilename = "values_matrix_test.yaml"
-
-	defaultDeckhouseModulesDir = "/deckhouse/modules"
 
 	crdsDir    = "crds"
 	openapiDir = "openapi"
@@ -144,9 +144,7 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
-func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
-	var modules []utils.Module
-
+func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []utils.Module, err error) {
 	var possibleModulesPaths []string
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
@@ -171,12 +169,28 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
 
 	var lintRuleErrorsList errors.LintRuleErrorsList
 	for _, modulePath := range modulesPaths {
+		if focusNames.Size() > 0 {
+			moduleName := filepath.Base(modulePath)
+			moduleName = strings.TrimLeft(moduleName, "1234567890-")
+
+			if !focusNames.Has(moduleName) {
+				continue
+			}
+		}
+
 		module, ok := lintModuleStructure(&lintRuleErrorsList, modulePath)
 		if !ok {
 			continue
 		}
+
+		module.Chart, err = loader.Load(modulePath)
+		if err != nil {
+			return modules, fmt.Errorf("chart load %q: %v", ChartConfigFilename, err)
+		}
+
 		modules = append(modules, module)
 	}
+
 	return modules, lintRuleErrorsList.ConvertToError()
 }
 

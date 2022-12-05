@@ -54,20 +54,32 @@ cloudProviderOpenstack:
 			Expect(f.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+	"name": "bar",
+	"type": "bar"
+  },
+  {
 	"name": "default",
 	"type": "__DEFAULT__"
+  },
+  {
+	"name": "other-bar",
+	"type": "other-bar"
   },
   {
 	"name": "some-foo",
 	"type": "some-foo"
   },
   {
-	"name": "bar",
-	"type": "bar"
+	"name": "ssd-r1",
+	"type": "SSD R1"
   },
   {
-	"name": "other-bar",
-	"type": "other-bar"
+	"name": "xx--foo",
+	"type": "-Xx__$()? -foo-"
+  },
+  {
+	"name": "yy-fast-ssd-foo",
+	"type": "  YY fast SSD-foo."
   }
 ]
 `))
@@ -95,6 +107,10 @@ cloudProviderOpenstack:
   {
 	"name": "other-bar",
 	"type": "other-bar"
+  },
+  {
+	"name": "ssd-r1",
+	"type": "SSD R1"
   }
 ]
 `))

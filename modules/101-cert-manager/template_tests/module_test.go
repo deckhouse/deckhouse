@@ -34,20 +34,6 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterMasterCount: 1
@@ -63,20 +49,6 @@ const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterMasterCount: 5
@@ -93,20 +65,6 @@ const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -122,20 +80,6 @@ highAvailability: true
 modules:
   placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
-modulesImages:
-  registry: registry.deckhouse.io
-  registryDockercfg: Y2ZnCg==
-  tags:
-    common:
-      kubeRbacProxy: tagstring
-    certManager:
-      annotationsConverter: tagstring
-      certManagerController: tagstring
-      certManagerWebhook: tagstring
-      certManagerCainjector: tagstring
-      legacyCertManagerController: legacystring
-      legacyCertManagerWebhook: legacystring
-      legacyCertManagerCainjector: legacystring
 discovery:
   kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -151,10 +95,10 @@ internal:
   selfSignedCA:
     cert: string
     key: string
-  webhookCACrt: string
-  webhookCAKey: string
-  webhookCrt: string
-  webhookKey: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
 `
 
 const cloudDNS = `
@@ -167,6 +111,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -184,17 +129,23 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -219,6 +170,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 	Context("DefaultHA", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -235,17 +187,23 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -293,6 +251,7 @@ podAntiAffinity:
 	Context("Managed", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManaged)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -309,17 +268,23 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -344,6 +309,7 @@ podAntiAffinity:
 	Context("ManagedHa", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager)
 			f.HelmRender()
 		})
@@ -360,17 +326,23 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -418,6 +390,7 @@ podAntiAffinity:
 	Context("CloudDNS", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("certManager", certManager+cloudDNS)
 			f.HelmRender()
 		})
@@ -430,6 +403,7 @@ podAntiAffinity:
 
 			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "clouddns")
 			Expect(clusterIssuer.Exists()).To(BeTrue())
+
 			if clusterIssuer.Field("apiVersion").String() == "cert-manager.io/v1" {
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.project").String()).To(Equal("project-209317"))
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
@@ -439,6 +413,24 @@ podAntiAffinity:
 				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
 				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			}
+		})
+	})
+	Context("<DisableLetsencrypt>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.ValuesSet("certManager.disableLetsencrypt", true)
+			f.HelmRender()
+		})
+
+		It("Check non-creation ClusterIssuer objects if disableLetsencrypt set to true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			clusterIssuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(clusterIssuer.Exists()).To(BeFalse())
+			clusterIssuerStaging := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
+			Expect(clusterIssuerStaging.Exists()).To(BeFalse())
 		})
 	})
 })

@@ -24,9 +24,12 @@ import (
 	"testing"
 	"time"
 
+	kube "github.com/flant/kube-client/client"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+
+	k8saccess "d8.io/upmeter/pkg/kubernetes"
 )
 
 func Test_smokeMiniAvailable(t *testing.T) {
@@ -34,7 +37,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 
 	var (
 		logger  = newDummyLogger()
-		timeout = 25 * time.Millisecond
+		timeout = 100 * time.Millisecond
 		slow    = timeout / 11 * 10 // ~91%
 		tooLate = 2 * timeout
 	)
@@ -109,7 +112,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t,
 				// klog
-				goleak.IgnoreTopFunction("k8s.io/klog.(*loggingT).flushDaemon"),
+				goleak.IgnoreTopFunction("k8s.io/klog/v2.(*loggingT).flushDaemon"),
 				// httputil.Server
 				goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
 			)
@@ -123,6 +126,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 			checker := &smokeMiniChecker{
 				path:        "/",
 				httpTimeout: timeout,
+				access:      NewFake(kube.NewFake(nil)),
 				lookuper: &dummyLookuper{
 					servers:  tt.servers,
 					addBogus: tt.cancel,
@@ -181,4 +185,40 @@ func respondSlowlyWith(timeout time.Duration, status int) *httptest.Server {
 		time.Sleep(timeout)
 		rw.WriteHeader(status)
 	}))
+}
+
+func NewFake(client kube.Client) *FakeAccess {
+	return &FakeAccess{client: client}
+}
+
+type FakeAccess struct {
+	client kube.Client
+}
+
+func (a *FakeAccess) Kubernetes() kube.Client {
+	return a.client
+}
+
+func (a *FakeAccess) ServiceAccountToken() string {
+	return "pewpew"
+}
+
+func (a *FakeAccess) UserAgent() string {
+	return "UpmeterTestClient/1.0"
+}
+
+func (a *FakeAccess) SchedulerProbeImage() *k8saccess.ProbeImage {
+	return createTestProbeImage("test-image:latest", nil)
+}
+
+func (a *FakeAccess) SchedulerProbeNode() string {
+	return ""
+}
+
+func (a *FakeAccess) CloudControllerManagerNamespace() string {
+	return ""
+}
+
+func (a *FakeAccess) ClusterDomain() string {
+	return ""
 }

@@ -16,6 +16,19 @@
   If it fixes an obvious bug, please tell users about the impact and effect of the problem.
 -->
 
+## What is the expected result?
+<!---
+  How can one check these changes after applying?  
+
+  Describe, what (resource, state, event, etc.) MUST or MUST NOT change/happen after applying these changes.
+-->
+
+## Checklist
+- [ ] The code is covered by unit tests.
+- [ ] e2e tests passed.
+- [ ] Documentation updated according to the changes.
+- [ ] Changes were tested in the Kubernetes cluster manually.
+
 ## Changelog entries
 <!---
   Describe the changes so they will be included in a release changelog.
@@ -25,25 +38,49 @@
 -->
 
 ```changes
-section: <kebab-case of a modules/*> | <1st level dir in the repo>
-type: fix | feature
-summary: <what effectively changes in a single line>
-impact_level: low | high*
-impact: <what to expect, possibly multi-line>, required if impact_level is high
+section: <kebab-case of a module name> | <1st level dir in the repo>
+type: fix | feature | chore
+summary: <ONE-LINE of what effectively changes for a user>
+impact: <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
+impact_level: default | high | low
 ```
 
 <!---
+`impact_level: default` adds to changelog as usual, this is the default that can be omitted
+`impact_level: high`    something important for users, the impact will be copied to "Know Before Update" section
+`impact_level: low`     omitted in changelog YAML; note there is `type:chore` for chores
+
 Tip for the section field:
 
-  - <kebab-case of a modules/*>, like "cloud-provider-aws", "node-manager"
-  - "dhctl"
+  - <kebab-case of a module>, e.g. "cloud-provider-aws", "node-manager"
+  - "ci", has forced low impact
+  - "docs", includes website changes, should have low impact
   - "candi"
   - "deckhouse-controller"
-  - *_lib
-  - "docs", includes website changes, should always have low impact
-  - "tests", should always have low impact
-  - "tools", should always have low impact
-  - "ci", should always have low impact
-  - "global" affects all possible modules at once, discouraged if only a few of modules affected, it is better to have multiple exact changes
+  - "dhctl"
+  - "global-hooks"
+  - "go_lib"
+  - "helm_lib"
+  - "jq_lib"
+  - "shell_lib"
+  - "testing", has forced low impact
+  - "tools", has forced low impact
 
+Find changed sections:
+
+gh pr diff   $PULL_REQUEST_NUMBER   |
+  egrep "^([+]{3} b|[-]{3} a)/" |
+  cut -d/ -f2- |
+  sed 's#^ee/##' |
+  sed 's#^fe/##' |
+  sed 's#^modules/##' |
+  sed 's#[0-9][0-9][0-9]-##' |
+  egrep -v 'Makefile' |       # add file exclusion here
+  cut -d/ -f1 |
+  sort |
+  uniq
+
+Find all possible sections (excluding ci):
+
+node -e 'console.log(require("./.github/scripts/js/changelog-find-sections.js")().join("\n"))'
 -->

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/iancoleman/strcase"
@@ -215,11 +216,23 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
 	}
 
-	if len(effectiveStorageClass) == 0 {
+	emptydirUsageMetricValue := 0.0
+	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
+		emptydirUsageMetricValue = 1.0
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
+
+	input.MetricsCollector.Set(
+		"d8_emptydir_usage",
+		emptydirUsageMetricValue,
+		map[string]string{
+			"namespace":   args.Namespace,
+			"module_name": args.ModuleName,
+		},
+		metrics.WithGroup("storage_class_change"),
+	)
 
 	return effectiveStorageClass
 }
@@ -265,8 +278,9 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 
 	effectiveStorageClass := calculateEffectiveStorageClass(input, args, currentStorageClass)
 
-	if currentStorageClass != effectiveStorageClass {
-		if len(currentStorageClass) != 0 {
+	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
+		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
+		if wasPvc {
 			for _, obj := range pvcs {
 				pvc := obj.(PVC)
 				input.LogEntry.Infof("storage class changed, deleting %s/PersistentVolumeClaim/%s", pvc.Namespace, pvc.Name)
@@ -292,6 +306,20 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		}
 	}
 	return nil
+}
+
+func storageClassesAreEqual(sc1, sc2 string) bool {
+	if sc1 == sc2 {
+		return true
+	}
+	return isEmptyOrFalseStr(sc1) && isEmptyOrFalseStr(sc2)
+}
+
+// isEmptyOrFalseStr returns true if sc is empty string or "false". For storage class values or
+// configuration, empty strings and "false" mean the same: no storage class specified. "false" is
+// set by humans, while absent values resolve to empty strings.
+func isEmptyOrFalseStr(sc string) bool {
+	return sc == "" || sc == "false"
 }
 
 func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {

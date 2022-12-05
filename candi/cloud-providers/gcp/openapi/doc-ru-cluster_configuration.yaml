@@ -6,6 +6,11 @@ apiVersions:
         description: Подсеть, в которой будут работать узлы кластера.
       sshKey:
         description: Публичный ключ для доступа на узлы под пользователем `user`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по ssh.
+
+          По умолчанию, с любого адреса.
       labels:
         description: |
           Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
@@ -21,7 +26,10 @@ apiVersions:
 
           Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
       masterNodeGroup:
-        description: Спецификация для описания NodeGroup master-узлов.
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: Сколько master-узлов создавать.
@@ -42,7 +50,7 @@ apiVersions:
                 description: |
                   Тип заказываемых инстансов.
 
-                  **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
+                  > **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
 
                   GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
               image:
@@ -51,7 +59,7 @@ apiVersions:
 
                   Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                  **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
+                  > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
               diskSizeGb:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
               disableExternalIP:
@@ -64,7 +72,7 @@ apiVersions:
 
                   `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
           zones:
-            description: Cписок зон, в которых допустимо создавать статичные-узлы.
+            description: Список зон, в которых допустимо создавать статичные-узлы.
       nodeGroups:
         description: Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов).
         items:

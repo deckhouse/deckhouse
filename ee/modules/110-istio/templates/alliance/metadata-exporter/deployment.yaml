@@ -1,3 +1,12 @@
+{{- define "metadata_discovery_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+{{- define "metadata_exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +23,20 @@ spec:
     name: metadata-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: metadata-discovery
+      minAllowed:
+        {{- include "metadata_discovery_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: metadata-exporter
+      minAllowed:
+        {{- include "metadata_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -24,6 +47,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: metadata-exporter
@@ -43,7 +67,7 @@ spec:
       containers:
       - name: metadata-exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}"
+        image: {{ include "helm_lib_module_image" (list . "metadataExporter") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: CLUSTER_UUID
@@ -80,6 +104,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "metadata_discovery_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - name: istio-ca-root-cert
           mountPath: /certs/
@@ -92,7 +119,7 @@ spec:
           mountPath: /metadata/
       - name: metadata-discovery
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}"
+        image: {{ include "helm_lib_module_image" (list . "metadataDiscovery") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG_UNIX_SOCKET
@@ -104,6 +131,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "metadata_discovery_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - name: metadata
           mountPath: /metadata/

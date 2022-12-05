@@ -1,0 +1,7 @@
+node-manager:
+  fixes:
+    - summary: >-
+        Avoid "node-role.kubernetes.io/master" taint removal when it is explicitly set in the master
+        NG
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2831
+

@@ -1,5 +1,8 @@
 name: 💡 Feature request
 description: Suggest an idea for Deckhouse
+labels:
+- 'type/enhancement'
+- 'status/needs-triage'
 body:
   - type: markdown
     attributes:

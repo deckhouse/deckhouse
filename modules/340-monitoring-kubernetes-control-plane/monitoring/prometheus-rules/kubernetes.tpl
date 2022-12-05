@@ -89,7 +89,6 @@ It will be better for you to enable `control-plane-manager` module to be able to
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 7 days) on node {{`{{$labels.node}}`}}.
         {{- include "instruction" . | nindent 8 }}
@@ -101,7 +100,6 @@ It will be better for you to enable `control-plane-manager` module to be able to
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 1 day) on node {{`{{$labels.component}}`}}.
         {{- include "instruction" . | nindent 8 }}

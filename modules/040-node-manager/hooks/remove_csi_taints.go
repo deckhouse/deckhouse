@@ -20,6 +20,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 )
@@ -49,7 +50,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleRemoveCSI)
 
 func csiFilterCSINode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+	var csiNode storagev1.CSINode
+
+	err := sdk.FromUnstructured(obj, &csiNode)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(csiNode.Spec.Drivers) == 0 {
+		return "", nil
+	}
+
+	return csiNode.Name, nil
 }
 func csiFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node v1.Node

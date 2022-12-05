@@ -24,26 +24,26 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 	"d8.io/upmeter/pkg/server/api"
 )
 
 type Sender struct {
-	client  *Client
-	recv    chan []check.Episode
-	storage *ListStorage
-	period  time.Duration
+	client   *Client
+	recv     chan []check.Episode
+	storage  *ListStorage
+	interval time.Duration
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func New(client *Client, recv chan []check.Episode, storage *ListStorage, period time.Duration) *Sender {
+func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration) *Sender {
 	s := &Sender{
-		client:  client,
-		recv:    recv,
-		storage: storage,
-		period:  period,
+		client:   client,
+		recv:     recv,
+		storage:  storage,
+		interval: interval,
 
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
@@ -74,14 +74,14 @@ func (s *Sender) receiveLoop() {
 }
 
 func (s *Sender) sendLoop() {
-	ticker := time.NewTicker(s.period)
+	ticker := time.NewTicker(s.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			err := s.export()
 			if err != nil {
-				log.Errorf("cannot export episodes: %v", err)
+				log.Errorf("sendLoop: %v", err)
 			}
 		case <-s.stop:
 			ticker.Stop()
@@ -92,14 +92,14 @@ func (s *Sender) sendLoop() {
 }
 
 func (s *Sender) cleanupLoop() {
-	ticker := time.NewTicker(s.period)
+	ticker := time.NewTicker(s.interval)
 
 	dayBack := -24 * time.Hour
 
 	for {
 		select {
 		case <-ticker.C:
-			deadline := time.Now().Truncate(s.period).Add(dayBack)
+			deadline := time.Now().Truncate(s.interval).Add(dayBack)
 			err := s.storage.Clean(deadline)
 			if err != nil {
 				log.Errorf("cannot clean old episodes: %v", err)
@@ -130,27 +130,23 @@ func (s *Sender) export() error {
 	slot := episodes[0].TimeSlot
 	err = s.storage.Clean(slot)
 	if err != nil {
-		return fmt.Errorf("cannot clean storage for slot=%v: %v", slot, err)
+		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
 	return nil
 }
 
 func (s *Sender) send(episodes []check.Episode) error {
 	data := api.EpisodesPayload{
-		Origin:   util.AgentUniqueId(),
+		Origin:   run.ID(),
 		Episodes: episodes,
 	}
 
 	body, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload to JSON: %v", err)
+		return fmt.Errorf("marshalling to JSON: %v", err)
 	}
 
-	err = s.client.Send(body)
-	if err != nil {
-		return fmt.Errorf("failed to send data: %v", err)
-	}
-	return nil
+	return s.client.Send(body)
 }
 
 func (s *Sender) Stop() {

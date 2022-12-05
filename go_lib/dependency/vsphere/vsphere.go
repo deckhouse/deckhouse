@@ -113,7 +113,7 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		return nil, err
 	}
 
-	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, regionTagName, zoneTagCategoryName)
+	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, zoneTagCategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagC
 		return nil, err
 	}
 
-	attachedObjects, err := tagsClient.ListAttachedObjects(ctx, regionTag.ID)
+	attachedObjects, _ := tagsClient.ListAttachedObjects(ctx, regionTag.ID)
 
 	var dcRefs []mo.Reference
 	for _, ref := range attachedObjects {
@@ -222,7 +222,7 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 		return nil, err
 	}
 
-	tagsInCategory, err := tagsClient.ListTagsForCategory(ctx, zoneTagCategory.ID)
+	tagsInCategory, _ := tagsClient.ListTagsForCategory(ctx, zoneTagCategory.ID)
 
 	tagsInCategoryMap := make(map[string]struct{})
 	for _, tagID := range tagsInCategory {
@@ -259,7 +259,7 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 	return matchingZones, nil
 }
 
-func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Datacenter, regionTagName, zoneTagCategoryName string) ([]ZonedDataStore, error) {
+func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Datacenter, zoneTagCategoryName string) ([]ZonedDataStore, error) {
 	finder := find.NewFinder(client.client.Client, true)
 
 	datastores, dsNotFoundErr := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
@@ -355,7 +355,6 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 	}
 
 	return zds, nil
-
 }
 
 func slugKubernetesName(data string) string {

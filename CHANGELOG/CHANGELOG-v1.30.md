@@ -35,7 +35,8 @@
 ## Release digest
 
 
- - Ingress nginx controllers will be removed manually by a hook.
+ - Disable enforced namespace passing to a query. If your metric need to be selected with a specific namespace label value, you should set it directly in an HPA's label selector
+ - Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
 
 ## Features
 
@@ -61,7 +62,8 @@
  - **[ingress-nginx]** Add documentation article "How to enable HorizontalPodAutoscaling for IngressNginxController". [#648](https://github.com/deckhouse/deckhouse/pull/648)
  - **[ingress-nginx]** Add an example of usage LoadBalancer inlet with MetalLB. [#465](https://github.com/deckhouse/deckhouse/pull/465)
  - **[ingress-nginx]** Add ingress-nginx controller version 1.0 [#394](https://github.com/deckhouse/deckhouse/pull/394)
- - **[istio]**  option to set a static port for NodePort-type ingressgateway Service. [#575](https://github.com/deckhouse/deckhouse/pull/575)
+ - **[istio]** nodeSelector and tolerations customization for control-plane [#1034](https://github.com/deckhouse/deckhouse/pull/1034)
+ - **[istio]** `alliance.ingressGateway.nodePort.port` option to set a static port for NodePort-type ingressgateway Service. [#575](https://github.com/deckhouse/deckhouse/pull/575)
  - **[local-path-provisioner]** Added reclaimPolicy selector, set default reclaimPolicy to Retain [#561](https://github.com/deckhouse/deckhouse/pull/561)
  - **[monitoring-kubernetes]** Added ebpf-exporter [#387](https://github.com/deckhouse/deckhouse/pull/387)
     ebpf-exporter that monitors global and per-cgroup OOMs. With recording rules and dashboard.
@@ -88,6 +90,9 @@
 ## Fixes
 
 
+ - **[candi]** Fix update password hash for node user. [#1192](https://github.com/deckhouse/deckhouse/pull/1192)
+ - **[candi]** Automatically discover zone for volumes in OpenStack [#1104](https://github.com/deckhouse/deckhouse/pull/1104)
+ - **[candi]** Fix docker-stuck-containers-cleaner unit [#1044](https://github.com/deckhouse/deckhouse/pull/1044)
  - **[candi]** Proper work with astra bundle in EE/FE. [#868](https://github.com/deckhouse/deckhouse/pull/868)
  - **[candi]** Fix centos distro version detection [#857](https://github.com/deckhouse/deckhouse/pull/857)
  - **[candi]** Speed up reboot master node on cluster bootstrap. [#800](https://github.com/deckhouse/deckhouse/pull/800)
@@ -95,30 +100,36 @@
  - **[candi]** Fix nodeuser creation script. [#749](https://github.com/deckhouse/deckhouse/pull/749)
  - **[candi]** Fix kubelet slow start on reboot. [#742](https://github.com/deckhouse/deckhouse/pull/742)
  - **[cert-manager]** Disable legacy cert-manager for >= 1.22 kubernetes [#551](https://github.com/deckhouse/deckhouse/pull/551)
-    Legacy cert-manager resources () will not be supported in 1.22+ clusters
+    Legacy cert-manager resources (`certmanager.k8s.io`) will not be supported in 1.22+ clusters
  - **[chrony]** Bashible step fix — missed openntpd.service and time-sync.target in list. [#653](https://github.com/deckhouse/deckhouse/pull/653)
- - **[chrony]** Add VPA label  to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
+ - **[chrony]** Add VPA label `workload-resource-policy` to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
+ - **[cloud-provider-aws]** Fixed zone selection for bastion in WithNAT layout [#1021](https://github.com/deckhouse/deckhouse/pull/1021)
  - **[cloud-provider-aws]** Documentation fixes. [#401](https://github.com/deckhouse/deckhouse/pull/401)
+ - **[cloud-provider-openstack]** Set volume availability zone in dhctl on bootstrap [#1033](https://github.com/deckhouse/deckhouse/pull/1033)
  - **[cloud-provider-vsphere]** Install latest version of open-vm-tools [#667](https://github.com/deckhouse/deckhouse/pull/667)
  - **[control-plane-manager]** LoadBalancer annotations are able to be set [#567](https://github.com/deckhouse/deckhouse/pull/567)
+ - **[deckhouse]** Fix cleanup DeckhouseReleases hook [#1168](https://github.com/deckhouse/deckhouse/pull/1168)
+ - **[deckhouse]** The more controlled and transparent release process. [#699](https://github.com/deckhouse/deckhouse/pull/699)
  - **[deckhouse]** Update the description of the release process [#660](https://github.com/deckhouse/deckhouse/pull/660)
  - **[deckhouse]** Fix requirements check semver lib [#658](https://github.com/deckhouse/deckhouse/pull/658)
  - **[deckhouse]** The start and end times of the update window must belong to the same day. [#496](https://github.com/deckhouse/deckhouse/pull/496)
  - **[deckhouse]** Use scrape interval x2 instead of hardcoded value for invalid config values alerting [#493](https://github.com/deckhouse/deckhouse/pull/493)
+ - **[deckhouse-controller]** Update addon-operator for working with FeatureGates helm validation [#1169](https://github.com/deckhouse/deckhouse/pull/1169)
  - **[dhctl]** Do not print error about not existing bastion host key for abort command. [#655](https://github.com/deckhouse/deckhouse/pull/655)
  - **[dhctl]** Check deckhouse pod readiness before get logs. It fixes static cluster bootstrap. [#571](https://github.com/deckhouse/deckhouse/pull/571)
- - **[dhctl]** All master nodes will have  role in new clusters. [#562](https://github.com/deckhouse/deckhouse/pull/562)
+ - **[dhctl]** All master nodes will have `control-plane` role in new clusters. [#562](https://github.com/deckhouse/deckhouse/pull/562)
+ - **[docs]** Updated the Supported OS versions list format. [#1126](https://github.com/deckhouse/deckhouse/pull/1126)
  - **[docs]** Getting started with Azure minor updates. [#698](https://github.com/deckhouse/deckhouse/pull/698)
  - **[docs]** Fix instructions for switching registry and image copier [#533](https://github.com/deckhouse/deckhouse/pull/533)
  - **[extended-monitoring]** CronJobFailed alert bugfix. [#489](https://github.com/deckhouse/deckhouse/pull/489)
- - **[flant-integration]** Getting rid of deprecated  config value spec. [#695](https://github.com/deckhouse/deckhouse/pull/695)
- - **[flant-integration]** Remove "kubeall.team" field from the  ConfigMap. [#673](https://github.com/deckhouse/deckhouse/pull/673)
+ - **[flant-integration]** Getting rid of deprecated `flantIntegration.kubeall.team` config value spec. [#695](https://github.com/deckhouse/deckhouse/pull/695)
+ - **[flant-integration]** Remove "kubeall.team" field from the `deckhouse` ConfigMap. [#673](https://github.com/deckhouse/deckhouse/pull/673)
  - **[flant-integration]** Remove the plan parameter from the OpenAPI specification [#486](https://github.com/deckhouse/deckhouse/pull/486)
  - **[flant-integration]** Implement proper HA remote-write and reduce outgoing traffic amount. [#412](https://github.com/deckhouse/deckhouse/pull/412)
  - **[helm]** Add deprecation guide link to deprecated resources alerts. [#678](https://github.com/deckhouse/deckhouse/pull/678)
  - **[helm]** Provide an actual description for deprecated resources API versions alerts. [#569](https://github.com/deckhouse/deckhouse/pull/569)
  - **[ingress-nginx]** Manual update for ingress controllers [#921](https://github.com/deckhouse/deckhouse/pull/921)
-    Ingress nginx controllers will be removed manually by a hook.
+    Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
  - **[ingress-nginx]** Fix handled request query on a dashboard. [#871](https://github.com/deckhouse/deckhouse/pull/871)
  - **[ingress-nginx]** temporary remove support of 1.0 controller [#782](https://github.com/deckhouse/deckhouse/pull/782)
  - **[ingress-nginx]** Added "pcre_jit on" to nginx.tmpl for controller-0.46 and above [#515](https://github.com/deckhouse/deckhouse/pull/515)
@@ -126,11 +137,13 @@
  - **[ingress-nginx]** Set proper version for new ingress-nginx controller 1.0 (drop the patch version). [#480](https://github.com/deckhouse/deckhouse/pull/480)
  - **[ingress-nginx]** Always return auth request cookies (only for controllers >= 0.33) [#368](https://github.com/deckhouse/deckhouse/pull/368)
     Ingress Nginx controllers >=0.33 pods will be restarted
+ - **[istio]** The `istio.tracing.kiali.jaegerURLForUsers` parameter bugfix. [#1196](https://github.com/deckhouse/deckhouse/pull/1196)
  - **[istio]** Correct decision to deploy ingressgateway for multiclusters. [#640](https://github.com/deckhouse/deckhouse/pull/640)
- - **[istio]**  option clarification in documentation. [#584](https://github.com/deckhouse/deckhouse/pull/584)
+ - **[istio]** `globalVersion` option clarification in documentation. [#584](https://github.com/deckhouse/deckhouse/pull/584)
  - **[local-path-provisioner]** Update local-path-provisioner v0.0.21, include fix [#478](https://github.com/deckhouse/deckhouse/pull/478)
     Protect PVs to be reused in case of unmounted storage.
- - **[log-shipper]** Add VPA label  to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
+ - **[log-shipper]** Add VPA label `workload-resource-policy` to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
+ - **[monitoring-kubernetes]** Add the container="POD" label to all advisor metrics for pause containers. [#960](https://github.com/deckhouse/deckhouse/pull/960)
  - **[monitoring-kubernetes]** Filter VPA by actual controllers to calculate VPA coverage [#459](https://github.com/deckhouse/deckhouse/pull/459)
  - **[monitoring-kubernetes]** Fixed node-exporter apparmor profile. [#457](https://github.com/deckhouse/deckhouse/pull/457)
  - **[node-manager]** Fix event creation for NG when new Machine provisioning process is failed [#757](https://github.com/deckhouse/deckhouse/pull/757)
@@ -139,8 +152,11 @@
  - **[node-manager]** When calculating maximum instances for particular NodeGroup without zones defined — use global zones count from CloudProvider configuration. [#580](https://github.com/deckhouse/deckhouse/pull/580)
  - **[node-manager]** Fix Static node template annotations updating [#544](https://github.com/deckhouse/deckhouse/pull/544)
  - **[prometheus]** Make Grafana home dashboard queries to only show the top-used versions [#476](https://github.com/deckhouse/deckhouse/pull/476)
+ - **[prometheus-metrics-adapter]** Restore HPA external metrics behavior [#1154](https://github.com/deckhouse/deckhouse/pull/1154)
+    Disable enforced namespace passing to a query. If your metric need to be selected with a specific namespace label value, you should set it directly in an HPA's label selector
  - **[upmeter]** Fixed floating bug causing false downtime of deckhouse/cluster-configuration probe [#997](https://github.com/deckhouse/deckhouse/pull/997)
  - **[upmeter]** Assigned limited access rights to the agent serviceaccount [#469](https://github.com/deckhouse/deckhouse/pull/469)
+ - **[user-authn]** Fixed .spec.ldap.bindPW escaping in DexProvider [#1032](https://github.com/deckhouse/deckhouse/pull/1032)
  - **[user-authn]** Migrate BitbucketCloud connector to utilizing workspaces API. [#738](https://github.com/deckhouse/deckhouse/pull/738)
  - **[user-authn]** Fix values scheme. [#676](https://github.com/deckhouse/deckhouse/pull/676)
  - **[user-authn]** Ignore updating an existing DexAuthenticator [#539](https://github.com/deckhouse/deckhouse/pull/539)

@@ -1,0 +1,109 @@
+{{- if hasKey .Values.openvpn "inlet" }}
+
+  {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+    {{- if .Values.openvpn.tcpEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-external
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+  {{- if .Values.openvpn.loadBalancer.annotations }}
+  annotations:
+    {{- .Values.openvpn.loadBalancer.annotations | toYaml | nindent 4 }}
+  {{- end }}
+
+spec:
+  externalTrafficPolicy: Local
+  {{- if .Values.openvpn.loadBalancer.sourceRanges }}
+  loadBalancerSourceRanges:
+    {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
+  {{- end }}
+  type: LoadBalancer
+  ports:
+    - name: ovpn-tcp
+      protocol: TCP
+      port: {{ .Values.openvpn.externalPort | default 5416 }}
+      targetPort: ovpn-tcp
+  selector:
+    app: {{ .Chart.Name }}
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-external-udp
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+  {{- if .Values.openvpn.loadBalancer.annotations }}
+  annotations:
+    {{- .Values.openvpn.loadBalancer.annotations | toYaml | nindent 4 }}
+  {{- end }}
+
+spec:
+  externalTrafficPolicy: Local
+  {{- if .Values.openvpn.loadBalancer.sourceRanges }}
+  loadBalancerSourceRanges:
+    {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
+  {{- end }}
+  type: LoadBalancer
+  ports:
+    - name: ovpn-udp
+      protocol: UDP
+      port: {{ .Values.openvpn.externalPort | default 5416 }}
+      targetPort: ovpn-udp
+  selector:
+    app: {{ .Chart.Name }}
+    {{- end }}
+  {{- else if eq .Values.openvpn.inlet "ExternalIP" }}
+    {{- if .Values.openvpn.tcpEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-external
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: ClusterIP
+  externalIPs:
+  - {{ .Values.openvpn.externalIP }}
+  ports:
+    - name: ovpn-tcp
+      port: {{ .Values.openvpn.externalPort | default 5416 }}
+      protocol: TCP
+      targetPort: ovpn-tcp
+  selector:
+    app: {{ .Chart.Name }}
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-external-udp
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: ClusterIP
+  externalIPs:
+  - {{ .Values.openvpn.externalIP }}
+  ports:
+    - name: ovpn-udp
+      port: {{ .Values.openvpn.externalPort | default 5416 }}
+      protocol: UDP
+      targetPort: ovpn-udp
+  selector:
+    app: {{ .Chart.Name }}
+    {{- end }}
+  {{- else if eq .Values.openvpn.inlet "Direct" }}
+---
+  {{- else if eq .Values.openvpn.inlet "HostPort" }}
+---
+  {{- else }}
+    {{- cat "Unsupported inlet type" .inlet | fail }}
+  {{- end }}
+
+{{- end }}

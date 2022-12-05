@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix docker config creation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2044
+

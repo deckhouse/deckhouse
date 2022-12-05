@@ -3,7 +3,7 @@
   {{- if $value.csi.openstack }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ env "BASE_DEBIAN" }}
+from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cinder-csi-plugin
@@ -21,7 +21,11 @@ docker:
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ env "BASE_GOLANG_BUSTER" }}
+    {{- if semverCompare ">=1.23" $version }}
+from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
+    {{- else }}
+from: {{ $.Images.BASE_GOLANG_BUSTER }}
+    {{- end }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

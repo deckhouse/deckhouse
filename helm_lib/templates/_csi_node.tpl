@@ -1,3 +1,13 @@
+{{- define "node_driver_registrar_resources" }}
+cpu: 12m
+memory: 25Mi
+{{- end }}
+
+{{- define "node_resources" }}
+cpu: 12m
+memory: 25Mi
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_csi_node_manifests" (list . $config) }} */ -}}
 {{- define "helm_lib_csi_node_manifests" }}
   {{- $context := index . 0 }}
@@ -13,13 +23,10 @@
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
-
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
-  {{- $driverRegistrarImage := printf "%s:%s" $context.Values.global.modulesImages.registry $driverRegistrarImageTag }}
-
-  {{- if $driverRegistrarImageTag }}
-    {{- if (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
+  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
+  {{- if $driverRegistrarImage }}
+    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -35,19 +42,21 @@ spec:
     name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "node-driver-registrar"
+      minAllowed:
+        {{- include "node_driver_registrar_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+    - containerName: "node"
+      minAllowed:
+        {{- include "node_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
     {{- end }}
----
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" $context | nindent 2 }}
-  selector:
-    matchLabels:
-      app: {{ $fullname }}
 ---
 kind: DaemonSet
 apiVersion: apps/v1
@@ -77,6 +86,9 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
+                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") }}
+                - Static
+                {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
@@ -86,7 +98,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -109,6 +121,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "node_driver_registrar_resources" $context | nindent 12 }}
+  {{- end }}
       - name: node
         securityContext:
           privileged: true
@@ -135,6 +150,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "node_resources" $context | nindent 12 }}
+  {{- end }}
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
       volumes:

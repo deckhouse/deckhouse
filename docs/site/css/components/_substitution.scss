@@ -1,0 +1,35 @@
+.substitution-intro {
+  &.intro {
+    padding-bottom: 0;
+  }
+
+  & .intro__wrap {
+    display: flex;
+  }
+
+  & .intro__row > div {
+    width: 75%;
+  }
+
+  & .button_default {
+    margin-left: 30px;
+  }
+
+  & .intro__pic {
+    width: 45%;
+  }
+}
+
+.who-already-use {
+  & .features__item.features__item_even {
+    padding: 100px 0;
+  }
+
+  & #clients {
+    padding-top: 0;
+
+    & .text_h1.features-group__title {
+      display: none;
+    }
+  }
+}

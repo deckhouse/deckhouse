@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -166,6 +168,7 @@ func (r *Runner) converge() error {
 	}
 
 	var nodeGroupsWithStateInCluster []string
+
 	for _, group := range terraNodeGroups {
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
@@ -230,7 +233,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 			return err
 		}
 
-		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name)
+		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name, ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}
@@ -255,9 +258,9 @@ type NodeGroupController struct {
 
 	stateCache dstate.Cache
 
-	nodeExternalIPs map[string]string
-	name            string
-	state           NodeGroupTerraformState
+	nodeToHost map[string]string
+	name       string
+	state      NodeGroupTerraformState
 }
 
 type NodeGroupGroupOptions struct {
@@ -295,70 +298,66 @@ func (c *NodeGroupController) WithExcludedNodes(nodesMap map[string]bool) *NodeG
 	return c
 }
 
-func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) (terraform.InfraActionHook, error) {
+func (c *NodeGroupController) populateNodeToHost() error {
+	if c.name != MasterNodeGroupName {
+		c.nodeToHost = make(map[string]string)
+		return nil
+	}
+
+	var userPassedHosts []string
+	if c.client.SSHClient != nil {
+		userPassedHosts = c.client.SSHClient.Settings.AvailableHosts()
+	}
+
+	nodesNames := make([]string, 0, len(c.state.State))
+	for nodeName := range c.state.State {
+		nodesNames = append(nodesNames, nodeName)
+	}
+
+	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	})
+
+	if err != nil {
+		return err
+	}
+
+	c.nodeToHost = nodeToHost
+
+	return nil
+}
+
+func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) terraform.InfraActionHook {
 	if c.name != MasterNodeGroupName {
 		// for not master node groups do not need readiness check
-		return &terraform.DummyHook{}, nil
+		return &terraform.DummyHook{}
 	}
 
 	// single master do no need readiness check
 	// it doesn't make sense
 	// but single master can converge for updating
 	if nodeGroup.CurReplicas() == 1 {
-		return &terraform.DummyHook{}, nil
+		return &terraform.DummyHook{}
 	}
 
-	if c.nodeExternalIPs == nil {
-		ips := make(map[string]string)
-		for nodeName, st := range nodeGroup.State {
-			r := terraform.NewRunnerFromConfig(c.config, "get-master-ip", c.stateCache).
-				WithState(st)
+	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
 
-			out, err := terraform.GetMasterNodeResult(r)
-			if err != nil {
-				return nil, err
-			}
-
-			ips[nodeName] = out.MasterIPForSSH
-		}
-
-		c.nodeExternalIPs = ips
+	confirm := func(msg string) bool {
+		return input.NewConfirmation().WithMessage(msg).Ask()
 	}
 
-	if c.client.SSHClient != nil {
-		userPassedHosts := c.client.SSHClient.Settings.AvailableHosts()
-		setFromState, err := ssh.CheckSSHHosts(userPassedHosts, c.nodeExternalIPs, func(msg string) bool {
-			return input.NewConfirmation().WithMessage(msg).Ask()
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		if setFromState {
-			hostnames := maputil.Values(c.nodeExternalIPs)
-			foundCurrentHostInNew := c.client.SSHClient.Settings.ReplaceAvailableHosts(hostnames)
-			if !foundCurrentHostInNew {
-				// we can not find current if we want to delete master
-				// in case, when we already connect to node for delete, we should reconnect to another node
-				log.InfoF("Need to restart kube proxy with new host %s ...\n", c.client.SSHClient.Settings.Host())
-				err := c.client.KubeProxy.Restart()
-				if err != nil {
-					return nil, err
-				}
-
-				log.InfoLn("Proxy was restarted")
-			}
+	if c.changeSettings.AutoApprove {
+		confirm = func(_ string) bool {
+			return true
 		}
 	}
-
-	nodesToCheck := maputil.ExcludeKeys(c.nodeExternalIPs, convergedNode)
 
 	h := controlplane.NewHook(c.client, nodesToCheck, c.config.UUID).
 		WithSourceCommandName("converge").
-		WithNodeToConverge(convergedNode)
+		WithNodeToConverge(convergedNode).
+		WithConfirm(confirm)
 
-	return h, nil
+	return h
 }
 
 func (c *NodeGroupController) Run() error {
@@ -367,7 +366,8 @@ func (c *NodeGroupController) Run() error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := getStepByNodeGroupName(nodeGroupName)
 
-	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName)
+	// we hide deckhouse logs because we always have config
+	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName, HideDeckhouseLogs)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,12 @@ func (c *NodeGroupController) Run() error {
 		return err
 	}
 
-	return c.tryDeleteNodeGroup(nodeGroup)
+	groupSpec := c.getSpec(nodeGroup.Name)
+	if groupSpec == nil {
+		return c.tryDeleteNodeGroup(nodeGroup)
+	}
+
+	return c.tryUpdateNodeTemplate(nodeGroup, groupSpec.NodeTemplate)
 }
 
 func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
@@ -415,8 +420,9 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
+			var output *terraform.PipelineOutputs
 			if nodeGroup.Name == MasterNodeGroupName {
-				_, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
+				output, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
 			} else {
 				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
 			}
@@ -424,12 +430,19 @@ func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOption
 				return err
 			}
 			count++
+			if output != nil {
+				nodeGroup.State[candidateName] = output.TerraformState
+			}
 			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
 	}
 
-	return WaitForNodesListBecomeReady(c.client, nodesToWait)
+	if nodeGroup.Name == MasterNodeGroupName {
+		return WaitForNodesListBecomeReady(c.client, nodesToWait, controlplane.NewManagerReadinessChecker(c.client))
+	}
+
+	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
 func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
@@ -445,10 +458,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 		return nil
 	}
 
-	checker, err := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
-	if err != nil {
-		return err
-	}
+	checker := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
 
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
@@ -478,6 +488,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
+		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
 		return err
 	}
 
@@ -598,6 +609,51 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
 	})
 }
+func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
+	nodeTemplatePath := []string{"spec", "nodeTemplate"}
+	for {
+		ng, err := GetNodeGroup(c.client, c.name)
+		if err != nil {
+			return err
+		}
+
+		templateInCluster, _, err := unstructured.NestedMap(ng.Object, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		diff := cmp.Diff(templateInCluster, nodeTemplate)
+		if diff == "" {
+			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
+			return nil
+		}
+
+		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
+
+		if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
+			log.InfoLn("Updating node group template was skipped")
+			return nil
+		}
+
+		err = unstructured.SetNestedMap(ng.Object, nodeTemplate, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		err = UpdateNodeGroup(c.client, nodeGroup.Name, ng)
+
+		if err == nil {
+			return nil
+		}
+
+		if errors.Is(err, ErrNodeGroupChanged) {
+			log.WarnLn(err.Error())
+			continue
+		}
+
+		return err
+	}
+}
 
 func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 	if c.changeSettings.AutoDismissDestructive {
@@ -610,23 +666,20 @@ func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOption
 		return nil
 	}
 
-	groupInConfig := false
-
-	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
-		if terranodeGroup.Name == c.name {
-			groupInConfig = true
-			break
-		}
-	}
-
-	if groupInConfig {
-		log.DebugF("Do not delete %s node group, because it present in config\n")
-		return nil
-	}
-
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
 		return DeleteNodeGroup(c.client, nodeGroup.Name)
 	})
+}
+
+func (c *NodeGroupController) getSpec(name string) *config.TerraNodeGroupSpec {
+	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+		if terranodeGroup.Name == name {
+			cc := terranodeGroup
+			return &cc
+		}
+	}
+
+	return nil
 }
 
 func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) error {
@@ -637,6 +690,10 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 
 	var allErrs *multierror.Error
 
+	if err := c.populateNodeToHost(); err != nil {
+		return err
+	}
+
 	for nodeName := range nodeGroup.State {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
@@ -645,10 +702,6 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
-			if errors.Is(err, ssh.ErrNotEnoughMastersSSHHosts) {
-				return err
-			}
-
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
 		}
 	}

@@ -1,12 +1,12 @@
 ARG BASE_ALPINE
 ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
-ARG BASE_DEBIAN
-# Note no 'v' prefix!
-ARG STATUSMAP_VERSION="0.4.2"
+ARG BASE_UBUNTU
+ARG GRAFANA_VERSION="8.5.13"
+ARG STATUSMAP_VERSION="0.5.1"
 ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
 
-# This Dockerfile is based on Dockerfile from https://github.com/grafana/grafana/blob/v8.2.3/Dockerfile
+# This Dockerfile is based on Dockerfile from https://github.com/grafana/grafana/blob/v8.5.2/Dockerfile
 # Changes:
 # - Source files are not available in the current directory.
 #   Archive is downloaded and patched using an intermediate image.
@@ -18,7 +18,8 @@ ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vona
 FROM $BASE_ALPINE as src-files
 WORKDIR /usr/src/app
 RUN apk add --no-cache patch
-RUN wget https://github.com/grafana/grafana/archive/v8.2.7.tar.gz -O - | tar -xz  --strip-components=1
+ARG GRAFANA_VERSION
+RUN wget https://github.com/grafana/grafana/archive/v${GRAFANA_VERSION}.tar.gz -O - | tar -xz  --strip-components=1
 # Extra '__interval_*' vars for prometheus datasource.
 COPY ./patches/feat_prometheus_extra_vars.patch .
 RUN patch -p1 < ./feat_prometheus_extra_vars.patch
@@ -26,7 +27,7 @@ RUN patch -p1 < ./feat_prometheus_extra_vars.patch
 COPY ./patches/fix_heatmap_thin_bars_on_ff.patch .
 RUN patch -p1 < ./fix_heatmap_thin_bars_on_ff.patch
 # Set more useful version than 'dev'. There are tabs in patch, so -l is used.
-COPY ./patches/build_go.patch .
+COPY patches/build_go.patch .
 RUN patch -p1 -l < ./build_go.patch
 # Patch to copy bundled plugins at start from ro directory to rw.
 COPY ./patches/run_sh.patch .
@@ -42,9 +43,9 @@ FROM $BASE_NODE_16_ALPINE as js-builder
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app
 RUN apk --no-cache add git
-RUN yarn install --pure-lockfile --no-progress
+RUN yarn install
 ENV NODE_ENV production
-ENV NODE_OPTIONS "--max_old_space_size=4096"
+ENV NODE_OPTIONS "--max_old_space_size=8000"
 RUN yarn build
 
 
@@ -53,15 +54,13 @@ RUN yarn build
 # Difference from original:
 # - No COPY actions: copy whole source code at start.
 # - WORKDIR $GOPATH/src/github.com/grafana/grafana is not needed to build with go modules.
-# - Get packages to fix 'missing go.sum entry for module providing package'
 # - Add 'make gen-go' to fix 'cli.go:163:12: undefined: server.Initialize'
 # - Use debian: see step 4 for details.
 FROM $BASE_GOLANG_17_BUSTER as go-builder
+ARG GRAFANA_VERSION
+ENV GRAFANA_VERSION=${GRAFANA_VERSION}
 COPY --from=src-files /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/
-# Temporary fix for v8.2.4. Try to remove for future Grafana versions.
-RUN go get github.com/hashicorp/memberlist@v0.2.4 && \
-    go get github.com/hashicorp/go-plugin@v1.4.2
 RUN make gen-go
 RUN go run build.go build
 
@@ -75,7 +74,7 @@ RUN go run build.go build
 # - Install additional plugins
 # - Install statusmap plugin
 # - Use debian because of grafana-image-renderer plugin: plugin_start_linux_amd64 binary is not working in musl environment.
-FROM $BASE_DEBIAN
+FROM $BASE_UBUNTU
 
 ENV PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
@@ -133,7 +132,7 @@ RUN echo "Fetch flant-statusmap-panel v${STATUSMAP_VERSION}" && \
 
 # Home Dashboard
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
-COPY ./web/deckhouse-platform.svg /usr/share/grafana/public/img/deckhouse-logo.svg
+COPY ./web/ /usr/share/grafana/public/img/
 
 EXPOSE 3000
 # Patched entrypoint script.

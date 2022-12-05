@@ -5,6 +5,7 @@ title: "Модуль user-authn: примеры конфигурации"
 ## Пример конфигурации модуля
 
 {% raw %}
+
 ```yaml
   userAuthn: |
     kubeconfigGenerator:
@@ -14,10 +15,11 @@ title: "Модуль user-authn: примеры конфигурации"
     publishAPI:
       enable: true
 ```
+
 {% endraw %}
 
-
 ## Примеры настройки провайдера
+
 ### GitHub
 
 ```yaml
@@ -42,6 +44,7 @@ spec:
 В том случае, если организация GitHub находится под управлением клиента, необходимо перейти в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и запросить подтверждение нажатием на `Send Request`. После попросить клиента подтвердить запрос, который придет к нему на email.
 
 ### GitLab
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -58,17 +61,17 @@ spec:
     - administrators
     - users
 ```
+
 В GitLab проекта необходимо создать новое приложение.
 
 Для этого необходимо:
 * **self-hosted**: перейти в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
 * **cloud gitlab.com**: под главной учетной записью проекта перейти в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`.
 
-**Внимание!** Не включайте опцию `Expire access tokens` для приложения, потому что это [сломает](https://github.com/dexidp/dex/issues/2316) интеграцию между Dex и Gitlab.
-
 Полученные `Application ID` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
 ### Atlassian Crowd
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -94,6 +97,7 @@ spec:
 Полученные `Application Name` и `Password` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
 ### Bitbucket Cloud
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -118,6 +122,7 @@ spec:
 Полученные `Key` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -134,12 +139,12 @@ spec:
     getUserInfo: true
 ```
 
-Для настройки аутентификации необходимо проконсультироваться с документацией
-вашего провайдера для создания приложения.
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, для [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration).
 
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
 ### LDAP
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -186,6 +191,7 @@ spec:
 Чтобы позволить подобным приложениям взаимодействовать с Dex используется Custom Resource [`DexClient`](cr.html#dexclient).
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexClient
@@ -202,12 +208,14 @@ spec:
   trustedPeers:
   - opendistro-sibling
 ```
+
 {% endraw %}
 
 После создание такого ресурса, в Dex будет зарегистрирован клиент с идентификатором (clientID) - `dex-client-myname@mynamespace`
 
 Пароль для доступа к клиенту (clientSecret) будет сохранен в секрете:
 {% raw %}
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -218,10 +226,13 @@ type: Opaque
 data:
   clientSecret: c2VjcmV0
 ```
+
 {% endraw %}
 
 ## Пример создания статического пользователя
+
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: User
@@ -236,4 +247,5 @@ spec:
   - admins
   ttl: 24h
 ```
+
 {% endraw %}

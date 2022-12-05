@@ -30,11 +30,13 @@ spec:
                 - mainNetwork
               properties:
                 numCPUs:
-                  description: Count of vCPUs to allocate to vSphere VirtualMachines.
+                  description: |
+                    Count of vCPUs to allocate to vSphere VirtualMachines.
                   example: 2
                   type: integer
                 memory:
-                  description: Memory in MiB to allocate to vSphere VirtualMachines.
+                  description: |
+                    Memory in MiB to allocate to vSphere VirtualMachines.
                   example: 8192
                   type: integer
                 rootDiskSize:
@@ -45,15 +47,18 @@ spec:
                   example: 20
                   type: integer
                 template:
-                  description: Path to the template to be cloned. Relative to the datacenter.
+                  description: |
+                    Path to the template to be cloned. Relative to the datacenter.
                   example: dev/golden_image
                   type: string
                 mainNetwork:
-                  description: Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
+                  description: |
+                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
                   example: k8s-msk-178
                   type: string
                 additionalNetworks:
-                  description: Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
+                  description: |
+                    Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
                   example:
                   - DEVOPS_32
                   - DEVOPS_50
@@ -61,17 +66,19 @@ spec:
                   items:
                     type: string
                 datastore:
-                  description: Path to a datastore in which VirtualMachines will be cloned. Relative to the datacenter.
+                  description: |
+                    Path to a Datastore in which VirtualMachines will be cloned. Relative to the datacenter.
                   example: lun-1201
                   type: string
                 disableTimesync:
                   description: >
                     Disable time synchronization in Guest VM.
 
-                    **Note:** this won't disable any NTP daemons running on the guest OS, it only disables time synchronization from ESXi.
+                    > **Note:** this won't disable any NTP daemons running on the guest OS, it only disables time synchronization from ESXi.
                   type: boolean
                 resourcePool:
-                  description: Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
+                  description: |
+                    Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
                   example: rp-2012
                   type: string
                 runtimeOptions:
@@ -80,33 +87,34 @@ spec:
                   type: object
                   properties:
                     nestedHardwareVirtualization:
-                      description: Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                      description: |
+                        Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
                       type: boolean
                     cpuShares:
                       description: |
                         The relative amount of CPU Shares for VMs to be created.
-
-                        By default: `1000` per vCPU.
                       type: integer
                     cpuLimit:
-                      description: CPU limit in MHz.
+                      description: |
+                        CPU limit in MHz.
                       type: integer
                     cpuReservation:
-                      description: CPU reservation in MHz.
+                      description: |
+                        CPU reservation in MHz.
                       type: integer
                     memoryShares:
                       description: |
                         The relative amount of Memory Shares for VMs to be created.
-
-                        By default: `10` shares per megabyte.
                       type: integer
                       maximum: 100
                       minimum: 0
                     memoryLimit:
-                      description: Memory limit in MB.
+                      description: |
+                        Memory limit in MB.
                       type: integer
                     memoryReservation:
-                      description: VM memory reservation in percent (relative to `.spec.memory`).
+                      description: |
+                        VM memory reservation in percent (relative to `.spec.memory`).
                       type: integer
                       x-doc-default: 80
                       minimum: 0

@@ -18,6 +18,8 @@ KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethto
 if bb-is-debian-version? 9 || bb-is-debian-version? 10 || bb-is-debian-version? 11; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} virt-what"
   KUBERNETES_DEPENDENCIES="${KUBERNETES_DEPENDENCIES} conntrack"
+else
+  bb-rp-install "virt-what:{{ .images.registrypackages.virtWhatDebian1151Deb9u1 }}" "conntrack:{{ .images.registrypackages.conntrackDebian1462 }}"
 fi
 
 bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}

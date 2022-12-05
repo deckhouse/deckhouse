@@ -102,16 +102,6 @@ apiVersions:
                         type: string
                       allowedPattern:
                         type: string
-                  kernel:
-                    type: object
-                    patternProperties:
-                      "generic|aws|azure|gcp|openstack|vsphere|yandex":
-                        type: object
-                        properties:
-                          desiredVersion:
-                            type: string
-                          allowedPattern:
-                            type: string
       k8s:
         type: object
         patternProperties:
@@ -137,6 +127,7 @@ apiVersions:
                   azure:
                     type: string
                   gcp:
+                    type: string
               csi:
                 type: object
                 properties:

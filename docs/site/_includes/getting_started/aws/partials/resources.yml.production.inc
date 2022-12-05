@@ -18,14 +18,14 @@ spec:
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -71,8 +71,8 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for frontend nodes
-# [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
+# [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
@@ -88,14 +88,14 @@ spec:
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.large
 ---
 # [<en>] section containing the parameters of frontend node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов frontend
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -129,14 +129,14 @@ metadata:
   name: worker
 spec:
   diskSizeGb: 30
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of worker node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов worker
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -179,6 +179,9 @@ spec:
   # [<en>] the name of the Ingress class to use with the Ingress nginx controller
   # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
@@ -193,12 +196,6 @@ spec:
   # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
-  # [<en>] maximum replicas count for the controller
-  # [<ru>] максимальное количество реплик контроллера
-  maxReplicas: 6
-  # [<en>] minimum replicas count for the controller
-  # [<ru>] минимальное количество реплик контроллера
-  minReplicas: 6
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

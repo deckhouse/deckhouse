@@ -1,5 +1,12 @@
+{{- define "istio_proxy_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
 {{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
-  {{- $revision := .Values.istio.internal.globalRevision }}
+  {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -15,7 +22,15 @@ spec:
     name: ingressgateway
   updatePolicy:
     updateMode: "Initial"
-  {{- end }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      minAllowed:
+        {{- include "istio_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 200Mi
+        cpu: 100m
+ {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -126,7 +141,11 @@ spec:
           value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
+  {{- if $.Values.istio.enableHTTP10 }}
+        - name: ISTIO_META_HTTP10
+          value: "1"
+  {{- end }}
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 15021
@@ -148,6 +167,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - mountPath: /etc/istio/proxy
           name: istio-envoy

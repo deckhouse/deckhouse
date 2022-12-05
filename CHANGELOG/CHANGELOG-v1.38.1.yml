@@ -1,0 +1,35 @@
+candi:
+  fixes:
+    - summary: Remove `master` taint if `control-plane` taint was removed in a single node installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2816
+cloud-provider-yandex:
+  fixes:
+    - summary: Disable the `csi-snapshotter` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2823
+deckhouse-controller:
+  fixes:
+    - summary: Reworked flow that checks release requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2785
+docs:
+  fixes:
+    - summary: Updated search indexing for the ability to search by OpenAPI spec parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2822
+    - summary: Istio documentation minor updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2768
+ingress-nginx:
+  fixes:
+    - summary: Increase Ingress validation webhook timeout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2818
+istio:
+  fixes:
+    - summary: Istio documentation minor updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2776
+kube-dns:
+  fixes:
+    - summary: Added "prefer_udp" to stub zones.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2774
+prometheus:
+  fixes:
+    - summary: Fixed disk retention size calculation for small disks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2825
+

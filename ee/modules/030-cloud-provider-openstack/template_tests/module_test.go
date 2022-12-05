@@ -39,41 +39,24 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
-        resolvWatcher: imagehash
-      cloudProviderOpenstack:
-        cinderCsiPlugin116: imagehash
-        cinderCsiPlugin119: imagehash
-        cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       master: 3
       worker: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.21.4
     defaultStorageClass: fastssd
 `
 
 const moduleValues = `
+  storageClass:
+    topologyEnabled: true
   internal:
     storageClasses:
       - name: fastssd
@@ -136,6 +119,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 	Context("Openstack", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.HelmRender()
 		})
@@ -246,6 +230,7 @@ monitor-delay = "2s"
 monitor-timeout = "1s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
+enable-ingress-hostname = true
 [BlockStorage]
 rescan-on-resize = true`
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
@@ -266,6 +251,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
 			f.HelmRender()
@@ -290,6 +276,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
 		})
@@ -303,6 +290,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 			f.HelmRender()
@@ -318,6 +306,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
 			f.HelmRender()

@@ -100,17 +100,14 @@ func mergeStrategy(dst, src Status) Status {
 	return dst
 }
 
-func MergeStatusSeries(size int, byId map[string]*StatusSeries, ids []string) (*StatusSeries, error) {
+// MergeStatusSeries merges status series according to the merge strategy: Down is preferred to Up,
+// Up is preferred to Unknown, anything is preferred to nodata. If no status series are passed to
+// merge, empty status series is returned. No data measn no data.
+func MergeStatusSeries(size int, sss []*StatusSeries) (*StatusSeries, error) {
 	acc := NewStatusSeries(size)
 
-	for _, id := range ids {
-		series, ok := byId[id]
-		if !ok {
-			// no data means no data
-			return NewStatusSeries(size), nil
-		}
-
-		err := acc.Merge(series)
+	for _, ss := range sss {
+		err := acc.Merge(ss)
 		if err != nil {
 			return nil, fmt.Errorf("cannot merge status series: %v", err)
 		}

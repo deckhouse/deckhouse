@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — AWS: Custom Resources"
+title: "Cloud provider — AWS: Custom Resources"
 ---
 
 <!-- SCHEMA -->

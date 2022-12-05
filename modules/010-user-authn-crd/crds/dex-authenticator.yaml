@@ -26,8 +26,8 @@ spec:
             - spec
           description: |
             After the `DexAuthenticator` object appears in the namespace, the following objects will be created:
-            * Deployment containig oauth2-proxy and redis containers
-            * Service, poining to a Deployment with an oauth2-proxy
+            * Deployment containing oauth2-proxy and redis containers
+            * Service, pointing to a Deployment with an oauth2-proxy
             * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side
             * Secrets, needed to access dex
 
@@ -79,10 +79,10 @@ spec:
                   type: array
                   description: |
                     CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                  example: ['192.168.42.0/24']
                   items:
                     type: string
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
-                    example: '192.168.42.0/24'
                 nodeSelector:
                   additionalProperties:
                     type: string

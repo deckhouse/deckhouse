@@ -1,3 +1,8 @@
+{{- define "nginx_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: nginx
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: nginx
+      minAllowed:
+        {{- include "nginx_resources" . | nindent 8}}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -23,6 +36,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: {{ .Chart.Name }}
@@ -43,7 +57,7 @@ spec:
       containers:
       - name: nginx
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.basicAuth.nginx }}"
+        image: {{ include "helm_lib_module_image" (list $ "nginx") }}
         lifecycle:
           preStop:
             exec:
@@ -75,6 +89,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "nginx_resources" . | nindent 12}}
+{{- end }}
       volumes:
       - name: nginx-config
         configMap:
@@ -83,13 +100,13 @@ spec:
         secret:
           secretName: htpasswd
           items:
-{{- range $location := .Values.basicAuth.locations }}
+{{- range $location := .Values.basicAuth.internal.locations }}
   {{- if eq $location.location "/" }}
           - key: htpasswd
             path: htpasswd
   {{- else }}
-          - key: {{ $location.location | trimPrefix "/" }}
-            path: {{ $location.location | trimPrefix "/" }}
+          - key: {{ $location.location | trimPrefix "/" | quote }}
+            path: {{ $location.location | trimPrefix "/" | quote }}
   {{- end }}
 {{- end }}
       - name: tmp

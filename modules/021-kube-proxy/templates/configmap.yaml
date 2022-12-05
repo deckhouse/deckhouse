@@ -9,6 +9,7 @@ config.conf: |
     EndpointSliceTerminatingCondition: true
     ProxyTerminatingEndpoints: true
     DaemonSetUpdateSurge: true
+    TopologyAwareHints: true
   {{- end }}
   nodePortAddresses: ["__node_address__"]
   clientConnection:

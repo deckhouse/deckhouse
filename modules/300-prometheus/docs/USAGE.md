@@ -26,6 +26,7 @@ prometheus: |
 Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` Custom Resource.
 
 ### Example of the basic PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -36,6 +37,7 @@ spec:
 ```
 
 ### Example of the expanded PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -55,13 +57,12 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-
 ## Connecting Prometheus to an external Grafana instance
 
 Each `ingress-nginx-controller` has certificates that can be used to connect to Prometheus. All you need is to create an additional `Ingress` resource.
 
 > For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
-
+>
 > Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
 
 ```yaml
@@ -71,16 +72,17 @@ metadata:
   name: my-prometheus-api
   namespace: d8-monitoring
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
+    nginx.ingress.kubernetes.io/app-root: /graph
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
 spec:
+  ingressClassName: nginx
   rules:
   - host: prometheus-api.example.com
     http:
@@ -106,6 +108,7 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
+
 Next, you only need to add the data source to Grafana:
 
 **Set `https://prometheus-api.<cluster-domain>` as the URL**.
@@ -154,7 +157,9 @@ subjects:
   name: app
   namespace: default
 ```
+
 Next, define the following job containing the `curl` request:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -178,4 +183,84 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 ```
+
 The `job` must complete successfully.
+
+## Sending alerts to Telegram
+
+Prometheus-operator does not support sending alerts to Telegram directly, so Alertmanager is configured to send alerts via a webhook and deploy the application, which sends the received data to Telegram.
+
+Deploy application:
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: telegram-alertmanager
+   namespace: d8-monitoring
+   labels:
+     app: telegram
+spec:
+   template:
+     metadata:
+       name: telegram-alertmanager
+       labels:
+         app: telegram
+     spec:
+       containers:
+         - name: telegram-alertmanager
+           image: janwh/alertmanager-telegram
+           ports:
+             - containerPort: 8080
+           env:
+             - name: TELEGRAM_CHAT_ID
+               value: "-30490XXXXX"
+             - name: TELEGRAM_TOKEN
+               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
+   replicas: 1
+   selector:
+     matchLabels:
+       app: telegram
+---
+apiVersion: v1
+kind: Service
+metadata:
+ labels:
+   app: telegram
+ name: telegram-alertmanager
+ namespace: d8-monitoring
+spec:
+ type: ClusterIP
+ selector:
+   app: telegram
+ ports:
+   - protocol: TCP
+     port: 8080
+```
+
+`TELEGRAM_CHAT_ID` and `TELEGRAM_TOKEN` must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
+
+Deploy CRD CustomAlertManager:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  internal:
+    receivers:
+    - name: webhook
+      webhookConfigs:
+      - sendResolved: true
+        url: http://telegram-alertmanager:8080/alerts
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: webhook
+      repeatInterval: 12h
+  type: Internal
+```

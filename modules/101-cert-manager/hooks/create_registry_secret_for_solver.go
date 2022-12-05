@@ -31,9 +31,6 @@ import (
 )
 
 const (
-	// todo remove with legacy cert-manager
-	challengesLegacySnapshot = "challenges_legacy"
-
 	challengesSnapshot = "challenges"
 	secretsSnapshot    = "registry_secrets_namespaces"
 	saSnapshot         = "sa_namespaces"
@@ -54,13 +51,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       challengesSnapshot,
 			ApiVersion: "acme.cert-manager.io/v1",
-			Kind:       "Challenge",
-			FilterFunc: applyNamespaceFilter,
-		},
-		// todo remove with legacy cert-manager
-		{
-			Name:       challengesLegacySnapshot,
-			ApiVersion: "certmanager.k8s.io/v1alpha1",
 			Kind:       "Challenge",
 			FilterFunc: applyNamespaceFilter,
 		},
@@ -201,8 +191,6 @@ func handleChallenge(input *go_hook.HookInput) error {
 	registryCfg := d8RegistrySnap[0].(registrySecret).Config
 
 	challengesNss := set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
-	legacyChallengesNss := set.NewFromSnapshot(input.Snapshots[challengesLegacySnapshot])
-	challengesNss.AddSet(legacyChallengesNss)
 
 	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots[saSnapshot])
 

@@ -16,8 +16,24 @@ type IstioOperator struct {
 
 	// Spec defines the behavior of a node group.
 	Spec IstioOperatorSpec `json:"spec"`
+
+	Status IstioOperatorStatus `json:"status"`
 }
 
 type IstioOperatorSpec struct {
 	Revision string `json:"revision"`
+}
+
+type IstioOperatorStatus struct {
+	Status          string                       `json:"status"`
+	ComponentStatus IstioOperatorComponentStatus `json:"componentStatus"`
+}
+
+type IstioOperatorComponentStatus struct {
+	Pilot IstioOperatorComponentStatusDetails `json:"Pilot"`
+}
+
+type IstioOperatorComponentStatusDetails struct {
+	Error  string `json:"error"`
+	Status string `json:"status"`
 }

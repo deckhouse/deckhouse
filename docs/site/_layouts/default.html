@@ -16,9 +16,11 @@
     {% include header.html %}
     {{ content }}
   </div>
-  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
+  {% include footer.html %}
 
-  {% include request_access_modal.html %}
+  {% include form_in_modal.html mode="request_access" %}
+  {% include form_in_modal.html mode="request_callback" %}
+  {% include form_in_modal.html mode="request_education" %}
 </body>
 {% if site.google_analytics %}
 {% include google_analytics.html %}

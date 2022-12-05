@@ -1,0 +1,5 @@
+docs:
+  fixes:
+    - summary: Updated the Supported OS versions list format.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1126
+

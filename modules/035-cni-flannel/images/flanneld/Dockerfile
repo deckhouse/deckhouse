@@ -1,6 +1,6 @@
 # Based on https://github.com/flannel-io/flannel/blob/master/Dockerfile.amd64
 ARG BASE_ALPINE
-FROM quay.io/coreos/flannel:v0.13.1-rc2-amd64@sha256:dd85a6f06d285ef8c82ec86af5045bf7bad701f77528c15d8325152293059c22 as base
+FROM quay.io/coreos/flannel:v0.15.1-amd64@sha256:a3ebdc7e5e44d1ba3ba8ccd8399e81444102bd35f5f480997a637a42d1e1da6b as base
 
 FROM $BASE_ALPINE
 

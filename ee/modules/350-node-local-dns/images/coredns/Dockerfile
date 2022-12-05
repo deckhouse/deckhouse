@@ -1,13 +1,17 @@
 # Based on https://github.com/coredns/coredns/blob/master/Dockerfile
 ARG BASE_ALPINE
-FROM coredns/coredns:1.6.9@sha256:40ee1b708e20e3a6b8e04ccd8b6b3dd8fd25343eab27c37154946f232649ae21 as artifact
+FROM coredns/coredns:1.9.3@sha256:bdb36ee882c13135669cfc2bb91c808a33926ad1a411fee07bd2dc344bb8f782 as artifact
 
 ARG BASE_ALPINE
 FROM $BASE_ALPINE
 COPY --from=artifact /coredns  /coredns
 COPY start.sh /
+COPY readiness.sh /
 COPY liveness.sh /
-COPY stop.sh /
-RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep lockfile-progs
+RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep
+
+COPY iptables-wrapper-installer.sh /
+RUN /iptables-wrapper-installer.sh
+
 RUN mkdir /etc/coredns
 ENTRYPOINT ["/coredns"]

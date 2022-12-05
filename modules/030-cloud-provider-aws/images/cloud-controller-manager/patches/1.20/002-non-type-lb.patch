@@ -5,7 +5,7 @@ index c74eef1..da40e86 100644
 @@ -293,6 +293,13 @@ var backendProtocolMapping = map[string]string{
  	"tcp":   "ssl",
  }
- 
+
 +var backendProtocolToAwsEnumMapping = map[string]string{
 +	"tcp":   elbv2.ProtocolEnumTcp,
 +	"tls":   elbv2.ProtocolEnumTls,
@@ -19,7 +19,7 @@ index c74eef1..da40e86 100644
 @@ -3811,7 +3818,7 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  			continue
  		}
- 
+
 -		if isNLB(annotations) {
 +		if isNLB(annotations) || isNone(annotations) {
  			portMapping := nlbPortMapping{
@@ -61,11 +61,11 @@ index c74eef1..da40e86 100644
 @@ -3867,6 +3889,59 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  		internalELB = true
  	}
- 
+
 +	if isNone(annotations) {
 +		if path, healthCheckNodePort := servicehelpers.GetServiceHealthCheckPathPort(apiService); path != "" {
 +			for i := range v2Mappings {
-+				v2Mappings[i].HealthCheckConfig.Port = string(healthCheckNodePort)
++				v2Mappings[i].HealthCheckConfig.Port = strconv.Itoa(int(healthCheckNodePort))
 +				v2Mappings[i].HealthCheckConfig.Path = path
 +				v2Mappings[i].HealthCheckConfig.Protocol = elbv2.ProtocolEnumHttp
 +			}
@@ -150,7 +150,7 @@ index c74eef1..da40e86 100644
 +			}, true, nil
 +		}
 +	}
- 
+
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
 @@ -4447,6 +4550,25 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
@@ -176,7 +176,7 @@ index c74eef1..da40e86 100644
 +
 +		return nil
 +	}
- 
+
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
 @@ -4638,6 +4760,10 @@ func (c *Cloud) UpdateLoadBalancer(ctx context.Context, clusterName string, serv
@@ -206,7 +206,7 @@ index 0fa0115..de77f3d 100644
 @@ -74,6 +74,13 @@ func isNLB(annotations map[string]string) bool {
  	return false
  }
- 
+
 +func isNone(annotations map[string]string) bool {
 +	if annotations[ServiceAnnotationLoadBalancerType] == "none" {
 +		return true
@@ -220,7 +220,7 @@ index 0fa0115..de77f3d 100644
 @@ -131,6 +138,21 @@ func getKeyValuePropertiesFromAnnotation(annotations map[string]string, annotati
  	return additionalTags
  }
- 
+
 +func (c *Cloud) describeTargetGroup(tgName string) (*elbv2.TargetGroup, error) {
 +	response, err := c.elbv2.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{})
 +	if err != nil {
@@ -241,7 +241,7 @@ index 0fa0115..de77f3d 100644
  	loadBalancer, err := c.describeLoadBalancerv2(loadBalancerName)
 @@ -561,7 +583,7 @@ func (c *Cloud) deleteListenerV2(listener *elbv2.Listener) error {
  }
- 
+
  // ensureTargetGroup creates a target group with a set of instances.
 -func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName types.NamespacedName, mapping nlbPortMapping, instances []string, vpcID string, tags map[string]string) (*elbv2.TargetGroup, error) {
 +func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName types.NamespacedName, mapping nlbPortMapping, instances []string, vpcID string, tags map[string]string, tgName ...string) (*elbv2.TargetGroup, error) {
@@ -251,7 +251,7 @@ index 0fa0115..de77f3d 100644
 @@ -581,6 +603,10 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  			// HealthCheckTimeoutSeconds:  Currently not configurable, 6 seconds for HTTP, 10 for TCP/HTTPS
  		}
- 
+
 +		if len(tgName) > 0 {
 +			input.Name = aws.String(tgName[0])
 +		}
@@ -262,7 +262,7 @@ index 0fa0115..de77f3d 100644
 @@ -628,6 +654,20 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  		return result.TargetGroups[0], nil
  	}
- 
+
 +	{
 +		if *targetGroup.Protocol != mapping.TrafficProtocol {
 +			_, err := c.elbv2.DeleteTargetGroup(&elbv2.DeleteTargetGroupInput{TargetGroupArn: targetGroup.TargetGroupArn})

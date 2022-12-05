@@ -7,7 +7,6 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
@@ -40,6 +39,7 @@ metadata:
       }
     nginx.ingress.kubernetes.io/affinity: cookie
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -77,6 +77,7 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 spec:
+  certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana") }}

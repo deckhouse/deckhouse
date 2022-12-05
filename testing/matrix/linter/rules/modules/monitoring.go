@@ -46,7 +46,7 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 	switch moduleName {
 	// These modules deploy common rules and dashboards to the cluster according to their configurations.
 	// That's why they have custom monitoring templates.
-	case "340-extended-monitoring", "340-monitoring-applications":
+	case "340-extended-monitoring", "030-cloud-provider-yandex":
 		return errors.EmptyRuleError
 	}
 
@@ -103,7 +103,12 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 
 	var res bool
 	for _, namespace := range []string{moduleNamespace, "d8-system", "d8-monitoring"} {
-		desiredContent := fmt.Sprintf(desiredContentBuilder.String(), namespace)
+		var desiredContent string
+		if rulesEx {
+			desiredContent = fmt.Sprintf(desiredContentBuilder.String(), namespace)
+		} else {
+			desiredContent = desiredContentBuilder.String()
+		}
 		res = res || desiredContent == string(content)
 	}
 
@@ -113,25 +118,10 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 			moduleLabel(moduleName),
 			searchingFilePath,
 			"The content of the 'templates/monitoring.yaml' should be equal to:\n%s\nGot:\n%s",
-			fmt.Sprintf(desiredContentBuilder.String(), "YOUR NAMESAPCE TO DEPLOY RULES: d8-monitoring, d8-system or module namespaces"),
+			fmt.Sprintf(desiredContentBuilder.String(), "YOUR NAMESPACE TO DEPLOY RULES: d8-monitoring, d8-system or module namespaces"),
 			string(content),
 		)
 	}
 
 	return errors.EmptyRuleError
-}
-
-func compareContent(content, namespace string, rules, dashboards bool) bool {
-	desiredContentBuilder := strings.Builder{}
-	if dashboards {
-		desiredContentBuilder.WriteString("{{- include \"helm_lib_grafana_dashboard_definitions\" . }}\n")
-	}
-
-	if rules {
-		desiredContentBuilder.WriteString(
-			"{{- include \"helm_lib_prometheus_rules\" (list . %q) }}\n",
-		)
-	}
-
-	return content == desiredContentBuilder.String()
 }

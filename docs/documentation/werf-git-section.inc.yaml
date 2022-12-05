@@ -7,7 +7,7 @@
   excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager/crds/mcm.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 - add: /modules
-  to: /srv/jekyll-data/documentation/_data/bundles
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
   owner: jekyll
   group: jekyll
   stageDependencies:
@@ -19,8 +19,22 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['config-values.yaml','doc-ru-config-values.yaml']
-{{- if or (eq .Env "EE") (eq .Env "FE") }}
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+- add: /candi/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+{{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+- add: /ee/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
 - add: /ee/modules
   to: /src/ee/modules
   owner: jekyll
@@ -28,7 +42,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/docs/internal/','110-istio/crds']
+  excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager']
 - add: /ee/modules/110-istio/crds
   to: /src/ee/modules/110-istio/crds
   owner: jekyll
@@ -54,10 +68,25 @@
   to: /src/ee/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/vsphere/openapi
+  to: /src/ee/modules/030-cloud-provider-vsphere/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 {{- end }}
-{{- if eq .Env "FE" }}
+{{- if or (eq .Env "FE") (eq .Env "development")  }}
+- add: /ee/fe/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
 - add: /ee/fe/modules
   to: /src/fe/modules
   owner: jekyll
@@ -195,6 +224,12 @@
   - verticalpodautoscalercheckpoint.yaml
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /dhctl/pkg/config/base.go
+  to: /srv/jekyll-data/documentation/_data/dhctl-base.go
   owner: jekyll
   group: jekyll
   stageDependencies:

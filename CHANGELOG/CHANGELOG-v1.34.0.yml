@@ -1,0 +1,284 @@
+candi:
+  features:
+    - summary: >-
+        Configured graceful node shutdown to 2 minutes by default. This value may be overriden in
+        some cloud providers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1887
+    - summary: Add 5.4 kernel support for centos 7
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1856
+    - summary: New Kuberenetes patch versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1724
+      impact: Restart of Kubernetes control plane components.
+  fixes:
+    - summary: Fixed the applying of disk size for CloudPermanent nodes in `YandexClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1900
+    - summary: Fix the `031_install_containerd` step  — don't stop kubelet if it isn't running.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1684
+cert-manager:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Remove extra-line cut from template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1786
+    - summary: Respect the global IngressClass in the `letsencrypt` ClusterIssuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1750
+ci:
+  features:
+    - summary: Move variables to werf
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1897
+    - summary: Add a checkbox about unit tests and how one can check the changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1878
+cloud-provider-azure:
+  features:
+    - summary: Provide new default StorageClasses for disks large than 4 TiB.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1652
+  fixes:
+    - summary: tests fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1963
+cloud-provider-yandex:
+  features:
+    - summary: Validate `serviceAccountJSON`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1904
+    - summary: Move NAT-instance to `ru-central1-a` for new instances.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1592
+      impact: >-
+        The `ru-central1-c` **Yandex.cloud** zone was
+        [deprecated](https://cloud.yandex.com/en/docs/overview/concepts/ru-central1-c-deprecation).
+
+        For new clusters NAT-instance will be created in `ru-central1-a` zone. For old instances you
+        should add to `withNATInstance.natInstanceInternalAddress` (you can get address from
+        Yandex.Cloud console) 
+
+        and `withNATInstance.internalSubnetID` (you can get address using command `kubectl -n
+        d8-system exec -it deploy/deckhouse -- deckhouse-controller module values
+        cloud-provider-yandex -o json | jq -r
+        '.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap["ru-central1-c"]'`)
+        to prevent NAT-instance recreation during a converge process.
+cni-cilium:
+  features:
+    - summary: cni-cilium set as default cni (replaces cni-flannel) for OpenStack and vSphere.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1712
+control-plane-manager:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+deckhouse:
+  features:
+    - summary: Add collect debug info command
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1787
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Change DeckhouseUpdating Prometheus rule severity_level to avoid alert deferring
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1929
+deckhouse-controller:
+  fixes:
+    - summary: Remove precautions from entrypoint.sh to make it compatible with container restarts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1916
+    - summary: Display help when deckhouse-controller is invoked without arguments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1861
+dhctl:
+  features:
+    - summary: >-
+        Add confirmation for waiting Deckhouse controller readiness and control-plane node
+        readiness.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1629
+  fixes:
+    - summary: >-
+        Do not try to remove the `dhctl.deckhouse.io/node-for-converge` label if the node object was
+        deleted during converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1930
+    - summary: Exclude password authentication check while connecting to host.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1629
+docs:
+  features:
+    - summary: Add targets for documentation to the Makefile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1923
+    - summary: Add docs for an air-gapped registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1852
+    - summary: Disaster recovery etcd documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1722
+    - summary: Script for installing Deckhouse in kind on macOs or Debian based distros.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1565
+  fixes:
+    - summary: Updates the Getting Started according to the Windows nuances.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1837
+    - summary: Updated step 2 of the Getting Started (overview of the installation process).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1817
+    - summary: Fix markdown markup in documents to match a style.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1794
+    - summary: Fix markdown formatting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1788
+extended-monitoring:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Fixed PVC usage alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1868
+global-hooks:
+  fixes:
+    - summary: >-
+        Remove `csi-not-bootstrapped` taint only after at least one CSI driver is properly
+        registered in the CSINode object.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1663
+helm_lib:
+  fixes:
+    - summary: Tolerate evictions for cluster components on node scaling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1912
+      impact: >-
+        All controllers with the all-node toleration strategy (master node components, system
+        daemonsets) will be restarted.
+ingress-nginx:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Upgrade 0.49 ingress controller to fix out-of-bounds temporary error
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1945
+      impact: IngressNginxController of the version 0.49 will be restarted
+    - summary: Refactor startup hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1888
+    - summary: Fixed wildcard `vhost` label in `ingress-controller` metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1630
+      impact: Ingress controller Pods will be restarted.
+kube-dns:
+  fixes:
+    - summary: >-
+        Updated CoreDNS to v1.9.3. With patches to persuade coredns to respect deprecated Service
+        annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints`. Alerts the user to the
+        need for migrating from deprecated annotation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1952
+linstor:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+log-shipper:
+  features:
+    - summary: Added new logs destination - Vector
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1730
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Fix DaemonSet alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1912
+monitoring-applications:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+monitoring-kubernetes:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Fixed PVC usage Grafana dashboards.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1868
+monitoring-kubernetes-control-plane:
+  features:
+    - summary: Added dashboard showing deprecated APIs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1867
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+node-local-dns:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Updated CoreDNS to v1.9.3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1952
+node-manager:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Fix bootstrap script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1933
+    - summary: Fix unbound variable bootstrap_job_log_pid when bootstrap static-node
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1917
+    - summary: >-
+        Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m
+        instead of 2m)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1746
+okmeter:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+operator-prometheus:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+prometheus:
+  features:
+    - summary: Do not collect some deprecated and unneeded metrics
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1925
+    - summary: >-
+        Validate `GrafanaDashboardDefinition` definition field, and add a readiness probe for the
+        Grafana dashboard provisioner.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1904
+    - summary: Added ability to deploy in-cluster Alertmanager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+      impact: >-
+        Modified existing alerts:
+
+        * Removed predefined groups in Polk.
+
+        * Added group auto-creation in Polk.
+
+        * Added the `for` parameter for all alerts.
+
+        * Removed the `plk_pending_until_firing_for` annotation from all alerts. LGTM as far as can
+        evaluate alerts.
+  fixes:
+    - summary: Fix prometheus template alerting section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1781
+snapshot-controller:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+terraform-manager:
+  features:
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+testing:
+  features:
+    - summary: Force to use revisionHistoryLimit<=2 for all deployments controlled by Deckhouse
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1789
+    - summary: Add linter for markdown files.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1599
+  fixes:
+    - summary: Fixed DNS servers use in vSphere's e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1971
+tools:
+  features:
+    - summary: Add the `regcopy` tool to upload base images with modifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1858
+    - summary: Add scripts for an air-gapped registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1852
+upmeter:
+  features:
+    - summary: Added basic probe for cert-manager in `control-plane` availability group.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1760
+    - summary: Added dynamic probes for Nginx Ingress Controller Pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1701
+    - summary: >-
+        Added dynamic probes for the violation of the minimal expected count of nodes in
+        `CloudEphemeral` node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1701
+    - summary: Removed the `plk_pending_until_firing_for` annotation from all alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1446
+  fixes:
+    - summary: Fix duplicating groups in alerting rules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1890
+user-authn:
+  features:
+    - summary: Make the kubelogin tab active by default.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1827
+  fixes:
+    - summary: Refactor Dex probes, and collect metrics from Dex.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1935
+vertical-pod-autoscaler:
+  features:
+    - summary: added daemonset eviction support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1700
+

@@ -31,8 +31,10 @@ function modify_user() {
 
   usermod -G "$extra_groups" "$user_name"
 
-  if ! grep -q -F "$password_hash" /etc/shadow; then
-      usermod -p "$password_hash" "$user_name"
+  local current_hash="$(getent shadow "$user_name" | awk -F ":" '{print $2}')"
+  if [ "$password_hash" != "$current_hash" ]; then
+    usermod -p "$password_hash" "$user_name"
+    echo "Password hash was updated for user '$user_name'"
   fi
 }
 

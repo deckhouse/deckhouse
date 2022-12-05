@@ -17,15 +17,27 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # Find section in the project structure
-    - name: Find possibe sections in dirs
+    - name: Find possible sections in project structure
       id: sections
       uses: actions/github-script@v5
       with:
         result-encoding: string
         script: |
-          const findSections = require('./.github/scripts/js/changelog-find-sections.js')
-          return findSections().join("\n")
+          const { find } = require('./.github/scripts/js/changelog-find-sections.js')
+          const rootDirs = [
+            ".",
+            "modules",
+            "ee/modules",
+            "ee/fe/modules"
+          ]
+          const excludePatterns = [
+            "^\\.",
+            "CHANGELOG",
+            "^ee$",
+            "^modules$"
+          ]
+          const sections = find(rootDirs, excludePatterns)
+          return sections.join("\n")
 
     - name: Collect Changelog
       id: changelog
@@ -48,7 +60,7 @@ runs:
       run: |
         mkdir -p ./CHANGELOG
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
-        cat > "$filename" <<EOF
+        cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.release_yaml }}
         EOF
 
@@ -58,7 +70,7 @@ runs:
       shell: bash
       run: |
         filename='./CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md'
-        cat > "$filename" <<EOF
+        cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.branch_markdown }}
         EOF
 
@@ -66,12 +78,18 @@ runs:
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3.10.1
       with:
-        commit-message: Re-generate changelog
+        commit-message: |
+          Re-generate changelog ${{ steps.args.outputs.milestone_title }}
+
+          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         base: main
         branch: changelog/${{ steps.args.outputs.milestone_title }}
         milestone: ${{ steps.args.outputs.milestone_number }}
         title: Changelog ${{ steps.args.outputs.milestone_title }}
-        body: ${{ steps.changelog.outputs.release_markdown }}
+        body: |
+          ${{ steps.changelog.outputs.release_markdown }}
+
+          See [CHANGELOG ${{ steps.changelog.outputs.minor_version }}](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) for more details.
         labels: changelog, auto
         token: ${{ inputs.token }}
         delete-branch: true

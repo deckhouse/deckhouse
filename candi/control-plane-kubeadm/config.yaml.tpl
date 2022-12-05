@@ -1,4 +1,19 @@
+{{- $featureGates := "EndpointSliceTerminatingCondition=true" }}
+{{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "TTLAfterFinished=true" | join "," }}
+{{- end }}
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
+{{- end }}
+
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
@@ -42,12 +57,7 @@ apiServer:
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "TTLAfterFinished=true"
-{{- end }}
+    feature-gates: {{ $featureGates | quote }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -82,6 +92,9 @@ apiServer:
   {{- end -}}
   {{ if .apiserver.authnWebhookURL }}
     authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
+  {{- end -}}
+  {{ if .apiserver.authnWebhookCacheTTL }}
+    authentication-token-webhook-cache-ttl: {{.apiserver.authnWebhookCacheTTL | quote }}
   {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
@@ -119,15 +132,12 @@ controllerManager:
   extraArgs:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "TTLAfterFinished=true"
-{{- end }}
+    feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -152,14 +162,11 @@ scheduler:
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
 {{- end }}
     profiling: "false"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "DefaultPodTopologySpread=true"
-{{- end }}
+    feature-gates: {{ $featureGates | quote }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}
@@ -168,20 +175,41 @@ etcd:
     extraArgs:
       # without this parameter, when restarting etcd, and /var/lib/etcd/member does not exist, it'll start with a new empty cluster
       initial-cluster-state: existing
+      experimental-initial-corrupt-check: "true"
+      {{- if hasKey .etcd "quotaBackendBytes" }}
+      quota-backend-bytes: {{ .etcd.quotaBackendBytes | quote }}
+      metrics: extensive
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
 ---
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: InitConfiguration
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+patches:
+  directory: /etc/kubernetes/deckhouse/kubeadm/patches/
+{{- end }}
 localAPIEndpoint:
 {{- if hasKey . "nodeIP" }}
   advertiseAddress: {{ .nodeIP | quote }}
 {{- end }}
   bindPort: 6443
 ---
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: JoinConfiguration
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+patches:
+  directory: /etc/kubernetes/deckhouse/kubeadm/patches/
+{{- end }}
 discovery:
   file:
     kubeConfigPath: "/etc/kubernetes/admin.conf"

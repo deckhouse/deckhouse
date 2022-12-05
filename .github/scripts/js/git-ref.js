@@ -1,3 +1,14 @@
+// Copyright 2022 Flant JSC
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//     http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /**
  * Helpers to work with Git refs.
  */
@@ -16,9 +27,11 @@ const parseGitRef = (ref) => {
   let majorMinor = '';
   let description = '';
   let isDeveloperTag = false;
+  let refSlug = '';
 
   if (ref.startsWith('refs/heads')) {
-    branchName = ref.replace('refs/heads/', '');
+    branchName = ref.replace('refs/heads/', '')
+    refSlug = branchName
     if (branchName === 'main') {
       description = 'default branch';
     }
@@ -29,7 +42,8 @@ const parseGitRef = (ref) => {
       majorMinor = 'v'+matches[1]; // vX.Y
     }
   } else if (ref.startsWith('refs/tags/')) {
-    tagName = ref.replace('refs/tags/', '');
+    tagName = ref.replace('refs/tags/', '')
+    refSlug = tagName
 
     let matches = fullMatchReleaseTag(tagName)
     if (matches) {
@@ -65,13 +79,15 @@ const parseGitRef = (ref) => {
     tagMajorMinor: tagName ? majorMinor : '',
     isTag: !!tagName,
     isDeveloperTag,
+    ref,
+    refSlug,
   };
 };
 module.exports.parseGitRef = parseGitRef;
 
 // vX.Y.Z
 const semVerReleaseTagNameFullMatch = /^(v\d+\.\d+)\.\d+$/
-const semVerReleaseTagName = /(v\d+\.\d+)\.\d+/
+const semVerReleaseTagName = /v(\d+\.\d+)\.\d+/
 // test-vX.Y.Z
 const semVerTestTagNameFullMatch = /^test-v?(\d+\.\d+)\.\d+/
 // release-X.Y

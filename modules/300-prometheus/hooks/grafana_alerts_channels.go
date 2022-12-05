@@ -56,7 +56,7 @@ type GrafanaAlertsChannelsConfig struct {
 	Notifiers []*GrafanaAlertsChannel `json:"notifiers"`
 }
 
-func getChannelSettings(notifyChannel *v1alpha1.GrafanaAlertsChannel) (settings map[string]interface{}, secureSettings map[string]interface{}, err error) {
+func getChannelSettings(notifyChannel *v1alpha1.GrafanaAlertsChannel) (settings map[string]interface{}, secureSettings map[string]interface{}) {
 	settings = make(map[string]interface{})
 	secureSettings = make(map[string]interface{})
 
@@ -71,7 +71,7 @@ func getChannelSettings(notifyChannel *v1alpha1.GrafanaAlertsChannel) (settings 
 		}
 	}
 
-	return settings, secureSettings, nil
+	return settings, secureSettings
 }
 
 func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -87,10 +87,7 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 		return nil, fmt.Errorf("unsupported GrafanaAlertsChannel type %s", notifyChannel.Spec.Type)
 	}
 
-	settings, securitySettings, err := getChannelSettings(&notifyChannel)
-	if err != nil {
-		return nil, err
-	}
+	settings, securitySettings := getChannelSettings(&notifyChannel)
 
 	return &GrafanaAlertsChannel{
 		OrgID:                 1,

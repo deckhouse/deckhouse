@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,7 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -38,6 +39,7 @@ type SmokeMiniAvailable struct {
 	DnsTimeout  time.Duration
 	HttpTimeout time.Duration
 	Logger      *log.Entry
+	Access      kubernetes.Access
 }
 
 func (s SmokeMiniAvailable) Checker() check.Checker {
@@ -47,7 +49,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 		timeout: s.DnsTimeout,
 	}
 
-	// timouts are maintained in request context
+	// timeouts are maintained in request context
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    5,
@@ -63,6 +65,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 		path:        s.Path,
 		httpTimeout: s.HttpTimeout,
 		client:      client,
+		access:      s.Access,
 
 		logger: s.Logger,
 	}
@@ -77,12 +80,9 @@ type smokeMiniChecker struct {
 	path        string
 	httpTimeout time.Duration
 	client      *http.Client
+	access      kubernetes.Access
 
 	logger *log.Entry
-}
-
-func (c *smokeMiniChecker) BusyWith() string {
-	return "requesting smoke-mini " + c.path
 }
 
 func (c *smokeMiniChecker) Check() check.Error {
@@ -170,6 +170,7 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
+	req.Header.Set("User-Agent", c.access.UserAgent())
 	if err != nil {
 		return err
 	}
@@ -200,26 +201,20 @@ func (d DnsAvailable) Checker() check.Checker {
 		timeout: d.DnsTimeout,
 	}
 	return &dnsChecker{
-		domain:   d.Domain,
 		lookuper: lkp,
-		logger:   d.Logger,
+		logger:   d.Logger.WithField("domain", d.Domain),
 	}
 }
 
 type dnsChecker struct {
 	lookuper lookuper
-	domain   string
 	logger   *log.Entry
-}
-
-func (c *dnsChecker) BusyWith() string {
-	return "resolving " + c.domain
 }
 
 func (c *dnsChecker) Check() check.Error {
 	_, err := c.lookuper.Lookup()
 	if err != nil {
-		return check.ErrFail("cannot resolve %s", c.domain)
+		return check.ErrFail("resolve: %w", err)
 	}
 	return nil
 }
@@ -254,12 +249,12 @@ func (l *nameLookuper) Lookup() ([]string, error) {
 // slice of IPs and nil error.
 func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, error) {
 	// lookup
-	ips, err := util.LookupIPs(name, resolveTimeout)
+	ips, err := lookupIPs(name, resolveTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("resolve '%s': %v", name, err)
+		return nil, fmt.Errorf("cannot resolve '%s': %v", name, err)
 	}
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("resolve get 0 IPs for '%s'", name)
+		return nil, fmt.Errorf("resolved no addresses for '%s'", name)
 	}
 
 	// shuffle
@@ -267,4 +262,34 @@ func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, e
 	rand.Shuffle(len(ips), func(i, j int) { ips[i], ips[j] = ips[j], ips[i] })
 
 	return ips, nil
+}
+
+func lookupIPs(domain string, timeout time.Duration) (ips []string, err error) {
+	// If hostname is ip return it as is
+	if isIP(domain) {
+		ips = []string{domain}
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	resolver := net.Resolver{}
+	addrs, err := resolver.LookupIPAddr(ctx, domain)
+	if err != nil {
+		return
+	}
+
+	for _, addr := range addrs {
+		ips = append(ips, addr.IP.String())
+	}
+	return ips, nil
+}
+
+func isIP(hostname string) bool {
+	input := net.ParseIP(hostname)
+	if input == nil || (input.To4() == nil && input.To16() == nil) {
+		return false
+	}
+	return true
 }

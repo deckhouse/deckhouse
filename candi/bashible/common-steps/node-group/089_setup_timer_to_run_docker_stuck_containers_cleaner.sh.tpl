@@ -39,7 +39,7 @@ function echo_err() {
 }
 
 function get_stuck_containers() {
-  sed_pattern='s/^.+Container ([a-z0-9]{64}) failed to exit within [0-9]+ seconds of signal 15 - using the force.+$/\1/p'
+  sed_pattern='s/^.+Container ([a-z0-9]{64}) failed to exit within [0-9]+ seconds of signal [0-9]+ - using the force.+$/\1/p'
   journalctl --since "$log_period_minutes min ago" -u docker.service | \
     sed -nr "$sed_pattern" | \
     sort | \
@@ -74,11 +74,12 @@ function main() {
   parse_arguments "$@"
 
   for container_id in $(get_stuck_containers); do
-    if ! image="$(docker container inspect "$container_id" -f '{{.Config.Image}}' 2> /dev/null)"; then
-      echo_err "Container $container_id was not found or it was remove on previous run"
+    if ! image_sha="$(docker container inspect "$container_id" -f '{{`{{.Config.Image}}`}}' 2> /dev/null)"; then
+      echo_err "Container $container_id was not found or it was removed on previous run"
       continue
     fi
 
+    image="$(docker image inspect "$image_sha" -f '{{`{{index .RepoTags 0}}`}}')"
     echo "Container $container_id has image $image"
 
     if ! [[ "$image" =~ $image_pattern ]]; then

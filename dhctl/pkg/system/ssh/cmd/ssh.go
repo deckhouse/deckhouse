@@ -76,6 +76,7 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "ServerAliveInterval=7",
 		"-o", "ServerAliveCountMax=2",
 		"-o", "ConnectTimeout=5",
+		"-o", "PasswordAuthentication=no",
 	}
 
 	if s.Session.ExtraArgs != "" {

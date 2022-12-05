@@ -33,6 +33,7 @@ type Client interface {
 	clientv3.Cluster
 	clientv3.KV
 	clientv3.Watcher
+	clientv3.Maintenance
 }
 
 func New(endpoints []string, options ...Option) (Client, error) {

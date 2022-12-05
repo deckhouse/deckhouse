@@ -1,3 +1,7 @@
+{{- define "admission_controller_resources" }}
+cpu: 25m
+memory: 100Mi
+{{- end }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -12,6 +16,14 @@ spec:
     name: vpa-admission-controller
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: admission-controller
+      minAllowed:
+        {{- include "admission_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -21,6 +33,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: vpa-admission-controller
@@ -43,7 +56,7 @@ spec:
       containers:
       - name: admission-controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.admissionController }}"
+        image: {{ include "helm_lib_module_image" (list . "admissionController") }}
         command:
         - /admission-controller
         - --address=:8944
@@ -68,6 +81,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "admission_controller_resources" . | nindent 12 }}
+{{- end }}
       volumes:
         - name: tls-certs
           secret:

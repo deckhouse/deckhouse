@@ -1,0 +1,43 @@
+candi:
+  fixes:
+    - summary: >-
+        Remove "node.kubernetes.io/exclude-from-external-load-balancers" label from control-plane
+        nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1218
+ci:
+  fixes:
+    - summary: Pass tests_image_name output with rw registry host
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1219
+dhctl:
+  fixes:
+    - summary: Trim ending slash for imagesRepo
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1232
+    - summary: >-
+        Remove "node.kubernetes.io/exclude-from-external-load-balancers" label from control-plane
+        nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1218
+docs:
+  fixes:
+    - summary: >-
+        Added more clarity to the section 'How do I change the node-group of a static node' in the
+        node-manager FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1234
+istio:
+  fixes:
+    - summary: AuthURL fix in external_auth.go hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1216
+node-manager:
+  fixes:
+    - summary: >-
+        Add migration to remove "node.kubernetes.io/exclude-from-external-load-balancers" label from
+        control-plane nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1218
+      impact: >-
+        node.kubernetes.io/exclude-from-external-load-balancers label will be deleted from the
+        master node group. It also can not be set manually in the current release.
+
+        Without "node.kubernetes.io/exclude-from-external-load-balancers" label traffic can be
+        directed to control plane nodes.
+
+        In the next release, migration will delete it, and users can add it manually if necessary.
+

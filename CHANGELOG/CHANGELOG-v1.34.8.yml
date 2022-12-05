@@ -1,0 +1,5 @@
+node-local-dns:
+  fixes:
+    - summary: Revert service account to prevent Pod from getting stuck in a Terminating state.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2111
+

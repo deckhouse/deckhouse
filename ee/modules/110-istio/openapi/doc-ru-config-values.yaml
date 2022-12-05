@@ -2,21 +2,14 @@ type: object
 properties:
   globalVersion:
     description: Явно заданная версия control-plane Istio, который обслуживает data-plane с неявной версией (Namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`). Должна быть из списка поддерживаемых версий (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). По умолчанию — последняя версия из списка поддерживаемых версий.
-  tlsMode:
+  additionalVersions:
+    description: Дополнительные версии control-plane Istio, которые будут установлены. Они будут обслуживать Namespace-ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
+  enableHTTP10:
     description: |
-      Режим прозрачного шифрования трафика между Pod'ами ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
-      - `Off` — pod'ы не будут шифровать исходящие запросы и не будут отклонять реквесты, которые не зашифрованы.
-      - `MutualPermissive` — pod'ы будут шифровать исходящие запросы, но не будут отклонять реквесты, которые не зашифрованы. Режим полезен в переходный момент при переезде на mTLS.
-      - `Mutual` — pod'ы будут шифровать исходящие запросы и строго будут принимать только зашифрованные реквесты.
-      
-      При включении режима `Mutual` перестанут работать классические HTTP-пробы, так как kubelet ничего про mTLS не знает. Но в sidecar c istio предусмотрен специальный порт, куда можно эти пробы направить. Sidecar-injector, который добавляет sidecar-ы в поды, заодно перенаправит ваши пробы на специальный порт.
-      
-      Для шифрования и аутентификации каждый сервис получит собственный индивидуальный ключ, подписанный корневым CA. Этот CA либо генерится при первом запуске модуля, либо указывается явно (см. `ca`).
-      
-      Управлять режимом mTLS можно отдельно для каждого приложения и его клиентских соединений с помощью ресурсов [AuthorizationPolicy](istio-cr.html#authorizationpolicy) и [DestinationRule](istio-cr.html#destinationrule).
+      Обрабатывать ли HTTP/1.0 запросы в sidecar-контейнерах или отвергать их с кодом ответа `426 Upgrade Required`.
   outboundTrafficPolicyMode:
     description: |
-      Как поступать с запросами в сторону внешних, то есть, не учтённых в меше сервисов.
+      Как поступать с запросами в сторону внешних, то есть, не учтённых в mesh'е сервисов.
       - `AllowAny` — пропускать.
       - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
   federation:
@@ -48,12 +41,12 @@ properties:
                 description: Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом kube-apiserver --service-node-port-range (по умолчанию 30000-32767).
           serviceAnnotations:
             description: |
-              Дополнительные аннотации для сервиса ingressgateway. 
-              
+              Дополнительные аннотации для сервиса ingressgateway.
+
               Полезно, например, для настройки локального LB в Yandex.Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
           nodeSelector:
             description: |
-              Cелектор для DaemonSet'а ingressgateway.
+              Селектор для DaemonSet'а ingressgateway.
 
               Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
           tolerations:
@@ -66,13 +59,26 @@ properties:
     properties:
       enabled:
         description: Включить отправку трейсов в коллектор и интегрировать их отображение в kiali.
+      sampling:
+        description: |
+          Параметр sampling используется для определения процента запросов, которые передаются в систему трассировки.
+
+          Этот параметр должен быть настроен в зависимости от трафика в сети и количества данных трассировки, которые необходимо собрать.
+
+          Параметр можно переопределить для каждого Pod'а индивидуально при помощи следующей аннотации:
+
+          ```yaml
+          proxy.istio.io/config: |
+            tracing:
+              sampling: 100.0
+          ```
       collector:
         description: Параметры отправки трейсов в коллектор.
         properties:
           zipkin:
             description: |
-              Параметры протокола zipkin, который использует Istio для отправки трейсов. 
-              
+              Параметры протокола zipkin, который использует Istio для отправки трейсов.
+
               Jaeger поддерживает этот протокол.
             properties:
               address:
@@ -85,8 +91,8 @@ properties:
         properties:
           jaegerURLForUsers:
             description: |
-              Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`. 
-              
+              Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`.
+
               Обязательный параметр.
           jaegerGRPCEndpoint:
             description: |
@@ -120,7 +126,7 @@ properties:
           type: string
           pattern: '^[0-9]{1,5}$'
   ca:
-    description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS (см. `tlsMode`).
+    description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
     properties:
       cert:
         description: Корневой или промежуточный сертификат в формате PEM.
@@ -130,6 +136,80 @@ properties:
         description: Цепочка сертификатов в формате PEM на случай  если `cert` — промежуточный сертификат.
       root:
         description: Корневой сертификат в формате PEM на  случай если `cert` — промежуточный сертификат.
+  proxyConfig:
+    description: |
+      Централизованная настройка [ProxyConfig](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+    properties:
+      holdApplicationUntilProxyStarts:
+        description: |
+          Этот параметр заставляет sidecar-injector вставлять sidecar-контейнер на первое место в списке контейнеров Pod'а. Также он добавляет postStart-хук для того, чтобы убедиться, что Envoy инициализировался раньше самого приложения. Это позволит избежать сетевых ошибок при старте Pod'а.
+
+          Этот глобальный параметр может быть переопределён на уровне Pod'а аннотацией `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+  controlPlane:
+    description: Настройки для компонента istiod.
+    properties:
+      nodeSelector:
+        description: |
+          Опциональный селектор для компонентa istiod. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      tolerations:
+        description: |
+          Опциональные tolerations для компонента istiod. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+          Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      resourceManagement:
+        description: |
+          Настройки управления ресурсами istiod.
+        properties:
+          mode:
+          vpa:
+            description: |
+              Параметры для режима VPA.
+            properties:
+              mode:
+                description: |
+                  Режим работы VPA.
+              cpu:
+                min:
+                  description: |
+                    Минимально допустимый requests для cpu.
+                max:
+                  description: |
+                    Максимально допустимый requests для cpu.
+                limitRatio:
+                  description: |
+                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+              memory:
+                min:
+                  description: |
+                    Минимально допустимый requests для memory.
+                max:
+                  description: |
+                    Максимально допустимый requests для memory.
+                limitRatio:
+                  description: |
+                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+          static:
+            description: |
+              Настройки управления ресурсами в статическом режиме.
+            properties:
+              requests:
+                properties:
+                  cpu:
+                    description: |
+                      Реквесты CPU.
+                  memory:
+                    description: |
+                      Реквесты памяти.
+              limits:
+                properties:
+                  cpu:
+                    description: |
+                      Лимиты CPU.
+                  memory:
+                    description: |
+                      Лимиты памяти.
   nodeSelector:
     description: |
       Опциональный селектор для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
@@ -168,25 +248,24 @@ properties:
               Имя secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
 
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
 
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   auth:
     description: Опции, связанные с аутентификацией или авторизацией в приложении.
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/), параметры externalAuthentication настраиваются автоматически.
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-      password:
-        description: |
-          Пароль для HTTP-авторизации для пользователя admin (генерируется автоматически, но можно менять).
-
-          Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в публичные веб-интерфейсы модуля.

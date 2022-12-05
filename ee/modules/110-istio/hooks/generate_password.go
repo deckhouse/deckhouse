@@ -6,40 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/json"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/istio/generate_password",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-}, generatePassword)
+const (
+	moduleValuesKey = "istio"
+	authSecretNS    = "d8-istio"
+	authSecretName  = "kiali-basic-auth"
+)
 
-func generatePassword(input *go_hook.HookInput) error {
-	if input.Values.Exists("istio.auth.externalAuthentication") {
-		input.ConfigValues.Remove("istio.auth.password")
-		if input.ConfigValues.Exists("istio.auth") && len(input.ConfigValues.Get("istio.auth").Map()) == 0 {
-			input.ConfigValues.Remove("istio.auth")
-		}
-
-		return nil
-	}
-
-	if input.Values.Exists("istio.auth.password") {
-		return nil
-	}
-
-	if !input.ConfigValues.Exists("istio.auth") {
-		input.ConfigValues.Set("istio.auth", json.RawMessage("{}"))
-	}
-
-	generatedPass := pwgen.AlphaNum(20)
-
-	input.ConfigValues.Set("istio.auth.password", generatedPass)
-
-	return nil
-}
+var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)

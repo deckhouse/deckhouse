@@ -506,9 +506,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
 	By("Validating initial values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
 	By("Validating initial config values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
 
 	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -557,8 +557,8 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session = sandbox_runner.Run(hookCmd, options...)
 	if hec.Session.ExitCode() != 0 {
 		By("Shell hook execution failed", func() {
-			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stdout", hec.Session.Out.Contents()))
-			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stderr", hec.Session.Err.Contents()))
+			fmt.Fprint(GinkgoWriter, hookColoredOutput("stdout", hec.Session.Out.Contents()))
+			fmt.Fprint(GinkgoWriter, hookColoredOutput("stderr", hec.Session.Err.Contents()))
 		})
 	}
 
@@ -589,9 +589,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
 		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
@@ -735,9 +735,9 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.GoHookBindingActions = bindingActions
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
 }
 
 var _ = BeforeSuite(func() {

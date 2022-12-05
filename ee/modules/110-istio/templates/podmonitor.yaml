@@ -35,7 +35,7 @@ spec:
       targetLabel: namespace
   selector:
     matchExpressions:
-    - key: istio.io/rev
+    - key: service.istio.io/canonical-name
       operator: Exists
   namespaceSelector:
     matchNames:

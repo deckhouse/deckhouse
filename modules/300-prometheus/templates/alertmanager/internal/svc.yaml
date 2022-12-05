@@ -1,0 +1,23 @@
+{{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
+  {{- range .Values.prometheus.internal.alertmanagers.internal }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "alertmanager-%s" .name))) | nindent 2 }}
+spec:
+  clusterIP: None
+  ports:
+  - name: https
+    port: 9093
+    protocol: TCP
+    targetPort: https
+  selector:
+    app.kubernetes.io/name: alertmanager
+    alertmanager: {{ .name }}
+  sessionAffinity: None
+  type: ClusterIP
+  {{- end }}
+{{- end }}

@@ -1,0 +1,23 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Support for volume type with spaces in the name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1872
+helm:
+  fixes:
+    - summary: Fix namespace detection for helm releases with unsupported/deprecated resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1882
+ingress-nginx:
+  fixes:
+    - summary: Fix pointer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1898
+    - summary: Handle IngressClass resources when migrating from controller < 1.0 version to > 1.0 version
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1892
+    - summary: >-
+        Fix HPA calculating for `IngressNginxController`. Calculate average CPU load instead of
+        summary.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1889
+monitoring-kubernetes:
+  fixes:
+    - summary: Fixed handling absent containerd directory·
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1894
+

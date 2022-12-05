@@ -1,0 +1,42 @@
+{{- $manual_ngs := list }}
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if and (ne $ng.nodeType "CloudEphemeral") (ne $ng.nodeType "Cloud") }}
+    {{- $manual_ngs = append $manual_ngs (printf "manual-bootstrap-for-%s" $ng.name) }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-group
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+{{- if gt (len $manual_ngs) 0 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-manual-bootstrap-secrets
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: {{ toJson $manual_ngs }}
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-manual-bootstrap-secrets
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-manual-bootstrap-secrets
+subjects:
+- kind: ServiceAccount
+  name: node-group
+  namespace: d8-cloud-instance-manager
+{{- end }}

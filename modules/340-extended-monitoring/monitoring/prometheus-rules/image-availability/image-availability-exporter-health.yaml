@@ -1,0 +1,108 @@
+- name: d8.extended-monitoring.image-availability-exporter.availability
+  rules:
+
+  - alert: D8ImageAvailabilityExporterTargetDown
+    expr: max by (job) (up{job="image-availability-exporter"} == 0)
+    for: 30m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_ignore_labels: "job"
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: Prometheus cannot scrape the image-availability-exporter metrics.
+
+  - alert: D8ImageAvailabilityExporterTargetAbsent
+    expr: absent(up{job="image-availability-exporter"}) == 1
+    for: 30m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: There is no `image-availability-exporter` target in Prometheus.
+
+  - alert: D8ImageAvailabilityExporterPodIsNotReady
+    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
+    for: 30m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "pod"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The image-availability-exporter Pod is NOT Ready.
+      description: |
+        The images listed in the `image` field are not checked for availability in the container registry.
+
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+
+  - alert: D8ImageAvailabilityExporterPodIsNotRunning
+    expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
+    for: 30m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The image-availability-exporter Pod is NOT Running.
+      description: |
+        The images listed in the `image` field are not checked for availability in the container registry.
+
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+
+- name: d8.extended-monitoring.image-availability-exporter.malfunctioning
+  rules:
+
+  - alert: D8ImageAvailabilityExporterMalfunctioning
+    expr: |
+      increase(k8s_image_availability_exporter_completed_rechecks_total[10m]) == 0
+    for: 30m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: image-availability-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
+
+        You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: image-availability-exporter has crashed.

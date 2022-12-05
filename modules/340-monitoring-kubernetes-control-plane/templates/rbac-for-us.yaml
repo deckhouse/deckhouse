@@ -7,6 +7,9 @@ metadata:
 rules:
 - nonResourceURLs:
   - /metrics
+  - /scheduler/metrics
+  - /controller-manager/metrics
+  - /etcd/metrics
   verbs:
   - get
 ---

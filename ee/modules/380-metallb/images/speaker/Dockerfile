@@ -1,16 +1,5 @@
+# based on https://raw.githubusercontent.com/metallb/metallb/v0.13.5/config/manifests/metallb-native.yaml
 ARG BASE_ALPINE
-ARG BASE_GOLANG_16_ALPINE
-
-FROM $BASE_GOLANG_16_ALPINE as artifact
-WORKDIR /src/
-RUN apk add git patch
-RUN git clone -b "v0.11.0" --single-branch https://github.com/metallb/metallb
-WORKDIR /src/metallb
-COPY patches/dont-announce-from-annotated-nodes.patch ./
-
-RUN patch -p1 < dont-announce-from-annotated-nodes.patch
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o speaker-bin ./speaker
-
 FROM $BASE_ALPINE
-COPY --from=artifact /src/metallb/speaker-bin /speaker
+COPY --from=quay.io/metallb/speaker:v0.13.7@sha256:aeab5aeeb25c7ca31a1c468a35b1db4513cd6199bf376bdf19ff5689d2ebad28 /speaker /
 ENTRYPOINT ["/speaker"]

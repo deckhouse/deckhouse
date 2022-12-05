@@ -6,19 +6,14 @@ topnav:
       - title: Getting started
         url: /gs/
       - title: Documentation
-        url: /documentation/v1/
+        url: /documentation/v1/deckhouse-overview.html
       - title: Community
-        url: '#'
-        items:
-        - title: About
-          url: /community/about.html
-        - title: Deckhouse Platform CE
-          url: /community/community_edition.html
-        - title: Used software
-          url: /documentation/v1/oss_info.html
+        url: /community/about.html
       - title: Products
         url: '#'
         items:
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
         - title: Deckhouse Platform EE
           url: /products/enterprise_edition.html
         - title: Deckhouse Commander
@@ -30,31 +25,37 @@ topnav:
           url: /services/managed.html
         - title: Training & Consulting
           url: /services/training.html
-      - title: About us
-        url: /about_us.html
+      - title: Resources
+        url: '#'
+        items:
+          - title: Deckhouse Security
+            url: /security.html
+          - title: Deckhouse vs KaaS
+            url: /deckhouse_vs_kaas.html
+          - title: Technical support regulations
+            url: /regulations.html
+          - title: Blog
+            external_url: 'https://blog.deckhouse.io/'
   ru:
     - title: Topnav
       items:
       - title: Быстрый старт
         url: /gs/
       - title: Документация
-        url: /documentation/v1/
+        url: /documentation/v1/deckhouse-overview.html
       - title: Сообщество
-        url: '#'
-        items:
-        - title: О сообществе
-          url: /community/about.html
-        - title: Deckhouse Platform CE
-          url: /community/community_edition.html
-        - title: Используемое ПО
-          url: /documentation/v1/oss_info.html
+        url: /community/about.html
       - title: Продукты
         url: '#'
         items:
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
         - title: Deckhouse Platform EE
           url: /products/enterprise_edition.html
         - title: Deckhouse Commander
           url: /products/commander.html
+        - title: Как купить
+          url: /how_to_buy.html
       - title: Услуги
         url: '#'
         items:
@@ -62,5 +63,22 @@ topnav:
           url: /services/managed.html
         - title: Обучение и консультации
           url: /services/training.html
-      - title: О нас
-        url: /about_us.html
+      - title: Информация
+        url: '#'
+        items:
+          - title: Импортозамещение
+            url: /substitution.html
+          - title: Безопасность Deckhouse
+            url: /security.html
+          - title: Сравнение с KaaS
+            url: /deckhouse_vs_kaas.html
+          - title: Регламент технической поддержки
+            url: /regulations.html
+          - title: Лицензионное соглашение
+            url: /license.html
+          - title: Правила лицензирования
+            url: /license_rules.html
+          - title: Блог
+            external_url: 'https://blog.deckhouse.io/'
+          - title: Вакансии
+            external_url: 'https://job.flant.ru/vacancies/deckhouse'

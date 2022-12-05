@@ -4,7 +4,12 @@
     margin: 75px auto;
     &_inverse {
         background: $color-main;
-        color: #fff;
+        color: $color-inverse;
+        padding: 75px 0;
+    }
+    &_alt {
+        background: $color-alt;
+        color: $color-inverse;
         padding: 75px 0;
     }
     &__content {

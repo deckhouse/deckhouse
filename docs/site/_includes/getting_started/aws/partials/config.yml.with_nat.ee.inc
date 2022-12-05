@@ -26,7 +26,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install
 # [<ru>] устанавливаемая версия Kubernetes
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера
 clusterDomain: "cluster.local"
@@ -96,11 +96,20 @@ withNAT:
       # [<en>] you might consider changing this
       # [<ru>] возможно, захотите изменить
       instanceType: m5.large
-      # [<en>] Amazon Machine Image id
-      # [<ru>] id образа виртуальной машины в Amazon
-      # [<en>] you might consider changing this
-      # [<ru>] возможно, захотите изменить
-      ami: ami-09a4a23815cdb5e06
+      # [<en>] Amazon Machine Image ID
+      # [<en>] The example uses the Ubuntu Server 22.04 image for the eu-central-1 region.
+      # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
+      # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
+      # [<ru>] ID образа виртуальной машины в Amazon.
+      # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона eu-central-1.
+      # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
+      # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+      # [<en>] You might consider changing this.
+      # [<ru>] Возможно, захотите изменить.
+      ami: ami-0caef02b518350c8b
+      # [<en>] Disk type
+      # [<ru>] Тип диска
+      diskType: gp3
 # [<en>] parameters of the master node group
 # [<ru>] параметры группы master-узлов
 masterNodeGroup:
@@ -112,16 +121,32 @@ masterNodeGroup:
   # [<en>] Parameters of the VM image
   # [<ru>] параметры инстанса
   instanceClass:
+    # [<en>] master node VM disk size
+    # [<ru>] размер диска для виртуальной машины master-узла
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    diskSizeGb: 30
+    # [<en>] master node VM disk type to use
+    # [<ru>] используемый тип диска для виртуальной машины master-узла
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    diskType: gp3
     # [<en>] type of the instance
     # [<ru>] тип используемого инстанса
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     instanceType: c5.large
-    # [<en>] Amazon Machine Image id
-    # [<ru>] id образа виртуальной машины в Amazon
-    # [<en>] you might consider changing this
-    # [<ru>] возможно, захотите изменить
-    ami: ami-0fee04b212b7499e2
+    # [<en>] Amazon Machine Image ID
+    # [<en>] The example uses the Ubuntu Server 22.04 image for the eu-central-1 region.
+    # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
+    # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
+    # [<ru>] ID образа виртуальной машины в Amazon.
+    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона eu-central-1.
+    # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
+    # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
+    ami: ami-0caef02b518350c8b
 # [<en>] address space of the AWS cloud
 # [<ru>] адресное пространство облака внутри AWS
 vpcNetworkCIDR: "10.241.0.0/16"
@@ -130,4 +155,4 @@ vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
 # [<en>] public SSH key for accessing cloud nodes
 # [<ru>] публичная часть SSH-ключа для доступа к узлам облака
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>

@@ -1,4 +1,19 @@
 (function() {
+  function getNormalizedContent(content) {
+    var maxResultItemContentLength = 250;
+
+    if ( content.length <= maxResultItemContentLength ) return content;
+
+    var result = content.substring(0, maxResultItemContentLength);
+    var lastSpaceIndex = result.lastIndexOf(' ');
+    if ( maxResultItemContentLength - lastSpaceIndex < 30 ) {
+      result = result.substring(0, lastSpaceIndex + 1);
+    }
+
+    result = result.replace(/[^A-Za-zА-Яа-я0-9_]+$/, '') + '…';
+
+    return result;
+  }
   function displaySearchResults(results, store) {
     var searchResults = document.getElementById('search-results');
 
@@ -14,8 +29,8 @@
               return element.url === results[i].ref;
             });
 
-        appendString += '<li><a href="' + item.url + '"><h3>' + item.title + '</h3></a>';
-        appendString += '<p>' + item.content.substring(0, 150) + '...</p></li>';
+        appendString += '<li><a href="./' + item.url.replace(/^\//,'') + '"><h3>' + item.title + '</h3></a>';
+        appendString += '<p>' + getNormalizedContent(item.content) + '</p></li>';
       }
 
       searchResults.innerHTML = appendString;

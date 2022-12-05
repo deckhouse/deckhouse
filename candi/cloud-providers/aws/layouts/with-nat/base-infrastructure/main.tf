@@ -21,11 +21,12 @@ module "vpc" {
 }
 
 module "security-groups" {
-  source       = "../../../terraform-modules/security-groups"
-  prefix       = local.prefix
+  source = "../../../terraform-modules/security-groups"
+  prefix = local.prefix
   cluster_uuid = var.clusterUUID
-  vpc_id       = module.vpc.id
-  tags         = local.tags
+  vpc_id = module.vpc.id
+  tags = local.tags
+  ssh_allow_list = local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}
@@ -162,6 +163,9 @@ resource "aws_iam_role_policy" "node" {
       {
         "Effect": "Allow",
         "Action": [
+          %{for policy in local.additional_role_policies}
+          "${policy}",
+          %{endfor}
           "ec2:DescribeTags",
           "ec2:DescribeInstances"
         ],
@@ -191,14 +195,12 @@ resource "aws_key_pair" "ssh" {
 // bastion
 
 locals {
-  with_nat                   = lookup(var.providerClusterConfiguration, "withNAT", {})
-  bastion_instance           = lookup(local.with_nat, "bastionInstance", {})
   instance_class             = lookup(local.bastion_instance, "instanceClass", {})
   additional_security_groups = lookup(local.instance_class, "additionalSecurityGroups", [])
 
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
 
-  zone = lookup(local.bastion_instance != null ? local.bastion_instance : {}, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
+  zone = lookup(local.bastion_instance, "zone", {}) != {} ? local.bastion_instance.zone : local.actual_zones[0]
 
   zone_to_subnet_id_map = {
     for subnet in aws_subnet.kube_public :
@@ -206,8 +208,6 @@ locals {
   }
 
   subnet_id = local.zone_to_subnet_id_map[local.zone]
-
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
 
   root_volume_size = lookup(local.instance_class, "diskSizeGb", 20)
   root_volume_type = lookup(local.instance_class, "diskType", "gp2")
@@ -219,7 +219,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = local.vpc_security_group_ids
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 

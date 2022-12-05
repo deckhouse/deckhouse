@@ -36,8 +36,8 @@ var CELicenseRe = regexp.MustCompile(`(?s)[/#{!-]*(\s)*Copyright 202[1-9] Flant 
 [/#{!-]*(\s)*See the License for the specific language governing permissions and[-!}\n]*
 [/#{!-]*(\s)*limitations under the License.[-!}\n]*`)
 
-var fileToCheckRe = regexp.MustCompile(`\.go$|/[^/.]+$|\.sh$|\.lua$|\.py$`)
-var fileToSkipRe = regexp.MustCompile(`geohash.lua$|Dockerfile$|Makefile$|/docs/documentation/|/docs/site/|bashrc$|inputrc$`)
+var fileToCheckRe = regexp.MustCompile(`\.go$|/[^/.]+$|\.sh$|\.lua$|\.py$|^\.github/(scripts|workflows|workflow_templates)/.+\.(js|yml|yaml|sh)$`)
+var fileToSkipRe = regexp.MustCompile(`geohash.lua$|\.github/CODEOWNERS|Dockerfile$|Makefile$|/docs/documentation/|/docs/site/|bashrc$|inputrc$|modules_menu_skip$`)
 
 func RunCopyrightValidation(info *DiffInfo) (exitCode int) {
 	fmt.Printf("Run 'copyright' validation ...\n")

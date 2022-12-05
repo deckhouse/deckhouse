@@ -20,6 +20,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
@@ -27,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -38,23 +38,32 @@ type Hook struct {
 	kubeCl            *client.KubernetesClient
 	nodeToConverge    string
 	runAfterAction    bool
+	confirm           func(msg string) bool
 }
 
-func NewHook(kubeCl *client.KubernetesClient, nodesToCheckWithIPs map[string]string, clusterUUID string) *Hook {
-	proxyChecker := NewKubeProxyChecker().
-		WithExternalIPs(nodesToCheckWithIPs).
-		WithClusterUUID(clusterUUID)
+func NewHook(kubeCl *client.KubernetesClient, nodeToHostForChecks map[string]string, clusterUUID string) *Hook {
+	addProxyChecker := true
+	nodes := make([]string, 0)
+
+	for nodeName, host := range nodeToHostForChecks {
+		nodes = append(nodes, nodeName)
+		if host == "" {
+			addProxyChecker = false
+		}
+	}
 
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeCl),
-		proxyChecker,
-		NewManagerReadinessChecker(kubeCl),
 	}
 
-	nodes := make([]string, 0)
-	for nodeName := range nodesToCheckWithIPs {
-		nodes = append(nodes, nodeName)
+	if addProxyChecker {
+		proxyChecker := NewKubeProxyChecker().
+			WithExternalIPs(nodeToHostForChecks).
+			WithClusterUUID(clusterUUID)
+		checkers = append(checkers, proxyChecker)
 	}
+
+	checkers = append(checkers, NewManagerReadinessChecker(kubeCl))
 
 	return &Hook{
 		nodesNamesToCheck: nodes,
@@ -70,6 +79,11 @@ func (h *Hook) WithSourceCommandName(name string) *Hook {
 
 func (h *Hook) WithNodeToConverge(nodeToConverge string) *Hook {
 	h.nodeToConverge = nodeToConverge
+	return h
+}
+
+func (h *Hook) WithConfirm(confirm func(msg string) bool) *Hook {
+	h.confirm = confirm
 	return h
 }
 
@@ -121,10 +135,7 @@ func (h *Hook) BeforeAction() (bool, error) {
 			return nil
 		}
 
-		confirm := input.NewConfirmation().
-			WithMessage("Deckhouse pod is located on node to converge. Do you want to move pod in another node?")
-
-		if !confirm.Ask() {
+		if !h.runConfirm("Deckhouse pod is located on node to converge. Do you want to move pod to another node?") {
 			log.WarnLn("Skip moving deckhouse pod")
 			h.runAfterAction = false
 			return nil
@@ -166,8 +177,55 @@ func (h *Hook) AfterAction() error {
 
 	title := fmt.Sprintf("Delete label '%s' from converged node", manifests.ConvergeLabel)
 	return retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
-		return h.convergeLabelToNode(false)
+		err := h.convergeLabelToNode(false)
+		if err != nil && errors.IsNotFound(err) {
+			log.InfoLn("Converged node was not found. Skip remove label.")
+			// node object was removed while converge
+			// we do not need to remove label, because label added to removed object
+			// and new object will create without label
+			return nil
+		}
+
+		return err
 	})
+}
+
+func (h *Hook) runConfirm(msg string) bool {
+	confirm := true
+
+	if h.confirm != nil {
+		confirm = h.confirm(msg)
+	}
+
+	return confirm
+}
+
+func (h *Hook) isAllNodesReady() error {
+	if h.checkers == nil {
+		log.DebugF("Not passed checkers. Skip. Nodes for check: %v", h.nodesNamesToCheck)
+		return nil
+	}
+
+	if len(h.nodesNamesToCheck) == 0 {
+		return fmt.Errorf("Do not have nodes for control plane nodes are readinss check.")
+	}
+
+	for _, nodeName := range h.nodesNamesToCheck {
+		if !h.runConfirm(fmt.Sprintf("Do you want to wait node %s will be ready?", nodeName)) {
+			continue
+		}
+
+		ready, err := hook.IsNodeReady(h.checkers, nodeName, h.sourceCommandName)
+		if err != nil {
+			return err
+		}
+
+		if !ready {
+			return hook.ErrNotReady
+		}
+	}
+
+	return nil
 }
 
 func (h *Hook) IsReady() error {
@@ -176,10 +234,12 @@ func (h *Hook) IsReady() error {
 		excludeNode = ""
 	}
 
-	err := deckhouse.WaitForReadinessNotOnNode(h.kubeCl, excludeNode)
-	if err != nil {
-		return err
+	if h.runConfirm("Wait until Deckhouse controller is ready?") {
+		err := deckhouse.WaitForReadinessNotOnNode(h.kubeCl, excludeNode)
+		if err != nil {
+			return err
+		}
 	}
 
-	return hook.IsAllNodesReady(h.checkers, h.nodesNamesToCheck, h.sourceCommandName, "Control plane nodes are ready")
+	return h.isAllNodesReady()
 }

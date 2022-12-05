@@ -17,7 +17,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install
 # [<ru>] устанавливаемая версия Kubernetes
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера
 clusterDomain: "cluster.local"
@@ -72,7 +72,7 @@ apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)
-# [<ru>] cписок внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# [<ru>] список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*

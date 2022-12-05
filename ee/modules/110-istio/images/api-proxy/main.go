@@ -158,18 +158,24 @@ func httpHandlerReady(w http.ResponseWriter, r *http.Request) {
 func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 	// check if request was passed by ingress
 	if len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "Only requests with client certificate are allowed.", http.StatusUnauthorized)
+		errstring := "Only requests with client certificate are allowed."
+		http.Error(w, errstring, http.StatusUnauthorized)
+		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
 		return
 	}
 
 	if r.TLS.PeerCertificates[0].Subject.Organization[0] != "ingress-nginx:auth" {
-		http.Error(w, "Only requests from ingress are allowed.", http.StatusUnauthorized)
+		errstring := "Only requests from ingress are allowed."
+		http.Error(w, errstring, http.StatusUnauthorized)
+		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
 		return
 	}
 
 	err := checkAuthn(r.Header, "api")
 	if err != nil {
-		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+		errstring := "Authentication error: " + err.Error()
+		http.Error(w, errstring, http.StatusUnauthorized)
+		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
 		return
 	}
 
@@ -187,6 +193,10 @@ func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 		Transport:     httpProxyTransport,
 		ErrorLog:      logger,
 		FlushInterval: 50 * time.Millisecond,
+		ModifyResponse: func(resp *http.Response) error {
+			logger.Println("[apiserver]", resp.Status)
+			return nil
+		},
 	}
 
 	proxy.ServeHTTP(w, r)

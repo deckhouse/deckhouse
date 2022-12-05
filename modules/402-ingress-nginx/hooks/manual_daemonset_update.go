@@ -146,13 +146,12 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 	}
 
 	for _, controller := range controllers {
-		podsReadyForUpdate := true
-
 		// check pod count to avoid race during creation a new pod
 		if controller.CurrentPodCount != controller.DesiredPodCount {
-			podsReadyForUpdate = false
 			continue
 		}
+
+		podsReadyForUpdate := true
 
 		var podNameForDeletion string
 		for _, pod := range podsMap[controller.CRName] {
@@ -190,7 +189,7 @@ func filterManualDS(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	return manualDSController{
 		CRName:          ds.GetLabels()["name"],
 		DesiredPodCount: ds.Status.DesiredNumberScheduled,
-		CurrentPodCount: ds.Status.CurrentNumberScheduled,
+		CurrentPodCount: ds.Status.NumberAvailable,
 	}, nil
 }
 

@@ -1,11 +1,24 @@
-{{ $_ := set . "Env" "FE" }}
-
+{{- if ne $.Env "development" -}}
+{{- $_ := set . "Env" "FE" }}
+{{- end }}
+---
 project: deckhouse-web
 configVersion: 1
-
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Env "development") (eq $.Env "local") }}
+      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- end }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
 ---
 image: web
-from: {{ env "BASE_NGINX_ALPINE" }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
 ansible:
   setup:
   - name: "Setup /etc/nginx/nginx.conf"
@@ -20,7 +33,7 @@ import:
   before: setup
 ---
 image: static-pages
-from: {{ env "BASE_JEKYLL" }}
+from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210713
 ansible:
   install:
@@ -113,9 +126,26 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Extract the default Kubernetes version"
+      shell: |
+        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
+    - name: "Make the supported OS & K8S version array"
+      shell: |
+        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+      args:
+        warn: false
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
+        {{- if eq $.Env "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
+        {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/
+        {{- end }}
       args:
         warn: false
         executable: /bin/bash
@@ -135,6 +165,7 @@ git:
   excludePaths:
     - '**/werf*.yaml'
     - '**/docker-compose.yml'
+    - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
     - documentation/pages/internal

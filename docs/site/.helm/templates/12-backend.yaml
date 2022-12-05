@@ -10,7 +10,7 @@ metadata:
     service: backend
 spec:
   minReadySeconds: 5
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       service: backend
@@ -21,6 +21,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: registrysecret
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: backend
           command: ["/app/server"]
@@ -31,6 +32,8 @@ spec:
             name: http
             protocol: TCP
           env:
+          - name: VROUTER_DOMAIN_MAP
+            value: {{ .Values.global.domain_map | quote }}
           {{- include "vrouter_envs" . | nindent 10 }}
           livenessProbe:
             httpGet:
@@ -41,14 +44,9 @@ spec:
               path: /health
               port: 8080
           volumeMounts:
-            - name: releasechannels
-              mountPath: /app/releasechannels
             - name: release-channels
               mountPath: /app/release-channels
       volumes:
-        - name: releasechannels
-          configMap:
-            name: releasechannels-data
         - name: release-channels
           configMap:
             name: release-channels-data

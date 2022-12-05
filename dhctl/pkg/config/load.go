@@ -50,34 +50,40 @@ func NewSchemaStore() *SchemaStore {
 		}
 	}
 
-	return newSchemaStore(paths)
+	return newOnceSchemaStore(paths)
 }
 
 func newSchemaStore(schemasDir []string) *SchemaStore {
-	once.Do(func() {
-		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
-		walkFunc := func(path string, info os.FileInfo, err error) error {
-			if info == nil {
-				return nil
-			}
-
-			switch info.Name() {
-			case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml":
-				uploadError := store.UploadByPath(path)
-				if uploadError != nil {
-					return uploadError
-				}
-			}
-
+	st := &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
+	walkFunc := func(path string, info os.FileInfo, err error) error {
+		if info == nil {
 			return nil
 		}
 
-		for _, d := range schemasDir {
-			err := filepath.Walk(d, walkFunc)
-			if err != nil {
-				panic(err)
+		switch info.Name() {
+		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml":
+			uploadError := st.UploadByPath(path)
+			if uploadError != nil {
+				return uploadError
 			}
 		}
+
+		return nil
+	}
+
+	for _, d := range schemasDir {
+		err := filepath.Walk(d, walkFunc)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return st
+}
+
+func newOnceSchemaStore(schemasDir []string) *SchemaStore {
+	once.Do(func() {
+		store = newSchemaStore(schemasDir)
 	})
 	return store
 }
@@ -119,7 +125,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 
 	schema := s.getV1alpha1CompatibilitySchema(index)
 	if schema == nil {
-		return fmt.Errorf("Schema for %s does not found.", index.String())
+		return fmt.Errorf("Schema for %s wasn't found.", index.String())
 	}
 
 	isValid, err := openAPIValidate(doc, schema)

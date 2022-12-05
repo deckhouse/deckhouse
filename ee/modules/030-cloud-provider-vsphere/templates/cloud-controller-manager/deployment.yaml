@@ -1,6 +1,12 @@
+{{- define "vsphere_cloud_controller_manager_resources" }}
+cpu: 25m
+memory: 100Mi
+{{- end }}
+
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- if hasKey .Values.global.modulesImages.tags.cloudProviderVsphere $ccmImageName }}
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -16,6 +22,14 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "vsphere-cloud-controller-manager"
+      minAllowed:
+        {{- include "vsphere_cloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
   {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -38,6 +52,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: cloud-controller-manager
@@ -61,7 +76,7 @@ spec:
       containers:
         - name: vsphere-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderVsphere $ccmImageName }}"
+          image: {{ $ccmImage }}
           args:
           - --leader-elect=true
           - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
@@ -105,6 +120,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "vsphere_cloud_controller_manager_resources" . | nindent 14 }}
+  {{- end }}
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki

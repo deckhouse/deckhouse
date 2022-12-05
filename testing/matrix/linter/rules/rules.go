@@ -20,15 +20,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
+
+const defaultRegistry = "registry.example.com/deckhouse"
 
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	// Dynatrace module deprecated and will be removed
@@ -66,7 +71,7 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 		return true
 	}
 	// Coredns listens :53 port in hostNetwork
-	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-system" &&
+	if o.Unstructured.GetKind() == "DaemonSet" && (o.Unstructured.GetNamespace() == "d8-system") || (o.Unstructured.GetNamespace() == "kube-system") &&
 		o.Unstructured.GetName() == "node-local-dns" && c.Name == "coredns" {
 		return true
 	}
@@ -83,13 +88,7 @@ type ObjectLinter struct {
 	ObjectStore    *storage.UnstructuredObjectStore
 	ErrorsList     *errors.LintRuleErrorsList
 	Module         utils.Module
-	Values         string
-	EnabledModules map[string]struct{}
-}
-
-func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
-	_, ok := l.EnabledModules[name]
-	return ok
+	EnabledModules set.Set
 }
 
 func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
@@ -97,13 +96,18 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		panic(err)
+	}
+	containers = append(initContainers, containers...)
 	if len(containers) == 0 {
 		return
 	}
 
 	l.ErrorsList.Add(containerNameDuplicates(object, containers))
 	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	l.ErrorsList.Add(containerImageTagLatest(object, containers))
+	l.ErrorsList.Add(containerImageTagCheck(object, containers))
 	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
@@ -166,22 +170,49 @@ func containerEnvVariablesDuplicates(object storage.StoreObject, containers []v1
 	return errors.EmptyRuleError
 }
 
-func containerImageTagLatest(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+func shouldSkipModuleContainer(module string, container string) bool {
+	// okmeter module uses images from external repo - registry.okmeter.io/agent/okagent:stub
+	if module == "okmeter" && container == "okagent" {
+		return true
+	}
+	// control-plane-manager uses `$images` as dict to render static pod manifests,
+	// so we cannot use helm lib `helm_lib_module_image` helper because `$images`
+	// is also rendered in `dhctl` tool on cluster bootstrap.
+	if module == "d8-control-plane-manager" && strings.HasPrefix(container, "image-holder") {
+		return true
+	}
+	return false
+}
+
+func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
 	for _, c := range containers {
-		imageParts := strings.Split(c.Image, ":")
-		if len(imageParts) != 2 {
+		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
+			continue
+		}
+
+		t, err := name.NewTag(c.Image)
+		if err != nil {
 			return errors.NewLintRuleError(
 				"CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Can't parse an image for container",
+				"Can't parse an image for container: %v", err,
 			)
 		}
-		if imageParts[1] == "latest" {
+		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
+		tag := t.TagStr()
+		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag \"latest\" used",
+				"All images must be deployed from the same default registry - "+defaultRegistry,
+			)
+		}
+		if !strings.HasPrefix(tag, "imageHash-") {
+			return errors.NewLintRuleError("CONTAINER004",
+				object.Identity()+"; container = "+c.Name,
+				nil,
+				"Image tag should start from `imageHash-`",
 			)
 		}
 	}
@@ -259,7 +290,7 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(objectRecommendedLabels(object))
 	l.ErrorsList.Add(objectAPIVersion(object))
-	if l.CheckModuleEnabled("priority-class") {
+	if l.EnabledModules.Has("priority-class") {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
 	l.ErrorsList.Add(objectDNSPolicy(object))
@@ -272,7 +303,10 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 		l.ErrorsList.Add(objectSecurityContext(object))
 	}
 
+	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
+
+	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
@@ -337,6 +371,46 @@ func newConvertError(object storage.StoreObject, err error) errors.LintRuleError
 		nil,
 		"Cannot convert object to %s: %v", object.Unstructured.GetKind(), err,
 	)
+}
+
+func objectRevisionHistoryLimit(object storage.StoreObject) errors.LintRuleError {
+	if object.Unstructured.GetKind() == "Deployment" {
+		converter := runtime.DefaultUnstructuredConverter
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit
+		// Revision history limit controls the number of replicasets stored in the cluster for each deployment.
+		// Higher number means higher resource consumption, lower means inability to rollback.
+		//
+		// Since Deckhouse does not use rollback, we can set it to 2 to be able to manually check the previous version.
+		// It is more important to reduce the control plane pressure.
+		maxHistoryLimit := int32(2)
+		actualLimit := deployment.Spec.RevisionHistoryLimit
+
+		if actualLimit == nil {
+			return errors.NewLintRuleError(
+				"MANIFEST008",
+				object.Identity(),
+				nil,
+				"Deployment spec.revisionHistoryLimit must be less or equal to %d", maxHistoryLimit,
+			)
+		}
+
+		if *actualLimit > maxHistoryLimit {
+			return errors.NewLintRuleError(
+				"MANIFEST008",
+				object.Identity(),
+				*actualLimit,
+				"Deployment spec.revisionHistoryLimit must be less or equal to %d", maxHistoryLimit,
+			)
+		}
+	}
+	return errors.EmptyRuleError
 }
 
 func objectPriorityClass(object storage.StoreObject) errors.LintRuleError {
@@ -501,6 +575,7 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+
 	for _, c := range containers {
 		for _, p := range c.Ports {
 			if hostNetworkUsed && p.ContainerPort >= 10500 {
@@ -587,7 +662,6 @@ func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
 		dnsPolicy,
 		"dnsPolicy must be `ClusterFirstWithHostNet` when hostNetwork is `true`",
 	)
-
 }
 
 func shouldSkipDNSPolicyResource(name string, kind string, namespace string, hostNetwork bool, dnsPolicy string) bool {
@@ -603,112 +677,6 @@ func shouldSkipDNSPolicyResource(name string, kind string, namespace string, hos
 	// Deckhouse main pod use Default policy when cluster isn't bootstrapped
 	case "deckhouse":
 		return kind == "Deployment" && namespace == "d8-system" && hostNetwork && dnsPolicy == "Default"
-
-	default:
-		return false
-	}
-}
-
-func objectResolvConfVolume(object storage.StoreObject) errors.LintRuleError {
-	kind := object.Unstructured.GetKind()
-	name := object.Unstructured.GetName()
-	namespace := object.Unstructured.GetNamespace()
-	converter := runtime.DefaultUnstructuredConverter
-
-	var volumes []v1.Volume
-	var objectHaveResolvConfVolume bool
-
-	switch kind {
-	case "Deployment":
-		deployment := new(appsv1.Deployment)
-
-		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
-		if err != nil {
-			return newConvertError(object, err)
-		}
-
-		volumes = deployment.Spec.Template.Spec.Volumes
-	case "DaemonSet":
-		daemonset := new(appsv1.DaemonSet)
-
-		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), daemonset)
-		if err != nil {
-			return newConvertError(object, err)
-		}
-
-		volumes = daemonset.Spec.Template.Spec.Volumes
-	case "StatefulSet":
-		statefulset := new(appsv1.StatefulSet)
-
-		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), statefulset)
-		if err != nil {
-			return newConvertError(object, err)
-		}
-
-		volumes = statefulset.Spec.Template.Spec.Volumes
-
-	default:
-		return errors.EmptyRuleError
-	}
-
-	for _, v := range volumes {
-		if v.Name == "resolv-conf-volume" && v.VolumeSource.HostPath.Path == "/var/lib/bashible/resolv/resolv.conf" {
-			objectHaveResolvConfVolume = true
-			break
-		}
-	}
-
-	if shouldSkipResolvConfMountResource(name, kind, namespace) {
-		if objectHaveResolvConfVolume {
-			return errors.EmptyRuleError
-		}
-
-		return errors.NewLintRuleError(
-			"MANIFEST007",
-			object.Identity(),
-			objectHaveResolvConfVolume,
-			"object should use `resolv-conf` volume",
-		)
-	}
-
-	if objectHaveResolvConfVolume {
-		return errors.NewLintRuleError(
-			"MANIFEST007",
-			object.Identity(),
-			objectHaveResolvConfVolume,
-			"object should not use `resolv-conf` volume",
-		)
-	}
-
-	return errors.EmptyRuleError
-}
-
-func shouldSkipResolvConfMountResource(name string, kind string, namespace string) bool {
-	// all of those pod should use resolv-conf-volume
-	switch name {
-	case "cloud-controller-manager":
-		return kind == "Deployment" && strings.HasPrefix(namespace, "d8-cloud-provider-")
-
-	case "node-termination-handler":
-		return kind == "DaemonSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
-
-	case "csi-controller":
-		return kind == "StatefulSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
-
-	case "csi-controller-legacy":
-		return kind == "StatefulSet" && namespace == "d8-cloud-provider-vsphere"
-
-	case "csi-node":
-		return kind == "DaemonSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
-
-	case "machine-controller-manager":
-		return kind == "Deployment" && namespace == "d8-cloud-instance-manager"
-
-	case "d8-kube-dns":
-		return kind == "Deployment" && namespace == "kube-system"
-
-	case "node-local-dns":
-		return kind == "DaemonSet" && namespace == "d8-system"
 
 	default:
 		return false

@@ -34,6 +34,6 @@ func GenJWT(privateKeyPath string, claims map[string]string, ttl time.Duration) 
 		return err
 	}
 
-	fmt.Fprintf(os.Stdout, tokenString)
+	fmt.Fprint(os.Stdout, tokenString)
 	return nil
 }

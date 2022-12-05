@@ -8,7 +8,7 @@ searchable: false
 Каждый релиз Istio содержит:
 * Бинарь istioctl с вкомпиленными helm-чартами и инструментами для деплоя. Он нужен для мануального деплоя (в случае Deckhouse это ни к чему) и для эксплуатации полезных утилит.
 * Image с оператором, который также содержит бинарь с вкомпиленными helm-чартами, но он ещё и следит за CR `IstioOperator`. Можно считать, что это — аналог addon-operator-а.
-* Набор image-й с компонентами Istio (pilot, proxyv2, ...).
+* Набор image-й с компонентами Istio (istiod, proxyv2, ...).
 * helm-чарты с компонентами Istio. Полезны для разбирательств, как работает оператор.
 
 Как обновлять Istio
@@ -16,13 +16,13 @@ searchable: false
 
 Для добавления новой версии:
 * Добавить images по аналогии с предыдущими версиями.
-* Добавить новую версию в values.yaml (`istio.internal.supportedVersions`).
+* Добавить новую версию в openapi/values.yaml (`istio.supportedVersions`) и поправить значение default у `globalVersion`.
 * Актуализировать crd-all.gen.yaml и crd-operator.yaml в папке crds.
 * Освежить дашборды графаны:
   * Извлечь json-описания дашборд из манифеста samples/addons/grafana.yaml, отформатировать их с помощью jq и сложить в соответствующие json-ки в /monitoring/grafana-dashboards/istio/XXX.json.
   * Найти все range'и и заменить на `$__interval_sx4`:
 
-    ```bash
+    ```shell
     for dashboard in *.json; do
       for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
         sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
@@ -32,27 +32,30 @@ searchable: false
 
   * Заменить `irate` на `rate`:
 
-    ```bash
+    ```shell
     sed 's/irate(/rate(/g' -i *.json
     ```
+
   * Заменить `Resolution` на `1/1`:
 
-    ```bash
+    ```shell
     sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
     ```
+
   * Убрать `Min Step`:
 
-    ```bash
+    ```shell
     sed '/"interval":/d' -i *.json
     ```
+
   * Заменить все графики на `Staircase` (поломает графики `Stack` + `Percent`, которые придется поправить руками на `Bars`):
 
-    ```bash
+    ```shell
     sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
     ```
 
   * Заменить все datasource на null:
 
-    ```bash
+    ```shell
     sed 's/"datasource": "Prometheus"/"datasource": null/' -i *.json
     ```

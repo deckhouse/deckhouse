@@ -46,7 +46,6 @@ func namespacedMetricConf(metricType string) go_hook.KubernetesConfig {
 }
 
 func generateKubeHookConfig() []go_hook.KubernetesConfig {
-
 	res := make([]go_hook.KubernetesConfig, 0, len(internal.AllMetricsTypes)*2)
 	for metricType := range internal.MetricsTypesForNsAndCluster() {
 		nsMetric := namespacedMetricConf(metricType)
@@ -67,9 +66,6 @@ func generateKubeHookConfig() []go_hook.KubernetesConfig {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{
-		Order: 20,
-	},
 	Queue:      "/modules/prometheus_metrics_adapter/custom_metrics",
 	Kubernetes: generateKubeHookConfig(),
 }, setCustomMetricsQueriesToValues)

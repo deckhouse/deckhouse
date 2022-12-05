@@ -27,6 +27,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -110,7 +111,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 	}
 
 	if params.MasterNodeSelector {
-		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
+		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
 	if params.IsSecureRegistry {
@@ -189,6 +190,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
+			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -277,12 +279,22 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		{
+			Name: "DECKHOUSE_NODE_NAME",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.nodeName"},
+			},
+		},
+		{
 			Name:  "HELM_HOST",
 			Value: "127.0.0.1:44434",
 		},
 		{
 			Name:  "HELM3LIB",
 			Value: "yes",
+		},
+		{
+			Name:  "HELM_HISTORY_MAX",
+			Value: "3",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
@@ -586,13 +598,19 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	)
 }
 
+const (
+	ClusterUUIDCmKey       = "cluster-uuid"
+	ClusterUUIDCm          = "d8-cluster-uuid"
+	ClusterUUIDCmNamespace = "kube-system"
+)
+
 func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "d8-cluster-uuid",
-			Namespace: "kube-system",
+			Name:      ClusterUUIDCm,
+			Namespace: ClusterUUIDCmNamespace,
 		},
-		Data: map[string]string{"cluster-uuid": uuid},
+		Data: map[string]string{ClusterUUIDCmKey: uuid},
 	}
 }
 

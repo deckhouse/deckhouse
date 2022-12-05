@@ -1,8 +1,18 @@
 # Based on https://github.com/coredns/coredns/blob/master/Dockerfile
 ARG BASE_ALPINE
-FROM coredns/coredns:1.6.9@sha256:40ee1b708e20e3a6b8e04ccd8b6b3dd8fd25343eab27c37154946f232649ae21 as artifact
+ARG BASE_GOLANG_17_ALPINE
 
-FROM $BASE_ALPINE
-COPY --from=artifact /coredns /coredns
+
+FROM $BASE_GOLANG_17_ALPINE as artifact
+WORKDIR /src
+RUN apk add patch
+RUN wget https://github.com/coredns/coredns/archive/refs/tags/v1.9.3.tar.gz -O - | tar -xzv --strip-components=1 -C /src/
+COPY patches/support-alpha-tolerate-unready-endpoints-annotation.patch /src/
+RUN patch -p1 < support-alpha-tolerate-unready-endpoints-annotation.patch
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.9.3-flant.1" -o coredns
+
+
+FROM $BASE_GOLANG_17_ALPINE
+RUN apk add --no-cache ca-certificates
+COPY --from=artifact /src/coredns /coredns
 ENTRYPOINT [ "/coredns" ]
-

@@ -7,7 +7,9 @@ title: "The ingress-nginx module: FAQ"
 Add the  kube-rbac-proxy container to the application Pod to allow only ingress Pods to access your application in the cluster:
 
 ### An example of the corresponding Kubernetes Deployment
+
 {% raw %}
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -59,18 +61,20 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
+
 {% endraw %}
 
 The application only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
 At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the Pod.
 
-## How do I provide minimum rights to the Service Account?
+### How do I provide minimum rights to the Service Account?
 
 The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using the kube-apiserver.
 
-Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
+Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
 You don't need to create it yourself! Just attach it to the ServiceAccount of your Deployment.
 {% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -94,6 +98,7 @@ subjects:
 ```
 
 ### The Kube-RBAC-Proxy configuration
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -115,11 +120,13 @@ data:
           subresource: http
           name: my-app
 ```
+
 {% endraw %}
 According to the configuration, the user must have access to the `my-app` Deployment and its `http` subresource in the `my-namespace` namespace.
 
 Such permissions have the following RBAC form:
 {% raw %}
+
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -149,6 +156,7 @@ subjects:
 ```
 
 You also need to add the following parameters to the ingress of the resource:
+
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -157,13 +165,14 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_ssl_protocols TLSv1.2;
   proxy_ssl_session_reuse on;
 ```
+
 {% endraw %}
 [Here](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs) you can read more about how certificate authentication works.
-
 
 ## How do I configure MetalLB to be accessible from the internal network only?
 
 Below is an example of a MetalLB config with access from the internal network only.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -178,6 +187,7 @@ spec:
 ```
 
 ## How to add extra log fields to a nginx-controller?
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -190,15 +200,58 @@ spec:
     my-cookie: "$cookie_MY_COOKIE"
 ```
 
-
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
 > **Note!** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+> **Note!** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-`hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
+The IngressNginxController is deployed using Daemonset. Daemonset does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
 
-If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
+`hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
-`hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
+Notes:
+* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
+* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
+
+## How to use IngressClass with IngressClassParameters?
+
+Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
+with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    ingress-class.deckhouse.io/external: "true"
+  name: my-super-ingress
+spec:
+  controller: ingress-nginx.deckhouse.io/my-super-ingress
+  parameters:
+    apiGroup: elbv2.k8s.aws
+    kind: IngressClassParams
+    name: awesome-class-cfg
+```
+
+In this case Deckhouse will not create an IngressClass object and will use your own.
+
+## How to disable the collection of detailed Ingress resources statistics?
+
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
+high load on the monitoring system.
+
+To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
+
+Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
+
+```shell
+kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+```
+
+Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
+
+```shell
+kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+```

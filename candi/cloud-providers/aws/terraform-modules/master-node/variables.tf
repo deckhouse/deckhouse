@@ -41,6 +41,11 @@ variable "associate_public_ip_address" {
   default = false
 }
 
+variable "associate_ssh_accessible_sg" {
+  type = bool
+  default = true
+}
+
 variable "cloud_config" {
   type = any
 }

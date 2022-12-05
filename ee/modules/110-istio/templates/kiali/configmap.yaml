@@ -1,3 +1,5 @@
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -22,6 +24,9 @@ data:
       istio:
         component_status:
           enabled: false
+        root_namespace: d8-{{ $.Chart.Name }}
+        url_service_version: http://istiod.d8-istio:15014/version
+        config_map_name: istio-{{ $revision  }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:
@@ -35,7 +40,7 @@ data:
 {{- if and .Values.istio.tracing.enabled .Values.istio.tracing.kiali }}
       tracing:
         enabled: true
-        url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
+        url: {{ .Values.istio.tracing.kiali.jaegerURLForUsers }}
   {{- if .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         in_cluster_url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         use_grpc: true

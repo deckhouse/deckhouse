@@ -59,9 +59,7 @@ func RegisterHook(moduleName string, namespace string) bool {
 }
 
 func deleteNotMatchingCertificateSecretHandler(moduleName string) func(input *go_hook.HookInput) error {
-
 	return func(input *go_hook.HookInput) error {
-
 		httpsMode := module.GetHTTPSMode(moduleName, input)
 
 		if httpsMode != "CertManager" {

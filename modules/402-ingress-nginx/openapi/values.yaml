@@ -74,7 +74,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["0.26"]
+                  x-examples: ["1.1"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -265,3 +265,32 @@ properties:
                           type: string
                         namespace:
                           type: string
+      externalIngressClasses:
+        type: array
+        default: []
+        items:
+          type: string
+      upmeterDiscovery:
+        type: object
+        required:
+        - controllerNames
+        properties:
+          controllerNames:
+            type: array
+            items:
+              type: string
+      discardMetricResources:
+        type: object
+        default: {}
+        description: Exclude ingress metrics for the next resources.
+        properties:
+          namespaces:
+            type: array
+            default: []
+            items:
+              type: string
+          ingresses:
+            type: array
+            default: []
+            items:
+              type: string

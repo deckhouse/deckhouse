@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
@@ -74,44 +75,48 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
+	// Discover module path and name: bubble up to the module root, also guard againt filesystem root.
 	modulePath := filepath.Dir(wd)
-
+	for filepath.Base(filepath.Dir(modulePath)) != "modules" && filepath.Dir(modulePath) != "/" {
+		modulePath = filepath.Dir(modulePath)
+	}
 	moduleName, err := library.GetModuleNameByPath(modulePath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	moduleName = strcase.ToLowerCamel(moduleName)
 	moduleValuesKey := addonutils.ModuleNameToValuesKey(moduleName)
 
-	defaultConfigValues := addonutils.Values{
-		addonutils.GlobalValuesKey: map[string]interface{}{},
-		moduleValuesKey:            map[string]interface{}{},
-	}
+	// Create values structure
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defaultConfigValues := addonutils.Values{
+		addonutils.GlobalValuesKey: map[string]interface{}{},
+		moduleValuesKey:            map[string]interface{}{},
+	}
 	mergedConfigValues := addonutils.MergeValues(defaultConfigValues, initialValues)
-
-	config := new(Config)
-	config.modulePath = modulePath
-	config.moduleName = moduleName
-
 	initialValuesJSON, err := json.Marshal(mergedConfigValues)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	config.ValuesValidator = validation.NewValuesValidator()
-
-	if err := values_validation.LoadOpenAPISchemas(config.ValuesValidator, moduleName, modulePath); err != nil {
+	// Populate the validator with OpenAPI schema
+	validator := validation.NewValuesValidator()
+	if err := values_validation.LoadOpenAPISchemas(validator, moduleName, modulePath); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// Helm config
+	config := new(Config)
+	config.modulePath = modulePath
+	config.moduleName = moduleName
+	config.ValuesValidator = validator
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
@@ -125,7 +130,25 @@ func SetupHelmConfig(values string) *Config {
 	return config
 }
 
-func (hec *Config) HelmRender() {
+func GetModulesImages() map[string]interface{} {
+	return map[string]interface{}{
+		"registry":          "registry.example.com",
+		"registryDockercfg": "Y2ZnCg==",
+		"registryAddress":   "registry.deckhouse.io",
+		"registryPath":      "/deckhouse/fe",
+		"registryCA":        "CACACA",
+		"registryScheme":    "https",
+		"tags":              library.DefaultImagesTags,
+	}
+}
+
+func (hec *Config) HelmRender(options ...Option) {
+	opts := &configOptions{}
+
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	// Validate Helm values
 	err := values_validation.ValidateHelmValues(hec.ValuesValidator, hec.moduleName, string(hec.values.JSONRepr))
 	Expect(err).To(Not(HaveOccurred()), "Helm values should conform to the contract in openapi/values.yaml")
@@ -143,7 +166,16 @@ func (hec *Config) HelmRender() {
 		return
 	}
 
-	for _, manifests := range files {
+	for filePath, manifests := range files {
+		if opts.renderedOutput != nil {
+			if opts.filterPath != "" {
+				if strings.Contains(filePath, opts.filterPath) {
+					opts.renderedOutput[filePath] = manifests
+				}
+			} else {
+				opts.renderedOutput[filePath] = manifests
+			}
+		}
 		for _, doc := range releaseutil.SplitManifests(manifests) {
 			var t interface{}
 			err = yaml.Unmarshal([]byte(doc), &t)
@@ -166,5 +198,27 @@ func (hec *Config) HelmRender() {
 				unstructuredObj.GetName(),
 			))
 		}
+	}
+}
+
+type configOptions struct {
+	renderedOutput map[string]string
+	filterPath     string
+}
+
+type Option func(options *configOptions)
+
+// WithRenderOutput output rendered files in a format: $filename: $renderedTemplates (splitted with ---)
+func WithRenderOutput(m map[string]string) Option {
+	return func(options *configOptions) {
+		options.renderedOutput = m
+	}
+}
+
+// WithFilteredRenderOutput same as WithRenderOutput but filters files which contain `filter` pattern
+func WithFilteredRenderOutput(m map[string]string, filter string) Option {
+	return func(options *configOptions) {
+		options.renderedOutput = m
+		options.filterPath = filter
 	}
 }

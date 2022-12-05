@@ -40,7 +40,7 @@ spec:
         {{- $ng.taints | toYaml | nindent 8 }}
       containers:
       - name: reserve-resources
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.pause }}"
+        image: {{ include "helm_lib_module_common_image" (list $ "pause") }}
         resources:
           requests:
             cpu: {{ $ng.reserveCPU | quote }}

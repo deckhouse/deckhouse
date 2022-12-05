@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
@@ -37,7 +38,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -48,17 +49,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
         memoryControlPlane: 536870912
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io
-    registryDockercfg: Y2ZnCg==
-    tags:
-      controlPlaneManager:
-        controlPlaneManager: imagehash
-        etcd: imagehash
-        kubeApiserver119: imagehash
-        kubeControllerManager119: imagehash
-        kubeScheduler119: imagehash
-        kubeApiserverHealthcheck: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -69,7 +59,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    effectiveKubernetesVersion: "1.19"
+    effectiveKubernetesVersion: "1.21"
     etcdServers:
       - https://192.168.199.186:2379
     pkiChecksum: checksum
@@ -80,7 +70,35 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("controlPlaneManager", moduleValues)
+	})
+
+	Context("Prometheus rules", func() {
+		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
+			Expect(rule.Exists()).To(BeTrue())
+
+			groups := rule.Field("spec.groups")
+
+			Expect(groups.IsArray()).To(BeTrue())
+			Expect(groups.Array()).To(HaveLen(length))
+
+		}
+
+		Context("For etcd main", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+				f.HelmRender()
+			})
+
+			It("spec.groups should not be empty array", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
+
+				assertSpecDotGroupsArray(rule, 1)
+			})
+		})
 	})
 
 	Context("Two NGs with standby", func() {

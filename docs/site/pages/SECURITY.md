@@ -22,6 +22,36 @@ anchors_disabled: true
       </div>
     </div>
   </div>
+  <div class="block__content block__columns block__columns_top container">
+    <div>
+      <h2 class="text text_h2">
+        CIS Benchmarks
+      </h2>
+      <p class="text text_big">
+        Deckhouse meets
+        <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">CIS Kubernetes Benchmark recommendations</a>*.
+        Security measures are implemented both at the component level and at the platform level.
+        For example, you can restrict network access to the necessary interfaces only, prohibit anonymous access,
+        use certificates, set permissions for files and directories.
+      </p>
+      <p class="text text_small">
+        * CIS Kubernetes Benchmark is a set of guidelines for creating a reliable security environment for Kubernetes-based software.
+      </p>
+    </div>
+    <div>
+      <h2 class="text text_h2">
+        SELinux
+      </h2>
+      <p class="text text_big">
+        <a href="https://github.com/SELinuxProject" target="_blank">Security-Enhanced Linux (SELinux)</a>*
+        is a standard for securing Linux distributions.
+        You can forcefully activate the SELinux mode in distributions that are used with Deckhouse.
+      </p>
+      <p class="text text_small">
+        * SELinux defines access policies for applications, processes and files.
+      </p>
+    </div>
+  </div>
 </section>
 
 <section class="features">
@@ -187,6 +217,7 @@ anchors_disabled: true
       An example of Dockerfile for the kube-dns module*
     </h2>
 <div markdown="1" class="docs">
+
 ```docker
 # Based on https://github.com/coredns/coredns/blob/master/Dockerfile
 ARG BASE_ALPINE
@@ -196,10 +227,11 @@ FROM $BASE_ALPINE
 COPY --from=artifact /coredns /coredns
 ENTRYPOINT [ "/coredns" ]
 ```
+
+</div>
 <p class="text">
   * The module installs CoreDNS components for managing DNS in the Kubernetes cluster.
 </p>
-</div>
   </div>
 </section>
 

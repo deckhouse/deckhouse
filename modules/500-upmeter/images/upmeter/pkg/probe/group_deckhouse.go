@@ -21,24 +21,25 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/crd"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/hookprobe"
 	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
+func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *logrus.Logger) []runnerConfig {
 	const (
-		groupName = "deckhouse"
-		cpTimeout = 5 * time.Second
+		groupDeckhouse      = "deckhouse"
+		controlPlaneTimeout = 5 * time.Second
 	)
 
-	logEntry := logrus.NewEntry(logger).WithField("group", groupName)
-	monitor := crd.NewHookProbeMonitor(access.Kubernetes(), logEntry)
+	logEntry := logrus.NewEntry(logger).WithField("group", groupDeckhouse)
+	monitor := hookprobe.NewMonitor(access.Kubernetes(), logEntry)
+	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupDeckhouse,
 			probe:  "cluster-configuration",
 			check:  "_",
 			period: time.Minute,
@@ -48,12 +49,12 @@ func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				DeckhouseLabelSelector: "app=deckhouse",
 
 				// CR
-				CustomResourceName: util.AgentUniqueId(),
+				CustomResourceName: run.ID(),
 				Monitor:            monitor,
 
-				Access: access,
+				Access:           access,
+				PreflightChecker: controlPlanePinger,
 
-				ControlPlaneAccessTimeout: cpTimeout,
 				DeckhouseReadinessTimeout: 20 * time.Minute,
 				PodAccessTimeout:          5 * time.Second,
 				ObjectChangeTimeout:       5 * time.Second,

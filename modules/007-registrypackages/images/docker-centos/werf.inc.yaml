@@ -11,7 +11,7 @@
   {{- $image_version := $version | replace "docker-ce-" "" |replace "." "-" | replace "_" "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -22,9 +22,18 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: centos
+  {{- if contains "el7" $image_version }}
+    version: 7
+  {{- else if contains "el8" $image_version }}
+    version: 8  {{- end }}
+    docker: {{ $image_version }}
+    docker-cli: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -40,6 +49,6 @@ shell:
   - CLI_VERSION="$(sed "s/docker-ce/docker-ce-cli/" <<< "${VERSION}")"
   - RPM_PACKAGE="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${VERSION}.rpm"
   - RPM_PACKAGE_CLI="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${CLI_VERSION}.rpm"
-  - curl -sL ${RPM_PACKAGE} --output /docker-ce.x86_64.rpm
-  - curl -sL ${RPM_PACKAGE_CLI} --output /docker-ce-cli.x86_64.rpm
+  - curl -sfL ${RPM_PACKAGE} --output /docker-ce.x86_64.rpm
+  - curl -sfL ${RPM_PACKAGE_CLI} --output /docker-ce-cli.x86_64.rpm
 {{- end }}

@@ -1,3 +1,8 @@
+{{- define "dex_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,15 @@ spec:
     name: dex
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dex
+      minAllowed:
+        {{- include "dex_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -23,6 +37,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: dex
@@ -55,7 +70,7 @@ spec:
       containers:
       - name: dex
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.dex }}"
+        image: {{ include "helm_lib_module_image" (list . "dex") }}
         command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
         env:
         - name: KUBERNETES_POD_NAMESPACE
@@ -68,16 +83,14 @@ spec:
           protocol: TCP
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 5556
+            path: /healthz/live
+            port: 5559
             scheme: HTTPS
         readinessProbe:
           httpGet:
-            path: /healthz
-            port: 5556
+            path: /healthz/ready
+            port: 5559
             scheme: HTTPS
-          initialDelaySeconds: 5
-          timeoutSeconds: 1
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex/config
@@ -86,3 +99,57 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dex_resources" . | nindent 12 }}
+{{- end }}
+
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5559"
+          - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz/live
+            - /healthz/ready
+            upstreams:
+            - upstream: http://127.0.0.1:5558/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-user-authn
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: dex
+        ports:
+        - containerPort: 5559
+          name: https-metrics
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5559
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5559
+            scheme: HTTPS

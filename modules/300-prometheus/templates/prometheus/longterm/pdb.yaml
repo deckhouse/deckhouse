@@ -10,6 +10,6 @@ spec:
   minAvailable: 0
   selector:
     matchLabels:
-      app: prometheus
+      app.kubernetes.io/name: prometheus
       prometheus: longterm
 {{- end }}

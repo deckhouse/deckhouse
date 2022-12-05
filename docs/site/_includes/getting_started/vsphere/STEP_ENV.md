@@ -1,3 +1,5 @@
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
 ## List of required vSphere resources
 
 * **User** with required set of [permissions](#permissions).
@@ -68,15 +70,16 @@ StorageClasses will be created automatically for each Datastore that is tagged w
 > We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
 You have to create a role with a following list of permissions and attach
-it to one or more Datacenter.
+it to **vCenter**.
 
 {% snippetcut %}
 ```shell
 govc role.create kubernetes \
-Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Global.GlobalTag Global.SystemTag \
+Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
 InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
 InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
 InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \
+InventoryService.Tagging.ObjectAttachable \
 Network.Assign Resource.AssignVMToPool Resource.ColdMigrate Resource.HotMigrate Resource.CreatePool \
 Resource.DeletePool Resource.RenamePool Resource.EditPool Resource.MovePool StorageProfile.View System.Anonymous System.Read System.View \
 VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice \
@@ -109,9 +112,10 @@ VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate
 VirtualMachine.Provisioning.DiskRandomRead VirtualMachine.Provisioning.FileRandomAccess VirtualMachine.Provisioning.GetVmFiles \
 VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM VirtualMachine.Provisioning.ModifyCustSpecs \
 VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
-VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
+VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot \
+Cns.Searchable StorageProfile.View
 
-govc permissions.set  -principal имя_пользователя -role kubernetes /DC
+govc permissions.set  -principal username -role kubernetes /DC
 ```
 {% endsnippetcut %}
 

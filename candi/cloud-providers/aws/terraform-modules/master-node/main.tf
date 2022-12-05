@@ -56,12 +56,16 @@ data "aws_security_group" "node" {
   name = "${var.prefix}-node"
 }
 
+locals {
+  base_security_groups = var.associate_ssh_accessible_sg == true ? [data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id] : [data.aws_security_group.node.id]
+}
+
 resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType
   key_name        = var.prefix
   subnet_id       = local.zone_to_subnet_id_map[local.zone]
-  vpc_security_group_ids = concat([data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id], var.additional_security_groups)
+  vpc_security_group_ids = concat(local.base_security_groups, var.additional_security_groups)
   source_dest_check = false
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
   iam_instance_profile = "${var.prefix}-node"
@@ -79,7 +83,17 @@ resource "aws_instance" "master" {
 
   lifecycle {
     ignore_changes = [
+      # user_data in our case is node bootstrap.sh template, which depends on kubernetes version, registry, etc. If we do not suppress
+      # user_data, the state of the terraform will change when we change the cluster parameters.
+      # how aws calculates user_data:
+      # root@kube-master-1:~# curl 169.254.169.254/latest/user-data 2>/dev/null | shasum
+      # 3539ff5cb43fb326f4faa6fa5d5aeb9dec1ea141
       user_data,
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance#user_data_replace_on_change
+      # When used in combination with user_data or user_data_base64 will trigger a destroy and recreate when set to true. Defaults to false if not set.
+      # In older versions of terraform-provider-aws this parameter was absent, so now terraform tries to add them.
+      # we ignore user_data_replace_on_change to avoid manual converge.
+      user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
       volume_tags

@@ -75,7 +75,8 @@ resource "azurerm_network_security_rule" "ssh" {
   protocol                    = "Tcp"
   source_port_range           = "*"
   destination_port_range      = "22"
-  source_address_prefix       = "*"
+  source_address_prefix       = local.ssh_allow_list == null ? "*" : null
+  source_address_prefixes     = local.ssh_allow_list == null ? null : local.ssh_allow_list
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.kube.name
   network_security_group_name = azurerm_network_security_group.kube.name

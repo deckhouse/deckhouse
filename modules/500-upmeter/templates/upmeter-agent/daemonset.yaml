@@ -1,3 +1,8 @@
+{{- define "agent_resources" }}
+cpu: 20m
+memory: 20Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,19 +18,15 @@ spec:
     name: upmeter-agent
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: agent
+      minAllowed:
+        {{- include "agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 40Mi
   {{- end }}
----
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: upmeter-agent
-  namespace: d8-upmeter
-  {{- include "helm_lib_module_labels" (list . (dict "app" "upmeter-agent")) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" . | nindent 2 }}
-  selector:
-    matchLabels:
-      app: upmeter-agent
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -50,25 +51,66 @@ spec:
       serviceAccountName: upmeter-agent
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       volumes:
       - name: data
         hostPath:
           type: DirectoryOrCreate
           path: /var/lib/upmeter/agent
+      - name: tmp
+        emptyDir:
+          medium: Memory
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
+      - name: migrator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
+        command:
+          - /migrate
+          - -verbose
+          - "-path=/data/migrations/agent"
+          - "-database=sqlite3:///db/db.sqlite?x-no-tx-wrap=true"
+          - up
+        volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "agent_resources" . | nindent 12 }}
+{{- end }}
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+          image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
           command:
             - /upmeter
             - agent
+            - --user-agent=UpmeterAgent/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
+            {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
+            - --disable-probe={{ $probeRef }}
+            {{- end }}
+            {{- if .Values.upmeter.internal.dynamicProbes }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.ingressControllerNames }}
+            - --dynamic-probe-nginx-controller={{ $name }}
+              {{- end }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.cloudEphemeralNodeGroupNames }}
+            - --dynamic-probe-nodegroup={{ $name }}
+              {{- end }}
+              {{- range $zone := .Values.upmeter.internal.dynamicProbes.zones }}
+            - --dynamic-probe-known-zone={{ $zone }}
+              {{- end }}
+            - --dynamic-probe-known-zoneprefix={{ .Values.upmeter.internal.dynamicProbes.zonePrefix}}
+            {{- end }}
           volumeMounts:
           - mountPath: /db
             name: data
+            readOnly: false
+          - mountPath: /tmp
+            name: tmp
             readOnly: false
           env:
           - name: NODE_NAME
@@ -76,7 +118,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
-            value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
+            value: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS
@@ -87,8 +129,6 @@ spec:
             value: "443"
           - name: UPMETER_DB_PATH
             value: "/db/db.sqlite"
-          - name: UPMETER_DB_MIGRATIONS_PATH
-            value: "/data/migrations/agent"
           {{- if hasKey $.Values.global "clusterConfiguration" }}
             {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
           - name: UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE
@@ -99,15 +139,25 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: UPMETER_DISABLED_PROBES
-            value: '{{ .Values.upmeter.internal.disabledProbes | join "," }}'
           - name: UPMETER_CLUSTER_DOMAIN
             value: {{ .Values.global.discovery.clusterDomain | quote }}
+          - name: LOG_LEVEL
+            value: "info"
           - name: LOG_TYPE
             value: "json"
+          - name: UPMETER_EXPORT_TIMEOUT
+            value: "15s"
+          # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables
+          - name: KUBE_CLIENT_QPS
+            value: "5"
+          - name: KUBE_CLIENT_BURST
+            value: "10"
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "agent_resources" . | nindent 14 }}
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       enableServiceLinks: false

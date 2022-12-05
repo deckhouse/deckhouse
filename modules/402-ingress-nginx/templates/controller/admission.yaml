@@ -1,4 +1,6 @@
 {{- $context := . }}
+{{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
+
 {{- if and $context.Values.ingressNginx.internal $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if gt (len $context.Values.ingressNginx.internal.ingressControllers) 0 }}
 ---
@@ -11,12 +13,14 @@ webhooks:
     {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
     {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
     {{- if $crd.spec.validationEnabled }}
-        # there is a bug https://github.com/kubernetes/ingress-nginx/issues/4916
-        # admission webhook was speed up in 0.48 https://github.com/kubernetes/ingress-nginx/pull/7298
-        # before that fix sometime we get context deadline on a large installation
-        {{- if semverCompare ">=0.48" $controllerVersion }}
   - name: {{ $crd.name }}.validate.d8-ingress-nginx
     matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: NotIn
+        values:
+        - deckhouse
     rules:
       - apiGroups:
           - networking.k8s.io
@@ -30,16 +34,51 @@ webhooks:
         scope: Namespaced
     failurePolicy: Fail
     sideEffects: None
-    timeoutSeconds: 15
+    timeoutSeconds: 30
     admissionReviewVersions:
       - v1
+    {{- if semverCompare "<1.22" $kubernetesVersion}}
+      - v1beta1
+    {{- end }}
     clientConfig:
       service:
         namespace: d8-ingress-nginx
         name: {{ $crd.name }}-admission
         path: /networking/v1/ingresses
       caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
-        {{- end }}
+  - name: {{ $crd.name }}.validate.d8-ingress-nginx-deckhouse
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: In
+        values:
+        - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    failurePolicy: Ignore
+    sideEffects: None
+    timeoutSeconds: 5
+    admissionReviewVersions:
+      - v1
+    {{- if semverCompare "<1.22" $kubernetesVersion}}
+      - v1beta1
+    {{- end }}
+    clientConfig:
+      service:
+        namespace: d8-ingress-nginx
+        name: {{ $crd.name }}-admission
+        path: /networking/v1/ingresses
+      caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
       {{- end }}
     {{- end }}
   {{- end }}

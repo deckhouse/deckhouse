@@ -9,6 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "yandex" | quote }}
+  region: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.region | b64enc | quote }}
   zones: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
   machineClassKind: {{ b64enc "YandexMachineClass" | quote }}

@@ -4,13 +4,66 @@ properties:
     type: boolean
     default: false
     description: |
-      Enable or disable debug logging for vector agent. Default: `false`.
+      Enable or disable agent debug logging. Default: `false`.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
   resourcesRequests:
     required: ["mode"]
     type: object
     description: |
-      Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+      Max amounts of CPU and memory resources that the pod can request when selecting a node.
+
+      If the vertical-pod-autoscaler module is disabled, then these values become the default ones.
     default: {}
+    x-examples:
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+    - mode: VPA
+      vpa:
+        mode: Initial
+        cpu:
+          min: 1
+          max: 3000m
+        memory:
+          min: 1024
+          max: 4096
+    - mode: Static
+      static:
+        cpu: "55m"
+        memory: "256Ki"
     oneOf:
       - properties:
           mode:
@@ -42,7 +95,7 @@ properties:
             description: |
               The VPA usage mode.
             enum: ["Initial", "Auto"]
-            default: "Auto"
+            default: "Initial"
           cpu:
             type: object
             description: |
@@ -54,7 +107,6 @@ properties:
                   - type: string
                     pattern: "^[0-9]+m?$"
                   - type: number
-                x-examples: [3, "300m"]
                 description: |
                   Maximum allowed CPU requests.
                 default: "500m"
@@ -63,7 +115,6 @@ properties:
                   - type: string
                     pattern: "^[0-9]+m?$"
                   - type: number
-                x-examples: [5, "500m"]
                 description: |
                   Minimum allowed CPU requests.
                 default: "50m"
@@ -76,18 +127,16 @@ properties:
               max:
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                x-examples: ["32Mi", 3000]
                 description: |
                   Maximum allowed memory requests.
                 default: "2048Mi"
               min:
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                x-examples: ["4Mi", 400]
                 description: |
                   Minimum allowed memory requests.
                 default: "64Mi"
@@ -111,7 +160,7 @@ properties:
           memory:
             oneOf:
               - type: string
-                pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
               - type: number
             description: |
               Memory requests.

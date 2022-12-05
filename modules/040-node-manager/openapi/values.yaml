@@ -147,6 +147,8 @@ properties:
         properties:
           type:
             type: string
+          region:
+            type: string
           zones:
             type: array
             items:
@@ -174,7 +176,12 @@ properties:
                   zoneb: mysubnetidb
               tags:
                 aaa: aaa
-
+      clusterAutoscalerPriorities:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
       nodeGroups:
         type: array
         description: |
@@ -210,7 +217,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.19"
+                - "1.21"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -227,6 +234,19 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            nodeCapacity:
+              type: object
+              properties:
+                cpu:
+                  oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                memory:
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
             nodeTemplate:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
@@ -253,7 +273,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.19"
+              kubernetesVersion: "1.21"
               cri:
                 type: "Docker"
               cloudInstances:
@@ -264,3 +284,12 @@ properties:
                 minPerZone: 1
                 zones:
                   - zonea
+      upmeterDiscovery:
+        type: object
+        required:
+          - ephemeralNodeGroupNames
+        properties:
+          ephemeralNodeGroupNames:
+            type: array
+            items:
+              type: string

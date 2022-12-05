@@ -17,8 +17,6 @@ limitations under the License.
 package db
 
 import (
-
-	// sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 
 	dbcontext "d8.io/upmeter/pkg/db/context"

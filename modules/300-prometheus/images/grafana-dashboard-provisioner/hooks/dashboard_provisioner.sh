@@ -14,12 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeuo pipefail
+
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
 done
 
 function __config__() {
-  cat << EOF
+  cat <<EOF
     configVersion: v1
     kubernetes:
     - name: dashboard_resources
@@ -32,33 +34,40 @@ EOF
 }
 
 function __main__() {
-  mkdir -p /tmp/dashboards/
-  rm -rf /tmp/dashboards/*
+  tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
-  if ! context::has snapshots.dashboard_resources.0 ; then
-    rm -rf /etc/grafana/dashboards/*
-    return 0
-  fi
-
+  malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
-    title=$(jq -rc '.definition | fromjson | .title' <<< ${dashboard} | slugify)
-    folder=$(jq -rc '.folder' <<< ${dashboard})
+    title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
+    if [[ "x${title}" == "x" ]]; then
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
+      continue
+    fi
+
+    title=$(slugify <<<${title})
+
+    folder=$(jq -rc '.folder' <<<${dashboard})
+    file="${folder}/${title}.json"
 
     # General folder can't be provisioned, see the link for more details
     # https://github.com/grafana/grafana/blob/3dde8585ff951d5e9a46cfd64d296fdab5acd9a2/docs/sources/http_api/folder.md#a-note-about-the-general-folder
     if [[ "$folder" == "General" ]]; then
-      # FIXME: Change folder to "" after updating grafana to version >= 7.1
-      #  In grafana >= 7.1 to store dashboard in General folder you must put it into the root of the provisioned folder
-      folder="General Folder"
+      file="${title}.json"
     fi
 
-    mkdir -p "/tmp/dashboards/${folder}"
-    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${folder}/${title}.json"
+    mkdir -p "${tmpDir}/${folder}"
+    jq -rc '.definition' <<<${dashboard} > "${tmpDir}/${file}"
   done
 
-  rm -rf /etc/grafana/dashboards/*
-  cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
+  if [[ "x${malformed_dashboards}" != "x" ]]; then
+    echo "Skipping malformed dashboards: ${malformed_dashboards}"
+  fi
+
+  rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
+  rm -rf ${tmpDir}
+
+  echo -n "ok" >/tmp/ready
 }
 
 hook::run "$@"

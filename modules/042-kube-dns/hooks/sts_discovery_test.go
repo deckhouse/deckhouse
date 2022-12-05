@@ -62,7 +62,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: k8s.gcr.io/nginx-slim:0.8
+        image: registry.k8s.io/nginx-slim:0.8
 `, 1))
 			f.RunHook()
 		})
@@ -110,7 +110,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: k8s.gcr.io/nginx-slim:0.8
+        image: registry.k8s.io/nginx-slim:0.8
 ---
 apiVersion: v1
 kind: Service
@@ -144,7 +144,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: k8s.gcr.io/nginx-slim:0.8
+        image: registry.k8s.io/nginx-slim:0.8
 ---
 apiVersion: v1
 kind: Service
@@ -178,7 +178,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: k8s.gcr.io/nginx-slim:0.8
+        image: registry.k8s.io/nginx-slim:0.8
 `, 1))
 			f.RunHook()
 		})

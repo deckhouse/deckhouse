@@ -23,11 +23,12 @@
       </td>
     </tr>
     {% for item in section.items %}
+    {%- unless item.description[page.lang].size > 1 %}{% continue %}{% endunless %}
     <tr>
       <td class="table__cell_left-title">
         <div>
           {%- if item.url %}
-          <a href="/{{ page.lang }}{{ item.url | relative_url }}">{{ item.description[page.lang] }}</a>
+          <a href="{{ item.url | relative_url }}">{{ item.description[page.lang] }}</a>
           {%- elsif item.external_url %}
           <a href="{{ item.external_url[page.lang] }}">{{ item.description[page.lang] }}</a>
           {%- else %}
@@ -114,9 +115,10 @@ $(document).ready(function () {
         {%- for hint in item.hint %}
       tippy('.table__hint_{{ section.id }}_{{ itemIndex }}_{{ hint[0] }}_{{ page.lang }}', {
         interactive: true,
-        interactiveDebounce: 75,
+        interactiveDebounce: 10,
         theme: 'custom',
         allowHTML: true,
+        maxWidth: 400,
         content: `<em>{{ hint[1][page.lang] }}</em>`
       });
         {%- endfor %}

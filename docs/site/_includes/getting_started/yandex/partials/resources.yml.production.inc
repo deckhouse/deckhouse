@@ -1,14 +1,28 @@
+# [<en>] section containing the parameters of system node group
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
 spec:
+  # [<en>] parameters for provisioning the cloud-based VMs
+  # [<ru>] параметры заказа облачных виртуальных машин
   cloudInstances:
+    # [<en>] the reference to the InstanceClass object
+    # [<ru>] ссылка на объект InstanceClass
     classReference:
       kind: YandexInstanceClass
       name: system
+    # [<en>] the maximum number of instances for the group in each zone
+    # [<ru>] максимальное количество инстансов в зоне
     maxPerZone: 1
+    # [<en>] the minimum number of instances for the group in each zone
+    # [<ru>] минимальное количество инстансов в зоне
     minPerZone: 1
+    # [<en>] list of availability zones to create instances in
+    # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     zones:
@@ -25,9 +39,15 @@ spec:
         value: system
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for system nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
+  # [<en>] name of instance class
+  # [<ru>] имя инстанс класса
   name: system
 spec:
   # [<en>] you might consider changing this
@@ -38,7 +58,7 @@ spec:
   memory: 8192
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskSizeGb: 30
+  diskSizeGB: 30
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -49,7 +69,11 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: frontend
+    # [<en>] the maximum number of instances for the group in each zone
+    # [<ru>] максимальное количество инстансов в зоне
     maxPerZone: 2
+    # [<en>] the minimum number of instances for the group in each zone
+    # [<ru>] минимальное количество инстансов в зоне
     minPerZone: 1
   disruptions:
     approvalMode: Automatic
@@ -62,16 +86,22 @@ spec:
         value: frontend
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for frontend nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
+  # [<en>] name of instance class
+  # [<ru>] имя инстанс класса
   name: frontend
 # [<en>] you might consider changing this
 # [<ru>] возможно, захотите изменить
 spec:
   cores: 2
   memory: 4096
-  diskSizeGb: 30
+  diskSizeGB: 30
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -87,11 +117,15 @@ spec:
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     zones:
-    - ru-central1-c
+    - ru-central1-a
   disruptions:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for worker nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
@@ -101,19 +135,26 @@ metadata:
 spec:
   cores: 4
   memory: 8192
-  diskSizeGb: 30
+  diskSizeGB: 30
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
+  # [<en>] the name of the Ingress class to use with the Ingress nginx controller
+  # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
+  # [<en>] the way traffic goes to cluster from the outer network
+  # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
+  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
-  maxReplicas: 3
-  minReplicas: 2
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

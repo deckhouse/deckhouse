@@ -26,6 +26,7 @@ prometheus: |
 У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью Custom Resource `PrometheusRemoteWrite`.
 
 ### Пример минимального PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -36,6 +37,7 @@ spec:
 ```
 
 ### Пример расширенного PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -55,15 +57,13 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-
 ## Подключение Prometheus к сторонней Grafana
 
 У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
 
 > В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
-
+>
 > Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие в вашем случае.
-
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -72,16 +72,17 @@ metadata:
   name: my-prometheus-api
   namespace: d8-monitoring
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
+    nginx.ingress.kubernetes.io/app-root: /graph
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
 spec:
+  ingressClassName: nginx
   rules:
   - host: prometheus-api.example.com
     http:
@@ -107,6 +108,7 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
+
 Далее остается только добавить data source в Grafana:
 
 **В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**
@@ -155,7 +157,9 @@ subjects:
   name: app
   namespace: default
 ```
+
 Далее сделаем запрос используя `curl`:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -179,4 +183,84 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 ```
+
 `Job` должен завершиться успешно.
+
+## Отправка алертов в Telegram
+
+Prometheus-operator не поддерживает прямую отправку алертов в Telegram, поэтому Alertmanager настраивается на отправку алертов через webhook в приложение, которое отправляет полученные данные в Telegram.
+
+Задеплойте приложение, которое отправляет полученные от webhook данные в Telegram:
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: telegram-alertmanager
+   namespace: d8-monitoring
+   labels:
+     app: telegram
+spec:
+   template:
+     metadata:
+       name: telegram-alertmanager
+       labels:
+         app: telegram
+     spec:
+       containers:
+         - name: telegram-alertmanager
+           image: janwh/alertmanager-telegram
+           ports:
+             - containerPort: 8080
+           env:
+             - name: TELEGRAM_CHAT_ID
+               value: "-30490XXXXX"
+             - name: TELEGRAM_TOKEN
+               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
+   replicas: 1
+   selector:
+     matchLabels:
+       app: telegram
+---
+apiVersion: v1
+kind: Service
+metadata:
+ labels:
+   app: telegram
+ name: telegram-alertmanager
+ namespace: d8-monitoring
+spec:
+ type: ClusterIP
+ selector:
+   app: telegram
+ ports:
+   - protocol: TCP
+     port: 8080
+```
+
+`TELEGRAM_CHAT_ID` и `TELEGRAM_TOKEN` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
+
+Задеплойте CRD CustomAlertManager:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  internal:
+    receivers:
+    - name: webhook
+      webhookConfigs:
+      - sendResolved: true
+        url: http://telegram-alertmanager:8080/alerts
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: webhook
+      repeatInterval: 12h
+  type: Internal
+```

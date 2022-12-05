@@ -2,82 +2,75 @@ type: object
 properties:
   host:
     description: |
-      домен vCenter сервера.
+      Доменное имя сервера vCenter.
   username:
     description: |
-      логин.
+      Login ID.
   password:
     description: |
-      пароль.
+      Пароль.
   insecure:
     description: |
-      можно выставить в `true`, если vCenter имеет самоподписанный сертификат.
-        * По умолчанию `false`.
+      Установите `true`, если vCenter использует самоподписанный сертификат.
   vmFolderPath:
     description: |
-      путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
-        * Пример — `dev/test`.
+      Путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
   regionTagCategory:
     description: |
-      имя **категории** тэгов, использующихся для идентификации региона (vSphere Datacenter).
-        * По умолчанию `k8s-region`.
+      Имя категории тегов, использующихся для идентификации региона (vSphere Datacenter).
   zoneTagCategory:
     description: |
-      имя **категории** тэгов, использующихся для идентификации зоны (vSphere Cluster).
-        * По умолчанию `k8s-zone`.
+      Имя категории тегов, использующихся для идентификации зоны (vSphere Cluster).
   disableTimesync:
     description: |
-      отключить ли синхронизацию времени со стороны vSphere.
-        * По умолчанию `true`.
-      **Внимание!** это не отключит NTP демоны в гостевой ОС, а лишь отключит "подруливание" временем со стороны ESXi.
+      Отключение синхронизации времени со стороны vSphere.
+
+      > **Внимание!** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
   region:
     description: |
-      тэг, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
+      Тег, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
   zones:
     description: |
-      глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+      Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
   sshKeys:
     description: |
-      список public SSH ключей в plain-text формате.
-        * Опциональный параметр.
-        * По умолчанию разрешённых ключей для пользователя по умолчанию не будет.
+      Список публичных SSH-ключей в plain-text формате.
   externalNetworkNames:
     description: |
-      имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
-        * Опциональный параметр.
+      Имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
   internalNetworkNames:
     description: |
-      имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
-        * Опциональный параметр.
+      Имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
   storageClass:
     properties:
       exclude:
         description: |
-          полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
-            * Формат — массив строк.
-            * Опциональный параметр.
+          Полные имена (или regex выражения имён) StorageClass'ов, которые не будут созданы в кластере.
       default:
         description: |
-          имя StorageClass, который будет использоваться в кластере по умолчанию.
-            * Формат — строка.
-            * Опциональный параметр.
-            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
-              * Лексикографически первый StorageClass из создаваемых модулем.
+          Имя StorageClass'а, который будет использоваться в кластере по умолчанию.
 
+          Если параметр не задан, фактическим StorageClass'ом по умолчанию будет один из следующих:
+            * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+            * Лексикографически первый StorageClass из создаваемых модулем.
+      compatibilityFlag:
+        description: |
+          Флаг, разрешающий использование старой версии CSI:
+            * `legacy` — используется старая версия драйвера — только диски FCD, без онлайн изменения размера;
+            * `migration` — в этом случае оба драйвера будут доступны в кластере одновременно. Этот режим используется для миграции со старого драйвера.
   nsxt:
     description: |
-      Поддержка cloud controller manager'ом load balancers для vSphere в Kubernetes.
+      Поддержка cloud controller manager'ом Load Balancer'ов в Vsphere через NSX-T.
     properties:
       defaultIpPoolName:
         description: |
-          Имя дефолтного ip pool, который используется если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
+          Имя пула IP-адресов по умолчанию, который используется, если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
       defaultTcpAppProfileName:
         description: |
-          Имя дефолтного профиля, используемого для TCP соединений в NSX-T.
+          Имя профиля по умолчанию, используемого для TCP соединений в NSX-T.
       defaultUdpAppProfileName:
         description: |
-          Имя дефолтного профиля, используемого для UDP соединений в NSX-T.
+          Имя профиля по умолчанию, используемого для UDP соединений в NSX-T.
       size:
         description: |
           Размер сервиса LoadBalancer.
@@ -98,7 +91,7 @@ properties:
           Должен быть установлен в `true` если NSX-T использует самоподписанный сертификат.
       loadBalancerClass:
         description: |
-          Классы Load Balancer.
+          Дополнительная секция, определяющая Load Balancer Classes (чтобы использовать Class, установите аннотацию `loadbalancer.vmware.io/class: <class name>` на SVC).
         items:
           properties:
             name:
@@ -106,7 +99,7 @@ properties:
                 Имя Load Balancer Class для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
             ipPoolName:
               description: |
-                Имя ip pool'а.
+                Имя пула IP-адресов.
             tcpAppProfileName:
               description: |
                 Имя профиля по умолчанию, используемого для TCP соединений.

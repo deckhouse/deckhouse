@@ -9,7 +9,10 @@ issues:
 
 linters-settings:
   gci:
-    local-prefixes: d8.io/upmeter
+    sections:
+      - standard
+      - default
+      - prefix(d8.io/upmeter)
   goimports:
     local-prefixes: d8.io/upmeter
   golint:
@@ -32,4 +35,3 @@ linters:
     - misspell
     - sqlclosecheck
     - unparam
-

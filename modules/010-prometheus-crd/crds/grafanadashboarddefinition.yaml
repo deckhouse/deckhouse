@@ -39,10 +39,11 @@ spec:
                   example: 'My Folder'
                 definition:
                   type: string
+                  pattern: '^[ \t\n]*\{(.|\n)*\}[ \t\n]*$'
                   description: |
                     The dashboard's JSON manifest.
 
-                    **Caution!** Make sure that there is no "local" `id` (at the `.id` address) in the manifest in addition to the `uid`.
+                    > **Caution!** Make sure that there is no "local" `id` (at the `.id` address) in the manifest in addition to the `uid`.
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.folder
           name: Folder

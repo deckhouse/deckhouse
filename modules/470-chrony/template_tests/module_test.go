@@ -35,12 +35,6 @@ const (
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io
-    registryDockercfg: Y2ZnCg==
-    tags:
-      chrony:
-        chrony: imagehash
   discovery:
     kubernetesVersion: 1.20.5
     d8SpecificNodeCountByRole:
@@ -48,10 +42,6 @@ const (
       master: 3
 `
 	moduleValues = `
-vpa:
-  updateMode: "Auto"
-  maxCPU: "50m"
-  maxMemory: "100Mi"
 ntpServers: ["pool.ntp.org", "ntp.ubuntu.com"]
 `
 )
@@ -62,6 +52,7 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 	Context("Render", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("chrony", moduleValues)
 			f.HelmRender()
 		})
@@ -73,8 +64,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-chrony", "deckhouse-registry")
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
-			chronyVPATest := f.KubernetesResource("VerticalPodAutoscaler", "d8-chrony", "chrony")
-			chronyPDBTest := f.KubernetesResource("PodDisruptionBudget", "d8-chrony", "chrony")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -87,12 +76,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
   }
 `))
 
-			Expect(chronyVPATest.Exists()).To(BeTrue())
-			Expect(chronyVPATest.Field("spec.updatePolicy.updateMode").String()).To(Equal(`Auto`))
-			Expect(chronyVPATest.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.cpu").String()).To(Equal(`50m`))
-			Expect(chronyVPATest.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal(`100Mi`))
-
-			Expect(chronyPDBTest.Exists()).To(BeTrue())
 		})
 	})
 })

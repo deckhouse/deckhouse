@@ -17,18 +17,16 @@ limitations under the License.
 package kubernetes
 
 import (
-	shapp "github.com/flant/shell-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	kube "github.com/flant/kube-client/client"
 )
 
-func InitKubeClient() (kube.KubernetesClient, error) {
-	client := kube.NewKubernetesClient()
+func InitKubeClient(config *Config) (kube.Client, error) {
+	client := kube.New()
 
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
-	client.WithMetricStorage(metric_storage.NewMetricStorage())
+	client.WithContextName(config.Context)
+	client.WithConfigPath(config.Config)
+	client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
+	// TODO(nabokihms): add kubernetes client metrics
 
 	// FIXME: Kubernetes client is configured successfully with 'out-of-cluster' config
 	//      operator.component=KubernetesAPIClient

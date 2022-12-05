@@ -6,4 +6,4 @@ properties:
     default: "HostGW"
     description: |
       Work mode.
-      > **NOTE!!!** All cluster nodes must be rebooted after switching work mode. You can change the parameter **only** in bare metal clusters.
+      > **NOTE!** All cluster nodes must be rebooted after switching work mode. You can change the parameter **only** in bare metal clusters.

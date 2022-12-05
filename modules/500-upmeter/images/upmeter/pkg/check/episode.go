@@ -19,8 +19,6 @@ package check
 import (
 	"fmt"
 	"time"
-
-	utime "d8.io/upmeter/pkg/time"
 )
 
 // Episode with time counters and start aligned to 30s or 5m
@@ -72,21 +70,20 @@ func (e Episode) IsCorrect(step time.Duration) bool {
 	return e.Total() <= step
 }
 
+// Combine deduces en episode from the two choosing the longest possible uptime, then the longest
+// possible downtime, then longest possible uncertainty. All the range time left will be unknown.
 func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 	target := Episode{
-		ProbeRef: ProbeRef{
-			Group: e.ProbeRef.Group,
-			Probe: e.ProbeRef.Probe,
-		},
+		ProbeRef: e.ProbeRef,
 		TimeSlot: e.TimeSlot,
 	}
 
 	// Combined NoData is a minimum of unavailable seconds.
 	// Episodes can be incomplete, so use slotSize for proper calculation.
-	targetAvail := utime.Longest(e.Avail(), o.Avail())
+	targetAvail := longest(e.Avail(), o.Avail())
 	target.NoData = slotSize - targetAvail
 
-	target.Up = utime.Longest(e.Up, o.Up)
+	target.Up = longest(e.Up, o.Up)
 
 	failUnknown := targetAvail - target.Up
 
@@ -100,7 +97,7 @@ func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 
 	// Success and Fail seconds are filling Unknown, but not more than
 	// maximum sum of known seconds.
-	maxKnown := utime.Longest(e.Known(), o.Known())
+	maxKnown := longest(e.Known(), o.Known())
 	allowedFail := maxKnown - target.Up
 
 	if allowedFail == failUnknown {
@@ -121,24 +118,15 @@ func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 }
 
 func (e Episode) EqualTimers(a Episode) bool {
-	if e.Up != a.Up {
-		return false
-	}
-	if e.Down != a.Down {
-		return false
-	}
-	if e.Unknown != a.Unknown {
-		return false
-	}
-	if e.NoData != a.NoData {
-		return false
-	}
-	return true
+	return e.Up == a.Up &&
+		e.Down == a.Down &&
+		e.Unknown == a.Unknown &&
+		e.NoData == a.NoData
 }
 
 func (e Episode) String() string {
-	return fmt.Sprintf("start=%s probe='%s' s=%s f=%s u=%s n=%s",
-		e.TimeSlot.Format(time.StampMilli),
+	return fmt.Sprintf("slot=%s probe=%s up=%s down=%s uncertain=%s notmeasured=%s",
+		e.TimeSlot.Format(time.Stamp),
 		e.ProbeRef.Id(),
 		e.Up,
 		e.Down,
@@ -171,4 +159,11 @@ type Stats struct {
 
 func (s Stats) String() string {
 	return fmt.Sprintf("(Σ%d ↑%d ↓%d ?%d)", s.Expected, s.Up, s.Down, s.Unknown)
+}
+
+func longest(a, b time.Duration) time.Duration {
+	if a > b {
+		return a
+	}
+	return b
 }

@@ -12,16 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $experimentalOption := "--patches" -}}
+{{- $experimentalOption := "" -}}
 {{- if semverCompare "<1.22" .kubernetesVersion -}}
-  {{- $experimentalOption = "--experimental-patches" -}}
+  {{- $experimentalOption = "--experimental-patches /var/lib/bashible/kubeadm/patches" -}}
 {{- end }}
 
+mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
+cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
-kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
+kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }}
+kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }}
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
+# This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
+# with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
+if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
+  echo "Cannot remove node.kubernetes.io/exclude-from-external-load-balancers label from node" 1>&2
+  exit 1
+fi
 
 # Upload pki for deckhouse
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete secret d8-pki || true

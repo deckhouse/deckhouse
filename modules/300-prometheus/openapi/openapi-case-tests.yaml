@@ -10,8 +10,16 @@ positive:
           maxMemory: "100"
     - internal:
         vpa:
+          maxCPU: "1400m"
+          maxMemory: "1.5Gi"
+    - internal:
+        vpa:
           longtermMaxCPU: "1m"
           longtermMaxMemory: "100Mi"
+    - internal:
+        vpa:
+          longtermMaxCPU: "1m"
+          longtermMaxMemory: "1.5Gi"
     - internal:
         vpa:
           longtermMaxCPU: 4096
@@ -79,3 +87,7 @@ negative:
       vpa:
         maxCPU: "123Hz"
         maxMemory: "3445J"
+  - internal:
+      vpa:
+        maxCPU: "123Pz"
+        maxMemory: "3.Gi"

@@ -8,12 +8,11 @@ sections:
       #   description:
       #     en: Description in English
       #     ru: Description in Russian
-      #   revision: (ce|ee|fe)
+      #   revision: (ce|ee)
       #   or
       #   revision:
       #     ce: true     each item can be true, partial or false
       #     ee: partial
-      #     fe: false
       #   hint:
       #     ru: Hint in Russian (not required)
       #     en: Hint in English (not required)
@@ -30,8 +29,8 @@ sections:
           ru: Bare metal
         revision: ce
         external_url:
-          en: https://deckhouse.io/en/gs/bm/step2.html
-          ru: https://deckhouse.io/ru/gs/bm/step2.html
+          en: https://deckhouse.io/gs/bm/step2.html
+          ru: https://deckhouse.ru/gs/bm/step2.html
       - description:
           en: Public cloud providers (AWS, Azure, GCP, Yandex.Cloud)
           ru: Публичные облака (AWS, Azure, GCP, Yandex.Cloud)
@@ -70,6 +69,20 @@ sections:
                   как обычные bare metal-серверы. Не будет интеграции с облаками, т.е. виртуальные машины придется
                   создавать вручную, не будет автомасштабирования и т.д.
         url: /documentation/v1/modules/030-cloud-provider-vsphere/
+      - description:
+          ru: Отечественные дистрибутивы Linux
+        revision:
+          ce: partial
+          ee: true
+        hint:
+          ce:
+            ru: |
+              <p>Базовая поддержка доступна в редакции CE. Расширенная поддержка предоставляется только в редакции EE.</p>
+              <p style="text-align: left;">В расширенную поддержку входит:
+              <ul style="text-align: left;"><li>Гарантия совместимости Deckhouse с ОС.</li>
+              <li>Приоритетное исправление ошибок и выпуск обновлений.</li>
+              <li>Консультации по миграции на ОС.</li></ul></p>
+        url: /documentation/v1/supported_versions.html
   - id: features
     description:
       en: Supported features
@@ -119,22 +132,11 @@ sections:
         revision: ee
         url: /documentation/v1/modules/350-node-local-dns/
       - description:
-          en: <a href="/en/documentation/v1/modules/020-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
-          ru: <a href="/ru/documentation/v1/modules/020-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
+          en: <a href="/documentation/v1/modules/002-deckhouse/usage.html#setting-up-the-update-mode">Choose maintenance window </a>
+          ru: <a href="/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
         revision:
           ce: true
           ee: true
-      - description:
-          en: Experimental features
-          ru: Экспериментальные фичи
-        revision:
-          ce: false
-          ee: partial
-        hint:
-          ee:
-            ru: Доступно в рамках услуги <a href='/ru/services/managed.html'>Managed Deckhouse</a>
-            en: Available as a part of the <a href='/en/services/managed.html'>Managed Deckhouse</a> service
-        skipInDocumentation: true
   - id: other
     description:
       en: Other
@@ -147,8 +149,8 @@ sections:
           ce: true
           ee: true
         external_url:
-          en: https://deckhouse.io/en/about_us.html#open-source
-          ru: https://deckhouse.io/ru/about_us.html#open-source
+          en: https://deckhouse.io/about_us.html#open-source
+          ru: https://deckhouse.ru/about_us.html#open-source
       - description:
           en: Open Source License
           ru: Лицензия Open Source
@@ -182,5 +184,5 @@ sections:
           ru: Обучение и консультации
         revision: ee
         external_url:
-          en: https://deckhouse.io/en/services/training.html
-          ru: https://deckhouse.io/ru/services/training.html
+          en: https://deckhouse.io/services/training.html
+          ru: https://deckhouse.ru/services/training.html

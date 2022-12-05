@@ -19,22 +19,24 @@ locals {
   kube_b_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1) : null
   kube_c_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 2) : null
 
-  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? (local.should_create_subnets ? cidrhost(local.kube_c_v4_cidr_block, 10) : cidrhost(data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0], 10)) : var.nat_instance_internal_address) : null
+  not_have_existing_subnet_a = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-a", null) == null)
+  not_have_existing_subnet_b = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-b", null) == null)
+  not_have_existing_subnet_c = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-c", null) == null)
 }
 
 data "yandex_vpc_subnet" "kube_a" {
-  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-a", null) == null) ? 0 : 1
-  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-a
+  count      = local.not_have_existing_subnet_a ? 0 : 1
+  subnet_id  = var.existing_zone_to_subnet_id_map.ru-central1-a
 }
 
 data "yandex_vpc_subnet" "kube_b" {
-  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-b", null) == null) ? 0 : 1
-  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-b
+  count     = local.not_have_existing_subnet_b ? 0 : 1
+  subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-b
 }
 
 data "yandex_vpc_subnet" "kube_c" {
-  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-c", null) == null) ? 0 : 1
-  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-c
+  count     = local.not_have_existing_subnet_c ? 0 : 1
+  subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-c
 }
 
 resource "yandex_vpc_route_table" "kube" {

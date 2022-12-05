@@ -6,9 +6,11 @@ metadata:
   name: kubeconfig-generator
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    web.deckhouse.io/export-name: "kubeconfig"
+    web.deckhouse.io/export-icon: "/public/img/kubeconfig-generator.jpeg"
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:

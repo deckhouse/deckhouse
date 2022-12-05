@@ -4,8 +4,8 @@
     expr: abs(node_ntp_offset_seconds)
 
   - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
-    expr: (min by (node) (node_ntp_sanity)) == 0
-    for: 2h
+    expr: (min by (node) (node_timex_sync_status)) == 0
+    for: 30m
     labels:
       severity_level: "5"
       tier: cluster
@@ -25,8 +25,8 @@
       summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
 
   - alert: NodeTimeOutOfSync
-    expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
-    for: 5m
+    expr: abs(node_ntp_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
+    for: 30m
     labels:
       severity_level: "5"
       tier: cluster
@@ -34,5 +34,5 @@
       plk_protocol_version: "1"
       plk_markup_format: markdown
       description: |
-        Node's {{$labels.node}} time is out of sync from Prometheus Node by {{ $value }} seconds.
+        Node's {{$labels.node}} time is out of sync from ntp server by {{ $value }} seconds.
       summary: Node's {{$labels.node}} clock is drifting.

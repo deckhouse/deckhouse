@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { Col, Container, Row } from "sveltestrap/src";
-	import Group from "./Group.svelte";
-	import StatusText from "./StatusText.svelte";
-
+	import { Col, Container, Row, Styles } from "sveltestrap";
+	import Group from "./lib/Group.svelte";
+	import StatusText from "./lib/StatusText.svelte";
 	import { getGroupData } from "./en";
 
 	async function fetchStatusJSON() {
-		const r = await fetch("/public/api/status", { headers: { "accept": "application/json" } });
+		const r = await fetch("/public/api/status", {
+			headers: { accept: "application/json" },
+		});
 		return await r.json();
 	}
 
@@ -15,7 +16,6 @@
 	let error = null;
 	let pendingUpdateText = "";
 	let now = new Date();
-
 
 	async function update() {
 		now = new Date();
@@ -37,51 +37,38 @@
 	}
 </script>
 
-<Container style="width: 720px">
+<Styles />
+
+<Container style="width: 600px">
 	<Row class="mt-5 align-items-end">
 		<Col>
-			<h1 class="display-4">Status</h1>
+			<h1 class="display-4 m-0">Status</h1>
 		</Col>
-		<Col class="text-right">
-			<p>
-				<span class="text-muted"> as of</span> {now.toLocaleTimeString()}
-			</p>
+		<Col class="text-end">
+			<h4 class="fw-normal text-muted">
+				{#if data == null && error == null}
+					Wait a second...
+				{:else}
+					<StatusText status={data.status} text={data.status + pendingUpdateText} />
+				{/if}
+			</h4>
 		</Col>
 	</Row>
 
-	<hr class="mt-0" />
+	<hr class="m-0" />
 
-	{#if data == null && error == null}
+	<Row class="mb-5">
+		<p class="text-end mt-2">
+			<span class="text-muted"> as of</span>
+			{now.toLocaleTimeString()}
+		</p>
+	</Row>
 
-		<Row class="mb-5 mt-5">
-			<Col>
-				<h2 class="text-muted font-weight-light">Wait a second...</h2>
-			</Col>
-		</Row>
-
-	{:else}
-
-		{#if data != null }
-			<h2 class="mb-5 mt-5 font-weight-normal">
-				<StatusText
-					status="{data.status}"
-					text={"Cluster " + data.status + pendingUpdateText}
-					mute={error != null}
-				/>
-			</h2>
-
-			{#each data.rows as row}
-				<Row class="mb-3">
-					<Group
-						{ ...getGroupData(row.group) }
-						status="{row.status}"
-						mute={error != null}
-					/>
-				</Row>
-			{/each}
-
-		{/if}
+	{#if data != null && error == null}
+		{#each data.rows as row}
+			<Row class="mb-3">
+				<Group {...getGroupData(row.group)} status={row.status} mute={error != null} />
+			</Row>
+		{/each}
 	{/if}
-
 </Container>
-

@@ -2,15 +2,6 @@
 title: "Модуль user-authn: настройки"
 ---
 
-Модуль по умолчанию **включен**. Для выключения добавьте в CM `deckhouse`:
-
-```yaml
-data:
-  userAuthnEnabled: "false"
-```
-
-## Параметры
-
 <!-- SCHEMA -->
 
 Автоматический деплой [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения и подключение его к Dex происходит при создании Custom Resource [`DexAuthenticator`](cr.html#dexauthenticator).

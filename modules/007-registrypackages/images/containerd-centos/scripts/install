@@ -14,14 +14,30 @@
 # limitations under the License.
 
 set -Eeo pipefail
-PACKAGES_TO_INSTALL=""
-if ! rpm --quiet -q "$(rpm -qip container-selinux.x86_64.rpm | grep Name | awk '{print $3}')"; then
-  PACKAGES_TO_INSTALL="container-selinux.x86_64.rpm"
+packages_to_install=""
+package_container_selinux="container-selinux"
+package_file_container_selinux="${package_container_selinux}.x86_64.rpm"
+rpm_name_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Name | awk '{print $3}')"
+rpm_version_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Version | awk '{print $3}')"
+
+if ! rpm --quiet -q "${rpm_name_container_selinux}-${rpm_version_container_selinux}"; then
+  packages_to_install="${packages_to_install} ${package_file_container_selinux}"
+else
+  echo "RPM ${package_file_container_selinux} already installed."
 fi
-if ! rpm --quiet -q "$(rpm -qip containerd.io.x86_64.rpm | grep Name | awk '{print $3}')"; then
-  PACKAGES_TO_INSTALL="${PACKAGES_TO_INSTALL} containerd.io.x86_64.rpm"
+
+package_containerd_io="containerd.io"
+package_file_containerd_io="${package_containerd_io}.x86_64.rpm"
+rpm_name_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Name | awk '{print $3}')"
+rpm_version_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Version | awk '{print $3}')"
+
+if ! rpm --quiet -q "${rpm_name_containerd_io}-${rpm_version_containerd_io}"; then
+  packages_to_install="${packages_to_install} ${package_file_containerd_io}"
+else
+  echo "RPM ${package_file_containerd_io} already installed."
 fi
-if [[ -n "${PACKAGES_TO_INSTALL}" ]]; then
-  rpm -U ${PACKAGES_TO_INSTALL}
+
+if [[ -n "${packages_to_install}" ]]; then
+  rpm -U ${packages_to_install}
 fi
-yum versionlock add container-selinux containerd.io
+yum versionlock add ${package_container_selinux} ${package_containerd_io}

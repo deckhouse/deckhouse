@@ -38,6 +38,7 @@ If you have metric flapping problems which lead to unwanted scales, there are op
 Below is an example of the HPA for scaling based on standard `metrics.k8s.io`metrics (CPU and memory of the Pods). Please, take special note of the `averageUtulization` — this value reflects the target percentage of resources that have been **requested**.
 
 {% raw %}
+
 ```yaml
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
@@ -79,6 +80,7 @@ spec:
         # Scale up if all the Deployment's Pods have requested 1GB and consumed more than 800MB on average.
         averageUtilization: 80
 ```
+
 {% endraw %}
 
 ## Custom metrics-based scaling
@@ -87,29 +89,29 @@ spec:
 
 Custom metrics must be registered with the `/apis/custom.metrics.k8s.io/` API. In our case, `prometheus-metrics-adapter` (it also implements the API) performs the registration. The `HorizontalPodAutoscaler` object can refer to these metrics after the registration is complete. Setting up a vanilla  `prometheus-metrics-adapter` is a time-consuming process. Happily, we have somewhat simplified it by defining a set of [Custom Resources](cr.html) with different Scopes:
 * Namespaced:
-    * `ServiceMetric`
-    * `IngressMetric`
-    * `PodMetric`
-    * `DeploymentMetric`
-    * `StatefulsetMetric`
-    * `NamespaceMetric`
-    * `DaemonSetMetric` (not available to users)
+  * `ServiceMetric`
+  * `IngressMetric`
+  * `PodMetric`
+  * `DeploymentMetric`
+  * `StatefulsetMetric`
+  * `NamespaceMetric`
+  * `DaemonSetMetric` (not available to users)
 * Cluster:
-    * `ClusterServiceMetric` (not available to users)
-    * `ClusterIngressMetric` (not available to users)
-    * `ClusterPodMetric` (not available to users)
-    * `ClusterDeploymentMetric` (not available to users)
-    * `ClusterStatefulsetMetric` (not available to users)
-    * `ClusterDaemonSetMetric` (not available to users)
+  * `ClusterServiceMetric` (not available to users)
+  * `ClusterIngressMetric` (not available to users)
+  * `ClusterPodMetric` (not available to users)
+  * `ClusterDeploymentMetric` (not available to users)
+  * `ClusterStatefulsetMetric` (not available to users)
+  * `ClusterDaemonSetMetric` (not available to users)
 
 You can globally define a metric using the Cluster-scoped resource, while the Namespaced resource allows you to redefine it locally. All CRs have the same [format](cr.html).
-
 
 ### Using custom metrics with HPA
 
 After a custom metric is registered, you can refer to it. For the HPA, custom metrics can be of two types — `Pods` and `Object`. `Object` is a reference to a cluster object that has metrics with the appropriate labels (`namespace=XXX,ingress=YYY`) in Prometheus. These labels will be substituted instead of `<<.LabelMatchers>>` in your custom request.
 
 {% raw %}
+
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -142,6 +144,7 @@ spec:
         # Scale up if the value of our custom metric is greater than 10.
         value: 10
 ```
+
 {% endraw %}
 
 In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the Pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. [Example...](#examples-of-using-custom-metrics-of-the-pods-type)
@@ -151,6 +154,7 @@ In the case of the `Pods` metric type, the process is more complex. First, metri
 Suppose there is a `send_forum_message` queue in RabbitMQ, and this message broker is exposed as an `rmq` service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
@@ -186,6 +190,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 #### Example of using unstable custom metric
@@ -195,6 +200,7 @@ Improvement for example above.
 Suppose there is a `send_forum_message` queue in RabbitMQ, and this message broker is exposed as an `rmq` service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. At the same time, we do not want to react to short-term spikes, for this we use MQL-function `avg_over_time()`.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
@@ -230,6 +236,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 #### Examples of using custom metrics of the `Pods` type
@@ -237,6 +244,7 @@ spec:
 Suppose we want the average number of php-fpm workers in the `mybackend` Deployment to be no more than 5.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
@@ -272,11 +280,13 @@ spec:
         # Scale up if the average metric value for all the Pods of the myworker Deployment is greater than 5.
         averageValue: 5
 ```
+
 {% endraw %}
 
 The Deployment is scaled based on the percentage of active php-fpm workers.
 
 {% raw %}
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1beta1
@@ -309,6 +319,7 @@ spec:
         # Scale up if, on average, 80% of workers in the deployment are running at full capacity.
         averageValue: 80
 ```
+
 {% endraw %}
 
 ### Registering external metrics with the Kubernetes API
@@ -320,6 +331,7 @@ In our installations, we have implemented a universal rule that allows you to cr
 An example of `CustomPrometheusRules`:
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -336,6 +348,7 @@ spec:
       # The results of this request will be passed to the final metric; there is no reason to include excess labels into it.
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
+
 {% endraw %}
 
 ### Using external metrics with HPA
@@ -343,6 +356,7 @@ spec:
 You can refer to a metric after it is registered.
 
 {% raw %}
+
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -375,6 +389,7 @@ spec:
         # Scale up if the value of our metric is greater than 10.
         value: 10
 ```
+
 {% endraw %}
 
 ### Example of scaling based on the Amazon SQS queue size
@@ -384,6 +399,7 @@ spec:
 Suppose there is a `send_forum_message` queue in Amazon SQS. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. Also, you will need an exporter to collect Amazon SQS metrics (say, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)).
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -430,6 +446,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 ## Debugging

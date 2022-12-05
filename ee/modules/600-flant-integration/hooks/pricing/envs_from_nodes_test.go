@@ -25,7 +25,7 @@ metadata:
   name: master-0
   labels:
     node.deckhouse.io/group: master
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   allocatable:
     cpu: "4"
@@ -57,11 +57,11 @@ metadata:
   name: master-0
   labels:
     node.deckhouse.io/group: master
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   allocatable:
     cpu: "4"
@@ -75,11 +75,11 @@ metadata:
   name: master-1
   labels:
     node.deckhouse.io/group: master
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   allocatable:
     cpu: "2"
@@ -143,7 +143,7 @@ metadata:
  name: master-0
  labels:
    node.deckhouse.io/group: master
-   node-role.kubernetes.io/master: ""
+   node-role.kubernetes.io/control-plane: ""
 status:
  allocatable:
    cpu: 1900m
@@ -157,7 +157,7 @@ metadata:
  name: master-1
  labels:
    node.deckhouse.io/group: master
-   node-role.kubernetes.io/master: ""
+   node-role.kubernetes.io/control-plane: ""
 status:
  allocatable:
    cpu: 4

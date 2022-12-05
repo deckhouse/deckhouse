@@ -2,11 +2,38 @@
 
 <footer class="footer">
     <div class="footer__content container">
-        <div class="footer__logo">
-            <a href="/">
-                <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-white.svg"
-                     alt="Deckhouse Kubernetes Platform"/>
-            </a>
+        <div class="footer__content--wrap">
+            <div class="footer__logo">
+                <a href="/">
+                    <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-white.svg"
+                         alt="Deckhouse Kubernetes Platform"/>
+                </a>
+            </div>
+            <div class="footer__contact-info">
+                <a href="mailto:contact@deckhouse.io">
+                  contact@deckhouse.io
+                </a>
+            </div>
+            <div class="footer__contact-info">
+                {%- if page.lang == "ru" %}
+                <a href="tel:74957211027">
+                    +7 (495) 721-10-27
+                </a>
+                {%- else %}
+                <a href="tel:3727770007">
+                  +372-777-00-07
+                </a>
+                {%- endif %}
+            </div>
+            <div class="footer__contact-info">
+                <a href="" data-open-modal="request_callback" class="button button_alt">
+                  {%- if page.lang == "ru" %}
+                  Перезвоните мне
+                  {%- else %}
+                  Request a call
+                  {%- endif %}
+                </a>
+            </div>
         </div>
         <div class="footer__navigation">
             {%- for column in site.data.footer.columns[page.lang] %}
@@ -20,7 +47,7 @@
                 {%- for item in column.items %}
                 <li>
                     {%- if item.external_url %}<a href="{{ item.external_url }}" target="_blank">
-                    {%- elsif item.url %}<a href="/{{ page.lang }}{{ item.url }}">
+                    {%- elsif item.url %}<a href="{{ item.url }}">
                     {%- else %}<a href="#">{% endif %}
                         {{- item.title -}}
                     </a>

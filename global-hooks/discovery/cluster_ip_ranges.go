@@ -24,7 +24,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/global-hooks/discovery/internal"
+	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
 const (
@@ -147,11 +147,11 @@ func applyClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyPodSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return internal.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
+	return filter.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
 }
 
 func applyServiceSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return internal.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
+	return filter.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
 }
 
 func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string) string {

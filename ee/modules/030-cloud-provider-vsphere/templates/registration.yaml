@@ -11,6 +11,7 @@ metadata:
 type: Opaque
 data:
   type: {{ b64enc "vsphere" | quote }}
+  region: {{ $providerClusterConfiguration.region | b64enc | quote }}
   zones: {{ $providerClusterConfiguration.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
   machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}

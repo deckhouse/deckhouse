@@ -26,8 +26,15 @@ provider:
 masterNodeGroup:
   replicas: 1
   instanceClass:
+    # type of the instance
     instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
+    # Amazon Machine Image ID
+    # AMI Catalog in the AWS console: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
+    # master node VM disk size
+    diskSizeGb: 30
+    # master node VM disk type to use
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -36,63 +43,21 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
-tags:
-  team: rangers
-```
-
-## Standard
-
->**Caution!** A bastion host is required to access nodes.
-
-Virtual machines access the Internet using a NAT Gateway with a shared (and single) source IP.
-
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSkzOWvLzAwB4hmIk4CP1-mj2QIxCyJg2VJvijFfdttjnV0quLpw7x87KtTC5v2I9xF5gVKpTK-aqyz/pub?w=812&h=655)
-<!-- Source: https://docs.google.com/drawings/d/1kln-DJGFldcr6gayVtFYn_3S50HFIO1PLTc1pC_b3L0/edit -->
-
-Example of the layout configuration:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
-layout: Standard
-provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
-  region: eu-central-1
-masterNodeGroup:
-  # Number of master nodes.
-  # If there is more than one master node, the etcd cluster will be set up automatically.
-  replicas: 1
-  instanceClass:
-    instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
-nodeGroups:
-  - name: mydb
-    nodeTemplate:
-      labels:
-        node-role.kubernetes.io/mydb: ""
-    replicas: 2
-    instanceClass:
-      instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
-    additionalTags:
-      backup: me
-vpcNetworkCIDR: "10.241.0.0/16"
-nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
 tags:
   team: rangers
 ```
 
 ## WithNAT
 
->**Caution!** A bastion host is required to access nodes (it can be created alongside the cluster by specifying the parameters in the section `withNAT.bastionInstance`).
+> **Caution!** A bastion host is required to access nodes (it can be created alongside the cluster by specifying the parameters in the section `withNAT.bastionInstance`).
+>
+> **Caution!** The NAT Gateway is always created in zone `a` in this layout. If cluster nodes are placed in other zones, then if there are problems in zone `a`, they will also be unavailable. In other words, when choosing the `WithNat` layout, the availability of the entire cluster will depend on the availability of zone `a`.
 
 Virtual machines access the Internet using a NAT Gateway with a shared (and single) source IP.
 
@@ -114,14 +79,22 @@ withNAT:
     zone: eu-central-1a
     instanceClass:
       instanceType: m5.large
-      ami: ami-09a4a23815cdb5e06
+      ami: ami-0caef02b518350c8b
+      diskType: gp3
 masterNodeGroup:
   # Number of master nodes.
   # If there is more than one master node, the etcd cluster will be set up automatically.
   replicas: 1
   instanceClass:
+    # type of the instance
     instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
+    # Amazon Machine Image ID
+    # AMI Catalog in the AWS console: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
+    # master node VM disk size
+    diskSizeGb: 30
+    # master node VM disk type to use
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -130,12 +103,12 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
 tags:
   team: rangers
 ```

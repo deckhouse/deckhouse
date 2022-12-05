@@ -168,7 +168,6 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 		} else {
 			tokensByNg[token.NodeGroup] = token
 		}
-
 	}
 
 	// Remove all expired tokens

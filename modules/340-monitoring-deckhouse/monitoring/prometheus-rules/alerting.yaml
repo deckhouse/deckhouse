@@ -1,0 +1,105 @@
+- name: d8.deckhouse.image
+  rules:
+  - alert: D8DeckhouseIsNotOnReleaseChannel
+    expr: max by (release_channel) (deckhouse_release_channel{release_channel=""} == 1) > 0
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Deckhouse is on a custom branch instead of one of the regular release channels.
+
+        It is recommended that Deckhouse be subscribed to one of the following channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+
+        Use the command below to find out what release channel is currently in use: `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
+
+        Subscribe the cluster to one of the regular release channels.
+      summary: |
+        Deckhouse in the cluster is not subscribed to one of the regular release channels.
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: max by (name) (d8_release_waiting_manual) == 1
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Deckhouse release is waiting for manual approval.
+
+        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+      summary: |
+        Deckhouse release is waiting for manual approval.
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: max by (name) (d8_release_waiting_manual) == 2
+    labels:
+      severity_level: "6"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Deckhouse release is waiting for manual approval.
+
+        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+      summary: |
+        Deckhouse release is waiting for manual approval.
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: max by (name) (d8_release_waiting_manual) >= 3
+    labels:
+      severity_level: "3"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Deckhouse release is waiting for manual approval.
+
+        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+      summary: |
+        Deckhouse release is waiting for manual approval.
+  - alert: DeckhouseReleaseIsBlocked
+    expr: max by (name) (d8_release_blocked{reason="requirement"}) >= 1
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Deckhouse release requirements is not met.
+
+        Please run `kubectl describe DeckhouseRelease {{ $labels.name }}` for details.
+      summary: |
+        Deckhouse release requirements unmet.
+  - alert: DeckhouseReleaseDisruptionApprovalRequired
+    expr: max by (name) (d8_release_blocked{reason="disruption"}) >= 1
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Deckhouse release contains disruption update.
+
+        You can figure out more details by running `kubectl describe DeckhouseRelease {{ $labels.name }}`.
+        If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
+      summary: |
+        Deckhouse release disruption approval required.

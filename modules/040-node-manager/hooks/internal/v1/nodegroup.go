@@ -34,9 +34,9 @@ type NodeType string
 
 const (
 	NodeTypeStatic         NodeType = "Static"
-	NodeTypeCloudEphemeral          = "CloudEphemeral"
-	NodeTypeCloudPermanent          = "CloudPermanent"
-	NodeTypeCloudStatic             = "CloudStatic"
+	NodeTypeCloudEphemeral NodeType = "CloudEphemeral"
+	NodeTypeCloudPermanent NodeType = "CloudPermanent"
+	NodeTypeCloudStatic    NodeType = "CloudStatic"
 )
 
 func (nt NodeType) String() string {
@@ -150,6 +150,9 @@ type CloudInstances struct {
 
 	// Reference to a ClassInstance resource. Required.
 	ClassReference ClassReference `json:"classReference"`
+
+	// Priority setting for autoscaler expander
+	Priority *int32 `json:"priority,omitempty"`
 }
 
 func (c CloudInstances) IsEmpty() bool {
@@ -164,12 +167,14 @@ func (c CloudInstances) IsEmpty() bool {
 }
 
 type StandbyHolder struct {
-	// Describes the amount of resources, that will not be held by standby holder.
+	// Percent of the node-group's node capacity which will be overprovisioned with standby-holder pod.
+	OverprovisioningRate *int64 `json:"overprovisioningRate,omitempty"`
+	// Deprecated: Describes the amount of resources, that will not be held by standby holder.
 	NotHeldResources Resources `json:"notHeldResources,omitempty"`
 }
 
 func (s StandbyHolder) IsEmpty() bool {
-	return s.NotHeldResources.IsEmpty()
+	return s.OverprovisioningRate == nil
 }
 
 type Resources struct {
@@ -212,6 +217,7 @@ func (c Chaos) IsEmpty() bool {
 
 type OperatingSystem struct {
 	// Enable kernel maintenance from bashible (default true).
+	// Deprecated
 	ManageKernel *bool `json:"manageKernel,omitempty"`
 }
 
@@ -225,6 +231,8 @@ type Disruptions struct {
 
 	// Extra settings for Automatic mode.
 	Automatic AutomaticDisruptions `json:"automatic,omitempty"`
+	// Extra settings for RolloutRestart mode.
+	RollingUpdate RollingUpdateDisruptions `json:"rollingUpdate,omitempty"`
 }
 
 func (d Disruptions) IsEmpty() bool {
@@ -242,8 +250,17 @@ type AutomaticDisruptions struct {
 	Windows update.Windows `json:"windows,omitempty"`
 }
 
+type RollingUpdateDisruptions struct {
+	// Node update windows
+	Windows update.Windows `json:"windows,omitempty"`
+}
+
 func (a AutomaticDisruptions) IsEmpty() bool {
 	return a.DrainBeforeApproval == nil && len(a.Windows) == 0
+}
+
+func (r RollingUpdateDisruptions) IsEmpty() bool {
+	return len(r.Windows) == 0
 }
 
 type Kubelet struct {
@@ -253,10 +270,18 @@ type Kubelet struct {
 	// Directory path for managing kubelet files (volume mounts,etc).
 	// Default: '/var/lib/kubelet'
 	RootDir string `json:"rootDir,omitempty"`
+
+	// Maximum log file size before it is rotated.
+	// Default: '50Mi'
+	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
+
+	// How many rotated log files to store before deleting them.
+	// Default: '4'
+	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 }
 
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == ""
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
 }
 
 type NodeGroupStatus struct {

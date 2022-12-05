@@ -1,0 +1,19 @@
+- name: d8.secret-copier.deprecations
+  rules:
+  - alert: D8SecretCopierDeprecatedLabels
+    expr: |
+      max(kube_secret_labels{namespace="default",label_antiopa_secret_copier="yes"}) > 0
+    labels:
+      severity_level: "9"
+      tier: application
+      d8_module: secret-copier
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Obsolete `antiopa_secret_copier=yes` label has been found.
+      description: |-
+        The [secrets copier module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed the service label for the original secrets in the `default` namespace.
+
+        Soon we will abandon the old `antiopa-secret-copier: "yes"` label.
+
+        You have to replace the `antiopa-secret-copier: "yes"` label with  `secret-copier.deckhouse.io/enabled: ""` for all secrets that the `secret-copier` module uses in the `default` namespace.

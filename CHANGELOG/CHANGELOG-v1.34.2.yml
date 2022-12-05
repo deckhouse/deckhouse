@@ -1,0 +1,27 @@
+candi:
+  fixes:
+    - summary: use cgroupfs as cgroup driver for docker 20
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1975
+docs:
+  fixes:
+    - summary: Minor fixes in documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2032
+    - summary: Fixed OpenAPI render
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2031
+kube-dns:
+  fixes:
+    - summary: Fixed previously introduced incorrect behavior of patched coredns.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2023
+prometheus:
+  fixes:
+    - summary: fix deckhouse group alerts label selectors
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2012
+    - summary: Fix alermanager instance class.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2009
+upmeter:
+  fixes:
+    - summary: Fix kubectl logs command in alerts D8UpmeterProbeGarbage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2003
+    - summary: Fixed garbage collection for control-plane probes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1943
+

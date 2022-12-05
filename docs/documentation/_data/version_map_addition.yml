@@ -1,0 +1,15 @@
+  alteros:
+    '7':
+      ru_support: 'true'
+      en_support: 'false'
+  astra:
+    '1.7.2':
+      ru_support: 'true'
+      en_support: 'false'
+  rocky:
+    '8':
+    '9':
+  '_redos':
+    '7.3':
+      ru_support: 'true'
+      en_support: 'false'

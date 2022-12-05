@@ -12,8 +12,10 @@ search: prometheus monitoring, prometheus custom alert, prometheus custom alerti
 1. Create Endpoints for this Service and explicitly specify the `IP:PORT` pairs that your applications use to expose metrics.
 > Note that port names in Endpoints must match those in the Service.
 
-### An example:
+### An example
+
 Application metrics are freely available (no TLS involved) at `http://10.182.10.5:9114/metrics`.
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ Custom Grafana dashboards can be added to the project using the infrastructure a
 To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition) Custom Resource in the cluster.
 
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -66,6 +69,7 @@ spec:
             "limit": 100,
 ...
 ```
+
 **Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
 
 ## How do I add alerts and/or recording rules?
@@ -76,6 +80,7 @@ Parameters:
 - `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -93,12 +98,17 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
+
 ### How do I provision additional Grafana data sources?
+
 The `GrafanaAdditionalDatasource` allows you to provision additional Grafana data sources.
 
 A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
 
+See the datasource type in the documentation for the specific [datasource](https://grafana.com/docs/grafana/latest/datasources/).
+
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -118,13 +128,43 @@ spec:
 ```
 
 ## How do I enable secure access to metrics?
+
 To enable secure access to metrics, we strongly recommend using **kube-rbac-proxy**.
+
+## How do I add Alertmanager?
+
+Create a custom resource `CustomAlertmanager` with type `Internal`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  type: Internal
+  internal:
+    route:
+      groupBy: ['job']
+      groupWait: 30s
+      groupInterval: 5m
+      repeatInterval: 12h
+      receiver: 'webhook'
+    receivers:
+    - name: 'webhook'
+      webhookConfigs:
+      - url: 'http://webhookserver:8080/'
+```
+
+Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager) custom resource for more information about the parameters.
 
 ## How do I add an additional Alertmanager?
 
-Create a Custom Resource `CustomAlertmanager`, it can point to Alertmanager through the FQDN or Kubernetes service
+Create a custom resource `CustomAlertmanager` with the type `External`, it can point to Alertmanager through the FQDN or Kubernetes service.
 
 FQDN Alertmanager example:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -137,6 +177,7 @@ spec:
 ```
 
 Alertmanager with a Kubernetes service:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -157,11 +198,12 @@ Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager)
 
 The solution comes down to configuring alert routing in the Alertmanager.
 
-You will need to: 
+You will need to:
 1. Create a parameterless receiver.
-1. Route unwanted alerts to this receiver. 
+1. Route unwanted alerts to this receiver.
 
 Below is the sample `alertmanager.yaml` for this kind of a situation:
+
 ```yaml
 receivers:
 - name: blackhole
@@ -206,6 +248,7 @@ To avoid situations when VPA requests more resources for Prometheus or Longterm 
 To provide Lens access to Prometheus metrics, you need to create some resources in a cluster.
 
 {% offtopic title="Resource templates to be created..." %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -257,6 +300,13 @@ metadata:
   name: prometheus-lens-proxy-conf
   namespace: lens-proxy
 data:
+  "39-log-format.sh": |
+    cat > /etc/nginx/conf.d/log-format.conf <<"EOF"
+    log_format  body  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"'
+                      ' req body: $request_body';
+    EOF
   "40-prometheus-proxy-conf.sh": |
     #!/bin/sh
     prometheus_service="$(getent hosts prometheus.d8-monitoring | awk '{print $2}')"
@@ -271,6 +321,7 @@ data:
         proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
         proxy_pass https://\$upstream:9090$request_uri;
       }
+      access_log /dev/stdout body;
     }
     EOF
 ---
@@ -304,6 +355,9 @@ spec:
         - mountPath: /docker-entrypoint.d/40-prometheus-proxy-conf.sh
           subPath: "40-prometheus-proxy-conf.sh"
           name: prometheus-lens-proxy-conf
+        - mountPath: /docker-entrypoint.d/39-log-format.sh
+          name: prometheus-lens-proxy-conf
+          subPath: 39-log-format.sh
       serviceAccountName: prometheus-lens-proxy
       volumes:
       - name: prometheus-lens-proxy-conf
@@ -324,10 +378,55 @@ spec:
     port: 8080
     targetPort: 80
 ```
+
 {% endofftopic %}
 
 After the resources deployment, Prometheus metrics will be available at address `lens-proxy/prometheus-lens-proxy:8080`.
-Lens Prometheus type - `Prometheus Operator`.
+Lens Prometheus type — `Prometheus Operator`.
+
+Starting from the version `5.2.7`, Lens requires `pod` and `namespace` labels to be present on node-exporter metrics.
+Otherwise, node resource consumption will not appear on Lens charts.
+
+To fix this, apply the following resource:
+
+{% offtopic title="A resource that fix the display of metrics..." %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  name: lens-hack
+spec:
+  groups:
+  - name: lens-hack
+    rules:
+    - expr: node_cpu_seconds_total{mode=~"user|system", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_cpu_seconds_total
+    - expr: node_filesystem_size_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_size_bytes
+    - expr: node_filesystem_avail_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_avail_bytes
+    - expr: node_memory_MemTotal_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemTotal_bytes
+    - expr: node_memory_MemFree_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemFree_bytes
+    - expr: node_memory_Buffers_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Buffers_bytes
+    - expr: node_memory_Cached_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Cached_bytes
+```
+
+{% endofftopic %}
 
 ## How do I set up a ServiceMonitor or PodMonitor to work with Prometheus?
 
@@ -335,6 +434,7 @@ Add the `prometheus: main` label to the PodMonitor or ServiceMonitor.
 Add the label `prometheus.deckhouse.io/monitor-watcher-enabled: "true"` to the namespace where the PodMonitor or ServiceMonitor was created.
 
 Example:
+
 ```yaml
 ---
 apiVersion: v1
@@ -358,3 +458,10 @@ spec:
   endpoints:
     - port: web
 ```
+
+## How to expand disk size
+
+1. To request a larger volume for a PVC, edit the PVC object and specify a larger size in `spec.resources.requests.storage` field.
+   * You can only expand a PVC if its storage class's `allowVolumeExpansion` field is set to true.
+2. If storage doesn't support online resize, the message `Waiting for user to (re-)start a pod to finish file system resize of volume on node.` will appear in the PersistentVolumeClaim status.
+3. Restart the Pod to complete the file system resizing.

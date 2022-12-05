@@ -1,0 +1,17 @@
+{{- if .Values.ciliumHubble.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "cilium-hubble"
+  namespace: "d8-cni-cilium"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "cilium-hubble" )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "hubble") }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.ciliumHubble.auth.allowedUserGroups }}
+  allowedGroups:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+{{- end }}

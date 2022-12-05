@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Fix update password hash for node user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1192
+istio:
+  fixes:
+    - summary: The `istio.tracing.kiali.jaegerURLForUsers` parameter bugfix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1196
+

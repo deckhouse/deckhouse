@@ -1,3 +1,8 @@
+{{- define "webhook_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: webhook
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "webhook"
+      minAllowed:
+        {{- include "webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -23,6 +36,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: webhook
@@ -45,7 +59,7 @@ spec:
       containers:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerWebhook }}"
+        image: {{ include "helm_lib_module_image" (list . "certManagerWebhook") }}
         args:
         - --v=3
         - --secure-port=6443
@@ -74,6 +88,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: certs
         secret:

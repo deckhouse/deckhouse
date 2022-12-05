@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     $.getJSON('/config/data.json', {_: new Date().getTime()}).done(function (resp) {
-        // data.json example: {"channel":"stable", "version":"xxxx", "edition":"FE"}
+        // data.json example: {"channel":"stable", "version":"xxxx", "edition":"EE"}
 
         let deckhouseVersionInfo = "";
         let update_channels_list = ['alpha', 'beta', 'early-access', 'stable', 'rock-solid'];

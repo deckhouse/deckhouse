@@ -1,6 +1,6 @@
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -20,7 +20,7 @@ spec:
   template: *!CHANGE_TEMPLATE_NAME*
 ---
 # [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры группы узлов worker
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -51,8 +51,8 @@ spec:
     - *!CHANGE_ANOTHER_ZONE_TAG_NAME*
   nodeType: CloudEphemeral
 ---
-# [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
+# [<en>] section containing the parameters of instance class for system nodes
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -71,9 +71,9 @@ spec:
   rootDiskSize: 100
   template: *!CHANGE_TEMPLATE_NAME*
 ---
-# [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры группы узлов worker
+# [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -118,8 +118,8 @@ spec:
         value: system
   nodeType: CloudEphemeral
 ---
-# [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
+# [<en>] section containing the parameters of instance class for frontend nodes
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -138,8 +138,8 @@ spec:
   rootDiskSize: 50
   template: *!CHANGE_TEMPLATE_NAME*
 ---
-# [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры группы узлов worker
+# [<en>] section containing the parameters of frontend node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -159,10 +159,10 @@ spec:
       name: frontend
     # [<en>] the maximum number of instances for the group in each zone
     # [<ru>] максимальное количество инстансов в зоне
-    maxPerZone: 2
+    maxPerZone: 3
     # [<en>] the minimum number of instances for the group in each zone
     # [<ru>] минимальное количество инстансов в зоне
-    minPerZone: 3
+    minPerZone: 2
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<ru>] возможно, захотите изменить
@@ -197,6 +197,9 @@ spec:
   # [<en>] the name of the Ingress class to use with the Ingress nginx controller
   # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: HostPort

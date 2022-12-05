@@ -81,6 +81,7 @@ func newState() State {
 	return map[string]*XState{"a": {}, "b": {}, "c": {}, "d": {}, "e": {}}
 }
 
+// nolint: unparam
 func fakeStateInSingleZone(zone string) State {
 	state := newState()
 

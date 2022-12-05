@@ -1,0 +1,25 @@
+control-plane-manager:
+  fixes:
+    - summary: Fixed panic when a node with minimal RAM cannot be found.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2635
+log-shipper:
+  fixes:
+    - summary: Stop generating pointless 'parse_json' transform, which improves performance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2619
+    - summary: Fix the bug when the many sources point to the same input and only the last is working.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2619
+monitoring-kubernetes:
+  fixes:
+    - summary: Add deployments to kube-state-metrics's allowlist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2642
+node-manager:
+  fixes:
+    - summary: Fixed failing on not existing control-plane node labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2635
+upmeter:
+  fixes:
+    - summary: >-
+        Reduces QPS and burst in `upmeter-agent` to reduce `kube-apiserver` latency in
+        multi-control-plane setups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2666
+

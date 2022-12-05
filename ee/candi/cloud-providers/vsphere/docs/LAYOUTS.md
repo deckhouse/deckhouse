@@ -7,6 +7,8 @@ title: "Cloud provider - VMware vSphere: Layouts"
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQolOJQw4clYDug78Mr7rvX7wYPsb2uVhab5cDZrzBKq76Ox6dZhgoBXuq-ta8DRC2grjNUcfEq_AR8/pub?w=667&h=516)
 <!--- Source: https://docs.google.com/drawings/d/1QOgPkq_xfBWMMI3SEU4Q9lyZM5mIWWbF_MwVsd06diE/edit --->
 
+Example of the layout configuration:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
@@ -43,7 +45,7 @@ nodeGroups:
     template: dev/golden_image
     datastore: dev/lun_1
     mainNetwork: k8s-msk/test_187
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 zones:
 - ru-central1-a
 - ru-central1-b

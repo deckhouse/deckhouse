@@ -104,12 +104,6 @@ func Test_episodes30s_CRUD(t *testing.T) {
 		g.Expect(downtime.Episode.Up).Should(BeEquivalentTo(100), "should have updated duration")
 	}
 
-	// 6. Select group and probe names
-	probeRefs, err := dao30s.ListGroupProbe()
-	g.Expect(err).ShouldNot(HaveOccurred(), "should return a list of group and probe")
-	g.Expect(probeRefs).Should(HaveLen(len(episodes)))
-	g.Expect(probeRefs[0].Group).Should(Equal("api"))
-
 	// 6. Delete everything earlier than the slot
 	err = dao30s.DeleteUpTo(t360.Add(-30 * time.Second))
 	g.Expect(err).ShouldNot(HaveOccurred(), "should delete earlier records")

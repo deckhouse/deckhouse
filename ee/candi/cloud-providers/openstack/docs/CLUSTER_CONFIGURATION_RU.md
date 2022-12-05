@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Openstack: настройки провайдера"
+title: "Cloud provider — OpenStack: настройки провайдера"
 ---
 
 <!-- SCHEMA -->

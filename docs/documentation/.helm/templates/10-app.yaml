@@ -13,7 +13,7 @@ metadata:
     service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
 spec:
   minReadySeconds: 5
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
@@ -24,6 +24,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: registrysecret
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: web
           command: ["nginx", "-g", "daemon off;"]

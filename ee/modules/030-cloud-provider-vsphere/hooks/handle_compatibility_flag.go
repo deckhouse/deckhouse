@@ -64,7 +64,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleStorageClasses(input *go_hook.HookInput) error {
 	// We use `none` in internal values against empty string `` for cleaner conditions in Helm templates.
 	compatibilityFlag := "none"
-	if v, ok := input.Values.GetOk("cloudProviderVsphere.compatibilityFlag"); ok {
+	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.compatibilityFlag"); ok {
 		compatibilityFlag = v.String()
 	}
 	input.Values.Set("cloudProviderVsphere.internal.compatibilityFlag", compatibilityFlag)

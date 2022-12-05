@@ -52,7 +52,7 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("dex user has no spec field")
 	}
 
-	status, ok, err := unstructured.NestedMap(obj.Object, "status")
+	status, _, err := unstructured.NestedMap(obj.Object, "status")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get status from dex user: %v", err)
 	}

@@ -26,7 +26,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install
 # [<ru>] устанавливаемая версия Kubernetes
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера
 clusterDomain: "cluster.local"
@@ -77,6 +77,10 @@ provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
+  # [<ru>] Укажите true, если vCenter использует самоподписанный сертификат,
+  # [<ru>] иначе укажите false (или удалите строку с параметром insecure).
+  # [<en>] Set to true if vCenter has a self-signed certificate,
+  # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
 # [<en>] path to a Folder in which VirtualMachines will be create
 # [<en>] the folder itself will be created by the Deckhouse Installer
@@ -94,7 +98,7 @@ zones:
 - *!CHANGE_ZONE_TAG_NAME*
 # [<en>] public SSH key for accessing cloud nodes
 # [<ru>] публичная часть SSH-ключа для доступа к узлам облака
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
 # [<en>] name of External Network which has access to the Internet
 # [<en>] ip addresses from External Network sets as ExternalIP of Node object
 # [<en>] optional parameter
@@ -106,7 +110,7 @@ externalNetworkNames:
 # [<en>] name of Internal Network that will be used for traffic between nodes
 # [<en>] ip addresses from Internal Network sets as InternalIP of Node object
 # [<en>] optional parameter
-# [<ru>] имя Internal Network, которая будет использоваться для трафика между нодами, в данном примере идентично externalNetworkNames
+# [<ru>] имя Internal Network, которая будет использоваться для трафика между узлами, в данном примере идентично externalNetworkNames
 # [<ru>] ip адреса из Internal Network проставляются как InternalIP объекта Node
 # [<ru>] опциональный параметр
 internalNetworkNames:
@@ -121,13 +125,15 @@ masterNodeGroup:
   # [<ru>] если будет больше одного master-узла, то control-plane на всех master-узлах будет развернут автоматическии
   replicas: 1
   # [<en>] Parameters of the VM image
-  # [<ru>] параметры инстанса
+  # [<ru>] Параметры инстанса
   instanceClass:
     numCPUs: 4
     memory: 8192
     rootDiskSize: 50
-    # [<en>] TODO
-    # [<ru>] имя образа, созданного в шаге "Сборка образа виртуальных машин"
+    # [<en>] The name of the image created in step 4 at the "Building a VM image" stage,
+    # [<en>] taking into account the vCenter folder path. Example: "folder/my-ubuntu-packer-image".
+    # [<ru>] Имя образа, созданного в шаге 4 на этапе "Сборка образа виртуальных машин",
+    # [<ru>] с учетом папки размещения образа в vCenter. Пример: "folder/my-ubuntu-packer-image".
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
     # [<en>] main network connected to node

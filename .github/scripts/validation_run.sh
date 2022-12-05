@@ -36,7 +36,10 @@ function download_diff() {
   CURL_RESPONSE=$TMPDIR/resp
   curlHeaders=$TMPDIR/headers
   curlError=$TMPDIR/error
+  # Note: headers for private repo are ignored for public repo.
   CURL_STATUS=$(curl -sS -w %{http_code} \
+    --header "Accept: application/vnd.github.diff" \
+    --header "Authorization: Bearer ${GITHUB_TOKEN}" \
     -o $CURL_RESPONSE \
     -D $curlHeaders \
     --request GET \

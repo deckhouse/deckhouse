@@ -34,12 +34,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+func connectionFlags(parent *kingpin.CmdClause) {
+	app.DefineKubeFlags(parent)
+	app.DefineSSHFlags(parent)
+	app.DefineBecomeFlags(parent)
+}
+
 func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, manifest func([]byte) *apiv1.Secret) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
-	app.DefineKubeFlags(cmd)
-	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd)
-	app.DefineBecomeFlags(cmd)
 	app.DefineEditorConfigFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -90,6 +92,18 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 	})
 
 	return cmd
+}
+
+func DefineEditCommands(parent *kingpin.CmdClause, wConnFlags bool) {
+	clusterCmd := DefineEditClusterConfigurationCommand(parent)
+	providerCmd := DefineEditProviderClusterConfigurationCommand(parent)
+	staticCmd := DefineEditStaticClusterConfigurationCommand(parent)
+
+	if wConnFlags {
+		connectionFlags(clusterCmd)
+		connectionFlags(providerCmd)
+		connectionFlags(staticCmd)
+	}
 }
 
 func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {

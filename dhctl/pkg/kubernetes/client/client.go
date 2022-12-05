@@ -19,7 +19,6 @@ import (
 	"time"
 
 	klient "github.com/flant/kube-client/client"
-
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 

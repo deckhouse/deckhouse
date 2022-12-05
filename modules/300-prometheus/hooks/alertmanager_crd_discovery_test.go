@@ -25,44 +25,59 @@ User-stories:
 package hooks
 
 import (
+	"context"
+
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Prometheus hooks :: alertmanager discovery :: deprecated services", func() {
+var _ = Describe("Prometheus hooks :: alertmanager discovery", func() {
 	const (
-		initValuesString       = `{"prometheus": {"internal": {"alerting": {}}}}`
+		initValuesString       = `{"prometheus": {"internal": {"alertmanagers": {}}}}`
 		initConfigValuesString = `{}`
 	)
 
 	const (
-		stateNonSpecialServices = `
----
-apiVersion: v1
-kind: Service
+		stateExternalAlertManagerByAddress = `
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
 metadata:
-  name: some-svc-1
-  namespace: some-ns-1
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: some-svc-2
-  namespace: some-ns-2
+  name: external-alertmanager
+spec:
+  external:
+    address: http://alerts.mycompany.com
+  type: External
 `
 
-		stateSpecialServicesAlpha = `
+		stateExternalAlertManagerByService = `
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: external-alertmanager
+spec:
+  external:
+    service:
+      name: test
+      namespace: test
+  type: External
+`
+
+		stateDeprecatedLabeledService = `
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysvc1
+  name: deprecatedsvc1
   namespace: myns1
   labels:
-    prometheus.deckhouse.io/alertmanager: alphaprom
+    prometheus.deckhouse.io/alertmanager: main
   annotations:
     prometheus.deckhouse.io/alertmanager-path-prefix: /myprefix/
 spec:
@@ -70,69 +85,179 @@ spec:
   - name: test
     port: 81
 `
-		stateSpecialServicesBeta = `
----
-apiVersion: v1
+
+		stateInternalAlertManager = `
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: wechat
+spec:
+  internal:
+    receivers:
+    - name: wechat-example
+      wechatConfigs:
+      - apiSecret:
+          key: apiSecret
+          name: wechat-config
+        apiURL: http://wechatserver:8080/
+        corpID: wechat-corpid
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: wechat-example
+      repeatInterval: 12h
+  type: Internal
+`
+		service = `
+piVersion: v1
 kind: Service
 metadata:
-  name: mysvc2
-  namespace: myns2
-  labels:
-    prometheus.deckhouse.io/alertmanager: betaprom
+  name: test
+  namespace: test
 spec:
   ports:
-  - port: 82
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysvc3
-  namespace: myns3
-  labels:
-    prometheus.deckhouse.io/alertmanager: betaprom
-spec:
-  ports:
-  - port: 83
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
 `
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "CustomAlertmanager", false)
 
-	Context("Cluster has non-special services", func() {
+	Context("Cluster has external CustomAlertManager by address", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices, 0))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateExternalAlertManagerByAddress, 1))
 			f.RunHook()
 		})
-
-		It("prometheus.internal.alertmanagers must be '{}'", func() {
+		It("prometheus.internal.alertmanagers.byAddress must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(Equal("{}"))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byAddress").String()).To(MatchJSON(`[
+          {
+            "name": "external-alertmanager",
+            "scheme": "http",
+            "target": "alerts.mycompany.com",
+            "basicAuth": {},
+            "tlsConfig": {}
+          }
+        ]`))
 		})
 	})
 
-	Context("Cluster has special service", func() {
+	Context("Cluster has external CustomAlertManager by service, corresponding svc is absent", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices+stateSpecialServicesAlpha, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateExternalAlertManagerByService, 1))
 			f.RunHook()
 		})
 
-		It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}]}'`, func() {
+		It("corresponding service absent, hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+	})
+
+	Context("Cluster has external CustomAlertManager by service, corresponding svc is present", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateExternalAlertManagerByService, 1))
+
+			var s v1.Service
+			_ = yaml.Unmarshal([]byte(service), &s)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Services("test").
+				Create(context.TODO(), &s, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.RunHook()
+		})
+
+		It("corresponding service present, prometheus.internal.alertmanagers.byService must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}]}`))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
+          {
+            "name": "test",
+            "namespace": "test",
+            "pathPrefix": "/",
+            "port": "https"
+          }
+        ]`))
+		})
+	})
+
+	Context("Cluster has external CustomAlertManager by service, corresponding svc is present, and deprecated labeled service", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateExternalAlertManagerByService+stateDeprecatedLabeledService, 1))
+
+			var s v1.Service
+			_ = yaml.Unmarshal([]byte(service), &s)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Services("test").
+				Create(context.TODO(), &s, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.RunHook()
 		})
 
-		Context("Two more special services added", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices+stateSpecialServicesAlpha+stateSpecialServicesBeta, 2))
-				f.RunHook()
-			})
-
-			It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":"test"}]}'`, func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":83}]}`))
-			})
+		It("corresponding service present, prometheus.internal.alertmanagers.byService must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
+          {
+            "name": "test",
+            "namespace": "test",
+            "pathPrefix": "/",
+            "port": "https"
+          },
+          {
+            "name": "deprecatedsvc1",
+            "namespace": "myns1",
+            "pathPrefix": "/myprefix/",
+            "port": "test"
+          }
+        ]`))
 		})
+	})
 
+	Context("Cluster has internal CustomAlertManager", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateInternalAlertManager, 1))
+			f.RunHook()
+		})
+		It("prometheus.internal.alertmanagers.internal must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers.internal").String()).To(MatchJSON(`[
+          {
+			"name": "wechat",
+            "receivers": [
+              {
+                "name": "wechat-example",
+                "wechatConfigs": [
+                  {
+                    "apiSecret": {
+                      "key": "apiSecret",
+                      "name": "wechat-config"
+                    },
+                    "apiURL": "http://wechatserver:8080/",
+                    "corpID": "wechat-corpid"
+                  }
+                ]
+              }
+            ],
+            "route": {
+              "groupBy": [
+                "job"
+              ],
+              "groupInterval": "5m",
+              "groupWait": "30s",
+              "receiver": "wechat-example",
+              "repeatInterval": "12h"
+            }
+          }
+        ]`))
+		})
 	})
 })

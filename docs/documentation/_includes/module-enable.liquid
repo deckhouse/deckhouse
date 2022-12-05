@@ -1,0 +1,23 @@
+{% if page.lang == 'ru' -%}
+{% offtopic title="Как явно включить или отключить модуль..." %}
+Установите `spec.enabled` в `true` или `false` в [настройках модуля]({{ "/#настройки-модулей" | true_relative_url }}) для его явного включения или выключения.
+
+Пример включения модуля `{{ include.moduleName }}`:
+{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="true" %}
+
+Пример выключения модуля `{{ include.moduleName }}`:
+{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="false" %}
+
+{% endofftopic %}
+{% else %}
+{% offtopic title="How to explicitly enable the module..." %}
+Set the `spec.enabled` [module parameter]({{ "/#modules-settings" | true_relative_url }}) to `true` or `false`  to explicitly enable or disable the module.
+
+Example of enabling the `{{ include.moduleName }}` module:
+{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="true" %}
+
+Example of disabling the `{{ include.moduleName }}` module:
+{% include module-enable-snippet.liquid moduleName=include.moduleName enabled="false" %}
+
+{% endofftopic %}
+{% endif %}

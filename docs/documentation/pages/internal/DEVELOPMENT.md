@@ -5,20 +5,22 @@ lang: en
 
 ## Releases and versions
 
-- `Release`, `version` (noun) — a logically complete and announced program that is somewhat different from its previous (or later) [forms](#versioning). A [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases). As a noun, both of these terms can be used interchangeably. 
+- `Release`, `version` (noun) — a logically complete and announced program that is somewhat different from its previous (or later) [forms](#versioning). A [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases). As a noun, both of these terms can be used interchangeably.
 - The code within some branch that is not a part of a release is considered a dev version.
 - Release (verb) — the process of creating, announcing, and releasing a new form (version) of the program.
 *Do not confuse* it with changing the version within the release channel.
-- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`. [More](https://deckhouse.io/en/documentation/v1/deckhouse-release-channels.html) about release channels on the site.
+- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`. [More](https://deckhouse.io/documentation/v1/deckhouse-release-channels.html) about release channels on the site.
 - We use the versioning scheme similar to the [semver](https://semver.org/) one.
-- Patch release changing — the process of changing version on a release channel when increments only patch version number.   
-- Release changing — the process of changing version on a release channel when increments minor version number.   
+- Patch release changing — the process of changing version on a release channel when increments only patch version number.
+- Release changing — the process of changing version on a release channel when increments minor version number.
 
 ## How to test the Deckhouse version
+
 The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss:<prNUM>`.
 All you need to do to test the new dev version is to change the image in the Deckhouse deployment.
 
 ## Auto-updates
+
 When you commit changes to git, a new Deckhouse docker-image gets built.
 
 A copy of Deckhouse running in the cluster regularly checks if a new image is available in the docker registry (if there is a new digest for the same image tag).
@@ -26,6 +28,7 @@ If the digest for the tag in the registry does not match the one for the image i
 The new image is pulled from the registry when a new Deckhouse Pod is being created.
 
 ## The process of releasing new versions and changing versions in the release channels
+
 ### Changing release in the release channels
 
 > As a rule, release changing brings a version with **new** functionality/modifications
@@ -63,8 +66,7 @@ Periodicity and timing of patch-release updates in the release channels:
 1. If a new version (patch-release) is released to fix the degradation, the version switching is performed according to the previous section. If the patch-release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
 1. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the release channels (there is no point in changing the version to the one known to result in degradation).
 
-Style Guide
------------
+## Style Guide
 
 ### Naming convention
 
@@ -98,8 +100,9 @@ You should only attach them to the primary resources managed by Deckhouse.
 We recommend using the `app` and `component` labels.
 
 ### Documentation
+
 {% raw %}
-* The site has two parts: the versioned one is tied to a specific version (documentation), while the unversioned one includes the main pages of the site and shared assets. 
+* The site has two parts: the versioned one is tied to a specific version (documentation), while the unversioned one includes the main pages of the site and shared assets.
 * The **versioned** documentation is located in the /docs/documentation/ (the doc pages themselves are in /docs/documentation/pages/) and the module's docs directory (/modules/<module name>/docs/).
 * The **unversioned** documentation is located in the /docs/site/ directory (the pages themselves are in /docs/site/pages/).
 * Note that all **cross-references** in the versioned documentation are **relative**.
@@ -124,7 +127,8 @@ The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specificat
 A list of `x-doc-` parameters:
 - `x-doc-required:` (boolean). It is used to indicate explicitly on the site if a particular parameter is mandatory or optional.
 - `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **cannot contain** markdown elements or arbitrary text (well, it can, but the rendering will be ugly). **Only** the value from the English version of the resource is used.
-- `x-doc-versionType` (array). This x-doc specification sets a limit on the Deckhouse version the target parameter can be used with. Possible values: `ee`,`experimental`.
+- `x-doc-d8Revision` (string). Sets a limit on the Deckhouse version the target parameter can be used with. Possible values: `ce`, `ee` (`ce` is the default value).
+- `x-doc-featureStatus` (string). Sets the status of the feature and can be one of `experimental` or `proprietaryOkmeter`.  
 - `x-doc-example` (arbitrary type). Provides an example of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters. The x-doc-example specification value can contain markdown elements or arbitrary text. **Only** the value from the English version of the resource is used.
 
 #### Running a site with the documentation locally
@@ -132,15 +136,16 @@ A list of `x-doc-` parameters:
 See instructions [here](../../../site/LOCAL_DEV.md).
 
 ## Check-list for the new module
-----------------------------
+
 ### Bundle
+
 {% raw %}
 
 Bundle is the Deckhouse delivery edition. Possible values:
 * `Default` — includes the recommended set of modules required for proper cluster operation: monitoring, authorization control, networking, and other needs. The current list can be found [here](/deckhouse/blob/main/modules/values-default.yaml).
 * `Minimal` — the minimum viable set of modules (only the `20-deckhouse` module is included).
 * `Managed` — a set of modules adapted for managed solutions of cloud providers. A list of supported providers:
-   * Google Kubernetes Engine (GKE)
+  * Google Kubernetes Engine (GKE)
 
 To include your module in the specific bundle by default, add the following line to the appropriate `modules/values-${bundle}.yaml` file: `${mobdule_name}Enabled: true`.
 
@@ -151,18 +156,20 @@ To include your module in the specific bundle by default, add the following line
 * `helm upgrade --install` is invoked if the `/modules/<module-name>/Chart.yaml` file is present.
 * A separate helm release is created for each module. Tiller is responsible for creating resources in the cluster. It is running in the Deckhouse Pod as a separate process.
 This command outputs the list of helm release:
+
   ```bash
   kubectl -n d8-system exec deploy/deckhouse -- helm list
   ```
+
 * When rolled out for the first time, the helm release deployment will fail if the resources described in the release already exist in the cluster. Thus, the release will have have the FAILED state.
 This error will persist until duplicate resources are deleted from the cluster.
 
 The release checksum is the checksum of all the helm chart files and values that Deckhouse generates for the release.
 
 Releases in helm do not get updated when the module is restarted if the following conditions are met:
-  * The status of the previous release is not FAILED (you can check it in the helm list);
-  * The release checksum is the same;
-  * The checksum of all manifests in the release after the rendering stays the same.
+* The status of the previous release is not FAILED (you can check it in the helm list);
+* The release checksum is the same;
+* The checksum of all manifests in the release after the rendering stays the same.
 
 Thus, restarting modules does not result in the accumulation of unneeded copies of the current helm release.
 
@@ -171,26 +178,33 @@ Thus, restarting modules does not result in the accumulation of unneeded copies 
 Values for a specific module are declared in the global key with the module name. Click [here](https://github.com/flant/addon-operator/blob/main/VALUES.md) to read more about values for modules.
 
 #### Priority Class
+
 A special helper is implemented in `helm_lib` to facilitate setting the `priorityClassName` parameter.
 Note that you **MUST** use it in all controllers without exception.
 
 An example:
+
 ```gotemplate
 spec:
   {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | nindent 2 }}
 ```
-The helper gets the global context and the desired priorityClassName value as an input. If the `010-priority-class` module is enabled in Deckhouse, the template will look like this:
+
+The helper gets the global context and the desired priorityClassName value as an input. If the `001-priority-class` module is enabled in Deckhouse, the template will look like this:
+
 ```yaml
 spec:
   priorityClassName: cluster-critical
 ```
+
 Otherwise:
+
 ```yaml
 spec:
 ```
+
 {% endraw %}
 
-For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/010-priority-class/).
+For more information about what classes Deckhouse uses, see the description of the [priority-class module](/modules/001-priority-class/).
 
 #### Node Selector
 
@@ -198,9 +212,11 @@ A special helper is also implemented in `helm_lib` to facilitate setting the `no
 
 {% raw %}
 An example:
+
 ```gotemplate
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
 ```
+
 The helper gets the global context and the desired strategy as the input to set the nodeSelector parameter.
 
 There are four strategies in total:
@@ -213,8 +229,7 @@ There are four strategies in total:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
 3. `master` - this strategy uses the following logic:
-    * If nodes with the `node-role.kubernetes.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
-    * If nodes with the `node-role.deckhouse.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes in the cluster (e.g., in the managed cluster), then the components of such modules run on the nodes set as masters.
+    * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes and nodes with labels designating these nodes as masters in the cluster, then the components of such modules run on system nodes.
 
 If none of the above conditions for the strategy is met, the nodeSelector will not be set.
@@ -226,9 +241,11 @@ The helper **MUST** be used for all Deckhouse components (wherever possible) exc
 A special helper is also implemented in `helm_lib` to facilitate setting the `tolerations`.
 
 An example:
+
 ```gotemplate
   {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
 ```
+
 The helper gets the global context and the desired strategy as the input to set the tolerations parameter.
 
 * If the module has the `tolerations` variable in values, it will be used to set this parameter.
@@ -243,6 +260,7 @@ The helper gets the global context and the desired strategy as the input to set 
     operator: Equal
     value: {{ strategy_name }}
   ```
+
 * For the `monitoring` strategy, the rules will look as follows:
 
   ```yaml
@@ -257,11 +275,13 @@ The helper gets the global context and the desired strategy as the input to set 
     operator: Equal
     value: "system"
   ```
+
 * For the `any-node` strategy, the rules will look as follows:
 
   ```yaml
   tolerations:
   - key: node-role.kubernetes.io/master
+  - key: node-role.kubernetes.io/control-plane
   - key: dedicated.deckhouse.io
   - key: dedicated
   - key: node.deckhouse.io/uninitialized
@@ -277,6 +297,7 @@ The helper gets the global context and the desired strategy as the input to set 
   ```
 
 * For the `wildcard` strategy, the rules will look as follows:
+
   ```yaml
   tolerations:
   - operator: Exists
@@ -290,12 +311,15 @@ The high availability (HA) mode protects crucial modules against possible downti
 
 `helm_lib` provides auxiliary templates to facilitate using the HA mode.
 * `helm_lib_ha_enabled` - returns a non-empty string of the HA mode is enabled for the cluster.
+
   ```yaml
   {{- if (include "helm_lib_ha_enabled" .) }}
   HA enabled in Kubernetes cluster!
   {{-end }}
   ```
+
 * `helm_lib_is_ha_to_value` - is used as an `if else` expression. If the HA mode is enabled in the cluster, this template returns the first argument passed to it, and if not, it returns the second one.
+
   ```yaml
   # There will be two replicas if the HA mode is enabled for the cluster and one if disabled.
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
@@ -308,18 +332,21 @@ The rules below ensure the correct operation and update of module components (De
   ```yaml
         {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | nindent 6 }}
   ```
+
 * Set the correct `replicas` and `strategy` values for a Deployment:
   * If the Deployment is NOT running on master nodes:
 
     ```yaml
       {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
     ```
+
     It prevents blocking updates when the number of Deployment Pods is equal to the number of nodes, and nodeSelector and podAntiAffinity parameters are set.
   * If the Deployment is running on master nodes (on each master node!):
 
     ```yaml
       {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
     ```
+
     It prevents blocking the Deployment update even if one of the master nodes is unavailable (if there are three or more master nodes!).
 
 ### Evaluating complex conditions
@@ -330,6 +357,7 @@ We recommend creating your own helper (if a similar helper has not been implemen
 * If the result of evaluating the helper is `false`, it must return an `empty string`.
 
 Here is an example of helper implementation:
+
 ```gotemplate
 {{- define "helm_lib_module_https_ingress_tls_enabled" -}}
   {{- $context := . -}}
@@ -341,13 +369,44 @@ Here is an example of helper implementation:
   {{- end -}}
 {{- end -}}
 ```
+
 Usage:
+
 ```gotemplate
 {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
 - name: ca-certificates
   mountPath: "/usr/local/share/ca-certificates/"
   readOnly: true
 {{- end }}
+```
+
+### Container images
+
+In controller templates (daemonsets, statefulsets, deployments) for container images please use helm helper `helm_lib_module_image`.
+For common images like `kube-rbac-proxy` use `helm_lib_module_common_image`.
+
+Usage:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: snapshot-controller
+  template:
+    metadata:
+      labels:
+        app: snapshot-controller
+    spec:
+      containers:
+      - name: snapshot-controller
+        image: {{ include "helm_lib_module_image" (list . "snapshotController") }}
+      - name: kube-rbac-proxy
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
 ```
 
 ### Hooks
@@ -381,6 +440,7 @@ We do not recommended using kubectl in hooks. It leads to a loss of idempotency 
 The "enabled" webhooks are located in the root directory of the module. You can use them to describe the conditions under which the module must be enabled/disabled.
 
 An example:
+
 ```bash
 #!/bin/bash
 
@@ -396,12 +456,14 @@ function __main__() {
 
 enabled::run $@
  ```
+
 This webhook disables the module in all clusters in which the `global.modules.publicDomainTemplate` option is not set.
 
-Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.19.0:
+Regular checks are implemented in `shell_lib` functions with the `enabled::` prefix. For example, the hook below disables the module in all clusters with the Kubernetes version < 1.21.0:
+
 ```bash
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.19.0
+  enabled::disable_module_in_kubernetes_versions_less_than 1.21.0
   echo "true" > $MODULE_ENABLED_RESULT
 }
 ```
@@ -413,9 +475,9 @@ See the [documentation](https://github.com/flant/addon-operator/blob/main/LIFECY
 Deckhouse support validation for values passed using the Deckhouse ConfigMap and for Deckhouse-generated values.
 
 The OpenAPI value validation scheme is needed:
-  * To make sure that the user has entered valid values into the Deckhouse ConfigMap, and to let the user know if the values entered are invalid.
-  * To ensure that all the necessary parameters (in the correct format) are passed for rendering the module's helm templates. It ensures the expected behavior within the cluster and that only the planned objects will end up in the cluster.
-  * To generate the [documentation](#documentation) for the module parameters on the site.
+* To make sure that the user has entered valid values into the Deckhouse ConfigMap, and to let the user know if the values entered are invalid.
+* To ensure that all the necessary parameters (in the correct format) are passed for rendering the module's helm templates. It ensures the expected behavior within the cluster and that only the planned objects will end up in the cluster.
+* To generate the [documentation](#documentation) for the module parameters on the site.
 
 The OpenAPI validating schemes are stored in the `$GLOBAL_HOOKS_DIR/openapi` directory for global values, and in the `$MODULES_DIR/<module-name>/openapi` for modules.
 
@@ -430,7 +492,8 @@ Note that `addon-operator` extends the schema format with additional properties.
 * The `openapi/config-values.yaml` scheme validates values passed by the user via a ConfigMap.
 
 An example:
-```
+
+```yaml
 type: object
 properties:
   podNetworkMode:
@@ -440,6 +503,7 @@ properties:
     description: |
       Work mode.
 ```
+
 * The `openapi/values.yaml` scheme validates combined values consisting of values from ConfigMap and values generated by hooks (learn more [here](https://github.com/flant/addon-operator/blob/main/VALUES.md#merged-values)).
 
   * **Caution !!!** Note that the `openapi/values.yaml` scheme validates values generated by webhooks. Thus, the scheme will fire up an error when validating combined values since it does not have the description of the ConfigMap-derived values.
@@ -447,7 +511,8 @@ properties:
     The `x-extend` parameter must be used in all cases. Learn more [here](https://github.com/flant/addon-operator/blob/main/VALUES.md#extending).
 
 An example:
-```
+
+```yaml
 x-extend:
   schema: config-values.yaml
 type: object
@@ -493,13 +558,14 @@ Such an approach allows you to avoid the re-provisioning of PVs (and data loss) 
 
 Note that you cannot mutate the `volumeClaimTemplate`.  Thus, you must delete a statefulset (e.g., using a webhook) when changing the storageClass.
 
-You can find a relevant example in the [prometheus](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/500-openvpn/hooks/storage_class_change.go) modules' hooks.
+You can find a relevant example in the [prometheus](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://github.com/deckhouse/deckhouse/blob/main/modules/500-openvpn/hooks/storage_class_change.go) modules' hooks.
 
 ### CRDs
 
 CRDs must be stored in the `crds` directory in the module's root.
 
 The module must contain a dedicated hook called `ensure_crds.go` with the following content:
+
 ```go
 /*
 Copyright 2021 Flant JSC
@@ -520,7 +586,7 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+ "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
 var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/MODULE_NAME/crds/*.yaml")
@@ -542,21 +608,24 @@ Each module must be properly covered with tests. There are three types of tests:
 * Helm tests. These are stored in a separate `template_tests` directory in the module's root. Helm tests check the logic in helm templates.
 * Matrix tests. These are described in the `values_matrix_test.yaml` file on the module's root. Matrix tests check the rendering of helm templates and if these templates match our standards for a large number of values.yaml the matrix describes.
 
-Troubleshooting Deckhouse
---------------------------------
+## Troubleshooting Deckhouse
 
 ### Debug
+
 Addon-operator provides specialized commands to facilitate the troubleshooting process.
 
 Run the following command to learn more about them:
+
 ```bash
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller help
 ```
+
 (or read the [docs](https://github.com/flant/addon-operator/blob/main/RUNNING.md#debug)).
 
 ### A script for getting all the necessary debugging information
 
 Run the following script on a master node:
+
 ```shell
 #!/bin/bash
 
@@ -595,6 +664,7 @@ ls -lah /tmp/deckhouse_debug_${debug_date}.tar.gz
 # Clear debug folder
 rm -rf ${deckhouse_debug_dir}
 ```
+
 {% endraw %}
 
 This script runs for about 2.5 minutes and generates a `.tar.gz` file that you need to send to the Deckhouse developers.
@@ -607,22 +677,29 @@ You can find a description and a list of available metrics [here](https://github
 
 Currently, al Deckhouse logs are displayed in the json format. Use `jq` to convert them into a viewable form (this tool is excellent at converting strings within a stream).
 
-#### Examples:
+#### Examples
+
 {% offtopic title="How to output logs for each module" %}
 {% raw %}
 
 * Colored:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.module != null) | .color |= (if .level == "error" then 1 else 4 end) | "\(.time) \u001B[1;3\(.color)m[\(.level)]\u001B[0m\u001B[1;35m[\(.module)]\u001B[0m - \u001B[1;33m\(.msg)\u001B[0m"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.module != null) | .color |= (if .level == "error" then 1 else 4 end) | "\(.time) \u001B[1;3\(.color)m[\(.level)]\u001B[0m\u001B[1;35m[\(.module)]\u001B[0m - \u001B[1;33m\(.msg)\u001B[0m"'
+  ```
+
 * Monochrome version:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.module != null) | "\(.time) [\(.level)][\(.module)] - \(.msg)"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.module != null) | "\(.time) [\(.level)][\(.module)] - \(.msg)"'
+  ```
+
 * The specific module:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg mod cloud-instance-manager 'select(.module == $mod) | "\(.time) [\(.level)][\(.module)] - \(.binding) - \(.msg)"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg mod cloud-instance-manager 'select(.module == $mod) | "\(.time) [\(.level)][\(.module)] - \(.binding) - \(.msg)"'
+  ```
+
 {% endraw %}
 {% endofftopic %}
 
@@ -630,22 +707,28 @@ kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg mod cloud-instance-m
 {% raw %}
 
 * Colored:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.hook != null) | .color |= (if .level == "error" then 1 else 4 end) | "\(.time) \u001B[1;3\(.color)m[\(.level)]\u001B[0m\u001B[1;35m[\(.hook)]\u001B[0m - \(.binding) - \u001B[1;33m\(.msg)\u001B[0m"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.hook != null) | .color |= (if .level == "error" then 1 else 4 end) | "\(.time) \u001B[1;3\(.color)m[\(.level)]\u001B[0m\u001B[1;35m[\(.hook)]\u001B[0m - \(.binding) - \u001B[1;33m\(.msg)\u001B[0m"'
+  ```
+
 * Monochrome version:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.hook != null) | "\(.time) [\(.level)][\(.hook)] - \(.binding) - \(.msg)"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r 'select(.hook != null) | "\(.time) [\(.level)][\(.hook)] - \(.binding) - \(.msg)"'
+  ```
+
 * The specific hook:
-```bash
-kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg hook 402-ingress-nginx/hooks/ensure_crds 'select(.hook == $hook) | "\(.time) [\(.level)][\(.hook)] - \(.binding) - \(.msg)"'
-```
+
+  ```bash
+  kubectl -n d8-system logs deploy/deckhouse -f | jq -r --arg hook 402-ingress-nginx/hooks/ensure_crds 'select(.hook == $hook) | "\(.time) [\(.level)][\(.hook)] - \(.binding) - \(.msg)"'
+  ```
+
 {% endraw %}
 {% endofftopic %}
 
-Debugging hooks
--------------
+## Debugging hooks
+
 {% raw %}
 
 * You can insert the following into any place of any webhook: `debug::breakpoint 127.0.0.1 4284` to make it wait until the connection to the specified port is established.
@@ -654,16 +737,20 @@ Debugging hooks
 * Use the if expression for the `debug::breakpoint` if you need to debug a specific situation.
 * For local development, it is recommended to use the  `0.0.0.0` address and `4284` port. In this case, you can telnet directly on the local machine and do not need to exec to the container.
 
-Local development
---------------------
+## Local development
+
 Create the following symlink to make the development process more convenient:
+
 ```bash
 sudo ln -s "$PWD" /deckhouse
 ```
+
 In macOS, if the root filesystem is in a Read-only mode, use the following command to create a symlink:
+
 ```bash
 echo "deckhouse\t$PWD" >> /etc/synthetic.conf
 ```
+
 and reboot the OS.
 
 NB: Both commands must be executed in the root directory of the repository.
@@ -672,9 +759,9 @@ NB: Both commands must be executed in the root directory of the repository.
 
 1. [Login](https://pult.flant.com/projects/dev-rnd/services/2c15f630-8072-43bc-a17b-61135fa88fcf) to the docker registry to store werf stages:
 
-```
-docker login https://dev-registry.deckhouse.io/
-```
+   ```shell
+   docker login https://dev-registry.deckhouse.io/
+   ```
 
 2. Invoke the `./testing/run` script and pass to it the filename.
 
@@ -694,26 +781,28 @@ All hook tests in the directory         | `./testing/run modules/150-user-authn/
 **Caution!** Multiwerf is required to run tests; please, [install it](https://werf.io/documentation/guides/installation.html).
 
 Enter the following command to exec to the container where the tests are running:
-```
+
+```shell
 docker exec -ti deckhouse-testing bash
 ```
+
 {% endraw %}
-### Running and debugging Goland tests
 
-#### Usage
+### Running and debugging GoLand tests
 
-#### Running tests
+#### Running tests with GoLand
 
 1. Select the Run/Debug Configuration in the upper-right corner of the screen:
 
-    ![](./images/running-tests-from-golang/00-select-configuration.jpg)
+   ![Select the Run/Debug Configuration](./images/running-tests-from-golang/00-select-configuration.jpg)
 2. Select the file (or directory) to run the tests for (either in Project or by focusing on the open file).
 3. Run the tests by pressing `Ctrl-R`.
 
 **Caution!**
 1. Note that the first run takes some time.
 2. The stop button works as intended – click it if you need to stop the test (it does not work during debugging).
-#### Debugging tests
+
+#### Debugging tests with GoLand
 
 1. Set the brake point.
 2. Switch to Debug Tests from Run/Debug Configuration.
@@ -723,69 +812,70 @@ docker exec -ti deckhouse-testing bash
 **Caution!**
 1. Note that the first run takes some time.
 1. Currently, you cannot view stout during debugging due to Goland bugs. Use the following command:
-    ```bash
-    tail -f /tmp/deckhouse-testing-debug.log
-    ```
-2. In some cases, the Stop button does not stop the debugging process. Suppose you run some "heavy" task that takes a long time to complete and eats up CPU resources (e.g., all the tests). In this case, you need to exec to the deckhouse-testing container and kill the relevant processes.
-3. Suppose the hotkey stopped responding (and the Debug button in the Debug Tests configuration is gone) for some reason. In this case, you need to find the running testing/run script and kill it.
+
+   ```bash
+   tail -f /tmp/deckhouse-testing-debug.log
+   ```
+
+1. In some cases, the Stop button does not stop the debugging process. Suppose you run some "heavy" task that takes a long time to complete and eats up CPU resources (e.g., all the tests). In this case, you need to exec to the deckhouse-testing container and kill the relevant processes.
+1. Suppose the hotkey stopped responding (and the Debug button in the Debug Tests configuration is gone) for some reason. In this case, you need to find the running testing/run script and kill it.
 
 #### Configuring
 
 1. Add two External Tools:
-    1. Open the External Tools section on the project's Preferences and click "+":
-
-        ![](./images/running-tests-from-golang/01-external-tools.jpg)
-    2. Enter the following parameters and create an External Tool for running the tests:
-
-        ![](./images/running-tests-from-golang/02-external-tool-for-running-tests.jpg)
-    3. Similarly, create a second External Tool for debugging tests:
-
-        ![](./images/running-tests-from-golang/03-external-tool-for-debugging-tests.jpg)
-
-        **Caution!!!** Note that the `--debug` argument is added and all the checkboxes are unchecked!
+   1. Open the External Tools section on the project's Preferences and click "+":
+      ![Open the External Tools](./images/running-tests-from-golang/01-external-tools.jpg)
+   2. Enter the following parameters and create an External Tool for running the tests:
+      ![Create an External Tool for running the tests](./images/running-tests-from-golang/02-external-tool-for-running-tests.jpg)
+   3. Similarly, create a second External Tool for debugging tests:
+      ![Create a second External Tool for debugging tests](./images/running-tests-from-golang/03-external-tool-for-debugging-tests.jpg)
+      **Caution!!!** Note that the `--debug` argument is added and all the checkboxes are unchecked!
 2. Add the Run/Debug Configuration for **running tests**:
     1. In the top menu, open Run -> Edit Configurations;
     2. Add the shell-based configuration:
 
-        ![](./images/running-tests-from-golang/04-create-run-configuration.jpg)
+       ![Add the shell-based configuration](./images/running-tests-from-golang/04-create-run-configuration.jpg)
     3. Fill in all the fields as follows:
 
-        ![](./images/running-tests-from-golang/05-setup-run-configuration.jpg)
+       ![Fill in all the fields](./images/running-tests-from-golang/05-setup-run-configuration.jpg)
 3. Add the Run/Debug Configuration for **debugging tests**:
     1. In the top menu, open Run -> Edit Configurations;
     2. Add the Go Remote-based configuration:
 
-        ![](./images/running-tests-from-golang/06-create-debug-configuration.jpg)
+       ![Add the Go Remote-based configuration](./images/running-tests-from-golang/06-create-debug-configuration.jpg)
     3. Fill in all the fields as follows:
 
-        ![](./images/running-tests-from-golang/07-setup-debug-configuration.jpg)
+       ![Fill in all the fields](./images/running-tests-from-golang/07-setup-debug-configuration.jpg)
 
-Minor upgrade of Deckhouse-supported Kubernetes versions
-------------------------------------------------------
+## Minor upgrade of Deckhouse-supported Kubernetes versions
 
 When new patch versions of [Kubernetes](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) are released, we need to update versions contained in the [version_map.yml](/candi/version_map.yml) file and
 run [additional scripts to build and push registry package images](https://github.com/deckhouse/deckhouse/candi/tools/registrypackages).
 
-Bashible tips
-------------------------------------------------------
+## Bashible tips
 
-## Install software from our registry.
+### Install software from our registry
+
 Installing packages from third-party repositories (for example, epel) in bashible steps forbidden.
 If we need to install additional software, we **must** install it from original distro repository or from our registry.
 
 Bashible supports installing software from registry images, but we need to prepare special images.
 
 #### Example
+
 We need to install jq binary to nodes.
 [How to build jq.](https://github.com/deckhouse/modules/007-registrypackages/jq)
 
 To install this image in bashible script we must use special helper function:
+
 ```shell
 bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
 ```
+
 * `{{ .images.registrypackages.jq16 }}` is autofilled from deckhouse global values.
 
 To uninstall:
+
 ```shell
 bb-rp-remove "jq"
 ```

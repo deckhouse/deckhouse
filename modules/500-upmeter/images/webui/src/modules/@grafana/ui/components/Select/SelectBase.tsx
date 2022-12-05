@@ -159,6 +159,7 @@ export function SelectBase<T>({
       // @ts-ignore
       selectedValue = value.map(v => {
         return options.filter(o => {
+          //@ts-ignore
           return v === o.value || o.value === v.value;
         })[0];
       });

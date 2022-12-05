@@ -1,9 +1,11 @@
 # Patches
 
-## Liveness probe
+## Scrape timestamp align
 
-The `LivenessProbe` was removed in [PR#3502](https://github.com/prometheus-operator/prometheus-operator/pull/3502) until the `StartupProbe` is not implemented. But we didn't face any issues with `LivenessProbe`, so we reverting it back.
+There is a bug in Go runtime. Because of it, tickers from the std library are not precise.
+This patch adds a flag to ignore timestamp difference for 10 ms instead of 2 ms,
+which promises us a 30% reduction in resource consumption.
 
-## Scrape params
+https://github.com/prometheus/prometheus/pull/9283
 
-With that patch, we are avoiding `ScrapeTimeout` being greater than `ScrapeInterval`.
+We will not open a PR to Prometheus operator, because this flag is experimental at its current state.

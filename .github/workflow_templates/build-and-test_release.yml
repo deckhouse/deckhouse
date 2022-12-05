@@ -1,3 +1,17 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # on push to default branch or on tags
 {!{- $ctx := dict -}!}
 {!{- $ctx = coll.Merge $ctx . -}!}
@@ -21,14 +35,10 @@ on:
 
 env:
 {!{ tmpl.Exec "werf_envs"               | strings.Indent 2 }!}
-{!{ tmpl.Exec "image_versions_envs"     | strings.Indent 2 }!}
-{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same tag/branch.
 concurrency:
-  group: ${{ github.ref }}-release-build
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -57,12 +67,21 @@ jobs:
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.go_generate) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "workflow_render" "Render workflow") }!}
+  workflow_render:
+    name: {!{ $jobNames.workflow_render }!}
+    needs:
+      - git_info
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.workflow_render) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "build_fe" "Build FE") }!}
   build_fe:
     name: {!{ $jobNames.build_fe }!}
     needs:
       - git_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -74,6 +93,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
@@ -86,6 +106,7 @@ jobs:
     needs:
       - git_info
       - go_generate
+      - workflow_render
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
@@ -116,8 +137,7 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
@@ -126,18 +146,16 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
-{!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Matrix tests") }!}
+{!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
   dhctl_tests:
     name: {!{ $jobNames.dhctl_tests }!}
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.dhctl_tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "golangci_lint" "GolangCI Lint") }!}
@@ -146,8 +164,7 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "openapi_test_cases" "OpenAPI Test Cases") }!}
@@ -156,8 +173,7 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.openapi_test_cases) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
@@ -167,7 +183,6 @@ jobs:
       - git_info
       - doc_web_build
       - main_web_build
-    continue-on-error: true
 {!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.web_links_test) | strings.Indent 6 }!}
 
@@ -177,8 +192,7 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
 {!{/* Autodeploy site and docs to production env on push to main branch. */}!}
@@ -189,8 +203,7 @@ jobs:
       - git_info
       - doc_web_build
       - main_web_build
-    continue-on-error: true
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
@@ -201,38 +214,19 @@ jobs:
 {!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web) | strings.Indent 6 }!}
 
-{!{/* Autodeploy documentation to production and stage envs on a new tag */}!}
-{!{ $jobNames = coll.Merge $jobNames (dict "deploy_tagged_doc" "Deploy tagged documentation") }!}
-  deploy_tagged_doc:
-    name: {!{ $jobNames.deploy_tagged_doc }!}
-    needs:
-      - git_info
-      - doc_web_build
-    continue-on-error: true
-    if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_tagged_doc) | strings.Indent 6 }!}
-
   last_comment:
     name: Update comment on finish
     needs:
       - started_at
       - git_info
       - go_generate
+      - workflow_render
       - build_fe
       - build_ee
       - build_ce
       - doc_web_build
       - main_web_build
       - deploy_latest_web
-      - deploy_tagged_doc
       - tests
       - matrix_tests
       - dhctl_tests

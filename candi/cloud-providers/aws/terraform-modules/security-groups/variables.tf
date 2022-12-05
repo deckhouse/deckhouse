@@ -27,3 +27,7 @@ variable "vpc_id" {
 variable "tags" {
   type = map(string)
 }
+
+variable "ssh_allow_list" {
+  type = any
+}

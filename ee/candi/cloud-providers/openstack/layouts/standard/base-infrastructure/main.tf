@@ -4,7 +4,7 @@
 module "network_security" {
   source           = "../../../terraform-modules/network-security"
   prefix           = local.prefix
-  remote_ip_prefix = "0.0.0.0/0"
+  ssh_allow_list   = local.ssh_allow_list
   enabled          = local.network_security
 }
 
@@ -81,6 +81,12 @@ data "openstack_images_image_v2" "image" {
   name  = local.bastion_image_name
 }
 
+module "volume_zone" {
+  source = "../../../terraform-modules/volume-zone"
+  compute_zone = local.zone
+  region = var.providerClusterConfiguration.provider.region
+}
+
 resource "openstack_blockstorage_volume_v2" "root" {
   count       = local.bastion_instance != {} ? 1 : 0
   name        = join("-", [local.name, "root-volume"])
@@ -88,9 +94,11 @@ resource "openstack_blockstorage_volume_v2" "root" {
   image_id    = data.openstack_images_image_v2.image[0].id
   metadata    = local.metadata_tags
   volume_type = local.volume_type
+  availability_zone = module.volume_zone.zone
   lifecycle {
     ignore_changes = [
       metadata,
+      availability_zone,
     ]
   }
 }
@@ -125,7 +133,13 @@ resource "openstack_compute_floatingip_v2" "bastion" {
 }
 
 resource "openstack_compute_floatingip_associate_v2" "bastion" {
-  count       = local.bastion_instance != {} ? 1 : 0
-  floating_ip = openstack_compute_floatingip_v2.bastion[0].address
-  instance_id = openstack_compute_instance_v2.bastion[0].id
+  count                 = local.bastion_instance != {} ? 1 : 0
+  floating_ip           = openstack_compute_floatingip_v2.bastion[0].address
+  instance_id           = openstack_compute_instance_v2.bastion[0].id
+  wait_until_associated = true
+  lifecycle {
+    ignore_changes = [
+      wait_until_associated,
+    ]
+  }
 }

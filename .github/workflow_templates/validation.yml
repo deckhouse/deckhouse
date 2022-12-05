@@ -1,3 +1,17 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 {!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
 {!{- $ctx := coll.Merge $pullRequestContext . -}!}
 
@@ -18,14 +32,40 @@ on:
       - opened
       - synchronize
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.event.number }}-validation
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  close_dependabot_prs_for_forks:
+    name: Autoclose Dependabot PRs for forks
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
+    env:
+      ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
+    steps:
+      - name: Close PR
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            // Keep PR if explicitly enabled.
+            const {ENABLE_DEPENDABOT_IN_FORKS} = process.env;
+            const prNum = context.payload.pull_request.number;
+            const repo = context.payload.repository.full_name;
+            if (ENABLE_DEPENDABOT_IN_FORKS === 'true') {
+              core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is 'true', proceed with validation for PR#${prNUM} in repo ${repo}.`);
+              return
+            }
+            core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is not 'true', close PR#${prNum} in repo ${repo}.`);
+            return await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNum,
+              state: 'closed'
+            });
+
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 
   # Get pull request info for validation scripts.
@@ -36,30 +76,33 @@ jobs:
       - pull_request_info
     runs-on: ubuntu-latest
     outputs:
-      run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
-      label_no_cyrillic: ${{ steps.on_push.outputs.label_no_cyrillic }}
-      run_doc_changes: ${{ steps.on_push.outputs.run_doc_changes }}
-      label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
-      run_copyright: ${{ steps.on_push.outputs.run_copyright }}
-      label_copyright: ${{ steps.on_push.outputs.label_copyright }}
-      pr_title: ${{ steps.on_push.outputs.pr_title }}
-      pr_description: ${{ steps.on_push.outputs.pr_description }}
-      diff_url: ${{ steps.on_push.outputs.diff_url }}
-
+      run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
+      label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
+      run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
+      label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
+      label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
+      run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
+      label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
-      - id: on_push
+      - id: check_labels
         name: Check labels on push
         uses: {!{ index (ds "actions") "actions/github-script" }!}
+        env:
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const labels = JSON.parse(process.env.PR_LABELS)
+
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({ github, context, core });
+            return ci.checkValidationLabels({ core, labels });
 
       - name: Download diff for pull request
         env:
-          DIFF_URL: ${{ steps.on_push.outputs.diff_url }}
+          DIFF_URL: ${{ needs.pull_request_info.outputs.diff_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./.github/scripts/validation_run.sh --download-only ./pr.diff
 
@@ -69,12 +112,41 @@ jobs:
           name: pr_diff
           path: pr.diff
 
+  check-pr-milestone:
+    name: Check milestone
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that a milestone is set for a pull request
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            const response = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            if (response.status != 200 || !response.data) {
+              return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+            }
+
+            let pr = response.data;
+            core.debug(`response: ${pr}`)
+
+            if (pr.milestone) {
+              core.debug(`This pull request has a milestone: ${pr.milestone.title}`);
+            } else {
+              core.setFailed("The pull request has no milestone. Set a milestone for the pull request.");
+            }
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
-      VALIDATE_TITLE: ${{ needs.discover.outputs.pr_title }}
-      VALIDATE_DESCRIPTION: ${{ needs.discover.outputs.pr_description }}
+      VALIDATE_TITLE: ${{ needs.pull_request_info.outputs.pr_title }}
+      VALIDATE_DESCRIPTION: ${{ needs.pull_request_info.outputs.pr_description }}
 {!{ tmpl.Exec "validation_template" (slice $ctx "no_cyrillic") | strings.Indent 4 }!}
 
   doc_validation:
@@ -83,9 +155,13 @@ jobs:
 
   copyright_validation:
     name: Copyright Validation
-{!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
 
-{!{/* Template for validation jobs. CI_COMMIT_REF_NAME and CI_PIPELINE_CREATED_AT are required for werf.yaml */}!}
+  markdown_linter:
+    name: Markdown Linter
+{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
+
+{!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $type := index . 1 }!}
@@ -108,4 +184,29 @@ steps:
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       ./.github/scripts/validation_run.sh ./testing/validate_{!{ $type }!}.sh
+{!{- end -}!}
+
+{!{/* Template for linter jobs. */}!}
+{!{ define "linter_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $type := index . 1 }!}
+needs:
+  - discover
+  - pull_request_info
+if: needs.discover.outputs.run_{!{ $type }!} == 'true'
+runs-on: ubuntu-latest
+steps:
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+  - name: Run linter
+    env:
+      DIFF_PATH: ./pr.diff
+      SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
+    run: |
+      make lint-{!{ $type }!}
 {!{- end -}!}

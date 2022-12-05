@@ -7,7 +7,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    web.deckhouse.io/export-name: "status"
+    web.deckhouse.io/export-icon: "/public/img/heart.ico"
 {{- if not .Values.upmeter.statusPageAuthDisabled }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.status.externalAuthentication.authSignInURL }}
@@ -23,6 +24,7 @@ metadata:
 {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -48,7 +50,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if not .Values.upmeter.statusPageAuthDisabled }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.status.externalAuthentication.authSignInURL }}
@@ -71,6 +72,7 @@ metadata:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET"
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -97,6 +99,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
+  certificateOwnerRef: false
   secretName: ingress-tls-status
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "status") }}

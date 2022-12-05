@@ -33,6 +33,7 @@ rules:
     resources:
       - namespaces
       - pods
+      - nodes
     verbs:
       - watch
       - get
@@ -42,6 +43,7 @@ rules:
     resources:
       - replicasets
     verbs:
+      - watch
       - get
       - list
   - apiGroups:

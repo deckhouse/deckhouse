@@ -12,12 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Disable auto reboot and remove unused deps
-if [ -f "/etc/apt/apt.conf.d/50unattended-upgrades" ] ; then
-  sed -i 's/\/\/Unattended-Upgrade::Automatic-Reboot "false"/Unattended-Upgrade::Automatic-Reboot "false"/g' /etc/apt/apt.conf.d/50unattended-upgrades
-  sed -i 's/\/\/Unattended-Upgrade::InstallOnShutdown "true"/Unattended-Upgrade::InstallOnShutdown "false"/g' /etc/apt/apt.conf.d/50unattended-upgrades
-  sed -i 's/\/\/Unattended-Upgrade::Remove-Unused-Dependencies "false"/Unattended-Upgrade::Remove-Unused-Dependencies "false"/g' /etc/apt/apt.conf.d/50unattended-upgrades
-fi
-
-# Disable periodic unattended-upgrades
-sed -i 's/APT::Periodic::Unattended-Upgrade "1"/APT::Periodic::Unattended-Upgrade "0"/g' /etc/apt/apt.conf.d/*
+bb-apt-remove unattended-upgrades

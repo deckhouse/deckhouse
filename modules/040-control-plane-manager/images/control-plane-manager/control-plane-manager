@@ -78,7 +78,8 @@ done
 
 # Configuration checksum
 CONFIGURATION_CHECKSUM=$(cat "${BASH_SOURCE[0]}" $CONFIG_DIR/* | sha256sum | cut -d" " -f1)
-BACKUP_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse/backup/$CONFIGURATION_CHECKSUM
+ROOT_BACKUP_DIR=$ROOTFS_DIR/etc/kubernetes/deckhouse/backup
+BACKUP_DIR=$ROOT_BACKUP_DIR/$CONFIGURATION_CHECKSUM
 TMP_ROOTFS_DIR="/tmp/${CONFIGURATION_CHECKSUM}"
 
 # Last applied configuration checksum
@@ -88,7 +89,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.19"]="1.19" ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" )
+declare -A supported_kubernetes_versions=( ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" )
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
@@ -318,19 +319,19 @@ function converge_component() {
   checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/${component}999checksum.yaml
 
   case $KUBERNETES_VERSION in
-    1.19 | 1.20 | 1.21)
-      experimental_option="--experimental-patches"
+    1.20 | 1.21)
+      experimental_option="--experimental-patches $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
       ;;
     *)
-      experimental_option="--patches"
+      experimental_option=""
       ;;
   esac
 
   if [[ "$component" != "etcd" ]] ; then
-    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
   else
-    kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
-    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
+    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
   fi
 
   echo "Converge $component"
@@ -538,10 +539,10 @@ echo "$CONFIGURATION_CHECKSUM" > $ROOTFS_DIR/etc/kubernetes/deckhouse/last_appli
 rm -rf "$TMP_ROOTFS_DIR"
 
 # Remove backup
-echo "Remove backup"
-if [[ -d "$BACKUP_DIR" ]] ; then
-  rm -rf "$BACKUP_DIR"
-fi
+echo "Remove backups older than 5"
+for i in $(find $ROOT_BACKUP_DIR -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -r -n -k 1,1 | tail -n +6 | awk '{print $2}')
+  do rm -rf "$i"
+done
 echo " * Done!"
 echo
 

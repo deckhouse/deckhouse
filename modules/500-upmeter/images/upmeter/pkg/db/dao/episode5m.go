@@ -21,21 +21,18 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/server/ranges"
 )
 
 const (
-	everyProbe       = "__all__"
-	groupAggregation = "__total__"
+	ProbeEnumeration = "__all__"
+	GroupAggregation = "__total__"
 )
 
-// __all__ and __total__ probes should select all probes
 func areAllProbesRequested(probe string) bool {
-	return probe == everyProbe || probe == groupAggregation
+	return probe == ProbeEnumeration
 }
 
 type EpisodeDao5m struct {
@@ -78,52 +75,6 @@ func (d *EpisodeDao5m) GetBySlotAndProbe(slot time.Time, ref check.ProbeRef) (En
 	}
 
 	return records[0], nil
-}
-
-// TODO (e.shevchenko): can be DRYed ? ?
-func (d *EpisodeDao5m) ListByRange(from, to int64) ([]Entity, error) {
-	const query = selectEntityStmt + `
-	FROM    episodes_5m
-	WHERE   timeslot >= ? AND timeslot < ?
-	`
-
-	rows, err := d.DbCtx.StmtRunner().Query(query, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("select for TimeslotRange: %v", err)
-	}
-	defer rows.Close()
-
-	return parseEpisodeEntities(rows)
-}
-
-// TODO (e.shevchenko): can be DRYed ?
-func (d *EpisodeDao5m) ListGroupProbe() ([]check.ProbeRef, error) {
-	const query = `
-	SELECT DISTINCT
-		group_name, probe_name
-	FROM
-		episodes_5m
-	ORDER BY 1, 2
-	`
-
-	rows, err := d.DbCtx.StmtRunner().Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("select group and probe: %v", err)
-	}
-	defer rows.Close()
-
-	res := make([]check.ProbeRef, 0)
-	for rows.Next() {
-		ref := check.ProbeRef{}
-		err := rows.Scan(&ref.Group, &ref.Probe)
-		if err != nil {
-			return nil, fmt.Errorf("row to ProbeRef: %v", err)
-		}
-		res = append(res, ref)
-		log.Infof("got probeRef=%s", ref.Id())
-	}
-
-	return res, nil
 }
 
 // TODO (e.shevchenko): can be DRYed ?
@@ -187,8 +138,8 @@ func (d *EpisodeDao5m) ListEpisodesByRange(from, to int64, ref check.ProbeRef) (
 		queryArgs = append(queryArgs, ref.Group)
 	}
 
-	// __all__ and __total__ probes should select all probes
 	if !areAllProbesRequested(ref.Probe) {
+		// Choose specific probe
 		query += " AND probe_name = ?"
 		queryArgs = append(queryArgs, ref.Probe)
 	}
@@ -232,11 +183,12 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 			groupBy = append(groupBy, "group_name")
 		}
 
-		// __all__ and __total__ probes should select all probes
 		if !areAllProbesRequested(ref.Probe) {
+			// Choose specific probe
 			where += " AND probe_name = ?"
 			queryArgs = append(queryArgs, ref.Probe)
 		}
+
 		selectPart += ", probe_name"
 		groupBy = append(groupBy, "probe_name")
 
@@ -250,7 +202,7 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 
 		rows, err := d.DbCtx.StmtRunner().Query(query, queryArgs...)
 		if err != nil {
-			return nil, fmt.Errorf("select for TimeslotRange: %v", err)
+			return nil, err
 		}
 		defer rows.Close()
 
@@ -282,7 +234,7 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 					&entity.Episode.ProbeRef.Probe)
 			}
 			if err != nil {
-				return nil, fmt.Errorf("row to Episode5m: %v", err)
+				return nil, fmt.Errorf("row to entity episode: %v", err)
 			}
 			entity.Episode.TimeSlot = time.Unix(stepRange.From, 0)
 			res = append(res, entity.Episode)

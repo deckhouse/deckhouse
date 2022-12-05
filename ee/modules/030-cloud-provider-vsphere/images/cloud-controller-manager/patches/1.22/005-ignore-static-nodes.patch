@@ -1,8 +1,3 @@
-Index: pkg/cloudprovider/vsphere/instances.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/cloudprovider/vsphere/instances.go b/pkg/cloudprovider/vsphere/instances.go
 --- a/pkg/cloudprovider/vsphere/instances.go	(revision 2461f899209081458fe3a0a7a109dad80f6ad02d)
 +++ b/pkg/cloudprovider/vsphere/instances.go	(revision 6b6f23f21569d43b84721011068fa2539b9ab7f8)

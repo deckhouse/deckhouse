@@ -1,0 +1,31 @@
+.github/                    @diafour
+002-deckhouse/              @yalosev
+021-cni-cilium/             @zuzzas @yalosev @RomanenkoDenys @konstantin-axenov
+030-cloud-provider-openstack/ @konstantin-axenov
+030-cloud-provider-vsphere/ @RomanenkoDenys
+041-linstor/                @kvaps
+031-local-path-provisioner/ @RomanenkoDenys
+040-control-plane-manager/  @yalosev
+040-node-manager/           @yalosev
+040-terraform-manager/      @name212
+101-cert-manager/           @yalosev
+110-istio/                  @apolovov
+140-user-authz/             @nabokihms @apolovov
+150-user-authn/             @nabokihms
+340-extended-monitoring/    @nabokihms @zuzzas
+340-monitoring-*/           @nabokihms
+350-node-local-dns/         @zuzzas
+380-metallb/                @RomanenkoDenys @kvaps
+402-ingress-nginx/          @nabokihms @yalosev
+460-log-shipper/            @nabokihms
+470-chrony/                 @RomanenkoDenys
+500-openvpn/                @vitaliy-sn
+500-upmeter/                @shvgn
+600-flant-integration/      @shvgn
+bashible-apiserver/         @yalosev
+candi/                      @RomanenkoDenys
+cloud-controller-manager/   @zuzzas
+csi/                        @zuzzas
+deckhouse-controller/       @diafour
+dhctl/                      @name212
+docs/                       @z9r5

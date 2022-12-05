@@ -1,0 +1,5 @@
+node-manager:
+  fixes:
+    - summary: Fix `cluster-autoscaler` configMap generation when a few node groups have the same priority.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3062
+

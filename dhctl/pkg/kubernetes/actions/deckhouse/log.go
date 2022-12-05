@@ -33,10 +33,11 @@ import (
 )
 
 var (
-	ErrListPods      = errors.New("No Deckhouse pod found.")
-	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
+	ErrListPods          = errors.New("No Deckhouse pod found.")
+	ErrMultiplePodsFound = errors.New("Multiple Deckhouse pods found.")
+	ErrTimedOut          = errors.New("Time is out waiting for Deckhouse readiness.")
+	ErrRequestFailed     = errors.New("Request failed. Probably pod was restarted during installation.")
+	ErrIncorrectNode     = errors.New("Deckhouse on wrong node")
 )
 
 type logLine struct {
@@ -58,6 +59,9 @@ func (l *logLine) StringWithLogLevel() string {
 	return fmt.Sprintf("\t%s/%s: [%s] %s\n", l.Module, l.Component, l.Level, l.Message)
 }
 
+// isErrorLine returns if log line is an error report:
+// - level="error" - log.Error from deckhouse and Go hooks.
+// - output="stderr" - errors from shell hooks.
 func isErrorLine(line *logLine) bool {
 	if line.Level == "error" {
 		badSubStrings := []string{
@@ -69,6 +73,9 @@ func isErrorLine(line *logLine) bool {
 			// We cannot skip this error in hook,
 			// because kube version needs for next installation steps
 			"Not found k8s versions",
+			// hook with creating master run immediately after deploy crd
+			// and we can get this message one time
+			"Create object: deckhouse.io/v1/NodeGroup//master: apiVersion 'deckhouse.io/v1', kind 'NodeGroup' is not supported by cluster",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
@@ -78,15 +85,33 @@ func isErrorLine(line *logLine) bool {
 		return true
 	}
 
+	// Consider stderr messages are errors too.
 	if line.Output == "stderr" {
-		// skip tiller output
-		if line.Component == "tiller" {
-			return false
-		}
-
-		return false
+		return true
 	}
 
+	return false
+}
+
+// isModuleSuccess returns true on message about successful module run.
+func isModuleSuccess(line *logLine) bool {
+	// Message about successful ModuleRun since PR#126 in flant/addon-operator.
+	// https://github.com/flant/addon-operator/blob/7e814fbe92fb12af79c67c4226b4c2781d959f3c/pkg/addon-operator/operator.go#L1376
+	return line.Message == "ModuleRun success, module is ready"
+}
+
+// isConvergeDone returns true when ConvergeModules task is done reloading all modules.
+// Consider the first occurrence is the first converge success.
+func isConvergeDone(line *logLine) bool {
+	// Message about successful converge since PR#315 in flant/addon-operator.
+	// https://github.com/flant/addon-operator/blob/7e814fbe92fb12af79c67c4226b4c2781d959f3c/pkg/addon-operator/operator.go#L588
+	if line.Message == "ConvergeModules task done" {
+		return true
+	}
+	// Message about successful converge prior PR#315 in flant/addon-operator.
+	if line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+		return true
+	}
 	return false
 }
 
@@ -119,6 +144,9 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		t := metav1.NewTime(d.lastErrorTime)
 		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &t}
 	}
+	// kubelet certificate on master can be changed before finish Deckhouse installation
+	// and dhctl can not get logs from Deckhouse pod
+	logOptions.InsecureSkipTLSVerifyBackend = true
 
 	var result []byte
 
@@ -127,6 +155,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 		result, lastErr = request.DoRaw(context.TODO())
 		if lastErr != nil {
+			log.DebugF("printErrorsForTask: %s\n %s", lastErr.Error(), string(result))
 			return ErrRequestFailed
 		}
 
@@ -174,13 +203,12 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 			return true
 		}
 
-		// TODO use module.state label
-		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
+		if isModuleSuccess(line) {
 			log.InfoF("\tModule %q run successfully\n", line.Module)
 			return true
 		}
 
-		if !d.stopOutputNoMoreConvergeTasks && line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+		if !d.stopOutputNoMoreConvergeTasks && isConvergeDone(line) {
 			log.InfoLn("No more converge tasks found in Deckhouse queue.")
 			d.stopOutputNoMoreConvergeTasks = true
 			return true
@@ -244,6 +272,7 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 
 	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(context.TODO(), d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
+		log.DebugF("checkDeckhousePodReady: %s\n", err.Error())
 		return false, ErrRequestFailed
 	}
 
@@ -268,7 +297,15 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
+	logOptions := corev1.PodLogOptions{
+		Container: "deckhouse",
+		TailLines: int64Pointer(5),
+
+		// kubelet certificate on master can be changed before finish Deckhouse installation
+		// and dhctl can not get logs from Deckhouse pod
+		InsecureSkipTLSVerifyBackend: true,
+	}
+
 	defer func() { d.deckhousePod = nil }()
 
 	for {
@@ -287,7 +324,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 			result, err := request.DoRaw(context.TODO())
 			if err != nil {
-				log.DebugLn(err)
+				log.DebugF("Print: %s\n %s", err.Error(), string(result))
 				return false, ErrRequestFailed
 			}
 
@@ -295,7 +332,12 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 
 			time.Sleep(time.Second)
 			currentTime := metav1.NewTime(time.Now())
-			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
+			logOptions = corev1.PodLogOptions{
+				Container: "deckhouse",
+				SinceTime: &currentTime,
+				// see above
+				InsecureSkipTLSVerifyBackend: true,
+			}
 		}
 	}
 }

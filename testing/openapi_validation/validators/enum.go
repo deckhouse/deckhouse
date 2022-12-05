@@ -72,6 +72,11 @@ var (
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
+		"modules/030-cloud-provider-azure/openapi/config-values.yaml": {
+			// ignore Azure disk types
+			"properties.storageClass.properties.provision.items.properties.type",
+			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
+		},
 		"modules/030-cloud-provider-aws/openapi/config-values.yaml": {
 			// ignore AWS disk types
 			"properties.storageClass.properties.provision.items.properties.type",
@@ -85,7 +90,16 @@ var (
 			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
 			"properties.storageClass.properties.compatibilityFlag",
 		},
+		"ee/modules/030-cloud-provider-vsphere/openapi/config-values.yaml": {
+			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
+			"properties.storageClass.properties.compatibilityFlag",
+		},
 		"modules/030-cloud-provider-vsphere/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
+		"ee/modules/030-cloud-provider-vsphere/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
@@ -106,6 +120,10 @@ var (
 			// ignore internal values
 			"properties.allowedBundles.items",
 		},
+		"ee/modules/040-node-manager/openapi/config-values.yaml": {
+			// ignore internal values
+			"properties.allowedBundles.items",
+		},
 		"modules/042-kube-dns/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.specificNodeType",
@@ -117,6 +135,24 @@ var (
 		"modules/402-ingress-nginx/crds/ingress-nginx.yaml": {
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items",
+		},
+		"modules/099-ceph-csi/crds/cephcsi.yaml": {
+			// ignore file system names: ext4, xfs, etc.
+			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
+		},
+		"modules/099-ceph-csi/openapi/values.yaml": {
+			// ignore file system names: ext4, xfs, etc.
+			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
+		},
+		"modules/380-metallb/openapi/config-values.yaml": {
+			// ignore enum values
+			"properties.addressPools.items.properties.protocol",
+		},
+		"ee/modules/380-metallb/openapi/config-values.yaml": {
+			// ignore enum values
+			"properties.addressPools.items.properties.protocol",
 		},
 	}
 

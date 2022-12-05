@@ -347,11 +347,15 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 				return imts.Before(&jmts)
 			})
 			failureReason = lastMachineFailures[len(lastMachineFailures)-1].LastOperation.Description
-
 		}
 		statusMsg := fmt.Sprintf("%s %s", nodeGroup.Error, failureReason)
 		statusMsg = strings.TrimSpace(statusMsg)
 		if len(statusMsg) > 0 {
+			// truncate to maximum allowed message limit
+			// https://github.com/kubernetes/kubernetes/blob/3e442b74f717ab2f43897d7af50de6114486e459/pkg/apis/core/validation/events.go#L38
+			if len(statusMsg) > 1024 {
+				statusMsg = statusMsg[:1024]
+			}
 			prev := ngStatusCache[nodeGroup.Name]
 			// skip events with the same in-row message
 			if prev != statusMsg {

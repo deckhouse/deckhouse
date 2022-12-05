@@ -25,6 +25,11 @@ data "azurerm_subnet" "kube" {
 locals {
   zones_count = length(local.zones)
   zone        = local.zones[var.nodeIndex % local.zones_count]
+  default_cloud_config = <<-EOF
+  #cloud-config
+  mounts:
+  - [ ephemeral0, /mnt/resource ]
+  EOF
 }
 
 resource "azurerm_public_ip" "master" {
@@ -43,7 +48,8 @@ resource "azurerm_network_interface" "master" {
   location            = data.azurerm_resource_group.kube.location
   resource_group_name = data.azurerm_resource_group.kube.name
 
-  enable_ip_forwarding = true
+  enable_ip_forwarding          = true
+  enable_accelerated_networking = local.accelerated_networking
 
   ip_configuration {
     name                          = local.prefix
@@ -84,7 +90,7 @@ resource "azurerm_linux_virtual_machine" "master" {
     version   = local.image_version
   }
 
-  custom_data = var.cloudConfig != "" ? var.cloudConfig : null
+  custom_data = var.cloudConfig != "" ? var.cloudConfig : base64encode(local.default_cloud_config)
 
   tags = local.additional_tags
 

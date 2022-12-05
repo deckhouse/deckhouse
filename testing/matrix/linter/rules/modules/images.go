@@ -28,21 +28,11 @@ import (
 )
 
 func skipModuleImageNameIfNeeded(filePath string) bool {
-	switch filePath {
-	case
-		// Following images will be removed soon
-		"/deckhouse/modules/110-istio/images/operator-v1x9x1trustca/Dockerfile",
-		"/deckhouse/modules/110-istio/images/pilot-v1x9x1trustca/Dockerfile",
-		"/deckhouse/modules/110-istio/images/proxyv2-v1x9x1trustca/Dockerfile":
-		return true
-	}
-	return false
+	return filePath == "/deckhouse/modules/021-cni-cilium/images/cilium/Dockerfile"
 }
 
 var regexPatterns = map[string]string{
 	`$BASE_ALPINE`:           imageRegexp(`alpine:[\d.]+`),
-	`$BASE_ALPINE_3_15`:      imageRegexp(`alpine:3.15[\d.]+`),
-	`$BASE_DEBIAN`:           imageRegexp(`debian:[\d.]+`),
 	`$BASE_GOLANG_ALPINE`:    imageRegexp(`golang:1.15.[\d.]+-alpine3.12`),
 	`$BASE_GOLANG_16_ALPINE`: imageRegexp(`golang:1.16.[\d.]+-alpine3.12`),
 	`$BASE_GOLANG_BUSTER`:    imageRegexp(`golang:1.15.[\d.]+-buster`),
@@ -196,7 +186,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 }
 
 func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !strings.HasPrefix(from, `{{ env "BASE_`) {
+	if !strings.HasPrefix(from, `{{ .Images.BASE_`) && !strings.HasPrefix(from, `{{ $.Images.BASE_`) {
 		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
 	}
 	return false, ""

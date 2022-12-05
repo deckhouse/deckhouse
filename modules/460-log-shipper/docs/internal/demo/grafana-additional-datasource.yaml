@@ -1,0 +1,12 @@
+---
+apiVersion: deckhouse.io/v1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: loki
+spec:
+  access: Proxy
+  basicAuth: false
+  jsonData:
+    timeInterval: 30s
+  type: loki
+  url: http://loki.loki-test:3100

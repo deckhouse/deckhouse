@@ -4,4 +4,4 @@ permalink: en/supported_versions.html
 toc: false
 ---
 
-{% include SUPPORTED_VERSIONS.md %}
+{% include SUPPORTED_VERSIONS.liquid %}

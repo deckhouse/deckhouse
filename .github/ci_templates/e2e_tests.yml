@@ -1,3 +1,54 @@
+{!{/* Get layout for cloud provider. */}!}
+{!{- define "e2e_get_layout" -}!}
+{!{- $ctx := . -}!}
+{!{- $layout := "WithoutNAT" -}!}
+{!{- if eq $ctx.provider "azure"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "openstack"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "static"  -}!}
+{!{-   $layout = "Static" -}!}
+{!{- end -}!}
+{!{ $layout }!}
+{!{ end -}!}
+
+# job for set e2e requirement status
+# $1 - name of function to set status. see ../scripts/e2e-commit-status.js
+{!{ define "set_e2e_requirement_status" }!}
+
+# <template: set_e2e_requirement_status>
+- name: Set commit status after e2e run
+  id: set_e2e_requirement_status
+  if: ${{ always() }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  env:
+    JOB_STATUS: ${{ job.status }}
+    STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    script: |
+      const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+      await e2eStatus.setStatusAfterE2eRun({github, context, core});
+# </template: set_e2e_requirement_status>
+{!{- end -}!}
+
+{!{ define "e2e_send_alert_template" }!}
+{!{- $ctx := index . 0 -}!}
+
+{!{- $annotations := dict "plk_create_group_if_not_exists/cloudlayouttestfailed" "CloudLayoutTestFailedGroup" -}!}
+{!{- $annotations = coll.Merge $annotations (dict "plk_grouped_by/cloudlayouttestfailed" "CloudLayoutTestFailedGroup") -}!}
+
+{!{- $templateCtx := coll.Merge $ctx (dict "annotations" $annotations ) }!}
+
+{!{ tmpl.Exec "send_alert_template" (slice $templateCtx) }!}
+{!{ end }!}
+
 {!{ define "e2e_run_template" }!}
 # <template: e2e_run_template>
 {!{- $provider := index . 0 -}!}
@@ -25,23 +76,22 @@
 {!{- end }!}
 run: |
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
+    INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+    DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+    INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
     PREFIX=${PREFIX}
-    TMPPATH=${TMPPATH}
-    DEV_BRANCH=${CI_COMMIT_REF_SLUG}
     PROVIDER=${PROVIDER}
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
-    CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-    JOB_STATUS=${JOB_STATUS}
+    TMP_DIR_PATH=${TMP_DIR_PATH}
   "
 
   docker run --rm \
-    -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-    -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
-    -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+    -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+    -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
@@ -68,7 +118,7 @@ run: |
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
 {!{- end }!}
     -v $(pwd)/testing:/deckhouse/testing \
-    -v ${TMPPATH}:/tmp \
+    -v ${TMP_DIR_PATH}:/tmp \
     --user $(id -u):$(id -u) \
     -v /etc/group:/etc/group:ro \
     -v /etc/passwd:/etc/passwd:ro \
@@ -79,6 +129,7 @@ run: |
 
 # </template: e2e_run_template>
 {!{- end -}!}
+
 
 
 {!{/*
@@ -114,3 +165,202 @@ check_e2e_labels:
           return await ci.checkE2ELabels({github, context, core, provider});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
+
+{!{/* One e2e job. */}!}
+{!{- define "e2e_run_job_template" -}!}
+{!{- $ctx := . -}!}
+{!{- $runsOnLabel := "e2e-common" -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $runsOnLabel = "e2e-vsphere" -}!}
+{!{- end -}!}
+# <template: e2e_run_job_template>
+{!{ $ctx.jobID }!}:
+  name: "{!{ $ctx.jobName }!}"
+  needs:
+{!{- if coll.Has $ctx "manualRun" }!}
+    - check_e2e_labels
+{!{- end }!}
+    - git_info
+{!{- if coll.Has $ctx "manualRun" }!}
+  if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
+{!{- end }!}
+  env:
+    PROVIDER: {!{ $ctx.providerName }!}
+    CRI: {!{ $ctx.criName }!}
+    LAYOUT: {!{ $ctx.layout }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+    EVENT_LABEL: ${{ github.event.label.name }}
+  runs-on: [self-hosted, {!{ $runsOnLabel }!}]
+  steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
+{!{- end }!}
+
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+
+    - name: Setup
+      id: setup
+      env:
+        DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
+        MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
+      run: |
+        # Calculate unique prefix for e2e test.
+        # GITHUB_RUN_ID is a unique number for each workflow run.
+        # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+        # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+        # CRI and PROVIDER values are trimmed to reduce prefix length.
+        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+        if [[ "${MANUAL_RUN}" == "false" ]] ; then
+          # for jobs which run multiple providers concurrency (daily e2e, for example)
+          # add provider suffix to prevent "directory already exists" error
+          DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
+        fi
+        # converts to DNS-like (all letters in lower case and replace all dots to dash)
+        # because it prefix will use for k8s resources names (nodes, for example)
+        DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+        # Create tmppath for test script.
+        TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+        if [[ -d "${TMP_DIR_PATH}" ]] ; then
+          echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+          ls -la ${TMP_DIR_PATH}
+          exit 1
+        else
+          echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+          mkdir -p "${TMP_DIR_PATH}"
+        fi
+
+        ## Source: ci_templates/build.yml
+
+        # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+
+        # Use dev-registry for Git branches.
+        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+        # Use rw-registry for Git tags.
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+        if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+          # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+          # Use dev-regisry for branches and Github Container Registry for semver tags.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+        fi
+
+        # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+        INITIAL_IMAGE_TAG=
+        if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        fi
+
+        # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
+        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+        INSTALL_IMAGE_NAME=
+        if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+        fi
+        if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+        fi
+        SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+        echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+        # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+        docker pull "${INSTALL_IMAGE_NAME}"
+
+        echo '::echo::on'
+        echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+        echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+        echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+        echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+        echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
+        echo '::echo::off'
+
+    - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
+      timeout-minutes: 60
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+        PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
+
+    - name: Cleanup bootstrapped cluster
+      if: always()
+      timeout-minutes: 60
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+        PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+
+    - name: Save test results
+      if: always()
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+        path: |
+          testing/cloud_layouts/
+
+    - name: Cleanup temp directory
+      if: always()
+      env:
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+      run: |
+        echo "Remove temporary directory '${TMPPATH}' ..."
+        if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+          rm -rf "${TMPPATH}"
+        else
+          echo Not a directory.
+        fi
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
+{!{- end }!}
+
+{!{- if not (coll.Has $ctx "manualRun") }!}
+
+  {!{- $labels := dict "trigger" "CloudLayoutTestFailed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
+  {!{- $annotations := dict "summary" "Cloud Layout Test failed" "description" "Check Github workflow log for more information" -}!}
+  {!{- $if := "github.ref == 'refs/heads/main' && (cancelled() || failure())" -}!}
+  {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
+
+{!{- end }!}
+# </template: e2e_run_job_template>
+{!{ end -}!}

@@ -33,10 +33,10 @@ properties:
             enum: ["SelfSigned", "Global"]
             default: "SelfSigned"
             description: |
-              The mode of issuing certificates for the Ingress resource. 
-              
-              In the `SelfSigned` mode, a self-signed certificate will be issued for the Ingress resource. 
-              
+              The mode of issuing certificates for the Ingress resource.
+
+              In the `SelfSigned` mode, a self-signed certificate will be issued for the Ingress resource.
+
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
             type: object
@@ -46,13 +46,13 @@ properties:
                 type: string
                 description: |
                   If there is an external load balancer in front of the Ingress that terminates HTTPS traffic, then you need to specify the CA of the certificate used on the load balancer so that kubectl can reach the API server.
-                  
+
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
   kubeconfigGenerator:
     type: array
     description: |
       An array in which additional possible methods for accessing the API server are specified.
-      
+
       This option comes in handy if you prefer not to grant access to the cluster's API via Ingress but rather do it by other means (e.g., using a bastion host or over OpenVPN).
     items:
       type: object
@@ -61,7 +61,7 @@ properties:
         id:
           type: string
           description: 'The name of the method for accessing the API server (no spaces, lowercase letters).'
-          pattern: '^[\@\.\:a-z_-]+$'
+          pattern: '^[\@\.\:0-9a-z._-]+$'
         masterURI:
           type: string
           description: |

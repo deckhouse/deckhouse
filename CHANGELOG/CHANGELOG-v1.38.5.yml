@@ -1,0 +1,5 @@
+prometheus:
+  fixes:
+    - summary: Fixed calculation of PVC size and retention size.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2918
+

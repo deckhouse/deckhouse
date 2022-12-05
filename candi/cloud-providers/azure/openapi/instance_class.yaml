@@ -36,6 +36,28 @@ spec:
                     az vm list-sizes --location westeurope -o table
                     ```
                   example: Standard_F4
+                capacity:
+                  type: object
+                  description: |
+                    Instance capacity for *non-standard* instance types (the `machineSize` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`Standard_A1_v2`, `Standard_B16ms`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1000m"
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      example: "1500Mi"
                 urn:
                   type: string
                   description: |
@@ -44,12 +66,12 @@ spec:
                     More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
                     You can get the latest version of an image using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
-                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
-                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
                     **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                    **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                    > **Caution!** Currently, `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
                   example: 'Canonical:UbuntuServer:18.04-LTS:18.04.202010140'
                   x-doc-required: false
                 diskSizeGb:
@@ -74,6 +96,11 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                acceleratedNetworking:
+                  type: boolean
+                  description: |
+                    Accelerated Networking provides up to 30Gbps in networking throughput.
+                  x-doc-default: true
     - name: v1
       served: true
       storage: false

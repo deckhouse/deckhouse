@@ -1,3 +1,0 @@
-{{- if .Values.monitoringApplications.internal.enabledApplicationsSummary | has "elasticsearch" }}
-{{ include "base_application_monitor" (list . "elasticsearch" 5000) }}
-{{- end }}

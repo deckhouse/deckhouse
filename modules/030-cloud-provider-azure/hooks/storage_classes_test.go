@@ -31,11 +31,13 @@ cloudProviderAzure:
   storageClass:
     provision:
     - name: managed-ultra-ssd
+      type: UltraSSD_LRS
       diskIOPSReadWrite: 600
       diskMBpsReadWrite: 150
     exclude:
     - sc\d+
     - bar
+    - managed-standard-large
     default: other-bar
 `
 		initValuesExcludeAllString = `
@@ -72,10 +74,20 @@ cloudProviderAzure:
     "type": "Premium_LRS"
   },
   {
-    "diskIOPSReadWrite": 600,
-    "diskMBpsReadWrite": 150,
+    "cachingMode": "None",
+    "name": "managed-standard-ssd-large",
+    "type": "StandardSSD_LRS"
+  },
+  {
+    "cachingMode": "None",
+    "name": "managed-premium-large",
+    "type": "Premium_LRS"
+  },
+  {
     "name": "managed-ultra-ssd",
-    "type": "UltraSSD_LRS"
+    "type": "UltraSSD_LRS",
+    "diskIOPSReadWrite": 600,
+    "diskMBpsReadWrite": 150
   }
 ]
 `))

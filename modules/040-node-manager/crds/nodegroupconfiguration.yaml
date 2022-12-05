@@ -32,7 +32,7 @@ spec:
               properties:
                 content:
                   type: string
-                  description: The content of the step, can be either go template or plain bash.
+                  description: The content of the step. Can be either Go Template or plain bash.
                 weight:
                   type: integer
                   default: 100
@@ -40,7 +40,7 @@ spec:
                 nodeGroups:
                   type: array
                   minItems: 1
-                  description: List of NodeGroups to apply the step for. To select all NodeGroups you can set '*'.
+                  description: List of NodeGroups to apply the step for. You can set `'*'` for selecting all NodeGroups.
                   x-examples:
                     - ["master", "worker"]
                     - ["worker"]
@@ -54,7 +54,7 @@ spec:
                     - ["ubuntu-lts", "centos-7"]
                     - ["ubuntu-lts"]
                     - ["*"]
-                  description: Bundles for step execution. Ex. ubuntu-lts / centos-7. You can set '*' for selecting all bundles.
+                  description: Bundles for step execution. You can set `'*'` for selecting all bundles.
                   items:
                     type: string
       additionalPrinterColumns:

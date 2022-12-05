@@ -18,10 +18,10 @@ anchors_disabled: true
                 What is it?
               </h2>
               <p class="text text_big">
-                Enterprise Edition offers you a straightforward method to get the most out of the self-hosted Deckhouse Platform. Deploy it on any infrastructure and enjoy the full spectrum of <a href="/{{ page.lang }}/index.html#features">the platform's features</a>! While your engineers are responsible for maintaining it, Flant is always happy to help with first-hand support and consultations.
+                Enterprise Edition offers you a straightforward method to get the most out of the self-hosted Deckhouse Platform. Deploy it on any infrastructure and enjoy the full spectrum of <a href="/index.html#features">the platform's features</a>! While your engineers are responsible for maintaining it, Flant is always happy to help with first-hand support and consultations.
               </p>
               <div class="button-group">
-                <a href="javascript:raOpen()" class="button button_alt">Request 30-day free trial access!</a>
+                <a href="" data-open-modal="request_access" class="button button_alt">Request 30-day free trial access!</a>
               </div>
           </div>
           <div class="intro__logo">
@@ -34,7 +34,7 @@ anchors_disabled: true
 
 <section class="block">
   <div class="block__content container">
-    <h2 class="text text_h1">
+    <h2 class="text text_h1" id="subscription_plans">
       Subscription Plans
     </h2>
     <p class="text text_big">
@@ -42,123 +42,214 @@ anchors_disabled: true
     </p>
     <table class="table">
       <tbody>
-        <tr>
-          <td class="table__cell_left-title"></td>
-          <td class="table__cell_top-title">
-            <div>Business</div>
-          </td>
-          <td class="table__cell_top-title">
-            <div>Enterprise</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Support time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>
-              8 &times; 5<br>
-              <small>(9:00 &mdash; 17:00 CET)</small>
-            </div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>24 &times; 7</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>24 &times; 7</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Reaction time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>1 hour</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>15 mins</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>5 mins</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Resolution time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>Next business day</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>4 hours</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>As soon as possible</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Communication channel</div>
-          </td>
-          <td class="table__cell_default">
-            <div>Email, Slack</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>Email, Slack</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>Email, Slack, Remote access</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>SLA for clusters*</div>
-          </td>
-          <td class="table__cell_default">
-            <div>99.9</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>99.95</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>99.95</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>SLA for applications**</div>
-          </td>
-          <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-            </div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-            </div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-            </div>
-          </td>
-        </tr>
+      <tr>
+        <td class="table__cell_left-title"></td>
+        <td class="table__cell_top-title">
+          <div>Standard*</div>
+        </td>
+        <td class="table__cell_top-title">
+          <div>Enterprise**</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Support time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            8 &times; 5
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>24 &times; 7</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Reaction time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>Next business day</div>
+        </td>
+        <td class="table__cell_default">
+          <div><a href="https://legal.flant.com/deckhouse_regulations_en" target="_blank">As per the regulations</a></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Resolution time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>No regulations</div>
+        </td>
+        <td class="table__cell_default">
+          <div><a href="https://legal.flant.com/deckhouse_regulations_en" target="_blank">As per the regulations</a></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Communication channels</div>
+        </td>
+        <td class="table__cell_default">
+          <div>Email, Slack</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            Email, Slack, Google Meet, remote access
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Unlimited number of requests</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Platform updates</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Personal manager</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>SLAs for applications</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <span title="We will coordinate with you on application business metrics and facilitate the resolution of any incidents in the cluster that prevent you from achieving your desired SLA level.">
+              <img src="{{ site.baseurl }}/images/icons/intermediate.svg" />
+            </span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Support for deploying the platform in custom environments</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Advice on the infrastructure adaptation/modification required for platform deployment</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Assistance in identifying and troubleshooting workload problems in the cluster</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Requests for new platform features</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Advising on CI/CD and addressing issues related to the delivery of your applications to the cluster</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
       </tbody>
     </table>
     <div style="max-width: 810px; margin-top: 25px;">
       <p class="text">
-        <em>* SLA for clusters means we guarantee that this is the level of availability you will enjoy and we will respond in a timely fashion to help you to achieve these numbers.</em><br />
-        <em>** SLA for applications means integration enabling you to enrich our application metrics with your own custom metrics, helping to resolve any issues that may appear on the cluster.</em>
+        <em>* Included in the license fee.</em><br />
+        <em>** To be purchased separately.</em><br />
       </p>
       <p class="text text_big">
         EE source code is open, but it’s neither Open Source nor free to use. If your subscription runs out, you can still
         use and modify the source code of the last EE version you purchased. However, in that case, you will no longer get
-        any further updates, be able to create new clusters, or have the ability to provide Kubernetes-as-a-Service
-        to third parties.
+        any further updates as well as vendor's support.
       </p>
       <p class="text text_big">
-        Please see <a href="/{{ page.lang }}/services/training.html">success packages</a> for training and consulting options.
+        Please see <a href="/services/training.html">success packages</a> for training and consulting options.
       </p>
     </div>
     <h3 class="text text_h2">
@@ -186,7 +277,7 @@ anchors_disabled: true
     <div class="cta__text text_h2">
       Ready to give Deckhouse Platform EE a try?
     </div>
-    <a href="javascript:raOpen()" class="button button_big button_main">30-day free trial</a>
+    <a href="" data-open-modal="request_access" class="button button_big button_main">30-day free trial</a>
   </div>
 </section>
 
@@ -197,10 +288,10 @@ anchors_disabled: true
         Deckhouse Platform EE vs. Managed Deckhouse
       </h2>
       <p class="text text_big">
-        Enterprise Edition powers <a href="/{{ page.lang }}/services/managed.html">Managed Deckhouse</a>, which is another way to take full advantage of all the features Deckhouse Platform comes with. The difference is <strong>all about the responsibility</strong> — refer to our table for details.
+        Enterprise Edition powers <a href="/services/managed.html">Managed Deckhouse</a>, which is another way to take full advantage of all the features Deckhouse Platform comes with. The difference is <strong>all about the responsibility</strong> — refer to our table for details.
       </p>
       <p class="text text_big">
-        To learn why &amp; how the Deckhouse Platform is different from existing KaaS (Kubernetes as a Service) offerings, please check <a href="/{{ page.lang }}/deckhouse_vs_kaas.html">this comparison</a>.
+        To learn why &amp; how the Deckhouse Platform is different from existing KaaS (Kubernetes as a Service) offerings, please check <a href="/deckhouse_vs_kaas.html">this comparison</a>.
       </p>
     </div>
     <table class="table">

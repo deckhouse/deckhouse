@@ -23,9 +23,15 @@
     {{- $definition = $definition | replace "__SCRAPE_INTERVAL__" (printf "%ds" ($context.Values.global.discovery.prometheusScrapeInterval | default 30)) | replace "__SCRAPE_INTERVAL_X_2__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 2)) | replace "__SCRAPE_INTERVAL_X_3__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 3)) | replace "__SCRAPE_INTERVAL_X_4__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 4)) }}
 
 {{/*    Patch expression based on `d8_ignore_on_update` annotation*/}}
-    {{ $definition = printf "Rules:\n%s" $definition }}
+
+
+    {{ $definition = printf "Rules:\n%s" ($definition | nindent 2) }}
     {{- $definitionStruct :=  ( $definition | fromYaml )}}
+    {{- if $definitionStruct.Error }}
+      {{- fail ($definitionStruct.Error | toString) }}
+    {{- end }}
     {{- range $rule := $definitionStruct.Rules }}
+
       {{- range $dedicatedRule := $rule.rules }}
         {{- if $dedicatedRule.annotations }}
           {{- if (eq (get $dedicatedRule.annotations "d8_ignore_on_update") "true") }}
@@ -33,7 +39,9 @@
           {{- end }}
         {{- end }}
       {{- end }}
+
     {{- end }}
+
     {{ $definition = $definitionStruct.Rules | toYaml }}
 
     {{- $resourceName := (regexReplaceAllLiteral "\\.(yaml|tpl)$" $path "") }}
@@ -71,5 +79,18 @@ spec:
   {{- $namespace := index . 1 }}
   {{- if ( $context.Values.global.enabledModules | has "operator-prometheus-crd" ) }}
 {{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
+  {{- end }}
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} */ -}}
+{{- /* returns adjust timeout value to scrape interval / */ -}}
+{{- define "helm_lib_prometheus_target_scrape_timeout_seconds" -}}
+  {{- $context := index . 0 }}
+  {{- $timeout := index . 1 }}
+  {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
+  {{- if gt $timeout $scrape_interval -}}
+{{ $scrape_interval }}s
+  {{- else -}}
+{{ $timeout }}s
   {{- end }}
 {{- end }}

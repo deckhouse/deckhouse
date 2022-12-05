@@ -40,12 +40,6 @@ post-install() {
  fi
 }
 
-# TODO: remove ASAP, provide proper migration from "docker.io" to "docker-ce"
-if bb-apt-package? docker.io ; then
-  bb-log-warning 'Skipping "docker-ce" installation, since "docker.io" is already installed'
-  exit 0
-fi
-
 if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   bb-deckhouse-get-disruptive-update-approval
   systemctl stop kubelet.service
@@ -100,7 +94,7 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-{{- $ubuntuName := dict "16.04" "Xenial" "18.04" "Bionic" "20.04" "Focal" }}
+{{- $ubuntuName := dict "16.04" "Xenial" "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
   if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then

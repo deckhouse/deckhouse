@@ -34,7 +34,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
       summary: There are unavailable instances in the {{`{{ $labels.node_group }}`}} node group.
       description: |
@@ -52,7 +53,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
       summary: There are no available instances in the {{`{{ $labels.node_group }}`}} node group.
       description: |
@@ -69,21 +71,32 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
       summary: The number of simultaneously unavailable instances in the {{`{{ $labels.node_group }}`}} node group exceeds the allowed value.
       description: |
         Possibly, autoscaler has provisioned too many Nodes. Take a look at the state of the Machine in the cluster.
 {{- template "todo_list" }}
 
-  - alert: ClusterHasNodeGroupsWithUnavailableReplicas
-    expr: count(max by (node_group) (ALERTS{alertname="NodeGroupReplicasUnavailable", alertstate="firing"})) > 0
+  - alert: NodeGroupMasterTaintIsAbsent
+    expr: |
+      max (d8_nodegroup_taint_missing{name="master"}) > 0
+    for: 20m
     labels:
+      severity_level: "4"
       tier: cluster
     annotations:
-      plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_alert_type: "group"
-      summary: There are several node groups with unavailable instances in the cluster.
+      plk_markup_format: "markdown"
+      summary: The 'master' node group does not contain desired taint.
       description: |
-        The detailed information is available in one of the relevant alerts.
+        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably control-plane nodes are misconfigured
+        and are able to run not only control-plane Pods. Please, add:
+        ```yaml
+          nodeTemplate:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/control-plane
+        ```
+        to the `master` node group spec.
+        `key: node-role.kubernetes.io/master` taint was deprecated and will have no effect in Kubernetes 1.24+.

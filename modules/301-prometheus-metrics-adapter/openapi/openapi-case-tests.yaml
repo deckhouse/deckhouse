@@ -2,11 +2,9 @@ positive:
   values:
   # all in
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
+      adapterCert:
+        ca: cert
+        crt: cert
         key: key
       customMetrics:
         daemonset:
@@ -47,11 +45,9 @@ positive:
               ns: query
   # empty metrics types
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
+      adapterCert:
+        ca: cert
+        crt: cert
         key: key
       customMetrics:
         daemonset: { }
@@ -66,11 +62,9 @@ negative:
   values:
   # incorrect metric type
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
+      adapterCert:
+        ca: cert
+        crt: cert
         key: key
       customMetrics:
         incorrect_metric_type:
@@ -82,45 +76,36 @@ negative:
 # next case don't work because deckhouse testes not support x-required-for-helm
 # need to fix it and uncomment cases after fix
 
-##  # does not have internal pma tls
-#  - internal:
-#      prometheusAPIClientTLS:
-#        certificate: cert
-#        key: key
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
-#
-#  # does not have prom client tls object
-#  - internal:
-#      adapterPem: cert
-#      adapterCA: cert
-#      adapterKey: key
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
-#
-#  # does not have prom client tls
-#  - internal:
-#      adapterPem: cert
-#      adapterCA: cert
-#      adapterKey: key
-#      prometheusAPIClientTLS: { }
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
+  # Cases with absent keys required for Helm.
+  helmValues:
+  # No required fields.
+  # TODO: empty adapterCert is added as a workaround. Remove after cleaning 'default:{}' in values.yaml.
+  - internal:
+      adapterCert: {}
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # No required adapterCert.Key.
+  - internal:
+      adapterCert:
+        ca: cert
+        crt: cert
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # Only one required field.
+  - internal:
+      adapterCert:
+        key: key

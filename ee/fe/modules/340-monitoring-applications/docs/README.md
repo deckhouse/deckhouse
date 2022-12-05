@@ -11,8 +11,8 @@ The module collects information about applications running in the cluster and co
 
 You can also activate applications explicitly via the [configuration](configuration.html).
 
-
 ## Dashboard availability in Grafana
+
 Dashboards are only available for applications that were either discovered by auto-searching for the `prometheus.deckhouse.io/target` service label or explicitly specified via the `enabledApplications` parameter.
 
 ## How do I collect application metrics?

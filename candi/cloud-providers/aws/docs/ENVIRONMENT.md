@@ -4,6 +4,8 @@ title: "Cloud provider — AWS: Preparing environment"
 
 To use the `cloud-provider` and `machine-controller-manager` modules, you must access the AWS API as an IAM user with a sufficient set of privileges.
 
+> Make sure that you have access to the desired regions and that you have the necessary quotas.
+
 ## JSON Policy
 
 First, prepare a JSON file with the configuration of the necessary privileges:
@@ -82,6 +84,10 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:RevokeSecurityGroupIngress",
                 "ec2:RunInstances",
                 "ec2:TerminateInstances",
+                "ec2:DescribeVpcPeeringConnections",
+                "ec2:CreateVpcPeeringConnection",
+                "ec2:DeleteVpcPeeringConnection",
+                "ec2:AcceptVpcPeeringConnection",
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -165,6 +171,16 @@ And apply the created Policy to it:
 1. Click `Create user`.
 
 Save credentials (`Access key ID` and `Secret access key`).
+
+> Make sure that you have access to the desired regions. Select the desired region from the dropdown list in the upper right corner.
+>
+> If there is a switch to the selected region, then there is access to the region.
+>
+> If there is no access to the region, then you will receive the following message (may differ):
+>
+> ![Enable region](../../images/030-cloud-provider-aws/region_enable.png)
+>
+> In this case, click `Continue` to enable the region.
 
 ## Configuring IAM via the CLI
 

@@ -1,5 +1,8 @@
 name: 🎯 Bug report
 description: Report a bug to help us improve Deckhouse
+labels:
+- 'type/bug'
+- 'status/needs-triage'
 body:
   - type: markdown
     attributes:

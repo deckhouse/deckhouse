@@ -1,3 +1,8 @@
+{{- define "bashible_apiserver_resources" }}
+cpu: 25m
+memory: 150Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: bashible-apiserver
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "bashible-apiserver"
+      minAllowed:
+        {{- include "bashible_apiserver_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -35,6 +48,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: "bashible-apiserver"
@@ -56,7 +70,7 @@ spec:
       containers:
       - name: bashible-apiserver
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeManager.bashibleApiserver }}"
+        image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
         imagePullPolicy: IfNotPresent
         args:
           - "--bind-address=$(HOST_IP)"
@@ -91,7 +105,10 @@ spec:
             scheme: HTTPS
         resources:
           requests:
-              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "bashible_apiserver_resources" . | nindent 12 }}
+{{- end }}
       volumes:
         - name: certs
           secret:
@@ -106,6 +123,7 @@ spec:
 {{- define "bashible_input_data" }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
+
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
     cloudProvider:
       {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
@@ -114,6 +132,20 @@ spec:
     packagesProxy:
       {{- $.Values.global.clusterConfiguration.packagesProxy | toYaml | nindent 6 }}
     {{- end }}
+  {{- if hasKey $.Values.global.modules "proxy" }}
+    modulesProxy:
+    {{- if hasKey $.Values.global.modules.proxy "httpProxy" }}
+      httpProxy: {{ $.Values.global.modules.proxy.httpProxy | quote }}
+    {{- end }}
+    {{- if hasKey $.Values.global.modules.proxy "httpsProxy" }}
+      httpsProxy: {{ $.Values.global.modules.proxy.httpsProxy | quote }}
+    {{- end }}
+    {{- $noProxy := list "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+    {{- if hasKey $.Values.global.modules.proxy "noProxy" }}
+      {{- $noProxy = concat $noProxy $.Values.global.modules.proxy.noProxy }}
+      noProxy: {{ $noProxy | join "," | quote }}
+    {{- end }}
+  {{- end }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}

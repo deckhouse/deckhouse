@@ -26,7 +26,6 @@ import (
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -81,6 +80,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+
+		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
@@ -207,40 +209,6 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	return static
 }
 
-// MasterNodeGroupManifest prepares NodeGroup custom resource for master nodes
-func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
-	spec := map[string]interface{}{
-		"nodeType": "CloudPermanent",
-		"disruptions": map[string]interface{}{
-			"approvalMode": "Manual",
-		},
-		"nodeTemplate": map[string]interface{}{
-			"labels": map[string]interface{}{
-				"node-role.kubernetes.io/master":        "",
-				"node-role.kubernetes.io/control-plane": "",
-			},
-			"taints": []map[string]interface{}{
-				{
-					"key":    "node-role.kubernetes.io/master",
-					"effect": "NoSchedule",
-				},
-			},
-		},
-	}
-	if m.ClusterType == StaticClusterType {
-		spec["nodeType"] = "Static"
-	}
-
-	return map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1",
-		"kind":       "NodeGroup",
-		"metadata": map[string]interface{}{
-			"name": "master",
-		},
-		"spec": spec,
-	}
-}
-
 // NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
 	if terraNodeGroup.NodeTemplate == nil {
@@ -335,14 +303,6 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 
 	images := m.Images
 
-	if !app.DontUsePublicControlPlaneImages {
-		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
-		delete(images["controlPlaneManager"], "etcd")
-		delete(images["controlPlaneManager"], "kubeApiserver"+k8s)
-		delete(images["controlPlaneManager"], "kubeControllerManager"+k8s)
-		delete(images["controlPlaneManager"], "kubeScheduler"+k8s)
-	}
-
 	result["images"] = images.ConvertToMap()
 	return result, nil
 }
@@ -410,9 +370,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
-	if !app.DontUsePublicControlPlaneImages {
-		delete(images["common"], "pause")
-	}
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
 	return configForBashibleBundleTemplate, nil
@@ -528,7 +485,9 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 	type dockerCfg struct {
 		Auths map[string]struct {
-			Auth string `json:"auth"`
+			Auth     string `json:"auth"`
+			Username string `json:"username"`
+			Password string `json:"password"`
 		} `json:"auths"`
 	}
 
@@ -552,7 +511,15 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		}
 
 		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			registryAuth = registry.Auth
+			switch {
+			case registry.Auth != "":
+				registryAuth = registry.Auth
+			case registry.Username != "" && registry.Password != "":
+				auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
+				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+			default:
+				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, m.Registry.Address)
+			}
 		}
 	}
 

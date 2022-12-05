@@ -31,9 +31,8 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/crd"
-	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/hookprobe"
 )
 
 type D8ClusterConfiguration struct {
@@ -42,22 +41,21 @@ type D8ClusterConfiguration struct {
 	DeckhouseReadinessTimeout time.Duration
 
 	CustomResourceName string
-	Monitor            *crd.HookProbeMonitor
+	Monitor            *hookprobe.Monitor
+	Preflight          Doer
 
-	Access kubernetes.Access
-	Logger *logrus.Entry
+	Access           kubernetes.Access
+	Logger           *logrus.Entry
+	PreflightChecker check.Checker
 
-	ControlPlaneAccessTimeout time.Duration
-	PodAccessTimeout          time.Duration
-	ObjectChangeTimeout       time.Duration
+	PodAccessTimeout    time.Duration
+	ObjectChangeTimeout time.Duration
 }
 
 // Verify deckhouse pod is up, and running, and ready
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
-
 	checkDeckhouse := withTimeout(
 		&podRunningOrReadyChecker{
 			namespace:        c.DeckhouseNamespace,
@@ -97,7 +95,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 	)
 
 	return sequence(
-		pingControlPlane,
+		c.PreflightChecker,
 		checkDeckhouse,
 		setInitedValue,
 		checkMirrorValue,
@@ -116,23 +114,23 @@ type HookProbeHandler struct {
 	logger *logrus.Entry
 
 	// Inner state
-	obj *v1.HookProbe
+	obj *hookprobe.HookProbe
 	mu  sync.RWMutex
 }
 
-func (h *HookProbeHandler) Get() *v1.HookProbe {
+func (h *HookProbeHandler) Get() *hookprobe.HookProbe {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	return h.obj
 }
 
-func (h *HookProbeHandler) OnAdd(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnAdd(obj *hookprobe.HookProbe) {
 	h.logger.Debug("object added")
 	h.OnModify(obj)
 }
 
-func (h *HookProbeHandler) OnModify(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnModify(obj *hookprobe.HookProbe) {
 	if obj.GetName() != h.name {
 		return
 	}
@@ -144,7 +142,7 @@ func (h *HookProbeHandler) OnModify(obj *v1.HookProbe) {
 	h.obj = obj
 }
 
-func (h *HookProbeHandler) OnDelete(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnDelete(obj *hookprobe.HookProbe) {
 	if obj.GetName() != h.name {
 		return
 	}
@@ -163,8 +161,8 @@ kind: UpmeterHookProbe
 metadata:
   name: %q
   labels:
-    heritage: upmeter
     app: upmeter
+    heritage: upmeter
     upmeter-agent: %q
     upmeter-group: deckhouse
     upmeter-probe: cluster-configuration
@@ -193,7 +191,7 @@ type setInitedValueChecker struct {
 func (c *setInitedValueChecker) Check() check.Error {
 	newValue := string(uuid.NewUUID())
 
-	obj, err := c.dynamicClient.Get(c.name, metav1.GetOptions{})
+	obj, err := c.dynamicClient.Get(context.TODO(), c.name, metav1.GetOptions{})
 	if err != nil || obj == nil {
 		c.logger.Debugf("creating object with value %s", newValue)
 
@@ -211,7 +209,7 @@ func (c *setInitedValueChecker) update(obj *unstructured.Unstructured, value str
 	}
 
 	opts := metav1.UpdateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Update(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Update(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot update UpmeterHookProbe object %q with new inited value: %v", c.name, err)
 	}
 
@@ -230,19 +228,15 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	}
 
 	opts := metav1.CreateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Create(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Create(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot create UpmeterHookProbe object in cluster: %v", err)
 	}
 
 	return nil
 }
 
-func (c *setInitedValueChecker) BusyWith() string {
-	return "setting inited value in object upmeterhookprobe.deckhouse.io/" + c.name
-}
-
 type hookProbeObjectGetter interface {
-	Get() *v1.HookProbe
+	Get() *hookprobe.HookProbe
 }
 
 type checkMirrorValueChecker struct {
@@ -268,8 +262,4 @@ func (c *checkMirrorValueChecker) Check() check.Error {
 		)
 	}
 	return nil
-}
-
-func (c *checkMirrorValueChecker) BusyWith() string {
-	return "checking values in object upmeterhookprobe.deckhouse.io/" + c.name
 }

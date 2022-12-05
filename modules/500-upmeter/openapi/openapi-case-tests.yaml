@@ -8,14 +8,14 @@ positive:
             authURL: "https://api.example.com/auth"
             authSignInURL: "https://www.example.com/login"
       smokeMini:
-        auth: { }
-      disabledProbes: [ "monitoring-and-autoscaling" ]
+        auth: {}
+      disabledProbes: ["monitoring-and-autoscaling"]
       statusPageAuthDisabled: false
       smokeMiniDisabled: false
     - auth:
-        status: { }
-        webui: { }
-      disabledProbes: [ ]
+        status: {}
+        webui: {}
+      disabledProbes: []
       internal:
         disabledProbes:
           - load-balancing/metallb

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO structure these functions into classes and move to the operations/bootstrap module
+// TODO move states saving to operations/bootstrap/state.go
+
 package operations
 
 import (
@@ -31,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -56,7 +60,7 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			err := log.Process("default", bootstrapScript, func() error {
 				if _, err := os.Stat(scriptPath); err != nil {
 					if os.IsNotExist(err) {
-						log.InfoF("Script %s doesn't found\n", scriptPath)
+						log.InfoF("Script %s wasn't found\n", scriptPath)
 						return nil
 					}
 					return fmt.Errorf("script path: %v", err)
@@ -181,9 +185,14 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
+		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
+		if err != nil {
+			return err
+		}
+
 		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
 			// run detect bundle type
-			detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
+			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
 				if ee, ok := err.(*exec.ExitError); ok {
@@ -218,9 +227,14 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config, nodeGroupConfig map[string]interface{}) error {
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
-		err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		err := bootstrap.CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
+		if err != nil {
+			return err
+		}
+
+		err = deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
@@ -233,13 +247,6 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 		err = deckhouse.WaitForReadiness(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse install: %v", err)
-		}
-
-		if len(config.ClusterConfig) > 0 {
-			err = converge.CreateNodeGroup(kubeCl, "master", nodeGroupConfig)
-			if err != nil {
-				return err
-			}
 		}
 
 		return nil
@@ -315,7 +322,7 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 				return err
 			}
 
-			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name)
+			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name, converge.ShowDeckhouseLogs)
 			if err != nil {
 				return err
 			}
@@ -383,7 +390,7 @@ func GetBastionHostFromCache() (string, error) {
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
-		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName)
+		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}

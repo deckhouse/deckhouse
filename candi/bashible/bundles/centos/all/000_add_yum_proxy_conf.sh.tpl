@@ -12,23 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if .packagesProxy.uri }}
-yum-config-manager --save --setopt=proxy={{ .packagesProxy.uri }} main
-{{- else }}
+# If yum-utils is not installed, we will try to install it. In closed environments yum-utils should be preinstalled in distro image
+# We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
+# which will be installed later in 001_install_mandatory_packages.sh step.
+if ! rpm -q --quiet yum-utils; then
+  yum install -y yum-utils
+fi
+
 if bb-is-centos-version? 7; then
-  yum-config-manager --save --setopt=proxy=_none_
+  proxy="_none_"
 fi
-if bb-is-centos-version? 8; then
-  yum-config-manager --save --setopt=proxy=
+
+if yum --version | grep -q dnf; then
+  proxy=""
 fi
+
+{{- if .packagesProxy.uri }}
+proxy="{{ .packagesProxy.uri }} main"
 {{- end }}
+
 {{- if .packagesProxy.username }}
-yum-config-manager --save --setopt=proxy_username={{ .packagesProxy.username }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_username=
+proxy_username="{{ .packagesProxy.username }} main"
 {{- end }}
+
 {{- if .packagesProxy.password }}
-yum-config-manager --save --setopt=proxy_password={{ .packagesProxy.password }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_password=
+proxy_password="{{ .packagesProxy.password }} main"
 {{- end }}
+
+yum-config-manager --save --setopt=proxy=${proxy}
+yum-config-manager --save --setopt=proxy_username=${proxy_username}
+yum-config-manager --save --setopt=proxy_password=${proxy_password}

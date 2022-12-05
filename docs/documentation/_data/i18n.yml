@@ -47,15 +47,27 @@ common:
   default_value:
     en: default
     ru: по умолчанию
+  default_version:
+    en: default version
+    ru: версия по умолчанию
   deprecated:
     en: deprecated
     ru: устарел
+  deprecated_parameter:
+    en: Deprecated
+    ru: Параметр устарел
+  deprecated_parameter_hint:
+    en: Support for the parameter might be removed in a later release.
+    ru: Поддержка параметра может быть исключена в следующих версиях.
   example:
     en: example
     ru: пример
   examples:
     en: examples
     ru: примеры
+  element_of_array:
+    en: element of the array
+    ru: элемент массива
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
@@ -78,33 +90,54 @@ common:
     en: Not required value.
     ru: Необязательный параметр.
   documents_found:
-    ru: Найдено документов
     en: Documents found
+    ru: Найдено документов
   empty_search_result:
-    ru: Документов не найдено
     en: No documents found
+    ru: Документов не найдено
   search_placeholder_text:
+    en: Search...
     ru: Поиск...
-    en: Search...
   warning_ee_version:
+    en: Available only in
     ru: Доступно только в
-    en: Search...
   version:
-    ru: Версия
-    en: Version
+    en: version
+    ru: версия
+  versions:
+    en: versions
+    ru: версии
+  version_of_schema:
+    en: Schema version
+    ru: Версия схемы
+  versions_supported:
+    en: Supported versions
+    ru: Поддерживаемые версии
   status:
-    ru: Статус
-    en: Status
+    en: status
+    ru: статус
   or:
     en: or
     ru: или
   notice-latest:
-    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/ru/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
     en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/en/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/ru/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+  os_supported_phrase:
+    en: The following Linux distributions are currently supported for nodes
+    ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
+  k8s_supported_phrase:
+    en: The following Kubernetes versions are currently supported
+    ru: В настоящий момент поддерживаются следующие версии Kubernetes
+  linux_distro:
+    en: Linux Distribution
+    ru: Дистрибутив Linux
 features:
   experimental:
-    ru: Эти возможности доступны только в Enterprise Edition. Их функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
-    en: This feature is available in Enterprise Edition only. It might significantly change in the future. Currently, it's not intended to be used without special assistance from Flant.
+    en: This feature is actively developed. It might significantly change in the future.
+    ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+  proprietaryOkmeter:
+    en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
+    ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
-    ru: Эти возможности доступны только в Enterprise Edition.
     en: This feature is available in Enterprise Edition only.
+    ru: Доступно только в Enterprise Edition.

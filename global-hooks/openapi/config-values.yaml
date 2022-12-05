@@ -14,7 +14,7 @@ properties:
     description: |
       A global switch to enable the *high availability* mode for modules that support it.
 
-      If not defined, the value is determined automatically.
+      If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
   modules:
     description: |
@@ -31,8 +31,7 @@ properties:
         x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
-        # only check that is containing %s
-        pattern: '.*%s.*'
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The template with the `%s` key as the dynamic string parameter.
 
@@ -43,7 +42,7 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           If this parameter is omitted, no Ingress resources will be created.
-        x-doc-example: '%s.kube.company.my'
+        x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:
         description: |
@@ -107,7 +106,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -128,6 +127,28 @@ properties:
         default: {}
         additionalProperties: false
         properties:
+          controlPlane:
+            type: object
+            default: {}
+            additionalProperties: false
+            description: |
+              The amount of resources (CPU and memory) allocated to control-plane components on each master node. Do not work in clouds with not-managed control-plane (GKE for example).
+            x-examples:
+              - cpu: 1000m
+                memory: 500M
+            properties:
+              cpu:
+                description: |
+                  The combined CPU requests for control-plane components on each master node.
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+              memory:
+                description: |
+                  The combined memory requests for control-plane components on each master node.
+                type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           everyNode:
             type: object
             default: {}
@@ -137,6 +158,7 @@ properties:
             x-examples:
             - cpu: 100m
               memory: 150M
+            x-doc-deprecated: true
             properties:
               cpu:
                 description: |
@@ -151,17 +173,18 @@ properties:
                   The combined memory requests for all the Deckhouse components on each node.
                 type: string
                 default: "512Mi"
-                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           masterNode:
             type: object
             additionalProperties: false
             description: |
               The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
 
-              **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
+              > **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
             x-examples:
             - cpu: "1"
               memory: 150Mi
+            x-doc-deprecated: true
             properties:
               cpu:
                 description: |
@@ -178,7 +201,7 @@ properties:
                     * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than `8Gi`) minus `everyNode.memory`.
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
-                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       proxy:
         additionalProperties: false
         description: |
@@ -189,29 +212,20 @@ properties:
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
-              HTTP proxy URL.
+              Proxy URL for HTTP requests.
           httpsProxy:
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
-              HTTPS proxy URL.
+              Proxy URL for HTTPS requests.
           noProxy:
             description: |
-              List of no proxy IP and domain entries.
+              List of no proxy IP and domain entries. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
             type: array
             items:
               type: string
               pattern: '^[a-z0-9\-\./]+$'
-        x-emamples:
-        - httpProxy: http://1.2.3.4:80
-        - httpsProxy: https://1.2.3.4:443
+        x-examples:
         - httpProxy: http://1.2.3.4:80
           httpsProxy: https://1.2.3.4:443
-        - {}
-        - httpProxy: http://1.2.3.4:80
-          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
-        - httpsProxy: https://1.2.3.4:443
-          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
-        - httpProxy: http://1.2.3.4:80
-          httpsProxy: https://1.2.3.4:80
           noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]

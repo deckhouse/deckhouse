@@ -55,6 +55,10 @@ variable "volume_type" {
   type = string
 }
 
+variable "volume_zone" {
+  type = string
+}
+
 variable "zone" {
   type = string
 }

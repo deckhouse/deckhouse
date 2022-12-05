@@ -16,6 +16,16 @@
 
 set -Eeo pipefail
 
+volumesRoot=
+if [[ -d workflows ]] ; then
+  volumesRoot=$(pwd)
+elif [[ -d .github ]] ; then
+  volumesRoot=$(pwd)/.github
+else
+  echo "Should run from repo root directory or .github directory"
+  exit 1
+fi
+
 # Check if actionlint is in PATH (https://github.com/rhysd/actionlint)
 ACTIONLINT_RUN=no
 if which actionlint 2>&1 >/dev/null ; then
@@ -33,11 +43,15 @@ fi
 dockerExit=0
 cat <<'SCRIPT_END' | docker run -i --rm \
   -e ACTIONLINT_RUN=$ACTIONLINT_RUN \
-  -v $(pwd)/../.gitlab/ci_includes:/in/gitlab_ci_includes \
-  -v $(pwd)/ci_includes:/in/ci_includes \
-  -v $(pwd)/ci_templates:/in/ci_templates \
-  -v $(pwd)/workflow_templates:/in/workflow_templates \
-  -v $(pwd)/workflows:/out/workflows \
+  -e TARGET_UID=$(id -u) \
+  -e TARGET_GID=$(id -g) \
+  -e TARGET_UMASK=$(umask) \
+  -e TARGET_OSTYPE=${OSTYPE} \
+  -v ${volumesRoot}/ci_includes:/in/ci_includes \
+  -v ${volumesRoot}/ci_templates:/in/ci_templates \
+  -v ${volumesRoot}/../candi/image_versions.yml:/in/image_versions.yml \
+  -v ${volumesRoot}/workflow_templates:/in/workflow_templates \
+  -v ${volumesRoot}/workflows:/out/workflows \
   --entrypoint=ash \
   hairyhenderson/gomplate:v3.10.0-alpine - || dockerExit=1
 
@@ -45,42 +59,14 @@ cat <<'SCRIPT_END' | docker run -i --rm \
 # directory and copy to /out/workflows
 set -e
 
+umask ${TARGET_UMASK}
+
 cat <<EOF > /in/header
 #
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
 EOF
-
-# Generate image_versions.yml from Gitlab configuration.
-# TODO remove after full migration to Github.
-(cat /in/header
- echo '{!{ define "image_versions_envs" }!}
-{!{$BASE_IMAGES_REGISTRY_PATH := "registry.deckhouse.io/base_images/" }!}'
- grep '^#' /in/gitlab_ci_includes/image_versions.yml | grep -v Note
- cat <<'EOF' | gomplate --datasource image_versions=file:///in/gitlab_ci_includes/image_versions.yml
-{{- $vars := (ds "image_versions").variables -}}
-{{ range $k, $v := $vars }}
-{{- $k }}: "{{$v | replaceAll "${BASE_IMAGES_REGISTRY_PATH}" "{!{$BASE_IMAGES_REGISTRY_PATH}!}" }}"
-{{ end -}}
-EOF
-echo '{!{- end -}!}'
-) > /in/ci_includes/image_versions.yml
-
-# Generate terraform_versions.yml from Gitlab configuration.
-# TODO remove after full migration to Github.
-(cat /in/header
- echo '{!{ define "terraform_versions_envs" }!}
-# Terraform settings'
- cat <<'EOF' | gomplate --datasource terraform_versions=file:///in/gitlab_ci_includes/terraform_versions.yml
-{{- $vars := (ds "terraform_versions").variables -}}
-{{ range $k, $v := $vars }}
-{{- $k }}: {{$v}}
-{{ end -}}
-EOF
-echo '{!{- end -}!}'
-) > /in/ci_includes/terraform_versions.yml
-
 
 # Generate workflow files from workflow_templates directory.
 mkdir -p /out/tmp
@@ -100,6 +86,7 @@ for f in /in/workflow_templates/* ; do
            --right-delim '}!}' \
            --datasource in=/in \
            --datasource actions=file:///in/ci_includes/actions_versions.yml \
+           --datasource image_versions=file:///in/image_versions.yml \
            --template incl=/in/ci_includes \
            --template tpl=/in/ci_templates \
            --file $f $outarg
@@ -126,8 +113,12 @@ for f in /out/tmp/* ; do
 done
 
 if [[ $hasChanges == 1 ]] ; then
-  mv /out/tmp/*.yml /out/workflows/
   echo "Render success. Workflows changed."
+  mv /out/tmp/*.yml /out/workflows/
+  if [[ ${TARGET_OSTYPE} == linux* ]] ; then
+    echo "Restore permissions to ${TARGET_UID}:${TARGET_GID}"
+    chown -R ${TARGET_UID}:${TARGET_GID} /out/workflows
+  fi
 else
   echo "Render success. No changes."
 fi

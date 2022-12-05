@@ -41,9 +41,12 @@ $PREFIX               A unique prefix to run several tests simultaneously.
 $KUBERNETES_VERSION   A version of Kubernetes to install.
 $CRI                  Docker or Containerd.
 $DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
-$DEV_BRANCH           An image tag for deckhouse Deployment. A Git tag to
+$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug
                       to test changes in pull requests.
+$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
+                      install first and then switching to DECKHOUSE_IMAGE_TAG.
+                      Also, run test suite for these 2 versions.
 
 Provider specific environment variables:
 
@@ -87,6 +90,20 @@ EOF
 set -Eeo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
+
+# Image tag to install.
+DEV_BRANCH=
+# Image tag to switch to if initial_image_tag is set.
+SWITCH_TO_IMAGE_TAG=
+# ssh command with common args.
+ssh_command="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet"
+
+# Path to private SSH key to connect to cluster after bootstrap
+ssh_private_key_path=
+# User for SSH connect.
+ssh_user=
+# IP of master node.
+master_ip=
 
 function abort_bootstrap_from_cache() {
   >&2 echo "Run abort_bootstrap_from_cache"
@@ -187,11 +204,12 @@ function prepare_environment() {
     return 1
   fi
 
-  if [[ -z "$DEV_BRANCH" ]]; then
+  if [[ -z "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # shellcheck disable=SC2016
-    >&2 echo 'DEV_BRANCH environment variable is required.'
+    >&2 echo 'DECKHOUSE_IMAGE_TAG environment variable is required.'
     return 1
   fi
+  DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
@@ -199,16 +217,33 @@ function prepare_environment() {
     return 1
   fi
 
+
+  if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
+    # Use initial image tag as devBranch setting in InitConfiguration.
+    # Then switch deploment to DECKHOUSE_IMAGE_TAG.
+    DEV_BRANCH="${INITIAL_IMAGE_TAG}"
+    SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
+    echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
+  fi
+
   case "$PROVIDER" in
   "Yandex.Cloud")
+    if [[ $CRI == "Containerd" ]]; then
+      ssh_user="cloud-user"
+      # RedOS 7.3
+      IMAGE_ID="fd8q0kjl4l1iovds9f29"
+    else
+      ssh_user="ubuntu"
+      # Ubuntu 20.04
+      IMAGE_ID="fd8kdq6d0p8sij7h5qe3"
+    fi
+
     # shellcheck disable=SC2016
     env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" IMAGE_ID="$IMAGE_ID" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${IMAGE_ID}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
-    ssh_user="ubuntu"
     ;;
 
   "GCP")
@@ -228,7 +263,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="ubuntu"
+    ssh_user="centos"
     ;;
 
   "Azure")
@@ -248,7 +283,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-    ssh_user="ubuntu"
+    ssh_user="debian"
     ;;
 
   "vSphere")
@@ -264,7 +299,7 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '$DECKHOUSE_DOCKERCFG $PREFIX $DEV_BRANCH $KUBERNETES_VERSION $CRI $OS_PASSWORD' \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     # shellcheck disable=SC2016
@@ -274,7 +309,7 @@ function prepare_environment() {
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
-    ssh_user="ubuntu"
+    ssh_user="astra"
     ;;
   esac
 
@@ -289,7 +324,12 @@ function run-test() {
     bootstrap || return $?
   fi
 
-  wait_cluster_ready "$ssh_private_key_path" "$ssh_user" "${master_ip}"
+  wait_cluster_ready || return $?
+
+  if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    wait_cluster_ready || return $?
+  fi
 }
 
 function bootstrap_static() {
@@ -325,7 +365,9 @@ function bootstrap_static() {
 
   >&2 echo 'Fetch registration script ...'
   for ((i=0; i<10; i++)); do
-    bootstrap_system="$(ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash << "ENDSSH"
+    bootstrap_system="$($ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
 ENDSSH
@@ -341,7 +383,9 @@ ENDSSH
 
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
-  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo -i /bin/bash <<ENDSSH || true
+  $ssh_command -o "ServerAliveInterval=5" -o "ServerAliveCountMax=5" -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
 ENDSSH
@@ -349,7 +393,9 @@ ENDSSH
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=10; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl get nodes
 kubectl get nodes -o json | jq -re '.items | length > 0' >/dev/null
@@ -391,8 +437,10 @@ function bootstrap() {
   provisioning_failed=
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
-  for ((i=1; i<=10; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+  for ((i=1; i<=20; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
 kubectl -n d8-cloud-instance-manager get machine -o json | jq -re '.items | length > 0' >/dev/null
@@ -402,12 +450,76 @@ ENDSSH
       break
     else
       provisioning_failed="true"
-      >&2 echo "Machine provisioning is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      >&2 echo "Machine provisioning is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
       sleep 60
     fi
   done
 
   if [[ $provisioning_failed == "true" ]] ; then
+    return 1
+  fi
+}
+
+# change_deckhouse_image changes deckhouse container image.
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+#  - branch
+function change_deckhouse_image() {
+  new_image_tag="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  if ! $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+ENDSSH
+    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    return 1
+  fi
+
+  # TODO remove after full migration to ModuleConfig (after 1.42).
+  # Get logs during switching to catch logs on restart.
+  #for i in $(seq 1 1000) ; do kubectl -n d8-system logs deploy/deckhouse > $(printf "%02d" $i).log ; sleep 0.2; done
+  >&2 echo "Fetch Deckhouse logs during release switch ..."
+  catchLogsScript=$(cat <<'END_SCRIPT'
+  for i in $(seq 1 1000) ; do
+    echo '{"msg":"=================================================="}'
+    echo '{"msg":"Get deckhouse logs attempt '$i' of 1000"}'
+    echo '{"msg":"=================================================="}'
+    kubectl -n d8-system logs deploy/deckhouse
+    echo '{"msg":"<<<<<<<=================================>>>>>>>>>>"}'
+    echo
+    sleep 0.2;
+  done
+END_SCRIPT
+)
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log" &
+
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system get pods -l app=deckhouse
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+END_SCRIPT
+)
+
+  testRunAttempts=60
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check Deckhouse pod readiness."
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Check Deckhouse pod readiness via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+  if [[ $test_failed == "true" ]] ; then
     return 1
   fi
 }
@@ -419,9 +531,16 @@ ENDSSH
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  if [[ "$PROVIDER" == "Static" ]]; then
+    run_linstor_tests || return $?
+  fi
+  echo "Linstor test suite: success"
+
   test_failed=
 
   testScript=$(cat <<"END_SCRIPT"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
 set -Eeuo pipefail
 
 function pause-the-test() {
@@ -438,35 +557,77 @@ function pause-the-test() {
 
 trap pause-the-test EXIT
 
-for ((i=0; i<10; i++)); do
-  smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
-  >&2 echo "Attempt to get Endpoints for smoke-mini #$i failed. Sleeping 30 seconds..."
-  sleep 30
-done
-
-if [[ -z "$smoke_mini_addr" ]]; then
-  >&2 echo "Couldn't get smoke-mini's address from Endpoints in 15 minutes."
-  exit 1
-fi
-
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 else
   ingress=""
 fi
 
-for ((i=0; i<10; i++)); do
-  for path in api disk dns prometheus; do
-    # if any path unaccessible, curl returns error exit code, and script fails, so we use || true to avoid script fail.
-    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")" || true
-    printf -v "$path" "%s" "$result"
-  done
+availability=""
+attempts=50
+# With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
+for i in $(seq $attempts); do
+  # Sleeping at the start for readability. First iterations do not succeed anyway.
+  sleep 30
 
-  cat <<EOF
-Kubernetes API check: $([ "$api" == "ok" ] && echo "success" || echo "failure")
-Disk check: $([ "$disk" == "ok" ] && echo "success" || echo "failure")
-DNS check: $([ "$dns" == "ok" ] && echo "success" || echo "failure")
-Prometheus check: $([ "$prometheus" == "ok" ] && echo "success" || echo "failure")
+  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
+    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
+
+      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
+      # param.
+      #
+      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
+      # -e flag does not work as expected. See
+      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
+      #
+      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
+        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
+        avail_report="$(jq -re '
+          [
+            .rows[]
+            | [
+                .group as $group
+                | .probes[]
+                | {
+                  probe: ($group + "/" + .probe),
+                  status: (if .availability > 0.99   then "up"   else "pending"   end),
+                  availability: .availability
+                }
+              ]
+          ]
+          | flatten
+          ' <<<"$avail_json")"
+
+        # Printing the table of probe statuses
+        echo '*'
+        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
+        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
+        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
+        echo '========================================================================='
+
+        # Overall availability status. We check that all probes are in place because at some point
+        # in the start the list can be empty.
+        availability="$(jq -r '
+          if (
+            (. | length > 0) and
+            ([ .[] | select(.status != "up") ] | length == 0)
+          )
+          then "ok"
+          else ""
+          end '<<<"$avail_report")"
+
+      else
+        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
+      fi
+    else
+      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
+    fi
+  else
+    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
+  fi
+
+    cat <<EOF
+Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
 EOF
 
   if [[ -n "$ingress_inlet" ]]; then
@@ -477,16 +638,16 @@ EOF
             if [[ "$ingress_lb_code" == "404" ]]; then
               ingress="ok"
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb."
+            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt #${i} of ${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
+          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt #${i} of ${attempts})."
         fi
       else
-        >&2 echo "Can't get svc/nginx-load-balancer."
+        >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
       fi
     else
       >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
@@ -498,11 +659,9 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$api:$disk:$dns:$prometheus:$ingress" == "ok:ok:ok:ok:ok" ]]; then
+  if [[ "$availability:$ingress" == "ok:ok" ]]; then
     exit 0
   fi
-
-  sleep 30
 done
 
 >&2 echo 'Timeout waiting for checks to succeed'
@@ -510,9 +669,9 @@ exit 1
 END_SCRIPT
 )
 
-  testRunAttempts=3
+  testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       test_failed=""
       break
     else
@@ -523,7 +682,7 @@ END_SCRIPT
   done
 
   >&2 echo "Fetch Deckhouse logs after test ..."
-  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
 kubectl -n d8-system logs deploy/deckhouse
 ENDSSH
 
@@ -531,6 +690,44 @@ ENDSSH
     return 1
   fi
 }
+
+# run_linstor_tests executes helm test for linstor module
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+#
+# TODO: replace with testing framework: https://github.com/deckhouse/deckhouse/issues/2380
+function run_linstor_tests() {
+  test_failed=
+
+  testScript=$(cat <<"END_SCRIPT"
+set -Eeuo pipefail
+>&2 echo "Running linstor test suite ..."
+set -x
+>&2 kubectl -n d8-system exec deploy/deckhouse -- helm test -n d8-system linstor
+END_SCRIPT
+)
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+}
+
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."

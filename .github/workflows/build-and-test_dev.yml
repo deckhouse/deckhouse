@@ -2,7 +2,19 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-# on every push to dev branches
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.# on every push to dev branches
 name: Build and test for dev branches
 on:
   pull_request_target:
@@ -10,73 +22,21 @@ on:
       - opened
       - synchronize
       - reopened
-
 env:
 
   # <template: werf_envs>
-  # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
-  # We use stapel image from own registry due to docker hub pull amount limitation.
-  # To re-push stapel image from docker hub use command:
-  # `skopeo copy docker://flant/werf-stapel:0.6.1 docker://registry-write.deckhouse.io/flant/werf-stapel:0.6.1`
-  WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
-  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
-  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
-
-  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # </template: werf_envs>
 
-
-  # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
-  # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
-  BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
-  BASE_ALPINE_3_15: "registry.deckhouse.io/base_images/alpine:3.15@sha256:21a3deaa0d32a8057914f36584b5288d2e5ecc984380bc0118285c70fa8c9300"
-  BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
-  BASE_ETCD: "k8s.gcr.io/etcd:3.5.1-0@sha256:64b9ea357325d5db9f8a723dcf503b5a449177b17ac87d69481e126bb724c263"
-  BASE_GOLANG_16_ALPINE: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
-  BASE_GOLANG_16_BUSTER: "registry.deckhouse.io/base_images/golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
-  BASE_GOLANG_17_ALPINE: "registry.deckhouse.io/base_images/golang:1.17.3-alpine3.14@sha256:78a88e6a712e60f9d942450e02508f3c0d8aa931853f02793a4c3aa30063eae0"
-  BASE_GOLANG_17_BUSTER: "registry.deckhouse.io/base_images/golang:1.17.3-buster@sha256:be7aa81b44dc85ddf4008bc5f3d5a5acfca8517620d0c4a393601c8e0495fb05"
-  BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
-  BASE_GOLANG_BUSTER: "registry.deckhouse.io/base_images/golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
-  BASE_JEKYLL: "registry.deckhouse.io/base_images/jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
-  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.21.6-alpine@sha256:050385609d832fae11b007fbbfba77d0bba12bf72bc0dca0ac03e09b1998580f"
-  BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
-  BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
-  BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
-  BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
-  BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
-
-  # Terraform settings
-  TF_AWS_NAMESPACE: hashicorp
-  TF_AWS_TYPE: aws
-  TF_AWS_VERSION: 3.56.0
-  TF_AZURE_NAMESPACE: hashicorp
-  TF_AZURE_TYPE: azurerm
-  TF_AZURE_VERSION: 2.36.0
-  TF_GCP_NAMESPACE: hashicorp
-  TF_GCP_TYPE: google
-  TF_GCP_VERSION: 3.48.0
-  TF_OPENSTACK_NAMESPACE: terraform-provider-openstack
-  TF_OPENSTACK_TYPE: openstack
-  TF_OPENSTACK_VERSION: 1.32.0
-  TF_VERSION: 0.13.4
-  TF_VSPHERE_NAMESPACE: hashicorp
-  TF_VSPHERE_TYPE: vsphere
-  TF_VSPHERE_VERSION: 2.0.2
-  TF_YANDEX_NAMESPACE: yandex-cloud
-  TF_YANDEX_TYPE: yandex
-  TF_YANDEX_VERSION: 0.45.1
-
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.event.number }}-dev
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -86,123 +46,221 @@ jobs:
     name: Get pull request reference
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.ref.outputs.ref }}
-      edition: ${{ steps.check.outputs.edition }}
-    # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
-    if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      edition: ${{ steps.pr_props.outputs.edition }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
     steps:
-      - name: Check if allow to run tests
-        id: check
+      - name: Get PR info for push trigger
+        id: push_info
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Get PR info for pull_request trigger
+        id: pr_info
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            if (!context.payload.pull_request) {
-              return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
-            }
-
-            // Fetch fresh pull request state using sha.
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
             // Why? Workflow rerun of 'opened' pull request contains outdated labels.
-            const owner = context.payload.pull_request.head.repo.owner.login
-            const repo = context.payload.pull_request.head.repo.name
-            const commit_sha = context.payload.pull_request.head.sha
-            const head_label = context.payload.pull_request.head.label
-            core.info(`Pull request: ${JSON.stringify({ owner, repo, commit_sha, head_label })}`);
-            core.info(`Base repo: ${JSON.stringify({owner: context.repo.owner, repo: context.repo.repo})}`);
-            const response = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: head_label
-            });
-            if (response.status != 200) {
-              return core.setFailed(`Cannot list PRs for head ${head_label} (${commit_sha}): ${JSON.stringify(response)}`);
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
             }
 
-            // No PR found, do not run next jobs.
-            if (!response.data || response.data.length === 0) {
-              return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+      - name: Check PR properties
+        id: pr_props
+        uses: actions/github-script@v5.0.0
+        env:
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
             }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
 
-            core.info(`Labels: ${JSON.stringify(response.data[0].labels)}`);
-
-            const prRepo = context.payload.pull_request.head.repo.full_name;
-            const targetRepo = context.payload.repository.full_name;
-            const isInternal = prRepo === targetRepo;
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
             const isDependabot = (context.actor === 'dependabot[bot]');
-            const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
-            const okToTest = response.data[0].labels.some((l) => l.name === 'status/ok-to-test');
-
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
             core.info(`PR internal?          ${isInternal}`)
             core.info(`PR from dependabot?   ${isDependabot}`)
             core.info(`PR changelog?         ${isChangelog}`)
             core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
 
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
             if (isInternal && !isDependabot) {
               // Ignore changelog pull requests.
               if (isChangelog) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
               }
             } else {
               // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
               if (!okToTest) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} without label 'status/ok-to-test' is ignored.`);
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
               }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
             }
 
-            const isEE = response.data[0].labels.some((l) => l.name === 'edition/ee');
-            const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
-            const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
-            core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
+            // Set edition from current labels.
+            const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
+            const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
+            const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
+            const edition = hasCE ? 'CE' : (hasEE ? 'EE' : defaultEdition);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}`);
+            core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
+
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
             core.setOutput('edition', edition);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.setCommandEcho(false);
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
-        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        if: steps.pr_props.outputs.should_check == 'true'
         uses: actions/checkout@v2.4.0
         with:
-          ref: "refs/pull/${{ github.event.number }}/head"
+          ref: ${{ steps.pr_props.outputs.ref }}
 
-      # Detect dangerous changes in external PR.
-      - name: Check for dangerous changes
+      # Get info about other changes.
+      - name: Get info about PR changes
         uses: dorny/paths-filter@v2
-        if: ${{ startsWith(github.event_name, 'pull_request') && github.event.pull_request.head.repo.full_name != github.repository }}
         id: changes
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # dangerous - detect if changes not allowed to test for external PRs
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
           filters: |
             dangerous:
               - './.github/**'
-              - './.gitlab/**'
               - './tools/**'
               - './testing/**'
               - './docs/**/js/**'
               - './docs/**/css/**'
               - './docs/**/images/**'
               - './docs/**/assets/**'
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
-        if: steps.changes.outputs.dangerous == 'true'
+        if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
             core.setFailed('External PR contains dangerous changes.')
 
-      # Set output.
-      - name: Return PR head commit ref
-        id: ref
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            let ref = context.ref;
-            if (context.eventName.startsWith('pull_request')) {
-              ref = `refs/pull/${ context.issue.number }/head`
-            }
-            if (context.eventName === 'workflow_dispatch' &&  context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              ref = context.payload.inputs.pull_request_ref;
-            }
-            core.info(`ref: '${ref}'`)
-            core.setOutput('ref', ref)
   # </template: pull_request_info>
 
   # <template: git_info_job>
@@ -215,7 +273,7 @@ jobs:
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
-      ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
@@ -225,22 +283,24 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
 
-            let githubBranch = '';
-            let githubTag = '';
-            let githubSHA = '';
-            let refName = '';
-            let refSlug = '';
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
-              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNum}`
               refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
               githubSHA     = context.payload.inputs.pull_request_sha
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-              refSlug       = `pr${prNum}`;
               core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
             } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
@@ -250,31 +310,30 @@ jobs:
 
               refSlug = `pr${context.issue.number}`;
               refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
             } else {
-              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
               refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
               githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
               githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
               githubSHA     = context.sha
-              // refName is 'main' or tag name, so slugification is not necessary.
-              refSlug       = refName
               core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
-            core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
-            core.info(`output.ci_commit_ref_name: '${refName}'`)
-            core.info(`output.ci_commit_tag:      '${githubTag}'`)
-            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
-            core.info(`output.github_sha:         '${githubSHA}'`)
-
+            core.setCommandEcho(true)
             core.setOutput('ci_commit_ref_slug', refSlug)
             core.setOutput('ci_commit_ref_name', refName)
             core.setOutput(`ci_commit_tag`, githubTag)
             core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setCommandEcho(false)
 
   # </template: git_info_job>
 
@@ -334,8 +393,15 @@ jobs:
       # </template: checkout_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -343,10 +409,23 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.16
+
       - name: Run go generate
         run: |
-          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
-          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+
+          (cd tools && go generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
 
       - name: Check generated code
         run: |
@@ -354,15 +433,13 @@ jobs:
     # </template: go_generate_template>
 
 
-  build_deckhouse:
-    name: Build Deckhouse
+  workflow_render:
+    name: Render workflow
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
-    # <template: build_template>
+
+    # <template: workflow_render_template>
     runs-on: [self-hosted, regular]
     steps:
 
@@ -374,6 +451,57 @@ jobs:
           echo "::set-output name=started_at::${unixTimestamp}"
       # </template: started_at_output>
 
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Render GitHub workflow
+        run: |
+          cd .github
+          ./render-workflows.sh
+
+      - name: Check rendered files
+        run: |
+          git diff --exit-code
+    # </template: workflow_render_template>
+
+
+  build_deckhouse:
+    name: Build Deckhouse
+    needs:
+      - git_info
+      - pull_request_info
+      - go_generate
+      - workflow_render
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+    # <template: build_template>
+    runs-on: [self-hosted, regular]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
@@ -383,8 +511,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -393,8 +528,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -403,24 +545,29 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
+      - name: Login to Github Container Registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_rw_registry_step>
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -430,15 +577,21 @@ jobs:
       # </template: werf_install_step>
 
       - name: Build and push deckhouse images
+        id: build
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
-          ## Source: .gitlab/ci_templates/build.yml
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
           # Put tags on produced images and push to dev and release repositories.
           #
           # There are 2 modes: "dev" and "release".
@@ -451,70 +604,88 @@ jobs:
           # - Build using deckhouse registry as primary and dev-registry as secondary.
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-          # SRC is a name of image from werf.yaml.
-          # WERF_STAGE is a stage image name (from werf stage output).
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name (stage name from werf build report).
           # DST is an image name for docker push.
-          function pull_push() {
-            SRC=$1
-            WERF_STAGE=$2
+          function pull_push_rmi() {
+            SRC_NAME=$1
+            SRC=$2
             DST=$3
-            echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
-            docker pull ${WERF_STAGE}
-            echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
-            docker image tag ${WERF_STAGE} ${DST}
-            echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+            echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+            docker pull ${SRC}
+            echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+            docker image tag ${SRC} ${DST}
+            echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
             docker image push ${DST}
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
           }
 
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
-          # This build put stages to "dev" registry.
-          # If "dev" registry is empty, stages are copied from FE cache.
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          werf build \
-            --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
-            --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          # Registry path to publish images for Git branches.
+          BRANCH_REGISTRY_PATH=
+          # Registry path to publish images for Git tags.
+          SEMVER_REGISTRY_PATH=
+
+          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
+            # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
+            werf build \
+              --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+              --parallel=true --parallel-tasks-limit=5 \
+              --report-path images_tags_werf.json
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          else
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Build using dev-registry as a single primary repo and push:
+            # - branches to Dev registry to run e2e tests.
+            # - semver tags to Github Container Registry for testing release process.
+            werf build \
+              --parallel=true --parallel-tasks-limit=5 \
+              --report-path images_tags_werf.json
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+          fi
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
-            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
-              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
-            else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
-              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
-            fi
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
-            echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
-
-            echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
-
-            echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
-
-            echo "⚓️ [$(date -u)] Remove local tags."
-            docker image rmi ${DESTINATION_IMAGE} || true
-            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
-            docker image rmi ${DESTINATION_TESTS_IMAGE} || true
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
+
+
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "::set-output name=tests_image_name::$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)"
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
           rm -f images_tags_werf.json
-
-
     # </template: build_template>
 
 
@@ -545,8 +716,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -555,12 +733,32 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "::set-output name=has_flant_credentials::true"
+            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+          else
+            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+          fi
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_flant_registry_step>
 
@@ -571,7 +769,7 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
     # </template: doc_web_build_template>
 
   main_web_build:
@@ -601,8 +799,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -611,12 +816,32 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "::set-output name=has_flant_credentials::true"
+            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+          else
+            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+          fi
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_flant_registry_step>
 
@@ -627,10 +852,11 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
     # </template: main_web_build_template>
 
   tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
     needs:
       - git_info
@@ -658,8 +884,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -667,34 +900,58 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
 
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
 
   matrix_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Matrix tests
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
 
-    # <template: tests_template>
+    # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
@@ -715,8 +972,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -724,27 +988,44 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.18.5-buster@sha256:eb4b3bd59da4604b0ab27d3837e39dacfba4a48cdd289419a3c49993c0eadba4"
         run: |
-
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
-    # </template: tests_template>
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin ${TESTS_IMAGE_NAME} make tests-matrix
+    # </template: tests_before_build_template>
 
   dhctl_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Dhctl Tests
     needs:
       - git_info
@@ -772,8 +1053,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -781,27 +1069,52 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
 
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
-          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
   golangci_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: GolangCI Lint
     needs:
       - git_info
@@ -829,8 +1142,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -838,27 +1158,52 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
 
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
 
   openapi_test_cases:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: OpenAPI Test Cases
     needs:
       - git_info
@@ -886,8 +1231,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -895,27 +1247,52 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
 
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
-          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
   web_links_test:
+    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' }}
     name: Web links test
     needs:
       - git_info
@@ -944,8 +1321,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -954,12 +1338,32 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "::set-output name=has_flant_credentials::true"
+            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+          else
+            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+          fi
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_flant_registry_step>
 
@@ -971,6 +1375,8 @@ jobs:
       # </template: werf_install_step>
 
       - name: Prepare site structure
+        env:
+          WEB_REGISTRY_PATH: ${{steps.check_flant_registry.outputs.web_registry_path}}
         run: |
           type werf
           werf version
@@ -981,7 +1387,7 @@ jobs:
           echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
           echo "_TMPDIR=$_TMPDIR"
 
-          export WERF_REPO="${FLANT_REGISTRY_PATH}"
+          export WERF_REPO="${WEB_REGISTRY_PATH}"
           echo -n 'use werf_repo'
           echo $WERF_REPO | tr 'a-z' 'A-Z'
 
@@ -1023,10 +1429,11 @@ jobs:
         run: |
           # Do not exit on html-proofer error.
           set +e
+          # TODO: Fix this
           docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 \
-            --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/ru\/documentation\/latest\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
+            --allow-hash-href --check-html --empty-alt-ignore --external_only \
+            --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,https\:\/\/deckhouse.ru\/:/,\/documentation\/$:/doc/en/,\/documentation\/v1\/:/doc/en/,\/documentation\/latest\/:/doc/en/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/en\/documentation\/latest\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
           exit 0
 
@@ -1039,6 +1446,7 @@ jobs:
     # </template: web_links_test_template>
 
   validators:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Validators
     needs:
       - git_info
@@ -1066,8 +1474,15 @@ jobs:
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1075,22 +1490,75 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
 
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
+
+  set_e2e_requirement_status:
+    # if previous jobs were failed we do not need set status, because checks will be failed
+    if: ${{ success() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Set 'waiting for e2e' commit status
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+      - validators
+      - openapi_test_cases
+      - golangci_lint
+      - dhctl_tests
+      - matrix_tests
+      - tests
+    runs-on: [ self-hosted, regular ]
+    steps:
+    - name: Set commit status after e2e run
+      id: set_e2e_requirement_status
+      uses: actions/github-script@v5.0.0
+      env:
+        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+      with:
+        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        script: |
+          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+          await e2eStatus.setInitialStatus({github, context, core});

@@ -7,7 +7,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    web.deckhouse.io/export-name: "upmeter"
+    web.deckhouse.io/export-icon: "/public/img/upmeter.png"
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.webui.externalAuthentication.authURL }}
@@ -21,6 +22,7 @@ metadata:
 {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -46,7 +48,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
   annotations:
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.webui.externalAuthentication.authURL }}
@@ -65,6 +66,7 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -91,6 +93,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
+  certificateOwnerRef: false
   secretName: ingress-tls-webui
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}

@@ -11,8 +11,8 @@ spec:
               properties:
                 enableIngressGateway:
                   description: |
-                    Использовать ли ingressgateway для доступа к удалённым подам. 
-                    
+                    Использовать ли ingressgateway для доступа к удалённым Pod'ам.
+
                     Если поды между кластерами доступны друг другу напрямую ("плоская" сеть), то выгодно не совершать лишний "хоп".
                   default: true
                 metadataEndpoint:

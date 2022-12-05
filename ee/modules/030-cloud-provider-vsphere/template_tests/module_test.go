@@ -40,31 +40,18 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io
-    registryDockercfg: Y2ZnCg==
-    tags:
-      common:
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
-        resolvWatcher: imagehash
-      cloudProviderVsphere:
-        vsphereCsi: imagehash
-        cloudControllerManager119: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.19.11
+    kubernetesVersion: 1.21.11
 `
 
 const moduleValuesA = `
@@ -235,6 +222,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
 		})
@@ -334,6 +322,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Vsphere", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.HelmRender()
 		})
@@ -396,6 +385,7 @@ labels:
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
 				f.HelmRender()
@@ -413,6 +403,7 @@ labels:
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
 			f.HelmRender()
@@ -438,6 +429,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
 			f.HelmRender()
 		})
@@ -490,6 +482,7 @@ nsxt:
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
 			f.HelmRender()
 		})

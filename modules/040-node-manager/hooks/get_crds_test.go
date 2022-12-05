@@ -106,7 +106,6 @@ func Test_calculateUpdateEpoch(t *testing.T) {
 	if epoch1 != epoch0+int(EpochWindowSize) {
 		t.Fatalf("epoch for ts == epoch+1 (%d) should be the next epoch (%d). Got: %d", ts1, epoch0+14400, epoch1)
 	}
-
 }
 
 const TestTimestampForUpdateEpoch int64 = 1234567890
@@ -350,7 +349,7 @@ metadata:
 		return "D8TestInstanceClass", "D8TestInstanceClass"
 	}
 
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.19.5", "kubernetesVersions":["1.19.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.21.5", "kubernetesVersions":["1.21.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
@@ -400,7 +399,7 @@ metadata:
 				    },
                     "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -421,7 +420,7 @@ metadata:
 				    },
                     "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -464,7 +463,7 @@ metadata:
 			expectedJSON := `
 				[
                   {
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -488,7 +487,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -509,7 +508,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -517,7 +516,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -552,7 +551,7 @@ metadata:
 			expectedJSON := `
 				[
                   {
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -576,7 +575,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -597,7 +596,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -605,7 +604,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -652,7 +651,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -673,7 +672,7 @@ metadata:
 				    },
 				    "instanceClass": null,
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -716,7 +715,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -737,7 +736,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -797,7 +796,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -818,7 +817,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -863,7 +862,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -884,7 +883,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -929,7 +928,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -950,7 +949,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -1010,7 +1009,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -1031,7 +1030,7 @@ metadata:
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.19",
+                    "kubernetesVersion": "1.21",
 					"cri": {
                       "type": "Containerd"
                     },
@@ -1081,8 +1080,8 @@ spec:
 		})
 	})
 
-	// config    1.19
-	// apiserver 1.22.X  |  effective 1.19
+	// config    1.21
+	// apiserver 1.22.X  |  effective 1.21
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1100,15 +1099,15 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.19")
+			setK8sVersionAsClusterConfig(f, "1.21")
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.22.0")
 			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.22.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.19", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.21", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.19"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.21"))
 		})
 	})
 
@@ -1203,7 +1202,7 @@ spec:
 	Context("Cluster with proper NG, global cri is set to docker", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.19")
+			setK8sVersionAsClusterConfig(f, "1.21")
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Docker")
 			f.RunHook()
 		})
@@ -1217,10 +1216,10 @@ spec:
 	Context("Cluster with proper NG, global cri is set to containerd", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.19")
+			setK8sVersionAsClusterConfig(f, "1.21")
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.19.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.19.5")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.21.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.21.5")
 			f.RunHook()
 		})
 
@@ -1245,10 +1244,10 @@ spec:
 	Context("Cluster with proper NG, global cri is set to not managed", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.19")
+			setK8sVersionAsClusterConfig(f, "1.21")
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.19.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.19.5")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.21.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.21.5")
 			f.RunHook()
 		})
 

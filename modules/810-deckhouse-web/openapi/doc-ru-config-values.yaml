@@ -11,7 +11,9 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/).
         properties:
           authURL:
             description: |
@@ -21,18 +23,13 @@ properties:
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-      password:
-        description: |
-          Пароль для HTTP-авторизации пользователя `admin` (генерируется автоматически, но можно менять).
-
-          Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых разрешен доступ к просмотру документации.
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
+          > **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
   https:
     description: |
       Тип используемого сертификата.
@@ -42,9 +39,9 @@ properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
-          - `Disabled` — доступ только по HTTP;
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`.
+          - `Disabled` — доступ только по HTTP.
           - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
       certManager:
         description: "Настройки для certmanager."

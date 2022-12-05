@@ -1,3 +1,7 @@
+priorityClassName:
+  _default: develop
+  production: production-medium
+  web-production: production-medium
 ingress:
   secret_name:
     _default: ingress-le-tls
@@ -15,7 +19,7 @@ vrouter:
     web-stage: "latest"
     _default: "latest"
   showLatestChannel: "true"
-  i18nType: "location"
+  i18nType: "separate-domain"
   logLevel:
     web-stage: trace
     _default: debug

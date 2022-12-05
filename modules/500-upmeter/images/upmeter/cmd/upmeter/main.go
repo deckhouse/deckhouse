@@ -26,9 +26,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"d8.io/upmeter/pkg/agent"
-	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 	"d8.io/upmeter/pkg/server"
 )
 
@@ -36,10 +35,10 @@ func main() {
 	var (
 		loggerConfig = &loggerConfig{}
 
-		agentKubeConfig = &kubernetes.Config{}
-		agentConfig     = &agent.Config{ClientConfig: &sender.ClientConfig{}}
+		kubeConfig  = &kubernetes.Config{}
+		agentConfig = agent.NewConfig()
 
-		serverConfig = &server.Config{}
+		serverConfig = server.NewConfig()
 	)
 
 	app := kingpin.New("upmeter", "upmeter")
@@ -49,13 +48,16 @@ func main() {
 
 	serverCommand := app.Command("start", "Start upmeter server")
 	parseServerArgs(serverCommand, serverConfig)
+	parseKubeArgs(serverCommand, kubeConfig)
 	parseLoggerArgs(serverCommand, loggerConfig)
 	serverCommand.Action(func(c *kingpin.ParseContext) error {
 		setupLogger(logger, loggerConfig)
 
 		logger.Info("Starting upmeter server")
+		logger.Debugf("Logger config: %v", loggerConfig)
+		logger.Debugf("Server config: %v", serverConfig)
 
-		srv := server.New(serverConfig, logger)
+		srv := server.New(serverConfig, kubeConfig, logger)
 		startCtx, cancelStart := context.WithCancel(context.Background())
 
 		go func() {
@@ -85,14 +87,17 @@ func main() {
 	// Agent
 
 	agentCommand := app.Command("agent", "Start upmeter agent")
-	parseKubeArgs(agentCommand, agentKubeConfig)
+	parseKubeArgs(agentCommand, kubeConfig)
 	parseAgentArgs(agentCommand, agentConfig)
 	parseLoggerArgs(agentCommand, loggerConfig)
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
 		setupLogger(logger, loggerConfig)
-		logger.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
+		logger.Infof("Starting upmeter agent. ID=%s", run.ID())
+		logger.Debugf("Logger config: %v", loggerConfig)
+		logger.Debugf("Agent config: %v", agentConfig)
+		logger.Debugf("Kubernetes config: %v", kubeConfig)
 
-		a := agent.New(agentConfig, agentKubeConfig, logger)
+		a := agent.New(agentConfig, kubeConfig, logger)
 
 		startCtx, cancelStart := context.WithCancel(context.Background())
 

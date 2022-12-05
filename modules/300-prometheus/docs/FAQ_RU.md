@@ -10,10 +10,12 @@ search: prometheus мониторинг, prometheus custom alert, prometheus к�
 
 1. Сконфигурировать Service, по аналогии с сервисом для [сбора метрик с вашего приложения](../../modules/340-monitoring-custom/#пример-service), но без указания параметра `spec.selector`.
 1. Создать Endpoints для этого Service, явно указав в них `IP:PORT`, по которым ваши приложения отдают метрики.
-> Важный момент: имена портов в Endpoints должны совпадать с именами этих портов в Service. 
+> Важный момент: имена портов в Endpoints должны совпадать с именами этих портов в Service.
 
-### Пример:
+### Пример
+
 Метрики приложения доступны без TLS, по адресу `http://10.182.10.5:9114/metrics`.
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ subsets:
 Чтобы ваш dashboard появился в Grafana, необходимо создать в кластере специальный ресурс — [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -66,6 +69,7 @@ spec:
             "limit": 100,
 ...
 ```
+
 **Важно!** Системные и добавленные через [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) dashboard нельзя изменить через интерфейс Grafana.
 
 ## Как добавить алерты и/или recording правила для вашего проекта?
@@ -76,6 +80,7 @@ spec:
 - `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с [аналогичной в prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -93,12 +98,15 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
+
 ### Как подключить дополнительные data source для Grafana?
+
 Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
 
-Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). Тип ресурса, смотрите в документации по конкретному [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -118,13 +126,43 @@ spec:
 ```
 
 ## Как обеспечить безопасный доступ к метрикам?
+
 Для обеспечения безопасности настоятельно рекомендуем использовать **kube-rbac-proxy**.
 
-## Как добавить дополнительный Alertmanager?
+## Как добавить Alertmanager?
 
-Создать Custom Resource `CustomAlertmanager`, который может указывать на Alertmanager по FQDN или через сервис в Kubernetes-кластере.
+Создайте custom resource `CustomAlertmanager` с типом `Internal`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  type: Internal
+  internal:
+    route:
+      groupBy: ['job']
+      groupWait: 30s
+      groupInterval: 5m
+      repeatInterval: 12h
+      receiver: 'webhook'
+    receivers:
+    - name: 'webhook'
+      webhookConfigs:
+      - url: 'http://webhookserver:8080/'
+```
+
+Подробно о всех параметрах можно прочитать в описании custom resource [CustomAlertmanager](cr.html#customalertmanager).
+
+## Как добавить внешний дополнительный Alertmanager?
+
+Создайте custom resource `CustomAlertmanager` с типом `External`, который может указывать на Alertmanager по FQDN или через сервис в Kubernetes-кластере.
 
 Пример FQDN Alertmanager:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -137,6 +175,7 @@ spec:
 ```
 
 Пример Alertmanager с Kubernetes service:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -151,17 +190,18 @@ spec:
   type: External
 ```
 
-Подробно о всех параметрах можно прочитать в описании Сustom Resource [CustomAlertmanager](cr.html#customalertmanager)
+Подробно о всех параметрах можно прочитать в описании Custom Resource [CustomAlertmanager](cr.html#customalertmanager)
 
 ## Как в Alertmanager игнорировать лишние алерты?
 
 Решение сводится к настройке маршрутизации алертов в вашем Alertmanager.
 
-Потребуется: 
+Потребуется:
 1. Завести получателя без параметров.
-1. Смаршрутизировать лишние алерты в этого получателя. 
+1. Смаршрутизировать лишние алерты в этого получателя.
 
 В `alertmanager.yaml` это будет выглядеть так:
+
 ```yaml
 receivers:
 - name: blackhole
@@ -206,6 +246,7 @@ route:
 Для обеспечения доступа Lens к метрикам Prometheus, необходимо создать в кластере ряд ресурсов.
 
 {% offtopic title="Шаблоны ресурсов, которые необходимо применить..." %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -257,6 +298,13 @@ metadata:
   name: prometheus-lens-proxy-conf
   namespace: lens-proxy
 data:
+  "39-log-format.sh": |
+    cat > /etc/nginx/conf.d/log-format.conf <<"EOF"
+    log_format  body  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"'
+                      ' req body: $request_body';
+    EOF
   "40-prometheus-proxy-conf.sh": |
     #!/bin/sh
     prometheus_service="$(getent hosts prometheus.d8-monitoring | awk '{print $2}')"
@@ -271,6 +319,7 @@ data:
         proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
         proxy_pass https://\$upstream:9090$request_uri;
       }
+      access_log /dev/stdout body;
     }
     EOF
 ---
@@ -304,6 +353,9 @@ spec:
         - mountPath: /docker-entrypoint.d/40-prometheus-proxy-conf.sh
           subPath: "40-prometheus-proxy-conf.sh"
           name: prometheus-lens-proxy-conf
+        - mountPath: /docker-entrypoint.d/39-log-format.sh
+          name: prometheus-lens-proxy-conf
+          subPath: 39-log-format.sh
       serviceAccountName: prometheus-lens-proxy
       volumes:
       - name: prometheus-lens-proxy-conf
@@ -324,17 +376,63 @@ spec:
       port: 8080
       targetPort: 80
 ```
+
 {% endofftopic %}
 
 После деплоя ресурсов, метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
-Тип Prometheus в Lens - `Prometheus Operator`.
+Тип Prometheus в Lens — `Prometheus Operator`.
 
-## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus? 
+Начиная с версии `5.2.7`, Lens требует наличия меток `pod` и `namespace` в метриках node-exporter'а.
+В противном случае потребление ресурсов узла не будет отображаться на диаграммах Lens.
+
+Чтобы исправить это, примените следующий ресурс:
+
+{% offtopic title="Ресурс, исправляющий отображение метрик..." %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  name: lens-hack
+spec:
+  groups:
+  - name: lens-hack
+    rules:
+    - expr: node_cpu_seconds_total{mode=~"user|system", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_cpu_seconds_total
+    - expr: node_filesystem_size_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_size_bytes
+    - expr: node_filesystem_avail_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_avail_bytes
+    - expr: node_memory_MemTotal_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemTotal_bytes
+    - expr: node_memory_MemFree_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemFree_bytes
+    - expr: node_memory_Buffers_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Buffers_bytes
+    - expr: node_memory_Cached_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Cached_bytes
+```
+
+{% endofftopic %}
+
+## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus?
 
 Добавьте лейбл `prometheus: main` к Pod/Service Monitor.
-Добавьте в namespace, в котором находится Pod/Service Monitor, лейбл `prometheus.deckhouse.io/monitor-watcher-enabled: "true"`. 
+Добавьте в namespace, в котором находится Pod/Service Monitor, лейбл `prometheus.deckhouse.io/monitor-watcher-enabled: "true"`.
 
 Пример:
+
 ```yaml
 ---
 apiVersion: v1
@@ -358,3 +456,10 @@ spec:
   endpoints:
     - port: web
 ```
+
+## Как увеличить размер диска
+
+1. Для увеличения размера отредактируйте PersistentVolumeClaim, указав новый размер в поле `spec.resources.requests.storage`.
+   * Увеличение размера возможно если в StorageClass поле `allowVolumeExpansion` установлено в `true`.
+2. Если используемое хранилище не поддерживает изменение диска на лету, то в статусе PersistentVolumeClaim появится сообщение `Waiting for user to (re-)start a pod to finish file system resize of volume on node.`.
+3. Перезапустите Pod для завершения изменения размера файловой системы.

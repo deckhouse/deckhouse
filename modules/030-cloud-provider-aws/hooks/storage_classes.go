@@ -83,13 +83,13 @@ func applyModuleStorageClassesFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	return sc, nil
 }
 
-func excludeCheck(regexps []*regexp.Regexp, storageClassName string) (bool, error) {
+func excludeCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 	for _, r := range regexps {
 		if r.MatchString(storageClassName) {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 func storageClasses(input *go_hook.HookInput, dc dependency.Container) error {
@@ -113,11 +113,7 @@ func storageClasses(input *go_hook.HookInput, dc dependency.Container) error {
 
 	var storageClassesFilteredProvision []StorageClass
 	for _, storageClass := range defaultStorageClasses {
-		isExcluded, err := excludeCheck(provisionRegexps, storageClass.Name)
-		if err != nil {
-			return err
-		}
-		if !isExcluded {
+		if !excludeCheck(provisionRegexps, storageClass.Name) {
 			storageClassesFilteredProvision = append(storageClassesFilteredProvision, storageClass)
 		}
 	}
@@ -147,11 +143,7 @@ func storageClasses(input *go_hook.HookInput, dc dependency.Container) error {
 
 	var storageClassesFiltered []StorageClass
 	for _, storageClass := range storageClassesFilteredProvision {
-		isExcluded, err := excludeCheck(excludeRegexps, storageClass.Name)
-		if err != nil {
-			return err
-		}
-		if !isExcluded {
+		if !excludeCheck(excludeRegexps, storageClass.Name) {
 			storageClassesFiltered = append(storageClassesFiltered, storageClass)
 		}
 	}

@@ -23,12 +23,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/executor"
-	"d8.io/upmeter/pkg/agent/manager"
+	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/migrations"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type Agent struct {
@@ -38,21 +43,33 @@ type Agent struct {
 	logger *log.Logger
 
 	sender    *sender.Sender
-	scheduler *executor.ProbeExecutor
+	scheduler *scheduler.Scheduler
 }
 
 type Config struct {
-	Period time.Duration
-
-	Namespace string
-
+	Interval     time.Duration
 	ClientConfig *sender.ClientConfig
+	DatabasePath string
+	UserAgent    string
 
-	DatabasePath           string
-	DatabaseMigrationsPath string
+	DisabledProbes []string
+	DynamicProbes  *DynamicProbesConfig
 }
 
-// Return agent with magic configuration
+type DynamicProbesConfig struct {
+	IngressControllers []string
+	NodeGroups         []string
+	Zones              []string
+	ZonePrefix         string
+}
+
+func NewConfig() *Config {
+	return &Config{
+		ClientConfig:  &sender.ClientConfig{},
+		DynamicProbes: &DynamicProbesConfig{},
+	}
+}
+
 func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Agent {
 	return &Agent{
 		config:     config,
@@ -64,33 +81,48 @@ func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Age
 func (a *Agent) Start(ctx context.Context) error {
 	// Initialize kube client from kubeconfig and service account token from filesystem.
 	kubeAccess := &kubernetes.Accessor{}
-	err := kubeAccess.Init(a.kubeConfig)
+	err := kubeAccess.Init(a.kubeConfig, a.config.UserAgent)
 	if err != nil {
 		return fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)
 	}
 
 	// Probe registry
-	registry := manager.New(kubeAccess, a.logger)
-	for _, probe := range registry.Runners() {
-		a.logger.Infof("Register probe %s", probe.ProbeRef().Id())
-	}
-	for _, calc := range registry.Calculators() {
-		a.logger.Infof("Register calculated probe %s", calc.ProbeRef().Id())
+	ftr := probe.NewProbeFilter(a.config.DisabledProbes)
+	dynamicConfig := probe.DynamicConfig{
+		IngressNginxControllers: a.config.DynamicProbes.IngressControllers,
+		NodeGroups:              a.config.DynamicProbes.NodeGroups,
+		Zones:                   a.config.DynamicProbes.Zones,
+		ZonePrefix:              a.config.DynamicProbes.ZonePrefix,
 	}
 
+	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
+	if err := nodeMon.Start(ctx); err != nil {
+		return fmt.Errorf("starting node monitor: %v", err)
+	}
+
+	// The preflight interval is chosen as the smallest period among probe runs which use the
+	// preflight check.
+	preflightInterval := 5 * time.Second
+	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, preflightInterval)
+	controlPlanePreflight.Start()
+
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger)
+	calcLoader := calculated.NewLoader(ftr, a.logger)
+	registry := registry.New(runnerLoader, calcLoader)
+
 	// Database connection with pool
-	dbctx, err := migrations.GetMigratedDatabase(ctx, a.config.DatabasePath, a.config.DatabaseMigrationsPath)
+	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())
 	if err != nil {
 		return fmt.Errorf("cannot connect to database: %v", err)
 	}
 
 	ch := make(chan []check.Episode)
 
-	client := sender.NewClient(a.config.ClientConfig, a.config.Period) // use period as timeout
+	client := sender.NewClient(a.config.ClientConfig)
 	storage := sender.NewStorage(dbctx)
 
-	a.sender = sender.New(client, ch, storage, a.config.Period)
-	a.scheduler = executor.New(registry, ch)
+	a.sender = sender.New(client, ch, storage, a.config.Interval)
+	a.scheduler = scheduler.New(registry, ch)
 
 	a.sender.Start()
 	a.scheduler.Start()

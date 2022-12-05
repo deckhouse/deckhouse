@@ -19,6 +19,7 @@ package template
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -149,6 +150,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Registry:      cb.registryData,
 		Images:        cb.imagesTags,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		ModulesProxy:  cb.clusterInputData.ModulesProxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -356,8 +358,14 @@ func (rid registryInputData) toRegistry() registry {
 			panic(err)
 		}
 
-		if registry, ok := dcfg.Auths[rid.Address]; ok {
-			auth = registry.Auth
+		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
+			switch {
+			case registryObj.Auth != "":
+				auth = registryObj.Auth
+			case registryObj.Username != "" && registryObj.Password != "":
+				authRaw := fmt.Sprintf("%s:%s", registryObj.Username, registryObj.Password)
+				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
+			}
 		}
 	}
 
@@ -442,6 +450,8 @@ type tplContextCommon struct {
 	Registry registry                     `json:"registry" yaml:"registry"`
 
 	PackagesProxy interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+
+	ModulesProxy interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -495,7 +505,9 @@ type registryInputData struct {
 
 type dockerCfg struct {
 	Auths map[string]struct {
-		Auth string `json:"auth"`
+		Auth     string `json:"auth"`
+		Username string `json:"username"`
+		Password string `json:"password"`
 	} `json:"auths"`
 }
 
@@ -504,6 +516,7 @@ type inputData struct {
 	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	ModulesProxy              interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
 	APIServerEndpoints        []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string      `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string    `json:"allowedBundles" yaml:"allowedBundles"`

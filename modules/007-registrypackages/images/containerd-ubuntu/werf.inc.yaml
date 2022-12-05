@@ -1,5 +1,5 @@
 {{- $containerd_versions := list }}
-{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" }}
+{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" "22.04" "jammy"}}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.ubuntu }}
     {{- if $versions.containerd.desiredVersion }}
@@ -15,7 +15,7 @@
   {{- $image_version := $version | replace "containerd.io=" "" | replace "." "-" | replace "~" "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -25,9 +25,19 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: ubuntu
+  {{- $distroname := regexSplit "-" $image_version -1 | last }}
+  {{- range $key, $value := $ubuntu_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
+    containerd: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -40,5 +50,5 @@ shell:
   setup:
   - DISTRO="$(awk -F "-" '{print $NF}' <<< "{{ $version | replace "=" "_" }}")"
   - VERSION="$(sed "s/-${DISTRO}//" <<< "{{ $version | replace "=" "_" }}")"
-  - curl -sL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/${VERSION}_amd64.deb" --output /containerd.io_amd64.deb
+  - curl -sfL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/${VERSION}_amd64.deb" --output /containerd.io_amd64.deb
 {{- end }}

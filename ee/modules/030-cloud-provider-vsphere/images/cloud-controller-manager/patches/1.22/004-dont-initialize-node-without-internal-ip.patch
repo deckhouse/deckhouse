@@ -1,12 +1,7 @@
-Index: pkg/cloudprovider/vsphere/nodemanager.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
---- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision af6bb22f1c299bc8b96d51d798fa4828a66eb4c1)
-+++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision 2461f899209081458fe3a0a7a109dad80f6ad02d)
-@@ -326,6 +326,17 @@
+--- a/pkg/cloudprovider/vsphere/nodemanager.go
++++ b/pkg/cloudprovider/vsphere/nodemanager.go
+@@ -363,6 +363,17 @@ func (nm *NodeManager) DiscoverNode(nodeID string, searchBy cm.FindVM) error {
  		}
  	}
 

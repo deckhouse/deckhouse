@@ -49,6 +49,7 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 * The `limitNamespaces` options will be combined, so that Jane will have access to the following namespaces.
 
 The resulting rights will be:
+
 ```yaml
 accessLevel: ClusterAdmin
 limitNamespaces:

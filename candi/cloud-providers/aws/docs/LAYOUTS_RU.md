@@ -28,8 +28,15 @@ masterNodeGroup:
   # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
   replicas: 1
   instanceClass:
+    # тип используемого инстанса
     instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
+    # ID образа виртуальной машины в Amazon
+    # каталог AMI в консоли AWS: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
+    # размер диска для виртуальной машины master-узла
+    diskSizeGb: 30
+    # используемый тип диска для виртуальной машины master-узла
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -38,63 +45,21 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
-tags:
-  team: torpedo
-```
-
-## Standard
-
->**Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам.
-
-Виртуальные машины выходят в интернет через NAT Gateway с общим и единственным IP-адресом.
-
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSkzOWvLzAwB4hmIk4CP1-mj2QIxCyJg2VJvijFfdttjnV0quLpw7x87KtTC5v2I9xF5gVKpTK-aqyz/pub?w=812&h=655)
-<!--- Исходник: https://docs.google.com/drawings/d/1kln-DJGFldcr6gayVtFYn_3S50HFIO1PLTc1pC_b3L0/edit --->
-
-Пример конфигурации схемы размещения:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
-layout: Standard
-provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
-  region: eu-central-1
-masterNodeGroup:
-  # Количество master-узлов.
-  # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
-  replicas: 1
-  instanceClass:
-    instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
-nodeGroups:
-  - name: mydb
-    nodeTemplate:
-      labels:
-        node-role.kubernetes.io/mydb: ""
-    replicas: 2
-    instanceClass:
-      instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
-    additionalTags:
-      backup: me
-vpcNetworkCIDR: "10.241.0.0/16"
-nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```
 
 ## WithNAT
 
->**Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
+> **Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
+>
+> **Важно!** В этой схеме размещения NAT Gateway всегда создается в зоне `a`. Если узлы кластера будут заказаны в других зонах, то при проблемах в зоне `a` они также будут недоступны. Другими словами, при выборе схемы размещения `WithNat` доступность всего кластера будет зависеть от работоспособности зоны `a`.
 
 Виртуальные машины выходят в интернет через NAT Gateway с общим и единственным IP-адресом.
 
@@ -116,14 +81,22 @@ withNAT:
     zone: eu-central-1a
     instanceClass:
       instanceType: m5.large
-      ami: ami-09a4a23815cdb5e06
+      ami: ami-0caef02b518350c8b
+      diskType: gp3
 masterNodeGroup:
   # Количество master-узлов.
   # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
   replicas: 1
   instanceClass:
+    # тип используемого инстанса
     instanceType: m5.xlarge
-    ami: ami-03818140b4ac9ae2b
+    # ID образа виртуальной машины в Amazon
+    # каталог AMI в консоли AWS: EC2 -> AMI Catalog
+    ami: ami-0caef02b518350c8b
+    # размер диска для виртуальной машины master-узла
+    diskSizeGb: 30
+    # используемый тип диска для виртуальной машины master-узла
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -132,12 +105,12 @@ nodeGroups:
     replicas: 2
     instanceClass:
       instanceType: t2.medium
-      ami: ami-03818140b4ac9ae2b
+      ami: ami-0caef02b518350c8b
     additionalTags:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```

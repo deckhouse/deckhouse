@@ -7,7 +7,7 @@
   {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -17,9 +17,14 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: centos
+    version: all
+    kubernetes-cni: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -31,5 +36,5 @@ shell:
   - apk add --no-cache curl
   setup:
   - RPM_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "kubernetes-cni-{{ $version }}-0" | awk -F "\"" '{print $2}')"
-  - curl -sL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubernetes-cni.x86_64.rpm
+  - curl -sfL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubernetes-cni.x86_64.rpm
 {{- end }}

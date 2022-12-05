@@ -67,11 +67,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: nginx
     kubernetes.io/tls-acme: "true"           # вот она, аннотация!
   name: example-com
   namespace: default
 spec:
+  ingressClassName: nginx
   rules:
   - host: example.com
     http:
@@ -115,14 +115,13 @@ spec:
 
 Если `cert-manager` не может заказать сертификаты с ошибкой:
 
-```
+```text
 CAA record does not match issuer
 ```
 
 То необходимо проверить `CAA (Certificate Authority Authorization)` DNS запись у домена, для которого заказывается сертификат.
 Если вы хотите использовать Let’s Encrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
 Подробнее про CAA можно почитать [тут](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) и [тут](https://letsencrypt.org/docs/caa/).
-
 
 ## Интеграция с Vault
 
@@ -135,6 +134,7 @@ CAA record does not match issuer
   kubectl create serviceaccount issuer
   ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
+
 - Создать Issuer:
 
   ```shell
@@ -159,6 +159,7 @@ CAA record does not match issuer
             key: token
   EOF
   ```
+
 - Создать ресурс Certificate, для получения TLS сертификата подписанного Vault CA:
 
   ```shell
@@ -173,6 +174,70 @@ CAA record does not match issuer
     issuerRef:
       name: vault-issuer
     # домены указываются на этапе конфигурации PKI в Vault
+    commonName: www.example.com 
+    dnsNames:
+    - www.example.com
+  EOF
+  ```
+
+## Как защитить учетные данные cert-manager?
+
+Если вы не хотите хранить учетные данные в ConfigMap `deckhouse` (например, по соображениям безопасности), вы можете создать
+свой собственный ClusterIssuer / Issuer.
+Например, вы можете создать свой ClusterIssuer для сервиса [route53](https://aws.amazon.com/route53/) следующим образом:
+- Создайте секрет с учетными данными:
+
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: v1
+  kind: Secret
+  type: Opaque
+  metadata:
+    name: route53
+    namespace: default
+  data:
+    secret-access-key: {{ "MY-AWS-ACCESS-KEY-TOKEN" | b64enc | quote }}
+  EOF
+  ```
+
+- Создайте простой ClusterIssuer со ссылкой на этот секрет:
+
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: ClusterIssuer
+  metadata:
+    name: route53
+    namespace: default
+  spec:
+    acme:
+      server: https://acme-v02.api.letsencrypt.org/directory
+      privateKeySecretRef:
+        name: route53-tls-key
+      solvers:
+      - dns01:
+          route53:
+            region: us-east-1
+            accessKeyID: {{ "MY-AWS-ACCESS-KEY-ID" }}
+            secretAccessKeySecretRef:
+              name: route53
+              key: secret-access-key
+  EOF
+  ```
+
+- Закажите сертификаты как обычно, используя созданный ClusterIssuer:
+
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Certificate
+  metadata:
+    name: example-com
+    namespace: default
+  spec:
+    secretName: example-com-tls
+    issuerRef:
+      name: route53
     commonName: www.example.com 
     dnsNames:
     - www.example.com

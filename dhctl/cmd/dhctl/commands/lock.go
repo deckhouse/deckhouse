@@ -43,7 +43,7 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(false)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}

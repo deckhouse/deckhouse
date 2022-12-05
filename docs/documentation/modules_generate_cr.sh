@@ -8,7 +8,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
   module_path=$(echo $schema_path | cut -d\/ -f-2 )
   module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
   module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
-  schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\/#\.#")
+  schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
   mkdir -p _data/schemas/${module_name}/crds
   cp -f $schema_path _data/schemas/${module_name}/crds/
   if [ -f "${module_path}/crds/doc-ru-${module_file_name}" ]; then

@@ -5,6 +5,7 @@ title: "The monitoring-ping module: usage"
 ## Adding extra IP addresses to monitor
 
 To monitor additional IP addresses, insert their names/hosts into the module config in the deckhouse ConfigMap as follows:
+
 ```yaml
 monitoringPing: |
   externalTargets:

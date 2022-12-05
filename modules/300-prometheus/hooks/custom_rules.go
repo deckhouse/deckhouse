@@ -45,11 +45,7 @@ func filterCustomRule(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, errors.New("no groups field")
 	}
 
-	for _, gr := range groupsRaw {
-		group := gr.(interface{})
-		cr.Groups = append(cr.Groups, group)
-	}
-
+	cr.Groups = append(cr.Groups, groupsRaw...)
 	return cr, nil
 }
 

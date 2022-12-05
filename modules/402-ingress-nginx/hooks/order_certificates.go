@@ -31,15 +31,15 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
 const namespace = "d8-ingress-nginx"
 
 type CertificateInfo struct {
-	ControllerName string                            `json:"controllerName,omitempty"`
-	IngressClass   string                            `json:"ingressClass,omitempty"`
-	Data           order_certificate.CertificateInfo `json:"data,omitempty"`
+	ControllerName string                          `json:"controllerName,omitempty"`
+	IngressClass   string                          `json:"ingressClass,omitempty"`
+	Data           tls_certificate.CertificateInfo `json:"data,omitempty"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -49,7 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(orderCertificate))
 
-func getSecret(namespace, name string, dc dependency.Container) (*order_certificate.CertificateSecret, error) {
+func getSecret(namespace, name string, dc dependency.Container) (*tls_certificate.CertificateSecret, error) {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func getSecret(namespace, name string, dc dependency.Container) (*order_certific
 		return nil, err
 	}
 
-	cc := order_certificate.ParseSecret(secret)
+	cc := tls_certificate.ParseSecret(secret)
 
 	return cc, nil
 }
@@ -102,7 +102,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 					certificates = append(certificates, CertificateInfo{
 						ControllerName: controller.Name,
 						IngressClass:   ingressClass,
-						Data: order_certificate.CertificateInfo{
+						Data: tls_certificate.CertificateInfo{
 							Certificate: string(secret.Crt),
 							Key:         string(secret.Key),
 						},
@@ -112,7 +112,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 				}
 			}
 
-			request := order_certificate.OrderCertificateRequest{
+			request := tls_certificate.OrderCertificateRequest{
 				Namespace:  namespace,
 				SecretName: secretName,
 				CommonName: fmt.Sprintf("nginx-ingress:%s", controller.Name),
@@ -120,7 +120,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 				ModuleName: "ingressNginx",
 			}
 
-			info, err := order_certificate.IssueCertificate(input, dc, request)
+			info, err := tls_certificate.IssueCertificate(input, dc, request)
 			if err != nil {
 				return err
 			}

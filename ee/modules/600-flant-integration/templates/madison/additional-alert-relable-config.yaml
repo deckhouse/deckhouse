@@ -1,6 +1,10 @@
 {{- define "additional_relable_config_tier" }}
 - source_labels: [namespace]
-  regex: "d8-.+|kube-system|kube-nginx-ingress.*|kube-prometheus|None"
+  regex: "d8-.+|kube-system|None"
+  target_label: tier
+  replacement: cluster
+- source_labels: [namespace, tier]
+  regex: "^;$"
   target_label: tier
   replacement: cluster
 - source_labels: [tier]

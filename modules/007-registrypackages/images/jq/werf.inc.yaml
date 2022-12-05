@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -12,9 +12,14 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    jq: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -25,5 +30,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sL https://github.com/stedolan/jq/releases/download/jq-{{ $version }}/jq-linux64 --output /jq
+  - curl -sfL https://github.com/stedolan/jq/releases/download/jq-{{ $version }}/jq-linux64 --output /jq
   - chmod +x /jq /install /uninstall

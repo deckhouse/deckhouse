@@ -18,10 +18,12 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -29,8 +31,9 @@ import (
 )
 
 type Client struct {
-	url    string
-	client *http.Client
+	url       string
+	client    *http.Client
+	UserAgent string
 }
 
 func getEndpoint(config *ClientConfig) string {
@@ -47,48 +50,56 @@ func getEndpoint(config *ClientConfig) string {
 }
 
 type ClientConfig struct {
-	Host   string
-	Port   string
-	CAPath string
-	TLS    bool
+	Host      string
+	Port      string
+	CAPath    string
+	TLS       bool
+	UserAgent string
+	Timeout   time.Duration
 }
 
-func NewClient(config *ClientConfig, timeout time.Duration) *Client {
+func NewClient(config *ClientConfig) *Client {
 	return &Client{
-		url:    getEndpoint(config),
-		client: NewHttpClient(config, timeout),
+		url:       getEndpoint(config),
+		client:    NewHttpClient(config),
+		UserAgent: config.UserAgent,
 	}
 }
 
 func (c *Client) Send(reqBody []byte) error {
 	req, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("cannot create POST request: %v", err)
+		return fmt.Errorf("preparing POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", c.UserAgent)
+
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("did not send to upmeter: %v", err)
+		return fmt.Errorf("sending: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("cannot read upmeter response body: %v", err)
+		return fmt.Errorf("reding server response body: %v", err)
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("unexpected upmeter response status=%d, body=%q", resp.StatusCode, string(body))
+		return fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
 	}
 
 	return nil
 }
 
-func NewHttpClient(config *ClientConfig, timeout time.Duration) *http.Client {
-	client, err := createSecureHttpClient(config.TLS, config.CAPath, timeout)
+func NewHttpClient(config *ClientConfig) *http.Client {
+	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
-		return &http.Client{Timeout: timeout}
+		return &http.Client{
+			Timeout:   config.Timeout,
+			Transport: newTransport(config.Timeout),
+		}
 	}
 	return client
 }
@@ -98,7 +109,7 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
-	tlsTransport, err := createHttpTransport(caPath)
+	tlsTransport, err := createSecureTransport(caPath, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -118,17 +129,15 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 	return client, nil
 }
 
-func createHttpTransport(caPath string) (*http.Transport, error) {
+func createSecureTransport(caPath string, timeout time.Duration) (*http.Transport, error) {
+	tr := newTransport(timeout)
+
 	if caPath == "" {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
+		// Unsecure
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		return tr, nil
 	}
 
-	// Create transport with tls and CA certificate checking
 	caCertBytes, err := ioutil.ReadFile(caPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", caPath, err)
@@ -137,13 +146,28 @@ func createHttpTransport(caPath string) (*http.Transport, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCertBytes)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
-	}
+	tr.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 
 	return tr, nil
+}
+
+func defaultTransportDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
+	return dialer.DialContext
+}
+
+func newTransport(timeout time.Duration) *http.Transport {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: defaultTransportDialContext(&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: timeout / 2,
+		}),
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          1,                // we need only one connection to the server
+		IdleConnTimeout:       time.Minute,      // double scrape interval which is 30s by design
+		TLSHandshakeTimeout:   10 * time.Second, // 10s is the default value
+		ResponseHeaderTimeout: timeout,
+	}
 }
 
 func getServiceAccountToken() (string, error) {

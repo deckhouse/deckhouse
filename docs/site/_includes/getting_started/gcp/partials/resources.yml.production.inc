@@ -18,7 +18,7 @@ spec:
 ---
 # [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -72,6 +72,8 @@ metadata:
   # [<en>] name of instance class
   # [<ru>] имя инстанс класса
   name: frontend
+# [<en>] you might consider changing this
+# [<ru>] возможно, захотите изменить
 spec:
   diskSizeGb: 40
   # [<en>] Machine type in use for this instance class
@@ -106,6 +108,10 @@ spec:
     # [<ru>] аналогично стандартному полю metadata.labels
     labels:
       node-role.deckhouse.io/frontend: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: frontend
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
@@ -163,6 +169,9 @@ spec:
   # [<en>] the name of the Ingress class to use with the Ingress nginx controller
   # [<ru>] имя Ingress-класса для обслуживания Ingress NGINX controller
   ingressClass: nginx
+  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
+  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
+  controllerVersion: "1.1"
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer

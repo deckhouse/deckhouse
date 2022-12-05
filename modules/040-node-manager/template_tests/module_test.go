@@ -39,26 +39,11 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
-modulesImages:
-  registry: registry.deckhouse.io/deckhouse/ce
-  registryDockercfg: Y2ZnCg==
-  registryAddress: registry.deckhouse.io
-  registryPath: /deckhouse/ce
-  registryScheme: https
-  tags:
-    nodeManager:
-      clusterAutoscaler: imagehash
-      machineControllerManager: imagehash
-    common:
-      kubeRbacProxy: imagehash
-      alpine: tagstring
-    registrypackages:
-      jq16: imagehash
 discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.19.8
+  kubernetesVersion: 1.21.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -68,7 +53,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Docker
   kind: ClusterConfiguration
-  kubernetesVersion: "1.19"
+  kubernetesVersion: "1.21"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -85,15 +70,25 @@ allowedBundles:
   - "centos"
   - "debian"
 allowedKubernetesVersions:
-  - "1.19"
   - "1.20"
   - "1.21"
   - "1.22"
+  - "1.23"
+  - "1.24"
 mcmEmergencyBrake: false
 `
 
 const nodeManagerAWS = `
 internal:
+  clusterAutoscalerPriorities:
+    "50":
+    - ^xxx-staging-[0-9a-zA-Z]+$
+    "70":
+    - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+    "90":
+    - ^xxx-staging-spot-[0-9a-zA-Z]+$
+    - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+    - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -124,7 +119,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -171,7 +166,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Docker"
     cloudInstances:
@@ -218,7 +213,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -264,7 +259,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Docker"
     cloudInstances:
@@ -320,7 +315,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -342,7 +337,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Docker"
     cloudInstances:
@@ -392,7 +387,34 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VsphereInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 2
+      zones:
+      - zonea
+      - zoneb
+  - name: worker-with-disabled-nested-virt
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      numCPUs: 3
+      memory: 3
+      rootDiskSize: 42
+      template: dev/test
+      mainNetwork: mymainnetwork
+      additionalNetworks: [aaa, bbb]
+      datastore: lun-111
+      runtimeOptions: # optional
+        nestedHardwareVirtualization: false
+        memoryReservation: 42
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.21"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -450,7 +472,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Docker"
     cloudInstances:
@@ -476,7 +498,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     cri:
       type: "Containerd"
 `
@@ -486,6 +508,105 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+	})
+
+	Context("Prometheus rules", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues)
+			setBashibleAPIServerTLSValues(f)
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
+		})
+
+		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
+			Expect(rule.Exists()).To(BeTrue())
+
+			groups := rule.Field("spec.groups")
+
+			Expect(groups.IsArray()).To(BeTrue())
+			if shouldEmpty {
+				Expect(groups.Array()).To(BeEmpty())
+			} else {
+				Expect(groups.Array()).ToNot(BeEmpty())
+			}
+		}
+
+		Context("For cluster auto-scaler", func() {
+			Context("cluster auto-scaler disabled", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("spec.groups should be empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+
+					assertSpecDotGroupsArray(rule, true)
+				})
+			})
+
+			Context("cluster auto-scaler enabled", func() {
+				BeforeEach(func() {
+					// autoscaler enabled if have none empty cloud node group
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("spec.groups should be none empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "cluster-autoscaler-priority-expander")
+					Expect(cm.Field("data.priorities").String()).To(MatchYAML(`
+50:
+  - ^xxx-staging-[0-9a-zA-Z]+$
+70:
+  - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+90:
+  - ^xxx-staging-spot-[0-9a-zA-Z]+$
+  - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+  - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+`))
+
+					assertSpecDotGroupsArray(rule, false)
+				})
+			})
+		})
+
+		Context("For machine controller manager", func() {
+			Context("machine controller manager disabled", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("spec.groups should be empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
+
+					assertSpecDotGroupsArray(rule, true)
+				})
+			})
+
+			Context("machine controller manager enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager.mcmEmergencyBrake", "false")
+					f.ValuesSetFromYaml("nodeManager.internal.machineControllerManagerEnabled", "true")
+
+					f.HelmRender()
+				})
+
+				It("spec.groups should be none empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
+
+					assertSpecDotGroupsArray(rule, false)
+				})
+			})
+		})
 	})
 
 	Context("AWS", func() {
@@ -576,7 +697,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -668,7 +789,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -810,7 +931,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -852,7 +973,14 @@ ccc: ddd
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			machineClassAWitoutNestedVirt := f.KubernetesResource("VsphereMachineClass", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-02320933")
+			machineClassSecretAWitoutNestedVirt := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-02320933")
+			machineDeploymentAWitoutNestedVirt := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-with-disabled-nested-virt-02320933")
+			machineClassBWitoutNestedVirt := f.KubernetesResource("VsphereMachineClass", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-6bdb5b0d")
+			machineClassSecretBWitoutNestedVirt := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-6bdb5b0d")
+			machineDeploymentBWitoutNestedVirt := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-with-disabled-nested-virt-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB, machineDeploymentAWitoutNestedVirt, machineDeploymentBWitoutNestedVirt)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -894,6 +1022,22 @@ ccc: ddd
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 
+			Expect(machineClassAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineDeploymentAWitoutNestedVirt.Exists()).To(BeTrue())
+
+			Expect(machineClassBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineDeploymentBWitoutNestedVirt.Exists()).To(BeTrue())
+
+			nestedVirtA := machineClassAWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
+			Expect(nestedVirtA.Exists()).To(BeTrue())
+			Expect(nestedVirtA.Bool()).To(BeFalse())
+
+			nestedVirtB := machineClassBWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
+			Expect(nestedVirtB.Exists()).To(BeTrue())
+			Expect(nestedVirtB.Bool()).To(BeFalse())
+
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -902,7 +1046,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -994,7 +1138,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -1089,7 +1233,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -1112,6 +1256,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.aws.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1142,6 +1287,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.openstack.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1172,6 +1318,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAzure)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.azure.additionalTags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
@@ -1202,6 +1349,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerGCP)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.gcp.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
@@ -1232,6 +1380,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandex)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.yandex.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)

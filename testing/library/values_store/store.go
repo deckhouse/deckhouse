@@ -72,7 +72,6 @@ func (store *ValuesStore) SetByPath(path string, value interface{}) {
 	}
 
 	store.JSONRepr = newValues
-
 }
 
 func (store *ValuesStore) SetByPathFromYAML(path string, yamlRaw []byte) {

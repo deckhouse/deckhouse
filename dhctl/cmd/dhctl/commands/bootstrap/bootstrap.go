@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -55,13 +56,19 @@ const cacheMessage = `Create cache %s:
 	If you want to continue, please delete the cache folder manually.
 `
 
-const (
-	versionMap     = "/deckhouse/candi/version_map.yml"
-	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
-)
-
 func printBanner() {
 	log.InfoLn(banner)
+}
+
+func showWarningAboutUsageDontUsePublicImagesFlagIfNeed() {
+	deprecationBanner := "" +
+		`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! DO NOT USE --dont-use-public-control-plane-images FLAG                               !
+! IT IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE                                   !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`
+	if app.DontUsePublicControlPlaneImages {
+		log.ErrorLn(deprecationBanner)
+	}
 }
 
 func generateClusterUUID(stateCache state.Cache) (string, error) {
@@ -95,32 +102,6 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 		return nil
 	})
 	return clusterUUID, err
-}
-
-func loadConfigFromFile(path string) (*config.MetaConfig, error) {
-	metaConfig, err := config.ParseConfig(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if metaConfig.ClusterConfig == nil {
-		return nil, fmt.Errorf("ClusterConfiguration must be provided")
-	}
-
-	err = metaConfig.LoadVersionMap(versionMap)
-	if err != nil {
-		return nil, err
-	}
-
-	err = metaConfig.LoadImagesTags(imagesTagsJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
-		return nil, fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
-	}
-	return metaConfig, nil
 }
 
 func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
@@ -168,12 +149,19 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
+	app.DefinePostBootstrapScriptFlags(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
 
+		if app.PostBootstrapScriptPath != "" {
+			if err := bootstrap.ValidateScriptFile(app.PostBootstrapScriptPath); err != nil {
+				return err
+			}
+		}
+
 		// first, parse and check cluster config
-		metaConfig, err := loadConfigFromFile(app.ConfigPath)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
 		if err != nil {
 			return err
 		}
@@ -204,6 +192,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		printBanner()
+
+		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
+
+		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
 		clusterUUID, err := generateClusterUUID(stateCache)
 		if err != nil {
@@ -313,7 +305,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := operations.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
+		if err := operations.InstallDeckhouse(kubeCl, deckhouseInstallConfig); err != nil {
 			return err
 		}
 
@@ -335,11 +327,21 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
+		if app.PostBootstrapScriptPath != "" {
+			postScriptExecutor := bootstrap.NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+				WithTimeout(app.PostBootstrapScriptTimeout)
+
+			if err := postScriptExecutor.Execute(); err != nil {
+				return err
+			}
+		}
+
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
 				operations.MasterHostsCacheKey,
 				operations.ManifestCreatedInClusterCacheKey,
 				operations.BastionHostCacheKey,
+				bootstrap.PostBootstrapResultCacheKey,
 			)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 			return nil

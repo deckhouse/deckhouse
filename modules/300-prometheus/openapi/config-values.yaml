@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   retentionDays:
@@ -39,25 +40,18 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
-            x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
+            x-examples: ["https://example.com/dex/auth"]
             description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string
-            x-examples: ["https://myhost.ru/dex/sign_in"]
+            x-examples: ["https://example.com/dex/sign_in"]
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
-      password:
-        type: string
-        format: password
-        description: |
-          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
-
-          This parameter is used if the `externalAuthentication` is not enabled.
       allowedUserGroups:
         type: array
         items:
@@ -78,6 +72,7 @@ properties:
       satisfyAny:
         type: boolean
         default: false
+        x-examples: [true]
         description: |
           Enables single authentication.
 
@@ -90,6 +85,7 @@ properties:
       useDarkTheme:
         type: boolean
         default: false
+        x-examples: [true]
         description: The dark theme is enabled by default.
       customPlugins:
         type: array
@@ -167,8 +163,8 @@ properties:
   vpa:
     type: object
     x-examples:
-      - {updateMode: "Initial"}
-      - {updateMode: "Off", longtermMaxCPU: "1", longtermMaxMemory: "2Mi", maxCPU: "1000m", maxMemory: "2Mi"}
+      - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
+      - {updateMode: "Off"}
     default: {updateMode: "Initial"}
     properties:
       maxCPU:
@@ -184,7 +180,7 @@ properties:
       maxMemory:
         oneOf:
           - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         x-examples: ["3Mi"]
         description: |
@@ -204,7 +200,7 @@ properties:
       longtermMaxMemory:
         oneOf:
           - type: string
-            pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           - type: number
         x-examples: ["4Mi"]
         description: |
@@ -222,7 +218,7 @@ properties:
           - "Off"
   highAvailability:
     type: boolean
-    x-examples: [true, false]
+    x-examples: [true]
     description: |
       Manually enable the high availability mode.
 
@@ -279,8 +275,14 @@ properties:
   mainMaxDiskSizeGigabytes:
     type: integer
     default: 300
-    description: The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
+    description: |
+      Deprecated and will be removed. Doesn't affect anything.
+      The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
+    x-doc-deprecated: true
   longtermMaxDiskSizeGigabytes:
     type: integer
     default: 300
-    description: the maximum size (in GiB) to which the Longterm Prometheus' disk can be automatically resized.
+    x-doc-deprecated: true
+    description: |
+      Deprecated and will be removed. Doesn't affect anything.
+      The maximum size (in GiB) to which the Longterm Prometheus' disk can be automatically resized.

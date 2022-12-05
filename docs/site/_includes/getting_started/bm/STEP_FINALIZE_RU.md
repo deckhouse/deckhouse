@@ -4,7 +4,7 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
 
-Для полноценной работы кластера добавьте узлы, согласно <a href="/{{ page.lang }}/documentation/latest/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
+Для полноценной работы кластера добавьте узлы, согласно <a href="/documentation/latest/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
 
 <blockquote>
 <p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
@@ -54,7 +54,8 @@ kubectl create -f user.yml
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -72,6 +73,7 @@ upmeter.example.com</code>
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP api.example.com
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
 $PUBLIC_IP dex.example.com
@@ -87,7 +89,6 @@ EOF
 </li>
 </ul>
 
-
 <script type="text/javascript">
 $(document).ready(function () {
     generate_password(true);
@@ -96,6 +97,7 @@ $(document).ready(function () {
     update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[user-yml]');
     update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
     update_domain_parameters();
+    config_highlight();
 });
 
 </script>

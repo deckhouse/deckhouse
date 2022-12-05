@@ -78,7 +78,7 @@ func discoveryDNSAddress(input *go_hook.HookInput) error {
 	}
 
 	if dnsAddress == "" {
-		return fmt.Errorf("not found dns addreses")
+		return fmt.Errorf("DNS addresses not found")
 	}
 
 	input.Values.Set("global.discovery.clusterDNSAddress", dnsAddress)

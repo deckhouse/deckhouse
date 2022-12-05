@@ -20,7 +20,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
   if [ $? -eq 0 ]; then
     # Apply schema
     echo "Generating schema ${schema_path} for ${module_path}/docs/CONFIGURATION.md"
-    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.config-values \| format_configuration \}\}" ${module_path}/docs/CONFIGURATION.md
+    sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
   fi
@@ -28,8 +28,20 @@ done
 
 if [ -d /src/global ]; then
   mkdir -p /srv/jekyll-data/documentation/_data/schemas/global
+  # OpenAPI spec for Deckhouse global config
   cp -f /src/global/config-values.yaml _data/schemas/global/
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/config-values.yaml
   cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/global/config-values.yaml
+  # ClusterConfiguration OpenAPI spec
+  cp -f /src/global/cluster_configuration.yaml _data/schemas/global/cluster_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/cluster_configuration.yaml
+  cat /src/global/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/cluster_configuration.yaml
+  # InitConfiguration OpenAPI spec
+  cp -f /src/global/init_configuration.yaml _data/schemas/global/init_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/init_configuration.yaml
+  cat /src/global/doc-ru-init_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/init_configuration.yaml
+  # StaticClusterConfiguration OpenAPI spec
+  cp -f /src/global/static_cluster_configuration.yaml _data/schemas/global/static_cluster_configuration.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/static_cluster_configuration.yaml
+  cat /src/global/doc-ru-static_cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/static_cluster_configuration.yaml
 fi
-

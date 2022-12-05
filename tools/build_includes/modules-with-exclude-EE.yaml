@@ -54,8 +54,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/040-node-manager/openapi/openapi-case-tests.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
+- add: /ee/modules/040-node-manager/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   excludePaths:
     - docs
     - README.md
@@ -65,8 +65,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/040-node-manager/openapi/values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+- add: /ee/modules/040-node-manager/openapi/openapi-case-tests.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   excludePaths:
     - docs
     - README.md
@@ -111,6 +111,28 @@
     - .build.yaml
 - add: /ee/modules/380-metallb
   to: /deckhouse/modules/380-metallb
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/450-keepalived
+  to: /deckhouse/modules/450-keepalived
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/450-network-gateway
+  to: /deckhouse/modules/450-network-gateway
   excludePaths:
     - docs
     - README.md
