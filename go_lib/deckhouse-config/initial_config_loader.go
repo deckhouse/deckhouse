@@ -73,7 +73,8 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 		return nil, fmt.Errorf("init default Kubernetes client: %v", err)
 	}
 
-	// Get ConfigMap. Return nil if the ConfigMap is not exists or contains no settings — it'll be handled by the global hook.
+	// Get ConfigMap. Return nil if the ConfigMap is not exists or contains no settings.
+	// This situation will be handled later by the 'startup_sync.go' global hook.
 	cm, err := GetConfigMap(l.KubeClient, DeckhouseNS, cmName)
 	if err != nil {
 		if k8errors.IsNotFound(err) {

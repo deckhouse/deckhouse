@@ -19,6 +19,8 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -241,11 +243,14 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 	}
 
 	// Log deleted sections in source CM.
+	fields := make([]string, 0)
 	for name := range generatedCM.Data {
 		if _, has := cmData[name]; !has {
-			input.LogEntry.Warnf("ModuleConfig/%s was deleted. Section '%s' will be deleted from cm/%s.", name, name, regeneratedCM.Name)
+			fields = append(fields, name)
 		}
 	}
+	sort.Strings(fields)
+	input.LogEntry.Warnf("Remove fields [%s] from cm/%s", strings.Join(fields, ", "), regeneratedCM.Name)
 
 	return nil
 }
