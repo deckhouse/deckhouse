@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "https://deckhouse.io/en/documentation/v1/modules/${__data.fields.module_name}"
+              "url": "https://deckhouse.io/documentation/v1/modules/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
