@@ -68,4 +68,4 @@ Execute commands another commands from `generate-copier-secret.sh` output:
   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
   ```
 
-Or use this [instruction](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry)
+Or use this [instruction](https://deckhouse.io/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry)

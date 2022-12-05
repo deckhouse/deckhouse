@@ -60,6 +60,6 @@ Both filters have the same structured configuration:
   * In, NotIn — a value of a field must / mustn't be in the list of provided values;
   * Regex, NotRegex — a value of a field must match any or mustn't match all the provided regexes (values).
 
-You can find examples in the [Usage](usage.html) section of the documentation.
+You can find examples in the [Examples](examples.html) section of the documentation.
 
 > NOTE: Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
