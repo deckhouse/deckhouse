@@ -36,3 +36,10 @@ properties:
               type: array
               items:
                 type: string
+      operationPolicies:
+        type: array
+        default: []
+        items:
+          # this spec is validated by CRD's openapi spec
+          type: object
+          additionalProperties: true
