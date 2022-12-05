@@ -1,3 +1,8 @@
+// const responseFromLicense = {{ site.data.license.response | jsonify }};
+// const pageLang = {{ page.lang }};
+
+// console.log(pageLang);
+
 document.addEventListener('DOMContentLoaded', () => {
   const wrappers = document.querySelectorAll('[data-presentation]');
   const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -36,12 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       nav.prev = document.createElement('button')
       nav.prev.classList.add('pdf-slider__nav--button', 'pdf-slider__nav--button-prev');
-      nav.prev.innerHTML = '<i class="fa fa-chevron-left" aria-hidden="true"></i>';
+      nav.prev.innerHTML = `<svg><use xlink:href="/images/sprite.svg#chevron-left-icon"></use></svg>`;
       nav.prev.addEventListener('click', function() { v.prevPage() });
 
       nav.next = document.createElement('button')
-      nav.next.classList.add('pdf-slider__nav--button', 'pdf-slider__nav--button-prev');
-      nav.next.innerHTML = '<i class="fa fa-chevron-right" aria-hidden="true"></i>';
+      nav.next.classList.add('pdf-slider__nav--button', 'pdf-slider__nav--button-next');
+      nav.next.innerHTML = `<svg><use xlink:href="/images/sprite.svg#chevron-left-icon"></use></svg>`;
       nav.next.addEventListener('click', function() { v.nextPage() } );
 
       nav.num = document.createElement('span')
