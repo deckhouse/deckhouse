@@ -52,7 +52,9 @@ spec:
       app.kubernetes.io/name: argocd-server
   template:
     metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-server" "app" "argocd-server")) | nindent 6 }}
+      labels:
+        app.kubernetes.io/name: argocd-server
+        app: argocd-server
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -289,7 +291,7 @@ spec:
               port: 8080
             initialDelaySeconds: 3
             periodSeconds: 30
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/ssh
               name: ssh-known-hosts

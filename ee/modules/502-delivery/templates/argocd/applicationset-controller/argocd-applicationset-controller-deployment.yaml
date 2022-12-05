@@ -52,7 +52,9 @@ spec:
       app.kubernetes.io/name: argocd-applicationset-controller
   template:
     metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-applicationset-controller" "app" "argocd-applicationset-controller")) | nindent 6 }}
+      labels:
+        app.kubernetes.io/name: argocd-applicationset-controller
+        app: argocd-applicationset-controller
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -76,7 +78,7 @@ spec:
               name: webhook
             - containerPort: 8080
               name: metrics
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}

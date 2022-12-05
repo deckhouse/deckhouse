@@ -57,16 +57,15 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "repo-server" "app.kubernetes.io/name" "argocd-repo-server" "app.kubernetes.io/part-of" "argocd" "app" "argocd-repo-server")) | nindent 2 }}
   name: argocd-repo-server
   namespace: d8-{{ .Chart.Name }}
-  annotations:
-    "container.apparmor.security.beta.kubernetes.io/werf-argocd-cmp-sidecar": "unconfined"
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   selector:
     matchLabels:
       app.kubernetes.io/name: argocd-repo-server
   template:
     metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-repo-server" "app" "argocd-repo-server")) | nindent 6 }}
+      labels:
+        app.kubernetes.io/name: argocd-repo-server
+        app: argocd-repo-server
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -240,7 +239,7 @@ spec:
               port: 8084
             initialDelaySeconds: 5
             periodSeconds: 10
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/ssh
               name: ssh-known-hosts
@@ -266,7 +265,7 @@ spec:
             - /var/run/argocd/argocd-cmp-server
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
           name: copyutil
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
           volumeMounts:
             - mountPath: /var/run/argocd
               name: var-files
