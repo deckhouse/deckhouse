@@ -69,9 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"crowd-basic-auth-cert"},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterSecret,
+			FilterFunc: filterSecret,
 		},
 	},
 }, dependency.WithExternalDependencies(generateProxyAuthCert))
