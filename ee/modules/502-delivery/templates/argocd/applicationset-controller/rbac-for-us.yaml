@@ -1,7 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "controller" "app.kubernetes.io/name" "argocd-applicationset-controller" "app.kubernetes.io/part-of" "argocd-applicationset" "app" "argocd-applicationset-controller")) | nindent 2 }}
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd-applicationset
   name: argocd-applicationset-controller
   namespace: d8-{{ .Chart.Name }}
 rules:
@@ -65,7 +68,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "controller" "app.kubernetes.io/name" "argocd-applicationset-controller" "app.kubernetes.io/part-of" "argocd-applicationset" "app" "argocd-applicationset-controller")) | nindent 2 }}
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd-applicationset
   name: argocd-applicationset-controller
   namespace: d8-{{ .Chart.Name }}
 roleRef:
@@ -79,6 +85,9 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "controller" "app.kubernetes.io/name" "argocd-applicationset-controller" "app.kubernetes.io/part-of" "argocd-applicationset" "app" "argocd-applicationset-controller")) | nindent 2 }}
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd-applicationset
   name: argocd-applicationset-controller
   namespace: d8-{{ .Chart.Name }}
