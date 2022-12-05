@@ -232,7 +232,7 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 		return err
 	}
 	regeneratedCM := d8config.GeneratedConfigMap(cmData)
-	input.LogEntry.Infof("Re-create Config/%s on sync", regeneratedCM.Name)
+	input.LogEntry.Infof("Re-creating Config/%s on sync", regeneratedCM.Name)
 	input.PatchCollector.Create(regeneratedCM, object_patch.UpdateIfExists())
 
 	// Return if source cm was empty.
