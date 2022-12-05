@@ -13,7 +13,7 @@
 # limitations under the License.
 
 data "yandex_compute_image" "nat_image" {
-  count = var.should_create_nat_instance ? 1 : 0
+  count  = local.is_with_nat_instance ? 1 : 0
   family = "nat-instance-ubuntu"
 }
 
@@ -61,7 +61,7 @@ locals {
 
   # but if user pass nat instance internal address directly (it for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
-  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.nat_instance_cidr, 10) : var.nat_instance_internal_address) : null
+  nat_instance_internal_address_calculated = local.is_with_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.nat_instance_cidr, 10) : var.nat_instance_internal_address) : null
 
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
 
@@ -92,7 +92,7 @@ locals {
 }
 
 resource "yandex_compute_instance" "nat_instance" {
-  count = var.should_create_nat_instance ? 1 : 0
+  count = local.is_with_nat_instance ? 1 : 0
 
   name         = join("-", [var.prefix, "nat"])
   hostname     = join("-", [var.prefix, "nat"])

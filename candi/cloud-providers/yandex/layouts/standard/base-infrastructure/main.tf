@@ -25,6 +25,7 @@ locals {
 
 module "vpc_components" {
   source = "../../../terraform-modules/vpc-components"
+  layout = local.layout
   prefix = local.prefix
   network_id = local.network_id
   node_network_cidr = local.node_network_cidr

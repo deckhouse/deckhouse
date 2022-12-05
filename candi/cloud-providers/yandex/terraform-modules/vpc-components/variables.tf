@@ -40,9 +40,8 @@ variable "existing_zone_to_subnet_id_map" {
   default = {}
 }
 
-variable "should_create_nat_instance" {
-  type = bool
-  default = false
+variable "layout" {
+  type = string
 }
 
 variable "nat_instance_external_address" {

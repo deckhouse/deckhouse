@@ -49,4 +49,5 @@ locals {
   dhcp_domain_name_servers = local.dhcp_options != null ? lookup(local.dhcp_options, "domainNameServers", null) : null
 
   labels = lookup(var.providerClusterConfiguration, "labels", {})
+  layout = var.providerClusterConfiguration.layout
 }
