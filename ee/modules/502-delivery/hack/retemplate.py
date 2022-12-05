@@ -13,6 +13,7 @@ def re_template(filepath):
     in_labels = False
     i_labels_start = 0
     i_labels_end = 0
+    insertions = []
 
     for i, l in enumerate(lines):
         if l.strip() == "labels:":
@@ -28,30 +29,46 @@ def re_template(filepath):
                 print(f"Found label {k}={v}")
                 labels[k.strip()] = v.strip()
             else:
+                # After labels
+                if l_indent > 2:
+                    # Pods should have only additional 'app' label
+                    indent = (l_indent + 2) * " "
+                    app_label = (
+                        f'{indent}app: {labels.get("app.kubernetes.io/name", "")}\n'
+                    )
+                    insertions.append((i, app_label))  # (index, text)
+                else:
+                    # Inject custom labels
+                    app_name = labels.get("app.kubernetes.io/name", "")
+                    if app_name != "":
+                        labels["app"] = app_name
 
-                # Inject custom labels
-                app_name = labels.get("app.kubernetes.io/name", "")
-                if app_name != "":
-                    labels["app"] = app_name
-
-                labels_s = " ".join([f'"{k}" "{v}"' for k, v in labels.items()])
-                labels_template = (
-                    "  {{- "
-                    + f'include "helm_lib_module_labels" (list . (dict {labels_s})) | nindent {l_indent}'
-                    + " }}\n"
-                )
-                print(f"Labels end at {i}")
-                lines[i_labels_start] = labels_template
-                i_labels_end = i
-                for j in range(i_labels_start + 1, i_labels_end):
-                    lines[j] = ""
+                    labels_s = " ".join([f'"{k}" "{v}"' for k, v in labels.items()])
+                    labels_template = (
+                        "  {{- "
+                        + f'include "helm_lib_module_labels" (list . (dict {labels_s})) | nindent {l_indent}'
+                        + " }}\n"
+                    )
+                    print(f"Labels end at {i}")
+                    lines[i_labels_start] = labels_template
+                    i_labels_end = i
+                    for j in range(i_labels_start + 1, i_labels_end):
+                        lines[j] = ""
                 labels = {}
                 in_labels = False
             continue
 
         if l.strip().startswith("image: "):
             image_parts = lines[i].split(": ")
+            print(f"Line {i}: '{l}'")
+            print(f"Image parts {len(image_parts)}: {image_parts}")
+            print(f"Found image '{image_parts[1]}'")
             lines[i] = image_parts[0] + ": " + map_image(image_parts[1].strip()) + "\n"
+
+    shift = 0
+    for i, l in insertions:
+        lines.insert(i + shift, l)
+        shift += 1
 
     with open(filepath, "w") as f:
         f.writelines([l for l in lines if l.strip() != ""])
