@@ -91,7 +91,7 @@ apiVersions:
           configOverrides:
             type: object
             description: |
-              Initial [Deckhouse configuration](/en/documentation/v1/#deckhouse-configuration).
+              Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
 
               The structure specified in the parameter will be moved to ConfigMap `deckhouse' (in the namespace `d8-system') as is (without changes).
 

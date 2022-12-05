@@ -36,7 +36,7 @@ apiVersions:
               [Уровень логирования](../modules/002-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
           configOverrides:
             description: |
-              Начальная [конфигурация Deckhouse](/ru/documentation/v1/#конфигурация-deckhouse).
+              Начальная [конфигурация Deckhouse](/documentation/v1/#конфигурация-deckhouse).
 
               Структура, указанная в параметре, будет перенесена в ConfigMap `deckhouse` (в пространстве имен `d8-system`) без изменений.
 

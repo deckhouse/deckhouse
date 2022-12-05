@@ -94,7 +94,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     additionalProperties:
@@ -103,7 +103,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -129,7 +129,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   ingressClass:
     type: string
     description: |
@@ -188,7 +188,7 @@ properties:
   controlPlaneConfigurator:
     type: object
     default: {}
-    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) module.'
+    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/) module.'
     properties:
       enabled:
         type: boolean
