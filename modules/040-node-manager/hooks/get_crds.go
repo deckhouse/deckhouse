@@ -371,10 +371,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
 					if err != nil {
 						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types", nodeGroupInstanceClassKind))
-						continue
+						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+					} else {
+						ngForValues["nodeCapacity"] = nodeCapacity
 					}
-					ngForValues["nodeCapacity"] = nodeCapacity
 				}
 			}
 
