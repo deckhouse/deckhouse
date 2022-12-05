@@ -1,10 +1,49 @@
+{{- define "resources_argocd-application-controller" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: argocd-application-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "argocd-application-controller")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: argocd-application-controller
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: argocd-application-controller
+      minAllowed:
+        {{- include "resources_argocd-application-controller" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 200Mi
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: argocd-application-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-application-controller" "app" "argocd-application-controller")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-application-controller
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  labels:
-    app.kubernetes.io/component: application-controller
-    app.kubernetes.io/name: argocd-application-controller
-    app.kubernetes.io/part-of: argocd
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller")) | nindent 2 }}
   name: argocd-application-controller
   namespace: d8-{{ .Chart.Name }}
 spec:
@@ -15,9 +54,13 @@ spec:
   serviceName: argocd-application-controller
   template:
     metadata:
-      labels:
-        app.kubernetes.io/name: argocd-application-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/name" "argocd-application-controller" "app" "argocd-application-controller")) | nindent 6 }}
     spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -159,26 +202,24 @@ spec:
                   key: application.namespaces
                   name: argocd-cmd-params-cm
                   optional: true
-          image: quay.io/argoproj/argocd:v2.5.3
+          image: {{ include "helm_lib_module_image" (list . "argocd") }}
           imagePullPolicy: Always
           name: argocd-application-controller
           ports:
             - containerPort: 8082
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "resources_argocd-application-controller" . | nindent 14 }}
+{{- end }}
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8082
             initialDelaySeconds: 5
             periodSeconds: 10
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/controller/tls
               name: argocd-repo-server-tls
