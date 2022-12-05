@@ -8,7 +8,9 @@ COPY --from=artifact /etc/trickster/trickster.conf /etc/trickster/
 RUN chown nobody /usr/local/bin/trickster
 RUN chmod +x /usr/local/bin/trickster
 
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+RUN apk update && apk add ca-certificates gettext && rm -rf /var/cache/apk/*
 
 USER nobody
-ENTRYPOINT ["trickster"]
+ADD entrypoint.sh /
+
+ENTRYPOINT ["/entrypoint.sh"]

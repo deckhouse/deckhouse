@@ -62,6 +62,8 @@ spec:
         - mountPath: /etc/trickster/trickster.conf
           name: trickster-config
           subPath: trickster.conf
+        - mountPath: /tmp
+          name: tmp
         livenessProbe:
           httpGet:
             path: /trickster/trickster/ping
@@ -72,6 +74,13 @@ spec:
             path: /trickster/trickster/health/main
             port: 8443
             scheme: HTTPS
+        env:
+        - name: PROMETHEUS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: prometheus-token
+              key: token
+              optional: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -129,5 +138,7 @@ spec:
       - name: trickster-config
         configMap:
           name: trickster-config
+      - name: tmp
+        emptyDir: {}
       imagePullSecrets:
       - name: deckhouse-registry
