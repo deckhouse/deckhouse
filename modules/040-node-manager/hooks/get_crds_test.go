@@ -1256,4 +1256,83 @@ spec:
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
 		})
 	})
+
+	Context("ScaleFromZero: can't find a capacity", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 0
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: caperror
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: caperror
+spec: {}
+`))
+			f.RunHook()
+		})
+
+		It("NodeGroup values must be valid", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// cloudInstances and kubernetesVersion field exists - they are creating below the capacity field
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").Exists()).To(BeTrue())
+			// nodeCapacity field does not exist
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeFalse())
+			// but we have an error in logs
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
+		})
+	})
+
+	Context("ScaleFromZero: with a capacity", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 0
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: cap
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: cap
+spec:
+  capacity:
+    cpu: 4
+    memory: 8Gi
+`))
+			f.RunHook()
+		})
+
+		It("NodeGroup values must be valid", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// cloudInstances field exists
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
+			// nodeCapacity field does not exist
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").String()).To(Equal(`{"cpu":"4","memory":"8Gi"}`))
+		})
+	})
 })

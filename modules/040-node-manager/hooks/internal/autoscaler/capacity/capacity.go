@@ -218,6 +218,17 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 		var spec openStackInstanceClass
 		extractor = &spec
 
+	case "D8TestInstanceClass":
+		// for test purpose
+		testspec := instanceClassSpec.(map[string]interface{})
+		if len(testspec) == 0 {
+			return nil, errors.New("Expected error for test")
+		}
+		return &Capacity{
+			CPU:    resource.MustParse("4"),
+			Memory: resource.MustParse("8Gi"),
+		}, nil
+
 	default:
 		return nil, errors.New("Unknown cloud provider")
 	}
