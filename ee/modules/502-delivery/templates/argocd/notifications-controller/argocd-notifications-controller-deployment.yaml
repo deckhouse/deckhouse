@@ -87,7 +87,6 @@ spec:
             - mountPath: /app/config/reposerver/tls
               name: argocd-repo-server-tls
           workingDir: /app
-      {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 6 }}
       serviceAccountName: argocd-notifications-controller
       volumes:
         - configMap:

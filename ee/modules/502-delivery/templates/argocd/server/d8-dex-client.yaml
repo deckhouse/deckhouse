@@ -6,4 +6,3 @@ metadata:
 spec:
   redirectURIs:
     - https://{{ include "helm_lib_module_public_domain" (list . "argocd") }}/auth/callback
-  {{- end }}
