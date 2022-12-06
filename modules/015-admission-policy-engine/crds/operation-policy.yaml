@@ -87,7 +87,7 @@ spec:
                               allowedRegex:
                                 type: string
                                 description: >-
-                                  If specified, a regular expression the annotation's value
+                                  If specified, a regular expression, the annotation's value
                                   must match. The value must contain at least one match for
                                   the regular expression.
                         watchKinds:
