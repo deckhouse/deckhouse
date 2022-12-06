@@ -697,7 +697,6 @@ discovery:
 `
 
 const moduleValues = `
-auth: {}
 argocd:
   admin:
     enabled: false
