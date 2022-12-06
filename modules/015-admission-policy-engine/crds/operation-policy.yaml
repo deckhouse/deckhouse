@@ -48,7 +48,7 @@ spec:
                         limits:
                           type: array
                           default: ["memory"]
-                          description: "A list of limits that should be enforced (cpu, memory or both)."
+                          description: "A list of limits that should be enforced (CPU, memory, or both)."
                           items:
                             type: string
                             enum:
