@@ -67,6 +67,15 @@ class ImageReplacer(Replacer):
         return "UNKNOWN"
 
 
+class ImagePullPolicyReplacer(Replacer):
+    def process(self, i: int, line: str):
+        if line.strip().startswith("imagePullPolicy: "):
+            delim = ": "
+            parts = line.split(delim)
+            new_line = parts[0] + delim + "IfNotPresent"
+            self.aggregator.substitute(i, new_line)
+
+
 class LabelReplacer(Replacer):
     def __init__(self, aggregator: Aggregator):
         super().__init__(aggregator)
@@ -193,6 +202,7 @@ def re_template(filepath: str):
         LabelReplacer(agg),
         SecurityContextReplacer(agg),
         ImageReplacer(agg),
+        ImagePullPolicyReplacer(agg),
     ]
 
     for i, line in enumerate(lines):
@@ -201,8 +211,16 @@ def re_template(filepath: str):
 
     agg.apply(lines)
 
+    new_lines = []
+    for line in lines:
+        if line.strip() == "":
+            continue
+        if not line.endswith("\n"):
+            line = line + "\n"
+        new_lines.append(line)
+
     with open(filepath, "w", encoding="utf-8") as f:
-        f.writelines([l for l in lines if l.strip() != ""])
+        f.writelines(new_lines)
 
 
 def main():
