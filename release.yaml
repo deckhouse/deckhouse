@@ -6,8 +6,8 @@
     interval: "5m"
   "beta":
     enabled: false
-    waves: 1
-    interval: "1m"
+    waves: 3
+    interval: "30m"
   "early-access":
     enabled: true
     waves: 6
