@@ -72,6 +72,6 @@ spec:
           name: redis
           ports:
             - containerPort: 6379
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
-      {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 6 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+      {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 6 }}
       serviceAccountName: argocd-redis

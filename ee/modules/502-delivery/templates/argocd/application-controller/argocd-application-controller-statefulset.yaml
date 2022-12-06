@@ -206,7 +206,7 @@ spec:
               port: 8082
             initialDelaySeconds: 5
             periodSeconds: 10
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           volumeMounts:
             - mountPath: /app/config/controller/tls
               name: argocd-repo-server-tls

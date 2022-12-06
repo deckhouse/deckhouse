@@ -24,7 +24,7 @@ def include_container_security_context(nindent):
         (
             " " * (nindent - 1),  # Helm template indentation
             "{{-",
-            'include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all"',
+            'include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" .',
             f"| nindent {nindent}",
             "}}\n",
         )
