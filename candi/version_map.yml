@@ -227,7 +227,7 @@ k8s:
     bashible: *bashible_k8s_ge_1_21
     ccm:
       openstack: v1.25.3
-      yandex: dff9cb0e03addb4fb17c1f18b12a8e49d6ccdc09 # change to v0.25.0
+      yandex: v0.25.0
       aws: v1.25.1
       vsphere: v1.25.0
       azure: v1.25.4

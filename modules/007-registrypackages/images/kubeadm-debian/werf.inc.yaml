@@ -1,4 +1,4 @@
-{{- $cri_tools_version := "1.24.2" }}
+{{- $cri_tools_version := "1.25.0" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := $key | toString }}
   {{- $patch := $value.patch | toString }}
