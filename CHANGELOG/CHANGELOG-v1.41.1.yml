@@ -1,0 +1,21 @@
+deckhouse-config:
+  fixes:
+    - summary: Apply defaults before spec.settings validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3206
+dhctl:
+  fixes:
+    - summary: Fix restart bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3195
+docs:
+  fixes:
+    - summary: Fix ModuleConfig APIVersion in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3194
+ingress-nginx:
+  fixes:
+    - summary: Fix manual pods rollout for `HostPort` inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3207
+node-manager:
+  fixes:
+    - summary: Fix node-group template generation when `minPerZone==0` and capacity is not set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3222
+

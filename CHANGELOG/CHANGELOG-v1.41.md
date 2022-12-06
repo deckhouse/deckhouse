@@ -46,10 +46,13 @@
  - **[cloud-provider-yandex]** Removed the Standard layout from the documentation, as it doesn't work. [#3108](https://github.com/deckhouse/deckhouse/pull/3108)
  - **[cloud-provider-yandex]** In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work. [#3031](https://github.com/deckhouse/deckhouse/pull/3031)
     The `cloud-provider-yandex` module will be restarted if a proxy is enabled in the cluster.
+ - **[deckhouse-config]** Apply defaults before spec.settings validation. [#3206](https://github.com/deckhouse/deckhouse/pull/3206)
+ - **[ingress-nginx]** Fix manual pods rollout for `HostPort` inlet. [#3207](https://github.com/deckhouse/deckhouse/pull/3207)
  - **[istio]** Fixed istio control-plane alerts: `D8IstioActualVersionIsNotInstalled`, `D8IstioDesiredVersionIsNotInstalled`. [#3024](https://github.com/deckhouse/deckhouse/pull/3024)
  - **[linstor]** In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work. [#3031](https://github.com/deckhouse/deckhouse/pull/3031)
     The `linstor` module will be restarted if a proxy is enabled in the cluster.
  - **[metallb]** Add validation for `addressPools` name. [#3110](https://github.com/deckhouse/deckhouse/pull/3110)
+ - **[node-manager]** Fix node-group template generation when `minPerZone==0` and capacity is not set. [#3222](https://github.com/deckhouse/deckhouse/pull/3222)
  - **[node-manager]** Fix script name generation and the bashible-apiserver [#3156](https://github.com/deckhouse/deckhouse/pull/3156)
  - **[node-manager]** Calculate resource requests for a stanby-holder Pod as a percentage of a node's capacity. [#2959](https://github.com/deckhouse/deckhouse/pull/2959)
  - **[prometheus]** Setting up `failureThreshold` of `startupProbes` for the main and longterm Prometheus objects from 60 to 300. [#3064](https://github.com/deckhouse/deckhouse/pull/3064)
