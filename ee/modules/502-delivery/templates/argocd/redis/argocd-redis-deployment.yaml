@@ -68,7 +68,7 @@ spec:
             - --appendonly
             - "no"
           image: {{ include "helm_lib_module_image" (list . "redis") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: redis
           ports:
             - containerPort: 6379

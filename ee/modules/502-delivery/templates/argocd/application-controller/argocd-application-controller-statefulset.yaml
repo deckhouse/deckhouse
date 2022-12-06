@@ -190,7 +190,7 @@ spec:
                   name: argocd-cmd-params-cm
                   optional: true
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: argocd-application-controller
           ports:
             - containerPort: 8082

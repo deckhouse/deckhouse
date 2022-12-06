@@ -69,7 +69,7 @@ spec:
         - command:
             - argocd-notifications
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             tcpSocket:
               port: 9001

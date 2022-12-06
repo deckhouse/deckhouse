@@ -200,7 +200,7 @@ spec:
             - name: HELM_DATA_HOME
               value: /helm-working-dir
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
             httpGet:

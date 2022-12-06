@@ -134,7 +134,7 @@ spec:
                   name: argocd-image-updater-config
                   optional: true
           image: {{ include "helm_lib_module_image" (list . "argocdImageUpdater") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
               path: /healthz

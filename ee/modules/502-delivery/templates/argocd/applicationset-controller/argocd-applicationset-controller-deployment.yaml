@@ -71,7 +71,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: argocd-applicationset-controller
           ports:
             - containerPort: 7000
