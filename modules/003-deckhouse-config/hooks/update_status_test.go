@@ -62,7 +62,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			mm := mock.NewModuleManager(
 				mock.NewModule("module-one", nil, mock.EnabledByScript),
 			)
-			err := mm.InitModuleValuesValidator("module-one", "testdata/update-status/modules/001-module-one")
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
 
@@ -86,7 +86,7 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			mm := mock.NewModuleManager(
 				mock.NewModule("module-one", mock.EnabledByBundle, mock.DisabledByScript),
 			)
-			err := mm.InitModuleValuesValidator("module-one", "testdata/update-status/modules/001-module-one")
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
 			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
 

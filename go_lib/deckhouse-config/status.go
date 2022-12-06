@@ -54,23 +54,26 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		}
 	}
 
-	// Show conversion or validation error for ignored ModuleConfig resources.
-	// Put error first.
-	// TODO(future): add cache for these errors.
-	res := Service().ConfigValidator().Validate(cfg)
-	if res.HasError() {
-		invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
-		return Status{
-			State:   "N/A",
-			Version: "",
-			Status:  invalidMsg,
+	chain := conversion.Registry().Chain(cfg.GetName())
+
+	// Run conversions and validate versioned settings to warn about invalid spec.settings.
+	// TODO(future): add cache for these errors, for example in internal values.
+	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
+		res := Service().ConfigValidator().Validate(cfg)
+		if res.HasError() {
+			invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
+			return Status{
+				State:   "N/A",
+				Version: "",
+				Status:  invalidMsg,
+			}
 		}
 	}
 
-	// Get settings version from spec or get the latest version from registered conversions.
+	// Fill the 'version' field. The value is a spec.version or the latest version from registered conversions.
+	// Also create warning if version is unknown or outdated.
 	versionWarning := ""
 	version := ""
-	chain := conversion.Registry().Chain(cfg.GetName())
 	if cfg.Spec.Version == 0 {
 		// Use latest version if spec.version is empty.
 		version = strconv.Itoa(chain.LatestVersion())
@@ -85,7 +88,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		}
 	}
 
-	// Special case: ModuleConfig/global.
+	// 'global' config is always enabled.
 	if cfg.GetName() == "global" {
 		return Status{
 			State:   "Enabled",
@@ -94,13 +97,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		}
 	}
 
-	// First, get effective "enabled" from ModuleManager.
-	enabled := "Disabled"
-	isModuleEnabled := s.moduleManager.IsModuleEnabled(cfg.GetName())
-	if isModuleEnabled {
-		enabled = "Enabled"
-	}
-
+	// Figure out additional statuses for known modules.
 	statusMsgs := make([]string, 0)
 	if versionWarning != "" {
 		statusMsgs = append(statusMsgs, versionWarning)
@@ -108,8 +105,10 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 
 	mod := s.moduleManager.GetModule(cfg.GetName())
 
-	// Calculate status for enabled module.
-	if isModuleEnabled {
+	// Calculate state and status.
+	stateMsg := "Disabled"
+	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
+		stateMsg = "Enabled"
 		lastHookErr := mod.State.GetLastHookErr()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
@@ -118,14 +117,17 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.State.LastModuleErr))
 		}
 	} else {
-		// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-		enabledByBundle := mergeEnabled(mod.CommonStaticConfig.IsEnabled, mod.StaticConfig.IsEnabled)
 		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
-		if cfg.Spec.Enabled == nil && !enabledByBundle {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: disabled by %s bundle", bundleName))
+		if cfg.Spec.Enabled == nil {
+			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
+			enabledMsg := "disabled"
+			if mergeEnabled(mod.CommonStaticConfig.IsEnabled, mod.StaticConfig.IsEnabled) {
+				enabledMsg = "enabled"
+			}
+			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
 		}
 
-		// Special case: enabled in config but disabled by script.
+		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
 		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
 		}
@@ -133,7 +135,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 
 	return Status{
 		Version: version,
-		State:   enabled,
+		State:   stateMsg,
 		Status:  strings.Join(statusMsgs, ", "),
 	}
 }
