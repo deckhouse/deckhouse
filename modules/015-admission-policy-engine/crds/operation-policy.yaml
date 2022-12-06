@@ -57,7 +57,7 @@ spec:
                         requests:
                           type: array
                           default: ["cpu", "memory"]
-                          description: "A list of requests that should be enforced (cpu, memory or both)."
+                          description: "A list of requests that should be enforced (CPU, memory, or both)."
                           items:
                             type: string
                             enum:
