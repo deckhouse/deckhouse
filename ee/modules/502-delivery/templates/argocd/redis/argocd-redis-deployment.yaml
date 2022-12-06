@@ -47,6 +47,7 @@ metadata:
   name: argocd-redis
   namespace: d8-{{ .Chart.Name }}
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: argocd-redis

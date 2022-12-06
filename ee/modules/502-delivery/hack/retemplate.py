@@ -112,7 +112,7 @@ class LabelReplacer(Replacer):
             return
 
         # After labels, form the transformations
-        app_name = self.labels.get("app.kubernetes.io/name", "not-specified")
+        app_name = self.labels.get("app.kubernetes.io/name", "")
         print(f"Labels end at {i-1}")
         if self.nindent > 2:
             # This is not top-level labels. Pods should have only additional 'app' label. We are

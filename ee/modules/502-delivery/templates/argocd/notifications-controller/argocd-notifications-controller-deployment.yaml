@@ -49,6 +49,7 @@ metadata:
 spec:
   # No HA implied in upstream
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: argocd-notifications-controller

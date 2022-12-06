@@ -58,6 +58,7 @@ metadata:
   name: argocd-repo-server
   namespace: d8-{{ .Chart.Name }}
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: argocd-repo-server

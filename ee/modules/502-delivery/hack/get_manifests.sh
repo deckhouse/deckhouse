@@ -84,11 +84,9 @@ xargs -n 1 -- yq -i '.metadata.namespace="d8-{{ .Chart.Name }}"' <<<$(egrep --fi
 #     namespace.
 xargs -n 1 -- perl -pi -e 's/namespace: argocd/namespace: d8-{{ .Chart.Name }}/' <<<$(egrep --files-with-matches '^\s+namespace: argocd$' argocd-*.yaml)
 
-# Fix manifests
-# xargs -n 1 -- perl -pi -e 's/image: .+updater.+/image: {{ include "helm_lib_module_image" (list . "argocdImageUpdater") }}/' <<<$(egrep --files-with-matches '^\s+image:\s+[^{{]+updater.+$' argocd-*.yaml)
-# xargs -n 1 -- perl -pi -e 's/image: .+argocd.+/image: {{ include "helm_lib_module_image" (list . "argocd") }}/'              <<<$(egrep --files-with-matches '^\s+image:\s+[^{{]+argocd.+$' argocd-*.yaml)
-# xargs -n 1 -- perl -pi -e 's/image: .+redis.+/image: {{ include "helm_lib_module_image" (list . "redis") }}/'                <<<$(egrep --files-with-matches '^\s+image:\s+[^{{]+redis.+$' argocd-*.yaml)
-
+xargs -n 1 -- yq -i '.spec.revisionHistoryLimit=2' <<<$(egrep --files-with-match '^kind: Deployment' argocd-*.yaml)
+xargs -n 1 -- yq -i 'select(.metadata.labels == null) | .metadata.labels.dummy="true"' <<<$(egrep --files-without-match '^  labels:' argocd-*.yaml)
+# (.spec.chart | select(.name == "my-chart") | .version)
 # Sort manifests
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/application-controller
 mkdir -p $COMPONENT_ROOT
