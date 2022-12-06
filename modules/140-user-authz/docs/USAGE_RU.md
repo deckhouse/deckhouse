@@ -113,9 +113,9 @@ spec:
 
      * Если прямого доступа до API-сервера нет, то [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges`. Либо через отдельный Ingress-controller укажите адреса, только с которых будут идти запросы: при помощи опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
 
-       * Если используется непубличный CA:
+     * Если используется непубличный CA:
 
-         1. Получите его из Secret'а с сертификатом для домена `api.%s`:
+       1. Получите его из Secret'а с сертификатом для домена `api.%s`:
 
           ```shell
           kubectl -n d8-user-authn get secrets -o json \
@@ -124,7 +124,7 @@ spec:
             | base64 -d > /tmp/ca.crt
           ```
 
-         2. И сгенерируйте секцию с внешним доменом и CA:
+       2. И сгенерируйте секцию с внешним доменом и CA:
 
           ```shell
           kubectl config set-cluster $cluster_name --embed-certs=true \
@@ -133,7 +133,7 @@ spec:
             --kubeconfig=$file_name
           ```
 
-       * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
+     * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
 
           ```shell
           kubectl config set-cluster $cluster_name \
