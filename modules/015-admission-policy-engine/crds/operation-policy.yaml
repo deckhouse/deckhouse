@@ -102,7 +102,7 @@ spec:
                     requiredProbes:
                       type: array
                       example: ["livenessProbe", "readinessProbe"]
-                      description: "The list of probes that are required (ex: `readinessProbe`)"
+                      description: "The list of probes that are required (e.g. `readinessProbe`)"
                       items:
                         type: string
                         enum:
