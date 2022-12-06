@@ -61,6 +61,9 @@ split_manifests() {
 split_manifests "${VENDOR_ROOT}/${ARGO_MANIFESTS}"
 split_manifests "${VENDOR_ROOT}/${IMAGE_UPDATER_MANIFESTS}"
 
+# Form labels where missing
+yq eval-all 'select(.metadata.labels == null) | .metadata.labels.dummy = "true"' argocd-*.yaml
+
 # remove network policies as we don't need them in Deckhouse
 # TODO why?
 rm *-networkpolicy.yaml
@@ -91,45 +94,45 @@ COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/application-controller
 mkdir -p $COMPONENT_ROOT
 mv argocd-application-controller*.yaml $COMPONENT_ROOT
 mv argocd-metrics-*.yaml $COMPONENT_ROOT
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/applicationset-controller
 mkdir -p $COMPONENT_ROOT
 mv argocd-applicationset-controller*.yaml $COMPONENT_ROOT
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/notifications-controller
 mkdir -p $COMPONENT_ROOT
 mv argocd-notifications*.yaml $COMPONENT_ROOT
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/repo-server
 mkdir -p $COMPONENT_ROOT
 mv argocd-repo-server*.yaml $COMPONENT_ROOT
-yq e $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/server
 mkdir -p $COMPONENT_ROOT
 mv argocd-server*.yaml $COMPONENT_ROOT
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/redis
 mkdir -p $COMPONENT_ROOT
 mv argocd-redis*.yaml $COMPONENT_ROOT
-pushd  $COMPONENT_ROOT && rename 's/^(.*)$/ha-$1/g' *-ha* && rename 's/-ha//' *-ha* || true && popd
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+pushd $COMPONENT_ROOT && rename 's/^(.*)$/ha-$1/g' *-ha* && rename 's/-ha//' *-ha* || true && popd
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/image-updater
 mkdir -p $COMPONENT_ROOT
 mv argocd-image-updater*.yaml $COMPONENT_ROOT
 pushd $COMPONENT_ROOT && rename 's/^(.*)$/ha-$1/g' *-ha* && rename 's/-ha//' *-ha* || true && popd
-yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* > $COMPONENT_ROOT/rbac-for-us.yaml
+yq e $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account* >$COMPONENT_ROOT/rbac-for-us.yaml
 rm $COMPONENT_ROOT/*role* $COMPONENT_ROOT/*account*
 
 # We use our own dex
