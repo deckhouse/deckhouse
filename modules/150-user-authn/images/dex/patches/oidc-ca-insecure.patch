@@ -1,8 +1,8 @@
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index e345dca0..32a612c5 100644
+index e345dca0..01e6c2e3 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
-@@ -3,11 +3,15 @@ package oidc
+@@ -3,9 +3,12 @@ package oidc
 
  import (
  	"context"
@@ -14,11 +14,8 @@ index e345dca0..32a612c5 100644
 +	"net"
  	"net/http"
  	"net/url"
-+	"os"
  	"strings"
- 	"time"
-
-@@ -34,6 +38,10 @@ type Config struct {
+@@ -34,6 +37,10 @@ type Config struct {
 
  	Scopes []string `json:"scopes"` // defaults to "profile" and "email"
 
@@ -29,7 +26,7 @@ index e345dca0..32a612c5 100644
  	// Override the value of email_verified to true in the returned claims
  	InsecureSkipEmailVerified bool `json:"insecureSkipEmailVerified"`
 
-@@ -105,8 +113,41 @@ func knownBrokenAuthHeaderProvider(issuerURL string) bool {
+@@ -105,8 +112,37 @@ func knownBrokenAuthHeaderProvider(issuerURL string) bool {
  // Open returns a connector which can be used to login users through an upstream
  // OpenID Connect provider.
  func (c *Config) Open(id string, logger log.Logger) (conn connector.Connector, err error) {
@@ -40,12 +37,8 @@ index e345dca0..32a612c5 100644
 +
 +	tlsConfig := tls.Config{RootCAs: pool, InsecureSkipVerify: c.InsecureSkipVerify}
 +	for _, rootCA := range c.RootCAs {
-+		rootCABytes, err := os.ReadFile(rootCA)
-+		if err != nil {
-+			return nil, fmt.Errorf("failed to read root-ca: %v", err)
-+		}
-+		if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
-+			return nil, fmt.Errorf("no certs found in root CA file %q", rootCA)
++		if !tlsConfig.RootCAs.AppendCertsFromPEM([]byte(rootCA)) {
++			return nil, fmt.Errorf("cannot add CA from PEM")
 +		}
 +	}
 +
