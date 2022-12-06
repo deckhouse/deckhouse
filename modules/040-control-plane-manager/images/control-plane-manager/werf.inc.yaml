@@ -35,7 +35,9 @@ docker:
   ENTRYPOINT: ["/control-plane-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.24" $version }}
+    {{- if semverCompare ">=1.25" $version }}
+from: {{ $.Images.BASE_GOLANG_19_BUSTER }}
+    {{- else if semverCompare ">=1.24" $version }}
 from: {{ $.Images.BASE_GOLANG_18_BUSTER }}
     {{- else if semverCompare ">=1.23" $version }}
 from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
