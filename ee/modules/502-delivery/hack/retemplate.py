@@ -3,8 +3,54 @@
 import os
 
 
-def re_template(filepath):
-    # Read lines, substitute, write back
+def map_image(image):
+    """
+    Match image name by substring and return Helm template function call.
+    """
+    if image.find("updater") > -1:
+        return '{{ include "helm_lib_module_image" (list . "argocdImageUpdater") }}'
+    if image.find("argo") > -1:
+        return '{{ include "helm_lib_module_image" (list . "argocd") }}'
+    if image.find("redis") > -1:
+        return '{{ include "helm_lib_module_image" (list . "redis") }}'
+    return "UNKNOWN"
+
+
+def include_container_security_context(nindent):
+    """
+    Get common security context for containers and Pods
+    """
+    return " ".join(
+        (
+            " " * (nindent - 1),  # Helm template indentation
+            "{{-",
+            'include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all"',
+            f"| nindent {nindent}",
+            "}}\n",
+        )
+    )
+
+
+def include_module_labels(labels: dict, nindent: int):
+    """
+    Get module labels Helm template function call.
+    """
+    kv_str = " ".join([f'"{k}" "{v}"' for k, v in labels.items()])
+    return " ".join(
+        (
+            " " * (nindent - 1),  # Helm template indentation
+            "{{-",
+            f'include "helm_lib_module_labels" (list . (dict {kv_str}))',
+            f"| nindent {nindent}",
+            "}}\n",
+        )
+    )
+
+
+def re_template(filepath: str):
+    """
+    Walk through ArgoCD templates and substitute Helm template functions.
+    """
 
     print(f"File {filepath}")
     lines = list(open(filepath).readlines())
@@ -13,10 +59,8 @@ def re_template(filepath):
 
     in_labels = False
     labels = {}
-    i_labels_start = 0
 
     in_seccontext = False
-    i_seccontext_start = 0
 
     for i, l in enumerate(lines):
         if l.strip() == "labels:":
@@ -46,48 +90,38 @@ def re_template(filepath):
                     if app_name != "":
                         labels["app"] = app_name
 
-                    labels_s = " ".join([f'"{k}" "{v}"' for k, v in labels.items()])
-                    labels_template = (
-                        "  {{- "
-                        + f'include "helm_lib_module_labels" (list . (dict {labels_s})) | nindent {l_indent}'
-                        + " }}\n"
-                    )
                     print(f"Labels end at {i}")
-                    overrides.append((i_labels_start, labels_template))
+                    overrides.append(
+                        (i_labels_start, include_module_labels(labels, l_indent))
+                    )
                     erasures += range(i_labels_start + 1, i)
                 labels = {}
                 in_labels = False
             continue
 
+        # Substitute securityContext with *drop_all
         if l.strip() == "securityContext:":
             print(f"Found securityContext at {i}")
             in_seccontext = True
-            i_seccontext_start = i
             sc_indent = l.count(" ", 0, l.find("s"))
-            helm_template = " ".join(
-                (
-                    " " * (sc_indent - 1),  # Helm template indentation
-                    "{{-",
-                    'include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all"',
-                    f"| nindent {sc_indent}",
-                    "}}\n",
-                )
-            )
-            overrides.append((i, helm_template))
+            # overwrite currentstarting line
+            overrides.append((i, include_container_security_context(sc_indent)))
             continue
-
         if in_seccontext:
+            # drop all inner lines
             if l.startswith((2 + sc_indent) * " "):
                 erasures.append(i)
             else:
                 in_seccontext = False
             continue
 
+        # Subtitute images
         if l.strip().startswith("image: "):
             image_parts = lines[i].split(": ")
             print(f"Found image '{image_parts[1]}'")
             lines[i] = image_parts[0] + ": " + map_image(image_parts[1].strip()) + "\n"
 
+    # Apply changes
     for i, l in overrides:
         lines[i] = l
 
@@ -101,16 +135,6 @@ def re_template(filepath):
 
     with open(filepath, "w") as f:
         f.writelines([l for l in lines if l.strip() != ""])
-
-
-def map_image(image):
-    if image.find("updater") > -1:
-        return '{{ include "helm_lib_module_image" (list . "argocdImageUpdater") }}'
-    if image.find("argo") > -1:
-        return '{{ include "helm_lib_module_image" (list . "argocd") }}'
-    if image.find("redis") > -1:
-        return '{{ include "helm_lib_module_image" (list . "redis") }}'
-    return "UNKNOWN"
 
 
 if __name__ == "__main__":
