@@ -1,5 +1,5 @@
 ### pdb-daemonset.patch
 
-For expiring soon certificates we want to get additional data about such certificate in the logs.
+Supports DaemonSets in disruption controller by adding /scale subresource to daemonsets API. It allows to control the eviction rate of DaemonSet pods.
 
-> Consider finding a way to do it without patching the `apiserver` or make a PR to the upstream.
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/98307.

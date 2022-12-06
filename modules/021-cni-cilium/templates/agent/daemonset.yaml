@@ -50,7 +50,6 @@ spec:
         - cilium-agent
         args:
         - --config-dir=/tmp/cilium/config-map
-        {{- if semverCompare ">=1.20-0" .Capabilities.KubeVersion.Version }}
         startupProbe:
           httpGet:
             host: "127.0.0.1"
@@ -63,7 +62,6 @@ spec:
           failureThreshold: 105
           periodSeconds: 2
           successThreshold: 1
-        {{- end }}
         livenessProbe:
           httpGet:
             host: "127.0.0.1"
