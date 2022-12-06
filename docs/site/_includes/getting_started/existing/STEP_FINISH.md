@@ -168,5 +168,5 @@ and create a `kubeconfig` file for external access to the API using the web inte
 
 Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/documentation/v1/).
 
-Please, reach us via our [online community](/en/community/about.html#online-community) if you have any questions.
+Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
 </div>

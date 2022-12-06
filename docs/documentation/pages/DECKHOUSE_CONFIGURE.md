@@ -5,7 +5,7 @@ permalink: en/
 
 Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
 
-<div markdown="0" style="height: 0;" id="#deckhouse-configuration"></div>
+<div markdown="0" style="height: 0;" id="deckhouse-configuration"></div>
 
 You can configure Deckhouse using:
 - **[Global settings](deckhouse-configure-global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.

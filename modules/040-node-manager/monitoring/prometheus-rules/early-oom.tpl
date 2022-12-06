@@ -21,5 +21,5 @@
         Possible actions to resolve the problem:
         * Upgrade kernel to version 4.20 or higher.
         * Enable [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
-        * [Disable](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
+        * [Disable](https://deckhouse.io/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
 {{- end }}
