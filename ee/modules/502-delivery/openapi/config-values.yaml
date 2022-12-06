@@ -1,6 +1,5 @@
 type: object
-required:
-  - auth
+required: []
 properties:
   argocd:
     type: object
