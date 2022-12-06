@@ -76,19 +76,6 @@ securityContext:
     - ALL
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" . }} */ -}}
-{{- define "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_ro_nonroot_rtdefault" }}
-securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  seccompProfile:
-    type: RuntimeDefault
-{{- end }}
-
 {{- /* Usage: {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} */ -}}
 {{- /* returns SecurityContext parameters for Container with read only root filesystem, all dropped and some added capabilities */ -}}
 {{- define "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" }}
