@@ -531,6 +531,26 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  # Print deckhouse info and enabled modules.
+  infoScript=$(cat <<'END'
+kubectl -n d8-system get deploy/deckhouse -o jsonpath='{.kind}/{.metadata.name}:{"\n"}Image: {.spec.template.spec.containers[0].image} {"\n"}Config: {.spec.template.spec.containers[0].env[?(@.name=="ADDON_OPERATOR_CONFIG_MAP")]}{"\n"}'
+echo "Deployment/deckhouse"
+kubectl -n d8-system get deploy/deckhouse -o wide
+echo "Pod/deckhouse-*"
+kubectl -n d8-system get po -o wide | grep ^deckhouse
+echo "Enabled modules:"
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
+echo "ConfigMap/generated"
+kubectl -n d8-system get configmap/deckhouse-generated-config-do-not-edit -o yaml
+echo "ModuleConfigs"
+kubectl get moduleconfigs
+echo "Errors:"
+kubectl -n d8-system logs deploy/deckhouse | grep '"error"'
+END
+)
+
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
+
   if [[ "$PROVIDER" == "Static" ]]; then
     run_linstor_tests || return $?
   fi
