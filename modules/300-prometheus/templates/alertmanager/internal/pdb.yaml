@@ -1,7 +1,7 @@
 {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
   {{- range .Values.prometheus.internal.alertmanagers.internal }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: alertmanager-{{ .name }}

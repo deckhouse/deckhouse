@@ -1,5 +1,5 @@
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:
@@ -14,7 +14,7 @@ spec:
     matchLabels:
       app: dashboard
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:

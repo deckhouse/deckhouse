@@ -75,6 +75,12 @@ const unsupportedVersionsYAML = `
   "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
   "policy/v1beta1": ["PodDisruptionBudget", "PodSecurityPolicy"]
   "node.k8s.io/v1beta1": ["RuntimeClass"]
+
+"1.26":
+  "flowcontrol.apiserver.k8s.io/v1beta1": ["FlowSchema", "PriorityLevelConfiguration"]
+
+"1.27":
+  "storage.k8s.io/v1beta1": ["CSIStorageCapacity"]
 `
 
 const (
