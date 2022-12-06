@@ -231,7 +231,7 @@ k8s:
       aws: v1.25.1
       vsphere: v1.25.0
       azure: v1.25.5
-      gcp: v0.25.3
+      gcp: ccm/v25.3.0
     csi:
       openstack: v1.25.3
       provisioner: v3.3.0@sha256:ee3b525d5b89db99da3b8eb521d9cd90cb6e9ef0fbb651e98bb37be78d36b5b8
