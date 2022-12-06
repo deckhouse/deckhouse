@@ -27,18 +27,6 @@ properties:
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss.
 
       Setting it to `false` forces the use of an emptyDir volume.
-  auth:
-    type: object
-    default: {}
-    description: Options related to authentication or authorization in the application.
-    properties:
-      password:
-        type: string
-        format: password
-        description: |
-          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
-
-          This parameter is used if the `externalAuthentication` is not enabled.
   https:
     type: object
     x-examples:
