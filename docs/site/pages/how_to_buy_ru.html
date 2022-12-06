@@ -19,6 +19,8 @@ anchors_disabled: true
           <p class="text text_big">
             Мы предлагаем разные варианты внедрения, лицензирования и&nbsp;поддержки платформы. Также готовы помочь согласовать выбранное вами решение со&nbsp;всеми заинтересованными сторонами в&nbsp;вашей компании.
           </p>
+          <a id="anchor" href="#first-meeting" class="button button_alt">Узнать подробнее</a>
+          <a href="" data-open-modal="request_callback" class="button button_default">Обсудить проект</a>
         </div>
       </div>
     </div>
@@ -30,7 +32,7 @@ anchors_disabled: true
 
 <section class="block deckhouse-in-register">
   <div class="container">
-    <h2 class="text text_lead" id="russian-k8s">
+    <h2 class="text text_lead" id="first-meeting">
       Первое знакомство
     </h2>
     <div class="block__columns block__columns_top">
@@ -41,7 +43,7 @@ anchors_disabled: true
       </div>
       <div>
         <p class="text text_big">
-          Чтобы протестировать полнофункциональную версию, <a href="products/enterprise_edition.html">запросите</a> триальный ключ доступа, который действует в&nbsp;течение 30 дней. Об&nbsp;отличиях бесплатной и&nbsp;платной версий платформы читайте в&nbsp;разделе <a href="community/community_edition.html#ce-vs-ee">«Deckhouse Platform&nbsp;CE vs. EE»</a>.
+          Чтобы протестировать полнофункциональную версию — <a href="products/enterprise_edition.html">Deckhouse EE</a> — запросите триальный ключ доступа, который действует в&nbsp;течение 30 дней. Об&nbsp;отличиях бесплатной и&nbsp;платной версий платформы читайте в&nbsp;разделе <a href="community/community_edition.html#ce-vs-ee">«Deckhouse Platform&nbsp;CE vs. EE»</a>.
         </p>
       </div>
     </div>
@@ -251,3 +253,20 @@ anchors_disabled: true
     </div>
   </div>
 </section>
+
+<script>
+  $(document).ready(function () {
+    $('#anchor').click(function(e) {
+      e.preventDefault();
+      const headerHeight = $('.header').outerHeight();
+
+      $("html, body").animate({
+        scrollTop: $($(this).attr("href")).offset().top - headerHeight + "px"
+      }, {
+        duration: 500,
+        easing: "swing"
+      });
+      return false;
+    })
+  });
+</script>
