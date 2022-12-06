@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"testing"
 
+	kcm "github.com/flant/addon-operator/pkg/kube_config_manager"
 	"github.com/flant/kube-client/client"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -54,7 +56,7 @@ func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
 		g.Expect(err).ShouldNot(HaveOccurred())
 		g.Expect(cfg).Should(BeNil())
 
-		cfg, err = loader.GetInitialKubeConfig(GeneratedConfigMapName)
+		cfg, err = loader.GetInitialKubeConfig(DeckhouseConfigMapName)
 		g.Expect(err).ShouldNot(HaveOccurred())
 		g.Expect(cfg).Should(BeNil())
 	})
@@ -81,21 +83,29 @@ data:
 
 		kubeCfg, err := loader.GetInitialKubeConfig(DeckhouseConfigMapName)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should load KubeConfig from cm")
-		g.Expect(kubeCfg).ShouldNot(BeNil(), "KubeConfig should not be nil")
 
-		g.Expect(kubeCfg.Global).ShouldNot(BeNil(), "should have global")
-		g.Expect(kubeCfg.Global.Values).ShouldNot(BeNil(), "should have global values")
+		g.Expect(kubeCfg.Global).Should(HaveField("Values", Not(BeNil())), "should have Global with Values")
 
-		ms, err := conversion.SettingsFromMap(kubeCfg.Global.Values)
-		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap global values")
-		g.Expect(ms.Get("global.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
-		g.Expect(ms.Get("global.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
+		g.Expect(kubeCfg.Global.Values).Should(MatchAllKeys(Keys{
+			"global": MatchAllKeys(Keys{
+				"paramGroup": MatchAllKeys(Keys{
+					"param1": Equal("value1"),
+				}),
+			}),
+		}))
 
-		g.Expect(kubeCfg.Modules).Should(HaveKey("module-one"), "should have module config")
-		ms, err = conversion.SettingsFromMap(kubeCfg.Modules["module-one"].Values)
-		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap 'module-one' values")
-		g.Expect(ms.Get("moduleOne.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
-		g.Expect(ms.Get("moduleOne.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
+		g.Expect(kubeCfg.Modules).Should(MatchAllKeys(Keys{
+			"module-one": PointTo(And(
+				HaveField("ModuleConfig.IsEnabled", BeNil()),
+				HaveField("ModuleConfig.Values", MatchAllKeys(Keys{
+					"moduleOne": MatchAllKeys(Keys{
+						"paramGroup": MatchAllKeys(Keys{
+							"param1": Equal("value1"),
+						}),
+					}),
+				})),
+			)),
+		}))
 	})
 
 	t.Run("ModuleConfigs", func(t *testing.T) {
@@ -180,31 +190,122 @@ spec:
 
 		kubeCfg, err := loader.GetInitialKubeConfig(GeneratedConfigMapName)
 		g.Expect(err).ShouldNot(HaveOccurred(), "should load KubeConfig from cm")
-		g.Expect(kubeCfg).ShouldNot(BeNil(), "KubeConfig should not be nil")
 
-		g.Expect(kubeCfg.Global).ShouldNot(BeNil(), "should have global")
-		g.Expect(kubeCfg.Global.Values).ShouldNot(BeNil(), "should have global values")
+		g.Expect(kubeCfg.Global).Should(HaveField("Values", Not(BeNil())), "should have Global with Values")
 
-		ms, err := conversion.SettingsFromMap(kubeCfg.Global.Values)
-		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap global values")
-		g.Expect(ms.Get("global.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
-		g.Expect(ms.Get("global.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
+		g.Expect(kubeCfg.Global.Values).Should(MatchAllKeys(Keys{
+			"global": MatchAllKeys(Keys{
+				"paramGroup": MatchAllKeys(Keys{
+					"param1": Equal("value1"),
+				}),
+			}),
+		}))
 
-		g.Expect(kubeCfg.Modules).Should(HaveKey("module-one"), "should have module config")
-		ms, err = conversion.SettingsFromMap(kubeCfg.Modules["module-one"].Values)
-		g.Expect(err).ShouldNot(HaveOccurred(), "should wrap 'module-one' values")
-		g.Expect(ms.Get("moduleOne.paramGroup.param1").Exists()).Should(BeTrue(), "should have param1, got %+v", ms.String())
-		g.Expect(ms.Get("moduleOne.paramGroup.obsoleteParam").Exists()).ShouldNot(BeTrue(), "should not have obsolete param, got %+v", ms.String())
-
-		g.Expect(kubeCfg.Modules).ShouldNot(HaveKey("module-two"), "should not have extra module config")
-
-		g.Expect(kubeCfg.Modules).Should(HaveKey("module-three"), "should have module config module-three")
-		g.Expect(kubeCfg.Modules["module-three"].Values).Should(HaveLen(0), "module-three should not have values")
-		g.Expect(kubeCfg.Modules["module-three"].IsEnabled).ShouldNot(BeNil(), "module-three should have enabled")
-		g.Expect(*kubeCfg.Modules["module-three"].IsEnabled).Should(BeFalse(), "module-three should have enabled from ModuleConfig")
-
-		g.Expect(kubeCfg.Modules).ShouldNot(HaveKey("module-four"), "should drop configs if no ModuleConfig present")
+		g.Expect(kubeCfg.Modules).Should(MatchAllKeys(Keys{
+			"module-one": PointTo(And(
+				HaveField("ModuleConfig.IsEnabled", BeNil()),
+				HaveField("ModuleConfig.Values", MatchAllKeys(Keys{
+					"moduleOne": MatchAllKeys(Keys{
+						"paramGroup": MatchAllKeys(Keys{
+							"param1": Equal("value1"),
+						}),
+					}),
+				})),
+			)),
+			"module-three": PointTo(And(
+				HaveField("ModuleConfig.IsEnabled", PointTo(BeFalse())),
+				HaveField("ModuleConfig.Values", HaveLen(0)),
+			)),
+		}))
 	})
+}
+
+func TestInitialConfigLegacyConfigMapToInitialConfig(t *testing.T) {
+	// Define some conversions with deletions.
+	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
+		return settings.DeleteAndClean("paramGroup.obsoleteParam")
+	})
+	conversion.RegisterFunc("module-one", 1, 2, func(settings *conversion.Settings) error {
+		return settings.DeleteAndClean("paramGroup.obsoleteParam")
+	})
+
+	tests := []struct {
+		name    string
+		data    string
+		matcher func(t *testing.T, cfg *kcm.KubeConfig)
+	}{
+		{
+			"global and one module enabled",
+			`
+global: |
+  param1: val1
+moduleOneEnabled: "false"
+`,
+			func(t *testing.T, cfg *kcm.KubeConfig) {
+				g := NewWithT(t)
+
+				g.Expect(cfg.Global).Should(HaveField("Values", Not(BeNil())), "should have Global with Values")
+
+				g.Expect(cfg.Global.Values).Should(MatchAllKeys(Keys{
+					"global": MatchAllKeys(Keys{
+						"param1": Equal("val1"),
+					}),
+				}))
+
+				g.Expect(cfg.Modules).Should(MatchAllKeys(Keys{
+					"module-one": PointTo(And(
+						HaveField("ModuleConfig.IsEnabled", PointTo(BeFalse())),
+						HaveField("ModuleConfig.Values", HaveLen(0)),
+					)),
+				}))
+			},
+		},
+		{
+			"global and module converted to empty",
+			`
+global: |
+  paramGroup:
+    obsoleteParam: someVal
+moduleOne: |
+  paramGroup:
+    obsoleteParam: someVal
+`,
+			func(t *testing.T, cfg *kcm.KubeConfig) {
+				g := NewWithT(t)
+
+				g.Expect(cfg.Global).Should(HaveField("Values", Not(BeNil())), "should have Global with Values")
+
+				g.Expect(cfg.Global.Values).Should(MatchAllKeys(Keys{
+					"global": HaveLen(0),
+				}))
+
+				g.Expect(cfg.Modules).Should(MatchAllKeys(Keys{
+					"module-one": PointTo(And(
+						HaveField("ModuleConfig.IsEnabled", BeNil()),
+						HaveField("ModuleConfig.Values", MatchAllKeys(Keys{
+							"moduleOne": HaveLen(0),
+						})),
+					)),
+				}))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			dataMap := make(map[string]string)
+			err := yaml.Unmarshal([]byte(tt.data), &dataMap)
+			g.Expect(err).ShouldNot(HaveOccurred(), "should load test data: %s", tt.data)
+
+			l := InitialConfigLoader{}
+			kubeCfg, err := l.LegacyConfigMapToInitialConfig(dataMap)
+			g.Expect(err).ShouldNot(HaveOccurred(), "should convert data: %s", tt.data)
+
+			tt.matcher(t, kubeCfg)
+		})
+	}
 }
 
 func createCm(kubeClient client.Client, manifest string) error {

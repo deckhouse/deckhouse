@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8syaml "sigs.k8s.io/yaml"
@@ -232,6 +233,13 @@ spec:
   version: 1
   settings:
     param1: val1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  enabled: false
 `
 
 			// Emulate migrated Deployment/deckhouse with absent ConfigMap.
@@ -251,18 +259,11 @@ spec:
 
 			gcm := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
 			Expect(gcm.Exists()).Should(BeTrue(), "should create ConfigMap from ModuleConfig")
-			data := gcm.Field("data").Map()
-			Expect(data).ShouldNot(HaveLen(0), "generated ConfigMap should have sections for known ModuleConfig objects")
-			for moduleName, vals := range data {
-				switch moduleName {
-				case "global":
-					Expect(vals.String()).Should(Equal("paramStr: val1\n"), "should update 'global' section")
-				case "deckhouse":
-					Expect(vals.String()).Should(Equal("paramStr: Debug\n"), "should update 'deckhouse' section")
-				default:
-					Expect(data).ShouldNot(HaveKey(moduleName), "ConfigMap should not have module sections for unknown modules, got '%s'", moduleName)
-				}
-			}
+			Expect(gcm.Field("data").Map()).Should(MatchAllKeys(Keys{
+				"global":             HaveField("String()", Equal("paramStr: val1\n")),
+				"deckhouse":          HaveField("String()", Equal("paramStr: Debug\n")),
+				"certManagerEnabled": HaveField("String()", Equal("false")),
+			}))
 		})
 	})
 
@@ -306,6 +307,14 @@ spec:
   version: 1
   settings:
     param1: val1
+---
+# disable cert-manager
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  enabled: false
 `
 
 			// Emulate migrated Deployment/deckhouse.
@@ -315,6 +324,8 @@ global: |
   param2: val4
 deckhouse: |
   logLevel: Info
+certManager: |
+  paramBool: true
 `)
 			f.KubeStateSet(existingConfigs + cm)
 
@@ -328,20 +339,12 @@ deckhouse: |
 			gcm := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
 			Expect(gcm.Exists()).Should(BeTrue(), "should not delete generated ConfigMap")
 
-			data := gcm.Field("data").Map()
-			Expect(data).ShouldNot(HaveLen(0), "generated ConfigMap should have sections for known ModuleConfig objects")
-			for moduleName, vals := range data {
-				switch moduleName {
-				case "global":
-					Expect(vals.String()).Should(Equal("paramStr: val1\n"))
-				case "deckhouse":
-					Expect(vals.String()).Should(Equal("paramStr: val1\n"))
-				case "prometheus":
-					Expect(vals.String()).Should(Equal("paramNum: 10\n"), "should create new module section for %s", moduleName)
-				default:
-					Expect(data).ShouldNot(HaveKey(moduleName), "ConfigMap should not have module sections for unknown modules")
-				}
-			}
+			Expect(gcm.Field("data").Map()).Should(MatchAllKeys(Keys{
+				"global":             HaveField("String()", Equal("paramStr: val1\n")),
+				"deckhouse":          HaveField("String()", Equal("paramStr: val1\n")),
+				"prometheus":         HaveField("String()", Equal("paramNum: 10\n")),
+				"certManagerEnabled": HaveField("String()", Equal("false")),
+			}))
 		})
 	})
 

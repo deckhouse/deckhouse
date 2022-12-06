@@ -20,17 +20,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/flant/addon-operator/pkg/values/validation"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
-func TestValidatorValidateCR(t *testing.T) {
-	const expectValid = true
-	const expectInvalid = false
+const (
+	expectValid   = true
+	expectInvalid = false
+)
 
+func TestValidatorValidateCR(t *testing.T) {
 	// Latest version is 2.
 	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
 		return nil
@@ -171,6 +175,84 @@ spec:
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 			res := v.validateCR(cfg)
+
+			switch tt.expect {
+			case expectValid:
+				g.Expect(res.HasError()).Should(BeFalse(), "should be valid, got error: %s", res.Error)
+			case expectInvalid:
+				g.Expect(res.HasError()).Should(BeTrue(), "should be invalid, got no error")
+			}
+		})
+	}
+}
+
+func TestValidatorValidate(t *testing.T) {
+	// Latest version is 2.
+	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
+		return nil
+	})
+
+	tests := []struct {
+		name     string
+		manifest string
+		expect   bool
+	}{
+		{"settings-and-version-1",
+			`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1
+  settings:
+    paramStr: val1
+`,
+			expectValid,
+		},
+		{"no-conversions",
+			`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: module-one
+spec:
+  enabled: false
+`,
+			expectValid,
+		},
+
+		// Invalid cases
+		{
+			"forbidden with oneOf",
+			`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 2
+  settings:
+    tcpEnabled: false
+    udpEnabled: false
+`,
+			expectInvalid,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			vv := validation.NewValuesValidator()
+			err := mock.AddOpenAPISchemas(vv, "global", "testdata/validator/global")
+			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
+
+			v := NewConfigValidator(vv)
+			cfg, err := modCfgFromYAML(tt.manifest)
+			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
+
+			res := v.Validate(cfg)
 
 			switch tt.expect {
 			case expectValid:

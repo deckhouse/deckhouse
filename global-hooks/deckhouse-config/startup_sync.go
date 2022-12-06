@@ -19,6 +19,8 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -221,6 +223,9 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		// Note: this message appears only on startup.
+		// TODO(future) switch to Debug after 1.42 release.
+		input.LogEntry.Infof("ModuleConfig/%s is valid", cfg.GetName())
 		properCfgs = append(properCfgs, cfg)
 	}
 
@@ -228,20 +233,24 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 	if err != nil {
 		return err
 	}
-	cm := d8config.GeneratedConfigMap(cmData)
-	input.LogEntry.Infof("Re-create Config/%s on sync", cm.Name)
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	regeneratedCM := d8config.GeneratedConfigMap(cmData)
+	input.LogEntry.Infof("Re-creating Config/%s on sync", regeneratedCM.Name)
+	input.PatchCollector.Create(regeneratedCM, object_patch.UpdateIfExists())
 
+	// Return if source cm was empty.
 	if generatedCM == nil || len(generatedCM.Data) == 0 {
 		return nil
 	}
 
-	// Log deleted sections.
+	// Log deleted sections in source CM.
+	fields := make([]string, 0)
 	for name := range generatedCM.Data {
 		if _, has := cmData[name]; !has {
-			input.LogEntry.Warnf("ModuleConfig/%s was deleted. Section '%s' will be deleted from cm/%s.", name, name, cm.Name)
+			fields = append(fields, name)
 		}
 	}
+	sort.Strings(fields)
+	input.LogEntry.Warnf("Remove fields [%s] from cm/%s", strings.Join(fields, ", "), regeneratedCM.Name)
 
 	return nil
 }

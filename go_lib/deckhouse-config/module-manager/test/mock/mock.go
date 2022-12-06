@@ -85,28 +85,11 @@ func (m *ModuleManagerMock) GetValuesValidator() *validation.ValuesValidator {
 	return m.valuesValidator
 }
 
-func (m *ModuleManagerMock) InitModuleValuesValidator(modName string, modPath string) error {
-	m.valuesValidator = validation.NewValuesValidator()
-
-	module := m.GetModule(modName)
-	if modPath == "" {
-		modPath = module.Path
+func (m *ModuleManagerMock) AddOpenAPISchemas(modName string, modPath string) error {
+	if m.valuesValidator == nil {
+		m.valuesValidator = validation.NewValuesValidator()
 	}
-	openAPIPath := filepath.Join(modPath, "openapi")
-	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(openAPIPath)
-	if err != nil {
-		return fmt.Errorf("module '%s' read openAPI schemas: %v", modName, err)
-	}
-
-	err = m.valuesValidator.SchemaStorage.AddModuleValuesSchemas(
-		module.ValuesKey(),
-		configBytes,
-		valuesBytes,
-	)
-	if err != nil {
-		return fmt.Errorf("add module '%s' schemas: %v", module.Name, err)
-	}
-	return nil
+	return AddOpenAPISchemas(m.valuesValidator, modName, modPath)
 }
 
 type ModuleMock struct {
@@ -128,4 +111,28 @@ func NewModule(name string, enabledByBundle *bool, enabledByScript *bool) Module
 		},
 		enabled: enabledByScript,
 	}
+}
+
+func AddOpenAPISchemas(v *validation.ValuesValidator, modName string, modPath string) error {
+	openAPIPath := filepath.Join(modPath, "openapi")
+	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(openAPIPath)
+	if err != nil {
+		return fmt.Errorf("read openAPI schemas for '%s': %v", modName, err)
+	}
+
+	valuesKey := utils.ModuleNameToValuesKey(modName)
+	if modName == "global" {
+		err = v.SchemaStorage.AddGlobalValuesSchemas(configBytes, valuesBytes)
+	} else {
+		err = v.SchemaStorage.AddModuleValuesSchemas(
+			valuesKey,
+			configBytes,
+			valuesBytes,
+		)
+	}
+
+	if err != nil {
+		return fmt.Errorf("add module '%s' schemas: %v", modName, err)
+	}
+	return nil
 }
