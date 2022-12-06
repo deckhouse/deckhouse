@@ -1,4 +1,6 @@
-{{  range $repo := .Values.delivery.internal.argocd.repositories }}
+{{- $context := . -}}
+{{- range $repo := .Values.delivery.internal.argocd.repositories -}}
+{{- with $context -}}
 ---
 apiVersion: v1
 kind: Secret
