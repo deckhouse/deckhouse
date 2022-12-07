@@ -29,21 +29,25 @@ function __config__() {
       kind: GrafanaDashboardDefinition
       includeSnapshotsFrom:
       - dashboard_resources
-      jqFilter: '{"name": .spec.definition, "folder": .spec.folder, "definition": .spec.definition}'
+      jqFilter: '{"name": .metadata.name, "folder": .spec.folder, "definition": .spec.definition}'
 EOF
 }
 
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
+  dashboard_uid=""
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
     title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
     if [[ "x${title}" == "x" ]]; then
-      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name | try(fromjson | .uid)' <<<${dashboard})"
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
+
       continue
     fi
+
+    dashboard_uid=$(jq --arg dbUid $malformed_dashboards '.definition | try(fromjson | .uid=$dbUid)')
 
     title=$(slugify <<<${title})
 
