@@ -65,7 +65,7 @@ resource "yandex_vpc_route_table" "kube" {
   dynamic "static_route" {
     for_each = local.is_standard || local.is_with_nat_instance ? local.next_hop_address : []
     content {
-      destination_prefix = local.is_with_nat_instance ? "0.0.0.0/0" : null
+      destination_prefix = "0.0.0.0/0"
       next_hop_address   = static_route.value
       gateway_id         = local.is_standard ? yandex_vpc_gateway.kube[0].id : null
     }
