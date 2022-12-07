@@ -5,55 +5,32 @@ properties:
 
       * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
       * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
-      * Если указать `false` — будет форсироваться использование emptyDir'а.
-  auth:
-    description: |
-      Доступ к web-интерфейсу
-    properties:
-      webui:
-        description: |
-          Настройки доступа к web-интерфейсу.
-        properties:
-          externalAuthentication:
-            description: |
-              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
-
-              > Если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/), параметры externalAuthentication настраиваются автоматически.
-            properties:
-              authURL:
-                description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-              authSignInURL:
-                description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
-          password:
-            description: |
-              Пароль для HTTP-авторизации для пользователя admin (генерируется автоматически, но можно менять).
-
-              Используется, если не включен параметр `externalAuthentication`.
+      * Если указать `false` — будет форсироваться использование emptyDir'а.        Используется, если не включен параметр `externalAuthentication`.
   https:
     description: |
-      Тип сертификата используемого для веб-приложений webui и status.
+      Тип сертификата используемого для веб-приложения Argo CD.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `Disabled` — webui/status будут работать только по HTTP.
-          - `CertManager` — webui/status будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — webui/status будут работать по https используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `Disabled` — веб-интерфейс Argo CD будет работать только по HTTP.
+          - `CertManager` — веб-интерфейс Argo CD будет работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — веб-интерфейс Argo CD будет работать по https используя сертификат из namespace `d8-system`.
+          - `OnlyInURI` — веб-интерфейс Argo CD будет работать по HTTP (подразумевая, что перед ним стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
       certManager:
         properties:
           clusterIssuerName:
             description: |
-              ClusterIssuer, используемый для webui/status.
+              ClusterIssuer, используемый для Argo CD.
 
               Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
       customCertificate:
         properties:
           secretName:
             description: |
-              Имя secret'а в namespace `d8-system`, который будет использоваться для webui/status.
+              Имя secret'а в namespace `d8-system`, который будет использоваться для Argo CD.
 
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
