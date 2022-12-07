@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller")) | nindent 2 }}
-  name: argocd-application-controller
+  name: d8:delivery:argocd:application-controller
 rules:
   - apiGroups:
       - '*'
@@ -19,11 +19,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller")) | nindent 2 }}
-  name: argocd-application-controller
+  name: d8:delivery:argocd:application-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: argocd-application-controller
+  name: d8:delivery:argocd:application-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-application-controller
@@ -33,7 +33,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller")) | nindent 2 }}
-  name: argocd-application-controller
+  name: argocd:application-controller
   namespace: d8-{{ .Chart.Name }}
 rules:
   - apiGroups:
@@ -70,12 +70,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app.kubernetes.io/component" "application-controller" "app.kubernetes.io/name" "argocd-application-controller" "app.kubernetes.io/part-of" "argocd" "app" "argocd-application-controller")) | nindent 2 }}
-  name: argocd-application-controller
+  name: argocd:application-controller
   namespace: d8-{{ .Chart.Name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: argocd-application-controller
+  name: argocd:application-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-application-controller

@@ -83,10 +83,26 @@ xargs -n 1 -- yq -i '.metadata.namespace="d8-{{ .Chart.Name }}"' <<<$(egrep --fi
 #   - not using `yq` to avoid coupling with manifests paths, we don't know where we can meet the
 #     namespace.
 xargs -n 1 -- perl -pi -e 's/namespace: argocd/namespace: d8-{{ .Chart.Name }}/' <<<$(egrep --files-with-matches '^\s+namespace: argocd$' argocd-*.yaml)
-
+# Add revisionHistoryLimit to Deployments
 xargs -n 1 -- yq -i '.spec.revisionHistoryLimit=2' <<<$(egrep --files-with-match '^kind: Deployment' argocd-*.yaml)
+
+# Add missing dummy labels
 xargs -n 1 -- yq -i 'select(.metadata.labels == null) | .metadata.labels.dummy="true"' <<<$(egrep --files-without-match '^  labels:' argocd-*.yaml)
-# (.spec.chart | select(.name == "my-chart") | .version)
+
+# Rename RBAC resources
+## Cluster-wide resources
+xargs -n 1 -- yq e -i '.metadata.name = "d8:delivery:argocd:" + (.metadata.name | sub("argocd-", ""))' <<<$(ls argocd-*-clusterrole.yaml)
+xargs -n 1 -- yq e -i '.metadata.name = "d8:delivery:argocd:" + (.metadata.name | sub("argocd-", ""))' <<<$(ls argocd-*-clusterrolebinding.yaml)
+xargs -n 1 -- yq e -i 'select(.roleRef.kind=="ClusterRole") | .roleRef.name = ("d8:delivery:argocd:" + (.roleRef.name | sub("argocd-", "")))' <<<$(ls argocd-*-clusterrolebinding.yaml)
+
+## Namespaced resources
+xargs -n 1 -- yq e -i '.metadata.name = "argocd:" + (.metadata.name | sub("argocd-", ""))' <<<$(ls argocd-*-role.yaml)
+xargs -n 1 -- yq e -i '.metadata.name = "argocd:" + (.metadata.name | sub("argocd-", ""))' <<<$(ls argocd-*-rolebinding.yaml)
+xargs -n 1 -- yq e -i 'select(.roleRef.kind=="Role") | .roleRef.name = ("argocd:" + (.roleRef.name | sub("argocd-", "")))' <<<$(ls argocd-*-rolebinding.yaml)
+
+# No such cases, but just in case, there is a bug:
+# xargs -n 1 -- yq e -i 'select(.roleRef.kind=="ClusterRole") | .roleRef.name = ("d8:delivery:argocd:" + (.roleRef.name | sub("argocd-", "")))' <<<$(ls argocd-*-rolebinding.yaml)
+
 # Sort manifests
 COMPONENT_ROOT=${ARGOCD_MANIFESTS_ROOT}/application-controller
 mkdir -p $COMPONENT_ROOT
