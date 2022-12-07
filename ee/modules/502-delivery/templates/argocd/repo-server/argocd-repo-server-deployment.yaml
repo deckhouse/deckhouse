@@ -75,6 +75,23 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       automountServiceAccountToken: false
       containers:
+        - image:  {{ include "helm_lib_module_image" (list . "werfArgocdCmpSidecar") }}
+          imagePullPolicy: IfNotPresent
+          name: werf-argocd-cmp-sidecar
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "resources_werf-argocd-cmp-sidecar" . | nindent 14 }}
+{{- end }}
+          volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /tmp
+            name: tmp
         - command:
             - sh
             - -c
