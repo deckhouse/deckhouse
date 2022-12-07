@@ -11,7 +11,7 @@ index 8c66cbf2a2f..850fa2ff69d 100644
  		controllerContext.RESTMapper,
  		scaleClient,
 diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption/disruption.go
-index 581992fc100..f5f62b05240 100644
+index 581992fc100..a470c1dd95a 100644
 --- a/pkg/controller/disruption/disruption.go
 +++ b/pkg/controller/disruption/disruption.go
 @@ -104,6 +104,9 @@ type DisruptionController struct {
@@ -32,7 +32,23 @@ index 581992fc100..f5f62b05240 100644
  	kubeClient clientset.Interface,
  	restMapper apimeta.RESTMapper,
  	scaleNamespacer scaleclient.ScalesGetter,
-@@ -217,6 +221,9 @@ func NewDisruptionControllerInternal(
+@@ -150,6 +154,7 @@ func NewDisruptionController(
+ 		rsInformer,
+ 		dInformer,
+ 		ssInformer,
++		dsInformer,
+ 		kubeClient,
+ 		restMapper,
+ 		scaleNamespacer,
+@@ -168,6 +173,7 @@ func NewDisruptionControllerInternal(
+ 	rsInformer appsv1informers.ReplicaSetInformer,
+ 	dInformer appsv1informers.DeploymentInformer,
+ 	ssInformer appsv1informers.StatefulSetInformer,
++	dsInformer appsv1informers.DaemonSetInformer,
+ 	kubeClient clientset.Interface,
+ 	restMapper apimeta.RESTMapper,
+ 	scaleNamespacer scaleclient.ScalesGetter,
+@@ -217,6 +223,9 @@ func NewDisruptionControllerInternal(
  	dc.ssLister = ssInformer.Lister()
  	dc.ssListerSynced = ssInformer.Informer().HasSynced
  
@@ -42,7 +58,7 @@ index 581992fc100..f5f62b05240 100644
  	dc.mapper = restMapper
  	dc.scaleNamespacer = scaleNamespacer
  	dc.discoveryClient = discoveryClient
-@@ -232,7 +239,7 @@ func NewDisruptionControllerInternal(
+@@ -232,7 +241,7 @@ func NewDisruptionControllerInternal(
  // resources directly and only fall back to the scale subresource when needed.
  func (dc *DisruptionController) finders() []podControllerFinder {
  	return []podControllerFinder{dc.getPodReplicationController, dc.getPodDeployment, dc.getPodReplicaSet,
@@ -51,7 +67,7 @@ index 581992fc100..f5f62b05240 100644
  }
  
  var (
-@@ -240,6 +247,7 @@ var (
+@@ -240,6 +249,7 @@ var (
  	controllerKindSS  = apps.SchemeGroupVersion.WithKind("StatefulSet")
  	controllerKindRC  = v1.SchemeGroupVersion.WithKind("ReplicationController")
  	controllerKindDep = v1beta1.SchemeGroupVersion.WithKind("Deployment")
@@ -59,7 +75,7 @@ index 581992fc100..f5f62b05240 100644
  )
  
  // getPodReplicaSet finds a replicaset which has no matching deployments.
-@@ -264,6 +272,24 @@ func (dc *DisruptionController) getPodReplicaSet(ctx context.Context, controller
+@@ -264,6 +274,24 @@ func (dc *DisruptionController) getPodReplicaSet(ctx context.Context, controller
  	return &controllerAndScale{rs.UID, *(rs.Spec.Replicas)}, nil
  }
  
@@ -84,7 +100,7 @@ index 581992fc100..f5f62b05240 100644
  // getPodStatefulSet returns the statefulset referenced by the provided controllerRef.
  func (dc *DisruptionController) getPodStatefulSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
  	ok, err := verifyGroupKind(controllerRef, controllerKindSS.Kind, []string{"apps"})
-@@ -432,7 +458,7 @@ func (dc *DisruptionController) Run(ctx context.Context) {
+@@ -432,7 +460,7 @@ func (dc *DisruptionController) Run(ctx context.Context) {
  	klog.Infof("Starting disruption controller")
  	defer klog.Infof("Shutting down disruption controller")
  
