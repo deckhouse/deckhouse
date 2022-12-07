@@ -159,7 +159,6 @@ func mapWerfSources(werfSources []werfSource, credsBySecret map[string]dockerFil
 func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry {
 	var registries []imageUpdaterRegistry
 	for _, ws := range werfSources {
-
 		url := ws.APIURL
 		if url == "" {
 			url = "https://" + firstSegment(ws.Repo)
