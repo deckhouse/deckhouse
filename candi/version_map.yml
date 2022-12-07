@@ -230,7 +230,7 @@ k8s:
       yandex: dff9cb0e03addb4fb17c1f18b12a8e49d6ccdc09 # change to v0.25.0
       aws: v1.25.1
       vsphere: v1.25.0
-      azure: v1.25.5
+      azure: v1.25.4
       gcp: ccm/v25.3.0
     csi:
       openstack: v1.25.3
