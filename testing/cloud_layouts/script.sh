@@ -324,10 +324,12 @@ function run-test() {
     bootstrap || return $?
   fi
 
+  wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
 }
@@ -481,8 +483,12 @@ ENDSSH
   fi
 
   # TODO remove after full migration to ModuleConfig (after 1.42).
-  # Get logs during switching to catch logs on restart.
-  #for i in $(seq 1 1000) ; do kubectl -n d8-system logs deploy/deckhouse > $(printf "%02d" $i).log ; sleep 0.2; done
+  # Catch deckhouse logs between restarts during switching and migration to ModuleConfig.
+  capture_logs_during_switching &
+}
+
+function capture_logs_during_switching() {
+  # Use for-loop to catch logs between restarts.
   >&2 echo "Fetch Deckhouse logs during release switch ..."
   catchLogsScript=$(cat <<'END_SCRIPT'
   for i in $(seq 1 1000) ; do
@@ -496,8 +502,11 @@ ENDSSH
   done
 END_SCRIPT
 )
-  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log" &
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log"
+}
 
+# wait_deckhouse_ready check if deckhouse Pod become ready.
+function wait_deckhouse_ready() {
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
@@ -509,19 +518,19 @@ END_SCRIPT
 
   testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
-    >&2 echo "Check Deckhouse pod readiness."
+    >&2 echo "Check Deckhouse Pod readiness..."
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Check Deckhouse pod readiness via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      return 0
+    fi
+
+    if [[ $i < $testRunAttempts ]]; then
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
       sleep 30
+    else
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
     fi
   done
-  if [[ $test_failed == "true" ]] ; then
-    return 1
-  fi
+  return 1
 }
 
 # wait_cluster_ready constantly checks if cluster components become ready.
