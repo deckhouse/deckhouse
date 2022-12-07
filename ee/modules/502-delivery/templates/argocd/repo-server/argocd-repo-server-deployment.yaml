@@ -255,6 +255,9 @@ spec:
           volumeMounts:
             - mountPath: /var/run/argocd
               name: var-files
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 12 }}
       serviceAccountName: argocd-repo-server
       volumes:
         - configMap:
