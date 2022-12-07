@@ -232,9 +232,9 @@ spec:
             - containerPort: 8084
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "resources_argocd-repo-server" . | nindent 14 }}
+              {{- include "resources_argocd-repo-server" . | nindent 14 }}
 {{- end }}
           readinessProbe:
             httpGet:
@@ -274,7 +274,7 @@ spec:
               name: var-files
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 12 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
       serviceAccountName: argocd-repo-server
       volumes:
         - configMap:
