@@ -37,7 +37,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.certificate", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
 	})
 

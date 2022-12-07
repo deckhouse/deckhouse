@@ -111,10 +111,16 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		// nothing was configured by hand
 		if issuerURL, ok := authNData["oidcIssuerURL"]; ok {
 			input.Values.Set(userAuthnOIDCIssuerURLPath, issuerURL)
-			input.Values.Set(userAuthnOIDCIssuerCAPath, input.Values.Get("global.discovery.kubernetesCA").String())
+
 			if address, ok := authNData["oidcIssuerAddress"]; ok {
 				input.Values.Set(userAuthnOIDCIssuerAddressPath, address)
 			}
+
+			ca, ok := authNData["oidcCA"]
+			if !ok {
+				ca = input.Values.Get("global.discovery.kubernetesCA").String()
+			}
+			input.Values.Set(userAuthnOIDCIssuerCAPath, ca)
 		} else {
 			input.Values.Remove(userAuthnOIDCIssuerURLPath)
 			input.Values.Remove(userAuthnOIDCIssuerCAPath)

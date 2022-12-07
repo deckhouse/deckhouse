@@ -22,27 +22,20 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-var _ = tls_certificate.RegisterOrderCertificateHook(
-	[]tls_certificate.OrderCertificateRequest{
-		{
-			Namespace:  "d8-user-authn",
-			SecretName: "dex-tls",
-			CommonName: "system:node:dex.d8-user-authn",
-			SANs: []string{
-				"dex.d8-user-authn",
-				"dex.d8-user-authn.svc",
-				tls_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
-				tls_certificate.PublicDomainSAN("dex"),
-			},
-			Usages: []certificatesv1.KeyUsage{
-				certificatesv1.UsageDigitalSignature,
-				certificatesv1.UsageKeyEncipherment,
-				certificatesv1.UsageServerAuth,
-			},
-			Groups:     []string{"system:nodes"},
-			SignerName: certificatesv1.KubeletServingSignerName,
-			ValueName:  "internal.dexTLS",
-			ModuleName: "userAuthn",
-		},
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	SANs: tls_certificate.DefaultSANs([]string{
+		"dex.d8-user-authn",
+		"dex.d8-user-authn.svc",
+		tls_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
+		tls_certificate.PublicDomainSAN("dex"),
+	}),
+	CN: "dex.d8-user-authn",
+	Usages: []certificatesv1.KeyUsage{
+		certificatesv1.UsageDigitalSignature,
+		certificatesv1.UsageKeyEncipherment,
+		certificatesv1.UsageServerAuth,
 	},
-)
+	Namespace:            "d8-user-authn",
+	TLSSecretName:        "dex-tls",
+	FullValuesPathPrefix: "userAuthn.internal.dexTLS",
+})

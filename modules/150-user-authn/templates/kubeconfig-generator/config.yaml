@@ -18,8 +18,10 @@ listen: "http://0.0.0.0:5555"
 logo_uri: "https://kubernetes.io/images/favicon.png"
 web_path_prefix: /
 debug: false
-# Always add Kubernetes CA to validate the Dex internal cetificate
-trusted_root_ca: | {{- .Values.global.discovery.kubernetesCA | nindent 2 }}
+# Always add CA to validate the Dex internal cetificate
+  {{- with .Values.userAuthn.internal.dexTLS.ca }}
+trusted_root_ca: | {{- . | nindent 2 }}
+  {{- end }}
 # Optionally add discovered Dex CA to validate the Dex external cetificate (for kubeconfigs)
   {{- with .Values.userAuthn.internal.discoveredDexCA }}
 idp_ca_pem: | {{- . | nindent 2 }}
