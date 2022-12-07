@@ -95,6 +95,7 @@
         and are able to run not only control-plane Pods. Please, add:
         ```yaml
           nodeTemplate:
+            taints:
             - effect: NoSchedule
               key: node-role.kubernetes.io/control-plane
         ```
