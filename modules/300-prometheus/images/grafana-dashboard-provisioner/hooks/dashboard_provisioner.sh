@@ -29,7 +29,7 @@ function __config__() {
       kind: GrafanaDashboardDefinition
       includeSnapshotsFrom:
       - dashboard_resources
-      jqFilter: '{"name": .spec.definition | try(fromjson | .uid), "folder": .spec.folder, "definition": .spec.definition}'
+      jqFilter: '{"name": .spec.definition, "folder": .spec.folder, "definition": .spec.definition}'
 EOF
 }
 
@@ -41,7 +41,7 @@ function __main__() {
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
     title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
     if [[ "x${title}" == "x" ]]; then
-      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name | try(fromjson | .uid)' <<<${dashboard})"
       continue
     fi
 
