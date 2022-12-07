@@ -1,5 +1,5 @@
 diff --git a/pkg/openstack/instances.go b/pkg/openstack/instances.go
-index b52d6f58..5a500983 100644
+index b52d6f58..a78e9305 100644
 --- a/pkg/openstack/instances.go
 +++ b/pkg/openstack/instances.go
 @@ -19,6 +19,7 @@ package openstack
@@ -33,7 +33,7 @@ index b52d6f58..5a500983 100644
  // See cloudprovider.GetInstanceProviderID and Instances.InstanceID.
  func instanceIDFromProviderID(providerID string) (instanceID string, region string, err error) {
 +	if providerID == "static://" {
-+		return "", errStaticNode
++		return "", "", errStaticNode
 +	}
  
  	// https://github.com/kubernetes/kubernetes/issues/85731
