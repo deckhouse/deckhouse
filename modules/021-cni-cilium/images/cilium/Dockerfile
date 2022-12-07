@@ -3,14 +3,15 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-ARG GOLANG_IMAGE=docker.io/library/golang:1.17.9@sha256:c1bf2101f7e1e0b08ce8f792735a81cd71b9d81cbcdceef2382140694f1ffbaf
-ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:cf31af331f38d1d7158470e095b132acd126a7180a54f263d386da88eb681d93
+# https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
+ARG GOLANG_IMAGE=docker.io/library/golang:1.18.8@sha256:ceb7ae25be83b903ef598401bbbef64742fce5177df32a81bfefd4a7f0be6178
+ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3322
 
-ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:0147a23fdada32bd51b4f313c645bcb5fbe188d6@sha256:24fd3ad32471d0e45844c856c38f1b2d4ac8bd0a2d4edf64cffaaa3fd0b21202
-ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:7a5420acb4a0fa276a549eb4674515eadb2821d7@sha256:3e204885a1b9ec2a5b593584608664721ef0bd221d3920c091c2e77eb259090c
-ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:824df0c341c724f4b12cc48762f80aa3d698b589@sha256:0af5e059b2a43c6383a3daa293182b50cb88f7761f543dacf43c1c3f8f79030c
+ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
+ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:78448c1a37ff2b790d5e25c3d8b8ec3e96e6405f@sha256:99a9453a921a8de99899ef82e0822f0c03f65d97005c064e231c06247ad8597d
+ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:3570d58349efb2d6b0342369a836998c93afd291@sha256:1abcd7a5d2117190ab2690a163ee9cd135bc9e4cf8a4df662a8f993044c79342
 
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:a5ba9ba04c230e4fe86c1eac885de7a911e9ce74@sha256:cb302f02973c69231c3a8837c950ac3ed1c1a1216404d46b9b786e033fed4351
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:f3ff491f1fb923136b8b5276fafd9d2ee460a265@sha256:764cc4a2ee14cdf57be3d4dbce132baa0fd7e62379ef6f6c05f3db4a7ccd64ba
 ARG CILIUM_RUNTIME_IMAGE=cilium-runtime
 
 FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
@@ -61,32 +62,33 @@ COPY --from=rootfs / /
 
 # cilium-envoy from github.com/cilium/proxy
 #
-FROM quay.io/cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256:943f1f522bdfcb1ca3fe951bd8186c41b970afa254096513ae6e0e0efda1a10d as cilium-envoy
+# https://github.com/cilium/cilium/blob/v1.12.4/images/cilium/Dockerfile#L11
+FROM quay.io/cilium/cilium-envoy:48cbb2f88edca93ba80d1135dbb067a827b8adc2@sha256:2c21f4a37bf6d46da88758a6194c0e63ab26c80a91c41d679247a921c46d42d3 as cilium-envoy
 
 #
 # Hubble CLI
 #
 FROM ${CILIUM_BUILDER_IMAGE} as hubble
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.5.tar.gz | tar xvz -C /tmp/cilium-repo
-RUN bash /tmp/cilium-repo/cilium-1.11.5/images/cilium/download-hubble.sh
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.4.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN bash /tmp/cilium-repo/cilium-1.12.4/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
 FROM ${CILIUM_BUILDER_IMAGE} as builder
 
 RUN apt-get update && apt-get install patch -y
 
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.5.tar.gz | tar xvz -C /tmp/cilium-repo
-WORKDIR /tmp/cilium-repo/cilium-1.11.5
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.4.tar.gz | tar xvz -C /tmp/cilium-repo
+WORKDIR /tmp/cilium-repo/cilium-1.12.4
 
-COPY patches/001-netfilter-compatibility-mode.patch /
-COPY patches/002-skip-host-ip-gc.patch /
-COPY patches/003-fix-bwmap-delete-errors.patch /
-COPY patches/004-health-check-terminating.patch /
-
-RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
-    patch -p1 < /002-skip-host-ip-gc.patch && \
-    patch -p1 < /003-fix-bwmap-delete-errors.patch && \
-    patch -p1 < /004-health-check-terminating.patch
+#COPY patches/001-netfilter-compatibility-mode.patch /
+#COPY patches/002-skip-host-ip-gc.patch /
+#COPY patches/003-fix-bwmap-delete-errors.patch /
+#COPY patches/004-health-check-terminating.patch /
+#
+#RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
+#    patch -p1 < /002-skip-host-ip-gc.patch && \
+#    patch -p1 < /003-fix-bwmap-delete-errors.patch && \
+#    patch -p1 < /004-health-check-terminating.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
