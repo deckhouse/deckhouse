@@ -29,7 +29,7 @@ function __config__() {
       kind: GrafanaDashboardDefinition
       includeSnapshotsFrom:
       - dashboard_resources
-      jqFilter: '{"name": .metadata.name, "folder": .spec.folder, "definition": .spec.definition}'
+      jqFilter: '{"name": .spec.definition | try(fromjson | .uid), "folder": .spec.folder, "definition": .spec.definition}'
 EOF
 }
 
