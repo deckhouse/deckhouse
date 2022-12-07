@@ -20,7 +20,7 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: argocd-redis
+    - containerName: redis
       minAllowed:
         {{- include "resources_argocd-redis" . | nindent 8 }}
       maxAllowed:
