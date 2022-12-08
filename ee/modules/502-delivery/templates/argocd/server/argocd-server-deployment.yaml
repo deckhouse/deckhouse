@@ -65,6 +65,9 @@ spec:
       containers:
         - command:
             - argocd-server
+          {{- if not (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+            - --insecure
+          {{- end }}
           env:
             {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
             - name: ARGOCD_SERVER_INSECURE
