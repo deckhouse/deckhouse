@@ -9,8 +9,8 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "ArgoCD"
     web.deckhouse.io/export-icon: "/public/img/argocd.svg"
-    nginx.ingress.kubernetes.io/backend-protocol: {{ include "helm_lib_module_uri_scheme" . | upper }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     # Suggestions from ArgoCD
     # https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ssl-passthrough-with-cert-manager-and-lets-encrypt
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
