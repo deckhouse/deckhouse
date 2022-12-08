@@ -265,6 +265,6 @@ func serializePolicy(policy *audit.Policy) (string, error) {
 		return "", fmt.Errorf("invalid final Policy format: %s", err)
 	}
 
-	data := strings.Replace(buf.String(), "metadata:\n  creationTimestamp: null\n", "", 1)
+	data := strings.Replace(buf.String(), "metadata:\n  annotations: null\n  creationTimestamp: null\n  labels: null\n", "", 1)
 	return base64.StdEncoding.EncodeToString([]byte(data)), nil
 }
