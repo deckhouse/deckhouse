@@ -166,13 +166,19 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	deckhouseUpdater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
 
+	labels := map[string]string{}
+	releaseChannelNameRaw, exists := input.Values.GetOk("deckhouse.releaseChannel")
+	if exists {
+		labels = map[string]string{"releaseChannel": releaseChannelNameRaw.String()}
+	}
+
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
-		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+		input.MetricsCollector.Set("d8_is_updating", 1, labels, metrics.WithGroup(metricUpdatingGroup))
 	}
 
 	// fetch releases from snapshot and patch initial statuses
