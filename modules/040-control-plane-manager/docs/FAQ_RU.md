@@ -409,7 +409,7 @@ docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
 registry.deckhouse.io/deckhouse/<edition>/install:<version> bash
 ```
 
-3. Меняем образ ОС для masterNodeGroup
+3. Меняем образ ОС для masterNodeGroup.
 
 ```bash
 dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
@@ -475,7 +475,7 @@ dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
 --ssh-host <master-node-name-2>
 ```
 
-9. В логах bashible.service на вновь созданной ноде `<master-node-name-x>` должно быть сообщение “nothing to do”.
+9. В логах `bashible.service` на вновь созданной ноде `<master-node-name-x>` должно быть сообщение “nothing to do”.
 
 ```bash
 journalctl -fu bashible.service
