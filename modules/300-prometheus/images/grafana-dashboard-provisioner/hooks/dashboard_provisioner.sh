@@ -36,7 +36,6 @@ EOF
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
-  dashboard_uid=""
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
@@ -47,9 +46,9 @@ function __main__() {
       continue
     fi
 
-    dashboard_uid=$(jq --arg dbUid $malformed_dashboards '.definition | try(fromjson | .uid=$dbUid)')
-
     title=$(slugify <<<${title})
+
+    dashboardUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}')
 
     folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
@@ -61,7 +60,7 @@ function __main__() {
     fi
 
     mkdir -p "${tmpDir}/${folder}"
-    jq -rc '.definition' <<<${dashboard} > "${tmpDir}/${file}"
+    echo "${dashboard}" | jq -rc '.definition' | jq --arg newUid ${dashboardUid} '.uid=$newUid' > "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
