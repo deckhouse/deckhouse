@@ -309,3 +309,187 @@ done
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+## Как из multi-master кластера сделать single-master кластер
+
+1. Выясняем используемую версию и редакцию deckhouse.
+
+```bash
+kubectl -n d8-system get deployment deckhouse \                                                                                                       
+-o jsonpath='Version: {.metadata.annotations.core\.deckhouse\.io\/version}, Edition: {.metadata.annotations.core\.deckhouse\.io\/edition}' \  
+| tr '[:upper:]' '[:lower:]'
+```
+
+2. Запускаем контейнер c dhctl.
+
+```bash
+docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
+registry.deckhouse.io/deckhouse/<edition>/install:<version> bash
+```
+
+3. Изменяем число реплик для masterNodeGroup.
+
+```bash
+dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+--ssh-host <master-node-name-0>
+```
+
+```yaml
+masterNodeGroup:
+  instanceClass:
+    replicas: 1
+```
+
+4. Снимаем лейблы с нод `<master-node-name-1>`, `<master-node-name-2>`.
+
+```bash
+kubectl label node <master-node-name-1> <master-node-name-2> \
+node-role.kubernetes.io/control-plane- \
+node-role.kubernetes.io/master- \
+node.deckhouse.io/group-
+```
+
+5. Убеждаемся, что ноды пропали из member'ов etcd.
+
+```bash
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+"ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
+```
+
+6. Выполняем drain для нод `<master-node-name-1>`, `<master-node-name-2>`.
+
+```bash
+kubectl drain <master-node-name-1> --ignore-daemonsets --delete-emptydir-data
+kubectl drain <master-node-name-2> --ignore-daemonsets --delete-emptydir-data
+```
+
+7. Выключаем (poweroff) `<master-node-name-1>`, `<master-node-name-2>`, удаляем инстансы соотвествующих нод из облака и подключенные к ним диски (kubernetes-data).
+
+8. Удаляем оставшиеся ресурсы с удаленных нод.
+
+```bash
+kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=<master-node-name-1>
+kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=<master-node-name-2>
+```
+
+9. Удаляем ресурсы нод `<master-node-name-1>`, `<master-node-name-1>`.
+
+```bash
+kubectl delete node <master-node-name-1> <master-node-name-2>
+```
+
+10. Выполняем converge.
+
+```bash
+dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+--ssh-user=<USERNAME> \
+--ssh-host <master-node-name-0>
+```
+
+11. Убеждаемся, что control-plane-manager функционирует. 
+
+```bash
+kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+```
+
+## Как изменить образ ОС multi-master кластере
+
+1. Выясняем используемую версию и редакцию deckhouse.
+
+```bash
+kubectl -n d8-system get deployment deckhouse \                                                                                                       
+-o jsonpath='Version: {.metadata.annotations.core\.deckhouse\.io\/version}, Edition: {.metadata.annotations.core\.deckhouse\.io\/edition}' \  
+| tr '[:upper:]' '[:lower:]'
+```
+
+2. Запускаем контейнер dhctl.
+
+```bash
+docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
+registry.deckhouse.io/deckhouse/<edition>/install:<version> bash
+```
+
+3. Меняем образ ОС для masterNodeGroup
+
+```bash
+dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+--ssh-host <master-node-name-0> --ssh-host <master-node-name-1> --ssh-host <master-node-name-2>
+```
+
+```yaml
+masterNodeGroup:
+  instanceClass:
+    template: <new image version>
+```
+> Следующие действия выполняем поочередно на всех master-нодах, начиная с последней (с суффиксом 2) и заканчивая первой (с суффиксом 0):
+
+1. Выбираем master-ноду для обновления.
+
+```bash
+NODE=<master-node-name-x>
+```
+
+2. Снимаем лейблы с ноды `<master-node-name-x>`.
+
+```bash
+kubectl label node ${NODE} \
+node-role.kubernetes.io/control-plane- \
+node-role.kubernetes.io/master- \
+node.deckhouse.io/group-
+```
+
+3. Убеждаемся что нода пропала из member'ов etcd.
+
+```bash
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+"ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
+```
+
+4. Выполняем drain для `<master-node-name-x>`.
+
+```bash
+kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
+```
+
+5. Выключаем (poweroff) `<master-node-name-x>`, удаляем инстанс ноды из облака и подключенные к ней диски (kubernetes-data).
+
+6. Удаляем поды, оставшиеся на удаленной ноде `<master-node-name-x>`. 
+
+```bash
+kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=${NODE}
+```
+
+7. Удаляем ресурс ноды `<master-node-name-x>`.
+
+```bash
+kubectl delete node ${NODE}
+```
+
+8. Выполняем converge.
+
+```bash
+dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+--ssh-user=<USERNAME> \
+--ssh-host <master-node-name-0> \
+--ssh-host <master-node-name-1> \
+--ssh-host <master-node-name-2>
+```
+
+9. В логах bashible.service на вновь созданной ноде `<master-node-name-x>` должно быть сообщение “nothing to do”.
+
+```bash
+journalctl -fu bashible.service
+```
+
+10. Убеждаемся что нода появилась в member'ах etcd.
+
+```bash
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+"ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
+```
+
+11. Убеждаемся что control-plane-manager функционирует на ноде `<master-node-name-x>`.
+
+```bash
+kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+```
