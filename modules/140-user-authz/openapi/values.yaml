@@ -40,12 +40,23 @@ properties:
               type: string
             default: []
         default: {}
-      webhookCA:
-        type: string
-      webhookServerCrt:
-        type: string
-      webhookServerKey:
-        type: string
+      webhookCertificate:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - ca
+          - key
+          - crt
+        properties:
+          ca:
+            type: string
+            x-examples: [ "testca" ]
+          key:
+            type: string
+            x-examples: [ "testkey" ]
+          crt:
+            type: string
+            x-examples: [ "testcrt" ]
       crds:
         type: array
         items:

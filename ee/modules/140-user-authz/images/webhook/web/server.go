@@ -21,8 +21,8 @@ import (
 const (
 	// Webhook tls certificates
 	sslWebhookPath = "/etc/ssl/user-authz-webhook/"
-	sslListenCert  = sslWebhookPath + "webhook-server.crt"
-	sslListenKey   = sslWebhookPath + "webhook-server.key"
+	sslListenCert  = sslWebhookPath + "tls.crt"
+	sslListenKey   = sslWebhookPath + "tls.key"
 
 	// CA to verify kube-apiserver client certificate
 	// https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers

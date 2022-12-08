@@ -47,8 +47,8 @@ metadata:
   namespace: d8-user-authz
 data:
   ca.crt: YQo= # a
-  webhook-server.crt: Ygo= # b
-  webhook-server.key: Ywo= # c
+  tls.crt: Ygo= # b
+  tls.key: Ywo= # c
 `
 
 	stateSecretChanged = `
@@ -59,8 +59,8 @@ metadata:
   namespace: d8-user-authz
 data:
   ca.crt: eAo= # x
-  webhook-server.crt: eQo= # y
-  webhook-server.key: ego= # z
+  tls.crt: eQo= # y
+  tls.key: ego= # z
 `
 )
 
@@ -85,9 +85,9 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 			It("Cert data must be stored in values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthz.internal.webhookCA").String()).To(Equal("a\n"))
-				Expect(f.ValuesGet("userAuthz.internal.webhookServerCrt").String()).To(Equal("b\n"))
-				Expect(f.ValuesGet("userAuthz.internal.webhookServerKey").String()).To(Equal("c\n"))
+				Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.ca").String()).To(Equal("a\n"))
+				Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.crt").String()).To(Equal("b\n"))
+				Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.key").String()).To(Equal("c\n"))
 			})
 
 			Context("Secret Changed", func() {
@@ -98,9 +98,9 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 				It("New cert data must be stored in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("userAuthz.internal.webhookCA").String()).To(Equal("x\n"))
-					Expect(f.ValuesGet("userAuthz.internal.webhookServerCrt").String()).To(Equal("y\n"))
-					Expect(f.ValuesGet("userAuthz.internal.webhookServerKey").String()).To(Equal("z\n"))
+					Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.ca").String()).To(Equal("x\n"))
+					Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.crt").String()).To(Equal("y\n"))
+					Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.key").String()).To(Equal("z\n"))
 				})
 			})
 		})
@@ -114,9 +114,9 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 		It("Cert data must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.webhookCA").String()).To(Equal("a\n"))
-			Expect(f.ValuesGet("userAuthz.internal.webhookServerCrt").String()).To(Equal("b\n"))
-			Expect(f.ValuesGet("userAuthz.internal.webhookServerKey").String()).To(Equal("c\n"))
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.ca").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.crt").String()).To(Equal("b\n"))
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.key").String()).To(Equal("c\n"))
 		})
 	})
 
@@ -131,15 +131,15 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.webhookCA").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("userAuthz.internal.webhookServerCrt").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("userAuthz.internal.webhookServerKey").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.ca").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("userAuthz.internal.webhookCertificate.key").Exists()).To(BeTrue())
 
 			certPool := x509.NewCertPool()
-			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("userAuthz.internal.webhookCA").String()))
+			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("userAuthz.internal.webhookCertificate.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("userAuthz.internal.webhookServerCrt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("userAuthz.internal.webhookCertificate.crt").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			cert, err := x509.ParseCertificate(block.Bytes)

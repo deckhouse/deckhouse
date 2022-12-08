@@ -105,9 +105,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 			f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
-			f.ValuesSet("userAuthz.internal.webhookCA", "test")
-			f.ValuesSet("userAuthz.internal.webhookServerCrt", "test")
-			f.ValuesSet("userAuthz.internal.webhookServerKey", "test")
+			f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
+			f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
+			f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
 
 			f.HelmRender()
 		})

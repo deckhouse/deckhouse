@@ -9,5 +9,5 @@ metadata:
 data:
   url: https://127.0.0.1:40443/
   ca: |
-    {{- .Values.userAuthz.internal.webhookCA | nindent 4 }}
+    {{- .Values.userAuthz.internal.webhookCertificate.ca | nindent 4 }}
 {{- end }}

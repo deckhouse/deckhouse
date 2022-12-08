@@ -71,9 +71,9 @@ spec:
             - curl
             - -ksS
             - --cert
-            - /etc/ssl/user-authz-webhook/webhook-server.crt
+            - /etc/ssl/user-authz-webhook/tls.crt
             - --key
-            - /etc/ssl/user-authz-webhook/webhook-server.key
+            - /etc/ssl/user-authz-webhook/tls.key
             - https://127.0.0.1:40443/healthz
           # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
           initialDelaySeconds: 5
