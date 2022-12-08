@@ -42,13 +42,11 @@ function __main__() {
     title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
     if [[ "x${title}" == "x" ]]; then
       malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
-
       continue
     fi
 
     title=$(slugify <<<${title})
-
-    dashboardUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}')
+    dashboardUid=$(jq -rc '.name' <<<${dashboard})
 
     folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
