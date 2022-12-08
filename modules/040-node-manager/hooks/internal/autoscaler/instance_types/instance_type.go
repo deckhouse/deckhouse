@@ -31,7 +31,7 @@ type InstanceType struct {
 	Architecture string
 }
 
-// 	GetInstanceType search for instance type by specified instance class (provider)
+// GetInstanceType search for instance type by specified instance class (provider)
 func GetInstanceType(instanceClass, instanceTypeName string) (*InstanceType, error) {
 	var (
 		instanceType *InstanceType

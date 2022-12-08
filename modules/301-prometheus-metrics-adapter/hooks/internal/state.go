@@ -33,9 +33,13 @@ type CustomMetric struct {
 // MetricsQueriesState
 // Examples for full path
 // namespaced
-//   prometheusMetricsAdapter.internal.customMetrics.pod.name.namespaced.ns1
+//
+//	prometheusMetricsAdapter.internal.customMetrics.pod.name.namespaced.ns1
+//
 // cluster
-//   prometheusMetricsAdapter.internal.customMetrics.pod.name.cluster
+//
+//	prometheusMetricsAdapter.internal.customMetrics.pod.name.cluster
+//
 // in this state we have all keys after 'customMetrics'
 // we collect all current metrics and replace 'customMetrics'
 // 'customMetrics' is map which should have (metric type) 'pod, ingress... etc' keys
