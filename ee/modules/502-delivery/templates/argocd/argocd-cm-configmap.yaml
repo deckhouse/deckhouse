@@ -5,10 +5,10 @@ metadata:
   name: argocd-cm
   namespace: d8-{{ .Chart.Name }}
 data:
-  url: https://{{ include "helm_lib_module_public_domain" (list . "argocd") }}
+  url: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "argocd") }}
   oidc.config: |
     name: Dex
-    issuer: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+    issuer: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
     clientID: dex-client-argocd@d8-{{ .Chart.Name }}
     clientSecret: $dex-client-argocd:clientSecret
   admin.enabled: {{ .Values.delivery.argocd.admin.enabled | quote }}
