@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Images sources: https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
-ARG GOLANG_IMAGE=docker.io/library/golang:1.18.8@sha256:ceb7ae25be83b903ef598401bbbef64742fce5177df32a81bfefd4a7f0be6178
-ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3322
+ARG BASE_GOLANG_18_ALPINE
+ARG BASE_UBUNTU_BIONIC
 
 ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
 ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:78448c1a37ff2b790d5e25c3d8b8ec3e96e6405f@sha256:99a9453a921a8de99899ef82e0822f0c03f65d97005c064e231c06247ad8597d
@@ -18,7 +18,7 @@ FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
 FROM ${CILIUM_BPFTOOL_IMAGE} as bpftool-dist
 FROM ${CILIUM_IPROUTE2_IMAGE} as iproute2-dist
 
-FROM ${GOLANG_IMAGE} as gops-cni-builder
+FROM ${BASE_GOLANG_18_ALPINE} as gops-cni-builder
 
 RUN apt-get update && apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
 
@@ -31,7 +31,7 @@ COPY download-cni.sh .
 COPY cni-version.sh .
 RUN ./download-cni.sh
 
-FROM ${UBUNTU_IMAGE} as rootfs
+FROM ${BASE_UBUNTU_BIONIC} as rootfs
 
 # Update ubuntu packages to the most recent versions
 RUN apt-get update && \
