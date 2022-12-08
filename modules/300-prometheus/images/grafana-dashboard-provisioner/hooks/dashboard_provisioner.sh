@@ -46,7 +46,7 @@ function __main__() {
     fi
 
     title=$(slugify <<<${title})
-    genUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}')
+    dashboardUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}')
 
     folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
@@ -58,7 +58,7 @@ function __main__() {
     fi
 
     mkdir -p "${tmpDir}/${folder}"
-    echo ${dashboard} | jq -rc '.definition' | jq --arg newUid ${genUid} '.uid=$newUid' > "${tmpDir}/${file}"
+    echo "${dashboard}" | jq -rc '.definition' | jq --arg newUid ${dashboardUid} '.uid=$newUid' > "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
