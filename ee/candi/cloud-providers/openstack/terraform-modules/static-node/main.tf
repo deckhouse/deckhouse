@@ -4,7 +4,7 @@
 locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
   zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
-  volume_type_map      = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  volume_type_map      = lookup(local.ng, "volumeTypeMap", nil)
   zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type          = local.volume_type_map[local.zone]
 }
