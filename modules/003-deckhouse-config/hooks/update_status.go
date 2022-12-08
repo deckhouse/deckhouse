@@ -113,7 +113,7 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 	for _, cfg := range allConfigs {
 		if cfg.GetName() == "deckhouse" {
 			if bundle, ok := cfg.Spec.Settings["bundle"].(string); ok {
-				bundleName = strings.Title(bundle)
+				bundleName = strings.Title(bundle) // nolint: staticcheck
 			}
 			break
 		}
