@@ -3,7 +3,7 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-# https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
+# Images sources: https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
 ARG GOLANG_IMAGE=docker.io/library/golang:1.18.8@sha256:ceb7ae25be83b903ef598401bbbef64742fce5177df32a81bfefd4a7f0be6178
 ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3322
 
@@ -60,9 +60,10 @@ LABEL maintainer="maintainer@cilium.io"
 COPY --from=rootfs / /
 
 
+#
 # cilium-envoy from github.com/cilium/proxy
 #
-# https://github.com/cilium/cilium/blob/v1.12.4/images/cilium/Dockerfile#L11
+# Image source: https://github.com/cilium/cilium/blob/v1.12.4/images/cilium/Dockerfile#L11
 FROM quay.io/cilium/cilium-envoy:48cbb2f88edca93ba80d1135dbb067a827b8adc2@sha256:2c21f4a37bf6d46da88758a6194c0e63ab26c80a91c41d679247a921c46d42d3 as cilium-envoy
 
 #
@@ -79,16 +80,6 @@ RUN apt-get update && apt-get install patch -y
 
 RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.4.tar.gz | tar xvz -C /tmp/cilium-repo
 WORKDIR /tmp/cilium-repo/cilium-1.12.4
-
-#COPY patches/001-netfilter-compatibility-mode.patch /
-#COPY patches/002-skip-host-ip-gc.patch /
-#COPY patches/003-fix-bwmap-delete-errors.patch /
-#COPY patches/004-health-check-terminating.patch /
-#
-#RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
-#    patch -p1 < /002-skip-host-ip-gc.patch && \
-#    patch -p1 < /003-fix-bwmap-delete-errors.patch && \
-#    patch -p1 < /004-health-check-terminating.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
