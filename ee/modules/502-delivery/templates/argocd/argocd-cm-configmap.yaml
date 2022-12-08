@@ -6,9 +6,11 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 data:
   url: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "argocd") }}
+  admin.enabled: {{ .Values.delivery.argocd.admin.enabled | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   oidc.config: |
     name: Dex
-    issuer: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+    issuer: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
     clientID: dex-client-argocd@d8-{{ .Chart.Name }}
     clientSecret: $dex-client-argocd:clientSecret
-  admin.enabled: {{ .Values.delivery.argocd.admin.enabled | quote }}
+  {{- end }}
