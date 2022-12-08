@@ -167,20 +167,21 @@ func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccoun
 
 // handleChallenge
 // synopsis:
-//   For every namespace contained cert-manager challenge
-//   must be contains registry secret for pull challenge solver
-//   Because solver image re-pushed in deckhouse registry
-//   It need for "closed loop" infrastructure
-//   If in namespace delete all challenges then registry secret must be deleted
-//   We do not use ownerReferences because cer-manager may to create
-//   multiple challenges in one namespace in one time
-//   We may solve this in next way: We patch cert-manager for generating
-//   image pull-secrets name dynamically (ex PREFIX+challenge_resource_name)
-//   and generate one pullSecret per challenge
-//   But, cert manager has pr with adding pullImageSecrets through pod template
-//   and this solution not generate pullSecrets name dynamically
-//   In future we want to rid all of patches in cert-manager
-//   and use vanilla cert-manager
+//
+//	For every namespace contained cert-manager challenge
+//	must be contains registry secret for pull challenge solver
+//	Because solver image re-pushed in deckhouse registry
+//	It need for "closed loop" infrastructure
+//	If in namespace delete all challenges then registry secret must be deleted
+//	We do not use ownerReferences because cer-manager may to create
+//	multiple challenges in one namespace in one time
+//	We may solve this in next way: We patch cert-manager for generating
+//	image pull-secrets name dynamically (ex PREFIX+challenge_resource_name)
+//	and generate one pullSecret per challenge
+//	But, cert manager has pr with adding pullImageSecrets through pod template
+//	and this solution not generate pullSecrets name dynamically
+//	In future we want to rid all of patches in cert-manager
+//	and use vanilla cert-manager
 func handleChallenge(input *go_hook.HookInput) error {
 	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
 	if len(d8RegistrySnap) == 0 {

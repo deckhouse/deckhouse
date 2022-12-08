@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 // Package tools tracks dependencies for tools that used in the build process.

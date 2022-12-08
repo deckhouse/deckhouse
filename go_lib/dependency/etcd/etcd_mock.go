@@ -300,7 +300,7 @@ func (mmAlarmDisarm *mClientMockAlarmDisarm) Return(ap1 *clientv3.AlarmResponse,
 	return mmAlarmDisarm.mock
 }
 
-//Set uses given function f to mock the Client.AlarmDisarm method
+// Set uses given function f to mock the Client.AlarmDisarm method
 func (mmAlarmDisarm *mClientMockAlarmDisarm) Set(f func(ctx context.Context, m *clientv3.AlarmMember) (ap1 *clientv3.AlarmResponse, err error)) *ClientMock {
 	if mmAlarmDisarm.defaultExpectation != nil {
 		mmAlarmDisarm.mock.t.Fatalf("Default expectation is already set for the Client.AlarmDisarm method")
@@ -516,7 +516,7 @@ func (mmAlarmList *mClientMockAlarmList) Return(ap1 *clientv3.AlarmResponse, err
 	return mmAlarmList.mock
 }
 
-//Set uses given function f to mock the Client.AlarmList method
+// Set uses given function f to mock the Client.AlarmList method
 func (mmAlarmList *mClientMockAlarmList) Set(f func(ctx context.Context) (ap1 *clientv3.AlarmResponse, err error)) *ClientMock {
 	if mmAlarmList.defaultExpectation != nil {
 		mmAlarmList.mock.t.Fatalf("Default expectation is already set for the Client.AlarmList method")
@@ -716,7 +716,7 @@ func (mmClose *mClientMockClose) Return(err error) *ClientMock {
 	return mmClose.mock
 }
 
-//Set uses given function f to mock the Client.Close method
+// Set uses given function f to mock the Client.Close method
 func (mmClose *mClientMockClose) Set(f func() (err error)) *ClientMock {
 	if mmClose.defaultExpectation != nil {
 		mmClose.mock.t.Fatalf("Default expectation is already set for the Client.Close method")
@@ -877,7 +877,7 @@ func (mmCompact *mClientMockCompact) Return(cp1 *clientv3.CompactResponse, err e
 	return mmCompact.mock
 }
 
-//Set uses given function f to mock the Client.Compact method
+// Set uses given function f to mock the Client.Compact method
 func (mmCompact *mClientMockCompact) Set(f func(ctx context.Context, rev int64, opts ...clientv3.CompactOption) (cp1 *clientv3.CompactResponse, err error)) *ClientMock {
 	if mmCompact.defaultExpectation != nil {
 		mmCompact.mock.t.Fatalf("Default expectation is already set for the Client.Compact method")
@@ -1094,7 +1094,7 @@ func (mmDefragment *mClientMockDefragment) Return(dp1 *clientv3.DefragmentRespon
 	return mmDefragment.mock
 }
 
-//Set uses given function f to mock the Client.Defragment method
+// Set uses given function f to mock the Client.Defragment method
 func (mmDefragment *mClientMockDefragment) Set(f func(ctx context.Context, endpoint string) (dp1 *clientv3.DefragmentResponse, err error)) *ClientMock {
 	if mmDefragment.defaultExpectation != nil {
 		mmDefragment.mock.t.Fatalf("Default expectation is already set for the Client.Defragment method")
@@ -1312,7 +1312,7 @@ func (mmDelete *mClientMockDelete) Return(dp1 *clientv3.DeleteResponse, err erro
 	return mmDelete.mock
 }
 
-//Set uses given function f to mock the Client.Delete method
+// Set uses given function f to mock the Client.Delete method
 func (mmDelete *mClientMockDelete) Set(f func(ctx context.Context, key string, opts ...clientv3.OpOption) (dp1 *clientv3.DeleteResponse, err error)) *ClientMock {
 	if mmDelete.defaultExpectation != nil {
 		mmDelete.mock.t.Fatalf("Default expectation is already set for the Client.Delete method")
@@ -1529,7 +1529,7 @@ func (mmDo *mClientMockDo) Return(o1 clientv3.OpResponse, err error) *ClientMock
 	return mmDo.mock
 }
 
-//Set uses given function f to mock the Client.Do method
+// Set uses given function f to mock the Client.Do method
 func (mmDo *mClientMockDo) Set(f func(ctx context.Context, op clientv3.Op) (o1 clientv3.OpResponse, err error)) *ClientMock {
 	if mmDo.defaultExpectation != nil {
 		mmDo.mock.t.Fatalf("Default expectation is already set for the Client.Do method")
@@ -1747,7 +1747,7 @@ func (mmGet *mClientMockGet) Return(gp1 *clientv3.GetResponse, err error) *Clien
 	return mmGet.mock
 }
 
-//Set uses given function f to mock the Client.Get method
+// Set uses given function f to mock the Client.Get method
 func (mmGet *mClientMockGet) Set(f func(ctx context.Context, key string, opts ...clientv3.OpOption) (gp1 *clientv3.GetResponse, err error)) *ClientMock {
 	if mmGet.defaultExpectation != nil {
 		mmGet.mock.t.Fatalf("Default expectation is already set for the Client.Get method")
@@ -1965,7 +1965,7 @@ func (mmHashKV *mClientMockHashKV) Return(hp1 *clientv3.HashKVResponse, err erro
 	return mmHashKV.mock
 }
 
-//Set uses given function f to mock the Client.HashKV method
+// Set uses given function f to mock the Client.HashKV method
 func (mmHashKV *mClientMockHashKV) Set(f func(ctx context.Context, endpoint string, rev int64) (hp1 *clientv3.HashKVResponse, err error)) *ClientMock {
 	if mmHashKV.defaultExpectation != nil {
 		mmHashKV.mock.t.Fatalf("Default expectation is already set for the Client.HashKV method")
@@ -2182,7 +2182,7 @@ func (mmMemberAdd *mClientMockMemberAdd) Return(mp1 *clientv3.MemberAddResponse,
 	return mmMemberAdd.mock
 }
 
-//Set uses given function f to mock the Client.MemberAdd method
+// Set uses given function f to mock the Client.MemberAdd method
 func (mmMemberAdd *mClientMockMemberAdd) Set(f func(ctx context.Context, peerAddrs []string) (mp1 *clientv3.MemberAddResponse, err error)) *ClientMock {
 	if mmMemberAdd.defaultExpectation != nil {
 		mmMemberAdd.mock.t.Fatalf("Default expectation is already set for the Client.MemberAdd method")
@@ -2399,7 +2399,7 @@ func (mmMemberAddAsLearner *mClientMockMemberAddAsLearner) Return(mp1 *clientv3.
 	return mmMemberAddAsLearner.mock
 }
 
-//Set uses given function f to mock the Client.MemberAddAsLearner method
+// Set uses given function f to mock the Client.MemberAddAsLearner method
 func (mmMemberAddAsLearner *mClientMockMemberAddAsLearner) Set(f func(ctx context.Context, peerAddrs []string) (mp1 *clientv3.MemberAddResponse, err error)) *ClientMock {
 	if mmMemberAddAsLearner.defaultExpectation != nil {
 		mmMemberAddAsLearner.mock.t.Fatalf("Default expectation is already set for the Client.MemberAddAsLearner method")
@@ -2615,7 +2615,7 @@ func (mmMemberList *mClientMockMemberList) Return(mp1 *clientv3.MemberListRespon
 	return mmMemberList.mock
 }
 
-//Set uses given function f to mock the Client.MemberList method
+// Set uses given function f to mock the Client.MemberList method
 func (mmMemberList *mClientMockMemberList) Set(f func(ctx context.Context) (mp1 *clientv3.MemberListResponse, err error)) *ClientMock {
 	if mmMemberList.defaultExpectation != nil {
 		mmMemberList.mock.t.Fatalf("Default expectation is already set for the Client.MemberList method")
@@ -2832,7 +2832,7 @@ func (mmMemberPromote *mClientMockMemberPromote) Return(mp1 *clientv3.MemberProm
 	return mmMemberPromote.mock
 }
 
-//Set uses given function f to mock the Client.MemberPromote method
+// Set uses given function f to mock the Client.MemberPromote method
 func (mmMemberPromote *mClientMockMemberPromote) Set(f func(ctx context.Context, id uint64) (mp1 *clientv3.MemberPromoteResponse, err error)) *ClientMock {
 	if mmMemberPromote.defaultExpectation != nil {
 		mmMemberPromote.mock.t.Fatalf("Default expectation is already set for the Client.MemberPromote method")
@@ -3049,7 +3049,7 @@ func (mmMemberRemove *mClientMockMemberRemove) Return(mp1 *clientv3.MemberRemove
 	return mmMemberRemove.mock
 }
 
-//Set uses given function f to mock the Client.MemberRemove method
+// Set uses given function f to mock the Client.MemberRemove method
 func (mmMemberRemove *mClientMockMemberRemove) Set(f func(ctx context.Context, id uint64) (mp1 *clientv3.MemberRemoveResponse, err error)) *ClientMock {
 	if mmMemberRemove.defaultExpectation != nil {
 		mmMemberRemove.mock.t.Fatalf("Default expectation is already set for the Client.MemberRemove method")
@@ -3267,7 +3267,7 @@ func (mmMemberUpdate *mClientMockMemberUpdate) Return(mp1 *clientv3.MemberUpdate
 	return mmMemberUpdate.mock
 }
 
-//Set uses given function f to mock the Client.MemberUpdate method
+// Set uses given function f to mock the Client.MemberUpdate method
 func (mmMemberUpdate *mClientMockMemberUpdate) Set(f func(ctx context.Context, id uint64, peerAddrs []string) (mp1 *clientv3.MemberUpdateResponse, err error)) *ClientMock {
 	if mmMemberUpdate.defaultExpectation != nil {
 		mmMemberUpdate.mock.t.Fatalf("Default expectation is already set for the Client.MemberUpdate method")
@@ -3484,7 +3484,7 @@ func (mmMoveLeader *mClientMockMoveLeader) Return(mp1 *clientv3.MoveLeaderRespon
 	return mmMoveLeader.mock
 }
 
-//Set uses given function f to mock the Client.MoveLeader method
+// Set uses given function f to mock the Client.MoveLeader method
 func (mmMoveLeader *mClientMockMoveLeader) Set(f func(ctx context.Context, transfereeID uint64) (mp1 *clientv3.MoveLeaderResponse, err error)) *ClientMock {
 	if mmMoveLeader.defaultExpectation != nil {
 		mmMoveLeader.mock.t.Fatalf("Default expectation is already set for the Client.MoveLeader method")
@@ -3703,7 +3703,7 @@ func (mmPut *mClientMockPut) Return(pp1 *clientv3.PutResponse, err error) *Clien
 	return mmPut.mock
 }
 
-//Set uses given function f to mock the Client.Put method
+// Set uses given function f to mock the Client.Put method
 func (mmPut *mClientMockPut) Set(f func(ctx context.Context, key string, val string, opts ...clientv3.OpOption) (pp1 *clientv3.PutResponse, err error)) *ClientMock {
 	if mmPut.defaultExpectation != nil {
 		mmPut.mock.t.Fatalf("Default expectation is already set for the Client.Put method")
@@ -3918,7 +3918,7 @@ func (mmRequestProgress *mClientMockRequestProgress) Return(err error) *ClientMo
 	return mmRequestProgress.mock
 }
 
-//Set uses given function f to mock the Client.RequestProgress method
+// Set uses given function f to mock the Client.RequestProgress method
 func (mmRequestProgress *mClientMockRequestProgress) Set(f func(ctx context.Context) (err error)) *ClientMock {
 	if mmRequestProgress.defaultExpectation != nil {
 		mmRequestProgress.mock.t.Fatalf("Default expectation is already set for the Client.RequestProgress method")
@@ -4134,7 +4134,7 @@ func (mmSnapshot *mClientMockSnapshot) Return(r1 io.ReadCloser, err error) *Clie
 	return mmSnapshot.mock
 }
 
-//Set uses given function f to mock the Client.Snapshot method
+// Set uses given function f to mock the Client.Snapshot method
 func (mmSnapshot *mClientMockSnapshot) Set(f func(ctx context.Context) (r1 io.ReadCloser, err error)) *ClientMock {
 	if mmSnapshot.defaultExpectation != nil {
 		mmSnapshot.mock.t.Fatalf("Default expectation is already set for the Client.Snapshot method")
@@ -4351,7 +4351,7 @@ func (mmStatus *mClientMockStatus) Return(sp1 *clientv3.StatusResponse, err erro
 	return mmStatus.mock
 }
 
-//Set uses given function f to mock the Client.Status method
+// Set uses given function f to mock the Client.Status method
 func (mmStatus *mClientMockStatus) Set(f func(ctx context.Context, endpoint string) (sp1 *clientv3.StatusResponse, err error)) *ClientMock {
 	if mmStatus.defaultExpectation != nil {
 		mmStatus.mock.t.Fatalf("Default expectation is already set for the Client.Status method")
@@ -4566,7 +4566,7 @@ func (mmTxn *mClientMockTxn) Return(t1 clientv3.Txn) *ClientMock {
 	return mmTxn.mock
 }
 
-//Set uses given function f to mock the Client.Txn method
+// Set uses given function f to mock the Client.Txn method
 func (mmTxn *mClientMockTxn) Set(f func(ctx context.Context) (t1 clientv3.Txn)) *ClientMock {
 	if mmTxn.defaultExpectation != nil {
 		mmTxn.mock.t.Fatalf("Default expectation is already set for the Client.Txn method")
@@ -4783,7 +4783,7 @@ func (mmWatch *mClientMockWatch) Return(w1 clientv3.WatchChan) *ClientMock {
 	return mmWatch.mock
 }
 
-//Set uses given function f to mock the Client.Watch method
+// Set uses given function f to mock the Client.Watch method
 func (mmWatch *mClientMockWatch) Set(f func(ctx context.Context, key string, opts ...clientv3.OpOption) (w1 clientv3.WatchChan)) *ClientMock {
 	if mmWatch.defaultExpectation != nil {
 		mmWatch.mock.t.Fatalf("Default expectation is already set for the Client.Watch method")

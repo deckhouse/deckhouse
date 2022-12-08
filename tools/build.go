@@ -75,7 +75,7 @@ var nothingButGoHooksExcludes = []string{
 }
 
 var stageDependencies = map[string][]string{
-	"setup": []string{
+	"setup": {
 		"**/*.go",
 	},
 }

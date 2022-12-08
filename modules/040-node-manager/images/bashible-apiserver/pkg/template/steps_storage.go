@@ -200,15 +200,17 @@ func (s *StepsStorage) loadTemplates(target, bundle, provider string) (map[strin
 var keyPattern = "%s:%s:%s"
 
 // Expected fs hierarchy so far
-//      bashible/{bundle}/{target}
-//      bashible/common-steps/{target}
-//      cloud-providers/{provider}/bashible/{bundle}/{target}
-//      cloud-providers/{provider}/bashible/common-steps/{target}
+//
+//	bashible/{bundle}/{target}
+//	bashible/common-steps/{target}
+//	cloud-providers/{provider}/bashible/{bundle}/{target}
+//	cloud-providers/{provider}/bashible/common-steps/{target}
 //
 // Where
-//      target   = "all" | "node-group"
-//      bundle   = "centos-7" | "ubuntu-lts" | ...
-//      provider = "" | "aws" | "gcp" | "openstack" | ...
+//
+//	target   = "all" | "node-group"
+//	bundle   = "centos-7" | "ubuntu-lts" | ...
+//	provider = "" | "aws" | "gcp" | "openstack" | ...
 func (s *StepsStorage) lookupDirs(target, bundle, provider string) []string {
 	dirs := []string{
 		filepath.Join(s.rootDir, "bashible", "bundles", bundle, target),

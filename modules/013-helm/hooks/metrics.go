@@ -328,10 +328,11 @@ const (
 )
 
 // CalculateCompatibility check compatibility. Returns
-//   0 - if resource is compatible
-//   1 - if resource in deprecated and will be removed in the future
-//   2 - if resource is unsupported for current k8s version
-//  and k8s version in which deprecation would be
+//
+//	 0 - if resource is compatible
+//	 1 - if resource in deprecated and will be removed in the future
+//	 2 - if resource is unsupported for current k8s version
+//	and k8s version in which deprecation would be
 func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) (uint, string) {
 	// check unsupported api for current k8s version
 	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
