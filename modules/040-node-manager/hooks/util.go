@@ -59,9 +59,10 @@ func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 }
 
 // SemverMajMin is a Go implementation of this bash snippet:
-//   function semver::majmin() {
-//     echo "$(echo $1 | cut -d. -f1,2)"
-//   }
+//
+//	function semver::majmin() {
+//	  echo "$(echo $1 | cut -d. -f1,2)"
+//	}
 func SemverMajMin(ver *semver.Version) string {
 	if ver == nil {
 		return ""

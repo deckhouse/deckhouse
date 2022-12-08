@@ -57,11 +57,11 @@ func NewInitialConfigLoader(kubeClient client.Client) *InitialConfigLoader {
 // with new OpenAPI schemas.
 //
 // There are 2 cases:
-// 1. cm/deckhouse is in use or cm/deckhouse-generated-do-no-edit was just copied (it has annotation).
-//   There are no ModuleConfig resources, so module sections are treated as settings with version 0.
-// 2. cm/deckhouse-generated-do-no-edit has no annotation.
-//   ConfigMap has no versions, so ModuleConfig resources are used to create initial config.
-//   Also, there is no ModuleManager instance, only module names from the ConfigMap are used.
+//  1. cm/deckhouse is in use or cm/deckhouse-generated-do-no-edit was just copied (it has annotation).
+//     There are no ModuleConfig resources, so module sections are treated as settings with version 0.
+//  2. cm/deckhouse-generated-do-no-edit has no annotation.
+//     ConfigMap has no versions, so ModuleConfig resources are used to create initial config.
+//     Also, there is no ModuleManager instance, only module names from the ConfigMap are used.
 func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConfig, error) {
 	if cmName != DeckhouseConfigMapName && cmName != GeneratedConfigMapName {
 		return nil, fmt.Errorf("load initial config: unknown ConfigMap/%s", cmName)

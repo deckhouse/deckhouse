@@ -1,3 +1,4 @@
+//go:build validation
 // +build validation
 
 /*

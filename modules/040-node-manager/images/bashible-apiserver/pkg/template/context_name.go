@@ -7,8 +7,9 @@ import (
 
 // Parses resource name that is expected to be of form {os}.{target} with hyphens as delimiters,
 // e.g.
-//     `ubuntu-lts.master`  for nodegroup bundles
-//     `ubuntu-lts.1-19`    for generic bundles
+//
+//	`ubuntu-lts.master`  for nodegroup bundles
+//	`ubuntu-lts.1-19`    for generic bundles
 func ParseName(name string) (string, string, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 2 {

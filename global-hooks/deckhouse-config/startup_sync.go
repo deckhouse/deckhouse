@@ -49,11 +49,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
 // as early as possible and do two things:
-// - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
-//   that is managed by deckhouse and by user to configuration via
-//   ModuleConfig objects that managed by user so can be stored in Git.
-// - synchronize ModuleConfig objects content to intermediate
-//   ConfigMap/deckhouse-generated-config-do-not-edit.
+//   - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
+//     that is managed by deckhouse and by user to configuration via
+//     ModuleConfig objects that managed by user so can be stored in Git.
+//   - synchronize ModuleConfig objects content to intermediate
+//     ConfigMap/deckhouse-generated-config-do-not-edit.
 func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {

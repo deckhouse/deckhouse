@@ -46,8 +46,9 @@ const (
 
 // DefaultSANs helper to generate list of sans for certificate
 // you can also use helpers:
-//    ClusterDomainSAN(value) to generate sans with respect of cluster domain (ex: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
-//    PublicDomainSAN(value)
+//
+//	ClusterDomainSAN(value) to generate sans with respect of cluster domain (ex: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
+//	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
 	return func(input *go_hook.HookInput) []string {
 		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()

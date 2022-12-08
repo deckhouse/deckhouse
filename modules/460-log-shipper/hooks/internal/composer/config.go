@@ -26,7 +26,8 @@ import (
 )
 
 // Pipeline is a representation of a single logical tube.
-//   Example: ClusterLoggingConfig +(destinationRef) ClusterLogsDestination = Single Pipeline.
+//
+//	Example: ClusterLoggingConfig +(destinationRef) ClusterLogsDestination = Single Pipeline.
 type Pipeline struct {
 	Source       PipelineSource
 	Destinations []PipelineDestination

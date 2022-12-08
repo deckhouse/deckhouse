@@ -139,7 +139,7 @@ func StartConfigUpdater() {
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 
-		for _ = range ticker.C {
+		for range ticker.C {
 			updateConfig()
 		}
 	}()

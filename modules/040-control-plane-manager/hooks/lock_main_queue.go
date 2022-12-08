@@ -32,6 +32,7 @@ import (
 
 /*
 Description:
+
 	locks deckhouse main queue while control-plane-manager Pod will be rolled out and become ready
 	Checks Daemonset: d8-control-plane-manager exists
 	Checks Pod readiness

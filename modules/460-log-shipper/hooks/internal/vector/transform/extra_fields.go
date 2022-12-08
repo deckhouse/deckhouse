@@ -35,10 +35,11 @@ var (
 // ExtraFieldTransform converts templated labels to values.
 //
 // TODO(nabokihms): Honestly, I do not know exactly how this function works.
-//   Only required for Elasticsearch sinks.
-//   It definitely deserves refactoring. My assumption is that it generates VRL rules from extra labels.
-//   Example:
-//     label_name: {{ values.app }} -> .label_name = .values.app
+//
+//	Only required for Elasticsearch sinks.
+//	It definitely deserves refactoring. My assumption is that it generates VRL rules from extra labels.
+//	Example:
+//	  label_name: {{ values.app }} -> .label_name = .values.app
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	var dataField string
 

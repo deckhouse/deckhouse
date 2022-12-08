@@ -91,7 +91,7 @@ func (mmGetZonesDatastores *mClientMockGetZonesDatastores) Return(op1 *Output, e
 	return mmGetZonesDatastores.mock
 }
 
-//Set uses given function f to mock the Client.GetZonesDatastores method
+// Set uses given function f to mock the Client.GetZonesDatastores method
 func (mmGetZonesDatastores *mClientMockGetZonesDatastores) Set(f func() (op1 *Output, err error)) *ClientMock {
 	if mmGetZonesDatastores.defaultExpectation != nil {
 		mmGetZonesDatastores.mock.t.Fatalf("Default expectation is already set for the Client.GetZonesDatastores method")
