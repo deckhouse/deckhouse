@@ -50,7 +50,7 @@ spec:
                     imagePullPolicy:
                       description: "Требуемая политика скачивания образов для контейнеров."
                     checkDNSPolicy:
-                      description: "Проверка, что dnsPolicy 'ClusterFirstWithHostNet' установлена для подов с hostNetwork: true."
+                      description: "Проверка, что dnsPolicy 'ClusterFirstWithHostNet' установлена для Pod'ов с `hostNetwork: true`."
                     checkContainerDuplicates:
                       description: "Проверка имена контейнеров и переменные env на наличие дубликатов."
                 match:
