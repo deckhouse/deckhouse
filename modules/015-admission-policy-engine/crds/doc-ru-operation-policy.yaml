@@ -74,7 +74,7 @@ spec:
                               description: Список выражений лейблов для пространств имен.
                     labelSelector:
                       description: |
-                        Указывает селектор лейблов для фильтрации подов.
+                        Указывает селектор лейблов для фильтрации Pod'ов.
 
                         Больше информации [здесь](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
