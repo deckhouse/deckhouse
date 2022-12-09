@@ -293,6 +293,8 @@ done
    --ssh-host <MASTER-NODE-0>
    ```
 
+  Фрагмент конфигурации:
+
    ```yaml
    masterNodeGroup:
      instanceClass:
@@ -335,6 +337,8 @@ done
    --ssh-host <MASTER-NODE-0>
    ```
 
+   Фрагмент конфигурации:
+
    ```yaml
    masterNodeGroup:
      instanceClass:
@@ -355,7 +359,7 @@ done
     node.deckhouse.io/group-
     ```
 
-4. Убедитесь, что ноды пропали из member'ов etcd.
+4. Убедитесь, что узлы пропали из членов кластера etcd.
 
    ```bash
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
@@ -419,10 +423,14 @@ done
 
 2. Измените образ ОС для masterNodeGroup.
 
+   Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0> --ssh-host <MASTER-NODE-1> --ssh-host <MASTER-NODE-2>
    ```
+
+   Фрагмент конфигурации:
 
    ```yaml
    masterNodeGroup:
@@ -458,7 +466,7 @@ done
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
    ```
 
-4. Выполните `drain` для `<MASTER-NODE-X>`.
+4. Выполните `drain` для узла `<MASTER-NODE-X>`.
 
    ```bash
    kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
@@ -490,7 +498,7 @@ done
 
    > При выполнении команды убедитесь, что планируется удалить именно требуемые узлы!
 
-9. В логах `bashible.service` на вновь созданной ноде `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
+9. В логах `bashible.service` на вновь созданном узле `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
 
    ```bash
    journalctl -fu bashible.service

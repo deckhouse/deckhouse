@@ -292,6 +292,8 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
    --ssh-host <MASTER-NODE-0>
    ```
 
+Фрагмент конфигурации:
+
    ```yaml
    masterNodeGroup:
      instanceClass:
@@ -334,6 +336,8 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
    --ssh-host <MASTER-NODE-0>
    ```
 
+   Фрагмент конфигурации:
+
    ```yaml
    masterNodeGroup:
      instanceClass:
@@ -341,19 +345,20 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
    ```
 
 3. Снимите следующие лейблы с удаляемых узлов:
-* node-role.kubernetes.io/control-plane
-* node-role.kubernetes.io/master
-* node.deckhouse.io/group
+  * node-role.kubernetes.io/control-plane
+  * node-role.kubernetes.io/master
+  * node.deckhouse.io/group
 
    Пример:
+
     ```bash
     kubectl label node <имя удаляемого узла> \
     node-role.kubernetes.io/control-plane- \
     node-role.kubernetes.io/master- \
     node.deckhouse.io/group-
-```
+    ```
 
-4. Убедитесь, что ноды пропали из member'ов etcd.
+4. Убедитесь, что узлы пропали из членов кластера etcd.
 
    ```bash
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
@@ -417,10 +422,14 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 
 2. Измените образ ОС для masterNodeGroup.
 
+   Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0> --ssh-host <MASTER-NODE-1> --ssh-host <MASTER-NODE-2>
    ```
+
+   Фрагмент конфигурации:
 
    ```yaml
    masterNodeGroup:
@@ -441,13 +450,12 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 * node-role.kubernetes.io/master
 * node.deckhouse.io/group
 
-Пример:
-
-```bash
-kubectl label node <имя удаляемого узла> \
-node-role.kubernetes.io/control-plane- \
-node-role.kubernetes.io/master- \
-node.deckhouse.io/group-
+  Пример:
+    ```bash
+    kubectl label node <имя удаляемого узла> \
+    node-role.kubernetes.io/control-plane- \
+    node-role.kubernetes.io/master- \
+    node.deckhouse.io/group-
 ```
 
 3. Убедитесь что узел пропал из членов etcd кластера.
@@ -457,7 +465,7 @@ node.deckhouse.io/group-
    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
    ```
 
-4. Выполните `drain` для `<MASTER-NODE-X>`.
+4. Выполните `drain` для узла `<MASTER-NODE-X>`.
 
    ```bash
    kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
@@ -489,7 +497,7 @@ node.deckhouse.io/group-
 
    > При выполнении команды убедитесь, что планируется удалить именно требуемые узлы!
 
-9. В логах `bashible.service` на вновь созданной ноде `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
+9. В логах `bashible.service` на вновь созданном узле `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
 
    ```bash
    journalctl -fu bashible.service
