@@ -111,18 +111,24 @@ func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 	possibleNames := d8config.Service().PossibleNames()
 	allConfigs := knownConfigsFromSnapshot(input.Snapshots["configs"], possibleNames)
 
+	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+
 	for _, cfg := range allConfigs {
-		res, err := d8config.Service().ConfigValidator().Validate(cfg)
-		if err != nil {
-			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
+		res := d8config.Service().ConfigValidator().Validate(cfg)
+		// Conversion or validation error. Log error and ignore this ModuleConfig.
+		if res.HasError() {
+			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored. Validate error is: %v", cfg.GetName(), res.Error)
+			continue
 		}
+		// Update spec.settings to converted settings.
 		if res.IsConverted {
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		properCfgs = append(properCfgs, cfg)
 	}
 
-	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(allConfigs)
+	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(properCfgs)
 	if err != nil {
 		return fmt.Errorf("convert ModuleConfig objects to ConfigMap: %s", err)
 	}

@@ -118,7 +118,7 @@ func (mmDigest *mClientMockDigest) Return(s1 string, err error) *ClientMock {
 	return mmDigest.mock
 }
 
-//Set uses given function f to mock the Client.Digest method
+// Set uses given function f to mock the Client.Digest method
 func (mmDigest *mClientMockDigest) Set(f func(tag string) (s1 string, err error)) *ClientMock {
 	if mmDigest.defaultExpectation != nil {
 		mmDigest.mock.t.Fatalf("Default expectation is already set for the Client.Digest method")
@@ -334,7 +334,7 @@ func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
 	return mmImage.mock
 }
 
-//Set uses given function f to mock the Client.Image method
+// Set uses given function f to mock the Client.Image method
 func (mmImage *mClientMockImage) Set(f func(tag string) (i1 v1.Image, err error)) *ClientMock {
 	if mmImage.defaultExpectation != nil {
 		mmImage.mock.t.Fatalf("Default expectation is already set for the Client.Image method")

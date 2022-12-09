@@ -58,14 +58,17 @@ properties:
         type: object
         default: {}
         x-examples:
-        - certificate: test
+        - ca: test
+          crt: test
           key: test
-          certificate_updated: true
         properties:
-          certificate:
+          crt:
             type: string
           key:
             type: string
+          ca:
+            type: string
+            default: ""
           certificate_updated:
             type: boolean
       dexAuthenticatorCRDs:
@@ -228,6 +231,25 @@ properties:
                 - email
               userIDKey: subsub
               userNameKey: noname
+          - id: oidc
+            displayName: google
+            type: OIDC
+            oidc:
+              issuer: "https://issue.example.com"
+              clientID: plainstring
+              clientSecret: plainstring
+              basicAuthUnsupported: true
+              insecureSkipEmailVerified: true
+              getUserInfo: true
+              scopes:
+                - profile
+                - email
+              userIDKey: subsub
+              userNameKey: noname
+              claimMapping:
+                email: mail
+                groups: roles
+                preferred_username: name
           - id: bitbucket
             displayName: bitbucket
             type: BitbucketCloud

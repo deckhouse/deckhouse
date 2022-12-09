@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -16,6 +16,6 @@ RUN git clone ${PIRAEUS_OPERATOR_GITREPO} /usr/local/go/piraeus-operator \
  && go build \
  && mv ./manager /piraeus-operator
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 COPY --from=builder /piraeus-operator /usr/bin/piraeus-operator
 ENTRYPOINT ["/usr/bin/piraeus-operator"]

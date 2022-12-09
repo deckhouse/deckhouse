@@ -371,10 +371,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
 					if err != nil {
 						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types", nodeGroupInstanceClassKind))
-						continue
+						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+					} else {
+						ngForValues["nodeCapacity"] = nodeCapacity
 					}
-					ngForValues["nodeCapacity"] = nodeCapacity
 				}
 			}
 
@@ -518,9 +518,10 @@ const EpochWindowSize int64 = 4 * 60 * 60 // 4 hours
 // calculateUpdateEpoch returns an end point of the drifted 4 hour window for given cluster and timestamp.
 //
 // epoch is the unix timestamp of an end time of the drifted 4 hour window.
-//   A0---D0---------------------A1---D1---------------------A2---D2-----
-//   A - points for windows in absolute time
-//   D - points for drifted windows
+//
+//	A0---D0---------------------A1---D1---------------------A2---D2-----
+//	A - points for windows in absolute time
+//	D - points for drifted windows
 //
 // Epoch for timestamps A0 <= ts <= D0 is D0
 //

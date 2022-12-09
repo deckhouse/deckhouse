@@ -40,4 +40,4 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 </li>
 </ul>
 
-After installation is complete, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/documentation/v1/) to learn more or reach out to the Deckhouse [community](/en/community/about.html).
+After installation is complete, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/documentation/v1/) to learn more or reach out to the Deckhouse [community](/community/about.html).

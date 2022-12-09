@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -15,7 +15,7 @@ RUN git clone https://github.com/LINBIT/linstor-wait-until /usr/local/go/linstor
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 COPY --from=builder /linstor-pools-importer /linstor-wait-until /
 
 RUN apt-get update \

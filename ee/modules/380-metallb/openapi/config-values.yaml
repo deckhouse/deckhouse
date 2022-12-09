@@ -166,7 +166,8 @@ properties:
         name:
           type: string
           description: |
-            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`).
+            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`). It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         protocol:
           type: string
           description: |
@@ -242,7 +243,7 @@ x-examples:
       matchLabels:
         node: test
   addressPools:
-  - name: myPoolBGP
+  - name: my-pool-bgp
     protocol: bgp
     addresses:
       - 192.168.100.1-192.168.100.10
@@ -258,7 +259,7 @@ x-examples:
     nodeSelector:
       mylabel: "speaker"
 - addressPools:
-  - name: myPoolL2
+  - name: my-pool-l2
     protocol: layer2
     addresses:
       - 192.168.100.1-192.168.100.10

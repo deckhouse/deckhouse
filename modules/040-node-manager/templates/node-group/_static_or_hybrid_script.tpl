@@ -75,5 +75,10 @@ chmod 0600 /var/lib/bashible/bootstrap-token
 touch /var/lib/bashible/first_run
 {{- end }}
 
-/var/lib/bashible/bootstrap.sh
+checkBashible=$(systemctl is-active bashible.timer)
+if [[ "$checkBashible" == "inactive" ]]; then
+  /var/lib/bashible/bootstrap.sh
+else
+  echo "The node already exists in the cluster and under bashible."
+fi
 {{ end }}

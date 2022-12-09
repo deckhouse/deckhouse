@@ -244,17 +244,112 @@ journalctl -fu bashible
 ```yaml
 cri:
   type: NotManaged
-operatingSystem:
-  manageKernel: false
 ```
 
 После чего добавить узел под управление `node-manager`.
+
+## Как обновить ядро на узлах?
+
+### Для дистрибутивов, основанных на Debian
+
+Создайте ресурс `NodeGroupConfiguration`, указав в переменной `desired_version` shell-скрипта (параметр spec.content ресурса) желаемую версию ядра:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="5.15.0-53-generic"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-apt-install "linux-image-${desired_version}"
+```
+
+### Для дистрибутивов, основанных на CentOS
+
+Создайте ресурс `NodeGroupConfiguration`, указав в переменной `desired_version` shell-скрипта (параметр spec.content ресурса) желаемую версию ядра:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="3.10.0-1160.42.2.el7.x86_64"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-yum-install "kernel-${desired_version}"
+```
 
 ## Какие параметры NodeGroup к чему приводят?
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
@@ -1254,3 +1349,48 @@ Done
 ```
 
 {% endraw %}
+
+### Как использовать NodeGroup с приоритетом?
+
+С помощью параметра [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) CustomResource'а `NodeGroup` можно задавать порядок заказа узлов в кластере.
+Например, можно сделать так, чтобы сначала заказывались узлы типа *spot-node*, а если они закончились — обычные узлы. Или чтобы при наличии ресурсов в облаке заказывались узлы большего размера, при их исчерпании — узлы меньшего размера.
+
+Пример создания двух `NodeGroup` с использованием узлов типа spot-node:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 50
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 30
+  nodeType: CloudEphemeral
+```
+
+В приведенном выше примере `cluster-autoscaler` сначала попытается заказать узел типа spot-node. Если в течение 15 минут его не получится добавить в кластер, NodeGroup `worker-spot` будет поставлена *на паузу* (на 20 минут), и `cluster-autoscaler` начнет заказывать узлы из NodeGroup `worker`.
+Если через 30 минут в кластере возникнет необходимость развернуть еще один узел, `cluster-autoscaler` сначала попытается заказать узел из NodeGroup `worker-spot`, и только потом — из NodeGroup `worker`.
+
+После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
+
+Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или, как минимум, подходить для той нагрузки, которая запускает процесс увеличения кластера.

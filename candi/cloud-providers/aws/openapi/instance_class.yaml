@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of the AWS instance used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/) modile).
+            Parameters of the AWS instance used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) modile).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
@@ -59,6 +59,8 @@ spec:
                 ami:
                   description: |
                     The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                    If omitted, the AMI defined in the [masterNodeGroup.instanceClass.ami](cluster_configuration.html#parameters-masternodegroup-instanceclass-ami) parameter of the `AWSClusterConfiguration` resource is used.
 
                     Here is how you can find the required AMI (each region has its own set of AMIs):
                     ```shell

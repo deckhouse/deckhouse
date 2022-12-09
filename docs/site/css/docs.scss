@@ -1068,9 +1068,16 @@ ul .resources__prop_title {
       cursor: pointer;
     }
 
-    & .fa-chevron-left,
-    & .fa-chevron-right {
-      color: #3C4043;
+    &-next {
+      & svg {
+        transform: rotate(180deg);
+      }
+    }
+
+    & svg {
+      width: 100%;
+      height: 100%;
+      fill: #3C4043;
     }
   }
 

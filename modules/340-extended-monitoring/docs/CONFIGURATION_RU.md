@@ -2,10 +2,6 @@
 title: "Модуль extended-monitoring: настройки"
 ---
 
-{% include module-bundle.liquid %}
-
-## Параметры
-
 <!-- SCHEMA -->
 
 ## Как использовать `extended-monitoring-exporter`
@@ -14,7 +10,7 @@ title: "Модуль extended-monitoring: настройки"
 - добавить в проект соответствующий helm-чарт (рекомендуемый)
 - добавить в описание `.gitlab-ci.yml` (kubectl patch/create)
 - поставить руками (`kubectl annotate namespace my-app-production extended-monitoring.flant.com/enabled=""`).
-- настроить через [namespace-configurator](/ru/documentation/v1/modules/600-namespace-configurator/) модуль.
+- настроить через [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) модуль.
 
 Сразу же после этого, для всех поддерживаемых Kubernetes объектов в данном Namespace в Prometheus появятся default метрики + любые кастомные с префиксом `threshold.extended-monitoring.flant.com/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes объектов, описанных ниже, мониторинг и стандартные аннотации включаются автоматически.
 

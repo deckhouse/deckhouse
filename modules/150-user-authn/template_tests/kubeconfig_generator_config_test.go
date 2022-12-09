@@ -82,8 +82,10 @@ Multiline
 		hec.ValuesSet("global.discovery.kubernetesCA", k8sCa)
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", dexClientAppSecret)
-		hec.ValuesSet("userAuthn.internal.dexTLS.certificate", "do not use, but set")
+		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "do not use, but set")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "do not use, but set")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", k8sCa)
+
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "do not use, but set")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "do not use, but set")
 	})

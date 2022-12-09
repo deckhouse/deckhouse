@@ -16,7 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/istio_versions"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -94,6 +96,19 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 	input.Values.Set("istio.internal.globalVersion", globalVersion)
 	input.Values.Set("istio.internal.versionsToInstall", versionsToInstall)
+
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
+	for _, ver := range versionsToInstall {
+		fullVer, ok := versionMap[ver]
+		if !ok {
+			input.LogEntry.Warnf("Not found full version for version to install %s", ver)
+			continue
+		}
+
+		input.MetricsCollector.Set(telemetry.WrapName("istio_control_plane_full_version"), 1.0, map[string]string{
+			"full_version": fullVer.FullVersion,
+		})
+	}
 
 	return nil
 }

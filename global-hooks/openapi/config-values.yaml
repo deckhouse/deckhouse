@@ -86,7 +86,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
             default: CertManager
             enum:
@@ -106,7 +106,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -220,7 +220,7 @@ properties:
               Proxy URL for HTTPS requests.
           noProxy:
             description: |
-              List of no proxy IP and domain entries.
+              List of no proxy IP and domain entries. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
             type: array
             items:
               type: string

@@ -1,9 +1,9 @@
-{{- $version := "1.8.2" }}
+{{- $version := "1.10.1" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
+  add: /build/cert-manager/_bin/server/controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
 shell:
@@ -13,7 +13,7 @@ docker:
   ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 git:
 - add: /modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -26,18 +26,12 @@ mount:
 shell:
   beforeInstall:
   - apt update
-  - apt install patch -y
+  - apt install patch jq -y
   install:
   - mkdir /build
   - cd /build
-  - git clone -b "v{{ $version }}" --single-branch https://github.com/jetstack/cert-manager.git
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 https://github.com/jetstack/cert-manager.git
   - cd /build/cert-manager
-  - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.12.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
-  - chmod +x /usr/local/bin/bazel
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
-  - export APP_VERSION="v{{ $version }}-flant"
-  - export USE_BAZEL_VERSION="4.2.1"
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/controller
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/cainjector
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/webhook
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/acmesolver
+  - export RELEASE_VERSION="v{{ $version }}-flant"
+  - make CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64

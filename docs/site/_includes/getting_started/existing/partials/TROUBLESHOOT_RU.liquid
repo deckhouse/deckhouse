@@ -82,14 +82,7 @@ kubectl create -f ingress-nginx-controller.yml
 {% endofftopic %}
 
 {% offtopic title="Кластер в EKS AWS (Amazon Elastic Kubernetes Service)" %}
-<div markdown="0">
-<p>Если вы устанавливаете Deckhouse в кластер <strong>EKS AWS</strong> (<a href="https://aws.amazon.com/ru/eks/">Amazon Elastic Kubernetes Service</a>), то в запущенном контейнере инсталлятора установите <a href="https://aws.amazon.com/ru/cli/">aws-cli</a>, выполнив:</p>
-{% snippetcut selector="azure-cli-install" %}
-```shell
-apk add python3 py3-pip && pip3 install --upgrade pip && pip3 install awscli
-```
-{% endsnippetcut %}
-</div>
+Установка Deckhouse в существующий кластер EKS AWS в настоящий момент не поддерживается.
 {% endofftopic %}
 
 

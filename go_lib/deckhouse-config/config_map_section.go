@@ -156,16 +156,17 @@ func (s *configMapSection) getModuleConfig() (*d8cfg_v1alpha1.ModuleConfig, stri
 // This method assumes values are from the cm/deckhouse, so schema version is 1.
 //
 // Example:
-//   input:
-//     configMapSection{
-//      name: "module-one",
-//      valuesKey: "moduleOne",
-//      values: map[string]interface{}{"param1":"val1"}
-//   }
-//   output:
-//     map[string]string{
-//       "moduleOne": "param1:\n  val1\n"
-//     }
+//
+//	input:
+//	  configMapSection{
+//	   name: "module-one",
+//	   valuesKey: "moduleOne",
+//	   values: map[string]interface{}{"param1":"val1"}
+//	}
+//	output:
+//	  map[string]string{
+//	    "moduleOne": "param1:\n  val1\n"
+//	  }
 func (s *configMapSection) getConfigMapData() (map[string]string, error) {
 	out := map[string]string{}
 

@@ -41,17 +41,17 @@ import (
 //
 // Known late-bound functions:
 //
-//	- "include"
-//	- "tpl"
+//   - "include"
+//   - "tpl"
 //
 // These are late-bound in Engine.Render().  The
 // version included in the FuncMap is a placeholder.
 //
 // NOTE: Sync the content of this function among these files!
-//                 dhctl/pkg/template/funcs.go
-//                 helm-mod/pkg/engine/funcs.go
-//  (you are here) modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
 //
+//	               dhctl/pkg/template/funcs.go
+//	               helm-mod/pkg/engine/funcs.go
+//	(you are here) modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
 func FuncMap() template.FuncMap {
 	f := sprig.TxtFuncMap()
 	delete(f, "env")

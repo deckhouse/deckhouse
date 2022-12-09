@@ -140,7 +140,7 @@ ansible:
 
 ---
 image: base-for-go
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
 ansible:
   beforeInstall:
   - name: "Install dependencies"
@@ -317,10 +317,6 @@ import:
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- artifact: libjq
-  add: /libjq
-  to: /libjq
-  after: setup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
@@ -340,15 +336,15 @@ ansible:
       - dumb-init
 
   - name: "Install ginkgo"
-    command: go get github.com/onsi/ginkgo/ginkgo
+    command: go install github.com/onsi/ginkgo/ginkgo@latest
 
   - name: "Install dlv"
-    command: go get github.com/go-delve/delve/cmd/dlv
+    command: go install github.com/go-delve/delve/cmd/dlv@latest
 
   - name: "Install GolangCI linter"
     shell: |
       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-        | sh -s -- -b $(go env GOPATH)/bin v1.46.2
+        | sh -s -- -b $(go env GOPATH)/bin v1.48.0
 
   - raw: rm -rf /var/cache/apk/*
 
@@ -364,8 +360,6 @@ docker:
     DECKHOUSE_POD: tests
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    CGO_CFLAGS: "-I/libjq/include"
-    CGO_LDFLAGS: "-L/libjq/lib"
 ---
 artifact: deckhouse-controller
 fromImage: base-for-go
@@ -403,11 +397,6 @@ git:
       - modules/**/*.go
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: libjq
-  add: /libjq
-  to: /libjq
-  before: setup
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -427,7 +416,7 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - ./go-build.sh /libjq
+  - ./go-build.sh
   - mv deckhouse-controller /out
 
 ---
@@ -497,26 +486,6 @@ ansible:
       make LDFLAGS=-all-static
       make prefix=/usr install
 
----
-artifact: libjq
-from: {{ .Images.BASE_ALPINE }}
-fromCacheVersion: "20210527"
-git:
-- url: https://github.com/flant/libjq-go
-  tag: v1.6.2
-  add: /
-  to: /src
-  stageDependencies:
-    install:
-      - "scripts/**"
-    setup:
-      - "modules/**"
-ansible:
-  install:
-  - shell: /src/scripts/install-libjq-dependencies-alpine.sh
-  - raw: rm -rf /var/cache/apk/*
-  setup:
-  - shell: /src/scripts/build-libjq-static.sh /src /libjq
 ---
 image: dev/install
 from: {{ .Images.BASE_ALPINE }}
@@ -647,8 +616,6 @@ context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images
 dockerfile: Dockerfile
 args:
   BASE_ALPINE: {{ .Images.BASE_ALPINE }}
-  BASE_DEBIAN: {{ .Images.BASE_DEBIAN }}
-  BASE_DEBIAN_BULLSEYE: {{ .Images.BASE_DEBIAN_BULLSEYE }}
   BASE_RUST: {{ .Images.BASE_RUST }}
   BASE_GOLANG_ALPINE: {{ .Images.BASE_GOLANG_ALPINE }}
   BASE_GOLANG_16_ALPINE: {{ .Images.BASE_GOLANG_16_ALPINE }}
@@ -658,12 +625,15 @@ args:
   BASE_GOLANG_17_BUSTER: {{ .Images.BASE_GOLANG_17_BUSTER }}
   BASE_GOLANG_18_BULLSEYE: {{ .Images.BASE_GOLANG_18_BULLSEYE }}
   BASE_GOLANG_18_ALPINE: {{ .Images.BASE_GOLANG_18_ALPINE }}
+  BASE_GOLANG_19_ALPINE: {{ .Images.BASE_GOLANG_19_ALPINE }}
+  BASE_GOLANG_19_BULLSEYE: {{ .Images.BASE_GOLANG_19_BULLSEYE }}
+  BASE_GOLANG_19_BUSTER: {{ .Images.BASE_GOLANG_19_BUSTER }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
   BASE_PYTHON_ALPINE:  {{ .Images.BASE_PYTHON_ALPINE }}
   BASE_SHELL_OPERATOR: {{ .Images.BASE_SHELL_OPERATOR }}
+  BASE_UBUNTU_BIONIC: {{ .Images.BASE_UBUNTU_BIONIC }}
   BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
-  BASE_UBUNTU_JAMMY: {{ .Images.BASE_UBUNTU_JAMMY }}
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
 {{- else }}

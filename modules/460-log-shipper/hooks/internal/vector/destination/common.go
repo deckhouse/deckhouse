@@ -50,6 +50,8 @@ type CommonTLS struct {
 	KeyPass           string `json:"key_pass,omitempty"`
 	VerifyHostname    bool   `json:"verify_hostname"`
 	VerifyCertificate bool   `json:"verify_certificate"`
+
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 type Buffer struct {

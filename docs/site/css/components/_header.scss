@@ -65,13 +65,34 @@ html {
                     fill: $color-main;
                 }
             }
-            & .fa-phone,
-            & .fa-envelope-o {
-              font-size: 21px;
-              color: $color-alt;
+            &--phone {
+              & svg {
+                width: 19px;
+                height: 20px;
+                fill: $color-alt;
 
-              &:hover {
-                color: $color-main;
+                &:hover {
+                  fill: $color-main;
+                }
+              }
+            }
+            &--email {
+              & svg {
+                width: 24px;
+                height: 24px !important;
+                fill: $color-alt;
+                stroke: $color-alt;
+                stroke-width: 10px;
+
+                @media (max-width: $container-breakpoint-lg) {
+                  height: 20px !important;
+                }
+
+                  &:hover {
+                  fill: $color-main;
+                  stroke: $color-main;
+                  stroke-width: 10px;
+                }
               }
             }
         }

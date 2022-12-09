@@ -6,10 +6,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [`Standard`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
+          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
         properties:
           natGatewayPublicIpCount:
             description: |
@@ -46,6 +46,8 @@ apiVersions:
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: |
@@ -60,7 +62,7 @@ apiVersions:
               ```
           instanceClass:
             description: |
-              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
             properties: &instanceClassProperties_ru
               machineSize:
                 description: |
@@ -151,7 +153,7 @@ apiVersions:
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       tags:
@@ -161,7 +163,7 @@ apiVersions:
           Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
+          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
         properties:
           location:
             description: |

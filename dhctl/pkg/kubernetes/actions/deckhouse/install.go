@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -174,12 +175,22 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `ConfigMap "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseConfigMap(cfg.DeckhouseConfig) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+				// check cm existing for prevent error
+				// deckhouse create manifests: create resource: admission webhook "validate-cm.deckhouse-config-webhook.deckhouse.io" denied the request:
+				// changing ConfigMap/deckhouse is not allowed for kubernetes-admin. Use ModuleConfig resources to configure Deckhouse.
+				// after restart bootstrap
+				cm := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+					Get(context.TODO(), cm.GetName(), metav1.GetOptions{})
+				if k8serror.IsNotFound(err) {
+					_, err := kubeCl.CoreV1().ConfigMaps("d8-system").
+						Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+					return err
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 	}

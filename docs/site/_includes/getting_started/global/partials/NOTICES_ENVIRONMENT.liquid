@@ -13,3 +13,10 @@
 {%- endif %}
 {%- endif %}
 {%- endif %}
+{%- if page.platform_type == 'existing' %}
+{%- if page.lang == "ru" %}
+> **Внимание!** Установка Deckhouse в существующий кластер EKS AWS (Amazon Elastic Kubernetes Service) в настоящий момент не поддерживается.
+{%- else %}
+> **Caution!** Installing Deckhouse into an existing EKS AWS (Amazon Elastic Kubernetes Service) cluster is not currently supported.
+{%- endif %}
+{%- endif %}

@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/deckhouse/deckhouse v0.0.0
-	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.20.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slok/kubewebhook/v2 v2.2.0
 	k8s.io/api v0.22.4

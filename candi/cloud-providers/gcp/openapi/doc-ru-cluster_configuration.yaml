@@ -26,7 +26,10 @@ apiVersions:
 
           Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
       masterNodeGroup:
-        description: Спецификация для описания NodeGroup master-узлов.
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: Сколько master-узлов создавать.
@@ -41,7 +44,7 @@ apiVersions:
 
               Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
-            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
+            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
               machineType:
                 description: |
@@ -98,7 +101,7 @@ apiVersions:
 
                 Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
-              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
+              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
             zones:
@@ -107,9 +110,9 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
+          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
 
-          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP адреса. [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
+          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP адреса. [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:

@@ -1,0 +1,7 @@
+---
+type: object
+default: {}
+additionalProperties: false
+properties:
+  param1:
+    type: string

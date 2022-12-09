@@ -11,6 +11,22 @@ prometheus:
     host_filter: false
     max_wal_time: 360h
     scrape_configs:
+    - job_name: 'deckhouse-telemetry'
+      static_configs:
+      - targets:
+        - deckhouse-telemetry.d8-system.svc.{{ .Values.global.discovery.clusterDomain }}:8080
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'd8_telemetry_.+'
+        action: keep
+      - source_labels: [job]
+        target_label: cluster_uuid
+        replacement: {{ .Values.global.discovery.clusterUUID }}
+      - source_labels: [instance]
+        target_label: __replica__
+        replacement: ${NODE_NAME}
+      - regex: hook|instance
+        action: labeldrop
     - job_name: 'flant-pricing'
       params:
         module: [http_2xx]  # Look for a HTTP 200 response.

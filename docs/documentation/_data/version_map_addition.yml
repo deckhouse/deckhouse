@@ -3,7 +3,7 @@
       ru_support: 'true'
       en_support: 'false'
   astra:
-    '1.7':
+    '1.7.2':
       ru_support: 'true'
       en_support: 'false'
   rocky:

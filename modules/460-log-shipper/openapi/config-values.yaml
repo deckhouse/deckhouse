@@ -12,13 +12,13 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -39,7 +39,7 @@ properties:
     description: |
       Max amounts of CPU and memory resources that the pod can request when selecting a node.
 
-      If the vertical-pod-autoscaler module is disabled, then these values become the default ones.
+      If the `vertical-pod-autoscaler` module is disabled, then these values become the default ones.
     default: {}
     x-examples:
     - mode: VPA
@@ -83,7 +83,7 @@ properties:
       vpa:
         type: object
         description: |
-          Parameters of the vpa mode.
+          Parameters of the VPA mode.
         required:
           - mode
           - cpu

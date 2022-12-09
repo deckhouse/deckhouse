@@ -1,4 +1,4 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_UBUNTU
 ARG BASE_RUST
 
 FROM $BASE_RUST as build
@@ -8,8 +8,10 @@ RUN apt-get update \
       ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
 
 WORKDIR /vector
+COPY patches/kafka-pem-tls.patch /
 RUN git clone --depth 1 --branch v0.24.2 https://github.com/vectordotdev/vector.git \
-    && cd vector
+    && cd vector \
+    && git apply /kafka-pem-tls.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector
@@ -20,10 +22,10 @@ RUN cargo build \
     -j $(($(nproc) /2)) \
     --offline \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,unix,rdkafka?/gssapi-vendored,vrl-cli" \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored,vrl-cli" \
     && strip target/release/vector
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_UBUNTU
 RUN mkdir -p /etc/vector \
     && apt-get update \
     && apt-get install -yq ca-certificates tzdata inotify-tools gettext procps \

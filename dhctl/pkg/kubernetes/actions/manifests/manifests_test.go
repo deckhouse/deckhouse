@@ -84,6 +84,7 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 		LogLevel:         "debug",
 		Bundle:           "default",
 		IsSecureRegistry: true,
+		DeployTime:       time.Now(),
 	}
 
 	depl1 := DeckhouseDeployment(params)

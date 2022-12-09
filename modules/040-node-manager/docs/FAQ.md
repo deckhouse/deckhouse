@@ -244,17 +244,112 @@ Create a `NodeGroup` with the following parameters:
 ```yaml
 cri:
   type: NotManaged
-operatingSystem:
-  manageKernel: false
 ```
 
 Then put the node under the control of `node-manager`.
+
+## How do I update kernel on nodes?
+
+### Debian-based distros
+
+Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="5.15.0-53-generic"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-apt-install "linux-image-${desired_version}"
+```
+
+### CentOS-based distros
+
+Create a `Node Group Configuration` resource by specifying the desired kernel version in the `desired_version` variable of the shell script (the resource's spec.content parameter):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-kernel.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 32
+  content: |
+    # Copyright 2022 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+  
+    desired_version="3.10.0-1160.42.2.el7.x86_64"
+
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      bb-log-info "Setting reboot flag due to kernel was updated"
+      bb-flag-set reboot
+    }
+  
+    version_in_use="$(uname -r)"
+  
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      exit 0
+    fi
+  
+    bb-deckhouse-get-disruptive-update-approval
+    bb-yum-install "kernel-${desired_version}"
+```
 
 ## NodeGroup parameters and their result
 
 | The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
@@ -1250,3 +1345,47 @@ Done
 ```
 
 {% endraw %}
+
+### How to use NodeGroup's priority feature
+
+The [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) field of the `NodeGroup` CustomResource allows you to define the order in which nodes will be provisioned in the cluster. For example, `cluster-autoscaler` can first provision *spot-nodes* and switch to regular ones when they run out. Or it can provision larger nodes when there are plenty of resources in the cluster and then switch to smaller nodes once cluster resources run out.
+
+Here is an example of creating two `NodeGroups` using spot-node nodes:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 50
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker
+    maxPerZone: 5
+    minPerZone: 0
+    priority: 30
+  nodeType: CloudEphemeral
+```
+
+In the above example, `cluster-autoscaler` will first try to provision a spot-node. If it fails to add such a node to the cluster within 15 minutes, the `worker-spot` NodeGroup will be paused (for 20 minutes), and `cluster-autoscaler` will start provisioning nodes from the `worker` NodeGroup.
+If, after 30 minutes, another node needs to be deployed in the cluster, `cluster-autoscaler` will first attempt to provision a node from the `worker-spot` NodeGroup before provisioning one from the `worker` NodeGroup.
+
+Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
+
+Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).

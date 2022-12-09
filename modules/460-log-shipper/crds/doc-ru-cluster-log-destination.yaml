@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` — задаёт имя upstream, который будет использоваться в CustomResource [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — задаёт имя upstream, который будет использоваться в CustomResource [ClusterLoggingConfig](https://deckhouse.ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -41,7 +41,7 @@ spec:
                               description: |
                                 Закодированный в Base64 сертификат в формате PEM.
 
-                                Также, необходимо указать ключ в параметре `keyFile`.
+                                Также необходимо указать ключ в параметре `keyFile`.
                             keyFile:
                               description: |
                                 Закодированный в Base64 ключ в формате PEM.
@@ -99,7 +99,7 @@ spec:
                               description: |
                                 Закодированный в Base64 сертификат в формате PEM.
 
-                                Также, необходимо указать ключ в параметре `keyFile`.
+                                Также необходимо указать ключ в параметре `keyFile`.
                             keyFile:
                               description: |
                                 Закодированный в Base64 ключ в формате PEM.
@@ -127,7 +127,7 @@ spec:
                               description: |
                                 Закодированный в Base64 сертификат в формате PEM.
 
-                                Также, необходимо указать ключ в параметре `keyFile`.
+                                Также необходимо указать ключ в параметре `keyFile`.
                             keyFile:
                               description: |
                                 Закодированный в Base64 ключ в формате PEM.
@@ -162,7 +162,40 @@ spec:
                               description: |
                                 Закодированный в Base64 сертификат в формате PEM.
 
-                                Также, необходимо указать ключ в параметре `keyFile`.
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также, необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
+                splunk:
+                  properties:
+                    endpoint:
+                      description: Базовый URL для экземпляра Splunk.
+                    token:
+                      type: string
+                      description: Токен по умолчанию для Splunk HEC. Если токен не был передан через metadata, будет использовано значение из этого поля.
+                    index:
+                      description: Имя индекса, куда будут сохранены данные. Это поле можно задать динамически.
+                    tls:
+                      description: Настройки защищённого TLS-соединения.
+                      properties:
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
                             keyFile:
                               description: |
                                 Закодированный в Base64 ключ в формате PEM.
@@ -190,7 +223,7 @@ spec:
                               description: |
                                 Закодированный в Base64 сертификат в формате PEM.
 
-                                Также, необходимо указать ключ в параметре `keyFile`.
+                                Также необходимо указать ключ в параметре `keyFile`.
                             keyFile:
                               description: |
                                 Закодированный в Base64 ключ в формате PEM.

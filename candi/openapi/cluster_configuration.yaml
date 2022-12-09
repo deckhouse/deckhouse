@@ -76,7 +76,10 @@ apiVersions:
         description: Address space of the cluster's Pods.
       podSubnetNodeCIDRPrefix:
         type: string
-        description: The prefix of Pod network on a node.
+        description: |
+          The prefix of Pod network on a node.
+
+          > Caution! Don't change the parameter in a working cluster.
         default: "24"
       serviceSubnetCIDR:
         type: string
@@ -103,7 +106,7 @@ apiVersions:
         description: |
           Kubernetes control plane version to use in a cluster.
 
-          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
+          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
 
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).

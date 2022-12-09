@@ -200,15 +200,17 @@ func (s *StepsStorage) loadTemplates(target, bundle, provider string) (map[strin
 var keyPattern = "%s:%s:%s"
 
 // Expected fs hierarchy so far
-//      bashible/{bundle}/{target}
-//      bashible/common-steps/{target}
-//      cloud-providers/{provider}/bashible/{bundle}/{target}
-//      cloud-providers/{provider}/bashible/common-steps/{target}
+//
+//	bashible/{bundle}/{target}
+//	bashible/common-steps/{target}
+//	cloud-providers/{provider}/bashible/{bundle}/{target}
+//	cloud-providers/{provider}/bashible/common-steps/{target}
 //
 // Where
-//      target   = "all" | "node-group"
-//      bundle   = "centos-7" | "ubuntu-lts" | ...
-//      provider = "" | "aws" | "gcp" | "openstack" | ...
+//
+//	target   = "all" | "node-group"
+//	bundle   = "centos-7" | "ubuntu-lts" | ...
+//	provider = "" | "aws" | "gcp" | "openstack" | ...
 func (s *StepsStorage) lookupDirs(target, bundle, provider string) []string {
 	dirs := []string{
 		filepath.Join(s.rootDir, "bashible", "bundles", bundle, target),
@@ -252,7 +254,7 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 }
 
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%03d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
 	klog.Infof("Adding NodeGroupConfiguration %s to context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
@@ -274,7 +276,7 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 }
 
 func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
+	name := nc.GenerateScriptName()
 	klog.Infof("Removing NodeGroupConfiguration %s from context", name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 

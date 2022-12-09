@@ -64,7 +64,7 @@ func SetupConversionTester() *ConversionTester {
 		mm := mock.NewModuleManager(
 			mock.NewModule(moduleName, nil, mock.EnabledByScript),
 		)
-		err := mm.InitModuleValuesValidator(moduleName, modulePath)
+		err := mm.AddOpenAPISchemas(moduleName, modulePath)
 		Expect(err).ShouldNot(HaveOccurred(), "should load openapi schemas for module '%s' from '%s'", moduleName, modulePath)
 		d8config.InitService(mm)
 	})
@@ -172,9 +172,9 @@ func (c *ConversionTester) ConvertToLatest(fromVersion int, input string) ConvTe
 		},
 	}
 
-	validationRes, err := d8config.Service().ConfigValidator().Validate(cfg)
-	if err != nil {
-		res.Error = fmt.Errorf("validate input Settings: %v", err)
+	validationRes := d8config.Service().ConfigValidator().Validate(cfg)
+	if validationRes.HasError() {
+		res.Error = fmt.Errorf("validate input Settings: %v", validationRes.Error)
 		return res
 	}
 

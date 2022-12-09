@@ -4,11 +4,12 @@
 */}}
 #!/bin/bash
 export LANG=C
-until yum install nc curl wget -y; do
+yum updateinfo
+until yum install nc curl wget jq -y; do
   echo "Error installing packages"
+  yum updateinfo
   sleep 10
 done
-yum install jq -y
 
 for FS_NAME in $(mount -l -t xfs | awk '{ print $1 }'); do
   if command -v xfs_info >/dev/null && xfs_info $FS_NAME | grep -q ftype=0; then

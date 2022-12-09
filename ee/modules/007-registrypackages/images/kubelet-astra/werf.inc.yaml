@@ -21,7 +21,7 @@ docker:
     kubelet: {{ printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_DEBIAN_BULLSEYE }}
+from: {{ $.Images.BASE_UBUNTU }}
 git:
   - add: /ee/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -39,7 +39,7 @@ shell:
     # Remove autostart kubelet from postinst script
     - dpkg-deb -R /kubelet_amd64.deb /kubelet
     - sed -i "s/deb-systemd-invoke start/# deb-systemd-invoke start/g" /kubelet/DEBIAN/postinst
-    - dpkg-deb -b /kubelet /kubelet_amd64.deb
+    - dpkg-deb -b -Zxz /kubelet /kubelet_amd64.deb
 {{- end }}
 
 

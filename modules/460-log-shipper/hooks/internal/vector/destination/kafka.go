@@ -55,12 +55,14 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		VerifyCertificate: true,
 		VerifyHostname:    true,
 	}
-
 	if spec.TLS.VerifyCertificate != nil {
 		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
 	}
 	if spec.TLS.VerifyHostname != nil {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
+	}
+	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
+		tls.Enabled = true
 	}
 
 	return &Kafka{

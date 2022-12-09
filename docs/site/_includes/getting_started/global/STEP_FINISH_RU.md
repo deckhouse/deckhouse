@@ -204,5 +204,5 @@ Deckhouse поддерживает [множество](/documentation/v1/module
 Подробная информация о системе в целом и по каждому компоненту Deckhouse Platform расположена в
 [документации](/documentation/v1/).
 
-По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/ru/community/about.html#online-community).
+По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).
 </div>

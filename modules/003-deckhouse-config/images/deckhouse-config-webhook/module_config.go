@@ -66,13 +66,13 @@ func (c *ModuleConfigValidator) Validate(_ context.Context, review *kwhmodel.Adm
 
 	// Check if spec.version value is valid and the version is the latest.
 	// Validate spec.settings using the OpenAPI schema.
-	res, err := d8config.Service().ConfigValidator().Validate(cfg)
-	if err != nil {
-		return rejectResult(err.Error())
+	res := d8config.Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		return rejectResult(res.Error)
 	}
 
-	// Return allow with warning about the latest version.
-	return allowResult(res.VersionWarning)
+	// Return allow with warning.
+	return allowResult(res.Warning)
 }
 
 func getModuleConfig(obj metav1.Object) (*d8cfg_v1alpha1.ModuleConfig, error) {

@@ -169,6 +169,21 @@ spec:
                     userNameKey:
                       description: |
                         [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя.
+                    claimMapping:
+                      description: |
+                        Некоторые провайдеры возвращают нестандартные claim'ы (например mail). Claim mappings помогают Dex преобразовать их в [стандартные claim'ы OIDC](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
+
+                        Dex может преобразовать нестандартный claim в стандартный только если id_token полученный от OIDC-провайдера не содержит аналогичный стандартный claim.
+                      properties:
+                        email:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения почтового адреса пользователя.
+                        groups:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения групп пользователя.
+                        preferred_username:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения предпочтительного имени пользователя.
                     scopes:
                       description: |
                         Список [полей](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.

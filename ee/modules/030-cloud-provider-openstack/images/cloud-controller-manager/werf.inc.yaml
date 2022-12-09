@@ -3,7 +3,7 @@
   {{- if $value.ccm.openstack }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_DEBIAN }}
+from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/openstack-cloud-controller-manager-amd64

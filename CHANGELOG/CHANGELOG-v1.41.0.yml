@@ -1,0 +1,175 @@
+admission-policy-engine:
+  fixes:
+    - summary: Watch only desired (constrainted) resources by validation webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3027
+cert-manager:
+  features:
+    - summary: Ability to disable the `letsencrypt` and `letsencrypt-staging` ClusterIssuers creation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3042
+cilium-hubble:
+  features:
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `cilium-hubble` module.
+cloud-provider-vsphere:
+  fixes:
+    - summary: Bump CSI driver to `v2.5.4`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3089
+cloud-provider-yandex:
+  fixes:
+    - summary: Removed the Standard layout from the documentation, as it doesn't work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3108
+    - summary: In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3031
+      impact: The `cloud-provider-yandex` module will be restarted if a proxy is enabled in the cluster.
+dashboard:
+  features:
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `dashboard` module.
+deckhouse:
+  features:
+    - summary: Add update windows telemetry metrics
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2896
+deckhouse-config:
+  fixes:
+    - summary: Fix the CE revision build of the `deckhouse-config-webhook`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3181
+    - summary: Ignore listing ModuleConfig at start when migration in progress.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3160
+    - summary: Ignore ModuleConfig resources with invalid spec.settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3125
+    - summary: Update version for configs with empty spec.settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3100
+deckhouse-controller:
+  features:
+    - summary: Use ModuleConfig objects to configure deckhouse modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: >-
+        **The new configuration mechanism.**
+
+        The `deckhouse` ConfigMap is forbidden to edit; use `ModuleConfig` object to change module
+        configuration.
+deckhouse-web:
+  features:
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `deckhouse-web` module
+dhctl:
+  fixes:
+    - summary: Fix restart bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3165
+    - summary: Fix struct_vs_unmarshal test
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3101
+    - summary: Minor edits of log messages in dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2989
+docs:
+  features:
+    - summary: Show the module's enable status according to bundles on a module configuration page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2779
+  fixes:
+    - summary: Update the generation of information about the module's enable status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3136
+    - summary: Update the generation of information about the module's enable status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3134
+    - summary: >-
+        Removed the Standard layout (Yandex Cloud) from the documentation and the Getting Started,
+        as it doesn't work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3108
+    - summary: Fix the menu of versions on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3085
+flant-integration:
+  features:
+    - summary: Add scrape telemetry metrics (with prefix d8_telemetry) from deckhouse pod via new service
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2896
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Added different ValidatingWebhookConfiguration webhooks for service and application
+        ingresses, with different failurePolicy, to avoid Deckhouse stuck during update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3055
+istio:
+  features:
+    - summary: Add pods usage telemetry metrics
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2896
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `istio` module.
+  fixes:
+    - summary: Exclude terminating application namespaces from discovery
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3056
+    - summary: >-
+        Fixed istio control-plane alerts: `D8IstioActualVersionIsNotInstalled`,
+        `D8IstioDesiredVersionIsNotInstalled`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3024
+linstor:
+  fixes:
+    - summary: In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3031
+      impact: The `linstor` module will be restarted if a proxy is enabled in the cluster.
+metallb:
+  fixes:
+    - summary: Add validation for `addressPools` name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3110
+node-manager:
+  features:
+    - summary: Add an alert about missing `control-plane` taints on the `master` node group.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3057
+  fixes:
+    - summary: Fix script name generation and the bashible-apiserver
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3156
+    - summary: Calculate resource requests for a stanby-holder Pod as a percentage of a node's capacity.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2959
+openvpn:
+  features:
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `openvpn` module.
+prometheus:
+  features:
+    - summary: The `auth.password` option is deprecated. Consider using the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: The deprecated `auth.password` option is removed from the `prometheus` module.
+  fixes:
+    - summary: >-
+        Setting up `failureThreshold` of `startupProbes` for the main and longterm Prometheus
+        objects from 60 to 300.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3064
+      impact: The `prometheus` module will be restarted.
+    - summary: Update Grafana Home dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3015
+snapshot-controller:
+  fixes:
+    - summary: In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3031
+      impact: The `snapshot-controller` module will be restarted if a proxy is enabled in the cluster.
+testing:
+  fixes:
+    - summary: run render-workflows.sh (fix for 2984)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3051
+      impact: low
+    - summary: avoid using werf inside the docker
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2984
+      impact: low
+tools:
+  fixes:
+    - summary: Added additional checks to registry migration script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3012
+    - summary: Add pull metadata channel image for push it to air-gap environment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3004
+upmeter:
+  features:
+    - summary: Added probe uptime in public status API to use in e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2991
+    - summary: >-
+        The `auth.status.password` and `auth.webui.password` options are deprecated. Consider using
+        the `user-authn` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1729
+      impact: >-
+        The deprecated `auth.status.password` and `auth.webui.password` options are removed from the
+        `upmeter` module.
+user-authz:
+  fixes:
+    - summary: Fix kubeconfig doc for Kubernetes `1.24`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3150
+

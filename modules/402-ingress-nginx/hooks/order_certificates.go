@@ -43,7 +43,8 @@ type CertificateInfo struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	// this hook should be run after get_ingress_controllers hook, which has order: 10
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 15},
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "42 4 * * *"},
 	},
@@ -70,7 +71,7 @@ func getSecret(namespace, name string, dc dependency.Container) (*tls_certificat
 
 func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 	if input.Values.Exists("ingressNginx.internal.ingressControllers") {
-		var certificates []CertificateInfo
+		certificates := make([]CertificateInfo, 0)
 		controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
 
 		for _, c := range controllersValues {

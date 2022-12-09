@@ -82,47 +82,6 @@ kubectl create -f ingress-nginx-controller.yml
 {% endofftopic %}
 
 {% offtopic title="Cluster in EKS AWS (Amazon Elastic Kubernetes Service)" %}
-<div markdown="0">
-<p>If you are installing Deckhouse to an <strong>EKS AWS</strong> (<a href="https://aws.amazon.com/ru/eks/">Amazon Elastic Kubernetes Service</a>) cluster, install <a href="https://aws.amazon.com/ru/cli/">aws-cli</a> in the running installer container using the following command:</p>
-{% snippetcut selector="azure-cli-install" %}
-```shell
-apk add python3 py3-pip && pip3 install --upgrade pip && pip3 install awscli
-```
-{% endsnippetcut %}
-</div>
-{% endofftopic %}
-
-
-{% offtopic title="Cluster in VK Cloud Solutions (MailRu Cloud Solutions)" %}
-<ul>
-<li><p>Add a <code>CriticalAddonsOnly</code> taint to <code>customTolerationKeys</code> in the Deckhouse installation configuration.</p>
-<p>Example:</p>
-<div markdown="1">
-```yaml
-deckhouse:
-  releaseChannel: Stable
-  bundle: Minimal
-  configOverrides:
-    global:
-      modules:
-        placement:
-          customTolerationKeys:
-          - CriticalAddonsOnly
-        publicDomainTemplate: "%s.example.com"
-```
-</div>
-</li>
-<li><p>VK Cloud Solutions version 1.21+ clusters have a Gatekeeper (OPA) that requires setting Pod requests and limits. However, the <code>deckhouse</code> Pod has no requests/limits, while for all other Deckhouse components and modules, requests/limits are calculated by Deckhouse.</p>
-<p>As a result, the following error may pop up in <code>deckhouse</code> deckhouse Deployment events:</p>
-<div class="highlight"><pre><code>admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...</code></pre></div>
-
-<p>For Deckhouse to work, add a GateKeeper exception (OPA) for the Deckhouse component namespaces (<code>d8*-</code>) before installing Deckhouse in clusters of this type.</p><p>For this, run the following command in the cluster:</p>
-{% snippetcut selector="gatekeeper-uninstall" %}
-```shell
-kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
-```
-{% endsnippetcut %}
-</li>
-</ul>
+Installing Deckhouse into an existing EKS AWS cluster is not currently supported.
 {% endofftopic %}
 

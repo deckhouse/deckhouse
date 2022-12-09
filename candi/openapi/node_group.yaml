@@ -425,11 +425,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
+                  deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
+                      deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
@@ -452,7 +454,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
@@ -473,7 +475,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1076,7 +1078,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be Manual to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
@@ -1097,7 +1099,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1704,7 +1706,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be Manual to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
                       x-doc-default: Automatic
@@ -1725,7 +1727,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |

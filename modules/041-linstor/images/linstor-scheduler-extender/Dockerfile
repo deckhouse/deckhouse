@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_JAMMY
+ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -12,7 +12,7 @@ RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-schedu
  && go build -ldflags="-X github.com/piraeusdatastore/linstor-scheduler-extender/pkg/consts.Version=v${LINSTOR_SCHEDULER_EXTENDER_VERSION}" \
  && mv ./linstor-scheduler-extender /
 
-FROM $BASE_UBUNTU_JAMMY
+FROM $BASE_UBUNTU
 COPY --from=builder /linstor-scheduler-extender /
 USER nonroot
 ENTRYPOINT ["/linstor-scheduler-extender"]

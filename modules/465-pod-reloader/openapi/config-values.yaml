@@ -10,7 +10,7 @@ properties:
     description: |
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -38,4 +38,12 @@ properties:
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  reloadOnCreate:
+    type: boolean
+    default: true
+    description: |
+      Rollout the workload in case of creating a ConfigMap or Secret.
+
+      Enabling the parameter will cause the workload to restart not only when changing the corresponding ConfigMap or Secret, but also when creating it.
+    x-examples: [true, false]

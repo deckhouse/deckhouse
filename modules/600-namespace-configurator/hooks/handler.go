@@ -74,10 +74,11 @@ func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 	}
 
 	configurations := input.Values.Get("namespaceConfigurator.configurations").Array()
-	var configItem namespaceConfigurationItem
 	var err error
 
 	for _, configuration := range configurations {
+		var configItem namespaceConfigurationItem
+
 		err = configItem.Load(configuration)
 		if err != nil {
 			return err

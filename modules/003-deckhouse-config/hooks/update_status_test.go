@@ -56,13 +56,14 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Known module enabled", func() {
-
 		BeforeEach(func() {
 			f.KubeStateSet(moduleConfigYaml)
 
 			mm := mock.NewModuleManager(
 				mock.NewModule("module-one", nil, mock.EnabledByScript),
 			)
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
+			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -85,6 +86,8 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			mm := mock.NewModuleManager(
 				mock.NewModule("module-one", mock.EnabledByBundle, mock.DisabledByScript),
 			)
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
+			Expect(err).ShouldNot(HaveOccurred())
 			d8config.InitService(mm)
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))

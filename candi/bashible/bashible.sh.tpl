@@ -239,7 +239,8 @@ function main() {
     echo === Step: $step
     echo ===
     attempt=0
-    until /bin/bash -eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
+    sx=""
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -251,6 +252,11 @@ function main() {
       echo ===
       echo === Step: $step
       echo ===
+      {{- if eq .runType "ClusterBootstrap" }}
+      if [ "$attempt" -gt 2 ]; then
+        sx=x
+      fi
+      {{- end }}
     done
   done
 

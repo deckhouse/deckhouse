@@ -25,6 +25,8 @@ apiVersions:
         required: [replicas, instanceClass]
         description: |
           Parameters of the master's NodeGroup.
+
+          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         properties:
           replicas:
             type: integer
@@ -35,7 +37,7 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
             properties: &instanceClassProperties
               instanceType:
                 type: string
@@ -165,7 +167,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 <<: *instanceClassProperties
             zones:
@@ -193,7 +195,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
 
           > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
@@ -228,7 +230,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
                 properties: &instanceClassProperties
                   instanceType:
                     type: string
@@ -319,7 +321,7 @@ apiVersions:
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Contains [settings to connect](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string

@@ -75,6 +75,7 @@ spec:
             - --search-match-annotation=pod-reloader.deckhouse.io/match
             - --configmap-annotation=pod-reloader.deckhouse.io/configmap-reload
             - --secret-annotation=pod-reloader.deckhouse.io/secret-reload
+            - --reload-on-create={{ .Values.podReloader.reloadOnCreate }}
           readinessProbe:
             failureThreshold: 3
             httpGet:

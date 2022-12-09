@@ -8,7 +8,7 @@ The module uses annotations for operating. The module is running on **system** n
 
 **Important** Reloader does not have HighAvailability mode.
 
-All annotations are described here. Examples of usage can be found [here](usage.html).
+All annotations are described here. You can find examples in the [Examples](examples.html) section of the documentation.
 
 | Annotation                                   | Resource                           | Description                                                                                                  | Acceptable values                             |
 | -------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |

@@ -34,12 +34,12 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
+          Settings for the [`Standard`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
@@ -93,6 +93,8 @@ apiVersions:
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
+
+          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
         properties:
           replicas:
@@ -117,7 +119,7 @@ apiVersions:
             uniqueItems: true
           instanceClass:
             description: |
-              Partial contents of the [AzureInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
             properties: &instanceClassProperties
@@ -277,7 +279,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
@@ -292,7 +294,7 @@ apiVersions:
           type: string
       provider:
         description: |
-          [Parameters](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
+          [Parameters](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]

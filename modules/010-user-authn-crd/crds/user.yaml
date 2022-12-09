@@ -36,7 +36,7 @@ spec:
                   description: |
                     User E-mail.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
                   example: 'user@domain.com'
                 password:
                   type: string

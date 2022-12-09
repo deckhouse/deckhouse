@@ -4,10 +4,16 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  reloadOnCreate:
+    type: boolean
+    description: |
+      Разрешение перезапуска рабочей нагрузки в случае создания ConfigMap или Secret.
+
+      Включение параметра будет приводить к перезапуску нагрузки не только при изменении соответствующего ConfigMap или Secret, но также и при его создании.

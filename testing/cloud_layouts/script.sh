@@ -324,10 +324,12 @@ function run-test() {
     bootstrap || return $?
   fi
 
+  wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
 }
@@ -480,30 +482,55 @@ ENDSSH
     return 1
   fi
 
+  # TODO remove after full migration to ModuleConfig (after 1.42).
+  # Catch deckhouse logs between restarts during switching and migration to ModuleConfig.
+  capture_logs_during_switching &
+}
+
+function capture_logs_during_switching() {
+  # Use for-loop to catch logs between restarts.
+  >&2 echo "Fetch Deckhouse logs during release switch ..."
+  catchLogsScript=$(cat <<'END_SCRIPT'
+  for i in $(seq 1 1000) ; do
+    echo '{"msg":"=================================================="}'
+    echo '{"msg":"Get deckhouse logs attempt '$i' of 1000"}'
+    echo '{"msg":"=================================================="}'
+    kubectl -n d8-system logs deploy/deckhouse
+    echo '{"msg":"<<<<<<<=================================>>>>>>>>>>"}'
+    echo
+    sleep 0.2;
+  done
+END_SCRIPT
+)
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log"
+}
+
+# wait_deckhouse_ready check if deckhouse Pod become ready.
+function wait_deckhouse_ready() {
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system get pods -l app=deckhouse
-[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}')" ==  "True" ]]
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
 END_SCRIPT
 )
 
   testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
-    >&2 echo "Check Deckhouse pod readiness."
+    >&2 echo "Check Deckhouse Pod readiness..."
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Check Deckhouse pod readiness via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      return 0
+    fi
+
+    if [[ $i < $testRunAttempts ]]; then
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
       sleep 30
+    else
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
     fi
   done
-  if [[ $test_failed == "true" ]] ; then
-    return 1
-  fi
+  return 1
 }
 
 # wait_cluster_ready constantly checks if cluster components become ready.
@@ -513,6 +540,26 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  # Print deckhouse info and enabled modules.
+  infoScript=$(cat <<'END'
+kubectl -n d8-system get deploy/deckhouse -o jsonpath='{.kind}/{.metadata.name}:{"\n"}Image: {.spec.template.spec.containers[0].image} {"\n"}Config: {.spec.template.spec.containers[0].env[?(@.name=="ADDON_OPERATOR_CONFIG_MAP")]}{"\n"}'
+echo "Deployment/deckhouse"
+kubectl -n d8-system get deploy/deckhouse -o wide
+echo "Pod/deckhouse-*"
+kubectl -n d8-system get po -o wide | grep ^deckhouse
+echo "Enabled modules:"
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
+echo "ConfigMap/generated"
+kubectl -n d8-system get configmap/deckhouse-generated-config-do-not-edit -o yaml
+echo "ModuleConfigs"
+kubectl get moduleconfigs
+echo "Errors:"
+kubectl -n d8-system logs deploy/deckhouse | grep '"error"'
+END
+)
+
+  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
+
   if [[ "$PROVIDER" == "Static" ]]; then
     run_linstor_tests || return $?
   fi

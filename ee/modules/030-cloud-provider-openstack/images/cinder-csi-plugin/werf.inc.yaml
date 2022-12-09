@@ -3,7 +3,7 @@
   {{- if $value.csi.openstack }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_DEBIAN }}
+from: {{ $.Images.BASE_UBUNTU }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cinder-csi-plugin

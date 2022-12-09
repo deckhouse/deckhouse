@@ -212,7 +212,12 @@ deckhouse: |
 		})
 
 		It("should create new sections and update values for existing", func() {
-			Expect(f).ToNot(ExecuteSuccessfully(), "should fail on invalid values in ModuleConfig object")
+			Expect(f).To(ExecuteSuccessfully(), "should not fail on invalid values in ModuleConfig object")
+
+			cm := f.KubernetesResource("ConfigMap", "d8-system", d8config.GeneratedConfigMapName)
+			Expect(cm.Exists()).Should(BeTrue())
+			Expect(cm.Field("data.global").Exists()).Should(BeFalse(), "should remove 'global' section, got data: %s", cm.Field("data").String())
+			Expect(cm.Field("data.deckhouse").Exists()).Should(BeFalse(), "should remove 'deckhouse' section, got data: %s", cm.Field("data").String())
 		})
 	})
 

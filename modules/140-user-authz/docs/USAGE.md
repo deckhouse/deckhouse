@@ -46,7 +46,22 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 1. Create a `ServiceAccount` in the `d8-service-accounts` namespace (you can change the name):
 
    ```shell
-   kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: gitlab-runner-deploy
+     namespace: d8-service-accounts
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: gitlab-runner-deploy-token
+     namespace: d8-service-accounts
+     annotations:
+       kubernetes.io/service-account.name: gitlab-runner-deploy
+   type: kubernetes.io/service-account-token
+   EOF
    ```
 
 2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
@@ -84,16 +99,14 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        1. Get the CA of our Kubernetes cluster:
 
           ```shell
-          cat /etc/kubernetes/kubelet.conf \
-            | grep certificate-authority-data | awk '{ print $2 }' \
-            | base64 -d > /tmp/ca.crt
+          kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
           ```
 
        2. Generate a section using the API server's IP:
 
           ```shell
           kubectl config set-cluster $cluster_name --embed-certs=true \
-            --server=https://<API_SERVER_IP>:6443 \
+            --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
             --certificate-authority=/tmp/ca.crt \
             --kubeconfig=$file_name
           ```
@@ -121,7 +134,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
      ```shell
      kubectl config set-credentials $user_name \
-       --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
+       --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy -o json |jq -r '.data["token"]' | base64 -d) \
        --kubeconfig=$file_name
      ```
 
@@ -131,6 +144,12 @@ It may be required to give your machine static access to the Kubernetes API, e.g
      kubectl config set-context $context_name \
        --cluster=$cluster_name --user=$user_name \
        --kubeconfig=$file_name
+     ```
+
+   * Set default context of your newly created kubeconfig file:
+
+     ```shell
+     kubectl config use-context $context_name --kubeconfig=$file_name
      ```
 
 ### How to create a user using a client certificate
@@ -153,7 +172,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 * Sign the CSR using the cluster root certificate:
 
   ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10000
+  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
   ```
 
 * Now you can use the certificate issued in the config file:

@@ -19,6 +19,8 @@ package hooks
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -45,17 +47,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
-const (
-	migrationAnnotation = "deckhouse.io/should-migrate-to-module-config-objects"
-)
-
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
 // as early as possible and do two things:
-// - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
-//   that is managed by deckhouse and by user to configuration via
-//   ModuleConfig objects that managed by user so can be stored in Git.
-// - synchronize ModuleConfig objects content to intermediate
-//   ConfigMap/deckhouse-generated-config-do-not-edit.
+//   - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
+//     that is managed by deckhouse and by user to configuration via
+//     ModuleConfig objects that managed by user so can be stored in Git.
+//   - synchronize ModuleConfig objects content to intermediate
+//     ConfigMap/deckhouse-generated-config-do-not-edit.
 func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
@@ -90,7 +88,7 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 		hasGeneratedCM = false
 	}
 	if hasGeneratedCM {
-		_, shouldMigrate := generatedCM.GetAnnotations()[migrationAnnotation]
+		_, shouldMigrate := generatedCM.GetAnnotations()[d8config.AnnoMigrationInProgress]
 		if shouldMigrate {
 			input.LogEntry.Infof("Migrate Configmap to ModuleConfig resources.")
 			return createInitialModuleConfigs(input, generatedCM.Data)
@@ -123,7 +121,7 @@ func migrateToGeneratedConfigMap(input *go_hook.HookInput, kubeClient k8s.Client
 	}
 
 	newCm := d8config.GeneratedConfigMap(data)
-	newCm.SetAnnotations(map[string]string{migrationAnnotation: "true"})
+	newCm.SetAnnotations(map[string]string{d8config.AnnoMigrationInProgress: "true"})
 
 	input.PatchCollector.Create(newCm, object_patch.UpdateIfExists())
 
@@ -143,24 +141,31 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 		input.LogEntry.Infof(msg)
 	}
 
+	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+
 	for _, cfg := range configs {
-		res, err := d8config.Service().ConfigValidator().Validate(cfg)
-		if err != nil {
-			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
+		res := d8config.Service().ConfigValidator().ConvertToLatest(cfg)
+		// Log conversion error and create ModuleConfig as-is.
+		// Ignore this ModuleConfig when update generated ConfigMap.
+		if res.HasError() {
+			input.LogEntry.Errorf("Auto-created ModuleConfig/%s will be ignored. The module section in the generated ConfigMap is invalid: %v", cfg.GetName(), res.Error)
+			continue
 		}
+		// Update spec.settings to converted settings.
 		if res.IsConverted {
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		properCfgs = append(properCfgs, cfg)
 	}
 
-	input.LogEntry.Infof("Create %d ModuleConfig objects", len(configs))
 	for _, cfg := range configs {
+		input.LogEntry.Infof("Creating ModuleConfig/%s", cfg.GetName())
 		input.PatchCollector.Create(cfg, object_patch.UpdateIfExists())
 	}
 
 	// Recreate ConfigMap from ModuleConfig objects to clean-up deprecated module sections.
-	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(configs)
+	newData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(properCfgs)
 	if err != nil {
 		return err
 	}
@@ -202,36 +207,50 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 	patchCollector.Filter(modify, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
 }
 
+// syncModuleConfigs updates generated ConfigMap using ModuleConfig resources.
 func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8cfg_v1alpha1.ModuleConfig) error {
+	properCfgs := make([]*d8cfg_v1alpha1.ModuleConfig, 0)
+
 	for _, cfg := range allConfigs {
-		res, err := d8config.Service().ConfigValidator().Validate(cfg)
-		if err != nil {
-			return fmt.Errorf("validate generated ModuleConfig/%s: %v", cfg.GetName(), err)
+		res := d8config.Service().ConfigValidator().Validate(cfg)
+		// Conversion or validation error. Log error and ignore this ModuleConfig.
+		if res.HasError() {
+			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored due to validation error: %v", cfg.GetName(), res.Error)
+			continue
 		}
+		// Update spec.settings to converted settings.
 		if res.IsConverted {
 			cfg.Spec.Settings = res.Settings
 			cfg.Spec.Version = res.Version
 		}
+		// Note: this message appears only on startup.
+		// TODO(future) switch to Debug after 1.42 release.
+		input.LogEntry.Infof("ModuleConfig/%s is valid", cfg.GetName())
+		properCfgs = append(properCfgs, cfg)
 	}
 
-	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(allConfigs)
+	cmData, err := d8config.Service().Transformer().ModuleConfigListToConfigMap(properCfgs)
 	if err != nil {
 		return err
 	}
-	cm := d8config.GeneratedConfigMap(cmData)
-	input.LogEntry.Infof("Re-create Config/%s on sync", cm.Name)
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	regeneratedCM := d8config.GeneratedConfigMap(cmData)
+	input.LogEntry.Infof("Re-creating Config/%s on sync", regeneratedCM.Name)
+	input.PatchCollector.Create(regeneratedCM, object_patch.UpdateIfExists())
 
+	// Return if source cm was empty.
 	if generatedCM == nil || len(generatedCM.Data) == 0 {
 		return nil
 	}
 
-	// Log deleted sections.
+	// Log deleted sections in source CM.
+	fields := make([]string, 0)
 	for name := range generatedCM.Data {
 		if _, has := cmData[name]; !has {
-			input.LogEntry.Warnf("ModuleConfig/%s was deleted. Section '%s' will be deleted from cm/%s.", name, name, cm.Name)
+			fields = append(fields, name)
 		}
 	}
+	sort.Strings(fields)
+	input.LogEntry.Warnf("Remove fields [%s] from cm/%s", strings.Join(fields, ", "), regeneratedCM.Name)
 
 	return nil
 }

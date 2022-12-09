@@ -103,6 +103,7 @@ spec:
               {{- range $zone := .Values.upmeter.internal.dynamicProbes.zones }}
             - --dynamic-probe-known-zone={{ $zone }}
               {{- end }}
+            - --dynamic-probe-known-zoneprefix={{ .Values.upmeter.internal.dynamicProbes.zonePrefix}}
             {{- end }}
           volumeMounts:
           - mountPath: /db

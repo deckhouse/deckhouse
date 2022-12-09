@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "https://deckhouse.io/en/documentation/v1/modules/${__data.fields.module_name}"
+              "url": "https://deckhouse.io/documentation/v1/modules/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
@@ -1388,7 +1388,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (mode) (label_replace(deckhouse_update_mode, \"mode\", \"Auto\", \"mode\", \"\"))",
+          "expr": "sum by (mode) (label_replace(d8_telemetry_update_window_approval_mode, \"mode\", \"Auto\", \"mode\", \"\"))",
           "instant": true,
           "interval": "",
           "legendFormat": "__auto",
@@ -1497,7 +1497,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (from, to, days) (deckhouse_update_window)",
+          "expr": "max by (from, to, days) (d8_telemetry_update_window)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",

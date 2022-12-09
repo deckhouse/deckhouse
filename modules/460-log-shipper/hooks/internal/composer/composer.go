@@ -19,6 +19,7 @@ package composer
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
@@ -44,19 +45,30 @@ func FromInput(input *go_hook.HookInput) *Composer {
 	for _, d := range destSnap {
 		dest := d.(v1alpha1.ClusterLogDestination)
 		res.Dest = append(res.Dest, dest)
+		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace)
 	}
 
 	for _, s := range sourceSnap {
 		src := s.(v1alpha1.ClusterLoggingConfig)
 		res.Source = append(res.Source, src)
+		customResourceMetric(input, "ClusterLoggingConfig", src.Name, src.Namespace)
 	}
 
 	for _, ns := range namespacedSourceSnap {
 		src := ns.(v1alpha1.PodLoggingConfig)
 		res.Source = append(res.Source, v1alpha1.NamespacedToCluster(src))
+		customResourceMetric(input, "PodLoggingConfig", src.Name, src.Namespace)
 	}
 
 	return res
+}
+
+func customResourceMetric(input *go_hook.HookInput, kind, name, namespace string) {
+	input.MetricsCollector.Set(telemetry.WrapName("log_shipper_custom_resource"), 1, map[string]string{
+		"kind":         kind,
+		"cr_name":      name,
+		"cr_namespace": namespace,
+	})
 }
 
 func (c *Composer) Do() ([]byte, error) {
@@ -149,6 +161,8 @@ func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) apis.
 		return destination.NewVector(name, spec)
 	case v1alpha1.DestKafka:
 		return destination.NewKafka(name, spec)
+	case v1alpha1.DestSplunk:
+		return destination.NewSplunk(name, spec)
 	}
 	return nil
 }

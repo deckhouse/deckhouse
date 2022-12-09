@@ -3,17 +3,28 @@ properties:
   debug:
     description: |
       Включить или выключить отладочные логи агента. По умолчанию: `false`.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesRequests:
     description: |
       Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла.
-      Если модуль vertical-pod-autoscaler выключен, максимальные значения становятся значениями по умолчанию.
+
+      Если модуль `vertical-pod-autoscaler` выключен, максимальные значения становятся значениями по умолчанию.
     properties:
       mode:
         description: |
           Режим управления реквестами ресурсов.
       vpa:
         description: |
-          Настройки VPA режима управления.
+          Настройки режима управления VPA.
         properties:
           mode:
             description: |
@@ -24,10 +35,10 @@ properties:
             properties:
               max:
                 description: |
-                  Максимальное значение, которое может выставить VPA для запроса cpu.
+                  Максимальное значение, которое может выставить VPA для запроса CPU.
               min:
                 description: |
-                  Минимальное значение, которое может выставить VPA для запроса cpu.
+                  Минимальное значение, которое может выставить VPA для запроса CPU.
           memory:
             description: |
               Значение для запроса memory.

@@ -37,6 +37,8 @@ apiVersions:
       podSubnetNodeCIDRPrefix:
         description: |
           Префикс сети Pod'ов на узле.
+
+          > Внимание! Не меняйте параметр в уже развернутом кластере.
       serviceSubnetCIDR:
         description: |
           Адресное пространство для service'ов кластера.
@@ -52,7 +54,7 @@ apiVersions:
         description: |
           Версия control plane кластера Kubernetes.
 
-          Изменение параметра в работающем кластере, приведет к [автоматическому обновлению](https://deckhouse.io/ru/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
+          Изменение параметра в работающем кластере, приведет к [автоматическому обновлению](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
 
           Если указано `Automatic`, то используется версия control plane, которая считается стабильной на данный момент. Изменение этой версии может произойти при смене минорной версии релиза Deckhouse (см. список изменений к релизу).
       packagesProxy:

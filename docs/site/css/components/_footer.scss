@@ -65,6 +65,12 @@ body {
     align-items: flex-start;
     color: $color-inverse;
 
+    @media screen and (max-width: $container-breakpoint-lg) {
+      flex-wrap: wrap;
+      column-gap: 50px;
+      row-gap: 30px;
+    }
+
     &-column {
       margin-right: 50px;
 
@@ -72,8 +78,13 @@ body {
         margin-right: 150px;
       }
 
+      @media screen and (max-width: $container-breakpoint-lg) {
+        margin-right: 0;
+        min-width: 45%;
+      }
+
       &:last-child {
-        margin-right: 0px;
+        margin-right: 0;
       }
 
       &-title {

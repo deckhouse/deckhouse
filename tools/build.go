@@ -75,7 +75,7 @@ var nothingButGoHooksExcludes = []string{
 }
 
 var stageDependencies = map[string][]string{
-	"setup": []string{
+	"setup": {
 		"**/*.go",
 	},
 }
@@ -210,6 +210,14 @@ func cwd() string {
 	for i := 0; i < 2; i++ { // ../
 		dir = filepath.Dir(dir)
 	}
+
+	// If deckhouse repo directory is symlinked (e.g. to /deckhouse), resolve the real path.
+	// Otherwise, filepath.Walk will ignore all subdirectories.
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		panic(err)
+	}
+
 	return dir
 }
 

@@ -34,6 +34,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
+const (
+	AnnoMigrationInProgress = "deckhouse.io/migration-in-progress"
+)
+
 // InitialConfigLoader runs conversions on module sections in the ConfigMap
 // or for settings in all ModuleConfig resources to make a KubeConfig
 // with values conform to the latest OpenAPI schemas.
@@ -48,22 +52,29 @@ func NewInitialConfigLoader(kubeClient client.Client) *InitialConfigLoader {
 	}
 }
 
+// GetInitialKubeConfig runs conversions on settings to feed valid 'KubeConfig'
+// to the AddonOperator. Otherwise, Deckhouse will stuck trying to validate old settings
+// with new OpenAPI schemas.
+//
+// There are 2 cases:
+//  1. cm/deckhouse is in use or cm/deckhouse-generated-do-no-edit was just copied (it has annotation).
+//     There are no ModuleConfig resources, so module sections are treated as settings with version 0.
+//  2. cm/deckhouse-generated-do-no-edit has no annotation.
+//     ConfigMap has no versions, so ModuleConfig resources are used to create initial config.
+//     Also, there is no ModuleManager instance, only module names from the ConfigMap are used.
 func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConfig, error) {
 	if cmName != DeckhouseConfigMapName && cmName != GeneratedConfigMapName {
 		return nil, fmt.Errorf("load initial config: unknown ConfigMap/%s", cmName)
 	}
 
-	// Init Kubernetes client if it was not specified. Mute logger to prevent non-formatted message.
-	lvl := log.GetLevel()
-	log.SetLevel(log.FatalLevel)
+	// Init Kubernetes client if it was not specified.
 	err := l.initKubeClient()
-	log.SetLevel(lvl)
 	if err != nil {
 		return nil, fmt.Errorf("init default Kubernetes client: %v", err)
 	}
 
-	// Prepare possible names from the ConfigMap.
-	// Also, return nil if the ConfigMap is not exists or contains no settings — it'll be handled by the global hook.
+	// Get ConfigMap. Return nil if the ConfigMap is not exists or contains no settings.
+	// This situation will be handled later by the 'startup_sync.go' global hook.
 	cm, err := GetConfigMap(l.KubeClient, DeckhouseNS, cmName)
 	if err != nil {
 		if k8errors.IsNotFound(err) {
@@ -72,8 +83,16 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 		return nil, fmt.Errorf("load cm/%s: %v", cmName, err)
 	}
 
-	// Assume sections with values are possible names.
-	// Return nil if there are no sections with values in the ConfigMap — it'll be handled by the global hook.
+	// Check if the ConfigMap/deckhouse-generated-config-do-not-edit is just a copy of ConfigMap/deckhouse.
+	migrationInProgress := false
+	if len(cm.GetAnnotations()) > 0 {
+		_, migrationInProgress = cm.GetAnnotations()[AnnoMigrationInProgress]
+	}
+
+	if cmName == DeckhouseConfigMapName || migrationInProgress {
+		return l.LegacyConfigMapToInitialConfig(cm.Data)
+	}
+
 	possibleNames := set.New()
 	hasValues := false
 	for k := range cm.Data {
@@ -83,29 +102,32 @@ func (l *InitialConfigLoader) GetInitialKubeConfig(cmName string) (*kcm.KubeConf
 		}
 		possibleNames.Add(utils.ModuleNameFromValuesKey(valuesKey))
 	}
+
+	// No conversions needed if there are no settings in the ConfigMap.
+	// KubeConfigManager will be absolutely happy about this situation.
 	if !hasValues {
 		return nil, nil
 	}
 
-	// Check if the Deckhouse is using ModuleConfig resources and load config from ModuleConfig resources.
-	// It is not possible to load settings from the ConfigMap/deckhouse-generated-do-no-edit, because it
-	// has no versions but it is useful as a source of possible names.
-	if cmName == GeneratedConfigMapName {
-		cfgList, err := GetAllConfigs(l.KubeClient)
-		if err != nil {
-			return nil, fmt.Errorf("load initial config from ModuleConfig resources: %v", err)
-		}
-		return l.ModuleConfigListToInitialConfig(cfgList, possibleNames)
+	// Create initial config from ModuleConfig resources using module names from the ConfigMap.
+	cfgList, err := GetAllConfigs(l.KubeClient)
+	if err != nil {
+		return nil, fmt.Errorf("load initial config from ModuleConfig resources: %v", err)
 	}
-
-	// Deckhouse doesn't use ModuleConfig resources, use ConfigMap/deckhouse content.
-	return l.ConfigMapToInitialConfig(cm.Data)
+	return l.ModuleConfigListToInitialConfig(cfgList, possibleNames)
 }
 
 func (l *InitialConfigLoader) initKubeClient() error {
 	if l.KubeClient != nil {
 		return nil
 	}
+
+	// Mute logger to prevent non-formatted message.
+	lvl := log.GetLevel()
+	log.SetLevel(log.FatalLevel)
+	defer func() {
+		log.SetLevel(lvl)
+	}()
 
 	kubeClient := shell_operator.DefaultMainKubeClient(nil, nil)
 	err := kubeClient.Init()
@@ -169,10 +191,10 @@ func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8cf
 	return kcm.ParseConfigMapData(data)
 }
 
-// ConfigMapToInitialConfig runs registered conversion for each module section in cmData.
-// It assumes settings have version 0 (cm/deckhouse case).
-func (l *InitialConfigLoader) ConfigMapToInitialConfig(cmData map[string]string) (*kcm.KubeConfig, error) {
-	// Use ConfigMap parser from addon-operator.
+// LegacyConfigMapToInitialConfig runs registered conversion for each 'module section'
+// in the ConfigMap data. It assumes settings have version 0 (cm/deckhouse case).
+func (l *InitialConfigLoader) LegacyConfigMapToInitialConfig(cmData map[string]string) (*kcm.KubeConfig, error) {
+	// Parse data as KubeConfigManager will do.
 	kubeCfg, err := kcm.ParseConfigMapData(cmData)
 	if err != nil {
 		return nil, fmt.Errorf("parse ConfigMap data: %v", err)

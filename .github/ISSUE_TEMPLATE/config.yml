@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
 - name: 📚 Documentation
-  url: https://deckhouse.io/en/documentation/
+  url: https://deckhouse.io/documentation/
   about: Check the documentation for help
 
 - name: 🤔 Ask a question

@@ -2,10 +2,6 @@
 title: "The extended-monitoring module: configuration"
 ---
 
-{% include module-bundle.liquid %}
-
-## Parameters
-
 <!-- SCHEMA -->
 
 ## How to use `extended-monitoring-exporter`
@@ -14,7 +10,7 @@ Attach the `extended-monitoring.flant.com/enabled` annotation to the Namespace t
 - adding the appropriate helm-chart to the project (recommended method);
 - adding it to `.gitlab-ci.yml` (kubectl patch/create);
 - attaching it manually (`kubectl annotate namespace my-app-production extended-monitoring.flant.com/enabled=""`).
-- configuring via [namespace-configurator](/en/documentation/v1/modules/600-namespace-configurator/) module.
+- configuring via [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) module.
 
 Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.flant.com/` prefix) for all supported Kubernetes objects in the target Namespace. Note that monitoring and standard annotations are enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
