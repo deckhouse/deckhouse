@@ -16,7 +16,7 @@
 # We cannot use bb-* commands, due to absent yum-plugin-versionlock package,
 # which will be installed later in 001_install_mandatory_packages.sh step.
 
-# TODO remove on the next release !!!
+# TODO remove after 1.42 release !!!
 
 if ! rpm -q --quiet yum-utils; then
   yum install -y yum-utils

@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO remove on the next release !!!
+# TODO remove after 1.42 release !!!
 
 rm -f /etc/apt/apt.conf.d/00proxy
