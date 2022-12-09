@@ -368,8 +368,8 @@ kubectl drain <master-node-name-2> --ignore-daemonsets --delete-emptydir-data
 8. Удаляем оставшиеся ресурсы с удаленных нод.
 
 ```bash
-kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=<master-node-name-1>
-kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=<master-node-name-2>
+kubectl delete pods --all-namespaces --field-selector spec.nodeName=<master-node-name-1> --force
+kubectl delete pods --all-namespaces --field-selector spec.nodeName=<master-node-name-2> --force
 ```
 
 9. Удаляем ресурсы нод `<master-node-name-1>`, `<master-node-name-1>`.
@@ -385,6 +385,8 @@ dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
 --ssh-user=<USERNAME> \
 --ssh-host <master-node-name-0>
 ```
+
+> При выполнении команды убедитесь, что планируется удалить именно требуемые ноды!
 
 11. Убеждаемся, что control-plane-manager функционирует. 
 
@@ -456,7 +458,7 @@ kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
 6. Удаляем поды, оставшиеся на удаленной ноде `<master-node-name-x>`. 
 
 ```bash
-kubectl delete pods --all-namespaces -o wide --field-selector spec.nodeName=${NODE}
+kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
 ```
 
 7. Удаляем ресурс ноды `<master-node-name-x>`.
@@ -474,6 +476,8 @@ dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
 --ssh-host <master-node-name-1> \
 --ssh-host <master-node-name-2>
 ```
+
+> При выполнении команды убедитесь, что планируется удалить именно требуемую ноду!
 
 9. В логах `bashible.service` на вновь созданной ноде `<master-node-name-x>` должно быть сообщение “nothing to do”.
 
