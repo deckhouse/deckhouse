@@ -24,7 +24,7 @@ The policies define by the module can be expanded. Examples of policy extensions
 ### Operation policies
 
 The module provides a set of operating policies and best practices for the secure operation of your applications.
-We recommend you to deploy the following minimum set of operating policies:
+We recommend you deploy the following minimum set of operating policies:
 
 ```yaml
 ---
