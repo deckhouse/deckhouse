@@ -79,6 +79,6 @@ spec:
                         Больше информации [здесь](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
-                          description: Список лейблов, которые должен иметь под.
+                          description: Список лейблов, которые должен иметь Pod.
                         matchExpressions:
-                          description: Список выражений лейблов для подов.
+                          description: Список выражений лейблов для Pod'ов.
