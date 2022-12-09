@@ -286,6 +286,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 2. Измените число реплик для masterNodeGroup на требуемое.
 
    Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0>
@@ -300,6 +301,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 3. Выполните converge.
 
    Пример:
+
     ```bash
     dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
     --ssh-user=<USERNAME> \
@@ -326,6 +328,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 2. Измените число реплик для masterNodeGroup на требуемое.
 
    Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0>
@@ -338,9 +341,9 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
    ```
 
 3. Снимите следующие лейблы с удаляемых узлов:
-  * node-role.kubernetes.io/control-plane
-  * node-role.kubernetes.io/master
-  * node.deckhouse.io/group
+* node-role.kubernetes.io/control-plane
+* node-role.kubernetes.io/master
+* node.deckhouse.io/group
 
    Пример:
     ```bash
@@ -348,7 +351,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
     node-role.kubernetes.io/control-plane- \
     node-role.kubernetes.io/master- \
     node.deckhouse.io/group-
-    ```
+```
 
 4. Убедитесь, что ноды пропали из member'ов etcd.
 
@@ -360,6 +363,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 5. Выполните drain для удаляемых узлов.
 
    Пример:
+
    ```bash
    kubectl drain <имя удаляемого узла> --ignore-daemonsets --delete-emptydir-data
    ```
@@ -369,6 +373,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 7. Удалите оставшиеся ресурсы с узлов.
 
    Пример:
+
     ```bash
     kubectl delete pods --all-namespaces --field-selector spec.nodeName=<имя удаляемого узла> --force
     ```
@@ -376,6 +381,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 8. Удалите ресурсы узлов.
 
    Пример:
+
    ```bash
    kubectl delete node <имя удаляемого узла>
    ```
@@ -383,6 +389,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 9. Выполните converge.
 
    Пример:
+
     ```bash
     dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
     --ssh-user=<USERNAME> \
@@ -435,6 +442,7 @@ You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-
 * node.deckhouse.io/group
 
 Пример:
+
 ```bash
 kubectl label node <имя удаляемого узла> \
 node-role.kubernetes.io/control-plane- \
@@ -502,11 +510,9 @@ node.deckhouse.io/group-
 
 ## Как изменить образ ОС в single-master кластере
 
-
 1. Преобразуйте single-master в multi-master кластер в соответствии с [инструкцией](#как-увеличить-число-master-узлов)
 
 > Внимание! Помимо увеличения числа реплик, также рекомендуется сразу установить требуемую версию ОС в masterNode.instanceClass.template: <new image version>
 
 2. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ОС-в-multi-master-кластере)
 3. Преобразуйте multi-master в single-master кластер в соответствии с [инструкцией](#как-уменьшить-число-master-узлов)
-

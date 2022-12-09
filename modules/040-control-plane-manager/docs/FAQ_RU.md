@@ -287,6 +287,7 @@ done
 2. Измените число реплик для masterNodeGroup на требуемое.
 
    Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0>
@@ -301,6 +302,7 @@ done
 3. Выполните converge.
 
    Пример:
+
     ```bash
     dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
     --ssh-user=<USERNAME> \
@@ -327,11 +329,12 @@ done
 2. Измените число реплик для masterNodeGroup на требуемое.
 
    Пример:
+
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
    --ssh-host <MASTER-NODE-0>
    ```
-   
+
    ```yaml
    masterNodeGroup:
      instanceClass:
@@ -344,6 +347,7 @@ done
     * node.deckhouse.io/group
 
     Пример:
+
     ```bash
     kubectl label node <имя удаляемого узла> \
     node-role.kubernetes.io/control-plane- \
@@ -361,6 +365,7 @@ done
 5. Выполните drain для удаляемых узлов.
 
    Пример:
+
    ```bash
    kubectl drain <имя удаляемого узла> --ignore-daemonsets --delete-emptydir-data
    ```
@@ -370,6 +375,7 @@ done
 7. Удалите оставшиеся ресурсы с узлов.
 
     Пример:
+
     ```bash
     kubectl delete pods --all-namespaces --field-selector spec.nodeName=<имя удаляемого узла> --force
     ```
@@ -377,6 +383,7 @@ done
 8. Удалите ресурсы узлов.
 
    Пример:
+
    ```bash
    kubectl delete node <имя удаляемого узла>
    ```
@@ -384,6 +391,7 @@ done
 9. Выполните converge.
 
     Пример:
+
     ```bash
     dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
     --ssh-user=<USERNAME> \
@@ -392,12 +400,12 @@ done
 
     > При выполнении команды убедитесь, что планируется удалить именно требуемые ноды!
 
-10. Убедитесь, что `control-plane-manager` функционирует. 
+10. Убедитесь, что `control-plane-manager` функционирует.
 
     ```bash
     kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
     ```
-    
+
 ## Как изменить образ ОС в multi-master кластере
 
 1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
@@ -408,7 +416,7 @@ done
     docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
     ```
-   
+
 2. Измените образ ОС для masterNodeGroup.
 
    ```bash
@@ -431,9 +439,9 @@ done
    ```
 
 2. Снимите следующие лейблы с удаляемых узлов:
-  * node-role.kubernetes.io/control-plane
-  * node-role.kubernetes.io/master
-  * node.deckhouse.io/group
+* node-role.kubernetes.io/control-plane
+* node-role.kubernetes.io/master
+* node.deckhouse.io/group
 
    Пример:
     ```bash
@@ -441,7 +449,7 @@ done
     node-role.kubernetes.io/control-plane- \
     node-role.kubernetes.io/master- \
     node.deckhouse.io/group-
-    ```
+```
 
 3. Убедитесь что узел пропал из членов etcd кластера.
 
@@ -455,21 +463,21 @@ done
    ```bash
    kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
    ```
-   
+
 5. Выключите (poweroff) `<MASTER-NODE-X>`, удалите инстанс узла из облака и подключенные к нему диски (kubernetes-data).
 
-6. Удалите Pod'ы, оставшиеся на удаляемом узле `<MASTER-NODE-X>`. 
+6. Удалите Pod'ы, оставшиеся на удаляемом узле `<MASTER-NODE-X>`.
 
    ```bash
    kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
    ```
-   
+
 7. Удалите объект Node `<MASTER-NODE-X>`.
 
    ```bash
    kubectl delete node ${NODE}
    ```
-   
+
 8. Выполните converge.
 
    ```bash
@@ -479,7 +487,7 @@ done
    --ssh-host <MASTER-NODE-1> \
    --ssh-host <MASTER-NODE-2>
    ```
-   
+
    > При выполнении команды убедитесь, что планируется удалить именно требуемые узлы!
 
 9. В логах `bashible.service` на вновь созданной ноде `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
@@ -487,7 +495,7 @@ done
    ```bash
    journalctl -fu bashible.service
    ```
-   
+
 10. Убедитесь, что узел появился в членах кластера etcd.
 
     ```bash
@@ -503,11 +511,9 @@ done
 
 ## Как изменить образ ОС в single-master кластере
 
-
 1. Преобразуйте single-master в multi-master кластер в соответствии с [инструкцией](#как-увеличить-число-master-узлов)
 
 > Внимание! Помимо увеличения числа реплик, также рекомендуется сразу установить требуемую версию ОС в masterNode.instanceClass.template: <new image version>
 
 2. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ОС-в-multi-master-кластере)
 3. Преобразуйте multi-master в single-master кластер в соответствии с [инструкцией](#как-уменьшить-число-master-узлов)
-
