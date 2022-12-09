@@ -76,7 +76,7 @@ spec:
                       description: |
                         Указывает селектор лейблов для фильтрации Pod'ов.
 
-                        Больше информации [здесь](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь Pod.
