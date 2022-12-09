@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -32,7 +33,10 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	mergeEditions()
 	RunSpecs(t, "")
+	restoreEditions() //Ginkgo's preferred way is to recover during tests
 }
 
 const globalValues = `
@@ -1433,4 +1437,28 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 	}
 
 	return nil
+}
+
+func mergeEditions() {
+	err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", "/deckhouse/candi/cloud-providers/openstack")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/candi/cloud-providers/vsphere")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+func restoreEditions() {
+	err := os.Remove("/deckhouse/candi/cloud-providers/openstack")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Remove("/deckhouse/candi/cloud-providers/vsphere")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+	Expect(err).ShouldNot(HaveOccurred())
 }
