@@ -273,7 +273,7 @@ done
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
-## Как увеличить число master-узлов
+## Как добавить мастер-узлы (single master в multi master)
 
 1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
 
@@ -317,7 +317,7 @@ done
     kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
     ```
 
-## Как уменьшить число master-узлов
+## Как уменьшить число master-узлов (multi master в single master)
 
 1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
 
