@@ -60,6 +60,6 @@ spec:
           operation-policy.deckhouse.io/enabled: "true"
 ```
 
-To apply these policies, it will be sufficient to set label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
-The above policy is a generic and recommended by Deckhouse team, if your company's policies are different, you can configure them as you like
+To apply these policies, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
+The above policy is generic and recommended by Deckhouse team; if your company's policies are different, you can configure them as you like
 or disable unnecessary checks.
