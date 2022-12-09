@@ -1,0 +1,23 @@
+deckhouse-config:
+  fixes:
+    - summary: Disable deckhouse-config webhook for uninitialized cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3257
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Fix auth TLS certificates bug which leads to absent certificates on the Ingress controller
+        bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3259
+namespace-configurator:
+  fixes:
+    - summary: Apply configuration only for namespaces matched the filter in this configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3273
+node-manager:
+  fixes:
+    - summary: Fix the description in the `NodeGroupMasterTaintIsAbsent` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3248
+user-authn:
+  fixes:
+    - summary: Read CA for OIDC provider from encoded PEM string.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3249
+

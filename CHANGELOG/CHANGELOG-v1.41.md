@@ -46,12 +46,16 @@
  - **[cloud-provider-yandex]** Removed the Standard layout from the documentation, as it doesn't work. [#3108](https://github.com/deckhouse/deckhouse/pull/3108)
  - **[cloud-provider-yandex]** In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work. [#3031](https://github.com/deckhouse/deckhouse/pull/3031)
     The `cloud-provider-yandex` module will be restarted if a proxy is enabled in the cluster.
+ - **[deckhouse-config]** Disable deckhouse-config webhook for uninitialized cluster. [#3257](https://github.com/deckhouse/deckhouse/pull/3257)
  - **[deckhouse-config]** Apply defaults before spec.settings validation. [#3206](https://github.com/deckhouse/deckhouse/pull/3206)
+ - **[ingress-nginx]** Fix auth TLS certificates bug which leads to absent certificates on the Ingress controller bootstrap. [#3259](https://github.com/deckhouse/deckhouse/pull/3259)
  - **[ingress-nginx]** Fix manual pods rollout for `HostPort` inlet. [#3207](https://github.com/deckhouse/deckhouse/pull/3207)
  - **[istio]** Fixed istio control-plane alerts: `D8IstioActualVersionIsNotInstalled`, `D8IstioDesiredVersionIsNotInstalled`. [#3024](https://github.com/deckhouse/deckhouse/pull/3024)
  - **[linstor]** In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work. [#3031](https://github.com/deckhouse/deckhouse/pull/3031)
     The `linstor` module will be restarted if a proxy is enabled in the cluster.
  - **[metallb]** Add validation for `addressPools` name. [#3110](https://github.com/deckhouse/deckhouse/pull/3110)
+ - **[namespace-configurator]** Apply configuration only for namespaces matched the filter in this configuration. [#3273](https://github.com/deckhouse/deckhouse/pull/3273)
+ - **[node-manager]** Fix the description in the `NodeGroupMasterTaintIsAbsent` alert. [#3248](https://github.com/deckhouse/deckhouse/pull/3248)
  - **[node-manager]** Fix node-group template generation when `minPerZone==0` and capacity is not set. [#3222](https://github.com/deckhouse/deckhouse/pull/3222)
  - **[node-manager]** Fix script name generation and the bashible-apiserver [#3156](https://github.com/deckhouse/deckhouse/pull/3156)
  - **[node-manager]** Calculate resource requests for a stanby-holder Pod as a percentage of a node's capacity. [#2959](https://github.com/deckhouse/deckhouse/pull/2959)
@@ -60,6 +64,7 @@
  - **[prometheus]** Update Grafana Home dashboard. [#3015](https://github.com/deckhouse/deckhouse/pull/3015)
  - **[snapshot-controller]** In case of wget and curl utility usage inside pods, proxy (and proxy ignore) will work. [#3031](https://github.com/deckhouse/deckhouse/pull/3031)
     The `snapshot-controller` module will be restarted if a proxy is enabled in the cluster.
+ - **[user-authn]** Read CA for OIDC provider from encoded PEM string. [#3249](https://github.com/deckhouse/deckhouse/pull/3249)
 
 ## Chore
 
