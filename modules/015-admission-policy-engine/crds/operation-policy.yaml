@@ -123,7 +123,7 @@ spec:
                         - IfNotPresent
                     checkDNSPolicy:
                       type: boolean
-                      description: "Check 'ClusterFirstWithHostNet' dnsPolicy is set for pods with hostNetwork: true."
+                      description: "Check 'ClusterFirstWithHostNet' dnsPolicy is set for Pods with `hostNetwork: true`."
                     checkContainerDuplicates:
                       type: boolean
                       description: "Check container names and env variables for duplicates."
