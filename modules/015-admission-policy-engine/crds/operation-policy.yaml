@@ -154,7 +154,7 @@ spec:
                           description: |
                             Specifies the label selector to filter namespaces.
 
-                            You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           anyOf:
                             - required: [ matchLabels ]
                             - required: [ matchExpressions ]
