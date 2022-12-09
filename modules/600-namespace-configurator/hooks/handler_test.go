@@ -83,6 +83,8 @@ configurations:
     labels: {"foo":"bar","bee":null}
     includeNames: ["test1", "test2", "test3", "test4", "test6"]
     excludeNames: ["test2"]
+  - labels: {"qqq":"zzz"}
+    includeNames: ["my*"]
 `))
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
@@ -127,6 +129,12 @@ metadata:
   name: test6
   labels:
     foo: bar
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: myns
+  labels: {}
 `))
 			f.RunHook()
 		})
@@ -139,28 +147,42 @@ metadata:
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`bar`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
 
 			ns = f.KubernetesResource("Namespace", "", "test3")
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`bar`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
+
 			ns = f.KubernetesResource("Namespace", "", "test4")
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`bar`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
 
 			ns = f.KubernetesResource("Namespace", "", "test2")
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`bar`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
+
 			ns = f.KubernetesResource("Namespace", "", "test5")
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`baz`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
+
 			ns = f.KubernetesResource("Namespace", "", "test6")
 			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeTrue())
 			Expect(ns.Field("metadata.labels.foo").String()).To(Equal(`bar`))
 			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).Exists()).To(BeFalse())
+
+			ns = f.KubernetesResource("Namespace", "", "myns")
+			Expect(ns.Field(`metadata.labels.foo`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.bee`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.qqq`).String()).To(Equal(`zzz`))
 		})
 	})
 
