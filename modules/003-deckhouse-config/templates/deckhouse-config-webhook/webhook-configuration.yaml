@@ -1,4 +1,4 @@
-{{ if .Values.global.clusterIsBootstrapped }}
+{{- if .Values.global.clusterIsBootstrapped }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -55,4 +55,4 @@ webhooks:
         name: deckhouse-config-webhook
         namespace: d8-system
         path: /validate-cm
-{{ end }}
+{{- end }}
