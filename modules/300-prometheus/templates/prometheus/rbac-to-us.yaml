@@ -41,3 +41,8 @@ subjects:
   name: prometheus-metrics-adapter
   namespace: d8-monitoring
 {{- end }}
+{{- if (.Values.global.enabledModules | has "flant-integration") }}
+- kind: ServiceAccount
+  name: pricing
+  namespace: d8-flant-integration
+{{- end }}
