@@ -157,7 +157,8 @@ func (hec *Config) HelmRender(options ...Option) {
 
 	yamlValuesBytes := hec.values.GetAsYaml()
 
-	renderer := helm.Renderer{LintMode: true}
+	// disable LintMode, otherwise 'fail' function will not render any value
+	renderer := helm.Renderer{LintMode: false}
 	files, err := renderer.RenderChartFromDir(hec.modulePath, string(yamlValuesBytes))
 
 	hec.RenderError = err
