@@ -18,7 +18,6 @@ package linter
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func LoadConfiguration(m utils.Module, path, prefix, dir string) (FileController
 		return FileController{}, fmt.Errorf("formatting path failed: %v", err)
 	}
 
-	configurationFile, err := ioutil.ReadFile(absPath)
+	configurationFile, err := os.ReadFile(absPath)
 	if err != nil {
 		return FileController{}, fmt.Errorf("read matrix tests configuration file failed: %v", err)
 	}
@@ -92,7 +91,7 @@ func LoadConfiguration(m utils.Module, path, prefix, dir string) (FileController
 	dir = strings.TrimSuffix(dir, "/")
 	_ = os.Mkdir(dir, 0755)
 
-	tmpDir, err := ioutil.TempDir(dir, "")
+	tmpDir, err := os.MkdirTemp(dir, "")
 	if err != nil {
 		return FileController{}, fmt.Errorf("tmp directory error: %v", err)
 	}

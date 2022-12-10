@@ -9,9 +9,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"user-authz-webhook/cache"
@@ -35,14 +35,14 @@ func buildTLSConfig() (*tls.Config, error) {
 	clientCertPool := x509.NewCertPool()
 
 	{ // kube-apiserver requests
-		clientCertBytes, err := ioutil.ReadFile(authClientCA)
+		clientCertBytes, err := os.ReadFile(authClientCA)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %v", authClientCA, err)
 		}
 		clientCertPool.AppendCertsFromPEM(clientCertBytes)
 	}
 	{ // kubelet liveness probe requests
-		clientCertBytes, err := ioutil.ReadFile(sslListenCert)
+		clientCertBytes, err := os.ReadFile(sslListenCert)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %v", sslListenCert, err)
 		}

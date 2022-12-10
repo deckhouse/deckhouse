@@ -19,7 +19,7 @@ package linter
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,7 +50,7 @@ func Run(tmpDir string, m utils.Module) (err error) {
 	}()
 
 	// Silence default loggers
-	log.SetOutput(ioutil.Discard)      // helm
+	log.SetOutput(io.Discard)          // helm
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator
 
 	var values []chartutil.Values

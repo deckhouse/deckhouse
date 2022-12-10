@@ -22,7 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"io/ioutil"
+	"os"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -95,7 +95,7 @@ func WithClientCertFile(caFilePath, certFilePath, keyFilePath string) Option {
 			return
 		}
 
-		caData, err := ioutil.ReadFile(caFilePath)
+		caData, err := os.ReadFile(caFilePath)
 		if err != nil {
 			return
 		}

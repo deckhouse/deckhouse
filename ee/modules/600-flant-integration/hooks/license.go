@@ -9,7 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -158,4 +158,4 @@ type dockerFileConfig struct {
 
 // Define global to mock file reading in tests.
 // TODO Add FS abstraction layer to dependency.Container.
-var readFile = ioutil.ReadFile
+var readFile = os.ReadFile

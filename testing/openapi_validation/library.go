@@ -18,7 +18,6 @@ package openapi_validation
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -129,7 +128,7 @@ type fileParser struct {
 }
 
 func getFileYAMLContent(path string) map[interface{}]interface{} {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}

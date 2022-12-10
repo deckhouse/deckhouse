@@ -18,7 +18,7 @@ package openapi_cases
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -70,7 +70,7 @@ var _ = Describe("OpenAPI case tests", func() {
 
 func ExecuteTestCases(testCases *TestCases) {
 	// Silence addon-operator logger. (Validation, moduleManager)
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 
 	modulePath, _ := filepath.Split(testCases.dir)
 	moduleName := filepath.Base(modulePath)

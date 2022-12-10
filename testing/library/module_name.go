@@ -18,7 +18,6 @@ package library
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +28,7 @@ import (
 var moduleDirNameRegex = regexp.MustCompile(`^(\d+-)(.+)$`)
 
 func GetModuleNameByPath(modulePath string) (string, error) {
-	chartYamlBytes, err := ioutil.ReadFile(modulePath + "/Chart.yaml")
+	chartYamlBytes, err := os.ReadFile(modulePath + "/Chart.yaml")
 	if err == nil {
 		return extractModuleNameFromChartYaml(chartYamlBytes)
 	}

@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
@@ -71,7 +70,7 @@ func checkAuthn(header http.Header, scope string) error {
 		return err
 	}
 
-	remotePublicMetadataBytes, err := ioutil.ReadFile("/remote/remote-public-metadata.json")
+	remotePublicMetadataBytes, err := os.ReadFile("/remote/remote-public-metadata.json")
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func checkAuthn(header http.Header, scope string) error {
 }
 
 func initProxyTransport() {
-	kubeCA, _ := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	kubeCA, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	kubeCertPool := x509.NewCertPool()
 	kubeCertPool.AppendCertsFromPEM(kubeCA)
 
@@ -180,7 +179,7 @@ func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// impersonate as current ServiceAccount
-	saToken, _ := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/token")
+	saToken, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/token")
 	proxyDirector := func(req *http.Request) {
 		req.Header.Del("Authorization")
 		req.Header.Add("Authorization", "Bearer "+string(saToken))
@@ -259,7 +258,7 @@ func main() {
 	router.Handle("/ready", http.HandlerFunc(httpHandlerReady))
 	router.Handle("/", http.HandlerFunc(httpHandlerApiProxy))
 
-	kubeCA, _ := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	kubeCA, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	kubeCertPool := x509.NewCertPool()
 	kubeCertPool.AppendCertsFromPEM(kubeCA)
 

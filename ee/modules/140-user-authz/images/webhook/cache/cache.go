@@ -10,10 +10,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -120,7 +121,7 @@ func (c *NamespacedDiscoveryCache) Check() error {
 func (c *NamespacedDiscoveryCache) initClient() {
 	tlsConfig := &tls.Config{}
 
-	contentCA, err := ioutil.ReadFile(caPath)
+	contentCA, err := os.ReadFile(caPath)
 	if err == nil {
 		caPool, err := x509.SystemCertPool()
 		if err != nil {
@@ -307,7 +308,7 @@ func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string,
 
 	defer resp.Body.Close()
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("%s: decoding response error: %w", logTag, err)
 	}

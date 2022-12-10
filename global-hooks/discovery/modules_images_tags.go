@@ -17,7 +17,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -34,7 +33,7 @@ func discoveryModulesImagesTags(input *go_hook.HookInput) error {
 		tagsFile = os.Getenv("D8_TAGS_TMP_FILE")
 	}
 
-	tagsContent, err := ioutil.ReadFile(tagsFile)
+	tagsContent, err := os.ReadFile(tagsFile)
 	if err != nil {
 		return fmt.Errorf("cannot read images tags files: %w", err)
 	}

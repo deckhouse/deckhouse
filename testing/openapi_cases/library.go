@@ -18,7 +18,6 @@ package openapi_cases
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -109,7 +108,7 @@ func GetAllOpenAPIDirs() ([]string, error) {
 
 func TestCasesFromFile(filename string) (*TestCases, error) {
 	var testCases TestCases
-	yamlFile, err := ioutil.ReadFile(filename)
+	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

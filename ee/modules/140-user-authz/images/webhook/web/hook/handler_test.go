@@ -7,7 +7,7 @@ package hook
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"regexp"
 	"testing"
@@ -248,7 +248,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			allRegex, _ := regexp.Compile("^.*$")
 
 			handler := &Handler{
-				logger: log.New(ioutil.Discard, "", 0),
+				logger: log.New(io.Discard, "", 0),
 				cache: &dummyCache{
 					data: map[string]map[string]bool{
 						"test/v1": {

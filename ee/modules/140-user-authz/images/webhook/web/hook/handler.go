@@ -7,7 +7,6 @@ package hook
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -214,7 +213,7 @@ func (h *Handler) renewDirectories() {
 
 	var config UserAuthzConfig
 
-	configRawData, err := ioutil.ReadFile(configPath)
+	configRawData, err := os.ReadFile(configPath)
 	if err != nil {
 		h.logger.Printf("cannot read the config %s: %v", configPath, err)
 		return

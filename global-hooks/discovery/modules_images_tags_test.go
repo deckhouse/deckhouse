@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -105,7 +104,7 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 })
 
 func writeTagsTMPFile(content string) error {
-	tmpfile, err := ioutil.TempFile("", "d8-modules-images-tags-*")
+	tmpfile, err := os.CreateTemp("", "d8-modules-images-tags-*")
 	if err != nil {
 		return err
 	}

@@ -22,7 +22,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -127,7 +126,7 @@ func GetKubeToken() (string, error) {
 		return "kube-auth-test-token", nil
 	}
 
-	content, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	content, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		return "", err
 	}

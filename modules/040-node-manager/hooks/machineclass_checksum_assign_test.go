@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -950,7 +949,7 @@ func getAvailableCloudProviderTypes() set.Set {
 	}
 	dir := filepath.Join(modulesDir, "040-node-manager", "cloud-providers")
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return ptypes
 	}

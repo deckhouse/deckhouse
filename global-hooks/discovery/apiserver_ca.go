@@ -18,7 +18,7 @@ package hooks
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -31,7 +31,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoverApiserverCA(input *go_hook.HookInput) error {
 	caPath := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
-	content, err := ioutil.ReadFile(caPath)
+	content, err := os.ReadFile(caPath)
 	if err != nil {
 		return fmt.Errorf("cannot find kubernetes ca: %v, (not in pod?)", err)
 	}

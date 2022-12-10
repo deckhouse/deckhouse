@@ -18,7 +18,6 @@ package modules
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -45,7 +44,7 @@ func crdsModuleRule(name, path string) errors.LintRuleErrorsList {
 			return nil
 		}
 
-		fileContent, err := ioutil.ReadFile(path)
+		fileContent, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}

@@ -19,7 +19,6 @@ package template
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -243,7 +242,7 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 			return nil
 		}
 
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}

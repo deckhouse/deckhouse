@@ -18,7 +18,7 @@ package hooks
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -222,7 +222,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 		})
 		It("Must be valid and have no deprecated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			out, _ := ioutil.ReadAll(f.LogrusOutput)
+			out, _ := io.ReadAll(f.LogrusOutput)
 			Expect(string(out)).ToNot(ContainSubstring("manifest read error"))
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).To(HaveLen(3))

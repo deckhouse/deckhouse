@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -217,7 +217,7 @@ func doMadisonRequest(req *http.Request, dc dependency.Container, logEntry *logr
 	defer resp.Body.Close()
 
 	var madisonResp madisonAuthKeyResp
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("cannot read response body: %v", err)
 	}

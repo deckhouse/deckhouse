@@ -17,7 +17,6 @@ limitations under the License.
 package sandbox_runner
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"syscall"
@@ -56,7 +55,7 @@ func Run(cmd *exec.Cmd, opts ...SandboxOption) *gexec.Session {
 
 func WithFile(path string, contents []byte, envOpts ...EnvOption) SandboxOption {
 	return func(conf sandboxConfig) error {
-		err := ioutil.WriteFile(path, contents, os.FileMode(0644))
+		err := os.WriteFile(path, contents, os.FileMode(0644))
 		if err != nil {
 			return err
 		}

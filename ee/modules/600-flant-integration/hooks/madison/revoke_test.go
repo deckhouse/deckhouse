@@ -7,7 +7,7 @@ package madison
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	_ "github.com/flant/addon-operator/sdk"
@@ -31,7 +31,7 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 	Context("project is archived", func() {
 		BeforeEach(func() {
 			buf := bytes.NewBufferString(`{"error": "Archived setup"}`)
-			rc := ioutil.NopCloser(buf)
+			rc := io.NopCloser(buf)
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
 				Return(&http.Response{
@@ -79,7 +79,7 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 				Return(&http.Response{
 					Header:     map[string][]string{"Content-Type": {"application/json"}},
 					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
+					Body:       io.NopCloser(bytes.NewBuffer(nil)),
 				}, nil)
 
 			f.KubeStateSet("")

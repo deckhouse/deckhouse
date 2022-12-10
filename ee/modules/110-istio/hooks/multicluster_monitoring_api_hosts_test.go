@@ -7,7 +7,7 @@ package hooks
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -113,7 +113,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 					return &http.Response{
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: mockResponse.Code,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(mockResponse.Response)),
+						Body:       io.NopCloser(bytes.NewBufferString(mockResponse.Response)),
 					}, nil
 				})
 			f.RunHook()

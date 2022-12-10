@@ -18,7 +18,7 @@ package modules
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +55,7 @@ func commonTestGoForHooks(name, path string) errors.LintRuleError {
 		)
 	}
 
-	contentBytes, err := ioutil.ReadFile(commonTestPath)
+	contentBytes, err := os.ReadFile(commonTestPath)
 	if err != nil {
 		return errors.NewLintRuleError(
 			"MODULE001",

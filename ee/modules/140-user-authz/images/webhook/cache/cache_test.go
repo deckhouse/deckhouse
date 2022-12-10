@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cache
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -210,7 +210,7 @@ func newTestCache() *NamespacedDiscoveryCache {
 	now := time.Now()
 	cache.now = func() time.Time { return now }
 
-	cache.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	cache.logger = log.New(io.Discard, "", log.LstdFlags)
 	cache.data = make(map[string]*namespacedCacheEntry)
 	cache.preferredVersions = make(map[string]*preferredVersionCacheEntry)
 
@@ -230,7 +230,7 @@ func newTestPreferredVersionCache() *NamespacedDiscoveryCache {
 	now := time.Now()
 	cache.now = func() time.Time { return now }
 
-	cache.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	cache.logger = log.New(io.Discard, "", log.LstdFlags)
 	cache.data = make(map[string]*namespacedCacheEntry)
 	cache.preferredVersions = make(map[string]*preferredVersionCacheEntry)
 

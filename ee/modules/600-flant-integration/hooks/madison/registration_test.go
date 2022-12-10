@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	_ "github.com/flant/addon-operator/sdk"
@@ -133,7 +133,7 @@ data:
 		BeforeEach(func() {
 			// Mock HTTP client to emulate registration.
 			buf := bytes.NewBufferString(fmt.Sprintf(`{"error": "", "auth_key":"%s"}`, madisonTestAuthKey))
-			rc := ioutil.NopCloser(buf)
+			rc := io.NopCloser(buf)
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
 				Return(&http.Response{

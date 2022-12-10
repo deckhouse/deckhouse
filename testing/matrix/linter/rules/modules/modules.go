@@ -18,7 +18,6 @@ package modules
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,7 +55,7 @@ func shouldSkipModule(name string) bool {
 }
 
 func namespaceModuleRule(name, path string) (string, errors.LintRuleError) {
-	content, err := ioutil.ReadFile(filepath.Join(path, ".namespace"))
+	content, err := os.ReadFile(filepath.Join(path, ".namespace"))
 	if err != nil {
 		return "", errors.NewLintRuleError(
 			"MODULE002",
@@ -76,7 +75,7 @@ func chartModuleRule(name, path string) (string, errors.LintRuleError) {
 		"Module does not contain valid %q file, module will be ignored", ChartConfigFilename,
 	)
 
-	yamlFile, err := ioutil.ReadFile(filepath.Join(path, ChartConfigFilename))
+	yamlFile, err := os.ReadFile(filepath.Join(path, ChartConfigFilename))
 	if err != nil {
 		return "", lintError
 	}
@@ -114,7 +113,7 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 		return errors.EmptyRuleError
 	}
 
-	contentBytes, err := ioutil.ReadFile(filepath.Join(path, ".helmignore"))
+	contentBytes, err := os.ReadFile(filepath.Join(path, ".helmignore"))
 	if err != nil {
 		return errors.NewLintRuleError(
 			"MODULE001",

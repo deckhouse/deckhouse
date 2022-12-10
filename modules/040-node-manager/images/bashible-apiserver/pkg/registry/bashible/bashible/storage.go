@@ -18,7 +18,7 @@ package bashible
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
@@ -35,7 +35,7 @@ const templateName = "bashible.sh.tpl"
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
 	templatePath := path.Join(rootDir, "bashible", templateName)
 
-	tplContent, err := ioutil.ReadFile(templatePath)
+	tplContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read template: %v", err)
 	}

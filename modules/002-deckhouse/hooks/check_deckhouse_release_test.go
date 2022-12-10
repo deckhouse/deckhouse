@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sort"
 	"strconv"
 	"testing"
@@ -517,7 +516,7 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	}
 
 	if len(fl.FilesContent) == 0 {
-		return ioutil.NopCloser(result), nil
+		return io.NopCloser(result), nil
 	}
 
 	wr := tar.NewWriter(result)
@@ -534,7 +533,7 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	}
 	_ = wr.Close()
 
-	return ioutil.NopCloser(result), nil
+	return io.NopCloser(result), nil
 }
 
 func (fl fakeLayer) Size() (int64, error) {

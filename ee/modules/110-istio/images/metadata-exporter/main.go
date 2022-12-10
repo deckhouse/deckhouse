@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -86,7 +85,7 @@ var spiffeBundleJSON string
 var publicMetadataJSON string
 
 func renderSpiffeBundleJSON() {
-	pubPem, err := ioutil.ReadFile(rootCAPath)
+	pubPem, err := os.ReadFile(rootCAPath)
 	if err != nil {
 		panic("Cert file read error: " + err.Error())
 	}
@@ -136,12 +135,12 @@ func renderPublicMetadataJSON() {
 		panic("Error reading cluster UUID")
 	}
 
-	authnKeyPubPem, err := ioutil.ReadFile("/keys/pub.pem")
+	authnKeyPubPem, err := os.ReadFile("/keys/pub.pem")
 	if err != nil {
 		panic("pub key file read error: " + err.Error())
 	}
 
-	rootCAPem, err := ioutil.ReadFile(rootCAPath)
+	rootCAPem, err := os.ReadFile(rootCAPath)
 	if err != nil {
 		panic("root ca file read error: " + err.Error())
 	}
@@ -163,13 +162,13 @@ func renderPublicMetadataJSON() {
 func renderFederationPrivateMetadataJSON() string {
 	var pm FederationPrivateMetadata
 
-	data, err := ioutil.ReadFile("/metadata/ingressgateways-array.json")
+	data, err := os.ReadFile("/metadata/ingressgateways-array.json")
 	if err == nil {
 		json.Unmarshal(data, &pm.IngressGateways)
 	}
 
 	if os.Getenv("FEDERATION_ENABLED") == "true" {
-		data, err := ioutil.ReadFile("/metadata/services-array.json")
+		data, err := os.ReadFile("/metadata/services-array.json")
 		if err == nil {
 			json.Unmarshal(data, &pm.PublicServices)
 		}
@@ -185,7 +184,7 @@ func renderFederationPrivateMetadataJSON() string {
 func renderMulticlusterPrivateMetadataJSON() string {
 	var pm MulticlusterPrivateMetadata
 
-	data, err := ioutil.ReadFile("/metadata/ingressgateways-array.json")
+	data, err := os.ReadFile("/metadata/ingressgateways-array.json")
 	if err == nil {
 		json.Unmarshal(data, &pm.IngressGateways)
 	}
@@ -226,7 +225,7 @@ func checkAuthn(header http.Header, scope string) error {
 		return err
 	}
 
-	remotePublicMetadataBytes, err := ioutil.ReadFile("/remote/remote-public-metadata.json")
+	remotePublicMetadataBytes, err := os.ReadFile("/remote/remote-public-metadata.json")
 	if err != nil {
 		return err
 	}

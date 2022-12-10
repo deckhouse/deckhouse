@@ -18,7 +18,7 @@ package drain
 
 import (
 	"io"
-	"io/ioutil"
+	"io/ioutil" // nolint: staticcheck
 	"time"
 
 	"k8s.io/client-go/kubernetes"

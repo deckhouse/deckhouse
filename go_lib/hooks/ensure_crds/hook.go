@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -213,7 +212,7 @@ func loadCRDsFromFile(crdFilePath string) ([]byte, error) {
 
 	defer crdFile.Close()
 
-	content, err := ioutil.ReadAll(crdFile)
+	content, err := io.ReadAll(crdFile)
 	if err != nil {
 		return nil, err
 	}

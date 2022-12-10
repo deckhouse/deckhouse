@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -83,7 +82,7 @@ var _ = Describe("Global hooks :: deckhouse_version ", func() {
 })
 
 func writeVersionTMPFile(content string) error {
-	tmpfile, err := ioutil.TempFile("", "deckhouse-version-*")
+	tmpfile, err := os.CreateTemp("", "deckhouse-version-*")
 	if err != nil {
 		return err
 	}
