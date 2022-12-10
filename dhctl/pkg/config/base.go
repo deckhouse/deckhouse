@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -80,7 +80,7 @@ func numerateManifestLines(manifest []byte) string {
 }
 
 func ParseConfig(path string) (*MetaConfig, error) {
-	fileContent, err := ioutil.ReadFile(path)
+	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading config file: %v", err)
 	}

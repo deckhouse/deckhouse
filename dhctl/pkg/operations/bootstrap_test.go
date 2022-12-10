@@ -16,7 +16,6 @@ package operations
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,7 +35,7 @@ import (
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
 	log.InitLogger("simple")
-	dir, err := ioutil.TempDir(os.TempDir(), "dhctl-test-bootstrap-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 
 	require.NoError(t, err)

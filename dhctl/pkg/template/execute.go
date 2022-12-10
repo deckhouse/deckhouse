@@ -17,7 +17,6 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +39,7 @@ type RenderedTemplate struct {
 // Files are rendered separately, so no support for
 // libraries, like in Helm.
 func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
-	files, err := ioutil.ReadDir(templatesDir)
+	files, err := os.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
 		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
 		return nil, nil
@@ -63,7 +62,7 @@ func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]Ren
 		tplPath := filepath.Join(templatesDir, tplName)
 
 		// Render template as a chart with one template to use helm functions.
-		tplContent, err := ioutil.ReadFile(tplPath)
+		tplContent, err := os.ReadFile(tplPath)
 		if err != nil {
 			return nil, fmt.Errorf("read template file '%s': %v", tplPath, err)
 		}
@@ -114,7 +113,7 @@ func NewTemplateController(tmpDir string) *Controller {
 	}
 	_ = os.Mkdir(tmpDir, bundlePermissions)
 
-	tmpDir, err = ioutil.TempDir(tmpDir, tmpDirPrefix)
+	tmpDir, err = os.MkdirTemp(tmpDir, tmpDirPrefix)
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +141,7 @@ func (t *Controller) RenderBashBooster(fromDir, toDir string) error {
 	}
 
 	filename := filepath.Join(t.TmpDir, toDir, "bashbooster.sh")
-	err = ioutil.WriteFile(filename, []byte(bashBooster), bundlePermissions)
+	err = os.WriteFile(filename, []byte(bashBooster), bundlePermissions)
 	if err != nil {
 		return fmt.Errorf("save bashboster: %v", err)
 	}

@@ -15,7 +15,6 @@
 package fs
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -26,7 +25,7 @@ func assertFileExistsWithContent(t *testing.T, fileName, expectContent string) {
 	_, err := os.Stat(fileName)
 	require.NoError(t, err)
 
-	cont, err := ioutil.ReadFile(fileName)
+	cont, err := os.ReadFile(fileName)
 	require.NoError(t, err)
 
 	require.Equal(t, string(cont), expectContent)
@@ -57,7 +56,7 @@ func TestTouchFile(t *testing.T) {
 		fileName := RandomTmpFileName()
 
 		const content = "test content"
-		err := ioutil.WriteFile(fileName, []byte(content), 0o600)
+		err := os.WriteFile(fileName, []byte(content), 0o600)
 		require.NoError(t, err)
 
 		defer os.Remove(fileName)

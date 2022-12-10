@@ -17,7 +17,7 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -114,7 +114,7 @@ func (r Resources) Less(i, j int) bool {
 }
 
 func ParseResources(path string, data map[string]interface{}) (Resources, error) {
-	fileContent, err := ioutil.ReadFile(path)
+	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
 	}

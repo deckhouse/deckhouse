@@ -16,7 +16,6 @@ package frontend
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -70,7 +69,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		}
 	}()
 
-	err = ioutil.WriteFile(srcPath, data, 0o600)
+	err = os.WriteFile(srcPath, data, 0o600)
 	if err != nil {
 		return fmt.Errorf("write data to tmp file: %v", err)
 	}
@@ -135,7 +134,7 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 		log.InfoF("Download file: %s", string(stdout))
 	}
 
-	data, err := ioutil.ReadFile(dstPath)
+	data, err := os.ReadFile(dstPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading tmp file '%s': %v", dstPath, err)
 	}

@@ -17,7 +17,6 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -193,7 +192,7 @@ func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
 func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 	log.DebugLn("Start render detect bundle script")
 
-	fileContent, err := ioutil.ReadFile(detectBundlePath)
+	fileContent, err := os.ReadFile(detectBundlePath)
 	if err != nil {
 		return "", fmt.Errorf("loading %s: %v", detectBundlePath, err)
 	}
@@ -218,7 +217,7 @@ func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 		log.DebugF("Bundle script content:\n%s", content)
 	}
 
-	outFile, err := ioutil.TempFile(os.TempDir(), "*-detect-bundle.sh")
+	outFile, err := os.CreateTemp(os.TempDir(), "*-detect-bundle.sh")
 	if err != nil {
 		return "", err
 	}

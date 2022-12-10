@@ -16,7 +16,7 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -134,7 +134,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 		// https://github.com/flant/kingpin/pull/1
 		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
 		if app.ParseInputFile == "" {
-			data, err := ioutil.ReadAll(os.Stdin)
+			data, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
 			}
@@ -179,12 +179,12 @@ func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd 
 		var data []byte
 
 		if app.ParseInputFile == "" {
-			data, err = ioutil.ReadAll(os.Stdin)
+			data, err = io.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read cloud-discovery-data from stdin: %v", err)
 			}
 		} else {
-			data, err = ioutil.ReadFile(app.ParseInputFile)
+			data, err = os.ReadFile(app.ParseInputFile)
 			if err != nil {
 				return fmt.Errorf("loading input file: %v", err)
 			}

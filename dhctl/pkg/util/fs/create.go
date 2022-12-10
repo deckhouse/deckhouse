@@ -17,7 +17,6 @@ package fs
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 )
@@ -51,7 +50,7 @@ func TouchFile(path string) error {
 }
 
 func WriteContentIfNeed(file string, newContent []byte) error {
-	curContent, err := ioutil.ReadFile(file)
+	curContent, err := os.ReadFile(file)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -60,5 +59,5 @@ func WriteContentIfNeed(file string, newContent []byte) error {
 		return nil
 	}
 
-	return ioutil.WriteFile(file, newContent, 0o600)
+	return os.WriteFile(file, newContent, 0o600)
 }

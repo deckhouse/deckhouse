@@ -108,7 +108,7 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 		_, _ = w.Write([]byte(indexPageContent))
 	})
 
-	return &http.Server{Addr: c.listenAddress, Handler: router}
+	return &http.Server{Addr: c.listenAddress, Handler: router, ReadHeaderTimeout: 30 * time.Second}
 }
 
 func (c *AutoConverger) runConverge() {
