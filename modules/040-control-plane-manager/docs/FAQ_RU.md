@@ -2,62 +2,123 @@
 title: "Управление control plane: FAQ"
 ---
 
-## Как добавить master-узел?
+<div id="как-добавить-master-узел"></div>
 
-### Статичный или гибридный кластер
+## Как добавить master-узел в статичном или гибридном кластере?
 
 Добавление master-узла в статичный или гибридный кластер ничем не отличается от добавления обычного узла в кластер. Воспользуйтесь для этого соответствующей [инструкцией](../040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
-### Облачный кластер
+## Как добавить master-узлы в облачном кластере (single-master в multi-master)?
 
 > Перед добавлением узлов убедитесь в наличии необходимых квот.
 
-Чтобы добавить в облачный кластер один или несколько master-узлов, выполните следующие действия:
-1. Определите версию и редакцию Deckhouse, используемую в кластере. Для этого выполните на master-узле или на хосте с настроенным доступом kubectl в кластер:
+1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
-   ```shell
-   kubectl -n d8-system get deployment deckhouse \
-   -o jsonpath='version-{.metadata.annotations.core\.deckhouse\.io\/version}, edition-{.metadata.annotations.core\.deckhouse\.io\/edition}' \
-   | tr '[:upper:]' '[:lower:]'
-   ```
-
-1. Запустите контейнер с инсталлятором, версия и редакция которого соответствуют версии и редакции Deckhouse в кластере:
-
-   ```shell
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-   registry.deckhouse.io/deckhouse/<DECKHOUSE_EDITION>/install:<DECKHOUSE_VERSION> bash
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
-   Например, если версия Deckhouse в кластере — `v1.28.0`, редакция — `ee`, то команда запуска инсталлятора будет следующей:
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество реплик в параметре `masterNodeGroup.replicas`:
 
-   ```shell
-   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
-   ```
-
-   > Измените адрес container registry при необходимости (например, если вы используете внутренний container registry).
-
-1. В контейнере с инсталлятором выполните следующую команду (используйте ключи `--ssh-bastion-*` в случае доступа через bastion-хост):
-
-   ```shell
+   ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-   --ssh-host <SSH_HOST>
+     --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-1. В открывшемся окне редактирования ресурса `<PROVIDERNAME>ClusterConfiguration` (например, `OpenStackClusterConfiguration` в случае OpenStack) укажите необходимое количество реплик master-узла в поле `masterNodeGroup.replicas` и сохраните изменения.
-1. Запустите масштабирование, выполнив следующую команду (необходимо указать соответствующие параметры доступа в кластер, как на предыдущем шаге):
+1. **В контейнере с инсталлятором** выполните следующую команду, для запуска масштабирования:
 
-   ```shell
-   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <SSH_HOST>
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-1. Ответьте утвердительно на вопрос `Do you want to CHANGE objects state in the cloud?`.
+1. Дождитесь появления необходимого количества master-узлов в статусе `Ready` и готовности всех экземпляров `control-plane-manager`:
 
-Все остальные действия будут выполнены автоматически, дождитесь их завершения — появления необходимого количества master-узлов в статусе `Ready`.
+   ```bash
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   ```
+
+<div id="как-удалить-master-узел"></div>
+
+## Как уменьшить число master-узлов в облачном кластере (multi-master в single-master)?
+
+1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите `1` в параметре `masterNodeGroup.replicas`:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+1. Снимите следующие лейблы с удаляемых master-узлов:
+   * `node-role.kubernetes.io/control-plane`
+   * `node-role.kubernetes.io/master`
+   * `node.deckhouse.io/group`
+
+   Команда для снятия лейблов:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Убедитесь, что удаляемые master-узлы пропали из списка членов кластера etcd:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Выполните drain для удаляемых узлов:
+
+   ```bash
+   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
+
+1. Удалите в кластере Pod'ы, оставшиеся на удаленных узлах:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   ```
+
+1. Удалите в кластере объекты Node удаленных узлов:
+
+   ```bash
+   kubectl delete node <MASTER-NODE-N-NAME>
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду, для запуска масштабирования:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
 
 ## Как убрать роль master-узла, сохранив узел?
 
-1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`, затем дождитесь, пока etcd member будет удален автоматически.
-2. Зайдите на узел и выполните следующие действия:
+1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
+1. Убедитесь, что удаляемый master-узел пропал из списка членов кластера etcd:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Зайдите на узел и выполните следующие команды:
 
    ```shell
    rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -68,6 +129,108 @@ title: "Управление control plane: FAQ"
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
    rm -rf /var/lib/etcd/member/
    ```
+
+## Как изменить образ ОС в multi-master-кластере?
+
+1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите необходимый образ ОС в параметре `masterNodeGroup.instanceClass` (укажите адреса всех master-узлов в параметре `--ssh-host`):
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+Следующие действия **выполняйте поочередно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
+
+1. Выберите master-узел для обновления (укажите его название):
+
+   ```bash
+   NODE="<MASTER-NODE-N-NAME>"
+   ```
+
+1. Выполните следующую команду для снятия лейблов `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group` с узла:
+
+   ```bash
+   kubectl label node ${NODE} \
+     node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Убедитесь, что узел пропал из списка членов кластера etcd:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Выполните `drain` для узла:
+
+   ```bash
+   kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Выключите виртуальную машину, соответствующую узлу, удалите инстанс узла из облака и подключенные к нему диски (kubernetes-data).
+
+1. Удалите в кластере Pod'ы, оставшиеся на удаляемом узле:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
+   ```
+
+1. Удалите в кластере объект Node удаленного узла:
+
+   ```bash
+   kubectl delete node ${NODE}
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду, для создания обновленного узла:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+1. **На созданном узле** посмотрите журнал systemd-unit'а `bashible.service`. Дождитесь окончания настройки узла, — сообщения `nothing to do` в журнале:
+
+   ```bash
+   journalctl -fu bashible.service
+   ```
+
+1. Убедитесь, что узел появился в списке членов кластера etcd:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Убедитесь, что `control-plane-manager` функционирует на узле.
+
+   ```bash
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+   ```
+
+1. Перейдите к обновлению следующего узла.
+
+## Как изменить образ ОС в single-master-кластере?
+
+1. Преобразуйте single-master-кластер в multi-master в соответствии с [инструкцией](#как-добавить master-узлы-в-облачном-кластере-single-master-в-multi-master).
+
+   > Помимо увеличения числа реплик вы можете сразу указать образ с необходимой версией ОС в параметре `masterNode.instanceClass`.
+
+1. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ос-в-multi-master-кластере).
+1. Преобразуйте multi-master-кластер в single-master в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master)
 
 ## Как посмотреть список member'ов в etcd?
 
@@ -272,256 +435,3 @@ done
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
-
-## Как добавить мастер-узлы (single master в multi master)
-
-1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
-
-    ```bash
-    DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-    DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
-    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
-    registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-    ```
-
-2. Измените число реплик для masterNodeGroup на требуемое.
-
-   Пример:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-   --ssh-host <MASTER-NODE-0>
-   ```
-
-  Фрагмент конфигурации:
-
-   ```yaml
-   masterNodeGroup:
-     instanceClass:
-       replicas: <требуемое число реплик>
-   ```
-
-3. Выполните converge.
-
-   Пример:
-
-    ```bash
-    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
-    --ssh-user=<USERNAME> \
-    --ssh-host <MASTER-NODE-0>
-    ```
-
-4. Убедитесь, что `control-plane-manager` функционирует.
-
-    ```bash
-    kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
-    ```
-
-## Как уменьшить число master-узлов (multi master в single master)
-
-1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
-
-    ```bash
-    DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-    DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
-    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
-    registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-    ```
-
-2. Измените число реплик для masterNodeGroup на требуемое.
-
-   Пример:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-   --ssh-host <MASTER-NODE-0>
-   ```
-
-   Фрагмент конфигурации:
-
-   ```yaml
-   masterNodeGroup:
-     instanceClass:
-       replicas: <требуемое число реплик>
-   ```
-
-3. Снимите следующие лейблы с удаляемых узлов:
-    * node-role.kubernetes.io/control-plane
-    * node-role.kubernetes.io/master
-    * node.deckhouse.io/group
-
-    Пример:
-
-    ```bash
-    kubectl label node <имя удаляемого узла> \
-    node-role.kubernetes.io/control-plane- \
-    node-role.kubernetes.io/master- \
-    node.deckhouse.io/group-
-    ```
-
-4. Убедитесь, что узлы пропали из членов кластера etcd.
-
-   ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
-   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
-   ```
-
-5. Выполните drain для удаляемых узлов.
-
-   Пример:
-
-   ```bash
-   kubectl drain <имя удаляемого узла> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-6. Выключите (poweroff) удаляемый узел и удалите инстансы соответствующих узлов из облака и подключенные к ним диски (kubernetes-data).
-
-7. Удалите оставшиеся ресурсы с узлов.
-
-    Пример:
-
-    ```bash
-    kubectl delete pods --all-namespaces --field-selector spec.nodeName=<имя удаляемого узла> --force
-    ```
-
-8. Удалите ресурсы узлов.
-
-   Пример:
-
-   ```bash
-   kubectl delete node <имя удаляемого узла>
-   ```
-
-9. Выполните converge.
-
-    Пример:
-
-    ```bash
-    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
-    --ssh-user=<USERNAME> \
-    --ssh-host <MASTER-NODE-0>
-    ```
-
-    > При выполнении команды убедитесь, что планируется удалить именно требуемые ноды!
-
-10. Убедитесь, что `control-plane-manager` функционирует.
-
-    ```bash
-    kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
-    ```
-
-## Как изменить образ ОС в multi-master кластере
-
-1. Запустите контейнер установщика Deckhouse соответствующей редакции и версии (на локальной машине).
-
-    ```bash
-    DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-    DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
-    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \                                                                                        
-    registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-    ```
-
-2. Измените образ ОС для masterNodeGroup.
-
-   Пример:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-   --ssh-host <MASTER-NODE-0> --ssh-host <MASTER-NODE-1> --ssh-host <MASTER-NODE-2>
-   ```
-
-   Фрагмент конфигурации:
-
-   ```yaml
-   masterNodeGroup:
-     instanceClass:
-       template: <new image version>
-   ```
-
-> Следующие действия выполняйте поочередно на всех master-узлах, начиная с последнего (с суффиксом 2) и заканчивая первым (с суффиксом 0):
-
-1. Выберите master-узел для обновления.
-
-   ```bash
-   NODE="<MASTER-NODE-X>"
-   ```
-
-2. Снимите следующие лейблы с удаляемых узлов:
-* node-role.kubernetes.io/control-plane
-* node-role.kubernetes.io/master
-* node.deckhouse.io/group
-
-   Пример:
-    ```bash
-    kubectl label node <имя удаляемого узла> \
-    node-role.kubernetes.io/control-plane- \
-    node-role.kubernetes.io/master- \
-    node.deckhouse.io/group-
-```
-
-3. Убедитесь что узел пропал из членов etcd кластера.
-
-   ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
-   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
-   ```
-
-4. Выполните `drain` для узла `<MASTER-NODE-X>`.
-
-   ```bash
-   kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
-   ```
-
-5. Выключите (poweroff) `<MASTER-NODE-X>`, удалите инстанс узла из облака и подключенные к нему диски (kubernetes-data).
-
-6. Удалите Pod'ы, оставшиеся на удаляемом узле `<MASTER-NODE-X>`.
-
-   ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
-   ```
-
-7. Удалите объект Node `<MASTER-NODE-X>`.
-
-   ```bash
-   kubectl delete node ${NODE}
-   ```
-
-8. Выполните converge.
-
-   ```bash
-   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
-   --ssh-user=<USERNAME> \
-   --ssh-host <MASTER-NODE-0> \
-   --ssh-host <MASTER-NODE-1> \
-   --ssh-host <MASTER-NODE-2>
-   ```
-
-   > При выполнении команды убедитесь, что планируется удалить именно требуемые узлы!
-
-9. В логах `bashible.service` на вновь созданном узле `<MASTER-NODE-X>` должно быть сообщение “nothing to do”.
-
-   ```bash
-   journalctl -fu bashible.service
-   ```
-
-10. Убедитесь, что узел появился в членах кластера etcd.
-
-    ```bash
-    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
-    "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table"
-    ```
-
-11. Убедитесь, что `control-plane-manager` функционирует на узле `<MASTER-NODE-X>`.
-
-    ```bash
-    kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
-    ```
-
-## Как изменить образ ОС в single-master кластере
-
-1. Преобразуйте single-master в multi-master кластер в соответствии с [инструкцией](#как-увеличить-число-master-узлов)
-
-> Внимание! Помимо увеличения числа реплик, также рекомендуется сразу установить требуемую версию ОС в masterNode.instanceClass.template: <new image version>
-
-2. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ОС-в-multi-master-кластере)
-3. Преобразуйте multi-master в single-master кластер в соответствии с [инструкцией](#как-уменьшить-число-master-узлов)
