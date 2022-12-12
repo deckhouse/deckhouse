@@ -62,9 +62,6 @@ spec:
         args:
         - "--secure-listen-address=0.0.0.0:8080"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
-        # Сертификат для проверки пользователя, указывает стандартный клиентский CA Kubernetes
-        # (есть в каждом Pod'е)
-        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
         # Если kube-apiserver недоступен, мы не сможем аутентифицировать и авторизовывать пользователей.

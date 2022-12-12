@@ -42,9 +42,6 @@ spec:
         args:
         - "--secure-listen-address=0.0.0.0:443"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
-        # User verification certificate, refers to the standard Kubernetes client CA
-        # (available in every Pod)
-        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
         # The user authentication and authorization are not possible if the kube-apiserver is not available.
