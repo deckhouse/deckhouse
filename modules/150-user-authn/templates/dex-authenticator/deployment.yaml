@@ -185,8 +185,7 @@ spec:
             command:
             - curl
             - -f
-            - --cacert
-            - /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            - -k
             - https://dex.d8-user-authn/.well-known/openid-configuration
           initialDelaySeconds: 5
           periodSeconds: 5
