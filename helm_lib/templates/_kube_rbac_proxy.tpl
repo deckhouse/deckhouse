@@ -11,6 +11,8 @@ metadata:
   annotations:
     kubernetes.io/description: Contains a CA bundle that can be used to verify the
       kube-rbac-proxy clients.
+  labels:
+{{- include "helm_lib_module_labels" (list $context dict) | nindent 2 }}
   name: kube-rbac-proxy-ca.crt
   namespace: {{ $namespace }}
 {{- end }}
