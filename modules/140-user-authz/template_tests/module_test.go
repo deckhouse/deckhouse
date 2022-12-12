@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -27,6 +28,11 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	defer GinkgoRecover()
+	defer restoreEditions()
+	mergeEditions()
+
 	RunSpecs(t, "")
 }
 
@@ -216,3 +222,13 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	})
 
 })
+
+func mergeEditions() {
+	err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates")
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+func restoreEditions() {
+	err := os.Remove("/deckhouse/modules/140-user-authz/templates")
+	Expect(err).ShouldNot(HaveOccurred())
+}
