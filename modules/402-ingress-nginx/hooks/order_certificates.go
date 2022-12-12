@@ -73,8 +73,8 @@ func getSecret(namespace, name string, dc dependency.Container) (*certificate.Ce
 func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 	if input.Values.Exists("ingressNginx.internal.ingressControllers") {
 		caAuthority := certificate.Authority{
-			Key:  input.Values.Get("global.internal.modules.kubeRBACProxyCA.cert").String(),
-			Cert: input.Values.Get("global.internal.modules.kubeRBACProxyCA.key").String(),
+			Key:  input.Values.Get("global.internal.modules.kubeRBACProxyCA.key").String(),
+			Cert: input.Values.Get("global.internal.modules.kubeRBACProxyCA.cert").String(),
 		}
 
 		certificates := make([]CertificateInfo, 0)
