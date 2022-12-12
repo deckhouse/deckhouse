@@ -117,7 +117,7 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 	}
 
 	if resJSON, ok := input.ConfigValues.GetOk("global.modules.proxy"); ok {
-		dataChanged = true
+		needMigration = true
 		res := make(map[string]interface{})
 		err := json.Unmarshal([]byte(resJSON.String()), &res)
 		if err != nil {
