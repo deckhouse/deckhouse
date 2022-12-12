@@ -26,6 +26,9 @@ subjects:
   name: ingress-nginx:auth
 - kind: Group
   name: prometheus:auth
+- kind: ServiceAccount
+  name: prometheus
+  namespace: d8-monitoring
 {{- if (.Values.global.enabledModules | has "upmeter") }}
 - kind: ServiceAccount
   name: upmeter-agent

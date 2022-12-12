@@ -28,8 +28,16 @@ data:
 
             [origins.main.tls]
               insecure_skip_verify = true
-              client_cert_path = '/etc/trickster/ssl/tls.crt'
-              client_key_path = '/etc/trickster/ssl/tls.key'
+
+            [origins.main.health_check_headers]
+              Authorization = 'Bearer $PROMETHEUS_TOKEN'
+
+            [origins.main.paths]
+              [origins.default.paths.root]
+                path = '/'
+
+                  [origins.main.paths.root.response_headers]
+                    Authorization = 'Bearer $PROMETHEUS_TOKEN'
 
         [origins.longterm]
           origin_type = 'prometheus'
@@ -40,8 +48,16 @@ data:
 
             [origins.longterm.tls]
               insecure_skip_verify = true
-              client_cert_path = '/etc/trickster/ssl/tls.crt'
-              client_key_path = '/etc/trickster/ssl/tls.key'
+
+            [origins.longterm.health_check_headers]
+              Authorization = 'Bearer $PROMETHEUS_TOKEN'
+
+            [origins.longterm.paths]
+              [origins.longterm.paths.root]
+                path = '/'
+
+                  [origins.longterm.paths.root.response_headers]
+                    Authorization = 'Bearer $PROMETHEUS_TOKEN'
 
       [metrics]
         listen_port = 8001
