@@ -102,9 +102,15 @@ spec:
     {{- end}}
   {{- else }}
     type: RollingUpdate
+    {{- if $loadBalancer }}
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
+    {{- else }}
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+    {{- end }}
   {{- end }}
   selector:
     matchLabels:
