@@ -6,7 +6,7 @@
 {{- end }}
 
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "system" "system-with-drbd-problems" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -206,5 +206,17 @@ tolerations:
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
 
+{{- /* System with DRBD problems: Nodes for system components including various drbd problems */ -}}
+  {{- else if eq $strategy "system-with-drbd-problems" }}
+tolerations:
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: {{ $context.Chart.Name | quote }}
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
   {{- end }}
 {{- end }}
