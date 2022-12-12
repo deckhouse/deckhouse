@@ -15,7 +15,6 @@
 package cache
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +29,7 @@ import (
 func TestNewTempStateCache(t *testing.T) {
 	log.InitLogger("simple")
 
-	dir, err := ioutil.TempDir(os.TempDir(), "dhctl-test-cache-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-cache-*")
 	require.NoError(t, err)
 	app.CacheDir = dir
 

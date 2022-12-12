@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -87,7 +86,7 @@ func walkModules(namespaces, sas *[]string, workDir string) error {
 		modulePath = strings.TrimRight(modulePath, "/")
 
 		if filepath.Base(path) == "Chart.yaml" {
-			c, err := ioutil.ReadFile(path)
+			c, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
@@ -105,7 +104,7 @@ func walkModules(namespaces, sas *[]string, workDir string) error {
 		}
 
 		if filepath.Base(path) == ".namespace" {
-			ns, err := ioutil.ReadFile(path)
+			ns, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
@@ -119,7 +118,7 @@ func walkModules(namespaces, sas *[]string, workDir string) error {
 		}
 
 		if filepath.Base(path) == "rbac-for-us.yaml" {
-			rbac, err := ioutil.ReadFile(path)
+			rbac, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}

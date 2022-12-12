@@ -16,13 +16,13 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"sigs.k8s.io/yaml"
 )
 
 func ParseBashibleConfig(path, specPath string) (map[string]interface{}, error) {
-	fileContent, err := ioutil.ReadFile(path)
+	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading schema file: %v", err)
 	}

@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -198,7 +198,7 @@ status:
 					return &http.Response{
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: mockResponse.Code,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(mockResponse.Response)),
+						Body:       io.NopCloser(bytes.NewBufferString(mockResponse.Response)),
 					}, nil
 				})
 			f.RunHook()
@@ -539,7 +539,7 @@ status: {}
 					return &http.Response{
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: mockResponse.Code,
-						Body:       ioutil.NopCloser(bytes.NewBufferString(mockResponse.Response)),
+						Body:       io.NopCloser(bytes.NewBufferString(mockResponse.Response)),
 					}, nil
 				})
 

@@ -18,8 +18,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -467,7 +467,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 func (m *MetaConfig) LoadVersionMap(filename string) error {
 	versionMap := make(map[string]interface{})
 
-	versionMapFile, err := ioutil.ReadFile(filename)
+	versionMapFile, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("%s file load: %v", filename, err)
 	}
@@ -532,7 +532,7 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 func (m *MetaConfig) LoadImagesTags(filename string) error {
 	var imagesTags ImagesTags
 
-	imagesTagsJSONFile, err := ioutil.ReadFile(filename)
+	imagesTagsJSONFile, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("%s file load: %v", filename, err)
 	}

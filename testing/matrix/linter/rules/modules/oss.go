@@ -18,7 +18,6 @@ package modules
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -131,7 +130,7 @@ func assertOssProject(i int, p ossProject) error {
 }
 
 func readOssFile(moduleRoot string) ([]ossProject, error) {
-	b, err := ioutil.ReadFile(filepath.Join(moduleRoot, ossFilename))
+	b, err := os.ReadFile(filepath.Join(moduleRoot, ossFilename))
 	if err != nil {
 		return nil, err
 	}

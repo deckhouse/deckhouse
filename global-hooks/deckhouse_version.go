@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -34,7 +33,7 @@ func discoverDeckhouseVersion(input *go_hook.HookInput) error {
 	}
 
 	version := "unknown"
-	content, err := ioutil.ReadFile(versionFile)
+	content, err := os.ReadFile(versionFile)
 	if err != nil {
 		input.LogEntry.Warnf("cannot get deckhouse version: %v", err)
 	} else {

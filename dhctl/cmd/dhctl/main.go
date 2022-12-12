@@ -19,7 +19,7 @@ import (
 	"os"
 	"runtime/trace"
 
-	"golang.org/x/crypto/ssh/terminal"
+	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"

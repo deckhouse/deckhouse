@@ -16,13 +16,13 @@ package template
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
 func RenderBashBooster(templatesDir string) (string, error) {
-	files, err := ioutil.ReadDir(templatesDir)
+	files, err := os.ReadDir(templatesDir)
 	if err != nil {
 		return "", fmt.Errorf("bashbooster read dir: %v", err)
 	}
@@ -35,7 +35,7 @@ func RenderBashBooster(templatesDir string) (string, error) {
 
 		filePath := filepath.Join(templatesDir, file.Name())
 
-		fileContent, err := ioutil.ReadFile(filePath)
+		fileContent, err := os.ReadFile(filePath)
 		if err != nil {
 			return "", fmt.Errorf("bashbooster read file %q: %v", filePath, err)
 		}

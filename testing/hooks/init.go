@@ -21,7 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -328,7 +328,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 			Stderr: &stderr,
 		}
 
-		hec.tmpDir, err = ioutil.TempDir(globalTmpDir, "")
+		hec.tmpDir, err = os.MkdirTemp(globalTmpDir, "")
 		if err != nil {
 			panic(err)
 		}
@@ -562,11 +562,11 @@ func (hec *HookExecutionConfig) RunHook() {
 		})
 	}
 
-	valuesJSONPatchBytes, err := ioutil.ReadAll(ValuesJSONPatchFile)
+	valuesJSONPatchBytes, err := io.ReadAll(ValuesJSONPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
-	configValuesJSONPatchBytes, err := ioutil.ReadAll(ConfigValuesJSONPatchFile)
+	configValuesJSONPatchBytes, err := io.ReadAll(ConfigValuesJSONPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
-	kubernetesPatchBytes, err := ioutil.ReadAll(KubernetesPatchSetFile)
+	kubernetesPatchBytes, err := io.ReadAll(KubernetesPatchSetFile)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	// TODO: take a closer look and refactor into a function

@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cache
 
 import (
-	"io/ioutil"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -49,7 +49,7 @@ func (t *kubeTransport) updateToken() {
 		return
 	}
 
-	token, err := ioutil.ReadFile(tokenPath)
+	token, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return
 	}

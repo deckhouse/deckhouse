@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -136,7 +135,7 @@ func writeSections(settings writeSettings) {
 		}
 
 		if ok {
-			content, err := ioutil.ReadFile(buildFile)
+			content, err := os.ReadFile(buildFile)
 			if err != nil {
 				log.Fatal(err)
 			}

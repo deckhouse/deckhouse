@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -55,7 +54,7 @@ var _ = Describe("Global hooks :: deckhouse_edition ", func() {
 })
 
 func writeEditionTMPFile(content string) error {
-	tmpfile, err := ioutil.TempFile("", "deckhouse-edition-*")
+	tmpfile, err := os.CreateTemp("", "deckhouse-edition-*")
 	if err != nil {
 		return err
 	}

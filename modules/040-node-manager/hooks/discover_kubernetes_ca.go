@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 const rootCAFile = "/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
 func discoverKubernetesCAHandler(input *go_hook.HookInput) error {
-	caBytes, err := ioutil.ReadFile(rootCAFile)
+	caBytes, err := os.ReadFile(rootCAFile)
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,6 @@
 package operations
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -37,13 +36,13 @@ func Edit(data []byte) ([]byte, error) {
 		}
 	}
 
-	tmpFile, err := ioutil.TempFile(app.TmpDirName, "dhctl-editor.*.yaml")
+	tmpFile, err := os.CreateTemp(app.TmpDirName, "dhctl-editor.*.yaml")
 	if err != nil {
 		log.ErrorF("can't save cluster configuration: %s\n", err)
 		return nil, err
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), data, 0o600)
+	err = os.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
 		log.ErrorF("can't write write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
 		return nil, err
@@ -59,7 +58,7 @@ func Edit(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	modifiedData, err := ioutil.ReadFile(tmpFile.Name())
+	modifiedData, err := os.ReadFile(tmpFile.Name())
 	if err != nil {
 		return nil, err
 	}

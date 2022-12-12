@@ -17,7 +17,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -262,7 +261,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 		if versionHTTPClient != nil {
 			return
 		}
-		contentCA, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+		contentCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 
 		versionHTTPClient = d8http.NewClient(
 			d8http.WithTLSServerName("kubernetes.default.svc"),
@@ -292,7 +291,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 
 	minVerStr := minVer.String()
 
-	err = ioutil.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
+	err = os.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
 	if err != nil {
 		return err
 	}

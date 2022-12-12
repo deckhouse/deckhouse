@@ -19,7 +19,6 @@ package template_tests
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -65,21 +64,21 @@ admissionPolicyEngine:
 
 		It("Rego policy test must have passed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			tmpDir, err := ioutil.TempDir("", "policy-*")
+			tmpDir, err := os.MkdirTemp("", "policy-*")
 			defer os.RemoveAll(tmpDir)
 			Expect(err).To(BeNil())
 
 			for filePath, content := range renderedOutput {
 				newPath := path.Join(tmpDir, filePath)
 				_ = os.MkdirAll(path.Dir(newPath), 0755)
-				_ = ioutil.WriteFile(newPath, []byte(content), 0444)
+				_ = os.WriteFile(newPath, []byte(content), 0444)
 			}
 			_ = filepath.Walk("../templates/policies", func(fpath string, info fs.FileInfo, err error) error {
 				if strings.HasSuffix(fpath, "test_suite.yaml") || strings.Contains(fpath, "/test_samples/") {
 					newPath := path.Join(tmpDir, strings.Replace(fpath, "../", "admission-policy-engine/", 1))
 					_ = os.MkdirAll(path.Dir(newPath), 0755)
-					input, _ := ioutil.ReadFile(fpath)
-					_ = ioutil.WriteFile(newPath, input, 0644)
+					input, _ := os.ReadFile(fpath)
+					_ = os.WriteFile(newPath, input, 0644)
 				}
 				return nil
 			})

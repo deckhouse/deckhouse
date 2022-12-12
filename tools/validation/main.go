@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 )
@@ -79,7 +78,7 @@ func main() {
 }
 
 func readFile(fName string) (*DiffInfo, error) {
-	content, err := ioutil.ReadFile(fName)
+	content, err := os.ReadFile(fName)
 	if err != nil {
 		return nil, err
 	}

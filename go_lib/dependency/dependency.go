@@ -18,7 +18,6 @@ package dependency
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
@@ -107,7 +106,7 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 	var opts []http.Option
 	opts = append(opts, options...)
 
-	contentCA, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	contentCA, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err == nil {
 		opts = append(opts, http.WithAdditionalCACerts([][]byte{contentCA}))
 	}

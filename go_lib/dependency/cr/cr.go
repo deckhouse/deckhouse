@@ -21,9 +21,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -113,7 +113,7 @@ func (r *client) Digest(tag string) (string, error) {
 }
 
 func readAuthConfig(configPath string) (authn.AuthConfig, error) {
-	dockerConfigBytes, err := ioutil.ReadFile(configPath)
+	dockerConfigBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}

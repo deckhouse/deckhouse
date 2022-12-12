@@ -17,7 +17,7 @@ package hooks
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -118,7 +118,7 @@ subsets:
   "platform": "linux/amd64"
 }`, version)
 		buf := bytes.NewBufferString(b)
-		rc := ioutil.NopCloser(buf)
+		rc := io.NopCloser(buf)
 		return &http.Response{
 			Header:     map[string][]string{"Content-Type": {"application/json"}},
 			StatusCode: http.StatusOK,
@@ -169,12 +169,12 @@ subsets:
 	}
 
 	assertNoFile := func() {
-		_, err := ioutil.ReadFile(kubeVersionFileName)
+		_, err := os.ReadFile(kubeVersionFileName)
 		Expect(os.IsNotExist(err)).To(BeTrue())
 	}
 
 	assertVersionInFile := func(k8sVer string) {
-		content, err := ioutil.ReadFile(kubeVersionFileName)
+		content, err := os.ReadFile(kubeVersionFileName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(content)).To(Equal(k8sVer))
 	}

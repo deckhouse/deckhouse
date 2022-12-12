@@ -7,7 +7,7 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -55,7 +55,7 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 	}
 	defer res.Body.Close()
 
-	dataBytes, err := ioutil.ReadAll(res.Body)
+	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, 0, err
 	}

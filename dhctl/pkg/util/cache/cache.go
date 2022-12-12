@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -54,7 +53,7 @@ func NewStateCache(dir string) (*StateCache, error) {
 
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) error {
-	if err := ioutil.WriteFile(s.GetPath(name), content, 0o600); err != nil {
+	if err := os.WriteFile(s.GetPath(name), content, 0o600); err != nil {
 		log.ErrorF("Can't save terraform state in cache: %v", err)
 	}
 
@@ -131,7 +130,7 @@ func (s *StateCache) Delete(name string) {
 }
 
 func (s *StateCache) Load(name string) ([]byte, error) {
-	return ioutil.ReadFile(s.GetPath(name))
+	return os.ReadFile(s.GetPath(name))
 }
 
 // LoadStruct loads go struct from the cache
@@ -154,7 +153,7 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 			return nil
 		}
 
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("can't read file %s: %w", path, err)
 		}

@@ -19,7 +19,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -158,7 +157,7 @@ func getChecksumTemplate(values *go_hook.PatchableValues) ([]byte, error) {
 
 func readChecksumTemplate(cloudType string) ([]byte, error) {
 	path := getChecksumTemplatePath(cloudType)
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read checksum template: %v", err)
 	}

@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sync/atomic"
@@ -153,13 +153,13 @@ func (r *Runner) WithHook(h InfraActionHook) *Runner {
 }
 
 func (r *Runner) WithState(stateData []byte) *Runner {
-	tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
+	tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
 	if err != nil {
 		log.ErrorF("can't save terraform state for runner %s: %s\n", r.step, err)
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0o600)
+	err = os.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform state for runner %s: %s\n", r.step, err)
 		return r
@@ -170,13 +170,13 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 }
 
 func (r *Runner) WithVariables(variablesData []byte) *Runner {
-	tmpFile, err := ioutil.TempFile(app.TmpDirName, varFileName)
+	tmpFile, err := os.CreateTemp(app.TmpDirName, varFileName)
 	if err != nil {
 		log.ErrorF("can't save terraform variables for runner %s: %s\n", r.step, err)
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0o600)
+	err = os.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform variables for runner %s: %s\n", r.step, err)
 		return r
@@ -420,7 +420,7 @@ func (r *Runner) Plan() error {
 	}
 
 	return log.Process("default", "terraform plan ...", func() error {
-		tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhousePlanSuffix)
+		tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("can't create temp file for plan: %w", err)
 		}
@@ -543,7 +543,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 		return 0
 	}
 
-	data, err := ioutil.ReadFile(r.statePath)
+	data, err := os.ReadFile(r.statePath)
 	if err != nil {
 		log.ErrorLn(err)
 		return 0
@@ -562,7 +562,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 }
 
 func (r *Runner) getState() ([]byte, error) {
-	return ioutil.ReadFile(r.statePath)
+	return os.ReadFile(r.statePath)
 }
 
 // Stop interrupts the current runner command and sets

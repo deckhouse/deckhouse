@@ -34,7 +34,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
 		err := checkMachinesAPI(fakeClient)
-		require.EqualError(t, err, "GroupVersion \"machine.sapcloud.io/v1alpha1\" not found")
+		require.EqualError(t, err, "the server could not find the requested resource, GroupVersion \"machine.sapcloud.io/v1alpha1\" not found")
 	})
 
 	t.Run("With sap API registration", func(t *testing.T) {

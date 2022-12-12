@@ -16,7 +16,6 @@ package jwt
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -24,7 +23,7 @@ import (
 )
 
 func GenJWT(privateKeyPath string, claims map[string]string, ttl time.Duration) error {
-	privKeyBytes, err := ioutil.ReadFile(privateKeyPath)
+	privKeyBytes, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return err
 	}

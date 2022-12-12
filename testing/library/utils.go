@@ -19,7 +19,6 @@ package library
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -56,7 +55,7 @@ func GetModulesImagesTags(modulePath string) (map[string]interface{}, error) {
 func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]interface{}, error) {
 	var tags map[string]interface{}
 
-	imageTagsRaw, err := ioutil.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
+	imageTagsRaw, err := os.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	)
 
 	// 0. Get values from values-default.yaml
-	globalValuesRaw, err := ioutil.ReadFile(filepath.Join("/deckhouse", "modules", "values.yaml"))
+	globalValuesRaw, err := os.ReadFile(filepath.Join("/deckhouse", "modules", "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	}
 
 	// 1. Get values from modules/[module_name]/template_tests/values.yaml
-	testsValuesRaw, err := ioutil.ReadFile(filepath.Join(modulePath, "template_tests", "values.yaml"))
+	testsValuesRaw, err := os.ReadFile(filepath.Join(modulePath, "template_tests", "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	}
 
 	// 2. Get values from modules/[module_name]/values.yaml
-	moduleValuesRaw, err := ioutil.ReadFile(filepath.Join(modulePath, "values.yaml"))
+	moduleValuesRaw, err := os.ReadFile(filepath.Join(modulePath, "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

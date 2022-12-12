@@ -258,7 +258,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			InitialDelaySeconds: 5,
 			PeriodSeconds:       5,
 			FailureThreshold:    120,
-			Handler: apiv1.Handler{
+			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: "/ready",
 					Port: intstr.FromInt(9650),
