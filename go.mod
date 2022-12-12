@@ -11,9 +11,9 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.0.7-0.20221210172805-5d1344c69a38 // branch: main
+	github.com/flant/addon-operator v1.1.0 // branch: main
 	github.com/flant/kube-client v0.25.0
-	github.com/flant/shell-operator v1.1.0 // branch: main
+	github.com/flant/shell-operator v1.1.1 // branch: main
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -38,8 +38,8 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.8.0
-	github.com/tidwall/gjson v1.12.1
-	github.com/tidwall/sjson v1.2.3
+	github.com/tidwall/gjson v1.14.4
+	github.com/tidwall/sjson v1.2.5
 	github.com/vmware/govmomi v0.24.1
 	go.etcd.io/etcd/api/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
