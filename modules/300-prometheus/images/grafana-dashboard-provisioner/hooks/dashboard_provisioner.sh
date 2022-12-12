@@ -59,6 +59,7 @@ function __main__() {
 
     mkdir -p "${tmpDir}/${folder}"
     echo "${dashboard}" | jq -rc '.definition' | jq --arg newUid ${dashboardUid} '.uid=$newUid' > "${tmpDir}/${file}"
+    sed -i "s/$(cat $dashboard | jq -rc '.definition | try(fromjson | .panels[0].styles[1].linkUrl)' | cut -d/ -f3 | tr -d '"')/$dashboardUid/g" "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
