@@ -126,7 +126,7 @@ apiVersions:
         properties:
           httpProxy:
             type: string
-            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:@]+$'
             description: |
               Proxy URL for HTTP requests.
           httpsProxy:
