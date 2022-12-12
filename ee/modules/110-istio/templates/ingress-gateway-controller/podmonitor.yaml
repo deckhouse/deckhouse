@@ -10,7 +10,7 @@ spec:
   jobLabel: app
   namespaceSelector:
     matchNames:
-      - d8-istio
+      - d8-ingress-{{ .Chart.Name }}
   podMetricsEndpoints:
     - path: /stats/prometheus
       relabelings:

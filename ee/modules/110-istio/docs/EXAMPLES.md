@@ -222,7 +222,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-tls-secert
-  namespace: d8-istio-ingress # note the namespace isn't app-ns
+  namespace: d8-ingress-istio # note the namespace isn't app-ns
 type: kubernetes.io/tls
 data:
   tls.crt: |
@@ -256,7 +256,7 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # a secret with a certificate and a key, which must be created in the d8-istio-ingress namespace
+        # a secret with a certificate and a key, which must be created in the d8-ingress-istio namespace
         # supported secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
         credentialName: app-tls-secrets
       hosts:
