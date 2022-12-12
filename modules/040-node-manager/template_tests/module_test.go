@@ -34,9 +34,11 @@ import (
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 
+	defer GinkgoRecover()
+	defer restoreEditions()
 	mergeEditions()
+
 	RunSpecs(t, "")
-	restoreEditions() //Ginkgo's preferred way is to recover during tests
 }
 
 const globalValues = `
