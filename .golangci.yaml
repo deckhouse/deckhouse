@@ -39,7 +39,7 @@ linters:
   - misspell
   - revive
   - staticcheck
-  - structcheck
+#  - structcheck
   - typecheck
   - unconvert
   - unparam

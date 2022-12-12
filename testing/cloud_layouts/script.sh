@@ -517,7 +517,7 @@ function bootstrap() {
   Cluster bootstrapped. Starting the test now.
 
   If you'd like to pause the cluster deletion for debugging:
-   1. ssh to cluster: 'ssh $ssh_user@$master_ip'
+   1. ssh to cluster: 'ssh $ssh_user@$master_ip $ssh_bastion'
    2. execute 'kubectl create configmap pause-the-test'
 
 =============================================================="
@@ -526,7 +526,7 @@ function bootstrap() {
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -558,7 +558,7 @@ ENDSSH
 function change_deckhouse_image() {
   new_image_tag="${1}"
   >&2 echo "Change Deckhouse image to ${new_image_tag}."
-  if ! $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+  if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -588,7 +588,7 @@ function capture_logs_during_switching() {
   done
 END_SCRIPT
 )
-  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log"
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log"
 }
 
 # wait_deckhouse_ready check if deckhouse Pod become ready.
@@ -605,7 +605,7 @@ END_SCRIPT
   testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
     >&2 echo "Check Deckhouse Pod readiness..."
-    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       return 0
     fi
 
@@ -644,7 +644,7 @@ kubectl -n d8-system logs deploy/deckhouse | grep '"error"'
 END
 )
 
-  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   if [[ "$PROVIDER" == "Static" ]]; then
     run_linstor_tests || return $?
