@@ -28,11 +28,6 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	defer GinkgoRecover()
-	defer restoreEditions()
-	mergeEditions()
-
 	RunSpecs(t, "")
 }
 
@@ -95,6 +90,14 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
 
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		mergeEditions()
+	})
+
+	AfterSuite(func() {
+		restoreEditions()
+	})
 
 	BeforeEach(func() {
 		// TODO: move to some common function???
@@ -224,11 +227,11 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 })
 
 func mergeEditions() {
-	err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates")
+	err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
 	Expect(err).ShouldNot(HaveOccurred())
 }
 
 func restoreEditions() {
-	err := os.Remove("/deckhouse/modules/140-user-authz/templates")
+	err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
 	Expect(err).ShouldNot(HaveOccurred())
 }
