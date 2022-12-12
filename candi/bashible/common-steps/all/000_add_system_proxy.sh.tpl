@@ -35,14 +35,6 @@ export https_proxy=${HTTPS_PROXY}
 export NO_PROXY=${NO_PROXY}
 export no_proxy=${NO_PROXY}
 EOF
-
-export HTTP_PROXY=${HTTP_PROXY}
-export http_proxy=${HTTP_PROXY}
-export HTTPS_PROXY=${HTTPS_PROXY}
-export https_proxy=${HTTPS_PROXY}
-export NO_PROXY=${NO_PROXY}
-export no_proxy=${NO_PROXY}
-
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
