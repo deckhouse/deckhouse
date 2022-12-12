@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO remove after 1.38 release
+// TODO remove after 1.42 release
 
 package hooks
 
