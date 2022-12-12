@@ -6,4 +6,4 @@ metadata:
   annotations:
     extended-monitoring.flant.com/enabled: ""
 ---
-{{- include "kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}

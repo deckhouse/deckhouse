@@ -1,4 +1,4 @@
-{{- define "kube_rbac_proxy_ca_certificate" -}}
+{{- define "helm_lib_kube_rbac_proxy_ca_certificate" -}}
   {{- $context := index . 0 }}
   {{- $namespace := index . 1 }}
 ---
