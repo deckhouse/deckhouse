@@ -15,5 +15,5 @@ tests:
         object: disallowed.yaml
         assertions:
           - violations: yes
-            message: "Pod <disallowed> has invalid priority class: bar, desired: foo"
-
+            message: >-
+              Pod <disallowed> has invalid priority class: bar

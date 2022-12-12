@@ -51,7 +51,7 @@ spec:
     maxRevisionHistoryLimit: 3
     imagePullPolicy: IfNotPresent
     priorityClassName: production-low
-    checkDNSPolicy: true
+    checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
   match:
     namespaceSelector:

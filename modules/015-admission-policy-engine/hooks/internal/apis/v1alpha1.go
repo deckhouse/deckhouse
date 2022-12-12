@@ -50,11 +50,11 @@ type OperationPolicySpec struct {
 			} `json:"labels,omitempty"`
 			WatchKinds []string `json:"watchKinds,omitempty"`
 		} `json:"requiredLabels,omitempty"`
-		MaxRevisionHistoryLimit  *int   `json:"maxRevisionHistoryLimit,omitempty"`
-		ImagePullPolicy          string `json:"imagePullPolicy,omitempty"`
-		PriorityClassName        string `json:"priorityClassName,omitempty"`
-		CheckDNSPolicy           bool   `json:"checkDNSPolicy,omitempty"`
-		CheckContainerDuplicates bool   `json:"checkContainerDuplicates,omitempty"`
+		MaxRevisionHistoryLimit   *int     `json:"maxRevisionHistoryLimit,omitempty"`
+		ImagePullPolicy           string   `json:"imagePullPolicy,omitempty"`
+		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`
+		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
+		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`

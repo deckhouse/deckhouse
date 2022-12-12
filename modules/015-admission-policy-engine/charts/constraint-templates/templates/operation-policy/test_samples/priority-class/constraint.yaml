@@ -9,4 +9,6 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
   parameters:
-    priorityClassName: "foo"
+    priorityClassNames:
+      - "foo"
+      - "baz"

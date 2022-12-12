@@ -50,8 +50,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"requiredProbes":["livenessProbe","readinessProbe"],
 			"maxRevisionHistoryLimit":3,
 			"imagePullPolicy":"Always",
-			"priorityClassName":"foobar",
-			"checkDNSPolicy":true
+			"priorityClassNames":["foo","bar"],
+			"checkHostNetworkDNSPolicy":true
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}], trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
@@ -85,10 +85,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 		})
 
 		It("Should pass tests", func() {
-			gatorCLI := exec.Command("gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint_templates/templates/operation-policy/test_suites/...")
-			res, err := gatorCLI.Output()
+			gatorCLI := exec.Command("gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples/...")
+			res, err := gatorCLI.CombinedOutput()
 			if err != nil {
-				output := strings.ReplaceAll(string(res), "deckhouse/modules/015-admission-policy-engine/charts/constraint_templates/templates/operation-policy/test_suites/", "")
+				output := strings.ReplaceAll(string(res), "deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples", "")
 				fmt.Println(output)
 				Fail("Gatekeeper policy tests failed:" + err.Error())
 			}

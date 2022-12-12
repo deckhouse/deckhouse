@@ -46,10 +46,10 @@ spec:
                     maxRevisionHistoryLimit:
                       description: "Максимальное значение для истории ревизий."
                     priorityClassName:
-                      description: "Желаемый класс приоритета."
+                      description: "Список возможных классов приоритета."
                     imagePullPolicy:
                       description: "Требуемая политика скачивания образов для контейнеров."
-                    checkDNSPolicy:
+                    checkHostNetworkDNSPolicy:
                       description: "Проверка, что dnsPolicy 'ClusterFirstWithHostNet' установлена для Pod'ов с `hostNetwork: true`."
                     checkContainerDuplicates:
                       description: "Проверка имена контейнеров и переменные env на наличие дубликатов."

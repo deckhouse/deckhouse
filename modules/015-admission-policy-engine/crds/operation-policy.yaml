@@ -112,16 +112,18 @@ spec:
                     maxRevisionHistoryLimit:
                       type: integer
                       description: "A maximum value for a revision history."
-                    priorityClassName:
-                      type: string
-                      description: "Desired priority class."
+                    priorityClassNames:
+                      type: array
+                      description: "List of allowed priority class names."
+                      items:
+                        type: string
                     imagePullPolicy:
                       type: string
                       description: "Required image pull policy for containers."
                       enum:
                         - Always
                         - IfNotPresent
-                    checkDNSPolicy:
+                    checkHostNetworkDNSPolicy:
                       type: boolean
                       description: "Check 'ClusterFirstWithHostNet' dnsPolicy is set for Pods with `hostNetwork: true`."
                     checkContainerDuplicates:

@@ -19,8 +19,10 @@ spec:
         openAPIV3Schema:
           type: object
           properties:
-            priorityClassName:
-              type: string
+            priorityClassNames:
+              type: array
+              items:
+                type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
@@ -28,7 +30,10 @@ spec:
 
         violation[{"msg": msg}] {
           priorityClass := input.review.object.spec.priorityClassName
-          desired := input.parameters.priorityClassName
-          priorityClass != desired
-          msg := sprintf("Pod <%v> has invalid priority class: %v, desired: %v", [input.review.object.metadata.name, priorityClass, desired])
+          not contains(input.parameters.priorityClassNames, priorityClass)
+          msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priorityClass, input.parameters.priorityClassNames])
+        }
+
+        contains(list, elem) {
+          list[_] = elem
         }

@@ -67,8 +67,10 @@ spec:
       - readinessProbe
     maxRevisionHistoryLimit: 3
     imagePullPolicy: Always
-    priorityClassName: foobar
-    checkDNSPolicy: true
+    priorityClassNames:
+      - foo
+      - bar
+    checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
   match:
     namespaceSelector:
