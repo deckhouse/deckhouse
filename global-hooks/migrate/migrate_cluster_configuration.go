@@ -22,7 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -75,12 +75,12 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 		return nil
 	}
 
-	var dataChanged bool
+	var needMigration bool
 
 	if _, ok := config["packagesProxy"]; ok {
 		var packagesProxy packagesProxy
 
-		dataChanged = true
+		needMigration = true
 
 		pp, err := json.Marshal(config["packagesProxy"])
 		if err != nil {
@@ -101,14 +101,15 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 		}
 
 		proxyString := packagesProxy.URI
-		idx := strings.Index(proxyString, "://")
-		if idx == -1 {
+		reg := regexp.MustCompile(`^(http://|https://)`)
+		if !reg.MatchString(packagesProxy.URI) {
 			return fmt.Errorf("packagesProxy.uri should start from `http[s]://`: %s", packagesProxy.URI)
 		}
 
 		if authInfo != "" {
-			proxyString = proxyString[:idx] + "://" + authInfo + "@" + proxyString[idx+3:]
+			proxyString = reg.ReplaceAllString(packagesProxy.URI, "${1}"+authInfo+"@")
 		}
+
 		delete(config, "packagesProxy")
 		config["proxy"] = map[string]interface{}{
 			"httpProxy":  proxyString,
@@ -126,7 +127,7 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 		config["proxy"] = res
 	}
 
-	if !dataChanged {
+	if !needMigration {
 		input.LogEntry.Info("migration is not needed")
 		return nil
 	}

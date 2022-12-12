@@ -6,20 +6,17 @@
 export LANG=C
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
-HTTP_PROXY={{ .proxy.httpProxy | quote }}
+export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+export http_proxy=${HTTP_PROXY}
   {{- end }}
   {{- if .proxy.httpsProxy }}
-HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+export https_proxy=${HTTPS_PROXY}
   {{- end }}
   {{- if .proxy.noProxy }}
-NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-  {{- end }}
-export HTTP_PROXY=${HTTP_PROXY}
-export http_proxy=${HTTP_PROXY}
-export HTTPS_PROXY=${HTTPS_PROXY}
-export https_proxy=${HTTPS_PROXY}
-export NO_PROXY=${NO_PROXY}
+export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
 export no_proxy=${NO_PROXY}
+  {{- end }}
 {{- end }}
 apt update
 export DEBIAN_FRONTEND=noninteractive

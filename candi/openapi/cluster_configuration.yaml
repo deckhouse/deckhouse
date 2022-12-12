@@ -131,7 +131,7 @@ apiVersions:
               Proxy URL for HTTP requests.
           httpsProxy:
             type: string
-            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:@]+$'
             description: |
               Proxy URL for HTTPS requests.
           noProxy:
