@@ -69,7 +69,7 @@ spec:
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
-    - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
     - "--v=2"
     - "--logtostderr=true"
     - "--stale-cache-interval=1h30m"
@@ -100,6 +100,9 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
 {{- end }}
+    volumeMounts:
+    - name: kube-rbac-proxy-ca
+      mountPath: /etc/kube-rbac-proxy
   - name: config-reloader
     resources:
       requests:
@@ -148,6 +151,7 @@ spec:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
+      checksum/kube-rbac-proxy: {{ include "kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
       prometheus: main
@@ -266,3 +270,8 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
       {{- include "prometheus_resources" . | nindent 6 }}
 {{- end }}
+  volumes:
+  - name: kube-rbac-proxy-ca
+    configMap:
+      defaultMode: 420
+      name: kube-rbac-proxy-ca.crt

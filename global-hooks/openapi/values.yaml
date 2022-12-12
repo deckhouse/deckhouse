@@ -10,10 +10,20 @@ properties:
     default: {}
     properties:
       modules:
-        default: { }
+        default: {}
         additionalProperties: false
         type: object
         properties:
+          kubeRBACProxyCA:
+            type: object
+            default: {}
+            properties:
+              cert:
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                type: string
+              key:
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                type: string
           resourcesRequests:
             type: object
             default: {}
