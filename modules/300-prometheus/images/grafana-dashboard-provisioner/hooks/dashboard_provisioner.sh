@@ -29,7 +29,7 @@ function __config__() {
       kind: GrafanaDashboardDefinition
       includeSnapshotsFrom:
       - dashboard_resources
-      jqFilter: '{"name": .metadata.name, "folder": .spec.folder, "definition": .spec.definition}'
+      jqFilter: '{"name": .uid, "folder": .spec.folder, "definition": .spec.definition}'
 EOF
 }
 
@@ -46,7 +46,7 @@ function __main__() {
     fi
 
     title=$(slugify <<<${title})
-    dashboardUid=$(jq -rc '.name' <<<${dashboard})
+    dashboardUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}' | cut -b -10)
 
     folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
