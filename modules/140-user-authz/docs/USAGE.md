@@ -134,7 +134,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
      ```shell
      kubectl config set-credentials $user_name \
-       --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy -o json |jq -r '.data["token"]' | base64 -d) \
+       --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
        --kubeconfig=$file_name
      ```
 
