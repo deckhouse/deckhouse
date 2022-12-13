@@ -22,7 +22,7 @@ spec:
           type: object
           description: |
             Delivery source configuration for Argo CD and werf bundle.
-            
+
             Used to create a registry configuration for Argo CD Image Updater and optionally to create an OCI Helm repository in Argo CD to use with werf bundles.
           required:
             - spec
@@ -42,13 +42,13 @@ spec:
                   pattern: ^https?://(?:[a-z0-9]+(?:[.-][a-z0-9]+)*)$
                   description: |
                     URL of the registry API.
-                    
+
                     Automatically derived from `imageRepo` if not specified.
                     E.g. if `imageRepo=cr.example.com/myproject`, then `apiURL` is derived as
                     `https://cr.example.com/`.
                 pullSecretName:
                   type: string
-                  minLength: 1
+                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   description: |
                     Name of the secret of type `kubernetes.io/dockerconfigjson` with credentials for the registry.
                     The secret must be in namespace `d8-delivery`.
@@ -64,7 +64,7 @@ spec:
                   default: {}
                   description: |
                     Argo CD repository configuration.
-                    
+
                     If `argocdRepoEnabled` is `true`, then the repository
                     will be created in Argo CD with the same name as the resource.
                   properties:
@@ -74,5 +74,5 @@ spec:
                       minLength: 1
                       description: |
                         Name of the Argo CD project to which the repository will be added.
-                        
+
                         If not specified, then the repository will be added to the default project.
