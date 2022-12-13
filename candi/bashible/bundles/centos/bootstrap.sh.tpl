@@ -172,6 +172,8 @@ export https_proxy=${HTTPS_PROXY}
 export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
 export no_proxy=${NO_PROXY}
   {{- end }}
+{{- else }}
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 yum updateinfo
 until yum install nc curl wget -y; do

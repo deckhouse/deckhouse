@@ -63,8 +63,8 @@ packagesProxy:
 `
 	proxyConfigurationMigrated = `
 proxy:
-  httpProxy: http:/1.2.3.4
-  httpsProxy: https:/1.2.3.4
+  httpProxy: http://1.2.3.4
+  httpsProxy: https://1.2.3.4
 `
 )
 
