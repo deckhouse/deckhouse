@@ -1,6 +1,6 @@
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: IngressNginxController
