@@ -45,7 +45,7 @@ properties:
               kubeconfigGeneratorMasterCA:
                 type: string
                 description: |
-                  If there is an external load balancer in front of the Ingress that terminates HTTPS traffic, then you need to specify the CA of the certificate used on the load balancer so that kubectl can reach the API server.
+                  If there is an external load balancer in front of the Ingress that terminates HTTPS traffic using non-public CA, then you need to specify the CA so it will be included in kubectl-config.
 
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
   kubeconfigGenerator:
