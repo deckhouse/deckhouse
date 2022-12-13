@@ -2,7 +2,7 @@
 # [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: AzureInstanceClass
@@ -25,7 +25,7 @@ spec:
 # [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: NodeGroup
@@ -59,13 +59,13 @@ spec:
     zones: ["1"]
   # [<en>] the type of nodes this group provides
   # [<ru>] тип узлов, которые представляет эта группа
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for system nodes
 # [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: AzureInstanceClass
@@ -88,7 +88,7 @@ spec:
 # [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: NodeGroup
@@ -137,13 +137,13 @@ spec:
       value: system
   # [<en>] the type of nodes this group provides
   # [<ru>] тип узлов, которые представляет эта группа
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for frontend nodes
 # [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: AzureInstanceClass
@@ -166,7 +166,7 @@ spec:
 # [<ru>] секция, описывающая параметры группы узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: NodeGroup
@@ -215,11 +215,11 @@ spec:
       value: frontend
   # [<en>] the type of nodes this group provides
   # [<ru>] тип узлов, которые представляет эта группа
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 ---
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: IngressNginxController

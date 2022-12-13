@@ -60,7 +60,7 @@ The YAML installation config contains multiple resource configurations (manifest
 {% offtopic title="An example of the installation config..." %}
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
@@ -71,7 +71,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.23"
 clusterDomain: cluster.local
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
@@ -80,7 +80,7 @@ deckhouse:
       modules:
         publicDomainTemplate: "%s.example.com"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
 sshPublicKey: <SSH_PUBLIC_KEY>
@@ -111,7 +111,7 @@ This file can help you with the additional cluster configuration once Deckhouse 
 {% offtopic title="An example of the resource config... " %}
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main
@@ -122,14 +122,14 @@ spec:
   nodeSelector:
     node.deckhouse.io/group: worker
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AzureInstanceClass
 metadata:
   name: worker
 spec:
   machineSize: Standard_F4
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
@@ -141,7 +141,7 @@ spec:
     maxPerZone: 3
     minPerZone: 1
     zones: ["1"]
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

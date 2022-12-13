@@ -2,7 +2,7 @@
 # [<en>] version of the Deckhouse API
 # [<ru>] секция с общими параметрами кластера (ClusterConfiguration)
 # [<ru>] используемая версия API Deckhouse Platform
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: ClusterConfiguration
@@ -35,7 +35,7 @@ clusterDomain: cluster.local
 # [<en>] version of the Deckhouse API
 # [<ru>] секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: InitConfiguration
@@ -58,7 +58,7 @@ deckhouse:
 # [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры облачного провайдера
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: AzureClusterConfiguration
