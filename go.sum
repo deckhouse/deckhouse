@@ -224,8 +224,8 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/felixge/httpsnoop v1.0.1 h1:lvB5Jl89CsZtGIWuTcDM1E/vkVs49/Ml7JJe07l8SPQ=
-github.com/flant/addon-operator v1.1.0 h1:gBiSKIRwug3aNqlTIFrR4bRqxBc6IibJcyV6BhUGfPY=
-github.com/flant/addon-operator v1.1.0/go.mod h1:ZKpMTCNK2uNEIzpNfMMG44C1KwTD3TsMGLK7G+pt7fI=
+github.com/flant/addon-operator v1.1.1-0.20221213151342-bbc9b31bd2af h1:/N44dWfVt7RBufGMtOIaSzwhYZk16A7fCdD1ySlcNhE=
+github.com/flant/addon-operator v1.1.1-0.20221213151342-bbc9b31bd2af/go.mod h1:zYBDqPKOp0CE5NUh41fDjOr9LEjpR794n9qV78socws=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v0.25.0 h1:7uwwbvGNl3d7jNk0nHM4VxNbTnhESXLTiv/gQaUb9A0=
@@ -234,8 +234,8 @@ github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWD
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.1.1 h1:T89AF6eZ74vlryy37nq3RQujRjNV31Vf592LcphOj80=
-github.com/flant/shell-operator v1.1.1/go.mod h1:nE5S7Qxb/P7YmzUly46HarzXPWKaoLGavqJRxTdqHdE=
+github.com/flant/shell-operator v1.1.2-0.20221213151024-35d64040ff1a h1:U8DGJFr3mzy+JyxYHjWdY/NwDnZZnzCvBhdl3nX35U4=
+github.com/flant/shell-operator v1.1.2-0.20221213151024-35d64040ff1a/go.mod h1:iqrt2LdrRG/wbdLbCuoFIW/NwantKTYUDaagoBglbt0=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.5.1 h1:mZcQUHVQUQWoPXXtuf9yuEXKudkV2sx1E06UadKWpgI=
