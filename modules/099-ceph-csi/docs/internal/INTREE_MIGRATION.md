@@ -357,7 +357,7 @@ metadata:
     app: test
   name: data-test-0
   namespace: default
-  resourceVersion: "8956688"  # удалим
+  resourceVersion: "8956688"  # delete
   uid: cd6f7b26-d768-4cab-88a4-baca5b242cc5 # delete
 spec:
   accessModes:
@@ -368,7 +368,7 @@ spec:
   storageClassName: rbd
   volumeMode: Filesystem
   volumeName: pvc-cd6f7b26-d768-4cab-88a4-baca5b242cc5
-status: # удалим
+status: # delete
   accessModes:
   - ReadWriteOnce
   capacity:
@@ -438,7 +438,7 @@ spec:
   mountOptions:
   - discard
   persistentVolumeReclaimPolicy: Delete
-  rbd: # удалим
+  rbd: # delete
     image: kubernetes-dynamic-pvc-f32fea79-d658-4ab1-967a-fb6e8f930dec
     keyring: /etc/ceph/keyring
     monitors:
@@ -450,7 +450,7 @@ spec:
   storageClassName: rbd # replace with ceph-csi-rbd
   volumeMode: Filesystem
   # добавим секцию csi
-status: # удалим
+status: # delete
   phase: Bound
 ```
 
