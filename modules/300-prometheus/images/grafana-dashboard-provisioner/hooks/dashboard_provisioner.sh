@@ -70,10 +70,6 @@ function __main__() {
     echo "Skipping malformed dashboards: ${malformed_dashboards}"
   fi
 
-  if [[ "x${dashboardUid}" != "x" ]]; then
-    echo "Skipping new dashboard formation because of existing with the same uid: ${dashboardUid}"
-  fi
-
   rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
   rm -rf ${tmpDir}
 
