@@ -19,7 +19,6 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
-	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
@@ -31,7 +30,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 			certExists          = len(input.Snapshots[tls_certificate.SnapshotKey]) > 0
 			multitenancyEnabled = input.Values.Get("userAuthz.enableMultiTenancy").Bool()
 		)
-		return !certExists && !multitenancyEnabled
+		return certExists && multitenancyEnabled
 	},
 
 	SANs: tls_certificate.DefaultSANs([]string{"127.0.0.1"}),
@@ -41,8 +40,3 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 	TLSSecretName:        "user-authz-webhook",
 	FullValuesPathPrefix: "userAuthz.internal.webhookCertificate",
 })
-
-type WebhookSecretData struct {
-	CA     certificate.Authority
-	Server certificate.Authority
-}
