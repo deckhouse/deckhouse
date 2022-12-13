@@ -63,6 +63,7 @@ rules:
   - services
   - endpoints
   - namespaces
+  - nodes
   verbs:
   - get
   - list
