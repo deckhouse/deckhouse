@@ -36,6 +36,7 @@ EOF
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
+  dashboardUid=""
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
@@ -46,7 +47,12 @@ function __main__() {
     fi
 
     title=$(slugify <<<${title})
-    dashboardUid=$(jq -rc '.name' <<<${dashboard} | md5sum | awk '{print $1}' | cut -b -10)
+    
+    dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)' <<<${dashboard})
+    if [[ "x${dashboardUid}" == "x" ]]; then
+      dashboardUid="${dashboardUid} $(jq -rc '.uid' <<<${dashboard})"
+      continue
+    fi
 
     folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
@@ -58,12 +64,15 @@ function __main__() {
     fi
 
     mkdir -p "${tmpDir}/${folder}"
-    echo "${dashboard}" | jq -rc '.definition' | jq --arg newUid ${dashboardUid} '.uid=$newUid' > "${tmpDir}/${file}"
-    sed -i "s/$(cat "${dashboard}" | jq -rc '.definition | try(fromjson | .panels[0].styles[1].linkUrl)' | cut -d/ -f3 | tr -d '"')/$dashboardUid/g" "${tmpDir}/${file}"
+    jq -rc '.definition' <<<${dashboard} > "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
     echo "Skipping malformed dashboards: ${malformed_dashboards}"
+  fi
+
+  if [[ "x${dashboardUid}" != "x" ]]; then
+    echo "Skipping new dashboard formation because of existing with the same uid: ${dashboardUid}"
   fi
 
   rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
