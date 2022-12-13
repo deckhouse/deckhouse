@@ -56,6 +56,7 @@ data:
         # https://www.formauri.es/personal/pgimeno/misc/non-match-regex/?word=ingress
         - ^d8-([^i]|i(i|n(i|g(i|r(i|e(i|si)))))*([^in]|n([^gi]|g([^ir]|r([^ei]|e([^is]|s[^is]))))))*(i(i|n(i|g(i|r(i|e(i|si)))))*(n(g?|gr(e?|es)))?)?$
         - ^kube-system$
+        - ^upmeter-probe-namespace-.+$
     server:
       metrics_enabled: true
       metrics_port: 9090
