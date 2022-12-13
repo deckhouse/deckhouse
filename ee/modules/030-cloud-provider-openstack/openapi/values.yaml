@@ -35,6 +35,9 @@ properties:
             type: string
           region:
             type: string
+      ignoreVolumeMicroversion:
+        type: boolean
+        default: false
       internalNetworkNames:
         type: array
         default: []

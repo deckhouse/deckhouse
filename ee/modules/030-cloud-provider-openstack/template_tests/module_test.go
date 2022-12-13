@@ -15,6 +15,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -39,7 +40,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "%s"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -50,7 +51,7 @@ const globalValues = `
       master: 3
       worker: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.21.4
+    kubernetesVersion: "%s.4"
     defaultStorageClass: fastssd
 `
 
@@ -78,6 +79,7 @@ const moduleValues = `
       - myextnetname
       - myextnetname2
     podNetworkMode: "VXLAN"
+    ignoreVolumeMicroversion: false
     instances:
       imageName: ubuntu
       mainNetwork: kube
@@ -113,55 +115,52 @@ const badModuleValues = `
     zones: ["zonea", "zoneb"]
 `
 
-var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
-	f := SetupHelmConfig(``)
+func openstackCheck(f *Config, k8sVer string) {
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, k8sVer, k8sVer))
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+		f.HelmRender()
+	})
 
-	Context("Openstack", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-			f.HelmRender()
-		})
+	It("Everything must render properly", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		It("Everything must render properly", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-openstack")
+		registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "deckhouse-registry")
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-openstack")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "deckhouse-registry")
+		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+		cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
+		cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
+		cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
+		cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
+		cinderProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
+		cinderProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
+		cinderAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-attacher")
+		cinderAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-attacher")
+		cinderResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-resizer")
+		cinderResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-resizer")
 
-			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
-			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
-			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
-			cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
-			cinderProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
-			cinderProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
-			cinderAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-attacher")
-			cinderAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-attacher")
-			cinderResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-resizer")
-			cinderResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-resizer")
+		ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cloud-controller-manager")
+		ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cloud-controller-manager")
+		ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
 
-			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cloud-controller-manager")
-			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cloud-controller-manager")
-			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cloud-controller-manager")
-			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-controller-manager")
-			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:user")
+		userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:cluster-admin")
 
-			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:user")
-			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:cluster-admin")
+		scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
+		scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
 
-			scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
-			scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
+		Expect(namespace.Exists()).To(BeTrue())
+		Expect(registrySecret.Exists()).To(BeTrue())
 
-			Expect(namespace.Exists()).To(BeTrue())
-			Expect(registrySecret.Exists()).To(BeTrue())
-
-			// user story #1
-			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
-			expectedProviderRegistrationJSON := `{
+		// user story #1
+		Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+		expectedProviderRegistrationJSON := `{
           "connection": {
             "authURL": "http://my.cloud.lalla/123/",
             "caCert": "mycacert",
@@ -184,32 +183,32 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
           },
           "podNetworkMode": "VXLAN"
         }`
-			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+		providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
 
-			// user story #2
-			Expect(cinderCSIDriver.Exists()).To(BeTrue())
-			Expect(cinderNodePluginDS.Exists()).To(BeTrue())
-			Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
-			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
-			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=true`))
-			Expect(cinderAttacherCR.Exists()).To(BeTrue())
-			Expect(cinderAttacherCRB.Exists()).To(BeTrue())
-			Expect(cinderProvisionerCR.Exists()).To(BeTrue())
-			Expect(cinderProvisionerCRB.Exists()).To(BeTrue())
-			Expect(cinderResizerCR.Exists()).To(BeTrue())
-			Expect(cinderResizerCRB.Exists()).To(BeTrue())
-			Expect(cinderResizerCR.Exists()).To(BeTrue())
-			Expect(cinderResizerCRB.Exists()).To(BeTrue())
+		// user story #2
+		Expect(cinderCSIDriver.Exists()).To(BeTrue())
+		Expect(cinderNodePluginDS.Exists()).To(BeTrue())
+		Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
+		Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
+		Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=true`))
+		Expect(cinderAttacherCR.Exists()).To(BeTrue())
+		Expect(cinderAttacherCRB.Exists()).To(BeTrue())
+		Expect(cinderProvisionerCR.Exists()).To(BeTrue())
+		Expect(cinderProvisionerCRB.Exists()).To(BeTrue())
+		Expect(cinderResizerCR.Exists()).To(BeTrue())
+		Expect(cinderResizerCRB.Exists()).To(BeTrue())
+		Expect(cinderResizerCR.Exists()).To(BeTrue())
+		Expect(cinderResizerCRB.Exists()).To(BeTrue())
 
-			Expect(ccmSA.Exists()).To(BeTrue())
-			Expect(ccmCR.Exists()).To(BeTrue())
-			Expect(ccmCRB.Exists()).To(BeTrue())
-			Expect(ccmVPA.Exists()).To(BeTrue())
-			Expect(ccmDeploy.Exists()).To(BeTrue())
-			Expect(ccmSecret.Exists()).To(BeTrue())
-			ccmExpectedConfig := `
+		Expect(ccmSA.Exists()).To(BeTrue())
+		Expect(ccmCR.Exists()).To(BeTrue())
+		Expect(ccmCRB.Exists()).To(BeTrue())
+		Expect(ccmVPA.Exists()).To(BeTrue())
+		Expect(ccmDeploy.Exists()).To(BeTrue())
+		Expect(ccmSecret.Exists()).To(BeTrue())
+		ccmExpectedConfig := `
 [Global]
 auth-url = "http://my.cloud.lalla/123/"
 domain-name = "mydomain"
@@ -233,24 +232,62 @@ floating-network-id = "my-floating-network-id"
 enable-ingress-hostname = true
 [BlockStorage]
 rescan-on-resize = true`
-			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
+		if k8sVer == "1.23" {
+			ccmExpectedConfig = `
+[Global]
+auth-url = "http://my.cloud.lalla/123/"
+domain-name = "mydomain"
+tenant-name = "mytenantname"
+username = "myuser"
+password = "myPaSs"
+region = "myreg"
+ca-file = /etc/config/ca.crt
+[Networking]
+public-network-name = "myextnetname"
+public-network-name = "myextnetname2"
+internal-network-name = "myintnetname"
+internal-network-name = "myintnetname2"
+ipv6-support-disabled = true
+[LoadBalancer]
+create-monitor = "true"
+monitor-delay = "2s"
+monitor-timeout = "1s"
+subnet-id = "my-subnet-id"
+floating-network-id = "my-floating-network-id"
+enable-ingress-hostname = true
+[BlockStorage]
+ignore-volume-microversion = false
+rescan-on-resize = true`
+		}
+		ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
 
-			Expect(userAuthzUser.Exists()).To(BeTrue())
-			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+		Expect(userAuthzUser.Exists()).To(BeTrue())
+		Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
-			Expect(scFast.Exists()).To(BeTrue())
-			Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
+		Expect(scFast.Exists()).To(BeTrue())
+		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
-			Expect(scSlow.Exists()).To(BeTrue())
-		})
+		Expect(scSlow.Exists()).To(BeTrue())
+	})
+}
+
+var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
+	f := SetupHelmConfig(``)
+
+	Context("Openstack", func() {
+		openstackCheck(f, "1.21")
+	})
+
+	Context("Openstack", func() {
+		openstackCheck(f, "1.23")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
@@ -275,7 +312,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -289,7 +326,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -305,7 +342,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")

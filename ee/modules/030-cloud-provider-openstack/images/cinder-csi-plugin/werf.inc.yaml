@@ -34,9 +34,14 @@ shell:
   - apt update
   - apt install git mercurial rsync patch -y
   install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.csi.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+  - git clone https://github.com/kubernetes/cloud-provider-openstack.git /src
   - cd /src
+  - git checkout tags/{{ $value.csi.openstack }}
+  - git config --global user.email "builder@deckhouse.io"
+    {{- if or (semverCompare "1.23" $version) (semverCompare "1.24" $version) }}
+  - git cherry-pick 03db687b95ea168e0de9609a7eaad43243f88944
+    {{- end }}
+  - export VERSION={{ $value.csi.openstack }}
   - make cinder-csi-plugin
   {{- end }}
 {{- end }}
