@@ -89,6 +89,10 @@ rules:
   - ciliumlocalredirectpolicies/status
   - ciliumlocalredirectpolicies/finalizers
   - ciliumendpointslices
+  - ciliumegressgatewaypolicies # ???
+  - ciliumclusterwideenvoyconfigs # ???
+  - ciliumbgppeeringpolicies # ???
+  - ciliumbgploadbalancerippools # ???
   verbs:
   - '*'
 - apiGroups:
