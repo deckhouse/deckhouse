@@ -214,6 +214,14 @@
   verbs:
   - delete
   - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - patch
+  - update
 {{- end -}}
 
 {{- define "user_authz_cluster_editor_rules" }}
