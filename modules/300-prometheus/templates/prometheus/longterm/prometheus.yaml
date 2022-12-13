@@ -154,9 +154,9 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
       {{- include "longterm_prometheus_resources" . | nindent 6 }}
   {{- end }}
-{{- end }}
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:
       defaultMode: 420
       name: kube-rbac-proxy-ca.crt
+{{- end }}
