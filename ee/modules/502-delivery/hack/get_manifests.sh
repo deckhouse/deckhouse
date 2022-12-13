@@ -16,7 +16,7 @@
 #   perl
 
 set -euo pipefail
-set -x
+# set -x
 
 # TODO check for the presence of yq
 
