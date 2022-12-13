@@ -354,11 +354,11 @@ function bootstrap_static() {
   terraform apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
-  if ! master_ip="$(grep "master_private_ip" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
     return 1
   fi
-  if ! system_ip="$(grep "system_private_ip" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi

@@ -210,11 +210,11 @@ resource "openstack_compute_floatingip_associate_v2" "bastion" {
   instance_id = openstack_compute_instance_v2.bastion.id
 }
 
-output "master_private_ip" {
+output "master_ip_address_for_ssh" {
   value = lookup(openstack_compute_instance_v2.master.network[0], "fixed_ip_v4")
 }
 
-output "system_private_ip" {
+output "system_ip_address_for_ssh" {
   value = lookup(openstack_compute_instance_v2.system.network[0], "fixed_ip_v4")
 }
 

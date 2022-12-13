@@ -345,7 +345,7 @@ func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
 		cfg := generateMetaConfig(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
-				"httpsProxy": "http://1.2.3.4",
+				"httpsProxy": "https://2.3.4.5",
 			},
 		})
 
@@ -353,7 +353,7 @@ func TestEnrichProxyData(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, p, map[string]interface{}{
-			"httpsProxy": "http://1.2.3.4",
+			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
@@ -362,7 +362,7 @@ func TestEnrichProxyData(t *testing.T) {
 		cfg := generateMetaConfig(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpProxy":  "http://1.2.3.4",
-				"httpsProxy": "http://1.2.3.4",
+				"httpsProxy": "https://2.3.4.5",
 				"noProxy":    []string{"example.com", ".example.com"},
 			},
 		})
@@ -372,7 +372,7 @@ func TestEnrichProxyData(t *testing.T) {
 
 		require.Equal(t, p, map[string]interface{}{
 			"httpProxy":  "http://1.2.3.4",
-			"httpsProxy": "http://1.2.3.4",
+			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
