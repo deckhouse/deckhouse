@@ -26,6 +26,7 @@ locals {
 
 module "vpc_components" {
   source = "../../../terraform-modules/vpc-components"
+  layout = local.layout
   prefix = local.prefix
   network_id = local.network_id
   node_network_cidr = local.node_network_cidr
@@ -34,7 +35,6 @@ module "vpc_components" {
   dhcp_domain_name = local.dhcp_domain_name
   dhcp_domain_name_servers = local.dhcp_domain_name_servers
 
-  should_create_nat_instance = true
   nat_instance_external_address = local.nat_instance_external_address
   nat_instance_internal_address = local.nat_instance_internal_address
   nat_instance_internal_subnet_id = local.nat_instance_internal_subnet_id

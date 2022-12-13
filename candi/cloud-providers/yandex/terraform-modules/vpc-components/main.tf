@@ -22,11 +22,17 @@ locals {
   not_have_existing_subnet_a = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-a", null) == null)
   not_have_existing_subnet_b = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-b", null) == null)
   not_have_existing_subnet_c = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-c", null) == null)
+
+  is_with_nat_instance = var.layout == "WithNATInstance"
+  is_standard          = var.layout == "Standard"
+
+  #For layout WithNATInstance we use next_hop_address and destination_prefix, for layout Standard we use created gateway
+  next_hop_address = local.is_with_nat_instance ? [local.nat_instance_internal_address_calculated] : [null]
 }
 
 data "yandex_vpc_subnet" "kube_a" {
-  count      = local.not_have_existing_subnet_a ? 0 : 1
-  subnet_id  = var.existing_zone_to_subnet_id_map.ru-central1-a
+  count     = local.not_have_existing_subnet_a ? 0 : 1
+  subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-a
 }
 
 data "yandex_vpc_subnet" "kube_b" {
@@ -39,9 +45,16 @@ data "yandex_vpc_subnet" "kube_c" {
   subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-c
 }
 
+resource "yandex_vpc_gateway" "kube" {
+  count  = local.is_standard ? 1 : 0
+  name   = var.prefix
+  labels = var.labels
+  shared_egress_gateway {}
+}
+
 resource "yandex_vpc_route_table" "kube" {
-  name           = var.prefix
-  network_id     = var.network_id
+  name       = var.prefix
+  network_id = var.network_id
 
   lifecycle {
     ignore_changes = [
@@ -49,11 +62,12 @@ resource "yandex_vpc_route_table" "kube" {
     ]
   }
 
-  dynamic static_route {
-    for_each = var.should_create_nat_instance ? [local.nat_instance_internal_address_calculated] : []
+  dynamic "static_route" {
+    for_each = local.is_standard || local.is_with_nat_instance ? local.next_hop_address : []
     content {
       destination_prefix = "0.0.0.0/0"
-      next_hop_address = static_route.value
+      next_hop_address   = static_route.value
+      gateway_id         = local.is_standard ? yandex_vpc_gateway.kube[0].id : null
     }
   }
 
@@ -71,7 +85,7 @@ resource "yandex_vpc_subnet" "kube_a" {
   dynamic "dhcp_options" {
     for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) ? [1] : []
     content {
-      domain_name = var.dhcp_domain_name
+      domain_name         = var.dhcp_domain_name
       domain_name_servers = var.dhcp_domain_name_servers
     }
   }
@@ -96,7 +110,7 @@ resource "yandex_vpc_subnet" "kube_b" {
   dynamic "dhcp_options" {
     for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) ? [1] : []
     content {
-      domain_name = var.dhcp_domain_name
+      domain_name         = var.dhcp_domain_name
       domain_name_servers = var.dhcp_domain_name_servers
     }
   }
@@ -121,7 +135,7 @@ resource "yandex_vpc_subnet" "kube_c" {
   dynamic "dhcp_options" {
     for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) ? [1] : []
     content {
-      domain_name = var.dhcp_domain_name
+      domain_name         = var.dhcp_domain_name
       domain_name_servers = var.dhcp_domain_name_servers
     }
   }

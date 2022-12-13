@@ -31,5 +31,5 @@ output "zone_to_subnet_id_map" {
 }
 
 output "nat_instance_name" {
-  value = var.should_create_nat_instance ? yandex_compute_instance.nat_instance[0].name : ""
+  value = local.is_with_nat_instance ? yandex_compute_instance.nat_instance[0].name : ""
 }

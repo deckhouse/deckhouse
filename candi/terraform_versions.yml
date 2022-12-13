@@ -28,4 +28,4 @@ vsphere:
 yandex:
   namespace: yandex-cloud
   type: yandex
-  version: 0.74.0
+  version: 0.83.0
