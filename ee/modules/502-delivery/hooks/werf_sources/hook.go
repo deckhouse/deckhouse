@@ -97,6 +97,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{namespace},
 				},
 			},
+			// We use field selector in the subscription to reduce memory footprint. Additionally, we
+			// duplicate the check because currently test framework cannot handle field selector.
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{{
+					Field:    "type",
+					Operator: "Equals",
+					Value:    string(corev1.SecretTypeDockerConfigJson),
+				}},
+			},
 			FilterFunc: filterDockerConfigJSON,
 		},
 	},
@@ -351,6 +360,8 @@ func filterDockerConfigJSON(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, err
 	}
 
+	// We use field selector in the subscription to reduce memory footprint. Additionally, we
+	// duplicate the check because currently test framework cannot handle field selector.
 	if secret.Type != corev1.SecretTypeDockerConfigJson {
 		return nil, nil
 	}
