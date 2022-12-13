@@ -4,6 +4,9 @@
 locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
   zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+  volume_type_map      = lookup(local.ng, "volumeTypeMap", {})
+  zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
+  volume_type          = local.volume_type_map[local.zone]
 }
 
 module "security_groups" {
@@ -50,6 +53,7 @@ resource "openstack_blockstorage_volume_v2" "volume" {
   size              = local.root_disk_size
   image_id          = data.openstack_images_image_v2.image.id
   metadata          = local.metadata_tags
+  volume_type       = local.volume_type
   availability_zone = module.volume_zone.zone
   lifecycle {
     ignore_changes = [

@@ -42,6 +42,6 @@ locals {
   internal_network_security = (local.layout == "standard" || local.layout == "standardWithNoRouter") ? lookup(var.providerClusterConfiguration[local.layout], "internalNetworkSecurity", true) : false
   internal_network_security_enabled = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled" || local.internal_network_security
   additional_sg_names = lookup(local.instance_class, "additionalSecurityGroups", [])
-  security_group_names = (local.layout == "standard" || local.layout == "standardWithNoRouter") ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
+  security_group_names = local.internal_network_security ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
   metadata_tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
 }
