@@ -64,9 +64,8 @@ func getSecret(namespace, name string, dc dependency.Container) (*certificate.Ce
 	}
 
 	return &certificate.Certificate{
-		CA:   string(secret.Data["ca.crt"]),
-		Cert: string(secret.Data["tls.crt"]),
-		Key:  string(secret.Data["tls.key"]),
+		Cert: string(secret.Data["client.crt"]),
+		Key:  string(secret.Data["client.key"]),
 	}, nil
 }
 
@@ -112,7 +111,6 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 						Data: certificate.Certificate{
 							Cert: secret.Cert,
 							Key:  secret.Key,
-							CA:   secret.CA,
 						},
 					})
 

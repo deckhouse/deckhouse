@@ -109,7 +109,7 @@ type: Opaque
 			Expect(certFirst.Get("data.key").Exists()).To(BeTrue())
 			Expect(certFirst.Get("data.certificate_updated").Exists()).To(BeFalse())
 
-			certFromValues := certFirst.Get("data.certificate").String()
+			certFromValues := certFirst.Get("data.cert").String()
 			parsedCert, err := helpers.ParseCertificatePEM([]byte(certFromValues))
 			if err != nil {
 				fmt.Printf("certificate parsing error: %v", err)

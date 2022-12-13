@@ -120,6 +120,7 @@ func SetupHelmConfig(values string) *Config {
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
+		config.values.SetByPath("global.discovery.kubernetesVersion", "1.22.0")
 	})
 
 	return config
@@ -145,9 +146,9 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 
 	// set some common values
-	hec.values.SetByPath("global.discovery.kubernetesVersion", "1.22.0")
 	hec.values.SetByPath("global.modulesImages.registry", "registry.example.com")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
+	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
 
 	// Validate Helm values
