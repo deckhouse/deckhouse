@@ -101,7 +101,7 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 		}
 
 		proxyString := packagesProxy.URI
-		reg := regexp.MustCompile(`^(http://|https://)`)
+		reg := regexp.MustCompile(`^https?://`)
 		if !reg.MatchString(packagesProxy.URI) {
 			return fmt.Errorf("packagesProxy.uri should start from `http[s]://`: %s", packagesProxy.URI)
 		}
