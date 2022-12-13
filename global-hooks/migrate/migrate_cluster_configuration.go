@@ -77,12 +77,12 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 
 	var needMigration bool
 
-	if _, ok := config["packagesProxy"]; ok {
+	if val, ok := config["packagesProxy"]; ok {
 		var packagesProxy packagesProxy
 
 		needMigration = true
 
-		pp, err := json.Marshal(config["packagesProxy"])
+		pp, err := json.Marshal(val)
 		if err != nil {
 			return err
 		}
