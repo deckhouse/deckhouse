@@ -36,7 +36,6 @@ EOF
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
 
-  dashboardUid=""
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
@@ -47,7 +46,7 @@ function __main__() {
     fi
 
     title=$(slugify <<<${title})
-    
+
     dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)' <<<${dashboard})
     if [[ "x${dashboardUid}" == "x" ]]; then
       dashboardUid="${dashboardUid} $(jq -rc '.uid' <<<${dashboard})"
