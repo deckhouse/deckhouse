@@ -48,8 +48,8 @@ function __main__() {
     title=$(slugify <<<${title})
 
     dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)' <<<${dashboard})
-    if [[ "x${dashboardUid}" == "x" ]]; then
-      dashboardUid="${dashboardUid} $(jq -rc '.uid' <<<${dashboard})"
+    if [[ "${dashboardUid}" == "" ]]; then
+      dashboardUid="${dashboardUid} $(jq -rc '.uid' <<< "${dashboard}")"
       continue
     fi
 
