@@ -60,6 +60,7 @@ spec:
         - --kube-api-qps=50
         - --pod-recommendation-min-cpu-millicores=25
         - --pod-recommendation-min-memory-mb=50
+        - --memory-aggregation-interval=1h
         - --recommender-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --stderrthreshold=0
         - --v=4
