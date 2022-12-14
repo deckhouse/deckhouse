@@ -608,4 +608,131 @@ updatePolicy:
 `))
 		})
 	})
+
+	Context("ingress gateway controller with inlet NodePort is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: nodeport-test
+  spec:
+    ingressGatewayClass: np
+    inlet: NodePort
+    nodePort:
+      httpPort: 30080
+      httpsPort: 30443
+    resourcesRequests:
+      mode: VPA
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-ingress-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-nodeport-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-nodeport-test")
+			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-nodeport-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeTrue())
+
+			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","maxAllowed":{"cpu":"50m","memory":"200Mi"},"minAllowed":{"cpu":"10m","memory":"50Mi"}}]}`))
+
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"nodeport-test","istio.deckhouse.io/ingress-gateway-class":"np","module":"istio"}`))
+
+			Expect(ingressSvc.Field("spec.type").String()).To(Equal("NodePort"))
+		})
+	})
+	Context("ingress gateway controller with inlet LoadBalancer is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: loadbalancer-test
+  spec:
+    ingressGatewayClass: lb
+    inlet: LoadBalancer
+    loadBalancer:
+      annotations:
+        aaa: bbb
+    resourcesRequests:
+      mode: Static
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-ingress-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
+			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeTrue())
+
+			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
+
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"loadbalancer-test","istio.deckhouse.io/ingress-gateway-class":"lb","module":"istio"}`))
+
+			Expect(ingressSvc.Field("metadata.annotations").String()).To(MatchJSON(`{ "aaa": "bbb" }`))
+			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
+		})
+	})
+	Context("ingress gateway controller with inlet HostPort is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: hostport-test
+  spec:
+    ingressGatewayClass: hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("serviceaccount", "d8-ingress-istio", "ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("role", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("rolebinding", "d8-ingress-istio", "istio:ingress-gateway-controller").Exists()).To(BeTrue())
+
+			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
+			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
+			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressSvc.Exists()).To(BeTrue())
+
+			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
+
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio.deckhouse.io/ingress-gateway-class":"hp","module":"istio"}`))
+			istioProxyContainer := ingressDs.Field("spec.template.spec.containers").Array()
+			Expect(len(istioProxyContainer)).To(Equal(1))
+			Expect((istioProxyContainer[0].Get("ports"))).To(MatchJSON(`[
+{"containerPort":8080,"hostPort":80,"name":"http","protocol":"TCP"},
+{"containerPort":8443,"hostPort":443,"name":"https","protocol":"TCP"},
+{"containerPort":15090,"name":"http-envoy-prom","protocol":"TCP"},
+{"containerPort":15021,"name":"status-port","protocol":"TCP"},
+{"containerPort":15012,"name":"tls-istiod","protocol":"TCP"}
+]`))
+
+			Expect(ingressSvc.Field("spec.type").String()).To(Equal("ClusterIP"))
+		})
+	})
 })

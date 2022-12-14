@@ -173,3 +173,117 @@ properties:
           password:
             type: string
             x-examples: ["p4ssw0rd"]
+      ingressControllers:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-examples: ["test"]
+            spec:
+              type: object
+              default: {}
+              properties:
+                ingressGatewayClass:
+                  type: string
+                  x-examples: ["istio"]
+                inlet:
+                  type: string
+                  x-examples:  ["HostPort", "LoadBalancer"]
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                tolerations:
+                  type: array
+                  description: |
+                    The same as `spec.tolerations` for the Kubernetes pod.
+
+                    Use [automatic](https://deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        type: integer
+                        format: int64
+                      value:
+                        type: string
+                loadBalancer:
+                  type: object
+                  default: {}
+                  properties:
+                    sourceRanges:
+                      type: array
+                      items:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties: true
+                nodePort:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                hostPort:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                resourcesRequests:
+                  type: object
+                  default: {}
+                  properties:
+                    mode:
+                      type: string
+                      x-examples: ["VPA", "Static"]
+                    vpa:
+                      type: object
+                      default: {}
+                      properties:
+                        mode:
+                          type: string
+                        cpu:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                              x-examples: ["200m"]
+                            min:
+                              type: string
+                        memory:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                            min:
+                              type: string
+                              x-examples: ["100Mi"]
+                    static:
+                      type: object
+                      default: {}
+                      properties:
+                        cpu:
+                          type: string
+                          x-examples: ["100m"]
+                        memory:
+                          type: string

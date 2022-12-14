@@ -1,0 +1,47 @@
+{{- range $controller := .Values.istio.internal.ingressControllers }}
+  {{- $ingressGatewayClass := $controller.spec.ingressGatewayClass -}}
+  {{- $nodePort := $controller.spec.nodePort | default dict }}
+  {{- $loadBalancer := $controller.spec.loadBalancer | default dict }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ingress_gateway_name" $controller.name }}
+  namespace: d8-ingress-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "ingress-gateway-controller" "instance" $controller.name)) | nindent 2 }}
+  {{- if $loadBalancer.annotations }}
+  annotations:
+    {{- $loadBalancer.annotations | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if ne $controller.spec.inlet "HostPort" }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpPort }}
+    nodePort: {{ $nodePort.httpPort }}
+  {{- end }}
+  - name: https
+    port: 443
+    targetPort: https
+    protocol: TCP
+  {{- if and (eq $controller.spec.inlet "NodePort") $nodePort.httpsPort }}
+    nodePort: {{ $nodePort.httpsPort }}
+  {{- end }}
+  selector:
+    app: ingress-gateway-controller
+    instance: {{ $controller.name }}
+    istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
+  sessionAffinity: None
+  {{- if eq $controller.spec.inlet "NodePort" }}
+  type: NodePort
+  {{- else if eq $controller.spec.inlet "HostPort" }}
+  type: ClusterIP
+  {{- else }}
+  type: LoadBalancer
+  {{- end }}
+{{- end }}

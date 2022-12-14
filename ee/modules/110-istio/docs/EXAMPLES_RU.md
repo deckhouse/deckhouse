@@ -189,9 +189,101 @@ spec:
       weight: 10
 ```
 
-## Ingress
+## Ingress для публикации приложений
 
-Для работы с Ingress требуется подготовить:
+### Istio Ingress Gateway
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1beta1
+kind: IngressIstioController
+metadata:
+ name: main
+spec:
+  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway
+  ingressGatewayClass: istio-hp
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role/frontend: ''
+  tolerations:
+    - effect: NoExecute
+      key: dedicated
+      operator: Equal
+      value: frontend
+  resourcesRequests:
+    mode: VPA
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-tls-secert
+  namespace: d8-ingress-istio # обратите внимание, что namespace не является app-ns
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+    <tls.crt data>
+  tls.key: |
+    <tls.key data>
+```
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway-app
+  namespace: app-ns
+spec:
+  selector:
+    # селектор меток для использования Istio Ingress Gateway main-hp
+    istio.deckhouse.io/ingress-gateway-class: istio-hp
+  servers:
+    - port:
+        # стандартный шаблон для использования протокола HTTP
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - app.example.com
+    - port:
+        # стандартный шаблон для использования протокола HTTPS
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        # секрет с сертификатом и ключем, который должен быть создан в d8-ingress-istio namespace
+        # поддерживаемые форматы секретов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
+        credentialName: app-tls-secrets
+      hosts:
+        - app.example.com
+```
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-app
+  namespace: app-ns
+spec:
+  gateways:
+    - gateway-app
+  hosts:
+    - app.example.com
+  http:
+    - route:
+        - destination:
+            host: app-svc
+```
+
+### Nginx Ingress
+
+Для работы с Nginx Ingress требуется подготовить:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/402-ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в Pod'ы приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
