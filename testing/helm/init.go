@@ -148,7 +148,7 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 
 	// set some common values
-	hec.values.SetByPath("global.modulesImages.registry", "registry.example.com")
+	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
