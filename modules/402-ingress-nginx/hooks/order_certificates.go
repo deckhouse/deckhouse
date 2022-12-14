@@ -31,15 +31,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
 const namespace = "d8-ingress-nginx"
 
 type CertificateInfo struct {
-	ControllerName string                          `json:"controllerName,omitempty"`
-	IngressClass   string                          `json:"ingressClass,omitempty"`
-	Data           tls_certificate.CertificateInfo `json:"data,omitempty"`
+	ControllerName string                  `json:"controllerName,omitempty"`
+	IngressClass   string                  `json:"ingressClass,omitempty"`
+	Data           certificate.Certificate `json:"data,omitempty"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,7 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(orderCertificate))
 
-func getSecret(namespace, name string, dc dependency.Container) (*tls_certificate.CertificateSecret, error) {
+func getSecret(namespace, name string, dc dependency.Container) (*certificate.Certificate, error) {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return nil, err
@@ -64,13 +63,19 @@ func getSecret(namespace, name string, dc dependency.Container) (*tls_certificat
 		return nil, err
 	}
 
-	cc := tls_certificate.ParseSecret(secret)
-
-	return cc, nil
+	return &certificate.Certificate{
+		Cert: string(secret.Data["client.crt"]),
+		Key:  string(secret.Data["client.key"]),
+	}, nil
 }
 
 func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 	if input.Values.Exists("ingressNginx.internal.ingressControllers") {
+		caAuthority := certificate.Authority{
+			Key:  input.Values.Get("global.internal.modules.kubeRBACProxyCA.key").String(),
+			Cert: input.Values.Get("global.internal.modules.kubeRBACProxyCA.cert").String(),
+		}
+
 		certificates := make([]CertificateInfo, 0)
 		controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
 
@@ -93,8 +98,8 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 
 			// If existing Certificate expires in more than 7 days — use it.
-			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
-				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon(secret.Crt, time.Hour*24*7)
+			if secret != nil && len(secret.Cert) > 0 && len(secret.Key) > 0 {
+				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*7)
 				if err != nil {
 					return err
 				}
@@ -103,9 +108,9 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 					certificates = append(certificates, CertificateInfo{
 						ControllerName: controller.Name,
 						IngressClass:   ingressClass,
-						Data: tls_certificate.CertificateInfo{
-							Certificate: string(secret.Crt),
-							Key:         string(secret.Key),
+						Data: certificate.Certificate{
+							Cert: secret.Cert,
+							Key:  secret.Key,
 						},
 					})
 
@@ -113,15 +118,18 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 				}
 			}
 
-			request := tls_certificate.OrderCertificateRequest{
-				Namespace:  namespace,
-				SecretName: secretName,
-				CommonName: fmt.Sprintf("nginx-ingress:%s", controller.Name),
-				Groups:     []string{"ingress-nginx:auth"},
-				ModuleName: "ingressNginx",
-			}
+			info, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+				fmt.Sprintf("nginx-ingress:%s", controller.Name),
+				caAuthority,
+				certificate.WithGroups("ingress-nginx:auth"),
+				certificate.WithSigningDefaultExpiry(87600*time.Hour),
+				certificate.WithSigningDefaultUsage([]string{
+					"signing",
+					"key encipherment",
+					"client auth",
+				}),
+			)
 
-			info, err := tls_certificate.IssueCertificate(input, dc, request)
 			if err != nil {
 				return err
 			}
@@ -129,7 +137,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 			certificates = append(certificates, CertificateInfo{
 				ControllerName: controller.Name,
 				IngressClass:   ingressClass,
-				Data:           *info,
+				Data:           info,
 			})
 		}
 

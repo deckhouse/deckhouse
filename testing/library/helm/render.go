@@ -68,7 +68,15 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 
 	caps := chartutil.DefaultCapabilities
 	vers := []string(caps.APIVersions)
-	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+
+	var found bool
+	for _, ver := range vers {
+		found = ver == "autoscaling.k8s.io/v1/VerticalPodAutoscaler"
+	}
+	if !found {
+		vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
+	}
+
 	caps.APIVersions = vers
 
 	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
