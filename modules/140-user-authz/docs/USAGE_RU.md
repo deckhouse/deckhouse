@@ -135,11 +135,11 @@ spec:
 
      * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
 
-          ```shell
-          kubectl config set-cluster $cluster_name \
-            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-            --kubeconfig=$file_name
-          ```
+       ```shell
+       kubectl config set-cluster $cluster_name \
+         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+         --kubeconfig=$file_name
+       ```
 
    * Секция `user` с токеном из Secret'а `ServiceAccount`:
 

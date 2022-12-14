@@ -135,11 +135,11 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
      * If the CA is public, generate a section with just the external domain:
 
-          ```shell
-          kubectl config set-cluster $cluster_name \
-            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-            --kubeconfig=$file_name
-          ```
+       ```shell
+       kubectl config set-cluster $cluster_name \
+         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+         --kubeconfig=$file_name
+       ```
 
    * Generate the `user` section using the token from the `ServiceAccount` secret:
 
