@@ -350,21 +350,23 @@ spec:
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| kubelet.maxPods                       | -                          | -                 | +               |
-| kubelet.rootDir                       | -                          | -                 | +               |
+| chaos                                 | -                          | -                 | -               |
+| cloudInstances.classReference         | -                          | +                 | -               |
+| cloudInstances.maxSurgePerZone        | -                          | +                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
 | cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
-| nodeTemplate                          | -                          | -                 | -               |
-| chaos                                 | -                          | -                 | -               |
-| kubernetesVersion                     | -                          | -                 | +               |
-| static                                | -                          | -                 | +               |
 | disruptions                           | -                          | -                 | -               |
-| cloudInstances.classReference         | -                          | +                 | -               |
+| kubelet.maxPods                       | -                          | -                 | +               |
+| kubelet.rootDir                       | -                          | -                 | +               |
+| kubernetesVersion                     | -                          | -                 | +               |
+| nodeTemplate                          | -                          | -                 | -               |
+| static                                | -                          | -                 | +               |
+| update.maxConcurrent                  | -                          | +                 | -               |
 
 Подробно о всех параметрах можно прочитать в описании custom resource [NodeGroup](cr.html#nodegroup).
 
-В случае изменения параметра `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит.
+В случае изменения параметров `InstanceClass` или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит. Количество заказываемых одновременно `MachineDeployment` определяется параметром `cloudInstances.maxSurgePerZone`.
 
 При disruption update выполняется evict Pod'ов с узла. Если какие-либо Pod'ы не удалось evict'нуть, evict повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После этого Pod'ы, которые не удалось evict'нуть, удаляются.
 
