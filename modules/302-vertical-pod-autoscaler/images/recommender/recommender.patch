@@ -25,15 +25,3 @@
 +
  	return aggregateContainerStateMap
  }
-
---- a/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go
-+++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go
-@@ -63,7 +63,7 @@ const (
- 	DefaultMemoryAggregationIntervalCount = 8
- 	// DefaultMemoryAggregationInterval is the default value for MemoryAggregationInterval.
- 	// which the peak memory usage is computed.
--	DefaultMemoryAggregationInterval = time.Hour * 24
-+	DefaultMemoryAggregationInterval = time.Hour
- 	// DefaultHistogramBucketSizeGrowth is the default value for HistogramBucketSizeGrowth.
- 	DefaultHistogramBucketSizeGrowth = 0.05 // Make each bucket 5% larger than the previous one.
- 	// DefaultMemoryHistogramDecayHalfLife is the default value for MemoryHistogramDecayHalfLife.
