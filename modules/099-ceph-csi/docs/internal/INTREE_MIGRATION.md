@@ -136,16 +136,26 @@ Apply this manifest in the cluster? (Type yes to confirm): yes
 persistentvolume/pvc-4a77a995-ce1e-463c-9726-d05966d3c5ef created
 ```
 
+**Caution!** Before switching to containerd, make sure that no log collectors other than log-shipper are used in the cluster. If there are any, you will either have to discard them in favor of the [log-shipper](https://deckhouse.io/documentation/v1/modules/460-log-shipper/) module or reconfigure them to work with containerd. This is because containerd has a different log format and stores log files under a different path.
+
+| CRI        | Log format  | Log files path         |
+| ---------- | ----------- | -----------------------|
+| Docker     | JSON        | `/var/log/containers/` |
+| Containerd | Plain Text  | `/var/log/pods/`       |
+
 ## Additional information about the migration process
 
 ### Table of contents
 
-* [Manifests of the PVCs and PVs to be migrated](#manifests-of-the-pvcs-and-pvs-to-be-migrated)
-* [PVC and PV manifests to use for importing the specific Ceph CSI parameters](#pvc-and-pv-manifests-to-use-for-importing-the-specific-ceph-csi-parameters)
-* [Renaming an RBD image in a ceph cluster](#renaming-an-rbd-image-in-a-ceph-cluster)
-* [Deleting PVCs and PVs from the cluster](#deleting-pvcs-and-pvs-from-the-cluster)
-* [Generating a new PVC manifest and creating an object in the cluster](#generating-a-new-pvc-manifest-and-creating-an-object-in-the-cluster)
-* [Generating a new PV manifest and creating an object in the cluster](#generating-a-new-pv-manifest-and-creating-an-object-in-the-cluster)
+- [Switching from the in-tree RBD driver to CSI (Ceph CSI)](#switching-from-the-in-tree-rbd-driver-to-csi-ceph-csi)
+  - [Additional information about the migration process](#additional-information-about-the-migration-process)
+    - [Table of contents](#table-of-contents)
+    - [Manifests of the PVCs and PVs to be migrated](#manifests-of-the-pvcs-and-pvs-to-be-migrated)
+    - [PVC and PV manifests to use for importing the specific Ceph CSI parameters](#pvc-and-pv-manifests-to-use-for-importing-the-specific-ceph-csi-parameters)
+    - [Renaming an RBD image in a ceph cluster](#renaming-an-rbd-image-in-a-ceph-cluster)
+    - [Deleting PVCs and PVs from the cluster](#deleting-pvcs-and-pvs-from-the-cluster)
+    - [Generating a new PVC manifest and creating an object in the cluster](#generating-a-new-pvc-manifest-and-creating-an-object-in-the-cluster)
+    - [Generating a new PV manifest and creating an object in the cluster](#generating-a-new-pv-manifest-and-creating-an-object-in-the-cluster)
 
 ### Manifests of the PVCs and PVs to be migrated
 
@@ -537,9 +547,4 @@ Create an object in the cluster using this manifest.
 
 This concludes the migration process.
   
-**Caution!** Before switching to containerd, make sure that no log collectors other than log-shipper are used in the cluster. If there are any, you will either have to discard them in favor of the [log-shipper](https://deckhouse.io/documentation/v1/modules/460-log-shipper/) module or reconfigure them to work with containerd. This is because containerd has a different log format and stores log files under a different path.
 
-| CRI        | Log format  | Log files path         |
-| ---------- | ----------- | -----------------------|
-| Docker     | JSON        | `/var/log/containers/` |
-| Containerd | Plain Text  | `/var/log/pods/`       |
