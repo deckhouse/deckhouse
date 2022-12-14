@@ -35,9 +35,9 @@ const (
 	// ca expiration = 10 years
 	caExpiryDurationStr = "87600h"
 	// certificate expiration - 10 years
-	certExpiryDuration = 87600 * time.Hour
+	certExpiryDuration = 10 * 365 * 24 * time.Hour
 	// when to recreate a certificate - 6 month (total expiration 10 years, so we will have enough time to recreate it)
-	certOutdatedDuration = 4380 * time.Hour
+	certOutdatedDuration = (365 / 2) * 24 * time.Hour
 
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
@@ -49,7 +49,7 @@ const (
 // DefaultSANs helper to generate list of sans for certificate
 // you can also use helpers:
 //
-//	ClusterDomainSAN(value) to generate sans with respect of cluster domain (ex: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
+//	ClusterDomainSAN(value) to generate sans with respect of cluster domain (e.g.: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
 //	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
 	return func(input *go_hook.HookInput) []string {
