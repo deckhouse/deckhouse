@@ -218,6 +218,8 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 				input.LogEntry.Errorf(err.Error())
 			}
 
+			// In case of errors, both these flags are false to avoid regeneration loop for the
+			// certificate.
 			if caOutdated || certOutdated {
 				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
 				if err != nil {
