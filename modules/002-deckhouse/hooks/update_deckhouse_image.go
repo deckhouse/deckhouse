@@ -169,7 +169,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	labels := map[string]string{}
 	releaseChannelNameRaw, exists := input.Values.GetOk("deckhouse.releaseChannel")
 	if exists {
-		labels = map[string]string{"releaseChannel": releaseChannelNameRaw.String()}
+		labels["releaseChannel"] = releaseChannelNameRaw.String()
 	}
 
 	if deckhousePod.Ready {
