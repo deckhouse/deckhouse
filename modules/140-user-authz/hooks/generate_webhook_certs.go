@@ -81,7 +81,9 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 //	ca.crt
 //
 // TODO: remove this migration in Deckhouse 1.44
-func migrateSecretStructure(_ *go_hook.HookInput, dc dependency.Container) error {
+func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) error {
+	input.Values.Get("userAuthz.enableMultiTenancy").Bool()
+
 	klient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot get kubernetes client: %v", err)
