@@ -167,7 +167,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	deckhouseUpdater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
 
 	labels := map[string]string{
-	   "releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
+		"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
 	}
 
 	if deckhousePod.Ready {
