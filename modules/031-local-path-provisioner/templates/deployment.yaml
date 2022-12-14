@@ -30,7 +30,7 @@ spec:
         memory: 50Mi
   {{- end }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}

@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(
 			},
 			{
 				Name:              "pdb",
-				ApiVersion:        "policy/v1beta1",
+				ApiVersion:        "policy/v1",
 				Kind:              "PodDisruptionBudget",
 				NamespaceSelector: namespaceSelector,
 				LabelSelector:     labelSelector,

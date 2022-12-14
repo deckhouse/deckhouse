@@ -218,9 +218,6 @@ serverTLSBootstrap: true
 {{- end }}
 featureGates:
   ExpandCSIVolumes: true
-{{- if semverCompare "=1.20" .kubernetesVersion }}
-  GracefulNodeShutdown: true
-{{- end }}
 {{- if semverCompare "<1.23" .kubernetesVersion }}
   EphemeralContainers: true
 {{- end }}

@@ -112,11 +112,11 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.20"
         - "1.21"
         - "1.22"
         - "1.23"
         - "1.24"
+        - "1.25"
         - "Automatic"
       proxy:
         type: object

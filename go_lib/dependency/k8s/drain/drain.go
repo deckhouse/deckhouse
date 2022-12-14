@@ -24,23 +24,27 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
 const (
 	// EvictionKind represents the kind of evictions object
 	EvictionKind = "Eviction"
 	// EvictionSubresource represents the kind of evictions object as pod's subresource
-	EvictionSubresource      = "pods/eviction"
-	podSkipMsgTemplate       = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
-	PodEvictionRetryInterval = 20 * time.Second
+	EvictionSubresource = "pods/eviction"
+	podSkipMsgTemplate  = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
 )
 
 // Helper contains the parameters to control the behaviour of drainer
@@ -55,11 +59,11 @@ type Helper struct {
 	GracePeriodSeconds int
 
 	IgnoreAllDaemonSets bool
-	IgnoreErrors        bool
 	Timeout             time.Duration
 	DeleteEmptyDirData  bool
 	Selector            string
 	PodSelector         string
+	ChunkSize           int64
 
 	// DisableEviction forces drain to use delete rather than evict
 	DisableEviction bool
@@ -77,6 +81,9 @@ type Helper struct {
 
 	Out    io.Writer
 	ErrOut io.Writer
+
+	DryRunStrategy cmdutil.DryRunStrategy
+	DryRunVerifier *resource.QueryParamVerifier
 
 	// OnPodDeletedOrEvicted is called when a pod is evicted/deleted; for printing progress output
 	OnPodDeletedOrEvicted func(pod *corev1.Pod, usingEviction bool)
@@ -97,35 +104,21 @@ type waitForDeleteParams struct {
 
 // CheckEvictionSupport uses Discovery API to find out if the server support
 // eviction subresource If support, it will return its groupVersion; Otherwise,
-// it will return an empty string
-func CheckEvictionSupport(clientset kubernetes.Interface) (string, error) {
+// it will return an empty GroupVersion
+func CheckEvictionSupport(clientset kubernetes.Interface) (schema.GroupVersion, error) {
 	discoveryClient := clientset.Discovery()
-	groupList, err := discoveryClient.ServerGroups()
-	if err != nil {
-		return "", err
-	}
-	foundPolicyGroup := false
-	var policyGroupVersion string
-	for _, group := range groupList.Groups {
-		if group.Name == "policy" {
-			foundPolicyGroup = true
-			policyGroupVersion = group.PreferredVersion.GroupVersion
-			break
-		}
-	}
-	if !foundPolicyGroup {
-		return "", nil
-	}
+
+	// version info available in subresources since v1.8.0 in https://github.com/kubernetes/kubernetes/pull/49971
 	resourceList, err := discoveryClient.ServerResourcesForGroupVersion("v1")
 	if err != nil {
-		return "", err
+		return schema.GroupVersion{}, err
 	}
 	for _, resource := range resourceList.APIResources {
-		if resource.Name == EvictionSubresource && resource.Kind == EvictionKind {
-			return policyGroupVersion, nil
+		if resource.Name == EvictionSubresource && resource.Kind == EvictionKind && len(resource.Group) > 0 && len(resource.Version) > 0 {
+			return schema.GroupVersion{Group: resource.Group, Version: resource.Version}, nil
 		}
 	}
-	return "", nil
+	return schema.GroupVersion{}, nil
 }
 
 func (d *Helper) makeDeleteOptions() metav1.DeleteOptions {
@@ -134,31 +127,55 @@ func (d *Helper) makeDeleteOptions() metav1.DeleteOptions {
 		gracePeriodSeconds := int64(d.GracePeriodSeconds)
 		deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
 	}
+	if d.DryRunStrategy == cmdutil.DryRunServer {
+		deleteOptions.DryRun = []string{metav1.DryRunAll}
+	}
 	return deleteOptions
 }
 
 // DeletePod will delete the given pod, or return an error if it couldn't
 func (d *Helper) DeletePod(pod corev1.Pod) error {
-	return d.Client.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, d.makeDeleteOptions())
+	if d.DryRunStrategy == cmdutil.DryRunServer {
+		if err := d.DryRunVerifier.HasSupport(pod.GroupVersionKind()); err != nil {
+			return err
+		}
+	}
+	return d.Client.CoreV1().Pods(pod.Namespace).Delete(d.getContext(), pod.Name, d.makeDeleteOptions())
 }
 
-// EvictPod will evict the give pod, or return an error if it couldn't
-func (d *Helper) EvictPod(pod corev1.Pod, policyGroupVersion string) error {
-	delOpts := d.makeDeleteOptions()
-	eviction := &policyv1beta1.Eviction{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: policyGroupVersion,
-			Kind:       EvictionKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-		},
-		DeleteOptions: &delOpts,
+// EvictPod will evict the given pod, or return an error if it couldn't
+func (d *Helper) EvictPod(pod corev1.Pod, evictionGroupVersion schema.GroupVersion) error {
+	if d.DryRunStrategy == cmdutil.DryRunServer {
+		if err := d.DryRunVerifier.HasSupport(pod.GroupVersionKind()); err != nil {
+			return err
+		}
 	}
 
-	// Remember to change change the URL manipulation func when Eviction's version change
-	return d.Client.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
+	delOpts := d.makeDeleteOptions()
+
+	switch evictionGroupVersion {
+	case policyv1.SchemeGroupVersion:
+		// send policy/v1 if the server supports it
+		eviction := &policyv1.Eviction{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+			},
+			DeleteOptions: &delOpts,
+		}
+		return d.Client.PolicyV1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
+
+	default:
+		// otherwise, fall back to policy/v1beta1, supported by all servers that support the eviction subresource
+		eviction := &policyv1beta1.Eviction{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+			},
+			DeleteOptions: &delOpts,
+		}
+		return d.Client.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
+	}
 }
 
 // GetPodsForDeletion receives resource info for a node, and returns those pods as PodDeleteList,
@@ -171,9 +188,23 @@ func (d *Helper) GetPodsForDeletion(nodeName string) (*PodDeleteList, []error) {
 		return nil, []error{err}
 	}
 
-	podList, err := d.Client.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{
+	podList := &corev1.PodList{}
+	initialOpts := &metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String()})
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
+		Limit:         d.ChunkSize,
+	}
+
+	err = resource.FollowContinue(initialOpts, func(options metav1.ListOptions) (runtime.Object, error) {
+		newPods, err := d.Client.CoreV1().Pods(metav1.NamespaceAll).List(d.getContext(), options)
+		if err != nil {
+			podR := corev1.SchemeGroupVersion.WithResource(corev1.ResourcePods.String())
+			return nil, resource.EnhanceListError(err, options, podR.String())
+		}
+		podList.Items = append(podList.Items, newPods.Items...)
+		return newPods, nil
+	})
+
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -202,6 +233,8 @@ func filterPods(podList *corev1.PodList, filters []PodFilter) *PodDeleteList {
 		// Add the pod to PodDeleteList no matter what PodDeleteStatus is,
 		// those pods whose PodDeleteStatus is false like DaemonSet will
 		// be catched by list.errors()
+		pod.Kind = "Pod"
+		pod.APIVersion = "v1"
 		pods = append(pods, PodDelete{
 			Pod:    pod,
 			Status: status,
@@ -219,24 +252,24 @@ func (d *Helper) DeleteOrEvictPods(pods []corev1.Pod) error {
 
 	// TODO(justinsb): unnecessary?
 	getPodFn := func(namespace, name string) (*corev1.Pod, error) {
-		return d.Client.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		return d.Client.CoreV1().Pods(namespace).Get(d.getContext(), name, metav1.GetOptions{})
 	}
 
 	if !d.DisableEviction {
-		policyGroupVersion, err := CheckEvictionSupport(d.Client)
+		evictionGroupVersion, err := CheckEvictionSupport(d.Client)
 		if err != nil {
 			return err
 		}
 
-		if len(policyGroupVersion) > 0 {
-			return d.evictPods(pods, policyGroupVersion, getPodFn)
+		if !evictionGroupVersion.Empty() {
+			return d.evictPods(pods, evictionGroupVersion, getPodFn)
 		}
 	}
 
 	return d.deletePods(pods, getPodFn)
 }
 
-func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
+func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupVersion, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
 	returnCh := make(chan error, 1)
 	// 0 timeout means infinite, we use MaxInt64 to represent it.
 	var globalTimeout time.Duration
@@ -251,15 +284,16 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 		go func(pod corev1.Pod, returnCh chan error) {
 			refreshPod := false
 			for {
+				switch d.DryRunStrategy {
+				case cmdutil.DryRunServer:
+					fmt.Fprintf(d.Out, "evicting pod %s/%s (server dry run)\n", pod.Namespace, pod.Name)
+				default:
+					fmt.Fprintf(d.Out, "evicting pod %s/%s\n", pod.Namespace, pod.Name)
+				}
 				select {
 				case <-ctx.Done():
 					// return here or we'll leak a goroutine.
-					err := d.DeletePod(pod)
-					if err != nil {
-						returnCh <- fmt.Errorf("error when deleting pods/%q -n %q: global timeout reached: %v, err: %v", pod.Name, pod.Namespace, globalTimeout, err)
-						return
-					}
-					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v, pod was deleted", pod.Name, pod.Namespace, globalTimeout)
+					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v", pod.Name, pod.Namespace, globalTimeout)
 					return
 				default:
 				}
@@ -276,15 +310,15 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 					refreshPod = false
 				}
 
-				err := d.EvictPod(activePod, policyGroupVersion)
+				err := d.EvictPod(activePod, evictionGroupVersion)
 				if err == nil {
 					break
 				} else if apierrors.IsNotFound(err) {
 					returnCh <- nil
 					return
 				} else if apierrors.IsTooManyRequests(err) {
-					fmt.Fprintf(d.ErrOut, "error when evicting pods/%q -n %q (will retry after %s): %v\n", activePod.Name, activePod.Namespace, PodEvictionRetryInterval.String(), err)
-					time.Sleep(PodEvictionRetryInterval)
+					fmt.Fprintf(d.ErrOut, "error when evicting pods/%q -n %q (will retry after 5s): %v\n", activePod.Name, activePod.Namespace, err)
+					time.Sleep(5 * time.Second)
 				} else if !activePod.ObjectMeta.DeletionTimestamp.IsZero() && apierrors.IsForbidden(err) && apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
 					// an eviction request in a deleting namespace will throw a forbidden error,
 					// if the pod is already marked deleted, we can ignore this error, an eviction
@@ -293,12 +327,16 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 				} else if apierrors.IsForbidden(err) && apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
 					// an eviction request in a deleting namespace will throw a forbidden error,
 					// if the pod is not marked deleted, we retry until it is.
-					fmt.Fprintf(d.ErrOut, "error when evicting pod %q (will retry after %s): %v\n", activePod.Name, PodEvictionRetryInterval.String(), err)
-					time.Sleep(PodEvictionRetryInterval)
+					fmt.Fprintf(d.ErrOut, "error when evicting pod %q (will retry after 5s): %v\n", activePod.Name, err)
+					time.Sleep(5 * time.Second)
 				} else {
 					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: %v", activePod.Name, activePod.Namespace, err)
 					return
 				}
+			}
+			if d.DryRunStrategy == cmdutil.DryRunServer {
+				returnCh <- nil
+				return
 			}
 			params := waitForDeleteParams{
 				ctx:                             ctx,

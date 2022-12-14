@@ -1,6 +1,6 @@
 {{- if .Values.flantIntegration.internal.madisonAuthKey }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:

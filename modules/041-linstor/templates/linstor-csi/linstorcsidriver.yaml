@@ -124,7 +124,7 @@ spec:
         memory: 50Mi
 {{- end }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:
@@ -142,7 +142,7 @@ spec:
       app.kubernetes.io/managed-by: piraeus-operator
       app.kubernetes.io/name: piraeus-csi
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:

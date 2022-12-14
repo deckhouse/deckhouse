@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -173,7 +173,7 @@ func parsePDBSelector(pdbObj storage.StoreObject) (labels.Selector, errors.LintR
 	content := pdbObj.Unstructured.UnstructuredContent()
 	converter := runtime.DefaultUnstructuredConverter
 
-	pdb := &v1beta1.PodDisruptionBudget{}
+	pdb := &policyv1.PodDisruptionBudget{}
 	err := converter.FromUnstructured(content, pdb)
 	if err != nil {
 		lerr := errors.NewLintRuleError(

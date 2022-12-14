@@ -58,11 +58,11 @@ The **patch version** of any control plane component (i.e. within the minor vers
 
 The upgrade of a **minor version** of any control plane component is performed in a safe way. You just need to specify the desired minor version in the `control plane` settings. Deckhouse implements a smart strategy for changing the versions of `control plane` components if the desired version does not match the current one:
 - When upgrading:
-  - The upgrades are performed **sequentially**, one minor version at a time: 1.19 -> 1.20, 1.20 -> 1.21, 1.21 -> 1.22.
+  - The upgrades are performed **sequentially**, one minor version at a time: 1.22 -> 1.23, 1.23 -> 1.24, 1.24 -> 1.25.
   - You cannot proceed to the next version until all the `control plane` components have been successfully upgraded to the current one.
   - The version to upgrade to can only be one minor version ahead of the kubelet versions on the nodes.
 - When downgrading:
-  - The downgrade is performed **sequentially**, one minor version at a time: 1.22 -> 1.21, 1.21 -> 1.20, 1.20 -> 1.19.
+  - The downgrade is performed **sequentially**, one minor version at a time: 1.25 -> 1.24, 1.24 -> 1.23, 1.23 -> 1.22.
   - Master nodes cannot have a lower version than workers: the downgrade isn't possible if the kubelet versions on the nodes aren't downgraded yet.
   - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components:
     - Suppose, `maxUsedControlPlaneVersion = 1.20`. In this case, the lowest possible version of the control plane components is `1.19`.

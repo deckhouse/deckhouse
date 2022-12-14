@@ -24,7 +24,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -109,7 +108,7 @@ func (s *StoreObject) GetInitContainers() ([]v1.Container, error) {
 
 		containers = job.Spec.Template.Spec.InitContainers
 	case "CronJob":
-		cronJob := new(batchv1beta1.CronJob)
+		cronJob := new(batchv1.CronJob)
 
 		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
 		if err != nil {
@@ -172,7 +171,7 @@ func (s *StoreObject) GetContainers() ([]v1.Container, error) {
 
 		containers = job.Spec.Template.Spec.Containers
 	case "CronJob":
-		cronJob := new(batchv1beta1.CronJob)
+		cronJob := new(batchv1.CronJob)
 
 		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
 		if err != nil {
@@ -234,7 +233,7 @@ func (s *StoreObject) GetPodSecurityContext() (*v1.PodSecurityContext, error) {
 
 		return job.Spec.Template.Spec.SecurityContext, nil
 	case "CronJob":
-		cronJob := new(batchv1beta1.CronJob)
+		cronJob := new(batchv1.CronJob)
 
 		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
 		if err != nil {
@@ -296,7 +295,7 @@ func (s *StoreObject) IsHostNetwork() (bool, error) {
 
 		return job.Spec.Template.Spec.HostNetwork, nil
 	case "CronJob":
-		cronJob := new(batchv1beta1.CronJob)
+		cronJob := new(batchv1.CronJob)
 
 		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
 		if err != nil {

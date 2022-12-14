@@ -28,7 +28,7 @@ spec:
         memory: 50Mi
 {{- end }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   annotations:
@@ -79,14 +79,12 @@ spec:
         - --certfile=/etc/spaas/certs/tls.crt
         - --keyfile=/etc/spaas/certs/tls.key
         - --debug
-        {{- if semverCompare ">=1.20-0" .Capabilities.KubeVersion.Version }}
         startupProbe:
           failureThreshold: 24
           httpGet:
             path: /api/v1/hello
             port: 2020
             scheme: HTTPS
-        {{- end }}
         livenessProbe:
           failureThreshold: 8
           httpGet:

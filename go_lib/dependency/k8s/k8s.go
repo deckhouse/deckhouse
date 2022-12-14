@@ -33,6 +33,10 @@ const (
 	V119 FakeClusterVersion = fake.ClusterVersionV119
 	V120 FakeClusterVersion = fake.ClusterVersionV120
 	V121 FakeClusterVersion = fake.ClusterVersionV121
+	V122 FakeClusterVersion = fake.ClusterVersionV122
+	V123 FakeClusterVersion = fake.ClusterVersionV123
+	V124 FakeClusterVersion = fake.ClusterVersionV124
+	V125 FakeClusterVersion = fake.ClusterVersionV125
 
 	// Default value, used in hook config - 1.21 now
 	DefaultFakeClusterVersion = fake.ClusterVersionV121
