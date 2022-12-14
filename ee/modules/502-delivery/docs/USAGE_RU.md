@@ -240,9 +240,9 @@ argocd login argocd.example.com --core
 $ kubectl config set-context --current --namespace=d8-delivery
 ```
 
-### Dex — не работает
+### Dex
 
-Авторизация через Dex не работает для CLI, хотя работает в веб-интерфейсе.
+Авторизация через Dex не работает для CLI, но работает в веб-интерфейсе.
 
 ```sh
 argocd login argocd.example.com --sso # не работает
