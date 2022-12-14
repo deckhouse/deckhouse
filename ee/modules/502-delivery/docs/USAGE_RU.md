@@ -2,44 +2,21 @@
 title: "Модуль delivery: пример конфигурации"
 ---
 
-- [Дисклеймер](#дисклеймер)
-- [Концепция](#концепция)
-- [Конфигурация с WerfSource CRD](#конфигурация-с-werfsource-crd)
-- [Публикация артефакта в registry](#публикация-артефакта-в-registry)
-- [Автообновление бандла](#автообновление-бандла)
-  - [Правила обновлений образов](#правила-обновлений-образов)
-  - [Настройки доступа к registry](#настройки-доступа-к-registry)
-    - [Индивидуальная настройка для Application](#индивидуальная-настройка-для-application)
-- [Особенности аутентификации командной утилиты `argocd`](#особенности-аутентификации-командной-утилиты-argocd)
-  - [Пользователь Argo CD](#пользователь-argo-cd)
-  - [kubectl](#kubectl)
-  - [Dex](#dex)
-- [Частичное использование WerfSource CRD](#частичное-использование-werfsource-crd)
-  - [Без репозитория Argo CD](#без-репозитория-argo-cd)
-    - [Как самостоятельно создать репозиторий Argo CD для OCI-регистри](#как-самостоятельно-создать-репозиторий-argo-cd-для-oci-регистри)
-      - [Argo CD CLI](#argo-cd-cli)
-      - [Веб-интерфейс и kubectl](#веб-интерфейс-и-kubectl)
-  - [Без регистри для Image Updater](#без-регистри-для-image-updater)
+## Прежде чем начать
 
-## Дисклеймер
-
-Мы ожидаем, что читатель знаком с Argo CD, поэтому далее описываем особенности его работы в поставке
-с Deckhouse.
+Раздел описывает особенности работы ArgoCD в поставке с Deckhouse и предполагает наличие базовых знаний или предварительного знакомства с Argo CD. 
 
 Данные, которые используются в примерах ниже:
-
-- Веб-интерфейс и API Argo CD доступны на адресе `https://argocd.example.com`. Это предполагает, что
-  параметр `publicDomainTemplate` выставлен в `%s.example.com`.
-- `APP_NAME=myapp` — название приложения.
-- `CHART_NAME=mychart` — название Helm-чарта и werf-бандла, в этой схеме они должны
-  совпадать. Для явности мы выбрали это название отличным от названия приложения.
-- `REGISTRY_HOST=cr.example.com` — хостнейм OCI-регистри.
-- `REGISTRY_REPO=cr.example.com/myproject` — репозиторий бандла в OCI-регистри.
+- Для доступа к веб-интерфейсу и API Argo CD выделен домен `argocd` в соответствии с шаблоном имен, определенном в параметре [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). В примерах ниже используется адрес `argocd.example.com`.
+- `myapp` — название приложения.
+- `mychart` — название Helm-чарта и werf-бандла. В приведенной схеме они должны совпадать. Для большей ясности, название Helm-чарта и werf-бандла выбрано отличным от названия приложения.
+- `cr.example.com` — хостнейм OCI-регистри.
+- `cr.example.com/myproject` — репозиторий бандла в OCI-регистри.
 
 ## Концепция
 
 Модуль предлагает способ развертывания приложений с помощью связки
-[werf bundle](https://werf.io/documentation/v1.2/advanced/bundles.html#bundles-publication)
+[werf bundle](https://ru.werf.io/documentation/v1.2/advanced/bundles.html#выкат-бандлов)
 и [OCI-based registries](https://helm.sh/docs/topics/registries/).
 
 Преимущество этого подхода заключается в том, что есть единое место доставки артефакта — container
@@ -53,43 +30,42 @@ registry. Артефакт содержит в себе как образы ко
 - werf-argocd-cmp-sidecar, чтобы сохранить аннотации werf во время рендеринга манифестов
 
 Чтобы использовать OCI-регистри как репозиторий, в параметрах репозитория Argo CD нужно использовать
-флаг `enableOCI=true`. Модуль delivery его устанавливает автоматически.
+флаг `enableOCI=true`. Модуль `delivery` его устанавливает автоматически.
 
-Чтобы автоматически обновлять приложения в кластере после доставки артефакта, используется Argo CD
-Image Updater. Мы используем наш
-[патч](https://github.com/argoproj-labs/argocd-image-updater/pull/405), чтобы Image Updater мог
-работать с werf-бандлами.
+Чтобы автоматически обновлять приложения в кластере после доставки артефакта, используется ArgoCD
+Image Updater. В ArgoCD Image Updater внесены [изменения](https://github.com/argoproj-labs/argocd-image-updater/pull/405), позволяющие ему работать с werf-бандлами.
 
-Ниже приведена схема с паттерном [«Application of
+В примерах используется схема с шаблоном [«Application of
 Applications»](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern),
-подразумевающая два git-репозитория: для приложения и для инфраструктуры. Инфраструктурный
-git-репозиторий и паттерн Application of Applications необязательны, если допускается создавать
-ресурсы Application вручную. Для простоты, в примерах ниже мы будем придерживаться ручного управления
-ресурсами Application.
+подразумевающая два git-репозитория — отдельный репозиторий для приложения, и отдельный репозиторий для инфраструктуры:
+![flow](../../images/502-delivery/werf-bundle-and-argocd.svg)
 
-![flow](./internal/werf-bundle-and-argocd.svg)
+Использование шаблона Application of Applications и отдельного репозитория для инфраструктуры не обязательно, если допускается создавать
+ресурсы Application вручную. Для простоты, в примерах ниже мы будем придерживаться ручного управления ресурсами Application.
 
 ## Конфигурация с WerfSource CRD
 
-Чтобы использовать Argo CD и Image Updater, достаточно настроить доступ к регистри и сам Application.
+Чтобы использовать ArgoCD и ArgoCD Image Updater, достаточно настроить объект Application и доступ к регистри.
 Доступ к регистри нужен в двух местах — в репозитории Argo CD и в конфигурации Argo CD
 Image Updater. Для этого нужно сконфигурировать:
 
-1. Секрет для доступа к регистри.
+1. Secret для доступа к регистри.
 2. Объект Application с конфигурацией приложения.
-3. Регистри для Image Updater в его configmap, в нем будет ссылка на секрет (1) для регистри.
-4. Секрет репозитрия Argo CD, в нем будет копия параметров доступа из секрета (1).
+3. Регистри для Image Updater в его configMap, в нем будет ссылка на Secret (п.1) для регистри.
+4. Secret репозитория Argo CD, в нем будет копия параметров доступа из Secret'а (п.1).
 
-Данный модуль упрощает конфигурацию для использования werf bundle и Argo CD. Упрощение касается двух
+Модуль `delivery` упрощает конфигурацию для использования werf bundle и Argo CD. Упрощение касается двух
 объектов: репозитория Argo CD и конфигурации регистри для Image Updater. Эта конфигурация задается
-одним ресурсов WerfBundle. Поэтому в рамках модуля нужно определить конфигурацию в трех местах:
+одним ресурсом — *WerfBundle*. Поэтому в рамках модуля нужно определить конфигурацию в трех местах:
 
-1. Смекрет для доступа к регистри в формате `dockerconfigjson`.
+1. Secret для доступа к регистри в формате `dockerconfigjson`.
 2. Объект Application с конфигурацией приложения.
-3. Объект WerfSource в котором содержится информация о регистри и ссылка на секрет (1) для доступа.
+3. Объект WerfSource, в котором содержится информация о регистри и ссылка на Secret (п.1) для доступа.
 
 Таким образом, для деплоя из OCI-репозитория нужно создать три объекта. Все объекты, предполагающие
-область видимости namespace, должны быть созданы в namespace `d8-delivery`. Пример:
+область видимости namespace, должны быть созданы в namespace `d8-delivery`.
+
+Пример:
 
 ```yaml
 ---
@@ -99,14 +75,14 @@ metadata:
   name: example
 spec:
   imageRepo: cr.example.io/myproject  # репозиторий бандлов и образов
-  pullSecretName: example-registry    # секрет с доступом
+  pullSecretName: example-registry    # Secret с доступом
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   namespace: d8-delivery              # namespace модуля
   name: example-registry
-type: kubernetes.io/dockerconfigjson  # поддерживается только этот тип секретов
+type: kubernetes.io/dockerconfigjson  # поддерживается только этот тип Secret'ов
 data:
   .dockerconfigjson: ...
 ---
@@ -135,32 +111,29 @@ spec:
     - CreateNamespace=true
 ```
 
-
 ## Публикация артефакта в registry
 
-OCI-чарт хельма требует, чтобы имя чарта в `Chart.yaml` совпадало с последним элементом пути
+OCI-чарт Helm требует, чтобы имя чарта в `Chart.yaml` совпадало с последним элементом пути
 в OCI-registry. Поэтому название чарта необходимо использовать в названии бандла:
 
 ```sh
 werf bundle publish --repo cr.example.com/myproject/mychart --tag 1.0.0
 ```
 
-Подробнее о бандлах — в документации werf: [подготовка
-артефактов релиза](https://ru.werf.io/documentation/v1.2/advanced/ci_cd/werf_with_argocd/configure_ci_cd.html).
-
+Подробнее о бандлах — [в документации werf](https://ru.werf.io/documentation/v1.2/advanced/ci_cd/werf_with_argocd/configure_ci_cd.html).
 
 ## Автообновление бандла
 
 Argo CD Image Updater используется для автоматического обновления Application из опубликованного
 werf-бандла в pull-модели. Image Updater сканирует OCI-репозиторий с заданным интервалом и обновляет
 `targetRevision` в Application, посредством чего обновляется всё приложение из обновленного
-артефакта. Мы используем пропатченный форк Image Updater, который умеет работать с OCI-регистри, и,
-соответственно, с werf-бандлами.
+артефакта. Мы используем [измененный Image Updater](https://github.com/argoproj-labs/argocd-image-updater/pull/405), который умеет работать с OCI-регистри и werf-бандлами.
 
 ### Правила обновлений образов
 
 В Application нужно добавить аннотацию с правилами обновления образа
-([документация](https://argocd-image-updater.readthedocs.io/en/stable/basics/update-strategies/)).
+(подробнее — [в документации werf](https://ru.werf.io/documentation/v1.2/advanced/ci_cd/werf_with_argocd/configure_ci_cd.html#непрерывное-развертывание)).
+
 Пример правила, обновляющего патч-версии приложения (`1.0.*`):
 
 ```yaml
@@ -173,13 +146,15 @@ metadata:
 
 ### Настройки доступа к registry
 
-У сервис-аккаунта `argocd-image-updater` есть права на работу с ресурсами только в namespace'е
+У сервис-аккаунта `argocd-image-updater` есть права на работу с ресурсами только в namespace
 `d8-delivery`, поэтому именно в нем необходимо создать Secret с параметрами доступа к регистри, на
-который ссылается поле `credetials`.
+который ссылается поле `credentials`.
 
 #### Индивидуальная настройка для Application
 
-Сослаться на параметры доступа можно индивидуально в каждом Application с помощью аннотации:
+Сослаться на параметры доступа можно индивидуально в каждом Application с помощью аннотации `argocd-image-updater.argoproj.io/pull-secret`.
+
+Пример:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -194,36 +169,37 @@ metadata:
 
 ### Пользователь Argo CD
 
-Задайте username и password в конфигурации Argo CD или используйте пользователя `admin`. `admin` по
-умолчанию выключен, поэтому его необходимо включить:
+Задайте `username` и `password` в конфигурации Argo CD или используйте пользователя `admin`. Пользователь `admin` по
+умолчанию выключен, поэтому его необходимо включить.
 
-Откройте конфиг
+Чтобы включить пользователя `admin`: 
 
-```sh
-kubectl edit mc delivery
-```
+1. Откройте конфигурацию модуля `delivery`: 
 
-Установите `spec.settings.argocd.admin.enabled=true`
+   ```sh
+   kubectl edit mc delivery
+   ```
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: delivery
-  # (...)
-spec:
-  enabled: true
-  settings:
-    argocd:
-      admin:
-        enabled: true
-  version: 1
-```
+1. Установите параметр `spec.settings.argocd.admin.enabled` в `true`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: delivery
+     # (...)
+   spec:
+     enabled: true
+     settings:
+       argocd:
+         admin:
+           enabled: true
+     version: 1
+   ```
 
 ### kubectl
 
-Если настроен внешний доступ к Kubernetes API
-([настройка publishAPI](../../modules/150-user-authn/configuration.html#параметры)), то `argocd`
+Если настроен [внешний доступ к Kubernetes API]((../../modules/150-user-authn/configuration.html#параметры)), то `argocd`
 может использовать запросы к kube-apiserver:
 
 ```sh
@@ -231,21 +207,21 @@ argocd login argocd.example.com --core
 ```
 
 Утилита `argocd` [не позволяет указывать namespace](https://github.com/argoproj/argo-cd/issues/9123)
-во время вызова и рассчитывает на установленное значение в `kubectl`. Модуль с Argo CD в Deckhouse
-находится в namespace `d8-delivery`. Поэтому на время работы с argocd нужно переключиться в него по
-умолчанию:
+во время вызова и рассчитывает на установленное значение в `kubectl`. Модуль `delivery` 
+находится в namespace `d8-delivery`, поэтому на время работы с argocd нужно выбрать namespace `d8-delivery` для использования по умолчанию.
 
+Выполните следующую команду, для выбора namespace `d8-delivery` в качестве namespace по умолчанию: 
 ```sh
-# временно переключите namespace по умолчанию
-$ kubectl config set-context --current --namespace=d8-delivery
+kubectl config set-context --current --namespace=d8-delivery
 ```
 
 ### Dex
 
-Авторизация через Dex не работает для CLI, но работает в веб-интерфейсе.
+Авторизация через Dex **не работает для CLI**, но работает в веб-интерфейсе.
 
+Вот так, **не работает**: 
 ```sh
-argocd login argocd.example.com --sso # не работает
+argocd login argocd.example.com --sso
 ```
 
 ## Частичное использование WerfSource CRD
@@ -268,11 +244,10 @@ spec:
   argocdRepoEnabled: false
 ```
 
-
 #### Как самостоятельно создать репозиторий Argo CD для OCI-регистри
 
 Регистри играет роль репозитория бандлов. Чтобы это работало, нужно в репозитории включить режим
-OCI. Однако веб-интерфейс не позволяет установить флаг `enableOCI`, поэтому его нужно добавить вне веб-интерфейса.
+OCI. Однако веб-интерфейс не позволяет установить флаг `enableOCI`, поэтому его нужно добавить вне веб-интерфейса.
 
 ##### Argo CD CLI
 
@@ -312,9 +287,9 @@ type: Opaque
 ### Без регистри для Image Updater
 
 Регистри в `configmap/argocd-image-updater-config` могут быть настроены только через WerfSource,
-потому что deckhouse генерирует этот ConfigMap, используя объекты WerfSource. Если этот способ не
+потому что deckhouse генерирует этот ConfigMap используя объекты WerfSource. Если этот способ не
 подходит, то конфигурацию Image Updater можно задать при помощи аннотаций в каждом
-Application индивидуально:
+Application индивидуально:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
