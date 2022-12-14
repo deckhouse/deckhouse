@@ -5,7 +5,7 @@ properties:
   argocd:
     type: object
     default: {}
-    description: "ArgoCD configuration."
+    description: "Argo CD configuration."
     properties:
       admin:
         type: object
@@ -14,7 +14,9 @@ properties:
           enabled:
             type: boolean
             default: false
-            description: "Enable ArgoCD admin user. Might be helpful when Dex is not used for authentication."
+            description: |
+              Enables Argo CD `admin` user.
+              Might be helpful when Dex is not used or for argocd CLI access (см. [usage.html](usage)).
   storageClass:
     oneOf:
       - type: string
@@ -84,7 +86,7 @@ properties:
     x-examples:
       - disktype: ssd
     description: |
-      Node selector for the ArgoCD server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+      Node selector for the Argo CD server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
@@ -109,6 +111,6 @@ properties:
           value: "value1"
           effect: "NoSchedule"
     description: |
-      Node tolerations for the ArgoCD server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+      Node tolerations for the Argo CD server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).

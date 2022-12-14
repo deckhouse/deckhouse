@@ -236,7 +236,7 @@ def re_template(filepath: str):
 
 def main():
     """
-    Walk through ArgoCD templates and insert Helm template functions.
+    Walk through Argo CD templates and insert Helm template functions.
     """
 
     templates_root = os.path.join(os.getcwd(), "templates", "argocd")

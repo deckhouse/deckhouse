@@ -1,4 +1,20 @@
 properties:
+  argocd:
+    type: object
+    default: {}
+    description: "Конфигурация Argo CD."
+    properties:
+      admin:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Флаг управлет включением пользователя `admin`.
+              Он может понадобиться, если в кластере не используется Dex
+              или если нужно настроить доступ в CLI утилитой `argocd` (см. [usage.html](примеры конфигурации)).
   storageClass:
     description: |
       Имя storageClass'а, который использовать.
