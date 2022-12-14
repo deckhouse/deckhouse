@@ -50,6 +50,7 @@ func ApplyLintRules(module utils.Module, values chartutil.Values, objectStore *s
 	resources.ControllerMustHaveVPA(&linter)
 	resources.ControllerMustHavePDB(&linter)
 	resources.DaemonSetMustNotHavePDB(&linter)
+	resources.NamespaceMustContainKubeRBACProxyCA(&linter)
 
 	return linter.ErrorsList.ConvertToError()
 }

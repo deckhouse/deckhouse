@@ -41,15 +41,15 @@ properties:
               type: object
               default: {}
               properties:
-                certificate:
+                cert:
                   type: string
                   x-examples: ["---certificate-string---"]
                 key:
                   type: string
                   x-examples: ["---key-string---"]
-                certificate_updated:
-                  type: boolean
-                  x-examples: [true]
+                ca:
+                  type: string
+                  x-examples: ["---certificate-string---"]
       ingressControllers:
         type: ['null', array]
         default: []
