@@ -20,3 +20,46 @@ kubectl label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
 
 The policies define by the module can be expanded. Examples of policy extensions can be found in the [FAQ](faq.html).
+
+### Operation policies
+
+The module provides a set of operating policies and best practices for the secure operation of your applications.
+We recommend you deploy the following minimum set of operating policies:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: common
+spec:
+  policies:
+    allowedRepos:
+      - myrepo.example.com
+      - registry.deckhouse.io
+    requiredResources:
+      limits:
+        - memory
+      requests:
+        - cpu
+        - memory
+    disallowedImageTags:
+      - latest
+    requiredProbes:
+      - livenessProbe
+      - readinessProbe
+    maxRevisionHistoryLimit: 3
+    imagePullPolicy: IfNotPresent
+    priorityClassName: production-low
+    checkHostNetworkDNSPolicy: true
+    checkContainerDuplicates: true
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+```
+
+To apply these policies, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
+The above policy is generic and recommended by Deckhouse team; if your company's policies are different, you can configure them as you like
+or disable unnecessary checks.

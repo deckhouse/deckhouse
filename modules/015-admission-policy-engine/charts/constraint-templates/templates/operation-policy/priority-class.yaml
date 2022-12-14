@@ -1,0 +1,39 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8priorityclass
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Priority Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Priority Class"
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8PriorityClass
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            priorityClassNames:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          priorityClass := input.review.object.spec.priorityClassName
+          not contains(input.parameters.priorityClassNames, priorityClass)
+          msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priorityClass, input.parameters.priorityClassNames])
+        }
+
+        contains(list, elem) {
+          list[_] = elem
+        }

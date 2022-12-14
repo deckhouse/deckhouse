@@ -1,0 +1,71 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8requiredresources
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Resources"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Requires containers to have defined resources set.
+
+      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8RequiredResources
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          properties:
+            limits:
+              type: array
+              description: "A list of limits that should be enforced (cpu, memory or both)."
+              items:
+                type: string
+                enum:
+                  - cpu
+                  - memory
+            requests:
+              type: array
+              description: "A list of requests that should be enforced (cpu, memory or both)."
+              items:
+                type: string
+                enum:
+                  - cpu
+                  - memory
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          general_violation[{"msg": msg, "field": "containers"}]
+        }
+
+        violation[{"msg": msg}] {
+          general_violation[{"msg": msg, "field": "initContainers"}]
+        }
+
+        general_violation[{"msg": msg, "field": field}] {
+          container := input.review.object.spec[field][_]
+          provided := {resource_type | container.resources.limits[resource_type]}
+          required := {resource_type | resource_type := input.parameters.limits[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("container <%v> does not have <%v> limits defined", [container.name, missing])
+        }
+
+        general_violation[{"msg": msg, "field": field}] {
+          container := input.review.object.spec[field][_]
+          provided := {resource_type | container.resources.requests[resource_type]}
+          required := {resource_type | resource_type := input.parameters.requests[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("container <%v> does not have <%v> requests defined", [container.name, missing])
+        }

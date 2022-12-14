@@ -54,7 +54,30 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"operationPolicies": [
+    {
+      "metadata": {
+        "name": "foo"
+      },
+      "spec": {
+        "match": {
+          "labelSelector": {},
+          "namespaceSelector": {
+            "excludeNames": [],
+            "labelSelector": {},
+            "matchNames": [
+              "default"
+            ]
+          }
+        },
+        "policies": {
+          "allowedRepos": [
+            "foo"
+          ]
+        }
+      }
+    }
+  ], trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
 	Context("Cluster with deckhouse on master node", func() {
 		BeforeEach(func() {
@@ -72,7 +95,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(sa.Exists()).To(BeTrue())
 			Expect(dp.Exists()).To(BeTrue())
-			Expect(vw.Exists()).To(BeTrue())
+			Expect(vw.Exists()).To(BeFalse())
 		})
 	})
 })

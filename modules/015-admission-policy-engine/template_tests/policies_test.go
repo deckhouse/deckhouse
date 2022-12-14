@@ -59,6 +59,7 @@ admissionPolicyEngine:
 			}
 
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.HelmRender(WithFilteredRenderOutput(renderedOutput, "admission-policy-engine/templates/policies/"))
 		})
 

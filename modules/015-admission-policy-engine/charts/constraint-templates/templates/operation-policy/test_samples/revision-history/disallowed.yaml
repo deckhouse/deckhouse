@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disallowed
+  namespace: default
+spec:
+  revisionHistoryLimit: 10
+  template:
+    spec:
+      containers:
+        - name: foo
+  selector:
+    matchLabels:
+      foo: bar
