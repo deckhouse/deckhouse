@@ -23,7 +23,7 @@ import (
 
 const namespace = "d8-delivery"
 
-// werfSourceConfit is a DTO for the WerfSource CRD, used to pass the data from the custom resource
+// werfSourceConfig is a DTO for the WerfSource CRD, used to pass the data from the custom resource
 // to the hook
 type werfSourceConfig struct {
 	// object Name that will be shared with argocd repo and image updater registry
