@@ -166,16 +166,15 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	deckhouseUpdater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
 
-	labels := map[string]string{
-		"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
-	}
-
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if releaseData.IsUpdating {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
+		labels := map[string]string{
+			"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
+		}
 		input.MetricsCollector.Set("d8_is_updating", 1, labels, metrics.WithGroup(metricUpdatingGroup))
 	}
 
