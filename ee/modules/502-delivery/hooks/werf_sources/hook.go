@@ -23,8 +23,31 @@ import (
 
 const namespace = "d8-delivery"
 
-// werfSource is a DTO for the WerfSource CRD, used to pass the data to ArgoCD repos and ArgoCD
-// Image Updater registries.
+// werfSourceConfit is a DTO for the WerfSource CRD, used to pass the data from the custom resource
+// to the hook
+type werfSourceConfig struct {
+	// object Name that will be shared with argocd repo and image updater registry
+	Name string
+
+	// container image repository: cr.example.com/path/to(/image)
+	Repo string
+
+	// container image registry API URL if the hostname is not the same as repository first segment
+	APIURL string
+
+	// name of creadentials secret in d8-delivery namespace, the secret is expected to have
+	// dockerconfigjson format
+	PullSecretName string
+
+	// Whether the Argo CD repository should be created for the source
+	ArgocdRepoEnabled *bool
+
+	// Argo CD repository settings; skipped if the value is nil
+	ArgocdRepo *argocdRepoConfig
+}
+
+// werfSource is an inner represenataion of the WerfSource CRD, used to pass the data to Argo CD
+// repos and Argo CD Image Updater registries.
 type werfSource struct {
 	// object Name that will be shared with argocd repo and image updater registry
 	Name string
@@ -39,16 +62,16 @@ type werfSource struct {
 	// dockerconfigjson format
 	PullSecretName string
 
-	// ArgoCD repository settings; skipped if the value is nil
+	// Argo CD repository settings; skipped if the value is nil
 	ArgocdRepo *argocdRepoConfig
 }
 
-// argocdRepoConfig is the set of options for ArgoCD repository configuration.
+// argocdRepoConfig is the set of options for Argo CD repository configuration.
 type argocdRepoConfig struct {
 	Project string
 }
 
-// imageUpdaterRegistry reflects container registries that the ArgoCD Image Updater will track, the
+// imageUpdaterRegistry reflects container registries that the Argo CD Image Updater will track, the
 // JSON mapping is taken from the upstream:
 // https://argocd-image-updater.readthedocs.io/en/v0.6.2/configuration/registries/#configuring-a-custom-container-registry.
 type imageUpdaterRegistry struct {
@@ -61,7 +84,7 @@ type imageUpdaterRegistry struct {
 	// TODO (shvgn) consider 'insecure' and 'ping' fields
 }
 
-// argocdHelmOCIRepository reflects OCI Helm repos to be used as ArgoCD repository for werf bundles,
+// argocdHelmOCIRepository reflects OCI Helm repos to be used as Argo CD repository for werf bundles,
 // type=helm and enableOCI=true are enforced.
 //
 // Doc examples https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#helm-chart-repositories
@@ -86,7 +109,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "werf_sources",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "WerfSource",
-			FilterFunc: filterWerfSource,
+			FilterFunc: filterWerfSourceConfig,
 		},
 		{
 			Name:       "credentials_secrets",
@@ -256,77 +279,104 @@ func firstSegment(s string) string {
 	return s
 }
 
-func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterWerfSourceConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
-		ws  werfSource
+		wsc werfSourceConfig
 		err error
 		ok  bool
 	)
 
-	ws.Name = obj.GetName()
+	wsc.Name = obj.GetName()
 
-	ws.Repo, ok, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("spec.imageRepo field expected")
-	}
-
-	ws.APIURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		ws.APIURL = "https://" + firstSegment(ws.Repo)
-	}
-
-	ws.PullSecretName, _, err = unstructured.NestedString(obj.Object, "spec", "pullSecretName")
+	wsc.Repo, ok, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
 	if err != nil {
 		return nil, err
 	}
 
-	// By default, Argo CD is desired, but the OCI repo can be disabled to use purely Image
-	// Updater functionality along with another repository type.
+	wsc.APIURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
+	if err != nil {
+		return nil, err
+	}
+
+	wsc.PullSecretName, _, err = unstructured.NestedString(obj.Object, "spec", "pullSecretName")
+	if err != nil {
+		return nil, err
+	}
+
+	// By default, Argo CD repository is desired, but the OCI repo can be disabled to use purely
+	// Argo CD Image Updater along with another repository type (git or helm chart museum).
 	repoEnabled, ok, err := unstructured.NestedBool(obj.Object, "spec", "argocdRepoEnabled")
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		repoEnabled = true
+	if ok {
+		wsc.ArgocdRepoEnabled = &repoEnabled
 	}
 
 	// By default, Argo CD repo belongs to the "default" project.
-	arepo, ok, err := unstructured.NestedStringMap(obj.Object, "spec", "argocdRepo")
+	arepo, _, err := unstructured.NestedStringMap(obj.Object, "spec", "argocdRepo")
 	if err != nil {
 		return nil, err
 	}
-	project := "default"
-	if repoEnabled && ok {
-		specifiedProject, projectSpecified := arepo["project"]
-		if projectSpecified && specifiedProject != "" {
-			project = specifiedProject
-		}
+	wsc.ArgocdRepo = &argocdRepoConfig{
+		Project: arepo["project"],
 	}
+
+	return wsc, nil
+}
+
+func parseWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
+	var wss []werfSource
+	for _, snap := range snapshots {
+		wsConfig, ok := snap.(werfSourceConfig)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type %T", snap)
+		}
+		ws, err := parseWefSource(wsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("parsing WerfSource %q: %v", ws.Name, err)
+		}
+
+		wss = append(wss, ws)
+	}
+	return wss, nil
+}
+
+func parseWefSource(wsConfig werfSourceConfig) (werfSource, error) {
+	var ws werfSource
+
+	ws.Name = wsConfig.Name
+	ws.PullSecretName = wsConfig.PullSecretName
+
+	if wsConfig.Repo == "" {
+		return ws, fmt.Errorf("missing spec.imageRepo field")
+	}
+	ws.Repo = wsConfig.Repo
+
+	if wsConfig.APIURL == "" {
+		ws.APIURL = "https://" + firstSegment(ws.Repo)
+	} else {
+		ws.APIURL = wsConfig.APIURL
+	}
+
+	// By default, Argo CD is desired, but the OCI repo can be disabled to use purely Image
+	// Updater functionality along with another repository type.
+	repoEnabled := wsConfig.ArgocdRepoEnabled == nil || *wsConfig.ArgocdRepoEnabled
 	if repoEnabled {
 		ws.ArgocdRepo = &argocdRepoConfig{
-			Project: project,
+			Project: parseProject(wsConfig.ArgocdRepo),
 		}
 	}
 
 	return ws, nil
 }
 
-func parseWerfSources(snapshots []go_hook.FilterResult) ([]werfSource, error) {
-	var res []werfSource
-	for _, snap := range snapshots {
-		r, ok := snap.(werfSource)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type %T", snap)
-		}
-		res = append(res, r)
+// parseProject returns "default" project if not specified.
+func parseProject(arc *argocdRepoConfig) string {
+	if arc == nil || arc.Project == "" {
+		return "default"
 	}
-	return res, nil
+	return arc.Project
 }
 
 type registryCredentials struct {

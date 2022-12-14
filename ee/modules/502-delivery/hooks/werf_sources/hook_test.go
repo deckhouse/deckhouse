@@ -33,10 +33,12 @@ var _ = Describe("Modules :: delivery :: hooks :: werf_sources ::", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Action
-			ws, err := filterWerfSource(obj)
+			wsConfig, err := filterWerfSourceConfig(obj)
+			Expect(err).ToNot(HaveOccurred())
+			ws, err := parseWefSource(wsConfig.(werfSourceConfig))
+			Expect(err).ToNot(HaveOccurred())
 
 			// Assert
-			Expect(err).ToNot(HaveOccurred())
 			Expect(ws).To(Equal(expected))
 		},
 			table.Entry("Minimal: only image repo", `
