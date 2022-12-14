@@ -64,19 +64,14 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	registryCnf, ok := secret.Data[".dockerconfigjson"]
-	if !ok {
-		return nil, fmt.Errorf("docker config not found in secret 'deckhouse-registry'")
-	}
-
 	var scheme []byte
-	scheme, ok = secret.Data["scheme"]
+	scheme, ok := secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")
 	}
 
 	return &registrySecret{
-		RegistryDockercfg: registryCnf,
+		RegistryDockercfg: secret.Data[".dockerconfigjson"],
 		Address:           string(secret.Data["address"]),
 		Path:              string(secret.Data["path"]),
 		Scheme:            string(scheme),
@@ -92,6 +87,15 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	}
 
 	registrySecretRaw := registryConfSnap[0].(*registrySecret)
+
+	if string(registrySecretRaw.RegistryDockercfg) == "" {
+		return fmt.Errorf("docker config not found in 'deckhouse-registry' secret")
+	}
+
+	if registrySecretRaw.Address == "" {
+		return fmt.Errorf("address field not found in 'deckhouse-registry' secret")
+	}
+
 	// yes, we store base64 encoded string but in secret object store decoded data
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)

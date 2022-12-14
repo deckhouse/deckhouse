@@ -65,6 +65,32 @@ data:
   address: cmVnaXN0cnkudGVzdC5jb20= # registry.test.com
   path: L2RlY2tob3VzZQ==            # /deckhouse
 `
+
+		stateDeckhouseRegistrySecretWithoutAddress = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eHl6Cg==
+  path: L2RlY2tob3VzZQ==            # /deckhouse
+`
+
+		stateDeckhouseRegistrySecretWithoutDockerconfigjson = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+type: kubernetes.io/dockerconfigjson
+data:
+  address: cmVnaXN0cnkudGVzdC5jb20= # registry.test.com
+  path: L2RlY2tob3VzZQ==            # /deckhouse
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -111,6 +137,30 @@ data:
 			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
 			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
 			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
+		})
+	})
+
+	Context("Secret without Address is created", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecretWithoutAddress))
+			f.RunHook()
+		})
+
+		It("Should fail", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError("address field not found in 'deckhouse-registry' secret"))
+		})
+	})
+
+	Context("Secret without Dockerconfigjson is created", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecretWithoutDockerconfigjson))
+			f.RunHook()
+		})
+
+		It("Should fail", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError("docker config not found in 'deckhouse-registry' secret"))
 		})
 	})
 
