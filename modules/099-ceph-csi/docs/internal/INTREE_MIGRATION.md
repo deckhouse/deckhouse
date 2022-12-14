@@ -546,5 +546,3 @@ spec:
 Create an object in the cluster using this manifest.
 
 This concludes the migration process.
-  
-
