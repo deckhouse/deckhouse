@@ -1,5 +1,5 @@
 ---
-title: "Модуль delivery"
+title: "The delivery module"
 ---
 
 This module integrates [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) — a declarative, GitOps continuous delivery tool — into Deckhouse.
