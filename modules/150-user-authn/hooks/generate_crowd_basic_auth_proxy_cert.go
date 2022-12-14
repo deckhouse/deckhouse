@@ -161,7 +161,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
-	tag := input.Values.Get("global.modulesImages.tags.userAuthn.cfssl").String()
+	tag := input.Values.Get("global.modulesImages.digests.userAuthn.cfssl").String()
 	job := generateJob(registry, tag, base64.StdEncoding.EncodeToString(gcsr))
 
 	foreground := v1.DeletePropagationForeground

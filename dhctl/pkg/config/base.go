@@ -37,8 +37,8 @@ const (
 )
 
 const (
-	versionMap     = "/deckhouse/candi/version_map.yml"
-	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
+	versionMap        = "/deckhouse/candi/version_map.yml"
+	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
 func LoadConfigFromFile(path string) (*MetaConfig, error) {
@@ -56,7 +56,7 @@ func LoadConfigFromFile(path string) (*MetaConfig, error) {
 		return nil, err
 	}
 
-	err = metaConfig.LoadImagesTags(imagesTagsJSON)
+	err = metaConfig.LoadimagesDigests(imagesDigestsJSON)
 	if err != nil {
 		return nil, err
 	}

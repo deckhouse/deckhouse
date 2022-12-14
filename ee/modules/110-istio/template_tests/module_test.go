@@ -202,14 +202,14 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV13.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(iopV12.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
-			Expect(deploymentOperatorV13.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x13x7`))
-			Expect(deploymentOperatorV12.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com:imageHash-istio-operatorV1x12x6`))
+			Expect(deploymentOperatorV13.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x13x7`))
+			Expect(deploymentOperatorV12.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x12x6`))
 
-			Expect(iopV13.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x13x7`))
-			Expect(iopV12.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com:imageHash-istio-proxyv2V1x12x6`))
+			Expect(iopV13.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x13x7`))
+			Expect(iopV12.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x12x6`))
 
-			Expect(iopV13.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash-istio-pilotV1x13x7`))
-			Expect(iopV12.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com:imageHash-istio-pilotV1x12x6`))
+			Expect(iopV13.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x13x7`))
+			Expect(iopV12.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x12x6`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x13x7`))
 			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")

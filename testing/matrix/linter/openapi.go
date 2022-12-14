@@ -43,14 +43,14 @@ func helmFormatModuleImages(m utils.Module, rawValues []interface{}) ([]chartuti
 	vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
 	caps.APIVersions = vers
 
-	tags, err := library.GetModulesImagesTags(m.Path)
+	digests, err := library.GetModulesImagesDigests(m.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	values := make([]chartutil.Values, 0, len(rawValues))
 	for _, singleValue := range rawValues {
-		applyTags(tags, singleValue)
+		applyDigests(digests, singleValue)
 
 		top := map[string]interface{}{
 			"Chart":        m.Chart.Metadata,

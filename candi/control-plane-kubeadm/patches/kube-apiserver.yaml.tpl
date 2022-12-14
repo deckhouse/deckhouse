@@ -19,7 +19,7 @@ metadata:
 spec:
   containers:
     - name: kube-apiserver
-      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
+      image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -99,7 +99,7 @@ spec:
         port: 3990
         scheme: HTTP
   - name: healthcheck
-    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
+    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
     resources:
       requests:
         cpu: "{{ div (mul $millicpu 2) 100 }}m"

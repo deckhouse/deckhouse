@@ -73,13 +73,13 @@ spec:
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     imagePullPolicy: IfNotPresent
     volumeMounts:
     - mountPath: /etc/nginx
       name: kubernetes-api-proxy-conf
   - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     volumeMounts:

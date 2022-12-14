@@ -2,7 +2,7 @@
 // To generate run 'make generate'
 package library
 
-var DefaultImagesTags = map[string]interface{}{
+var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
 		"constraintExporter": "imageHash-admissionPolicyEngine-constraintExporter",
 		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",

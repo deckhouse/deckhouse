@@ -7,13 +7,13 @@ bb-rp-remove kubeadm
 bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniAstra%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlAstra%s" $kubernetesVersion) | toString }}"
 
 old_kubelet_hash=""
-if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag" ]; then
-  old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag")
+if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest" ]; then
+  old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
 fi
 
 bb-rp-install "kubelet:{{ index .images.registrypackages (printf "kubeletAstra%s" $kubernetesVersion) | toString }}"
 
-new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag")
+new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
 if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
   bb-flag-set kubelet-need-restart
 fi

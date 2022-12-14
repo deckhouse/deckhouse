@@ -177,6 +177,6 @@ metadata:
 data:
   version_map.yml: |-
     {{- .Files.Get "candi/version_map.yml" | nindent 4 }}
-  images_tags.json: |-
-    {{- .Files.Get "images_tags.json" | nindent 4 }}
+  images_digests.json: |-
+    {{- .Files.Get "images_digests.json" | nindent 4 }}
 

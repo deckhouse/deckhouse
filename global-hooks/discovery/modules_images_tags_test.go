@@ -42,25 +42,25 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
 
-				const content = `{"basicAuth": {"nginx": "valid-tag"}}`
+				const content = `{"basicAuth": {"nginx": "valid-digest"}}`
 				err := writeTagsTMPFile(content)
 				Expect(err).To(BeNil())
 				f.RunHook()
 			})
 
-			It("Should set tags files content as object into 'global.modulesImages.tags'", func() {
+			It("Should set tags files content as object into 'global.modulesImages.digests'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				tag := f.ValuesGet("global.modulesImages.tags").String()
+				tag := f.ValuesGet("global.modulesImages.digests").String()
 				Expect(tag).To(MatchJSON(`
 {
 	"basicAuth": {
-	  "nginx": "valid-tag"
+	  "nginx": "valid-digest"
 	},
 	"testLocal": {
-	  "test": "valid-tag"
+	  "test": "valid-digest"
 	},
 	"testTest": {
-	  "test": "valid-tag"
+	  "test": "valid-digest"
 	}
 }`))
 			})
@@ -100,7 +100,7 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
 
-				const content = `{"basicAuth": {"nginx": "valid-tag"}`
+				const content = `{"basicAuth": {"nginx": "valid-digest"}`
 				err := writeTagsTMPFile(content)
 				Expect(err).To(BeNil())
 				f.RunHook()
@@ -123,5 +123,5 @@ func writeTagsTMPFile(content string) error {
 		return err
 	}
 
-	return os.Setenv("D8_TAGS_TMP_FILE", tmpfile.Name())
+	return os.Setenv("D8_DIGESTS_TMP_FILE", tmpfile.Name())
 }

@@ -216,7 +216,7 @@ properties:
         additionalProperties: true
         description: |
           Map module_name => map(image_name => tag)
-          The map loads from /deckhouse/modules/images_tags.json file.
+          The map loads from /deckhouse/modules/images_digests.json file.
           That file generated on build stage.
           Values from this map uses in helm teplates for generating container image address in deployments sts...
         x-examples:

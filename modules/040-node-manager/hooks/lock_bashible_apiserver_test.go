@@ -24,9 +24,9 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on image update ::", func() {
-	f := HookExecutionConfigInit(`{"global": {"modulesImages": {"tags": {"nodeManager": {"bashibleApiserver": "xxx"}}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"modulesImages": {"digests": {"nodeManager": {"bashibleApiserver": "sha256:8913a5815edcdebc436664ac1f654194a43df117c27b7e5ff153cdf64df30fbb"}}}}}`, `{}`)
 
-	Context("Tags are up to date", func() {
+	Context("Digests are up to date", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(actualDeployment + bashibleSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -39,9 +39,9 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 		})
 	})
 
-	Context("Tags are different", func() {
+	Context("Digests are different", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
+			f.ValuesSet("global.modulesImages.digests.nodeManager.bashibleApiserver", "sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d")
 			f.KubeStateSet(actualDeployment + bashibleSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunGoHook()
@@ -54,7 +54,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 
 		Context("Deployment was updated", func() {
 			BeforeEach(func() {
-				f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
+				f.ValuesSet("global.modulesImages.digests.nodeManager.bashibleApiserver", "sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d")
 				f.BindingContexts.Set(f.KubeStateSet(actualDeploymentYYY + bashibleSecretLocked))
 				f.RunGoHook()
 			})
@@ -67,7 +67,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 
 		Context("Deployment was updated but old pod exists", func() {
 			BeforeEach(func() {
-				f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
+				f.ValuesSet("global.modulesImages.digests.nodeManager.bashibleApiserver", "sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d")
 				f.BindingContexts.Set(f.KubeStateSet(outdatedDeploymentYYY + bashibleSecretLocked))
 				f.RunGoHook()
 			})
@@ -101,7 +101,7 @@ spec:
     spec:
       containers:
       - name: bashible-apiserver
-        image: dev-registry.deckhouse.io/sys/deckhouse-oss:xxx
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:8913a5815edcdebc436664ac1f654194a43df117c27b7e5ff153cdf64df30fbb
 status:
   replicas: 2
   updatedReplicas: 2
@@ -126,7 +126,7 @@ spec:
     spec:
       containers:
       - name: bashible-apiserver
-        image: dev-registry.deckhouse.io/sys/deckhouse-oss:yyy
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d
 status:
   replicas: 2
   updatedReplicas: 2
@@ -151,7 +151,7 @@ spec:
     spec:
       containers:
       - name: bashible-apiserver
-        image: dev-registry.deckhouse.io/sys/deckhouse-oss:yyy
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d
 status:
   replicas: 2
   updatedReplicas: 1
