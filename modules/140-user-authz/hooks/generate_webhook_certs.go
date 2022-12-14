@@ -37,7 +37,6 @@ var ErrSkip = fmt.Errorf("skipping")
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	BeforeHookCheck: func(input *go_hook.HookInput) bool {
-
 		// Migrate the secret structure in any case
 		err := dependency.WithExternalDependencies(migrateSecretStructure)(input)
 		if err != nil {
@@ -46,17 +45,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 		}
 
 		multitenancyEnabled := input.Values.Get("userAuthz.enableMultiTenancy").Bool()
-		if !multitenancyEnabled {
-			// No need to handle the certificate at all
-			return false
-		}
-
-		if len(input.Snapshots[tls_certificate.SnapshotKey]) == 0 {
-			// Handle the absence of the certificate in the library
-			return true
-		}
-
-		return true
+		return multitenancyEnabled
 	},
 
 	SANs: tls_certificate.DefaultSANs([]string{"127.0.0.1"}),
@@ -80,7 +69,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 //	tls.key
 //	ca.crt
 //
-// TODO: remove this migration in Deckhouse 1.44
+// TODO: (migration) remove in Deckhouse 1.44
 func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) error {
 	input.Values.Get("userAuthz.enableMultiTenancy").Bool()
 
