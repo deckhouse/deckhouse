@@ -459,7 +459,7 @@ spec:
     user: kube
   storageClassName: rbd # replace with ceph-csi-rbd
   volumeMode: Filesystem
-  # добавим секцию csi
+  # add the csi section
 status: # delete
   phase: Bound
 ```
