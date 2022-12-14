@@ -109,7 +109,7 @@
             </a>
           </li>
           <li class="header__navigation-item-icon header__navigation-item-icon--email">
-            <a href="mailto:contact@deckhouse.io" target="_blank">
+            <a href='mailto:{%- if page.lang == "ru" %}contact@deckhouse.ru{% else %}contact@deckhouse.io{% endif %}' target="_blank">
               <svg>
                 <use xlink:href="/images/sprite.svg#email-icon"></use>
               </svg>

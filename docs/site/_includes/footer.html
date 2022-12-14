@@ -10,9 +10,15 @@
                 </a>
             </div>
             <div class="footer__contact-info">
+            {%- if page.lang == "ru" %}
+                <a href="mailto:contact@deckhouse.ru">
+                  contact@deckhouse.ru
+                </a>
+            {%- else %}
                 <a href="mailto:contact@deckhouse.io">
                   contact@deckhouse.io
                 </a>
+            {%- endif %}
             </div>
             <div class="footer__contact-info">
                 {%- if page.lang == "ru" %}
