@@ -92,7 +92,14 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	if !input.Values.Get("global.discovery.clusterControlPlaneIsHighlyAvailable").Bool() {
+	highAvailability := false
+	if input.Values.Exists("global.highAvailability") {
+		highAvailability = input.Values.Get("global.highAvailability").Bool()
+	}
+	if input.Values.Exists("prometheus.highAvailability") {
+		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
+	}
+	if !highAvailability {
 		return nil
 	}
 
