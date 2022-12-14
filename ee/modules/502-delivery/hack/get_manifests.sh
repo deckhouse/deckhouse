@@ -4,16 +4,15 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 #
+# This script fetches manifests from the upstream repositories and splits them into separate files.
+# It is used to update manifests and partially adopt them for Deckhouse.
 #
-###########################################################################
-# CALL THIS SCRIPT FROM THE MODULE DIRECTORY
-#  ./hack/get_manifests.sh
 #
-# Dependencies:
-#   yq                  https://github.com/mikefarah/yq
-#   curl
-#   rename
-#   perl
+# Usage: call this script from the module directory:
+#
+#   ./hack/get_manifests.sh
+#
+# Dependencies: yq, curl, rename, perl
 
 set -euo pipefail
 # set -x

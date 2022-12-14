@@ -3,6 +3,14 @@
 # Copyright 2022 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
+# This script partially fills manifests with deckhouse-specific Helm function calls. Resulting
+# manifests are only partially templated and are not completely correct. Manual revision must follow
+# before commiting.
+#
+# Usage: call it from the module root:
+#
+#   ./hack/retemplate.py
+#
 import os
 
 
