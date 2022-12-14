@@ -288,12 +288,12 @@ func filterWerfSourceConfig(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	wsc.Name = obj.GetName()
 
-	wsc.Repo, ok, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
+	wsc.Repo, _, err = unstructured.NestedString(obj.Object, "spec", "imageRepo")
 	if err != nil {
 		return nil, err
 	}
 
-	wsc.APIURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
+	wsc.APIURL, _, err = unstructured.NestedString(obj.Object, "spec", "apiURL")
 	if err != nil {
 		return nil, err
 	}
