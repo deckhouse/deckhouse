@@ -30,7 +30,7 @@ lang: ru
 </ul>
 Не нашли то, что нужно? Попросите помощи в нашем [Telegram-канале]({{ site.social_links[page.lang]['telegram'] }}). Вас там точно не оставят один на один с проблемой.
 
-Если вы используете Enterprise Edition, [напишите нам](mailto:support@deckhouse.io) — мы обязательно поможем.
+Если вы используете Enterprise Edition, [напишите нам](mailto:support@deckhouse.ru) — мы обязательно поможем.
 
 Знаете, как сделать Deckhouse лучше? Заведите [задачу](https://github.com/deckhouse/deckhouse/issues/), [обсудите](https://github.com/deckhouse/deckhouse/discussions) с нами вашу идею или даже предложите [решение](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
 
