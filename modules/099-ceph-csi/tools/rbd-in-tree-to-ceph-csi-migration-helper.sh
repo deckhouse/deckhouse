@@ -62,8 +62,11 @@ new_target_pvc="$(jq --argjson a "$new_annotations_for_target_pvc" --arg sc "$ne
   ' <<< "$target_pvc")"
 
 while true; do
-  msg="Rename the rbd image in your ceph cluster using the following command:
->rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
+  msg="Rename the rbd image in your ceph cluster using the following commands:
+---
+rbd mv $pool_name/$original_rbd_image_name $pool_name/$new_rbd_image_name
+rbd image-meta set $pool_name/$new_rbd_image_name rbd.csi.ceph.com/thick-provisioned false
+---
 After renaming, enter yes to confirm: "
   read -p "$msg" confirm
   if [ "$confirm" == "yes" ]; then
@@ -105,7 +108,6 @@ new_target_pv="$(jq --argjson m "$new_target_pvc_metadata" --argjson a "$new_ann
   .spec.claimRef.uid = $m.uid |
   .spec.csi = $csi |
   .spec.storageClassName = $sc |
-  .spec.persistentVolumeReclaimPolicy = "Retain" |
   .spec.csi.volumeHandle = (.spec.csi.volumeHandle | sub($sampleRbdImageUid; $newRbdImageUid)) |
   del(.spec.rbd) |
   del(.spec.claimRef.resourceVersion) |
