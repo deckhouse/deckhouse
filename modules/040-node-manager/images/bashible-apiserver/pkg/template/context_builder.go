@@ -63,6 +63,7 @@ type BashibleContextData struct {
 	Images     map[string]map[string]string `json:"images" yaml:"images"`
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
 	Registry   registry                     `json:"registry" yaml:"registry"`
+	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
 // Map returns context data as map[string]interface{} for proper yaml marshalling
@@ -76,6 +77,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	result["images"] = bd.Images
 	result["registry"] = bd.Registry
 	result["versionMap"] = bd.VersionMap
+	result["proxy"] = bd.Proxy
 
 	return result
 }
@@ -131,6 +133,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		VersionMap:       cb.versionMap,
 		Images:           cb.imagesTags,
 		Registry:         cb.registryData,
+		Proxy:            cb.clusterInputData.Proxy,
 	}
 
 	ngMap := make(map[string][]byte)
@@ -147,10 +150,9 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 		},
-		Registry:      cb.registryData,
-		Images:        cb.imagesTags,
-		PackagesProxy: cb.clusterInputData.PackagesProxy,
-		ModulesProxy:  cb.clusterInputData.ModulesProxy,
+		Registry: cb.registryData,
+		Images:   cb.imagesTags,
+		Proxy:    cb.clusterInputData.Proxy,
 	}
 
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
@@ -210,6 +212,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 
 		Images:   cb.imagesTags,
 		Registry: &cb.registryData,
+		Proxy:    cb.clusterInputData.Proxy,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -432,6 +435,7 @@ type bashibleContext struct {
 	// Enrich with images and registry
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry *registry                    `json:"registry" yaml:"registry"`
+	Proxy    map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
 // for appropriate marshalling
@@ -449,9 +453,7 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	PackagesProxy interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-
-	ModulesProxy interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
+	Proxy map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -512,15 +514,14 @@ type dockerCfg struct {
 }
 
 type inputData struct {
-	ClusterDomain             string      `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	ModulesProxy              interface{} `json:"modulesProxy,omitempty" yaml:"modulesProxy,omitempty"`
-	APIServerEndpoints        []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA              string      `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles            []string    `json:"allowedBundles" yaml:"allowedBundles"`
-	AllowedKubernetesVersions []string    `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
-	NodeGroups                []nodeGroup `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                      interface{} `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	ClusterDomain             string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress         string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider             interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	AllowedKubernetesVersions []string               `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
+	NodeGroups                []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                      interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
 }

@@ -124,6 +124,22 @@ function main() {
   export REGISTRY_PATH="{{ .registry.path }}"
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
 {{- end }}
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+  export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+  export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+  {{- if .proxy.noProxy }}
+  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+  export no_proxy=${NO_PROXY}
+  {{- end }}
+{{- else }}
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(kubectl_exec get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then

@@ -363,9 +363,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
 	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
-	configForBashibleBundleTemplate["packagesProxy"] = make(map[string]interface{})
-	if data["packagesProxy"] != nil {
-		configForBashibleBundleTemplate["packagesProxy"] = data["packagesProxy"]
+	configForBashibleBundleTemplate["proxy"] = make(map[string]interface{})
+	if data["proxy"] != nil {
+		proxyData, err := m.EnrichProxyData()
+		if err != nil {
+			return nil, err
+		}
+		if proxyData != nil {
+			configForBashibleBundleTemplate["proxy"] = proxyData
+		}
 	}
 	configForBashibleBundleTemplate["registry"] = registryData
 
@@ -525,6 +531,56 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 
 	ret := m.Registry.ConvertToMap()
 	ret["auth"] = registryAuth
+
+	return ret, nil
+}
+
+func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
+	type proxy struct {
+		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
+		HttpsProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
+		NoProxy    []string `json:"noProxy" yaml:"noProxy"`
+	}
+
+	p := &proxy{}
+	cp, ok := m.ClusterConfig["proxy"]
+	if !ok {
+		return nil, nil
+	}
+
+	err := json.Unmarshal(cp, &p)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal proxy cfg: %v", err)
+	}
+
+	var (
+		clusterDomain     string
+		podSubnetCIDR     string
+		serviceSubnetCIDR string
+	)
+	err = json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(m.ClusterConfig["podSubnetCIDR"], &podSubnetCIDR)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnetCIDR)
+	if err != nil {
+		return nil, err
+	}
+
+	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", string(clusterDomain), string(podSubnetCIDR), string(serviceSubnetCIDR))
+
+	ret := make(map[string]interface{})
+	if p.HttpProxy != "" {
+		ret["httpProxy"] = p.HttpProxy
+	}
+	if p.HttpsProxy != "" {
+		ret["httpsProxy"] = p.HttpsProxy
+	}
+	ret["noProxy"] = p.NoProxy
 
 	return ret, nil
 }

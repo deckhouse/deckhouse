@@ -202,23 +202,28 @@ properties:
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+# TODO remove after 1.42 release
       proxy:
+        deprecated: true
         additionalProperties: false
         description: |
           Global proxy setup for modules.
         type: object
         properties:
           httpProxy:
+            deprecated: true
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               Proxy URL for HTTP requests.
           httpsProxy:
+            deprecated: true
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               Proxy URL for HTTPS requests.
           noProxy:
+            deprecated: true
             description: |
               List of no proxy IP and domain entries. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
             type: array

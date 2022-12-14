@@ -57,13 +57,16 @@ apiVersions:
           Изменение параметра в работающем кластере, приведет к [автоматическому обновлению](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
 
           Если указано `Automatic`, то используется версия control plane, которая считается стабильной на данный момент. Изменение этой версии может произойти при смене минорной версии релиза Deckhouse (см. список изменений к релизу).
-      packagesProxy:
+      proxy:
         description: |
-          Параметры прокси-сервера для загрузки пакетов ОС (например .deb или .rpm-пакетов).
+          Глобальная настройка proxy (в основном для работы в закрытых окружениях).
         properties:
-          uri:
-            description: Адрес прокси-сервера.
-          username:
-            description: Имя пользователя для аутентификации на прокси-сервере.
-          password:
-            description: Пароль пользователя для аутентификации на прокси-сервере.
+          httpProxy:
+            description: |
+              Proxy URL для HTTP-запросов.
+          httpsProxy:
+            description: |
+              Proxy URL для HTTPS-запросов.
+          noProxy:
+            description: |
+              Список IP и доменных имен, для которых проксирование не применяется. Для настройки wildcard-доменов используйте написание вида ".example.com".

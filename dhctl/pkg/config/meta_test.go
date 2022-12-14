@@ -74,6 +74,21 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.21"
 clusterDomain: "cluster.local"
+{{- if .proxy }}
+proxy:
+  {{- if .proxy.httpProxy }}
+  httpProxy: {{ .proxy.httpProxy }}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+  httpsProxy: {{ .proxy.httpsProxy }}
+  {{- end }}
+  {{- if .proxy.noProxy }}
+  noProxy:
+    {{- range .proxy.noProxy }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -297,6 +312,68 @@ func TestParseRegistryData(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, m["auth"], "")
+		})
+	})
+}
+
+func TestEnrichProxyData(t *testing.T) {
+	t.Run("proxy config is absent", func(t *testing.T) {
+		cfg := generateMetaConfig(t, map[string]interface{}{})
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, p, map[string]interface{}(nil))
+	})
+
+	t.Run("proxy config is present, httpProxy is set", func(t *testing.T) {
+		cfg := generateMetaConfig(t, map[string]interface{}{
+			"proxy": map[string]interface{}{
+				"httpProxy": "http://1.2.3.4",
+			},
+		})
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, p, map[string]interface{}{
+			"httpProxy": "http://1.2.3.4",
+			"noProxy":   []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
+		})
+	})
+
+	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
+		cfg := generateMetaConfig(t, map[string]interface{}{
+			"proxy": map[string]interface{}{
+				"httpsProxy": "https://2.3.4.5",
+			},
+		})
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, p, map[string]interface{}{
+			"httpsProxy": "https://2.3.4.5",
+			"noProxy":    []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
+		})
+	})
+
+	t.Run("proxy config is present, all options is set", func(t *testing.T) {
+		cfg := generateMetaConfig(t, map[string]interface{}{
+			"proxy": map[string]interface{}{
+				"httpProxy":  "http://1.2.3.4",
+				"httpsProxy": "https://2.3.4.5",
+				"noProxy":    []string{"example.com", ".example.com"},
+			},
+		})
+
+		p, err := cfg.EnrichProxyData()
+		require.NoError(t, err)
+
+		require.Equal(t, p, map[string]interface{}{
+			"httpProxy":  "http://1.2.3.4",
+			"httpsProxy": "https://2.3.4.5",
+			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
 }

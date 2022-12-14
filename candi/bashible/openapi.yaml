@@ -22,15 +22,17 @@ apiVersions:
       cri:
         type: string
         enum: [Docker, Containerd, NotManaged]
-      packagesProxy:
+      proxy:
         type: object
         properties:
-          uri:
+          httpProxy:
             type: string
-          username:
+          httpsProxy:
             type: string
-          password:
-            type: string
+          noProxy:
+            type: array
+            items:
+              type: string
       runType:
         type: string
         enum: [ClusterBootstrap, ImageBuilding, Normal]

@@ -80,10 +80,6 @@ positive:
         cloud:
           prefix: test
           provider: OpenStack
-        packagesProxy:
-          uri: https://example.com
-          username: user
-          password: passwd
       clusterIsBootstrapped: true
       deckhouseVersion: dev
       deckhouseEdition: FE
@@ -218,10 +214,6 @@ negative:
         cloud:
           prefix: test
           provider: OpenStack
-        packagesProxy:
-          uri: https://example.com
-          username: user
-          password: passwd
     # docker cfg not in base64 format
     - modulesImages:
         registryDockercfg: cfg
