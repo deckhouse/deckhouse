@@ -28,7 +28,7 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-1. **В контейнере с инсталлятором** выполните следующую команду, для запуска масштабирования:
+1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
