@@ -93,12 +93,12 @@ type GenSelfSignedTLSHookConf struct {
 	// FullValuesPathPrefix - prefix full path to store CA certificate TLS private key and cert
 	// full paths will be
 	//   FullValuesPathPrefix + .ca  - CA certificate
-	//   FullValuesPathPrefix + .cert - TLS private key
+	//   FullValuesPathPrefix + .crt - TLS private key
 	//   FullValuesPathPrefix + .key - TLS certificate
 	// Example: FullValuesPathPrefix =  'prometheusMetricsAdapter.internal.adapter'
 	// Values to store:
 	// prometheusMetricsAdapter.internal.adapter.ca
-	// prometheusMetricsAdapter.internal.adapter.cert
+	// prometheusMetricsAdapter.internal.adapter.crt
 	// prometheusMetricsAdapter.internal.adapter.key
 	// Data in values store as plain text
 	// In helm templates you need use `b64enc` function to encode
