@@ -1286,11 +1286,8 @@ spec: {}
 
 		It("NodeGroup values must be valid", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// cloudInstances and kubernetesVersion field exists - they are creating below the capacity field
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").Exists()).To(BeTrue())
-			// nodeCapacity field does not exist
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeFalse())
+			// nodeGroup should not be rendered at all
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").Array()).To(HaveLen(0))
 			// but we have an error in logs
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
 		})

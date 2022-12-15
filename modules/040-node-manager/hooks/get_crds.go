@@ -330,7 +330,23 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				continue
 			}
 
-			// check #3 — zones should be valid
+			// check #3 - node capacity planning: scale from zero check
+			instanceClassSpec := instanceClasses[nodeGroupInstanceClassName]
+			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
+				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
+					// capacity calculation required only for scaling from zero, we can save some time in the other cases
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
+					if err != nil {
+						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
+						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+						continue
+					}
+
+					ngForValues["nodeCapacity"] = nodeCapacity
+				}
+			}
+
+			// check #4 — zones should be valid
 			if len(defaultZones) > 0 {
 				// All elements in nodeGroup.Spec.CloudInstances.Zones
 				// should contain in defaultZonesMap.
@@ -353,7 +369,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 			// Put instanceClass.spec into values.
-			instanceClassSpec := instanceClasses[nodeGroupInstanceClassName]
 			ngForValues["instanceClass"] = instanceClassSpec
 
 			var zones []string
@@ -362,20 +377,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 			if zones == nil {
 				zones = defaultZones.Slice()
-			}
-
-			// Scale from zero check
-			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
-				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
-					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
-					if err != nil {
-						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
-					} else {
-						ngForValues["nodeCapacity"] = nodeCapacity
-					}
-				}
 			}
 
 			if ngForValues["cloudInstances"] == nil {
