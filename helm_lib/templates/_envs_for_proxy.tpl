@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_envs_for_proxy" . }} */ -}}
 {{- define "helm_lib_envs_for_proxy" }}
   {{- $context := . -}}
-  {{- if $context.Values.global.clusterConfiguration.proxy }}
+  {{- if hasKey $context.Values.global.clusterConfiguration "proxy" }}
     {{- if $context.Values.global.clusterConfiguration.proxy.httpProxy }}
 - name: HTTP_PROXY
   value: {{ $context.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
