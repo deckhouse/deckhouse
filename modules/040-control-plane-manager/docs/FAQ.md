@@ -2,97 +2,123 @@
 title: "Managing control plane: FAQ"
 ---
 
-## How do I add a master node?
+<div id="how-do-i-add-a-master-node"></div>
 
-### Static or hybrid cluster
+## How do I add a master node to a static or hybrid cluster?
 
 Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [instruction](../040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
-### Cloud cluster
+## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-> Make sure you have all the necessary quota limits, before adding nodes.
+> Before adding nodes, ensure you have the required quotas in the cloud provider.
 
-To add one or more master nodes to a cloud cluster, follow these steps:
-1. Determine the Deckhouse version and edition used in the cluster by running the following command on the master node or a host with configured kubectl access to the cluster:
+1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
-   ```shell
-   kubectl -n d8-system get deployment deckhouse \
-   -o jsonpath='version-{.metadata.annotations.core\.deckhouse\.io\/version}, edition-{.metadata.annotations.core\.deckhouse\.io\/edition}' \
-   | tr '[:upper:]' '[:lower:]'
-   ```
-
-1. Run the corresponding version and edition of the Deckhouse installer:
-
-   ```shell
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-   registry.deckhouse.io/deckhouse/<DECKHOUSE_EDITION>/install:<DECKHOUSE_VERSION> bash
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
-   For example, if the Deckhouse version in the cluster is `v1.28.0` and the Deckhouse edition is `ee`, the command to run the installer will be:
+1. **In the installer container**, run the following command and specify the required number of replicas using the `masterNodeGroup.replicas` parameter:
 
-   ```shell
-   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
-   ```
-
-   > Change the container registry address if necessary (e.g, if you use an internal container registry).
-
-1. Run the following command inside the installer container (use the `--ssh-bastion-*` parameters if using a bastion host):
-
-   ```shell
+   ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-   --ssh-host <SSH_HOST>
+     --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-1. Specify the required number of master node replicas in the `masterNodeGroup.replicas` field and save changes.
-1. Start scaling process by running the following command (specify the appropriate cluster access parameters, as in the previous step):
+1. **In the installer container**, run the following command to start scaling:
 
-   ```shell
-   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <SSH_HOST>
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-1. Answer `Yes` to the question `Do you want to CHANGE objects state in the cloud?`.
+1. Wait until the required number of master nodes are `Ready` and all `control-plane-manager` instances are up and running:
 
-All the other actions are performed automatically. Wait until the master nodes appears in Ready status.
+   ```bash
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   ```
 
-## How do I delete the master node?
+<div id="how-do-i-delete-the-master-node"></div>
 
-1. Check if the deletion lead to the etcd cluster losing its quorum:
-   * If the deletion does not lead to the etcd cluster losing its quorum:
-     * If a virtual machine with a master node can be deleted (there are no other necessary services on it), then you can delete the virtual machine in the usual way.
-     * If you can't delete the master right away (for example, it is used for backups or it is involved in the deployment process), then you have to stop the Container Runtime on the node:
-       In the case of Docker:
+## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-       ```shell
-       systemctl stop docker
-       systemctl disable docker
-       ```
+1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
-       In the case of Containerd:
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
 
-       ```shell
-       systemctl stop containerd
-       systemctl disable containerd
-       kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-       ```
+1. Run the following command **in the installer container** and set `masterNodeGroup.replicas` to `1`:
 
-   * If the deletion may result in etcd losing its quorum (the 2 -> 1 mirgation), stop kubelet on the node (without stopping the etcd container):
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
 
-     ```shell
-     systemctl stop kubelet
-     systemctl stop bashible.timer
-     systemctl stop bashible
-     systemctl disable kubelet
-     systemctl disable bashible.timer
-     systemctl disable bashible
-     ```
+1. Remove the following labels from the master nodes to be deleted:
+   * `node-role.kubernetes.io/control-plane`
+   * `node-role.kubernetes.io/master`
+   * `node.deckhouse.io/group`
 
-2. Delete the Node object from Kubernetes.
-3. [Wait](#how-do-i-view-the-list-of-etcd-members) until the etcd member is automatically deleted.
+   Use the following command to remove labels:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Drain the nodes being deleted:
+
+   ```bash
+   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Shut down the virtual machines corresponding to the nodes to be deleted, remove the instances of those nodes from the cloud and the disks connected to them (`kubernetes-data-master-<N>`).
+
+1. In the cluster, delete the Pods running on the nodes being deleted:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   ```
+
+1. In the cluster, delete the Nore objects associated with the nodes being deleted:
+
+   ```bash
+   kubectl delete node <MASTER-NODE-N-NAME>
+   ```
+
+1. **In the installer container**, run the following command to start scaling:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
 
 ## How do I dismiss the master role while keeping the node?
 
-1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels, then wait for the etcd member to be automatically deleted.
-2. Exec to the node and run the following commands:
+1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels.
+1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Exec to the node and run the following commands:
 
    ```shell
    rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -103,6 +129,108 @@ All the other actions are performed automatically. Wait until the master nodes a
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
    rm -rf /var/lib/etcd/member/
    ```
+
+## How do I switch to a different OS image in a multi-master cluster?
+
+1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}') \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **In the installer container**, run the following command and specify the required OS image using the `masterNodeGroup.instanceClass` parameter (specify the addresses of all master nodes using the `-ssh-host` parameter):
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+Repeat the steps below for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
+
+1. Select the master node to update (enter its name):
+
+   ```bash
+   NODE="<MASTER-NODE-N-NAME>"
+   ```
+
+1. Run the following command to remove the `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` labels from the node:
+
+   ```bash
+   kubectl label node ${NODE} \
+     node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Make sure that the node is no longer listed as an etcd cluster member:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Drain the node:
+
+   ```bash
+   kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Shut down the virtual machine associated with the node, remove the node instance from the cloud and the disks connected to it (`kubernetes-data`).
+
+1. In the cluster, delete the Pods remaining on the node being deleted:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
+   ```
+
+1. In the cluster, delete the Node object for the node being deleted:
+
+   ```bash
+   kubectl delete node ${NODE}
+   ```
+
+1. **In the installer container**, run the following command to create the updated node:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
+   ```
+
+1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
+
+   ```bash
+   journalctl -fu bashible.service
+   ```
+
+1. Make sure the node is listed as an etcd cluster member:
+
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- sh -c \
+   "ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table"
+   ```
+
+1. Make sure `control-plane-manager` is running on the node:
+
+   ```bash
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+   ```
+
+1. Proceed to update the next node (repeat the steps above).
+
+## How do I switch to a different OS image in a single-master cluster?
+
+1. Convert your single-master cluster to a multi-master one, as described in [the guide on adding master nodes to a cluster](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master).
+
+   > In addition to increasing the number of replicas, you can also specify the image with the required OS version using the `masterNode.instanceClass` parameter.
+
+1. Update the master nodes following the [instructions](#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster).
+1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master).
 
 ## How do I view the list of etcd members?
 
