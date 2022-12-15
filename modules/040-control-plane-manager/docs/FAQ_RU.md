@@ -225,7 +225,7 @@ title: "Управление control plane: FAQ"
 
 ## Как изменить образ ОС в single-master-кластере?
 
-1. Преобразуйте single-master-кластер в multi-master в соответствии с [инструкцией](#как-добавить master-узлы-в-облачном-кластере-single-master-в-multi-master).
+1. Преобразуйте single-master-кластер в multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
 
    > Помимо увеличения числа реплик вы можете сразу указать образ с необходимой версией ОС в параметре `masterNode.instanceClass`.
 
