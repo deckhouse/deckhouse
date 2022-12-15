@@ -2,6 +2,6 @@
 title: "The delivery module"
 ---
 
-This module integrates [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) — a declarative, GitOps continuous delivery tool — into Deckhouse.
+This module integrates [Argo CD](https://argo-cd.readthedocs.io/en/stable/) — a declarative, GitOps continuous delivery tool — into Deckhouse.
 
 We recommend using the `delivery` module together with [werf bundles](https://werf.io/documentation/v1.2/advanced/bundles.html).

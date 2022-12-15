@@ -4,7 +4,7 @@ title: "The delivery module: configuration example"
 
 ## Before you begin
 
-This section describes how ArgoCD works when bundled with Deckhouse and assumes you have basic understanding or prior knowledge of Argo CD. 
+This section describes how Argo CD works when bundled with Deckhouse and assumes you have basic understanding or prior knowledge of Argo CD.
 
 The following details are used in the examples below:
 - The `argocd` domain has been allocated according to the name template defined in the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. It allows you to access the Argo CD web interface and the API. The examples below use `argocd.example.com`.
@@ -27,7 +27,7 @@ The following components are used:
 
 To use the OCI registry as a repository, you have to enable the `enableOCI=true` flag in the Argo CD repository settings. The `delivery` module does it automatically.
 
-ArgoCD Image Updater automatically updates applications in the cluster once the artifact has been delivered. ArgoCD Image Updater has been [modified](https://github.com/argoproj-labs/argocd-image-updater/pull/405) to work with werf bundles.
+Argo CD Image Updater automatically updates applications in the cluster once the artifact has been delivered. Argo CD Image Updater has been [modified](https://github.com/argoproj-labs/argocd-image-updater/pull/405) to work with werf bundles.
 
 The examples below use the [«Application of
 Applications»](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern) pattern, which implies that there are two git repositories — a dedicated repository for the application, and a dedicated repository for the infrastructure:
@@ -37,7 +37,7 @@ The use of the Application of Applications pattern and a separate infrastructure
 
 ## WerfSource CRD-based configuration
 
-All you need to do to use ArgoCD and ArgoCD Image Updater is to configure the Application object and access to the registry. Access to the registry is required for the Argo CD repository and Argo CD Image Updater. Thus, you have to configure:
+All you need to do to use Argo CD and Argo CD Image Updater is to configure the Application object and access to the registry. Access to the registry is required for the Argo CD repository and Argo CD Image Updater. Thus, you have to configure:
 
 1. Secret to access the registry.
 2. Application object containing the application configuration.
@@ -110,7 +110,7 @@ For more information about bundles, see the [werf documentation](https://werf.io
 
 ## Bundle auto-updating
 
-As part of the pull model, ArgoCD Image Updater automatically updates the Application using a published werf bundle. Image Updater scans the OCI repository at set intervals and updates `targetRevision` in the Application. This causes the entire application to be updated based on the updated artifact. We use a [modified Image Updater](https://github.com/argoproj-labs/argocd-image-updater/pull/405) that supports OCI registries and werf bundles.
+As part of the pull model, Argo CD Image Updater automatically updates the Application using a published werf bundle. Image Updater scans the OCI repository at set intervals and updates `targetRevision` in the Application. This causes the entire application to be updated based on the updated artifact. We use a [modified Image Updater](https://github.com/argoproj-labs/argocd-image-updater/pull/405) that supports OCI registries and werf bundles.
 
 ### The rules for updating images
 
@@ -145,7 +145,7 @@ metadata:
     argocd-image-updater.argoproj.io/pull-secret: pullsecret:d8-delivery/example-registry
 ```
 
-## How to authenticate using the `argocd` CLI 
+## How to authenticate using the `argocd` CLI
 
 ### Argo CD user
 
@@ -153,7 +153,7 @@ Set `username` and `password` in the Argo CD configuration or use the `admin` us
 
 To do so:
 
-1. Open the `delivery` module config: 
+1. Open the `delivery` module config:
 
    ```sh
    kubectl edit mc delivery
@@ -187,6 +187,7 @@ argocd login argocd.example.com --core
 The `argocd` CLI [does not allow namespace](https://github.com/argoproj/argo-cd/issues/9123) to be set at invocation time and relies on the value defined in `kubectl`. The `delivery` module is in the `d8-delivery` namespace, so you must set the `d8-delivery` namespace to be the default while working with argocd.
 
 Use the following command to set `d8-delivery` as the default namespace:
+
 ```sh
 kubectl config set-context --current --namespace=d8-delivery
 ```
@@ -196,6 +197,7 @@ kubectl config set-context --current --namespace=d8-delivery
 The Dex-based authorization **does not work for the CLI**, but it does in the web interface.
 
 That is, you **cannot** authorize like this:
+
 ```sh
 argocd login argocd.example.com --sso
 ```
@@ -237,6 +239,7 @@ $ argocd repo add cr.example.com/myproject \
 ##### Using the web interface and kubectl
 
 The missing flag can be added manually to an existing repository:
+
 ```sh
 kubectl -n d8-delivery edit secret repo-....
 ```

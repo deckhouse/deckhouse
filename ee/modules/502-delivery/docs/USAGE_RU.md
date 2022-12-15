@@ -4,7 +4,7 @@ title: "Модуль delivery: пример конфигурации"
 
 ## Прежде чем начать
 
-Раздел описывает особенности работы ArgoCD в поставке с Deckhouse и предполагает наличие базовых знаний или предварительного знакомства с Argo CD. 
+Раздел описывает особенности работы Argo CD в поставке с Deckhouse и предполагает наличие базовых знаний или предварительного знакомства с Argo CD.
 
 Данные, которые используются в примерах ниже:
 - Для доступа к веб-интерфейсу и API Argo CD выделен домен `argocd` в соответствии с шаблоном имен, определенном в параметре [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). В примерах ниже используется адрес `argocd.example.com`.
@@ -32,8 +32,8 @@ registry. Артефакт содержит в себе как образы ко
 Чтобы использовать OCI-регистри как репозиторий, в параметрах репозитория Argo CD нужно использовать
 флаг `enableOCI=true`. Модуль `delivery` его устанавливает автоматически.
 
-Чтобы автоматически обновлять приложения в кластере после доставки артефакта, используется ArgoCD
-Image Updater. В ArgoCD Image Updater внесены [изменения](https://github.com/argoproj-labs/argocd-image-updater/pull/405), позволяющие ему работать с werf-бандлами.
+Чтобы автоматически обновлять приложения в кластере после доставки артефакта, используется Argo CD
+Image Updater. В Argo CD Image Updater внесены [изменения](https://github.com/argoproj-labs/argocd-image-updater/pull/405), позволяющие ему работать с werf-бандлами.
 
 В примерах используется схема с шаблоном [«Application of
 Applications»](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern),
@@ -45,7 +45,7 @@ Applications»](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster
 
 ## Конфигурация с WerfSource CRD
 
-Чтобы использовать ArgoCD и ArgoCD Image Updater, достаточно настроить объект Application и доступ к регистри.
+Чтобы использовать Argo CD и Argo CD Image Updater, достаточно настроить объект Application и доступ к регистри.
 Доступ к регистри нужен в двух местах — в репозитории Argo CD и в конфигурации Argo CD
 Image Updater. Для этого нужно сконфигурировать:
 
@@ -124,7 +124,7 @@ werf bundle publish --repo cr.example.com/myproject/mychart --tag 1.0.0
 
 ## Автообновление бандла
 
-Argo CD Image Updater используется для автоматического обновления Application из опубликованного
+Argo CD Image Updater используется для автоматического обновления Application из опубликованного
 werf-бандла в pull-модели. Image Updater сканирует OCI-репозиторий с заданным интервалом и обновляет
 `targetRevision` в Application, посредством чего обновляется всё приложение из обновленного
 артефакта. Мы используем [измененный Image Updater](https://github.com/argoproj-labs/argocd-image-updater/pull/405), который умеет работать с OCI-регистри и werf-бандлами.
@@ -172,9 +172,9 @@ metadata:
 Задайте `username` и `password` в конфигурации Argo CD или используйте пользователя `admin`. Пользователь `admin` по
 умолчанию выключен, поэтому его необходимо включить.
 
-Чтобы включить пользователя `admin`: 
+Чтобы включить пользователя `admin`:
 
-1. Откройте конфигурацию модуля `delivery`: 
+1. Откройте конфигурацию модуля `delivery`:
 
    ```sh
    kubectl edit mc delivery
@@ -207,10 +207,11 @@ argocd login argocd.example.com --core
 ```
 
 Утилита `argocd` [не позволяет указывать namespace](https://github.com/argoproj/argo-cd/issues/9123)
-во время вызова и рассчитывает на установленное значение в `kubectl`. Модуль `delivery` 
+во время вызова и рассчитывает на установленное значение в `kubectl`. Модуль `delivery`
 находится в namespace `d8-delivery`, поэтому на время работы с argocd нужно выбрать namespace `d8-delivery` для использования по умолчанию.
 
-Выполните следующую команду, для выбора namespace `d8-delivery` в качестве namespace по умолчанию: 
+Выполните следующую команду, для выбора namespace `d8-delivery` в качестве namespace по умолчанию:
+
 ```sh
 kubectl config set-context --current --namespace=d8-delivery
 ```
@@ -219,7 +220,8 @@ kubectl config set-context --current --namespace=d8-delivery
 
 Авторизация через Dex **не работает для CLI**, но работает в веб-интерфейсе.
 
-Вот так, **не работает**: 
+Вот так, **не работает**:
+
 ```sh
 argocd login argocd.example.com --sso
 ```
