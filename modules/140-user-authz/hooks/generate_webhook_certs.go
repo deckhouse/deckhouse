@@ -22,11 +22,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -44,8 +44,12 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 			return false // skip hook
 		}
 
-		multitenancyEnabled := input.Values.Get("userAuthz.enableMultiTenancy").Bool()
-		return multitenancyEnabled
+		var (
+			secretExists        = len(input.Snapshots[tls_certificate.SnapshotKey]) > 0
+			multitenancyEnabled = input.Values.Get("userAuthz.enableMultiTenancy").Bool()
+		)
+
+		return secretExists || multitenancyEnabled
 	},
 
 	SANs: tls_certificate.DefaultSANs([]string{"127.0.0.1"}),
@@ -80,6 +84,10 @@ func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) e
 
 	secret, err := klient.CoreV1().Secrets(internal.Namespace).Get(context.TODO(), certificateSecretName, metav1.GetOptions{})
 	if err != nil {
+		if k8serror.IsNotFound(err) {
+			// Secret does not exist, nothing to migrate
+			return nil
+		}
 		return fmt.Errorf("cannot get secret %s/%s: %v", internal.Namespace, certificateSecretName, err)
 	}
 
