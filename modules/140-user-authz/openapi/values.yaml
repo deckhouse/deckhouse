@@ -128,9 +128,10 @@ properties:
                         minLength: 1
         default: []
     x-examples:
-    - webhookServerCrt: certificatestring
-      webhookServerKey: keystring
-      webhookCA: castring
+    - webhookCertificate:
+        ca: castring
+        key: keystring
+        crt: certificatestring
       customClusterRoles:
         admin:
           - d8:user-authz:cert-manager:admin
