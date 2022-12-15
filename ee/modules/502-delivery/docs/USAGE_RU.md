@@ -220,7 +220,8 @@ kubectl config set-context --current --namespace=d8-delivery
 
 Авторизация через Dex **не работает для CLI**, но работает в веб-интерфейсе.
 
-Вот так **не работает**:
+Вот так **не работает**, потому нет возможности зарегистрировать публичного клиента для DexClient, в
+роли которого выступает Argo CD:
 
 ```sh
 argocd login argocd.example.com --sso

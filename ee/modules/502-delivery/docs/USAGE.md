@@ -196,7 +196,8 @@ kubectl config set-context --current --namespace=d8-delivery
 
 The Dex-based authorization **does not work for the CLI**, but it does in the web interface.
 
-That is, you **cannot** authorize like this:
+That is, you **cannot** authorize via SSO because Dex Client in Deckhouse does not support public
+clients, in this case Argo CD:
 
 ```sh
 argocd login argocd.example.com --sso

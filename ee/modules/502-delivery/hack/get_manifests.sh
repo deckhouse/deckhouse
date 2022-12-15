@@ -63,8 +63,8 @@ split_manifests "${VENDOR_ROOT}/${IMAGE_UPDATER_MANIFESTS}"
 # Form labels where missing
 yq eval-all 'select(.metadata.labels == null) | .metadata.labels.dummy = "true"' argocd-*.yaml
 
-# remove network policies as we don't need them in Deckhouse
-# TODO why?
+# Remove network policies as we don't use them in Deckhouse. We are in the transition period to
+# cilium.
 rm *-networkpolicy.yaml
 
 # Move CRDs
