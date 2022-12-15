@@ -1,0 +1,23 @@
+Subject: [PATCH] Fixed wrong error checking in ControllerUnpublishVolume
+
+A comparison with cnsvsphere.ErrVMNotFound will not work since NodeManager returns its own error ErrNodeNotFound
+
+The error was introduced by 5571cf55993de8f08c465c6120f588b7685a85de
+---
+Index: pkg/csi/service/vanilla/controller.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/csi/service/vanilla/controller.go b/pkg/csi/service/vanilla/controller.go
+--- a/pkg/csi/service/vanilla/controller.go	(revision 72a6a29f486df1feff9ebc0e1807f6c55a864ac8)
++++ b/pkg/csi/service/vanilla/controller.go	(date 1671106224289)
+@@ -1264,7 +1264,7 @@
+ 			nodevm, err = c.nodeMgr.GetNodeByName(ctx, req.NodeId)
+ 		}
+ 		if err != nil {
+-			if err == cnsvsphere.ErrVMNotFound {
++			if err == node.ErrNodeNotFound {
+ 				log.Infof("Virtual Machine for Node ID: %v is not present in the VC Inventory. "+
+ 					"Marking ControllerUnpublishVolume for Volume: %q as successful.", req.NodeId, req.VolumeId)
+ 				return &csi.ControllerUnpublishVolumeResponse{}, "", nil

@@ -1,9 +1,12 @@
-ARG BASE_GOLANG_16_ALPINE
+ARG BASE_GOLANG_19_ALPINE
 ARG BASE_UBUNTU
 
-FROM $BASE_GOLANG_16_ALPINE as csi
+FROM $BASE_GOLANG_19_ALPINE as csi
 WORKDIR /src/
-RUN wget https://github.com/kubernetes-sigs/vsphere-csi-driver/archive/refs/tags/v2.5.4.tar.gz -O - | tar -xz --strip-components=1 -C /src
+RUN apk add --no-cache patch
+RUN wget https://github.com/kubernetes-sigs/vsphere-csi-driver/archive/refs/tags/v2.7.0.tar.gz -O - | tar -xz --strip-components=1 -C /src
+COPY patches/001-fixed-non-existing-node-error-handling-on-unpublishvolume.patch /src
+RUN patch -p1 < 001-fixed-non-existing-node-error-handling-on-unpublishvolume.patch
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
 
 # support every standard Linux disk/mount utility so that CSI components won't complain
