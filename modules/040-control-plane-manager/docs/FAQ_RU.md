@@ -192,7 +192,7 @@ title: "Управление control plane: FAQ"
    kubectl delete node ${NODE}
    ```
 
-1. **В контейнере с инсталлятором** выполните следующую команду, для создания обновленного узла:
+1. **В контейнере с инсталлятором** выполните следующую команду для создания обновленного узла:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
