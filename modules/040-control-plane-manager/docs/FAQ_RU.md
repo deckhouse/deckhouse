@@ -199,7 +199,7 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-1. **На созданном узле** посмотрите журнал systemd-unit'а `bashible.service`. Дождитесь окончания настройки узла, — сообщения `nothing to do` в журнале:
+1. **На созданном узле** посмотрите журнал systemd-unit'а `bashible.service`. Дождитесь окончания настройки узла — в журнале появится сообщение `nothing to do`:
 
    ```bash
    journalctl -fu bashible.service
