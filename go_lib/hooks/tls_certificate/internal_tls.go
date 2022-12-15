@@ -110,14 +110,24 @@ type GenSelfSignedTLSHookConf struct {
 	BeforeHookCheck func(input *go_hook.HookInput) bool
 }
 
-func (gss GenSelfSignedTLSHookConf) generatePaths() (caPath, certPath, keyPath string) {
-	prefix := strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+func (gss GenSelfSignedTLSHookConf) path() string {
+	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+}
 
-	caPath = strings.Join([]string{prefix, "ca"}, ".")
-	certPath = strings.Join([]string{prefix, "crt"}, ".")
-	keyPath = strings.Join([]string{prefix, "key"}, ".")
+type certValues struct {
+	Ca  string `json:"ca"`
+	Crt string `json:"crt"`
+	Key string `json:"key"`
+}
 
-	return
+// The certificate mapping "cert" -> "crt" for backward compatibility.
+// We are migrating to "crt" naming for certificates.
+func convCertToValues(cert certificate.Certificate) certValues {
+	return certValues{
+		Ca:  cert.CA,
+		Crt: cert.Cert,
+		Key: cert.Key,
+	}
 }
 
 // RegisterInternalTLSHook
@@ -168,8 +178,6 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
-	caPath, certPath, keyPath := conf.generatePaths()
-
 	var usages []string
 	if conf.Usages == nil {
 		usages = []string{
@@ -229,9 +237,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		}
 
 		// Note that []byte values will be encoded in base64. Use strings here!
-		input.Values.Set(caPath, cert.CA)
-		input.Values.Set(certPath, cert.Cert)
-		input.Values.Set(keyPath, cert.Key)
+		input.Values.Set(conf.path(), convCertToValues(cert))
 		return nil
 	}
 }
