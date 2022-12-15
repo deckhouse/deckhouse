@@ -120,8 +120,8 @@ type certValues struct {
 	Key string `json:"key"`
 }
 
-// The certificate mapping "cert" -> "crt" for backward compatibility.
-// We are migrating to "crt" naming for certificates.
+// The certificate mapping "cert" -> "crt". We are migrating to "crt" naming for certificates
+// in values.
 func convCertToValues(cert certificate.Certificate) certValues {
 	return certValues{
 		Ca:  cert.CA,
@@ -236,7 +236,6 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 		}
 
-		// Note that []byte values will be encoded in base64. Use strings here!
 		input.Values.Set(conf.path(), convCertToValues(cert))
 		return nil
 	}
