@@ -79,30 +79,26 @@ func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) e
 
 	klient, err := dc.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("cannot get kubernetes client: %v", err)
+		return fmt.Errorf("getting kubernetes client: %v", err)
 	}
 
 	secret, err := klient.CoreV1().Secrets(internal.Namespace).Get(context.TODO(), certificateSecretName, metav1.GetOptions{})
 	if err != nil {
 		if k8serror.IsNotFound(err) {
-			// Secret does not exist, nothing to migrate
+			// Secret does not exist, nothing to do
 			return nil
 		}
-		return fmt.Errorf("cannot get secret %s/%s: %v", internal.Namespace, certificateSecretName, err)
+		return fmt.Errorf("getting secret %s/%s: %v", internal.Namespace, certificateSecretName, err)
 	}
 
-	if secret.Data["tls.crt"] != nil {
+	if secret.Data["webhook-server.crt"] == nil {
 		// Already migrated
 		return nil
 	}
 
-	// After this, the tls certificate library will be able to handle the certificate
-	secret.Data["tls.crt"] = secret.Data["webhook-server.crt"]
-	secret.Data["tls.key"] = secret.Data["webhook-server.key"]
-
-	_, err = klient.CoreV1().Secrets(internal.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	err = klient.CoreV1().Secrets(internal.Namespace).Delete(context.TODO(), certificateSecretName, metav1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("cannot update secret %s/%s: %v", internal.Namespace, certificateSecretName, err)
+		return fmt.Errorf("deleting secret with outedated structure %s/%s: %v", internal.Namespace, certificateSecretName, err)
 	}
 
 	// We have just migrated the secret, so we need to skip the hook to avoid wrong snapshot.
