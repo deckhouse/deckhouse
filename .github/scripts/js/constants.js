@@ -137,7 +137,7 @@ module.exports.knownKubernetesVersions = kubernetesVersions;
 
 module.exports.e2eDefaults = {
   criName: 'Containerd',
-  kubernetesVersion: '1.21',
+  kubernetesVersion: '1.23',
 }
 
 const editions = [
