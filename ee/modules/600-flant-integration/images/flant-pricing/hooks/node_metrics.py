@@ -205,8 +205,13 @@ def read_snaphots(name):
 
 
 def read_binding_context():
-    context_path = os.getenv("BINDING_CONTEXT_PATH")
     i = os.getenv("BINDING_CONTEXT_CURRENT_INDEX")
+    if i is None:
+        i = 0
+    else:
+        i = int(i)
+
+    context_path = os.getenv("BINDING_CONTEXT_PATH")
     context = ""
     with open(context_path, "r", encoding="utf-8") as f:
         context = json.load(f)
