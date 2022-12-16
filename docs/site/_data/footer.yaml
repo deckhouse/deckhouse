@@ -61,6 +61,8 @@ columns:
         url: '/services/managed.html'
       - title: Обучение и консалтинг
         url: '/services/training.html'
+      - title: Переезд на Deckhouse
+        url: /services/moving_to_deckhouse.html
   - title: Информация
     items:
       - title: Импортозамещение
