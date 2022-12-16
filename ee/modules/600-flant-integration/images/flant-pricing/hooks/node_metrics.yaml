@@ -1,0 +1,125 @@
+# Copyright 2022 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+#
+# This is a config for node_metrics.py hook.
+configVersion: v1
+kubernetes:
+  - name: nodes
+    group: main
+    queue: /node_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: v1
+    kind: Node
+    labelSelector:
+    matchExpressions:
+    - key: "node.deckhouse.io/group"
+      operator: Exists
+    jqFilter: |
+        select(
+            .metadata.labels."node.deckhouse.io/group" != "master"
+            or
+            (
+              .spec.taints == null
+              or
+              (
+                [
+                    .spec.taints[]
+                    | select(
+                      .key == "node-role.kubernetes.io/control-plane" or
+                      .key == "node-role.kubernetes.io/master"
+                    )
+                ]
+                | length == 0
+              )
+            )
+        )
+        | {
+            "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+            "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+            "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        }
+  - name: nodes_all
+    group: main
+    queue: /node_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: v1
+    kind: Node
+    labelSelector:
+    matchExpressions:
+    - key: "node.deckhouse.io/group"
+      operator: Exists
+    # All nodes managed by deckhouse, counting into flant_pricing_node_count
+    jqFilter: |
+        select( .metadata.labels."node.deckhouse.io/group" != null )
+        | {
+          "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+        }
+  - name: nodes_cp
+    group: main
+    queue: /node_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: v1
+    kind: Node
+    labelSelector:
+    matchExpressions:
+    - key: "node.deckhouse.io/group"
+      operator: Exists
+    # Control plane nodes, counting into flant_pricing_controlplane_node_count
+    jqFilter: |
+      select( .metadata.labels."node.deckhouse.io/group" == "master" )
+      | {
+        "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+        "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+        "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+      }
+  - name: nodes_t_cp
+    group: main
+    queue: /node_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: v1
+    kind: Node
+    labelSelector:
+    matchExpressions:
+    - key: "node.deckhouse.io/group"
+      operator: Exists
+    # Control plane nodes with desired taints, counting into flant_pricing_controlplane_tainted_node_count
+    jqFilter: |
+      select(
+          .metadata.labels."node.deckhouse.io/group" == "master"
+          and
+          .spec.taints != null
+          and
+          (
+            [
+                .spec.taints[]
+                | select(
+                  .key == "node-role.kubernetes.io/control-plane" or
+                  .key == "node-role.kubernetes.io/master"
+                )
+            ]
+            | length > 0
+          )
+      )
+      | {
+        "nodeGroup":        .metadata.labels."node.deckhouse.io/group",
+        "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+        "virtualization":  (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
+      }
+  - name: ngs
+    group: main
+    queue: /node_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "nodeType": .spec.nodeType
+      }
