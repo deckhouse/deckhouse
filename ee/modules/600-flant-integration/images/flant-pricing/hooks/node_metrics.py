@@ -206,10 +206,11 @@ def read_snaphots(name):
 
 def read_binding_context():
     context_path = os.getenv("BINDING_CONTEXT_PATH")
+    i = os.getenv("BINDING_CONTEXT_CURRENT_INDEX")
     context = ""
     with open(context_path, "r", encoding="utf-8") as f:
         context = json.load(f)
-    return context
+    return context[i]
 
 
 if __name__ == "__main__":
