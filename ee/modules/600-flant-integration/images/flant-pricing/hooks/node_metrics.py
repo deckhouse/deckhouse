@@ -114,6 +114,9 @@ def generate_metric_with_type(
 
     # Count by nodes type
     for node in node_filter_results:
+        if node is None:
+            # Some nodes are skipped by jqFilter
+            continue
         node_nodegroup_name = node.get("nodeGroup")
         # We don't bill nodes without NodeGroup
         if node_nodegroup_name is None:
