@@ -669,7 +669,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
 
   const abortRes = tryParseAbortE2eCluster({argv: arg.argv, context, core})
   if (abortRes !== null) {
-    return abortRes
+    return {...abortRes, command}
   }
 
 

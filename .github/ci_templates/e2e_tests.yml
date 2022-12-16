@@ -54,6 +54,7 @@
 # <template: e2e_run_template>
 {!{- $provider := index . 0 -}!}
 {!{- $script_arg := index . 1 -}!}
+{!{- $run_from_issue_or_pr := index . 2 -}!}
 {!{- $script := "script.sh" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
@@ -95,10 +96,10 @@ run: |
 
   ls -lh $(pwd)/testing
 
-  dhctl_log_file="${DHCTL_LOG_FILE}-{!{ $script_arg }!}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   echo "DHCTL log file: $dhctl_log_file"
 
-{!{- if eq $script_arg "run-test" }!}
+{!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   echo "Start waiting ssh connection string script"
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
   echo "Full comment url for updating ${comment_url}"
@@ -351,7 +352,7 @@ check_e2e_labels:
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
-  {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
 
 {!{- if coll.Has $ctx "manualRun" }!}
     - name: Read connection string
@@ -367,7 +368,7 @@ check_e2e_labels:
           await e2e_cleanup.readConnectionScript({core, context, github});
 
     - name: Label pr if e2e failed
-      if: ${{ failure() || cancelled() }}
+      if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
       uses: actions-ecosystem/action-add-labels@v1
       with:
         github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
@@ -390,7 +391,7 @@ check_e2e_labels:
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
 
     - name: Save dhctl state
       id: save_failed_cluster_state
@@ -430,18 +431,12 @@ check_e2e_labels:
 
 {!{- if not (coll.Has $ctx "manualRun") }!}
 
-  # general error alter
   {!{- $labels := dict "trigger" "CloudLayoutTestFailed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
   {!{- $annotations := dict "summary" "Cloud Layout Test failed" "description" "Check Github workflow log for more information" -}!}
   {!{- $if := "github.ref == 'refs/heads/main' && (cancelled() || failure())" -}!}
   {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
 
-  # alert about cluster was not cleaned correctly
-  {!{- $labels = dict "trigger" "CloudLayoutTestClusterNotDestroyed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
-  {!{- $annotations = dict "summary" "Cloud resources did not clean after e2e run" "description" "Check Github workflow log and remove cloud resources" -}!}
-  {!{- $if = "github.ref == 'refs/heads/main' && (cancelled() || failure()) && steps.cleanup-{!{ $ctx.jobID }!}.outcome" -}!}
-  {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
-  {!{- end }!}
+{!{- end }!}
 # </template: e2e_run_job_template>
 {!{ end -}!}
 
@@ -537,7 +532,7 @@ check_e2e_labels:
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
 
     - name: Remove failed cluster label
       if: ${{ success() }}

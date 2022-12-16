@@ -251,7 +251,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -513,7 +513,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -775,7 +775,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -1037,7 +1037,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -1299,7 +1299,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -1561,7 +1561,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -1823,7 +1823,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -2085,7 +2085,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -2347,7 +2347,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
@@ -2609,7 +2609,7 @@ jobs:
 
           ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
           docker run --rm \
