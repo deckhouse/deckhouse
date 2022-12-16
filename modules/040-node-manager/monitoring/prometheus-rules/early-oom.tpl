@@ -12,8 +12,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReady,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReady,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReadyGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReadyGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes" 
       plk_labels_as_annotations: "pod"
       summary: >
         The {{`{{$labels.pod}}`}} Pod has detected unavailable PSI subsystem.

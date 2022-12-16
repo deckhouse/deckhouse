@@ -10,8 +10,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_group_for__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDirGroup,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_group_for__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDirGroup,prometheus=deckhouse,kubernetes=~kubernetes
       summary: Deckhouse module {{ $labels.module_name }} use emptydir as storage.
       description: |
         Deckhouse module {{ $labels.module_name }} use emptydir as storage.
