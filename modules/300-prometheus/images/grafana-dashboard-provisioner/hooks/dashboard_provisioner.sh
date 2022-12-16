@@ -50,21 +50,13 @@ function __main__() {
 
     dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)')
     if [[ "${dashboardUid}" == "" ]]; then
-<<<<<<< HEAD
-<<<<<<< HEAD
-      dashboardUid="${dashboardUid} $(jq -rc '.uid' <<< "${dashboard}")"
-=======
       dashboardUid="${dashboardUid} $(jq -rc '.uid')"
->>>>>>> 6674008f4 (++)
-=======
-      dashboardUid="${dashboardUid} $(jq -rc '.uid')"
->>>>>>> fix/make-dashboard-unique-by-UID
       continue
     fi
-    
+
     check_dashboard=0
 
-    if [[ ! -s "$tmpFile" ]]; then
+    if [[ ! -s "${tmpFile}" ]]; then
       echo "${dashboardUid}" >> "${tmpFile}"
     else
       for uid in $(cat "${tmpFile}"); do
