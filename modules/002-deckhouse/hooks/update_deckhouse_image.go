@@ -172,7 +172,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 			deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
-		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+		labels := map[string]string{
+			"releaseChannel": input.Values.Get("deckhouse.releaseChannel").String(),
+		}
+		input.MetricsCollector.Set("d8_is_updating", 1, labels, metrics.WithGroup(metricUpdatingGroup))
 	}
 
 	// fetch releases from snapshot and patch initial statuses
