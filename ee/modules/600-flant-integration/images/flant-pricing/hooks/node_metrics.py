@@ -33,8 +33,8 @@ import sys
 #   - hard
 #   - special
 #
-# To count the number of nodes to charge for any type, the consumer must subtract the number of tainted nodes
-# from the total number of nodes of the same type, e.g.
+# To count the number of nodes to charge for any type, the consumer must subtract the number of
+# tainted nodes from the total number of nodes of the same type, e.g.
 #
 # flant_pricing_nodes{type="ephemeral"} - flant_pricing_controlplane_tainted_nodes{type="ephemeral"}
 # flant_pricing_nodes{type="vm"}        - flant_pricing_controlplane_tainted_nodes{type="vm"}
