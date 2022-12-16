@@ -486,6 +486,28 @@ entries:
                 ru: Настройки
               url: /modules/500-openvpn/configuration.html
     - title:
+        en: Delivery
+        ru: Доставка
+      folders:
+        - title:
+            en: Description
+            ru: Описание
+          url: /modules/502-delivery/
+        - title:
+            en: Usage
+            ru: Примеры
+          url: /modules/502-delivery/usage.html
+        - title:
+            en: Reference
+            ru: Справка
+          folders:
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/502-delivery/configuration.html
+            - title: Custom Resources
+              url: /modules/502-delivery/cr.html
+    - title:
         en: Network Load Balancing
         ru: Балансировка трафика
       folders:

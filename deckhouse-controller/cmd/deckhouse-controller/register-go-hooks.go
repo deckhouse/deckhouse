@@ -14,6 +14,8 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/380-metallb/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-keepalived/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/502-delivery/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/502-delivery/hooks/werf_sources"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/madison"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/migrate"

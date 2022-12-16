@@ -41,3 +41,11 @@ trim_trailing_whitespace = false
 [{*.go, *.patch}]
 indent_style = tab
 indent_size = 4
+
+###########################################################
+; python
+###########################################################
+
+[*.py]
+indent_style = space
+indent_size = 4

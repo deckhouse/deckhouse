@@ -21,6 +21,7 @@
 470-chrony/                 @RomanenkoDenys
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
+502-delivery/               @shvgn
 600-flant-integration/      @shvgn
 bashible-apiserver/         @yalosev
 candi/                      @RomanenkoDenys
