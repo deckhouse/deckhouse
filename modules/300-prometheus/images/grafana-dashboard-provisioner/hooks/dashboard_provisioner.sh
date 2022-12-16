@@ -35,6 +35,7 @@ EOF
 
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
+  tmpFile=$(mktemp -t uids.XXXXXX)
 
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
@@ -47,10 +48,31 @@ function __main__() {
 
     title=$(slugify <<<${title})
 
-    dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)' <<<${dashboard})
+    dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)')
     if [[ "${dashboardUid}" == "" ]]; then
+<<<<<<< HEAD
       dashboardUid="${dashboardUid} $(jq -rc '.uid' <<< "${dashboard}")"
+=======
+      dashboardUid="${dashboardUid} $(jq -rc '.uid')"
+>>>>>>> 6674008f4 (++)
       continue
+    fi
+    
+    check_dashboard=0
+
+    if [[ ! -s "$tmpFile" ]]; then
+      echo "${dashboardUid}" >> "${tmpFile}"
+    else
+      for uid in $(cat "${tmpFile}"); do
+        if [[ "${uid}" == "${dashboardUid}" ]]; then
+          check_dashboard=1
+        fi
+      done
+      if [[ "${check_dashboard}" -eq 0 ]]; then
+        echo "${dashboardUid}" >> "${tmpFile}"
+      else
+        echo "The dashboard with specified uid exists: ${dashboardUId}"
+      fi
     fi
 
     folder=$(jq -rc '.folder' <<<${dashboard})
