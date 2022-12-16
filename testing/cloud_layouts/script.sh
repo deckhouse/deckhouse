@@ -567,28 +567,6 @@ ENDSSH
     >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
     return 1
   fi
-
-  # TODO remove after full migration to ModuleConfig (after 1.42).
-  # Catch deckhouse logs between restarts during switching and migration to ModuleConfig.
-  capture_logs_during_switching &
-}
-
-function capture_logs_during_switching() {
-  # Use for-loop to catch logs between restarts.
-  >&2 echo "Fetch Deckhouse logs during release switch ..."
-  catchLogsScript=$(cat <<'END_SCRIPT'
-  for i in $(seq 1 1000) ; do
-    echo '{"msg":"=================================================="}'
-    echo '{"msg":"Get deckhouse logs attempt '$i' of 1000"}'
-    echo '{"msg":"=================================================="}'
-    kubectl -n d8-system logs deploy/deckhouse
-    echo '{"msg":"<<<<<<<=================================>>>>>>>>>>"}'
-    echo
-    sleep 0.2;
-  done
-END_SCRIPT
-)
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${catchLogsScript}" > "$cwd/deckhouse-release-switch.json.log"
 }
 
 # wait_deckhouse_ready check if deckhouse Pod become ready.
