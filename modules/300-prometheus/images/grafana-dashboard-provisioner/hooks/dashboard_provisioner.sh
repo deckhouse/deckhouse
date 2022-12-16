@@ -49,11 +49,6 @@ function __main__() {
     title=$(slugify <<<${title})
 
     dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)')
-    if [[ "${dashboardUid}" == "" ]]; then
-      dashboardUid="${dashboardUid} $(jq -rc '.uid')"
-      continue
-    fi
-
     check_dashboard=0
 
     if [[ ! -s "${tmpFile}" ]]; then
