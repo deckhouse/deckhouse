@@ -1,0 +1,154 @@
+[
+    {
+        "binding": "main",
+        "type": "Group",
+        "snapshots": {
+            "nodes_t_cp": [
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": null
+                },
+                {
+                    "filterResult": null
+                }
+            ],
+            "nodes": [
+                {
+                    "filterResult": null
+                },
+                {
+                    "filterResult": null
+                },
+                {
+                    "filterResult": null
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "worker-medium",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "worker-small",
+                        "virtualization": "kvm"
+                    }
+                }
+            ],
+            "ngs": [
+                {
+                    "filterResult": {
+                        "name": "master",
+                        "nodeType": "CloudPermanent"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "name": "worker-large",
+                        "nodeType": "CloudEphemeral"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "name": "worker-medium",
+                        "nodeType": "CloudEphemeral"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "name": "worker-small",
+                        "nodeType": "CloudEphemeral"
+                    }
+                }
+            ],
+            "nodes_all": [
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "worker-medium",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "worker-small",
+                        "virtualization": "kvm"
+                    }
+                }
+            ],
+            "nodes_cp": [
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": {
+                        "pricingNodeType": "unknown",
+                        "nodeGroup": "master",
+                        "virtualization": "kvm"
+                    }
+                },
+                {
+                    "filterResult": null
+                },
+                {
+                    "filterResult": null
+                }
+            ]
+        }
+    }
+]

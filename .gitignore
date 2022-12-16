@@ -1,4 +1,4 @@
-# Binaries for programs and plugins
+# Binaries for 'rograms and plugins
 *.exe
 *.dll
 *.so
@@ -46,3 +46,6 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+
+# Python dev environment
+__pycache__/

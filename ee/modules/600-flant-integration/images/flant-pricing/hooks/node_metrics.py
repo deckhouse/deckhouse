@@ -1,7 +1,6 @@
 #!/usr/bin/env micropython
 #
-# Copyright 2022 Flant JSC
-# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+# Copyright 2022 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # This hook is responsible for generating metrics for node count of each type.
 #
@@ -215,7 +214,6 @@ def read_binding_context():
         i = int(i)
 
     context_path = os.getenv("BINDING_CONTEXT_PATH")
-    context = ""
     with open(context_path, "r", encoding="utf-8") as f:
         context = json.load(f)
     return context[i]
