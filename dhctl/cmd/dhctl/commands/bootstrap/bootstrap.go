@@ -114,7 +114,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 		return err
 	}
 
-	return log.Process("bootstrap", "Waiting for additional Nodes", func() error {
+	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
 		if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 			return err
 		}
