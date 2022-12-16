@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	k8serror "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
