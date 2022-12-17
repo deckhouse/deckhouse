@@ -12,12 +12,17 @@ from contextlib import contextmanager
 def bindingcontext(configpath):
     """
     Provides binding context for hook.
+
+    Example:
+
+        with bindingcontext("node_metrics.yaml") as ctx:
+            snapshots = ctx["snapshots"]
+            ...
     """
-    # Hook config
     if len(sys.argv) > 1 and sys.argv[1] == "--config":
         with open(configpath, "r", encoding="utf-8") as cf:
             print(cf.read())
-            exit(0)
+            sys.exit(0)
 
     yield read_binding_context()
 
