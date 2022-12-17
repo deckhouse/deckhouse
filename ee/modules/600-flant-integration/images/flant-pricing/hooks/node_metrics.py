@@ -11,8 +11,6 @@ import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import yaml
-
 # We do not charge for control plane nodes which are in desired state.
 #
 # The consumer must subtract the number of tainted control plane nodes from the total number of
@@ -100,69 +98,76 @@ class Node:
         return self.pricing_node_type
 
 
-def parse_nodegroups_by_name(snapshots):
+def parse_nodegroups_by_name(ng_snapshots):
+    """
+    Collects dict of node groups by name.
+    """
     by_name = {}
-    for s in snapshots:
-        ng = s["filterResult"]
-        if ng is None:
+    for s in ng_snapshots:
+        filtered = s["filterResult"]
+        if filtered is None:
             # should not happen
             continue
-        name, node_type = ng["name"], ng["nodeType"]
+        name, node_type = filtered["name"], filtered["nodeType"]
         by_name[name] = NodeGroup(name=name, node_type=node_type)
     return by_name
 
 
-def parse_nodes(snapshots, nodegroup_by_name):
+def parse_nodes(node_snapshots, nodegroup_by_name):
+    """
+    Collects list of nodes with nodegroup in them. Skips nodes which are not in node groups.
+    """
     nodes = []
-    for s in snapshots:
-        node = s["filterResult"]
-        if node is None:
-            # filterResult is None if the node does not match the filter, like control-plane node
-            # without expected taints
+    for s in node_snapshots:
+        filtered = s["filterResult"]
+        if filtered is None:
+            # The node did not match the jqFilter, e.g. control-plane node without expected taints
             continue
 
-        ng_name = node["nodeGroup"]
+        ng_name = filtered["nodeGroup"]
         if ng_name not in nodegroup_by_name:
             # we don't charge for nodes which are not in node groups
             continue
+        node_group = nodegroup_by_name.get(ng_name)
 
         nodes.append(
             Node(
-                node_group=nodegroup_by_name.get(ng_name),
-                pricing_node_type=node["pricingNodeType"],
-                virtualization=node["virtualization"],
+                node_group=node_group,
+                pricing_node_type=filtered["pricingNodeType"],
+                virtualization=filtered["virtualization"],
             )
         )
     return nodes
 
 
 def main():
+    """
+    Hook entry point. Used in test.
+    """
     metric_group = "group_node_metrics"
     # snap_name, metric_name
     metric_configs = (
-        ("nodes", "flant_pricing_count_nodes_by_type"),
+        ("nodes", "flant_pricing_count_nodes_by_type"),  # DEPRECATED
         ("nodes_all", "flant_pricing_nodes"),
         ("nodes_cp", "flant_pricing_controlplane_nodes"),
         ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
     )
 
     metrics = []
-    with hookconfig("node_metrics.yaml") as ctx:
+    with bindingcontext("node_metrics.yaml") as ctx:
         snapshots = ctx["snapshots"]
+        # Collect node groups to use them in nodes
         ng_by_name = parse_nodegroups_by_name(snapshots["ngs"])
-
         for snap_name, metric_name in metric_configs:
+            # Build node instances
             nodes = parse_nodes(snapshots[snap_name], ng_by_name)
             for m in gen_metric(nodes, metric_group, metric_name):
                 metrics.append(m)
 
-    # Hook body
-    with open(os.getenv("METRICS_PATH"), "a", encoding="utf-8") as f:
-        f.write(json.dumps({"action": "expire", "group": metric_group}))
-        f.write("\n")
+    with MetricsExporter() as e:
+        e.export({"action": "expire", "group": metric_group})
         for m in metrics:
-            f.write(json.dumps(m))
-            f.write("\n")
+            e.export(m)
 
 
 def gen_metric(nodes, metric_group: str, metric_name: str):
@@ -189,39 +194,6 @@ def gen_metric(nodes, metric_group: str, metric_name: str):
         }
 
 
-def read_snaphots(name, safe=False):
-    """
-    Returns the list of snapshots.
-
-    In general, there is only one snapshot, but there can be more than one.
-
-    In generatl, the returned list contains dicts of the following structure:
-
-        {
-            "object": { "kind": ..., "metadata": ... } ,
-            "filterResult": { ... }
-        }
-
-    - `object` is a JSON dump of Kubernetes object.
-    - `filterResult`is a JSON result of applying `jqFilter` to the Kubernetes object.
-
-    Keeping dumps for object fields can take a lot of memory. There is a parameter
-    `keepFullObjectsInMemory: false` to disable full dumps.
-
-    Note that disabling full objects make sense only if `jqFilter` is defined, as it disables full
-    objects in snapshots field, objects field of "Synchronization" binding context and object field
-    of "Event" binding context.
-
-    See https://github.com/flant/shell-operator/blob/main/HOOKS.md
-    """
-
-    context = read_binding_context()
-    snaps = context["snapshots"]
-    if safe:
-        return snaps.get(name, [])
-    return snaps[name]
-
-
 def read_binding_context():
     i = os.getenv("BINDING_CONTEXT_CURRENT_INDEX")
     if i is None:
@@ -236,7 +208,10 @@ def read_binding_context():
 
 
 @contextmanager
-def hookconfig(configpath):
+def bindingcontext(configpath):
+    """
+    Provides binding context for hook.
+    """
     # Hook config
     if len(sys.argv) > 1 and sys.argv[1] == "--config":
         with open(configpath, "r", encoding="utf-8") as cf:
@@ -244,6 +219,25 @@ def hookconfig(configpath):
             exit(0)
 
     yield read_binding_context()
+
+
+class MetricsExporter(object):
+    """
+    Wrapper for metrics exporting. Accepts raw dicts and appends them into the metrics file.
+    """
+
+    def __init__(self):
+        self.file = open(os.getenv("METRICS_PATH"), "a", encoding="utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file.close()
+
+    def export(self, metric: dict):
+        self.file.write(json.dumps(metric))
+        self.file.write("\n")
 
 
 if __name__ == "__main__":
