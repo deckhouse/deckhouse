@@ -1,15 +1,17 @@
-#!/usr/bin/env micropython
+#!/usr/bin/env python3
 #
 # Copyright 2022 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # This hook is responsible for generating metrics for node count of each type.
 #
-# It is written in micropython because it lets keep the image size small. Note the difference
-# between python and micropython: https://docs.micropython.org/en/latest/genrst/index.html
 
 import json
 import os
 import sys
+from contextlib import contextmanager
+from dataclasses import dataclass
+
+import yaml
 
 # We do not charge for control plane nodes which are in desired state.
 #
@@ -43,140 +45,151 @@ import sys
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
+# Node types for pricing from the annotation 'pricing.flant.com/nodeType'. Lowercase versions of
+# them are used as labels in metrics
+PRICING_EPHEMERAL = "Ephemeral"
+PRICING_HARD = "Hard"
+PRICING_SPECIAL = "Special"
+PRICING_VM = "VM"
+PRICING_UNKNOWN = "unknown"  # fallback from filter result
+
+
+# Node group node types
+NG_CLOUDEPHEMERAL = "CloudEphemeral"
+NG_CLOUDPERMANENT = "CloudPermanent"
+NG_CLOUDSTATIC = "CloudStatic"
+NG_STATIC = "Static"
+
+
+def map_ng_to_pricing_type(ng_node_type, virtualization):
+    if ng_node_type == NG_CLOUDEPHEMERAL:
+        return PRICING_EPHEMERAL
+
+    if ng_node_type in (NG_CLOUDPERMANENT, NG_CLOUDSTATIC):
+        return PRICING_VM
+
+    if ng_node_type == NG_STATIC and virtualization != "unknown":
+        return PRICING_VM
+
+    return PRICING_HARD
+
+
+@dataclass
+class NodeGroup:
+    # jqFiter: name
+    name: str
+    # jqFiter: nodeType
+    node_type: str
+
+
+@dataclass
+class Node:
+    # jqFiter: nodeGroup (name)
+    node_group: NodeGroup
+    # jqFiter: pricingNodeType
+    pricing_node_type: str
+    # jqFiter: virtualization
+    virtualization: str
+
+    def pricing_type(self):
+        if self.pricing_node_type == PRICING_UNKNOWN:
+            return map_ng_to_pricing_type(
+                self.node_group.node_type,
+                self.virtualization,
+            )
+        return self.pricing_node_type
+
+
+def parse_nodegroups_by_name(snapshots):
+    by_name = {}
+    for s in snapshots:
+        ng = s["filterResult"]
+        if ng is None:
+            # should not happen
+            continue
+        name, node_type = ng["name"], ng["nodeType"]
+        by_name[name] = NodeGroup(name=name, node_type=node_type)
+    return by_name
+
+
+def parse_nodes(snapshots, nodegroup_by_name):
+    nodes = []
+    for s in snapshots:
+        node = s["filterResult"]
+        if node is None:
+            # filterResult is None if the node does not match the filter, like control-plane node
+            # without expected taints
+            continue
+
+        ng_name = node["nodeGroup"]
+        if ng_name not in nodegroup_by_name:
+            # we don't charge for nodes which are not in node groups
+            continue
+
+        nodes.append(
+            Node(
+                node_group=nodegroup_by_name.get(ng_name),
+                pricing_node_type=node["pricingNodeType"],
+                virtualization=node["virtualization"],
+            )
+        )
+    return nodes
+
+
 def main():
-    # Hook config
-    if len(sys.argv) > 1 and sys.argv[1] == "--config":
-        with open("node_metrics.yaml", "r", encoding="utf-8") as f:
-            print(f.read())
-            return
+    metric_group = "group_node_metrics"
+    # snap_name, metric_name
+    metric_configs = (
+        ("nodes", "flant_pricing_count_nodes_by_type"),
+        ("nodes_all", "flant_pricing_nodes"),
+        ("nodes_cp", "flant_pricing_controlplane_nodes"),
+        ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
+    )
+
+    metrics = []
+    with hookconfig("node_metrics.yaml") as ctx:
+        snapshots = ctx["snapshots"]
+        ng_by_name = parse_nodegroups_by_name(snapshots["ngs"])
+
+        for snap_name, metric_name in metric_configs:
+            nodes = parse_nodes(snapshots[snap_name], ng_by_name)
+            for m in gen_metric(nodes, metric_group, metric_name):
+                metrics.append(m)
 
     # Hook body
-    metric_group = "group_node_metrics"
     with open(os.getenv("METRICS_PATH"), "a", encoding="utf-8") as f:
         f.write(json.dumps({"action": "expire", "group": metric_group}))
         f.write("\n")
-        for m in collect_metrics(metric_group):
+        for m in metrics:
             f.write(json.dumps(m))
             f.write("\n")
 
 
-def collect_metrics(metric_group):
-    ng_filter_results = list(read_filter_results("ngs"))
-
-    def generate(name, metric_name):
-        return generate_metric_with_type(
-            list(read_filter_results(name)),
-            ng_filter_results,
-            metric_group,
-            metric_name,
-        )
-
-    # DEPRECATED all nodes except CP nodes with expected taints
-    for m in generate("nodes", "flant_pricing_count_nodes_by_type"):
-        yield m
-
-    # all nodes
-    for m in generate("nodes_all", "flant_pricing_nodes"):
-        yield m
-
-    # CP nodes
-    for m in generate("nodes_cp", "flant_pricing_controlplane_nodes"):
-        yield m
-
-    # CP nodes with expected taints
-    for m in generate("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"):
-        yield m
-
-
-# Node types for pricing from the annotation 'pricing.flant.com/nodeType'. Lowercase versions of
-# them are used as labels in metrics
-PRICING_NODE_TYPE_EPHEMERAL = "Ephemeral"
-PRICING_NODE_TYPE_HARD = "Hard"
-PRICING_NODE_TYPE_SPECIAL = "Special"
-PRICING_NODE_TYPE_VM = "VM"
-PRICING_NODE_TYPE_UNKNOWN = "unknown"  # fallback from filter result
-
-
-def generate_metric_with_type(
-    node_filter_results,
-    ng_filter_results,
-    metric_group: str,
-    metric_name: str,
-):
+def gen_metric(nodes, metric_group: str, metric_name: str):
     pricing_types = (
-        PRICING_NODE_TYPE_EPHEMERAL,
-        PRICING_NODE_TYPE_HARD,
-        PRICING_NODE_TYPE_SPECIAL,
-        PRICING_NODE_TYPE_VM,
+        PRICING_EPHEMERAL,
+        PRICING_HARD,
+        PRICING_SPECIAL,
+        PRICING_VM,
     )
+    # Count nodes by type
     count_by_type = {t: 0 for t in pricing_types}
+    for node in nodes:
+        count_by_type[node.pricing_type()] += 1
 
-    # Count by nodes type
-    for node in node_filter_results:
-        if node is None:
-            # Some nodes are skipped by jqFilter
-            continue
-        node_nodegroup_name = node.get("nodeGroup")
-        # We don't bill nodes without NodeGroup
-        if node_nodegroup_name is None:
-            continue
-
-        virtualization = node["virtualization"]
-        pricing_type = node["pricingNodeType"]
-
-        if pricing_type == PRICING_NODE_TYPE_UNKNOWN:
-            # Deduce node type from NodeGroup if we can
-            for ng in ng_filter_results:
-                # Find the relevant NodeGroup snapshot
-                if ng["name"] != node_nodegroup_name:
-                    continue
-                pricing_type = map_node_type_to_pricing_type(
-                    ng["nodeType"], virtualization
-                )
-                break
-        count_by_type[pricing_type] += 1
-
-    # Generate metrics
+    # Yield metrics
     for pricing_type, count in count_by_type.items():
-        # by coincidence, metric label values are lowercase pricing annotation values
-        metric_type = pricing_type.lower()
         yield {
             "name": metric_name,
             "group": metric_group,
             "set": count,
-            "labels": {"type": metric_type},
+            "labels": {
+                "type": pricing_type.lower(),
+            },
         }
 
 
-# Node group node types
-NODEGROUP_NODE_TYPE_CLOUDEPHEMERAL = "CloudEphemeral"
-NODEGROUP_NODE_TYPE_CLOUDPERMANENT = "CloudPermanent"
-NODEGROUP_NODE_TYPE_CLOUDSTATIC = "CloudStatic"
-NODEGROUP_NODE_TYPE_STATIC = "Static"
-
-
-def map_node_type_to_pricing_type(ng_node_type, virtualization):
-    if ng_node_type == NODEGROUP_NODE_TYPE_CLOUDEPHEMERAL:
-        return PRICING_NODE_TYPE_EPHEMERAL
-
-    if ng_node_type in (
-        NODEGROUP_NODE_TYPE_CLOUDPERMANENT,
-        NODEGROUP_NODE_TYPE_CLOUDSTATIC,
-    ):
-        return PRICING_NODE_TYPE_VM
-
-    if ng_node_type == NODEGROUP_NODE_TYPE_STATIC and virtualization != "unknown":
-        return PRICING_NODE_TYPE_VM
-
-    return PRICING_NODE_TYPE_HARD
-
-
-def read_filter_results(name):
-    for s in read_snaphots(name):
-        yield s["filterResult"]
-
-
-def read_snaphots(name):
+def read_snaphots(name, safe=False):
     """
     Returns the list of snapshots.
 
@@ -203,7 +216,10 @@ def read_snaphots(name):
     """
 
     context = read_binding_context()
-    return context["snapshots"][name]
+    snaps = context["snapshots"]
+    if safe:
+        return snaps.get(name, [])
+    return snaps[name]
 
 
 def read_binding_context():
@@ -217,6 +233,17 @@ def read_binding_context():
     with open(context_path, "r", encoding="utf-8") as f:
         context = json.load(f)
     return context[i]
+
+
+@contextmanager
+def hookconfig(configpath):
+    # Hook config
+    if len(sys.argv) > 1 and sys.argv[1] == "--config":
+        with open(configpath, "r", encoding="utf-8") as cf:
+            print(cf.read())
+            exit(0)
+
+    yield read_binding_context()
 
 
 if __name__ == "__main__":
