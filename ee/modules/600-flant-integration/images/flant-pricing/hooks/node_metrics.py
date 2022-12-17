@@ -6,6 +6,7 @@
 #
 
 from dataclasses import dataclass
+from typing import List
 
 from framework import MetricsExporter, bindingcontext
 
@@ -96,7 +97,37 @@ class Node:
         return self.pricing_node_type
 
 
-def parse_nodegroups_by_name(ng_snapshots):
+@dataclass
+class MetricGenerator:
+    name: str
+    group: str
+    nodes: List[Node]
+
+    def generate(self):
+        pricing_types = (
+            PRICING_EPHEMERAL,
+            PRICING_HARD,
+            PRICING_SPECIAL,
+            PRICING_VM,
+        )
+        # Count nodes by type
+        count_by_type = {t: 0 for t in pricing_types}
+        for node in self.nodes:
+            count_by_type[node.pricing_type()] += 1
+
+        # Yield metrics
+        for pricing_type, count in count_by_type.items():
+            yield {
+                "name": self.name,
+                "group": self.group,
+                "set": count,
+                "labels": {
+                    "type": pricing_type.lower(),
+                },
+            }
+
+
+def parse_nodegroups(ng_snapshots):
     """
     Collects dict of node groups by name.
     """
@@ -142,54 +173,52 @@ def main():
     """
     Hook entry point. Used in test.
     """
+
     metric_group = "group_node_metrics"
-    # snap_name, metric_name
     metric_configs = (
+        # snapshot, metric_name
         ("nodes", "flant_pricing_count_nodes_by_type"),  # DEPRECATED
         ("nodes_all", "flant_pricing_nodes"),
         ("nodes_cp", "flant_pricing_controlplane_nodes"),
         ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
     )
 
-    metrics = []
-    with bindingcontext("node_metrics.yaml") as ctx:
-        snapshots = ctx["snapshots"]
-        # Collect node groups to use them in nodes
-        ng_by_name = parse_nodegroups_by_name(snapshots["ngs"])
-        for snap_name, metric_name in metric_configs:
-            # Build node instances
-            nodes = parse_nodes(snapshots[snap_name], ng_by_name)
-            for m in gen_metric(nodes, metric_group, metric_name):
-                metrics.append(m)
+    ctx = bindingcontext("node_metrics.yaml")
+    snapshots = ctx["snapshots"]
 
+    # Collect node groups to use them in nodes
+    ng_by_name = parse_nodegroups(snapshots["ngs"])
+
+    # Parse nodes of interest into MetricGenerators per snapshot
+    metric_generators = []
+    for snap_name, metric_name in metric_configs:
+        # Parse lists of nodes
+        node_snaps = snapshots[snap_name]
+        nodes = parse_nodes(node_snaps, ng_by_name)
+
+        # Build MetricGenerator instance
+        metric_generators.append(
+            MetricGenerator(
+                name=metric_name,
+                group=metric_group,
+                nodes=nodes,
+            )
+        )
+
+    # Export metrics
     with MetricsExporter() as e:
         e.export({"action": "expire", "group": metric_group})
-        for m in metrics:
+        for m in gen_metrics(metric_generators):
             e.export(m)
 
 
-def gen_metric(nodes, metric_group: str, metric_name: str):
-    pricing_types = (
-        PRICING_EPHEMERAL,
-        PRICING_HARD,
-        PRICING_SPECIAL,
-        PRICING_VM,
-    )
-    # Count nodes by type
-    count_by_type = {t: 0 for t in pricing_types}
-    for node in nodes:
-        count_by_type[node.pricing_type()] += 1
-
-    # Yield metrics
-    for pricing_type, count in count_by_type.items():
-        yield {
-            "name": metric_name,
-            "group": metric_group,
-            "set": count,
-            "labels": {
-                "type": pricing_type.lower(),
-            },
-        }
+def gen_metrics(metric_generators):
+    """
+    Flattens metric generators into a single generator
+    """
+    for mg in metric_generators:
+        for m in mg.generate():
+            yield m
 
 
 if __name__ == "__main__":
