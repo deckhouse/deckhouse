@@ -12,7 +12,7 @@ sitemap_include: false
 {%- unless page.searchable == false %}
 {
 "title": "{{ page.title | escape }}",
-"url": "{{ site.url }}/{{ page.lang}}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "{{ site.urls[page.lang] }}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": "{{ page.search | strip }}",
 "summary": "{% if page.summary %}{{ page.summary | strip }}{% else %}{{ page.description | strip }}{% endif %}",
 "content": {{ page.content | strip_html | strip | regex_replace: "\n", ' ' | regex_replace: '\s\s+', ' ' | jsonify }}
