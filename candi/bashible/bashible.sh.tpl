@@ -240,14 +240,14 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step; tmpFile=$(mktemp -t events.XXXXXX)"
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
+      echo "Failed to execute step "$step" ... retry in 10 seconds." 2>&1 | tee -a "${tmpFile}"
       sleep 10
       echo ===
       echo === Step: $step
@@ -255,6 +255,21 @@ function main() {
       {{- if eq .runType "ClusterBootstrap" }}
       if [ "$attempt" -gt 2 ]; then
         sx=x
+      fi
+      {{- end }}
+      {{- if ne .runType "ClusterBootstrap" }}
+      if [[ -s "${tmpFile}" ]]; then
+        for event in $(cat "${tmpFile}"); do
+          bb-kubectl apply -f - <<EOF
+            apiVersion: v1
+            kind: Event
+            metadata:
+              name: CannotApplyKubeletConfiguration
+              namespace: default
+            type: Error
+            message: '${event}'
+EOF
+        done
       fi
       {{- end }}
     done
