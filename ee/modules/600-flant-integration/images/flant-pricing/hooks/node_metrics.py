@@ -182,33 +182,33 @@ def main():
         ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
     )
 
-    ctx = bindingcontext("node_metrics.yaml")
-    snapshots = ctx["snapshots"]
+    for ctx in bindingcontext("node_metrics.yaml"):
+        snapshots = ctx["snapshots"]
 
-    # Collect node groups to use them in nodes
-    ng_by_name = parse_nodegroups(snapshots["ngs"])
+        # Collect node groups to use them in nodes
+        ng_by_name = parse_nodegroups(snapshots["ngs"])
 
-    # Parse nodes of interest into MetricGenerators per snapshot
-    metric_generators = []
-    for snap_name, metric_name in metric_configs:
-        # Parse lists of nodes
-        node_snaps = snapshots[snap_name]
-        nodes = parse_nodes(node_snaps, ng_by_name)
+        # Parse nodes of interest into MetricGenerators per snapshot
+        metric_generators = []
+        for snap_name, metric_name in metric_configs:
+            # Parse lists of nodes
+            node_snaps = snapshots[snap_name]
+            nodes = parse_nodes(node_snaps, ng_by_name)
 
-        # Build MetricGenerator instance
-        metric_generators.append(
-            MetricGenerator(
-                name=metric_name,
-                group=metric_group,
-                nodes=nodes,
+            # Build MetricGenerator instance
+            metric_generators.append(
+                MetricGenerator(
+                    name=metric_name,
+                    group=metric_group,
+                    nodes=nodes,
+                )
             )
-        )
 
-    # Export metrics
-    with MetricsExporter() as e:
-        e.export({"action": "expire", "group": metric_group})
-        for m in gen_metrics(metric_generators):
-            e.export(m)
+        # Export metrics
+        with MetricsExporter() as e:
+            e.export({"action": "expire", "group": metric_group})
+            for m in gen_metrics(metric_generators):
+                e.export(m)
 
 
 def gen_metrics(metric_generators):
