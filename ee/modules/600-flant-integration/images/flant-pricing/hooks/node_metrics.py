@@ -19,8 +19,7 @@ from framework import MetricsExporter, bindingcontext
 #      reconfigured by user, so we charge for it
 #
 # The following metrics are generated:
-#   - flant_pricing_count_nodes_by_type         -- DEPRECATED all nodes except CP nodes with
-#     expected taints
+#   - flant_pricing_count_nodes_by_type         -- DEPRECATED all nodes except CP nodes with expected taints
 #   - flant_pricing_nodes                       -- all nodes
 #   - flant_pricing_controlplane_nodes          -- CP nodes
 #   - flant_pricing_controlplane_tainted_nodes  -- CP nodes with expected taints
@@ -52,17 +51,17 @@ PRICING_UNKNOWN = "unknown"  # fallback from filter result
 
 
 # Node group node types
-NG_CLOUDEPHEMERAL = "CloudEphemeral"
-NG_CLOUDPERMANENT = "CloudPermanent"
-NG_CLOUDSTATIC = "CloudStatic"
+NG_CLOUD_EPHEMERAL = "CloudEphemeral"
+NG_CLOUD_PERMANENT = "CloudPermanent"
+NG_CLOUD_STATIC = "CloudStatic"
 NG_STATIC = "Static"
 
 
 def map_ng_to_pricing_type(ng_node_type, virtualization):
-    if ng_node_type == NG_CLOUDEPHEMERAL:
+    if ng_node_type == NG_CLOUD_EPHEMERAL:
         return PRICING_EPHEMERAL
 
-    if ng_node_type in (NG_CLOUDPERMANENT, NG_CLOUDSTATIC):
+    if ng_node_type in (NG_CLOUD_PERMANENT, NG_CLOUD_STATIC):
         return PRICING_VM
 
     if ng_node_type == NG_STATIC and virtualization != "unknown":
