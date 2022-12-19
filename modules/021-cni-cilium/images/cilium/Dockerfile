@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Images sources: https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
-ARG BASE_GOLANG_18_BUSTER
+ARG BASE_GOLANG_18_BULLSEYE
 ARG BASE_UBUNTU_BIONIC
 
 ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
@@ -18,7 +18,7 @@ FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
 FROM ${CILIUM_BPFTOOL_IMAGE} as bpftool-dist
 FROM ${CILIUM_IPROUTE2_IMAGE} as iproute2-dist
 
-FROM ${BASE_GOLANG_18_BUSTER} as gops-cni-builder
+FROM ${BASE_GOLANG_18_BULLSEYE} as gops-cni-builder
 
 RUN apt-get update && apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
 
@@ -58,7 +58,6 @@ COPY --from=gops-cni-builder /out/linux/amd64/bin/gops /bin/gops
 FROM scratch as cilium-runtime
 LABEL maintainer="maintainer@cilium.io"
 COPY --from=rootfs / /
-
 
 #
 # cilium-envoy from github.com/cilium/proxy
