@@ -80,6 +80,13 @@ var (
 		crt: cert2.Cert,
 		key: cert2.Key,
 	})
+
+	cert3                  = generateTestCert()
+	secretWithoutCAFixture = setupHookTest(tlsTest{
+		crt: cert3.Cert,
+		key: cert3.Key,
+		// ca: ""
+	})
 )
 
 var _ = Describe("Modules :: common :: hooks :: internal_tls", func() {
@@ -177,6 +184,19 @@ var _ = Describe("Modules :: common :: hooks :: internal_tls", func() {
 		})
 	})
 
+	Context("For cluster with secret without CA", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(secretWithoutCAFixture.state))
+			f.RunHook()
+		})
+
+		It("generates new certificate", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			cert := assertExistsTLSInValues(f)
+			assertNotEqualsCerts(cert, secretWithoutCAFixture.cert)
+		})
+	})
 })
 
 func assertNotEqualsCerts(a tlsTest, b tlsTest) {
