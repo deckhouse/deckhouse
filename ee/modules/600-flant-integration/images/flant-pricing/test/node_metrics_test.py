@@ -7,9 +7,9 @@ import os
 import sys
 
 sys.path.insert(0, "../hooks")
-from node_metrics import main
+from node_metrics import run
 
-main()
+run()
 
 
 with open(os.getenv("METRICS_PATH"), "r", encoding="utf-8") as f:

@@ -2,33 +2,14 @@
 #
 # Copyright 2022 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
+import functools
 import json
 import os
 import sys
+from dataclasses import dataclass
 
 
-def bindingcontext(configpath):
-    """
-    Provides binding context for hook.
-
-    Example:
-
-    ctx = bindingcontext("node_metrics.yaml")
-    """
-    if len(sys.argv) > 1 and sys.argv[1] == "--config":
-        with open(configpath, "r", encoding="utf-8") as cf:
-            print(cf.read())
-            sys.exit(0)
-
-    for ctx in read_binding_context():
-        yield ctx
-
-
-# PatchCollector
-# --log-proxy-hook-json	LOG_PROXY_HOOK_JSON	false	Delegate hook stdout/ stderr JSON logging to the hooks and act as a proxy that adds some extra fields before just printing the output. NOTE: It ignores LOG_TYPE for the output of the hooks; expects JSON lines to stdout/ stderr from the hooks
-
-
-class KubeModifier(object):
+class KubernetesModifier(object):
     """
     Wrapper for the kubernetes actions: creation, deletion, patching.
     """
@@ -274,6 +255,9 @@ class MetricsExporter(object):
         self.file.write(json.dumps(metric))
         self.file.write("\n")
 
+    def expire_group(self, metric_group: str):
+        self.export({"action": "expire", "group": metric_group})
+
 
 def read_binding_context():
     """
@@ -287,3 +271,53 @@ def read_binding_context():
         context = json.load(f)
     for ctx in context:
         yield ctx
+
+
+def bindingcontext(configpath):
+    """
+    Provides binding context for hook.
+
+    Example:
+
+     for ctx in bindingcontext("node_metrics.yaml")
+        do_something(ctx)
+    """
+    if len(sys.argv) > 1 and sys.argv[1] == "--config":
+        with open(configpath, "r", encoding="utf-8") as cf:
+            print(cf.read())
+            sys.exit(0)
+
+    for ctx in read_binding_context():
+        yield ctx
+
+
+# TODO --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
+#   Delegate hook stdout/ stderr JSON logging to the hooks and act as a proxy that adds some extra #
+#   fields before just printing the output. NOTE: It ignores LOG_TYPE for the output of the hooks; #
+#   expects JSON lines to stdout/ stderr from the hooks
+
+
+@dataclass
+class HookContext:
+    binding_context: dict
+    snapshots: list
+    metrics: MetricsExporter
+    kubernetes: KubernetesModifier
+
+
+def hook(configpath):
+    def dec_run_hook(run):
+        @functools.wraps(run)
+        def run_hook():
+            for bctx in bindingcontext(configpath):
+                ctx = HookContext(
+                    binding_context=bctx,
+                    snapshots=bctx.get("snapshots", None),
+                    metrics=MetricsExporter(),
+                    kubernetes=KubernetesModifier(),
+                )
+                run(ctx)
+
+        return run_hook
+
+    return dec_run_hook
