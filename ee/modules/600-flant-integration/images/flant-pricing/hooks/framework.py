@@ -306,17 +306,29 @@ class HookContext:
 
 
 def hook(configpath):
+    """
+    Decorator for hook handler.
+
+    Args:
+        configpath (_type_): the path to hook config file.
+
+    Usage:
+        @hook("hook_config.yaml")
+        def run(ctx):
+          do_something(ctx.snapshots)
+    """
+
     def dec_run_hook(run):
         @functools.wraps(run)
         def run_hook():
-            for bctx in bindingcontext(configpath):
-                ctx = HookContext(
-                    binding_context=bctx,
-                    snapshots=bctx.get("snapshots", None),
+            for bind_ctx in bindingcontext(configpath):
+                hook_ctx = HookContext(
+                    binding_context=bind_ctx,
+                    snapshots=bind_ctx.get("snapshots", {}),
                     metrics=MetricsExporter(),
                     kubernetes=KubernetesModifier(),
                 )
-                run(ctx)
+                run(hook_ctx)
 
         return run_hook
 
