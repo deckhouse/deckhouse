@@ -81,6 +81,10 @@ RUN apt-get update && apt-get install patch -y
 RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.4.tar.gz | tar xvz -C /tmp/cilium-repo
 WORKDIR /tmp/cilium-repo/cilium-1.12.4
 
+COPY patches/001-netfilter-compatibility-mode.patch /
+
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch
+
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
 
