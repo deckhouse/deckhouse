@@ -269,6 +269,12 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 }
 
 func isOutdatedCA(ca string) (bool, error) {
+	// Issue a new certificate if there is no CA in the secret.
+	// Without CA it is not possible to validate the certificate.
+	if len(ca) == 0 {
+		return true, nil
+	}
+
 	cert, err := certificate.ParseCertificate(ca)
 	if err != nil {
 		return false, err
