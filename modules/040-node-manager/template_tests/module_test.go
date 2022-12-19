@@ -33,11 +33,6 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	defer GinkgoRecover()
-	defer restoreEditions()
-	mergeEditions()
-
 	RunSpecs(t, "")
 }
 
@@ -511,6 +506,14 @@ internal:
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		mergeEditions()
+	})
+
+	AfterSuite(func() {
+		restoreEditions()
+	})
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
