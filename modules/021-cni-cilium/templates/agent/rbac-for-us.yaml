@@ -109,10 +109,10 @@ rules:
   - ciliumlocalredirectpolicies/finalizers
   - ciliumegressnatpolicies
   - ciliumendpointslices
-  - ciliumegressgatewaypolicies # ???
-  - ciliumclusterwideenvoyconfigs # ???
-  - ciliumbgppeeringpolicies # ???
-  - ciliumbgploadbalancerippools # ???
+  - ciliumegressgatewaypolicies
+  - ciliumclusterwideenvoyconfigs
+  - ciliumbgppeeringpolicies
+  - ciliumbgploadbalancerippools
   verbs:
   - '*'
 - apiGroups:
