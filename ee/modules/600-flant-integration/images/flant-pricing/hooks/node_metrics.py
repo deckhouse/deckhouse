@@ -41,6 +41,51 @@ from framework import HookContext, hook
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
+@hook("node_metrics.yaml")
+def run(ctx: HookContext):
+    metric_group = "group_node_metrics"
+    metric_configs = (
+        # snapshot, metric_name
+        ("nodes", "flant_pricing_count_nodes_by_type"),  # DEPRECATED
+        ("nodes_all", "flant_pricing_nodes"),
+        ("nodes_cp", "flant_pricing_controlplane_nodes"),
+        ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
+    )
+
+    # Collect node groups to use them in nodes
+    ng_by_name = parse_nodegroups(ctx.snapshots["ngs"])
+
+    # Parse nodes of interest into MetricGenerators per snapshot
+    metric_generators = []
+    for snap_name, metric_name in metric_configs:
+        # Parse lists of nodes
+        node_snaps = ctx.snapshots[snap_name]
+        nodes = parse_nodes(node_snaps, ng_by_name)
+
+        # Build MetricGenerator instance, it yields metrics for each node type
+        metric_generators.append(
+            MetricGenerator(
+                name=metric_name,
+                group=metric_group,
+                nodes=nodes,
+            )
+        )
+
+    # Export metrics
+    ctx.metrics.expire_group(metric_group)
+    for m in gen_metrics(metric_generators):
+        ctx.metrics.export(m)
+
+
+def gen_metrics(metric_generators):
+    """
+    Flattens metric generators into a single generator
+    """
+    for mg in metric_generators:
+        for m in mg.generate():
+            yield m
+
+
 # Node types for pricing from the annotation 'pricing.flant.com/nodeType'. Lowercase versions of
 # them are used as labels in metrics
 PRICING_EPHEMERAL = "Ephemeral"
@@ -86,8 +131,8 @@ class Node:
 
     def pricing_type(self):
         """
-        Deduces pricing type from node group type and pricing node type if it is not specified in
-        the node itself.
+        Deduces pricing type from node group type and pricing node type if not specified in the node
+        itself.
         """
         if self.pricing_node_type == PRICING_UNKNOWN:
             return map_ng_to_pricing_type(
@@ -167,48 +212,3 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
             )
         )
     return nodes
-
-
-def gen_metrics(metric_generators):
-    """
-    Flattens metric generators into a single generator
-    """
-    for mg in metric_generators:
-        for m in mg.generate():
-            yield m
-
-
-@hook("node_metrics.yaml")
-def run(ctx: HookContext):
-    metric_group = "group_node_metrics"
-    metric_configs = (
-        # snapshot, metric_name
-        ("nodes", "flant_pricing_count_nodes_by_type"),  # DEPRECATED
-        ("nodes_all", "flant_pricing_nodes"),
-        ("nodes_cp", "flant_pricing_controlplane_nodes"),
-        ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
-    )
-
-    # Collect node groups to use them in nodes
-    ng_by_name = parse_nodegroups(ctx.snapshots["ngs"])
-
-    # Parse nodes of interest into MetricGenerators per snapshot
-    metric_generators = []
-    for snap_name, metric_name in metric_configs:
-        # Parse lists of nodes
-        node_snaps = ctx.snapshots[snap_name]
-        nodes = parse_nodes(node_snaps, ng_by_name)
-
-        # Build MetricGenerator instance, it yields metrics for each node type
-        metric_generators.append(
-            MetricGenerator(
-                name=metric_name,
-                group=metric_group,
-                nodes=nodes,
-            )
-        )
-
-    # Export metrics
-    ctx.metrics.expire_group(metric_group)
-    for m in gen_metrics(metric_generators):
-        ctx.metrics.export(m)

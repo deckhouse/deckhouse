@@ -29,19 +29,19 @@ class KubernetesModifier(object):
 
     def create(self, obj):
         """
-        :param: obj must be serializable to JSON
+        :param obj: must be serializable to JSON
         """
         self.__export({"operation": "Create", "object": obj})
 
     def create_or_update(self, obj):
         """
-        :param: obj must be serializable to JSON
+        :param obj: must be serializable to JSON
         """
         self.__export({"operation": "CreateOrUpdate", "object": obj})
 
     def create_if_not_exists(self, obj):
         """
-        :param: obj must be serializable to JSON
+        :param obj: must be serializable to JSON
         """
         self.__export({"operation": "CreateIfNotExists", "object": obj})
 
@@ -49,14 +49,13 @@ class KubernetesModifier(object):
         self, operation, kind, namespace, name, apiVersion=None, subresource=None
     ):
         """
-        :param: apiVersion  — optional field that specifies object's apiVersion. If not present,
-          we'll use preferred apiVersion for the given kind.
-        :param: kind        — object's Kind.
-        :param: namespace   — object's namespace. If empty, implies operation on a cluster-level
-          resource.
-        :param: name        — object's name.
-        :param: subresource — a subresource name if subresource is to be transformed. For example,
-          status.
+        :param kind: object Kind.
+        :param namespace: object namespace. If empty, implies operation on a cluster-level resource.
+        :param name: object name.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
         """
         if operation not in ("Delete", "DeleteInBackground", "DeleteNonCascading"):
             raise ValueError(f"Invalid delete operation: {operation}")
@@ -75,14 +74,13 @@ class KubernetesModifier(object):
 
     def delete(self, kind, namespace, name, apiVersion=None, subresource=None):
         """
-        :param: apiVersion  — optional field that specifies object's apiVersion. If not present,
-          we'll use preferred apiVersion for the given kind.
-        :param: kind        — object's Kind.
-        :param: namespace   — object's namespace. If empty, implies operation on a cluster-level
-          resource.
-        :param: name        — object's name.
-        :param: subresource — a subresource name if subresource is to be transformed. For example,
-          status.
+        :param kind: object Kind.
+        :param namespace: object namespace. If empty, implies operation on a cluster-level resource.
+        :param name: object name.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
         """
         return self.__delete("Delete", kind, namespace, name, apiVersion, subresource)
 
@@ -90,14 +88,13 @@ class KubernetesModifier(object):
         self, kind, namespace, name, apiVersion=None, subresource=None
     ):
         """
-        :param: apiVersion  — optional field that specifies object's apiVersion. If not present,
-          we'll use preferred apiVersion for the given kind.
-        :param: kind        — object's Kind.
-        :param: namespace   — object's namespace. If empty, implies operation on a cluster-level
-          resource.
-        :param: name        — object's name.
-        :param: subresource — a subresource name if subresource is to be transformed. For example,
-          status.
+        :param kind: object Kind.
+        :param namespace: object namespace. If empty, implies operation on a cluster-level resource.
+        :param name: object name.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
         """
         return self.__delete(
             "DeleteInBackground", kind, namespace, name, apiVersion, subresource
@@ -107,20 +104,19 @@ class KubernetesModifier(object):
         self, kind, namespace, name, apiVersion=None, subresource=None
     ):
         """
-        :param: apiVersion  — optional field that specifies object's apiVersion. If not present,
-          we'll use preferred apiVersion for the given kind.
-        :param: kind        — object's Kind.
-        :param: namespace   — object's namespace. If empty, implies operation on a cluster-level
-          resource.
-        :param: name        — object's name.
-        :param: subresource — a subresource name if subresource is to be transformed. For example,
-          status.
+        :param kind: object Kind.
+        :param namespace: object namespace. If empty, implies operation on a cluster-level resource.
+        :param name: object name.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
         """
         return self.__delete(
             "DeleteNonCascading", kind, namespace, name, apiVersion, subresource
         )
 
-    def mege_patch(
+    def merge_patch(
         self,
         kind,
         namespace,
@@ -131,18 +127,18 @@ class KubernetesModifier(object):
         ignoreMissingObject=False,
     ):
         """
-        :param: operation           — specifies an operation's type.
-        :param: apiVersion          — optional field that specifies object's apiVersion. If not
-            present, we'll use preferred apiVersion for the given kind.
-        :param: kind                — object's Kind.
-        :param: namespace           — object's Namespace. If empty, implies operation on a
-            Cluster-level resource.
-        :param: name                — object's name.
-        :param: patch               — describes transformations to perform on an object. Can be a
-            normal JSON or YAML array or a stringified JSON or YAML array.
-        :param: subresource         — a subresource name if subresource is to be transformed. For
-            example, status.
-        :param: ignoreMissingObject — set to true to ignore error when patching non existent object.
+        :param operation: specifies an operation's type.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param kind: object Kind.
+        :param namespace: object Namespace. If empty, implies operation on a Cluster-level
+            resource.
+        :param name: object name.
+        :param patch: describes transformations to perform on an object. Can be a normal JSON or
+            YAML array or a stringified JSON or YAML array.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
+        :param ignoreMissingObject: set to true to ignore error when patching non existent object.
         """
         return self.__patch(
             "MergePatch",
@@ -166,20 +162,19 @@ class KubernetesModifier(object):
         ignoreMissingObject=False,
     ):
         """
-        :param: apiVersion          — optional field that specifies object's apiVersion. If not
-            present, we'll use preferred apiVersion for the given kind.
-        :param: kind                — object's Kind.
-        :param: namespace           — object's Namespace. If empty, implies operation on a
-            Cluster-level resource.
-        :param: name                — object's name.
-        :param: patch               — describes transformations to perform on an object. Can be a
-            normal JSON or YAML array or a stringified JSON or YAML array.
-        :param: subresource         — a subresource name if subresource is to be transformed. For
-            example, status.
-        :param: ignoreMissingObject — set to true to ignore error when patching non existent object.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param kind: object Kind.
+        :param namespace: object Namespace. If empty, implies operation on a Cluster-level resource.
+        :param name: object name.
+        :param patch: describes transformations to perform on an object. Can be a normal JSON or
+            YAML array or a stringified JSON or YAML array.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
+        :param ignoreMissingObject: set to true to ignore error when patching non existent object.
         """
         return self.__patch(
-            "JsonPatch",
+            "JSONPatch",
             kind,
             namespace,
             name,
@@ -201,18 +196,17 @@ class KubernetesModifier(object):
         ignoreMissingObject=False,
     ):
         """
-        :param: operation           — specifies an operation's type.
-        :param: apiVersion          — optional field that specifies object's apiVersion. If not
-            present, we'll use preferred apiVersion for the given kind.
-        :param: kind                — object's Kind.
-        :param: namespace           — object's Namespace. If empty, implies operation on a
-            Cluster-level resource.
-        :param: name                — object's name.
-        :param: patch               — describes transformations to perform on an object. Can be a
-            normal JSON or YAML array or a stringified JSON or YAML array.
-        :param: subresource         — a subresource name if subresource is to be transformed. For
-            example, status.
-        :param: ignoreMissingObject — set to true to ignore error when patching non existent object.
+        :param operation: specifies an operation's type.
+        :param apiVersion: optional field that specifies object apiVersion. If not present, we'll
+            use preferred apiVersion for the given kind.
+        :param kind: object Kind.
+        :param namespace: object Namespace. If empty, implies operation on a Cluster-level resource.
+        :param name: object name.
+        :param patch: describes transformations to perform on an object. Can be a normal JSON or
+            YAML array or a stringified JSON or YAML array.
+        :param subresource: a subresource name if subresource is to be transformed. For example,
+            status.
+        :param ignoreMissingObject: set to true to ignore error when patching non existent object.
         """
         ret = {
             "operation": operation,
