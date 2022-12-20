@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
 					Key:      "prometheus.deckhouse.io/alertmanager",
-					Operator: "In",
+					Operator: metav1.LabelSelectorOpIn,
 					Values:   []string{"main"},
 				},
 			}},

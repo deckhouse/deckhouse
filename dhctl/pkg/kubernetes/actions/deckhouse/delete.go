@@ -315,12 +315,7 @@ func checkMachinesAPI(kubeCl *client.KubernetesClient) error {
 
 	var desiredResources int
 	for _, resource := range resourcesList.APIResources {
-		if resource.Kind == "Machine" {
-			desiredResources++
-			continue
-		}
-
-		if resource.Kind == "MachineDeployment" {
+		if resource.Kind == "Machine" || resource.Kind == "MachineDeployment" {
 			desiredResources++
 			continue
 		}
