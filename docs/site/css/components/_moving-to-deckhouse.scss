@@ -3,6 +3,10 @@
     display: flex;
   }
 
+  & .intro__content {
+    min-width: 65%;
+  }
+
   & .intro__row > div {
     width: 75%;
   }
@@ -12,7 +16,7 @@
   }
 
   & .intro__pic {
-    width: 45%;
+    margin-top: 36px;
   }
 }
 
