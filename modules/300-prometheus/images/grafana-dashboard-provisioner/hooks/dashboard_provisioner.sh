@@ -61,6 +61,7 @@ function __main__() {
       done
       if [[ "${check_dashboard}" -eq 0 ]]; then
         echo "${dashboardUid}" >> "${tmpFile}"
+        continue
       else
         echo "The dashboard with specified uid exists: ${dashboardUId}"
       fi
