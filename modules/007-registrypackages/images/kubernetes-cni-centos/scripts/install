@@ -20,7 +20,7 @@ rpm_name="$(rpm -qip ${package_file} 2>/dev/null | grep Name | awk '{print $3}')
 rpm_version="$(rpm -qip ${package_file} 2>/dev/null | grep Version | awk '{print $3}')"
 
 if ! rpm --quiet -q "${rpm_name}-${rpm_version}"; then
-  rpm -U --nodeps $package_file
+  rpm -U --nodeps --oldpackage $package_file
 else
   echo "RPM ${package_file} already installed."
 fi
