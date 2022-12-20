@@ -100,6 +100,7 @@ type clusterIsBootstrapCheck struct {
 	kubeCl   *client.KubernetesClient
 
 	startCheckTime time.Time
+	attempts       int32
 }
 
 func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, kubeCl *client.KubernetesClient) *clusterIsBootstrapCheck {
@@ -109,6 +110,10 @@ func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, kubeCl *client.Kuberne
 		logger:   log.GetDefaultLogger(),
 
 		startCheckTime: time.Now().Add(1 * time.Minute),
+		// start from 1 for prevent output table at first time because
+		// we can get false positive error: "Wrong classReference: There is no valid instance class CLASS_NAME of
+		// type *InstanceClass"
+		attempts: 1,
 	}
 }
 
@@ -158,15 +163,19 @@ func (n *clusterIsBootstrapCheck) hasBootstrappedCM() (bool, error) {
 	return hasCm, err
 }
 
-func (n *clusterIsBootstrapCheck) outputNodeGroups() bool {
+func (n *clusterIsBootstrapCheck) outputNodeGroups() {
+	if n.attempts%4 != 0 {
+		return
+	}
+
 	ngs, err := n.ngGetter.NodeGroups()
 	if err != nil {
-		n.logger.LogErrorF("Error while getting node groups: %v", err)
-		return false
+		n.logger.LogDebugF("Error while getting node groups: %v", err)
+		return
 	}
 
 	if len(ngs) == 0 {
-		return false
+		return
 	}
 
 	fs := "%-30s %-8s %-8s %-9s %-8s %-17s\n"
@@ -181,32 +190,28 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups() bool {
 			fmt.Sprint(stat.Desired),
 			stat.Error)
 	}
-
-	return true
 }
 
-func (n *clusterIsBootstrapCheck) outputMachineFailures() bool {
+func (n *clusterIsBootstrapCheck) outputMachineFailures() {
 	if time.Now().Before(n.startCheckTime) {
 		n.logger.LogDebugF("Waiting 1 minute for stabilize node group events\n")
-		return false
+		return
 	}
 
 	events, err := n.lastEvents(1 * time.Minute)
 	if err != nil {
-		n.logger.LogErrorF("Error while getting node groups: %v", err)
-		return false
+		n.logger.LogDebugF("Error while getting last events: %v", err)
+		return
 	}
 
 	if len(events) == 0 {
-		return true
+		return
 	}
 
 	n.logger.LogErrorF("\nMachine Failures:\n")
 	for _, e := range events {
 		n.logger.LogErrorF("\t%s\n", e.Note)
 	}
-
-	return true
 }
 
 func (n *clusterIsBootstrapCheck) Name() string {
@@ -215,14 +220,18 @@ func (n *clusterIsBootstrapCheck) Name() string {
 
 func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 	defer func() {
+		n.attempts++
 		n.logger.LogInfoF("\n")
 	}()
 
 	n.logger.LogInfoF("Waiting for cluster will be in 'bootstrapped' state:\n")
 
+	notBootstrappedMsg := "Cluster is not yet bootstrapped. Waiting for at least one non-master node in Ready status.\n"
+
 	ok, err := n.hasBootstrappedCM()
 	if err != nil {
-		n.logger.LogErrorF("Error while checking cluster state: %v", err)
+		n.logger.LogDebugF("Error while checking cluster state: %v\n", err)
+		n.logger.LogInfoF(notBootstrappedMsg)
 		return false, nil
 	}
 
@@ -231,13 +240,11 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 		return true, nil
 	}
 
-	n.logger.LogInfoF("Cluster is not yet bootstrapped. Waiting.\n")
+	n.logger.LogInfoF(notBootstrappedMsg)
 
-	outEvents := n.outputNodeGroups()
+	n.outputNodeGroups()
 
-	if outEvents {
-		n.outputMachineFailures()
-	}
+	n.outputMachineFailures()
 
 	return false, nil
 }
