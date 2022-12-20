@@ -87,6 +87,7 @@ function __main__() {
 
   rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
   rm -rf ${tmpDir}
+  rm ${tmpFile}
 
   echo -n "ok" >/tmp/ready
 }
