@@ -38,6 +38,6 @@ else
 fi
 
 if [[ -n "${packages_to_install}" ]]; then
-  rpm -U ${packages_to_install}
+  rpm -U --oldpackage ${packages_to_install}
 fi
 yum versionlock add ${package_cri_tools} ${package_kubeadm}
