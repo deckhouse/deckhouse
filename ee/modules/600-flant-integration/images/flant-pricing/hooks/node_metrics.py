@@ -42,12 +42,6 @@ import framework
 
 
 if __name__ == "__main__":
-    run()
-
-
-def run():
-    # There will be no need for this function when we switch to python tests instead of shell-based
-    # ones.
     framework.run(handle, "node_metrics.yaml")
 
 
