@@ -19,7 +19,6 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -27,7 +26,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeObsoleteCiliumCRD)
 
 func removeObsoleteCiliumCRD(input *go_hook.HookInput) error {
-	input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "ciliumenvoyconfigs.cilium.io", object_patch.InForeground())
-	input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "ciliumclusterwideenvoyconfigs.cilium.io", object_patch.InForeground())
+	//input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "ciliumenvoyconfigs.cilium.io", object_patch.InForeground())
+	//input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "ciliumclusterwideenvoyconfigs.cilium.io", object_patch.InForeground())
 	return nil
 }
