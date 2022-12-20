@@ -4,8 +4,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Images sources: https://github.com/cilium/cilium/blob/v1.12.4/images/runtime/Dockerfile
+
 ARG BASE_GOLANG_18_BULLSEYE
-ARG BASE_UBUNTU_BIONIC
+
+# TODO: replace with some of base images when they become compatable
+ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3322
 
 ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
 ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:78448c1a37ff2b790d5e25c3d8b8ec3e96e6405f@sha256:99a9453a921a8de99899ef82e0822f0c03f65d97005c064e231c06247ad8597d
@@ -31,7 +34,7 @@ COPY download-cni.sh .
 COPY cni-version.sh .
 RUN ./download-cni.sh
 
-FROM ${BASE_UBUNTU_BIONIC} as rootfs
+FROM ${UBUNTU_IMAGE} as rootfs
 
 # Update ubuntu packages to the most recent versions
 RUN apt-get update && \
@@ -108,6 +111,7 @@ FROM ${CILIUM_RUNTIME_IMAGE}
 RUN groupadd -f cilium \
     && echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
 COPY --from=cilium-envoy / /
+
 # When used within the Cilium container, Hubble CLI should target the
 # local unix domain socket instead of Hubble Relay.
 ENV HUBBLE_SERVER=unix:///var/run/cilium/hubble.sock
