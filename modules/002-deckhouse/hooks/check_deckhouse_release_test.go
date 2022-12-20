@@ -403,7 +403,7 @@ status:
 
 	Context("Release with changelog", func() {
 		BeforeEach(func() {
-			changelog := `
+			changelog_tpl := `
 cert-manager:
   fixes:
     - summary: Remove D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
@@ -414,7 +414,7 @@ ci:
       pull_request: https://github.com/deckhouse/deckhouse/pull/911
 global:
   features:
-    - description: All master nodes will have  role in new exist clusters.
+    - description: All master nodes will have %s role in new exist clusters.
       note: Add migration for adding role. Bashible steps will be rerunned on master nodes.
       pull_request: https://github.com/deckhouse/deckhouse/pull/562
     - description: Update Kubernetes patch versions.
@@ -425,6 +425,9 @@ global:
     - description: Fix serialization of empty strings in secrets
       pull_request: https://github.com/deckhouse/deckhouse/pull/523
 `
+
+			changelog := fmt.Sprintf(changelog_tpl, "`control-plane`") // global.features[0].description
+
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
 					return []v1.Layer{
@@ -432,8 +435,7 @@ global:
 						&fakeLayer{FilesContent: map[string]string{
 							"version.json":   `{"version": "v1.31.0"}`,
 							"changelog.yaml": changelog,
-						},
-						},
+						}},
 					}, nil
 				},
 				DigestStub: func() (v1.Hash, error) {
@@ -449,15 +451,22 @@ global:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
 			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+
 			// global changelog is added
 			globalChangelog := rl.Field("spec.changelog.global")
 			Expect(globalChangelog.Exists()).To(BeTrue())
+			lineWithBackquotes := rl.Field("spec.changelog.global.features.0.description")
+			Expect(lineWithBackquotes.Exists()).To(BeTrue())
+			Expect(lineWithBackquotes.Str).To(Equal("All master nodes will have `control-plane` role in new exist clusters."))
+
 			// cert-manager module is enabled and has changes
 			certManagerChangelog := rl.Field("spec.changelog.cert-manager")
 			Expect(certManagerChangelog.Exists()).To(BeTrue())
+
 			// prometheus is enabled but doesn't have changes
 			prometheusChangelog := rl.Field("spec.changelog.prometheus")
 			Expect(prometheusChangelog.Exists()).To(BeFalse())
+
 			// ci module has changes but not enabled
 			ciChangelog := rl.Field("spec.changelog.ci")
 			Expect(ciChangelog.Exists()).To(BeFalse())
@@ -465,6 +474,7 @@ global:
 			link := rl.Field("spec.changelogLink")
 			Expect(link.String()).To(BeEquivalentTo("https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0"))
 		})
+
 	})
 
 	// manual release creation, for testing in a cluster
