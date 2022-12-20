@@ -93,7 +93,7 @@ spec:
                         watchKinds:
                           type: array
                           description: |
-                            The list of kubernetes objects in the format "$apiGroup/$kind" to watch the labels on.
+                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
                           minItems: 1
                           items:
                             type: string
@@ -125,7 +125,7 @@ spec:
                         - IfNotPresent
                     checkHostNetworkDNSPolicy:
                       type: boolean
-                      description: "Check 'ClusterFirstWithHostNet' dnsPolicy is set for Pods with `hostNetwork: true`."
+                      description: "Check `ClusterFirstWithHostNet` dnsPolicy is set for Pods with `hostNetwork: true`."
                     checkContainerDuplicates:
                       type: boolean
                       description: "Check container names and env variables for duplicates."
