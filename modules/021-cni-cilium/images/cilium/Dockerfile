@@ -38,7 +38,8 @@ FROM ${UBUNTU_IMAGE} as rootfs
 
 # Update ubuntu packages to the most recent versions
 RUN apt-get update && \
-    apt-get upgrade -y
+    apt-get upgrade -y \
+    apt-get install jq -y
 
 WORKDIR /go/src/github.com/cilium/cilium/images/runtime
 
