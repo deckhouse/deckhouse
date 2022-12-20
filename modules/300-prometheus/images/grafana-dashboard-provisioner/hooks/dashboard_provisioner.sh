@@ -57,13 +57,13 @@ function __main__() {
       for uid in $(cat "${tmpFile}"); do
         if [[ "${uid}" == "${dashboardUid}" ]]; then
           check_dashboard=1
+          break
         fi
       done
       if [[ "${check_dashboard}" -eq 0 ]]; then
         echo "${dashboardUid}" >> "${tmpFile}"
-        continue
       else
-        echo "The dashboard with specified uid exists: ${dashboardUId}"
+        echo "The dashboard with specified uid exists: ${dashboardUid}"
       fi
     fi
 
