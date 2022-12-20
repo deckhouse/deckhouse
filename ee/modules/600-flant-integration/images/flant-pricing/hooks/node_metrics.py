@@ -41,10 +41,6 @@ import framework
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
-if __name__ == "__main__":
-    framework.run(handle, "node_metrics.yaml")
-
-
 def handle(ctx: framework.HookContext):
     metric_group = "group_node_metrics"
     metric_configs = (
@@ -215,3 +211,7 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
             )
         )
     return nodes
+
+
+if __name__ == "__main__":
+    framework.run(handle, "node_metrics.yaml")
