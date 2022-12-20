@@ -7,6 +7,17 @@
 import framework
 from node_metrics import handle
 
+
+def test_node_metrics():
+    metrics = framework.MetricsExporter(mem_store=True)
+    kubernetes = framework.KubernetesModifier(mem_store=True)
+    for ctx in binding_context:
+        hook_ctx = framework.HookContext(ctx, metrics=metrics, kubernetes=kubernetes)
+        handle(hook_ctx)
+
+    assert metrics.storage.data == expected_metrics
+
+
 binding_context = [
     {
         "binding": "main",
@@ -144,109 +155,102 @@ binding_context = [
 ]
 
 
-def test_node_metrics():
-    metrics = framework.MetricsExporter(mem_store=True)
-    kubernetes = framework.KubernetesModifier(mem_store=True)
-    for ctx in binding_context:
-        hook_ctx = framework.HookContext(ctx, metrics=metrics, kubernetes=kubernetes)
-        handle(hook_ctx)
-
-    assert metrics.storage.data == [
-        {"action": "expire", "group": "group_node_metrics"},
-        {
-            "name": "flant_pricing_count_nodes_by_type",
-            "group": "group_node_metrics",
-            "set": 2,
-            "labels": {"type": "ephemeral"},
-        },
-        {
-            "name": "flant_pricing_count_nodes_by_type",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "hard"},
-        },
-        {
-            "name": "flant_pricing_count_nodes_by_type",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "special"},
-        },
-        {
-            "name": "flant_pricing_count_nodes_by_type",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "vm"},
-        },
-        {
-            "name": "flant_pricing_nodes",
-            "group": "group_node_metrics",
-            "set": 2,
-            "labels": {"type": "ephemeral"},
-        },
-        {
-            "name": "flant_pricing_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "hard"},
-        },
-        {
-            "name": "flant_pricing_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "special"},
-        },
-        {
-            "name": "flant_pricing_nodes",
-            "group": "group_node_metrics",
-            "set": 3,
-            "labels": {"type": "vm"},
-        },
-        {
-            "name": "flant_pricing_controlplane_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "ephemeral"},
-        },
-        {
-            "name": "flant_pricing_controlplane_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "hard"},
-        },
-        {
-            "name": "flant_pricing_controlplane_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "special"},
-        },
-        {
-            "name": "flant_pricing_controlplane_nodes",
-            "group": "group_node_metrics",
-            "set": 3,
-            "labels": {"type": "vm"},
-        },
-        {
-            "name": "flant_pricing_controlplane_tainted_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "ephemeral"},
-        },
-        {
-            "name": "flant_pricing_controlplane_tainted_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "hard"},
-        },
-        {
-            "name": "flant_pricing_controlplane_tainted_nodes",
-            "group": "group_node_metrics",
-            "set": 0,
-            "labels": {"type": "special"},
-        },
-        {
-            "name": "flant_pricing_controlplane_tainted_nodes",
-            "group": "group_node_metrics",
-            "set": 3,
-            "labels": {"type": "vm"},
-        },
-    ]
+expected_metrics = [
+    {"action": "expire", "group": "group_node_metrics"},
+    {
+        "name": "flant_pricing_count_nodes_by_type",
+        "group": "group_node_metrics",
+        "set": 2,
+        "labels": {"type": "ephemeral"},
+    },
+    {
+        "name": "flant_pricing_count_nodes_by_type",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "hard"},
+    },
+    {
+        "name": "flant_pricing_count_nodes_by_type",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "special"},
+    },
+    {
+        "name": "flant_pricing_count_nodes_by_type",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "vm"},
+    },
+    {
+        "name": "flant_pricing_nodes",
+        "group": "group_node_metrics",
+        "set": 2,
+        "labels": {"type": "ephemeral"},
+    },
+    {
+        "name": "flant_pricing_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "hard"},
+    },
+    {
+        "name": "flant_pricing_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "special"},
+    },
+    {
+        "name": "flant_pricing_nodes",
+        "group": "group_node_metrics",
+        "set": 3,
+        "labels": {"type": "vm"},
+    },
+    {
+        "name": "flant_pricing_controlplane_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "ephemeral"},
+    },
+    {
+        "name": "flant_pricing_controlplane_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "hard"},
+    },
+    {
+        "name": "flant_pricing_controlplane_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "special"},
+    },
+    {
+        "name": "flant_pricing_controlplane_nodes",
+        "group": "group_node_metrics",
+        "set": 3,
+        "labels": {"type": "vm"},
+    },
+    {
+        "name": "flant_pricing_controlplane_tainted_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "ephemeral"},
+    },
+    {
+        "name": "flant_pricing_controlplane_tainted_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "hard"},
+    },
+    {
+        "name": "flant_pricing_controlplane_tainted_nodes",
+        "group": "group_node_metrics",
+        "set": 0,
+        "labels": {"type": "special"},
+    },
+    {
+        "name": "flant_pricing_controlplane_tainted_nodes",
+        "group": "group_node_metrics",
+        "set": 3,
+        "labels": {"type": "vm"},
+    },
+]
