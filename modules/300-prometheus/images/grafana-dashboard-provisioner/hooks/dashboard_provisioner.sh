@@ -64,6 +64,7 @@ function __main__() {
         echo "${dashboardUid}" >> "${tmpFile}"
       else
         echo "The dashboard with specified uid exists: ${dashboardUid}"
+        continue
       fi
     fi
 
