@@ -2,20 +2,16 @@
 #
 # Copyright 2022 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
-import functools
+
 import json
 import os
 import sys
 from dataclasses import dataclass
 
 
-class KubernetesModifier(object):
-    """
-    Wrapper for the kubernetes actions: creation, deletion, patching.
-    """
-
-    def __init__(self):
-        self.file = open(os.getenv("KUBERNETES_PATCH_PATH"), "a", encoding="utf-8")
+class FileStorage:
+    def __init__(self, path):
+        self.file = open(path, "a", encoding="utf-8")
 
     def __enter__(self):
         return self
@@ -23,9 +19,44 @@ class KubernetesModifier(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.file.close()
 
-    def __export(self, payload: dict):
+    def write(self, payload: dict):
         self.file.write(json.dumps(payload))
         self.file.write("\n")
+
+
+class MemStorage:
+    def __init__(self):
+        self.data = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def write(self, payload: dict):
+        self.data.append(payload)
+
+
+class KubernetesModifier:
+    """
+    Wrapper for the kubernetes actions: creation, deletion, patching.
+    """
+
+    def __init__(self, mem_store: bool = False):
+        if mem_store:
+            self.storage = MemStorage()
+        else:
+            self.storage = FileStorage(os.getenv("KUBERNETES_PATCH_PATH"))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.storage.__exit__(exc_type, exc_value, traceback)
+
+    def __export(self, payload: dict):
+        self.storage.write(payload)
 
     def create(self, obj):
         """
@@ -231,23 +262,25 @@ class KubernetesModifier(object):
         self.__export(ret)
 
 
-class MetricsExporter(object):
+class MetricsExporter:
     """
     Wrapper for metrics exporting. Accepts raw dicts and appends them into the metrics file.
     """
 
-    def __init__(self):
-        self.file = open(os.getenv("METRICS_PATH"), "a", encoding="utf-8")
+    def __init__(self, mem_store: bool = False):
+        if mem_store:
+            self.storage = MemStorage()
+        else:
+            self.storage = FileStorage(os.getenv("METRICS_PATH"))
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.file.close()
+        self.storage.__exit__(exc_type, exc_value, traceback)
 
     def export(self, metric: dict):
-        self.file.write(json.dumps(metric))
-        self.file.write("\n")
+        self.storage.write(metric)
 
     def expire_group(self, metric_group: str):
         self.export({"action": "expire", "group": metric_group})
@@ -267,6 +300,21 @@ def read_binding_context():
         yield ctx
 
 
+@dataclass
+class HookContext:
+    def __init__(self, binding_context: dict, metrics=None, kubernetes=None):
+        self.binding_context = binding_context
+        self.snapshots = binding_context.get("snapshots", {})
+        self.metrics = MetricsExporter() if metrics is None else metrics
+        self.kubernetes = KubernetesModifier() if kubernetes is None else kubernetes
+
+
+# TODO --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
+#   Delegate hook stdout/ stderr JSON logging to the hooks and act as a proxy that adds some extra #
+#   fields before just printing the output. NOTE: It ignores LOG_TYPE for the output of the hooks; #
+#   expects JSON lines to stdout/ stderr from the hooks
+
+
 def bindingcontext(configpath):
     """
     Provides binding context for hook.
@@ -282,27 +330,7 @@ def bindingcontext(configpath):
             sys.exit(0)
 
     for ctx in read_binding_context():
-        hook_ctx = HookContext(
-            binding_context=ctx,
-            snapshots=ctx.get("snapshots", {}),
-            metrics=MetricsExporter(),
-            kubernetes=KubernetesModifier(),
-        )
-        yield hook_ctx
-
-
-# TODO --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
-#   Delegate hook stdout/ stderr JSON logging to the hooks and act as a proxy that adds some extra #
-#   fields before just printing the output. NOTE: It ignores LOG_TYPE for the output of the hooks; #
-#   expects JSON lines to stdout/ stderr from the hooks
-
-
-@dataclass
-class HookContext:
-    binding_context: dict
-    snapshots: list
-    metrics: MetricsExporter
-    kubernetes: KubernetesModifier
+        yield HookContext(ctx)
 
 
 def run(func, configpath):
