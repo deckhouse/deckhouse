@@ -282,7 +282,13 @@ def bindingcontext(configpath):
             sys.exit(0)
 
     for ctx in read_binding_context():
-        yield ctx
+        hook_ctx = HookContext(
+            binding_context=ctx,
+            snapshots=ctx.get("snapshots", {}),
+            metrics=MetricsExporter(),
+            kubernetes=KubernetesModifier(),
+        )
+        yield hook_ctx
 
 
 # TODO --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
@@ -299,31 +305,6 @@ class HookContext:
     kubernetes: KubernetesModifier
 
 
-def hook(configpath):
-    """
-    Decorator for hook handler.
-
-    Args:
-        configpath (_type_): the path to hook config file.
-
-    Usage:
-        @hook("hook_config.yaml")
-        def run(ctx):
-          do_something(ctx.snapshots)
-    """
-
-    def dec_run_hook(run):
-        @functools.wraps(run)
-        def run_hook():
-            for bind_ctx in bindingcontext(configpath):
-                hook_ctx = HookContext(
-                    binding_context=bind_ctx,
-                    snapshots=bind_ctx.get("snapshots", {}),
-                    metrics=MetricsExporter(),
-                    kubernetes=KubernetesModifier(),
-                )
-                run(hook_ctx)
-
-        return run_hook
-
-    return dec_run_hook
+def run(func, configpath):
+    for ctx in bindingcontext(configpath):
+        func(ctx)

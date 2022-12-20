@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from framework import HookContext, hook
+import framework
 
 # We do not charge for control plane nodes which are in desired state.
 #
@@ -41,8 +41,15 @@ from framework import HookContext, hook
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
-@hook("node_metrics.yaml")
-def run(ctx: HookContext):
+if __name__ == "__main__":
+    run()
+
+
+def run():
+    framework.run(handle, "node_metrics.yaml")
+
+
+def handle(ctx: framework.HookContext):
     metric_group = "group_node_metrics"
     metric_configs = (
         # snapshot, metric_name
