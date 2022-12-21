@@ -3,19 +3,19 @@
 # Copyright 2022 Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 
-
-import framework
+import shell_operator as operator
 from node_metrics import handle
 
 
 def test_node_metrics():
-    metrics = framework.MetricsExporter(mem_store=True)
-    kubernetes = framework.KubernetesModifier(mem_store=True)
+    metrics = operator.MetricsExporter(operator.MemStorage())
+    kubernetes = operator.KubernetesModifier(operator.MemStorage())
     for ctx in binding_context:
-        hook_ctx = framework.HookContext(ctx, metrics=metrics, kubernetes=kubernetes)
+        hook_ctx = operator.HookContext(ctx, metrics=metrics, kubernetes=kubernetes)
         handle(hook_ctx)
 
     assert metrics.storage.data == expected_metrics
+    assert kubernetes.storage.data == []
 
 
 binding_context = [

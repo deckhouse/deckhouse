@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import framework
+import shell_operator as operator
 
 # We do not charge for control plane nodes which are in desired state.
 #
@@ -41,7 +41,7 @@ import framework
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
-def handle(ctx: framework.HookContext):
+def handle(ctx: operator.HookContext):
     metric_group = "group_node_metrics"
     metric_configs = (
         # snapshot, metric_name
@@ -214,4 +214,4 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
 
 
 if __name__ == "__main__":
-    framework.run(handle, "node_metrics.yaml")
+    operator.run(handle, configpath="node_metrics.yaml")
