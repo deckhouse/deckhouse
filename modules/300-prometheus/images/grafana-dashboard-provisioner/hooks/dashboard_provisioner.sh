@@ -35,7 +35,7 @@ EOF
 
 function __main__() {
   tmpDir=$(mktemp -d -t dashboard.XXXXXX)
-  tmpFile=$(mktemp -t uids.XXXXXX)
+  existingUidsFile=$(mktemp -t uids.XXXXXX)
 
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
@@ -48,24 +48,17 @@ function __main__() {
 
     title=$(slugify <<<${title})
 
-    dashboardUid=$(jq -rc '.definition | try(fromjson | .uid)')
-    check_dashboard=0
+    if ! dashboardUid=$(jq -erc '.definition | fromjson | .uid' <<< ${dashboard}); then
+      >&2 echo "ERROR: definition.uid is mandatory field"
+      continue
+    fi
 
-    if [[ ! -s "${tmpFile}" ]]; then
-      echo "${dashboardUid}" >> "${tmpFile}"
+    if grep -qE "^${dashboardUid}$" ${existingUidsFile}; then
+      >&2 echo "ERROR: a dashboard with the same uid is already exist: ${dashboardUid}"
+      break
     else
-      for uid in $(cat "${tmpFile}"); do
-        if [[ "${uid}" == "${dashboardUid}" ]]; then
-          check_dashboard=1
-          break
-        fi
-      done
-      if [[ "${check_dashboard}" -eq 0 ]]; then
-        echo "${dashboardUid}" >> "${tmpFile}"
-      else
-        echo "The dashboard with specified uid exists: ${dashboardUid}"
-        continue
-      fi
+      echo "${dashboardUid}" >> "${existingUidsFile}"
+      continue
     fi
 
     folder=$(jq -rc '.folder' <<<${dashboard})
@@ -87,7 +80,7 @@ function __main__() {
 
   rsync -rq --delete-after "${tmpDir}/" /etc/grafana/dashboards/
   rm -rf ${tmpDir}
-  rm ${tmpFile}
+  rm ${existingUidsFile}
 
   echo -n "ok" >/tmp/ready
 }
