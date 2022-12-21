@@ -40,28 +40,27 @@ function __main__() {
   malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
-    title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
+    title=$(jq -rc '.definition | try(fromjson | .title)' <<<"${dashboard}")
     if [[ "x${title}" == "x" ]]; then
-      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<"${dashboard}")"
       continue
     fi
 
     title=$(slugify <<<${title})
 
-    if ! dashboardUid=$(jq -erc '.definition | fromjson | .uid' <<< ${dashboard}); then
+    if ! dashboardUid=$(jq -erc '.definition | fromjson | .uid' <<<"${dashboard}"); then
       >&2 echo "ERROR: definition.uid is mandatory field"
       continue
     fi
 
     if grep -qE "^${dashboardUid}$" ${existingUidsFile}; then
       >&2 echo "ERROR: a dashboard with the same uid is already exist: ${dashboardUid}"
-      break
+      continue
     else
       echo "${dashboardUid}" >> "${existingUidsFile}"
-      continue
     fi
 
-    folder=$(jq -rc '.folder' <<<${dashboard})
+    folder=$(jq -rc '.folder' <<<"${dashboard}")
     file="${folder}/${title}.json"
 
     # General folder can't be provisioned, see the link for more details
@@ -71,7 +70,7 @@ function __main__() {
     fi
 
     mkdir -p "${tmpDir}/${folder}"
-    jq -rc '.definition' <<<${dashboard} > "${tmpDir}/${file}"
+    jq -rc '.definition' <<<"${dashboard}" > "${tmpDir}/${file}"
   done
 
   if [[ "x${malformed_dashboards}" != "x" ]]; then
