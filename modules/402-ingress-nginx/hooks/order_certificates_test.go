@@ -42,7 +42,7 @@ var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 	log.Out = os.Stdout
 	var logEntry = log.WithContext(context.TODO())
 
-	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kubernetes")
+	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kube-rbac-proxy-ca-key-pair")
 	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA)
 
 	Context(":: empty_cluster", func() {
@@ -152,7 +152,7 @@ internal:
 `
 			f.ValuesSetFromYaml("ingressNginx", []byte(values))
 
-			tlsAuthSecret := fmt.Sprintf(`
+			tlsAuthSecret := `
 ---
 apiVersion: v1
 data:
@@ -163,7 +163,7 @@ metadata:
   name: ingress-nginx-main-auth-tls
   namespace: d8-ingress-nginx
 type: Opaque
-`)
+`
 
 			f.BindingContexts.Set(f.KubeStateSet(tlsAuthSecret))
 
