@@ -403,7 +403,7 @@ status:
 
 	Context("Release with changelog", func() {
 		BeforeEach(func() {
-			changelog_tpl := `
+			changelogTemplate := `
 cert-manager:
   fixes:
     - summary: Remove D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
@@ -426,7 +426,7 @@ global:
       pull_request: https://github.com/deckhouse/deckhouse/pull/523
 `
 
-			changelog := fmt.Sprintf(changelog_tpl, "`control-plane`") // global.features[0].description
+			changelog := fmt.Sprintf(changelogTemplate, "`control-plane`") // global.features[0].description
 
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
