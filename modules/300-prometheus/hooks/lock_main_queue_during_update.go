@@ -54,6 +54,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: lockQueueFilterPod,
 		},
+		{
+			Name:       "nodes",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			FilterFunc: readyNodeFilter,
+		},
 	},
 }, handleLockMainQueue)
 
@@ -62,10 +68,10 @@ type prometheusPod struct {
 	IsReady bool
 }
 
-func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func lockQueueFilterPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod corev1.Pod
 
-	err := sdk.FromUnstructured(unstructured, &pod)
+	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +90,32 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	return cpod, nil
+}
+
+type node struct {
+	Name   string
+	Ready  bool
+	Taints []corev1.Taint
+}
+
+func readyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node corev1.Node
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return false, err
+	}
+
+	// check node is ready
+	for _, c := range node.Status.Conditions {
+		if c.Type != corev1.NodeReady {
+			continue
+		}
+
+		isReady := c.Status == corev1.ConditionTrue
+		return isReady, nil
+	}
+
+	return false, nil
 }
 
 func handleLockMainQueue(input *go_hook.HookInput) error {
@@ -123,4 +155,8 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func checkTaints() {
+
 }
