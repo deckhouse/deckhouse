@@ -124,6 +124,11 @@ func enableCni(input *go_hook.HookInput) error {
 	cniNameSnap := input.Snapshots["cni_name"]
 	deckhouseCMSnap := input.Snapshots["deckhouse_cm"]
 
+	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
+	labels := map[string]string{
+		"cluster_uuid": clusterUUID,
+	}
+
 	if len(cniNameSnap) == 0 {
 		input.LogEntry.Warnln("Cni name not found")
 		return nil
@@ -144,6 +149,8 @@ func enableCni(input *go_hook.HookInput) error {
 	if len(cmEnabledCNIs) > 1 {
 		return fmt.Errorf("more then one CNI enabled: %v", cmEnabledCNIs)
 	} else if len(cmEnabledCNIs) == 1 {
+		labels["cni"] = cmEnabledCNIs[0]
+		input.MetricsCollector.Set("d8_cni_plugin", 1, labels)
 		input.LogEntry.Infof("enabled CNI from Deckhouse CM: %s", strings.TrimSuffix(cmEnabledCNIs[0], "Enabled"))
 		return nil
 	}
@@ -157,5 +164,7 @@ func enableCni(input *go_hook.HookInput) error {
 
 	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
 	input.Values.Set(cniNameToModule[cniToEnable], true)
+	labels["cni"] = cniToEnable
+	input.MetricsCollector.Set("d8_cni_plugin", 1, labels)
 	return nil
 }
