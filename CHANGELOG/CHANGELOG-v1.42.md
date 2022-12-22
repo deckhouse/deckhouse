@@ -23,8 +23,6 @@
 
 
  - **[admission-policy-engine]** Add CRD `OperationPolicy` for configuring best-practice cluster policies. [#3115](https://github.com/deckhouse/deckhouse/pull/3115)
- - **[candi]** Upgraded patch versions of Kubernetes images: v1.25.5. [#3376](https://github.com/deckhouse/deckhouse/pull/3376)
-    "Kubernetes control-plane components will restart, kubelet will restart"
  - **[candi]** Upgraded patch versions of Kubernetes images: v1.22.17, v1.23.15, and v1.24.9. [#3297](https://github.com/deckhouse/deckhouse/pull/3297)
     "Kubernetes control-plane components will restart, kubelet will restart"
  - **[candi]** Upgraded patch versions of Kubernetes images: v1.22.16, v1.23.14, and v1.24.8. [#3250](https://github.com/deckhouse/deckhouse/pull/3250)
@@ -92,6 +90,8 @@
 ## Chore
 
 
+ - **[candi]** Upgraded patch versions of Kubernetes images: v1.25.5. [#3376](https://github.com/deckhouse/deckhouse/pull/3376)
+    "Kubernetes control-plane components will restart, kubelet will restart"
  - **[ceph-csi]** Added script for semi-automatic migration of volumes from in-tree RBD driver to Ceph CSI, as well as instruction and alert. [#2973](https://github.com/deckhouse/deckhouse/pull/2973)
  - **[cert-manager]** Bump `cert-manager` version to the `1.10.1`. [#3133](https://github.com/deckhouse/deckhouse/pull/3133)
  - **[deckhouse]** Changed the default Kubernetes version to `1.23`. [#3292](https://github.com/deckhouse/deckhouse/pull/3292)
