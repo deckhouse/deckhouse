@@ -1,5 +1,7 @@
 ceph-csi:
   fixes:
+    - summary: Restoring the previous secret name with ceph cluster credentials.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3387
     - summary: Delete storage classes after changing immutable fields.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3380
 deckhouse:
