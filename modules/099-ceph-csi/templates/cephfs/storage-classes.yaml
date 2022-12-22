@@ -22,11 +22,11 @@ mountOptions:
         {{- end }}
       {{- end }}
 parameters:
-  csi.storage.k8s.io/provisioner-secret-name: csi-cephfs-{{ $cr.name }}
+  csi.storage.k8s.io/provisioner-secret-name: csi-{{ $cr.name }}
   csi.storage.k8s.io/provisioner-secret-namespace: d8-{{ $.Chart.Name }}
-  csi.storage.k8s.io/controller-expand-secret-name: csi-cephfs-{{ $cr.name }}
+  csi.storage.k8s.io/controller-expand-secret-name: csi-{{ $cr.name }}
   csi.storage.k8s.io/controller-expand-secret-namespace: d8-{{ $.Chart.Name }}
-  csi.storage.k8s.io/node-stage-secret-name: csi-cephfs-{{ $cr.name }}
+  csi.storage.k8s.io/node-stage-secret-name: csi-{{ $cr.name }}
   csi.storage.k8s.io/node-stage-secret-namespace: d8-{{ $.Chart.Name }}
   clusterID: {{ $cr.spec.clusterID }}
   fsName: {{ $sc.fsName }}
