@@ -1,6 +1,6 @@
-# Based on https://github.com/kubernetes/dashboard/blob/v2.5.1/aio/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/v2.7.0/aio/Dockerfile
 ARG BASE_ALPINE
-FROM kubernetesui/dashboard:v2.5.1@sha256:6614c53fcdb9df9cb920c701c6a418e398be9b5ee147e5231ad6669fd2b76862 as artifact
+FROM kubernetesui/dashboard:v2.7.0@sha256:2e500d29e9d5f4a086b908eb8dfe7ecac57d2ab09d65b24f588b1d449841ef93 as artifact
 
 FROM $BASE_ALPINE
 
