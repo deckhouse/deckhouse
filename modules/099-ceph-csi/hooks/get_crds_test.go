@@ -100,5 +100,4 @@ reclaimPolicy: Delete
 			Expect(f.ValuesGet("cephCsi.internal.crs.0.spec.rbd.storageClasses.0.mountOptions.0").String()).To(Equal("discard"))
 		})
 	})
-
 })
