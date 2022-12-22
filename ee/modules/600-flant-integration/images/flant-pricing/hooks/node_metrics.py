@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import shell_operator as operator
+from shell_operator import hook
 
 # We do not charge for control plane nodes which are in desired state.
 #
@@ -41,7 +41,7 @@ import shell_operator as operator
 # flant_pricing_controlplane_tainted_nodes will be non-zero only for one type.
 
 
-def handle(ctx: operator.HookContext):
+def main(ctx: hook.Context):
     metric_group = "group_node_metrics"
     metric_configs = (
         # snapshot, metric_name
@@ -71,9 +71,9 @@ def handle(ctx: operator.HookContext):
         )
 
     # Export metrics
-    ctx.metrics.expire_group(metric_group)
+    ctx.output.metrics.expire(metric_group)
     for m in gen_metrics(metric_generators):
-        ctx.metrics.export(m)
+        ctx.output.metrics.collect(m)
 
 
 def gen_metrics(metric_generators):
@@ -214,4 +214,4 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
 
 
 if __name__ == "__main__":
-    operator.run(handle, configpath="node_metrics.yaml")
+    hook.run(main, configpath="node_metrics.yaml")
