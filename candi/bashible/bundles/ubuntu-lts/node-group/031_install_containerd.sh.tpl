@@ -18,8 +18,9 @@ bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
   systemctl daemon-reload
   systemctl enable containerd.service
+
 {{ if ne .runType "ImageBuilding" -}}
-  systemctl restart containerd.service
+  bb-flag-set containerd-need-restart
 {{- end }}
 }
 
@@ -76,7 +77,7 @@ fi
 
 if [[ "$should_install_containerd" == true ]]; then
 
-{{- $ubuntuName := dict "16.04" "Xenial" "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
+{{- $ubuntuName := dict "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
   if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
@@ -92,19 +93,4 @@ crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVer
 if ! bb-rp-is-installed? "crictl" "${crictl_tag}" ; then
   bb-rp-install "crictl:${crictl_tag}"
 fi
-
-# Upgrade containerd-flant-edition if needed
-containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
-if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
-  systemctl stop containerd.service
-  bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
-
-  mkdir -p /etc/systemd/system/containerd.service.d
-  bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
-[Service]
-ExecStart=
-ExecStart=-/usr/local/bin/containerd
-EOF
-fi
-
 {{- end }}
