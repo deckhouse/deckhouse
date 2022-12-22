@@ -77,8 +77,9 @@ type CSIConfigCephFS struct {
 }
 
 type StorageClassFilter struct {
-	Name          string `json:"namePostfix"`
-	ReclaimPolicy string `json:"reclaimPolicy"`
+	Name          string            `json:"namePostfix"`
+	ReclaimPolicy string            `json:"reclaimPolicy"`
+	Annotations   map[string]string `json:"annotations"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -125,6 +126,7 @@ func applyStorageclassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return StorageClassFilter{
 		Name:          sc.Name,
 		ReclaimPolicy: string(*sc.ReclaimPolicy),
+		Annotations:   sc.Annotations,
 	}, nil
 }
 
@@ -139,7 +141,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 		if len(rbdStorageClasses) > 0 {
 			for _, sc := range rbdStorageClasses {
 				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
-				if isReclaimPolicyChanged(input, storageClassName, sc.ReclaimPolicy) {
+				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
 					input.LogEntry.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 				}
@@ -150,7 +152,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 		if len(cephFsStorageClasses) > 0 {
 			for _, sc := range cephFsStorageClasses {
 				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
-				if isReclaimPolicyChanged(input, storageClassName, sc.ReclaimPolicy) {
+				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
 					input.LogEntry.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 				}
@@ -167,12 +169,14 @@ func setInternalValues(input *go_hook.HookInput) error {
 	return nil
 }
 
-func isReclaimPolicyChanged(input *go_hook.HookInput, scName, scReclaimPolicy string) bool {
+func isStorageClassChanged(input *go_hook.HookInput, scName, scReclaimPolicy string) bool {
 	storageClasses := input.Snapshots["scs"]
 	for _, storageClass := range storageClasses {
 		sc := storageClass.(StorageClassFilter)
 		if sc.Name == scName {
-			if sc.ReclaimPolicy != scReclaimPolicy {
+			// Annotation check and annotation in templates can be safely removed after release 1.43
+			_, migrationCompleted := sc.Annotations["migration-secret-name-changed"]
+			if sc.ReclaimPolicy != scReclaimPolicy || !migrationCompleted {
 				return true
 			}
 		}
