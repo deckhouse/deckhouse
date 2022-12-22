@@ -69,6 +69,7 @@
 
  - **[admission-policy-engine]** Add secret with credentials for a registry [#3310](https://github.com/deckhouse/deckhouse/pull/3310)
  - **[candi]** Fail node bootstrap if the node has an XFS partition with ftype=0 parameter. [#3103](https://github.com/deckhouse/deckhouse/pull/3103)
+ - **[ceph-csi]** Restoring the previous secret name with ceph cluster credentials. [#3387](https://github.com/deckhouse/deckhouse/pull/3387)
  - **[ceph-csi]** Delete storage classes after changing immutable fields. [#3380](https://github.com/deckhouse/deckhouse/pull/3380)
  - **[ceph-csi]** Allow non-admin ceph account for cephfs. [#3212](https://github.com/deckhouse/deckhouse/pull/3212)
  - **[cloud-provider-openstack]** Fix ordering static nodes without security groups. [#3182](https://github.com/deckhouse/deckhouse/pull/3182)
