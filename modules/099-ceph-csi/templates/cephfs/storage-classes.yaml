@@ -7,6 +7,8 @@ kind: StorageClass
 metadata:
   name: {{ $cr.name }}-{{ $sc.namePostfix }}
   namespace: d8-{{ $.Chart.Name }}
+  annotations:
+    migration-secret-name-changed: ""
 {{ include "helm_lib_module_labels" (list $ (dict "app" $.Chart.Name)) | indent 2 }}
 provisioner: cephfs.csi.ceph.com
 reclaimPolicy: {{ $sc.reclaimPolicy }}

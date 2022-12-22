@@ -174,6 +174,7 @@ func isStorageClassChanged(input *go_hook.HookInput, scName, scReclaimPolicy str
 	for _, storageClass := range storageClasses {
 		sc := storageClass.(StorageClassFilter)
 		if sc.Name == scName {
+			// Annotation check and annotation in templates сan be safely removed after release 1.43
 			_, migrationCompleted := sc.Annotations["migration-secret-name-changed"]
 			if sc.ReclaimPolicy != scReclaimPolicy || !migrationCompleted {
 				return true
