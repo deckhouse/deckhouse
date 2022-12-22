@@ -60,6 +60,18 @@ kind: StorageClass
 metadata:
   labels:
     app: ceph-csi
+  annotations:
+    migration-secret-name-changed: ""
+  name: test-rbd
+reclaimPolicy: Delete
+`
+	scChanged := `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  labels:
+    app: ceph-csi
   name: test-rbd
 reclaimPolicy: Delete
 `
@@ -98,6 +110,18 @@ reclaimPolicy: Delete
 			Expect(f.ValuesGet("cephCsi.internal.crs.0.spec.rbd.storageClasses.0.reclaimPolicy").String()).To(Equal("Delete"))
 			Expect(f.ValuesGet("cephCsi.internal.crs.0.spec.rbd.storageClasses.0.allowVolumeExpansion").String()).To(Equal("true"))
 			Expect(f.ValuesGet("cephCsi.internal.crs.0.spec.rbd.storageClasses.0.mountOptions.0").String()).To(Equal("discard"))
+		})
+	})
+
+	Context("Cluster with cr", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cr + scChanged))
+			f.RunHook()
+		})
+		It("StorageClass must be deleted", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			sc := f.KubernetesGlobalResource("StorageClass", "test-rbd")
+			Expect(sc.Exists()).To(BeFalse())
 		})
 	})
 })
