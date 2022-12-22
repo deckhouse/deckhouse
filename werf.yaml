@@ -586,7 +586,7 @@ shell:
       # changelog exists only for tags, we have to skip it for branches
       {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
       {{ if $changelog }}
-      cat <<EOF > /changelog.yaml
+      cat <<"EOF" > /changelog.yaml
       {{ $changelog | nindent 6 }}
       EOF
       {{ end }}
