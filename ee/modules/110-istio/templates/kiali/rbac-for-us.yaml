@@ -96,6 +96,14 @@ rules:
   resources: ["deployments/http"]
   resourceNames: ["trickster"]
   verbs: ["get", "create", "update", "patch", "delete"]
+- apiGroups:
+    - monitoring.coreos.com
+  resources:
+    - prometheuses
+    - prometheuses/http
+  verbs:
+    - create
+    - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
