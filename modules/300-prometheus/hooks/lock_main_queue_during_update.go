@@ -92,10 +92,10 @@ func lockQueueFilterPod(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return cpod, nil
 }
 
-type node struct {
-	Name   string
-	Ready  bool
-	Taints []corev1.Taint
+type ReadyNode struct {
+	Name      string
+	Ready     bool
+	HasTaints bool
 }
 
 func readyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -105,17 +105,19 @@ func readyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		return false, err
 	}
 
+	isReady := false
+
 	// check node is ready
 	for _, c := range node.Status.Conditions {
 		if c.Type != corev1.NodeReady {
 			continue
 		}
 
-		isReady := c.Status == corev1.ConditionTrue
-		return isReady, nil
+		isReady = c.Status == corev1.ConditionTrue
+		break
 	}
 
-	return false, nil
+	return ReadyNode{Name: node.Name, Ready: isReady, HasTaints: len(node.Spec.Taints) > 0}, nil
 }
 
 func handleLockMainQueue(input *go_hook.HookInput) error {
@@ -124,13 +126,30 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	nodes := input.Snapshots["nodes"]
+	nodesCount := 0
+	for _, obj := range nodes {
+		node := obj.(ReadyNode)
+
+		if node.Ready && !node.HasTaints {
+			nodesCount++
+		}
+	}
+
+	// If there are no nodes for prometheus, then it makes no sense to lock the queue.
+	if nodesCount < 2 {
+		return nil
+	}
+
 	highAvailability := false
 	if input.Values.Exists("global.highAvailability") {
 		highAvailability = input.Values.Get("global.highAvailability").Bool()
 	}
+
 	if input.Values.Exists("prometheus.highAvailability") {
 		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
 	}
+
 	if !highAvailability {
 		return nil
 	}
@@ -155,8 +174,4 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 	}
 
 	return nil
-}
-
-func checkTaints() {
-
 }

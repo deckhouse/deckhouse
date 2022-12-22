@@ -79,6 +79,26 @@ status:
   - type: Ready
     status: 'False'
 `
+		nodes = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-2
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -96,7 +116,7 @@ status:
 
 	Context("Cluster having one prometheus main Pod being Ready", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(runningReadyPods)
+			f.KubeStateSet(runningReadyPods + nodes)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
 			f.RunHook()
@@ -109,8 +129,8 @@ status:
 
 	Context("Cluster having not Ready Pods", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(runningNotReadyPods))
-			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+			f.BindingContexts.Set(f.KubeStateSet(runningNotReadyPods + nodes))
+			f.ValuesSet("global.highAvailability", true)
 			f.RunHook()
 		})
 
@@ -122,7 +142,7 @@ status:
 
 	Context("Cluster having not Ready Pods", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(runningNotReadyPods))
+			f.BindingContexts.Set(f.KubeStateSet(runningNotReadyPods + nodes))
 			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
 			f.RunHook()
 		})
