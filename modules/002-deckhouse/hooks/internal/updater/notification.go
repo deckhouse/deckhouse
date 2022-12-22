@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -54,10 +55,10 @@ func (a *Auth) Fill(req *http.Request) {
 	}
 }
 
-func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationConfig {
+func ParseNotificationConfigFromValues(input *go_hook.HookInput) (*NotificationConfig, error) {
 	webhook, ok := input.Values.GetOk("deckhouse.update.notification.webhook")
 	if !ok {
-		return nil
+		return nil, nil // no notification
 	}
 
 	var minimalTime v1alpha1.Duration
@@ -65,7 +66,7 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationCo
 	if ok {
 		err := json.Unmarshal([]byte(t.Raw), &minimalTime)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("parsing minimalNotificationTime: %v", err)
 		}
 	}
 
@@ -77,7 +78,7 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationCo
 		auth = &Auth{}
 		err := json.Unmarshal([]byte(a.Raw), auth)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("parsing auth: %v", err)
 		}
 	}
 
@@ -86,7 +87,7 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationCo
 		SkipTLSVerify:           skipTLSVertify,
 		MinimalNotificationTime: minimalTime,
 		Auth:                    auth,
-	}
+	}, nil
 }
 
 func sendWebhookNotification(config *NotificationConfig, data webhookData) error {

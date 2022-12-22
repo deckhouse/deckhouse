@@ -67,8 +67,11 @@ type DeckhouseUpdater struct {
 	notificationConfig *NotificationConfig
 }
 
-func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseReleaseData, podIsReady, isBootstrapping bool) *DeckhouseUpdater {
-	nConfig := ParseNotificationConfigFromValues(input)
+func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseReleaseData, podIsReady, isBootstrapping bool) (*DeckhouseUpdater, error) {
+	nConfig, err := ParseNotificationConfigFromValues(input)
+	if err != nil {
+		return nil, fmt.Errorf("parsing notification config: %v", err)
+	}
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
@@ -85,7 +88,7 @@ func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data DeckhouseRe
 		deckhouseIsBootstrapping:    isBootstrapping,
 		releaseData:                 data,
 		notificationConfig:          nConfig,
-	}
+	}, nil
 }
 
 // for patch we check less conditions, then for minor release

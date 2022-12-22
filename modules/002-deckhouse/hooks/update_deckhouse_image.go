@@ -164,7 +164,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// initialize deckhouseUpdater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	deckhouseUpdater := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	deckhouseUpdater, err := updater.NewDeckhouseUpdater(input, approvalMode, releaseData, deckhousePod.Ready, deckhousePod.isBootstrapImage())
+	if err != nil {
+		return fmt.Errorf("initializing deckhouse updater: %v", err)
+	}
 
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
