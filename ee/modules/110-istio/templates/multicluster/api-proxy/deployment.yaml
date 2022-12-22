@@ -92,7 +92,7 @@ spec:
           mountPath: /remote/
         - name: kube-rbac-proxy-ca
           mountPath: /etc/ssl/kube-rbac-proxy-ca.crt
-          subPath: kube-rbac-proxy-ca.crt
+          subPath: ca.crt
       volumes:
       - name: remote-public-metadata
         secret:
