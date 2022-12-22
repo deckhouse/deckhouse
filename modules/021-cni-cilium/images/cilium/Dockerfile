@@ -108,6 +108,7 @@ RUN cp -t /tmp/install images/cilium/init-container.sh \
 # backwards compatible.
 #
 FROM ${CILIUM_RUNTIME_IMAGE}
+RUN echo HELLO
 RUN groupadd -f cilium \
     && echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
 COPY --from=cilium-envoy / /
