@@ -108,8 +108,9 @@ RUN cp -t /tmp/install images/cilium/init-container.sh \
 # backwards compatible.
 #
 FROM ${CILIUM_RUNTIME_IMAGE}
+# date added for a temporary solution of werf build problem
 RUN groupadd -f cilium \
-    && echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+    && echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc && date
 COPY --from=cilium-envoy / /
 
 # When used within the Cilium container, Hubble CLI should target the
