@@ -35,9 +35,9 @@ const (
 	// ca expiration = 10 years
 	caExpiryDurationStr = "87600h"
 	// certificate expiration - 10 years
-	certExpiryDuration = 10 * 365 * 24 * time.Hour
+	certExpiryDuration = 87600 * time.Hour
 	// when to recreate a certificate - 6 month (total expiration 10 years, so we will have enough time to recreate it)
-	certOutdatedDuration = (365 / 2) * 24 * time.Hour
+	certOutdatedDuration = 4380 * time.Hour
 
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
