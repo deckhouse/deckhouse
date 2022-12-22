@@ -93,6 +93,19 @@ properties:
               Механизм обновления гарантирует, что Deckhouse не обновится раньше указанного времени.
 
               При использовании окон обновлений, обновление Deckhouse после оповещения произойдет в ближайшее возможное окно обновлений, но не ранее чем истечет указанное в `minimalNotificationTime` время.
+          auth:
+            description: |
+              Структура, описывающая способ авторизации на webhook.
+
+              Если не указано — авторизация не используется.
+            properties:
+              username:
+                description: Имя пользователя для авторизации на webhook.
+              password:
+                description: Пароль для авторизации на webhook.
+              token:
+                description: Токен для авторизации на webhook.
+
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.

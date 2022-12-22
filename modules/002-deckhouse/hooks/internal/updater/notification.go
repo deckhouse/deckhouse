@@ -32,6 +32,26 @@ type NotificationConfig struct {
 	WebhookURL              string
 	SkipTLSVerify           bool
 	MinimalNotificationTime v1alpha1.Duration
+	Auth                    *Auth
+}
+
+type Auth struct {
+	Username string
+	Password string
+	Token    string
+}
+
+func (a *Auth) Fill(req *http.Request) {
+	if a == nil {
+		return
+	}
+	if a.Username != "" && a.Password != "" {
+		req.SetBasicAuth(a.Username, a.Password)
+		return
+	}
+	if a.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+a.Token)
+	}
 }
 
 func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationConfig {
@@ -51,10 +71,21 @@ func ParseNotificationConfigFromValues(input *go_hook.HookInput) *NotificationCo
 
 	skipTLSVertify := input.Values.Get("deckhouse.update.notification.tlsSkipVerify").Bool()
 
+	var auth *Auth
+	a, ok := input.Values.GetOk("deckhouse.update.notification.auth")
+	if ok {
+		auth = &Auth{}
+		err := json.Unmarshal([]byte(a.Raw), auth)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return &NotificationConfig{
 		WebhookURL:              webhook.String(),
 		SkipTLSVerify:           skipTLSVertify,
 		MinimalNotificationTime: minimalTime,
+		Auth:                    auth,
 	}
 }
 
@@ -70,9 +101,15 @@ func sendWebhookNotification(config *NotificationConfig, data webhookData) error
 	buf := bytes.NewBuffer(nil)
 	_ = json.NewEncoder(buf).Encode(data)
 
-	var err error
+	req, err := http.NewRequest(http.MethodPost, config.WebhookURL, buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	config.Auth.Fill(req)
+
 	for i := 0; i < 3; i++ {
-		_, err = client.Post(config.WebhookURL, "application/json", buf)
+		_, err = client.Do(req)
 		if err == nil {
 			return nil
 		}
