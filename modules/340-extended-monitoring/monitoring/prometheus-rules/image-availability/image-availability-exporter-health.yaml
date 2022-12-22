@@ -99,8 +99,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioningGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioningGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
 
