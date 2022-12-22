@@ -23,6 +23,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -70,84 +71,103 @@ func getSecret(namespace, name string, dc dependency.Container) (*certificate.Ce
 }
 
 func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
-	if input.Values.Exists("ingressNginx.internal.ingressControllers") {
-		caAuthority := certificate.Authority{
-			Key:  input.Values.Get("global.internal.modules.kubeRBACProxyCA.key").String(),
-			Cert: input.Values.Get("global.internal.modules.kubeRBACProxyCA.cert").String(),
+	if !input.Values.Exists("ingressNginx.internal.ingressControllers") {
+		return nil
+	}
+
+	caAuthority := certificate.Authority{
+		Key:  input.Values.Get("global.internal.modules.kubeRBACProxyCA.key").String(),
+		Cert: input.Values.Get("global.internal.modules.kubeRBACProxyCA.cert").String(),
+	}
+
+	certificates := make([]CertificateInfo, 0)
+	controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
+
+	for _, c := range controllersValues {
+		var controller Controller
+		err := json.Unmarshal([]byte(c.Raw), &controller)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal: %v", err)
 		}
 
-		certificates := make([]CertificateInfo, 0)
-		controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
+		ingressClass, _, err := unstructured.NestedString(controller.Spec, "ingressClass")
+		if err != nil {
+			return fmt.Errorf("cannot get ingressClass from ingress controller spec: %v", err)
+		}
 
-		for _, c := range controllersValues {
-			var controller Controller
-			err := json.Unmarshal([]byte(c.Raw), &controller)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal: %v", err)
-			}
+		secretName := fmt.Sprintf("ingress-nginx-%s-auth-tls", controller.Name)
+		secret, err := getSecret(namespace, secretName, dc)
+		if err != nil {
+			return fmt.Errorf("can't get Secret %s: %v", secretName, err)
+		}
 
-			ingressClass, _, err := unstructured.NestedString(controller.Spec, "ingressClass")
-			if err != nil {
-				return fmt.Errorf("cannot get ingressClass from ingress controller spec: %v", err)
-			}
-
-			secretName := fmt.Sprintf("ingress-nginx-%s-auth-tls", controller.Name)
-			secret, err := getSecret(namespace, secretName, dc)
-			if err != nil {
-				return fmt.Errorf("can't get Secret %s: %v", secretName, err)
-			}
-
-			// If existing Certificate expires in more than 7 days — use it.
-			if secret != nil && len(secret.Cert) > 0 && len(secret.Key) > 0 {
-				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*7)
-				if err != nil {
-					return err
-				}
-
-				if !shouldGenerateNewCert {
-					certificates = append(certificates, CertificateInfo{
-						ControllerName: controller.Name,
-						IngressClass:   ingressClass,
-						Data: certificate.Certificate{
-							Cert: secret.Cert,
-							Key:  secret.Key,
-						},
-					})
-
-					continue
-				}
-			}
-
-			info, err := certificate.GenerateSelfSignedCert(input.LogEntry,
-				fmt.Sprintf("nginx-ingress:%s", controller.Name),
-				caAuthority,
-				certificate.WithGroups("ingress-nginx:auth"),
-				certificate.WithSigningDefaultExpiry(87600*time.Hour),
-				certificate.WithSigningDefaultUsage([]string{
-					"signing",
-					"key encipherment",
-					"client auth",
-				}),
-			)
-
+		// If existing Certificate expires in more than 7 days — use it.
+		if secret != nil && len(secret.Cert) > 0 && len(secret.Key) > 0 {
+			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*7)
 			if err != nil {
 				return err
 			}
 
-			certificates = append(certificates, CertificateInfo{
-				ControllerName: controller.Name,
-				IngressClass:   ingressClass,
-				Data:           info,
-			})
+			// migration 1.42: this branch could be deleted after 1.42 release
+			if !shouldGenerateNewCert {
+				shouldGenerateNewCert, err = shouldMigrateOldCertificate([]byte(secret.Cert))
+				if err != nil {
+					return err
+				}
+			}
+			// end migration
+
+			if !shouldGenerateNewCert {
+				certificates = append(certificates, CertificateInfo{
+					ControllerName: controller.Name,
+					IngressClass:   ingressClass,
+					Data: certificate.Certificate{
+						Cert: secret.Cert,
+						Key:  secret.Key,
+					},
+				})
+
+				continue
+			}
 		}
 
-		// Sort slice to prevent triggering helm on elements order change.
-		sort.Slice(certificates, func(i, j int) bool {
-			return certificates[i].ControllerName < certificates[j].ControllerName
-		})
+		info, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+			fmt.Sprintf("nginx-ingress:%s", controller.Name),
+			caAuthority,
+			certificate.WithGroups("ingress-nginx:auth"),
+			certificate.WithSigningDefaultExpiry(87600*time.Hour),
+			certificate.WithSigningDefaultUsage([]string{
+				"signing",
+				"key encipherment",
+				"client auth",
+			}),
+		)
 
-		input.Values.Set("ingressNginx.internal.nginxAuthTLS", certificates)
+		if err != nil {
+			return err
+		}
+
+		certificates = append(certificates, CertificateInfo{
+			ControllerName: controller.Name,
+			IngressClass:   ingressClass,
+			Data:           info,
+		})
 	}
 
+	// Sort slice to prevent triggering helm on elements order change.
+	sort.Slice(certificates, func(i, j int) bool {
+		return certificates[i].ControllerName < certificates[j].ControllerName
+	})
+
+	input.Values.Set("ingressNginx.internal.nginxAuthTLS", certificates)
+
 	return nil
+}
+
+func shouldMigrateOldCertificate(cert []byte) (bool, error) {
+	c, err := helpers.ParseCertificatePEM(cert)
+	if err != nil {
+		return false, err
+	}
+	return c.Issuer.CommonName == "kubernetes", nil
 }
