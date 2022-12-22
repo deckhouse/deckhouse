@@ -90,9 +90,16 @@ spec:
         volumeMounts:
         - name: remote-public-metadata
           mountPath: /remote/
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/ssl/kube-rbac-proxy-ca.crt
+          subPath: ca.crt
       volumes:
       - name: remote-public-metadata
         secret:
           defaultMode: 420
           secretName: d8-remote-clusters-public-metadata
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
 {{- end }}

@@ -258,7 +258,7 @@ func main() {
 	router.Handle("/ready", http.HandlerFunc(httpHandlerReady))
 	router.Handle("/", http.HandlerFunc(httpHandlerApiProxy))
 
-	kubeCA, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	kubeCA, _ := os.ReadFile("/etc/ssl/kube-rbac-proxy-ca.crt")
 	kubeCertPool := x509.NewCertPool()
 	kubeCertPool.AppendCertsFromPEM(kubeCA)
 
