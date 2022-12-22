@@ -23,6 +23,8 @@
 
 
  - **[admission-policy-engine]** Add CRD `OperationPolicy` for configuring best-practice cluster policies. [#3115](https://github.com/deckhouse/deckhouse/pull/3115)
+ - **[candi]** Upgraded patch versions of Kubernetes images: v1.25.5. [#3376](https://github.com/deckhouse/deckhouse/pull/3376)
+    "Kubernetes control-plane components will restart, kubelet will restart"
  - **[candi]** Upgraded patch versions of Kubernetes images: v1.22.17, v1.23.15, and v1.24.9. [#3297](https://github.com/deckhouse/deckhouse/pull/3297)
     "Kubernetes control-plane components will restart, kubelet will restart"
  - **[candi]** Upgraded patch versions of Kubernetes images: v1.22.16, v1.23.14, and v1.24.8. [#3250](https://github.com/deckhouse/deckhouse/pull/3250)
@@ -69,8 +71,11 @@
 
  - **[admission-policy-engine]** Add secret with credentials for a registry [#3310](https://github.com/deckhouse/deckhouse/pull/3310)
  - **[candi]** Fail node bootstrap if the node has an XFS partition with ftype=0 parameter. [#3103](https://github.com/deckhouse/deckhouse/pull/3103)
+ - **[ceph-csi]** Delete storage classes after changing immutable fields. [#3380](https://github.com/deckhouse/deckhouse/pull/3380)
  - **[ceph-csi]** Allow non-admin ceph account for cephfs. [#3212](https://github.com/deckhouse/deckhouse/pull/3212)
  - **[cloud-provider-openstack]** Fix ordering static nodes without security groups. [#3182](https://github.com/deckhouse/deckhouse/pull/3182)
+ - **[deckhouse]** Fixed unrendered backquotes in the DeckhouseRelease resource. [#3367](https://github.com/deckhouse/deckhouse/pull/3367)
+ - **[ingress-nginx]** Fix client certificate update. [#3368](https://github.com/deckhouse/deckhouse/pull/3368)
  - **[ingress-nginx]** Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the Load Balancer to rebuild the endpoints. [#3121](https://github.com/deckhouse/deckhouse/pull/3121)
  - **[log-shipper]** Fix TLS certificates error for Kafka destination. [#3215](https://github.com/deckhouse/deckhouse/pull/3215)
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
