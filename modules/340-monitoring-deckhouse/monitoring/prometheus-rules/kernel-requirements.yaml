@@ -10,9 +10,7 @@
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__cluster_has_problems_with_unmet_kernel_requirements_alerts: "D8ClusterHasProblemsWithUnmetKernelRequirements,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: Node {{ $labels.node }} has unmet kernel requirements
+        summary: Nodes have unmet kernel requirements
         description: |-
           Some nodes have unmet kernel constraints. This means that some modules cannot be run on that nodes.
           Current kernel constraint requirements:
