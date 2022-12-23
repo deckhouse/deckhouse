@@ -76,6 +76,7 @@
  - **[deckhouse]** Fixed unrendered backquotes in the DeckhouseRelease resource. [#3367](https://github.com/deckhouse/deckhouse/pull/3367)
  - **[ingress-nginx]** Fix client certificate update. [#3368](https://github.com/deckhouse/deckhouse/pull/3368)
  - **[ingress-nginx]** Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the Load Balancer to rebuild the endpoints. [#3121](https://github.com/deckhouse/deckhouse/pull/3121)
+ - **[istio]** Replace CA for the Ingress validation of api-proxy, fix kiali `ClusterRole`. [#3395](https://github.com/deckhouse/deckhouse/pull/3395)
  - **[log-shipper]** Fix TLS certificates error for Kafka destination. [#3215](https://github.com/deckhouse/deckhouse/pull/3215)
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
  - **[node-manager]** Show errors on scale-from-zero capacity planning. [#3316](https://github.com/deckhouse/deckhouse/pull/3316)
@@ -87,6 +88,7 @@
  - **[user-authn]** Fixed the `generate_crowd_basic_auth_proxy_cert.go` hook. [#3223](https://github.com/deckhouse/deckhouse/pull/3223)
  - **[user-authn]** Use a self-signed certificate for Dex when accessing from inside the cluster. [#3218](https://github.com/deckhouse/deckhouse/pull/3218)
  - **[user-authz]** Create patch update rights for the `user-authz:admin` clusterrole. [#3211](https://github.com/deckhouse/deckhouse/pull/3211)
+ - **[vertical-pod-autoscaler]** Setting `admissionReviewVersions` to `v1` in mutating webhook. [#3397](https://github.com/deckhouse/deckhouse/pull/3397)
 
 ## Chore
 
@@ -105,4 +107,5 @@
  - **[flant-integration]** Filter master nodes based on `node.deckhouse.io/group` in pricing and consider both `node-role.kubernetes.io/master` and `node-role.kubernetes.io/control-plane` taints for dedicated master. [#3077](https://github.com/deckhouse/deckhouse/pull/3077)
     The `pricing` Pods will restart in the `d8-flant-integration` namespace.
  - **[global-hooks]** Remove x bit from *.go files in global-hooks. [#3258](https://github.com/deckhouse/deckhouse/pull/3258)
+ - **[monitoring-deckhouse]** Add an alert about deprecated OS versions. [#3405](https://github.com/deckhouse/deckhouse/pull/3405)
 
