@@ -54,7 +54,8 @@ func clusterConfigurationMigration(input *go_hook.HookInput, dc dependency.Conta
 		Secrets("kube-system").
 		Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("cannot get Secret/kube-system/d8-cluster-configuration: %v", err)
+		input.LogEntry.Info("cannot get Secret/kube-system/d8-cluster-configuration, proxy configuration migration skipped")
+		return nil
 	}
 
 	configYaml, ok := secret.Data[DataKey]
