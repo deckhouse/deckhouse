@@ -258,17 +258,22 @@ function main() {
       fi
       {{- end }}
       {{- if ne .runType "ClusterBootstrap" }}
+      eventHash="$(cat $bashibleEventsFile | uniq -d)-$(echo -n "$(hostname -s)" | md5sum | awk '{print $1}' | cut -b -10)"
       bb-kubectl apply -f - <<EOF
         apiVersion: v1
         kind: Event
         metadata:
-          name: BashibleError
+          name: bashible-error-${eventHash}
           namespace: default
         reason: Failed
         type: Error
+        lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
         message: '$(cat $bashibleEventsFile | uniq -d)'
         involvedObject:
           kind: Node
+        source:
+          component: bashible
+          host: '$(hostname -s)'
 EOF
       {{- end }}
     done
