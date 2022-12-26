@@ -1,7 +1,7 @@
-# Based on https://github.com/cilium/cilium/blob/956c4d670fd75eb9f2a5a44406bc02aeab820cd7/images/operator/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.12.5/images/operator/Dockerfile
 ARG BASE_ALPINE
-# Source: https://github.com/cilium/cilium/releases/tag/v1.12.4
-FROM quay.io/cilium/operator:v1.12.4@sha256:95c9a3be33ec87fe404cc876719f6a06a27658464dab3efbedd9974969cab21c as artifact
+# Image source: https://github.com/cilium/cilium/releases/tag/v1.12.4
+FROM quay.io/cilium/operator:v1.12.5@sha256:a6d24a006a6b92967ac90786b49bc1ac26e5477cf028cd1186efcfc2466484db as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /usr/bin/cilium-operator /usr/bin/cilium-operator
