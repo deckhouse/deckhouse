@@ -247,7 +247,7 @@ function main() {
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      echo "Failed to execute step "$step" ... retry in 10 seconds." 2>&1 | cut -f 5 -d ' ' | tee "${bashibleEventsFile}"
+      echo "Failed to execute step "$step" ... retry in 10 seconds." 2>&1 | cut -f 5 -d ' ' | tee -a "${bashibleEventsFile}"
       sleep 10
       echo ===
       echo === Step: $step
@@ -278,6 +278,8 @@ EOF
       {{- end }}
     done
   done
+
+  rm ${bashibleEventsFile}
 
 {{ if eq .runType "Normal" }}
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
