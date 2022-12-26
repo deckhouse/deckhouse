@@ -63,7 +63,7 @@ topnav:
           url: /services/managed.html
         - title: Обучение и консультации
           url: /services/training.html
-        - title: Переезд на Deckhouse
+        - title: Переезд с OpenShift
           url: /services/moving_to_deckhouse.html
       - title: Информация
         url: '#'
