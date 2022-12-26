@@ -240,13 +240,14 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step; bashibleEventsFile=$(mktemp -t events.XXXXXX)"
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
+      bashibleEventsFile=$(mktemp -t events.XXXXXX)
       echo "Failed to execute step "$step" ... retry in 10 seconds." 2>&1 | cut -f 5 -d ' ' | tee -a "${bashibleEventsFile}"
       sleep 10
       echo ===
