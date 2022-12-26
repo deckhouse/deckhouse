@@ -4,6 +4,67 @@ title: "Cloud provider — Yandex.Cloud: схемы размещения"
 
 Поддерживаются три схемы размещения. Ниже подробнее о каждой их них.
 
+## Standard
+
+В данной схеме размещения узлы не будут иметь публичных адресов, а будут выходить в интернет через Yandex.Cloud NAT-шлюз.
+
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vTSpvzjcEBpD1qad9u_UgvsOrYT_Xtnxwg6Pzb64HQHLqQWcZi6hhCNRPKVUdYKX32nXEVJeCzACVRG/pub?w=812&h=655)
+<!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
+
+Пример конфигурации схемы размещения:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+provider:
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
+  serviceAccountJSON: |
+    {"test": "test"}
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: testtest
+    externalIPAddresses:
+    - "198.51.100.5"
+    - "Auto"
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    additionalLabels:
+      takes: priority
+nodeGroups:
+- name: khm
+  replicas: 1
+  zones:
+  - ru-central1-a
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: testtest
+    coreFraction: 50
+    externalIPAddresses:
+    - "198.51.100.5"
+    - "Auto"
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    additionalLabels:
+      toy: example
+labels:
+  billing: prod
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
+dhcpOptions:
+  domainName: test.local
+  domainNameServers:
+  - 213.177.96.1
+  - 231.177.97.1
+```
+
 ## WithoutNAT
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдаётся публичный IP-адрес.
