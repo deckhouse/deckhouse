@@ -626,6 +626,69 @@ metadata:
 			Expect(r136.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Notification: basic auth", func() {
+		type auth struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+		var (
+			username string
+			password string
+		)
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			username, password, _ = r.BasicAuth()
+		}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesSet("deckhouse.update.notification.auth", auth{Username: "user", Password: "pass"})
+			f.ValuesDelete("deckhouse.update.windows")
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should not change postpone time", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(username).To(Equal("user"))
+			Expect(password).To(Equal("pass"))
+		})
+	})
+
+	Context("Notification: bearer token auth", func() {
+		type auth struct {
+			Token string `json:"token"`
+		}
+		var (
+			headerValue string
+		)
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			headerValue = r.Header.Get("Authorization")
+		}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesSet("deckhouse.update.notification.auth", auth{Token: "the_token"})
+			f.ValuesDelete("deckhouse.update.windows")
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should have basica auth credentials in headers", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(headerValue).To(Equal("Bearer the_token"))
+		})
+	})
 })
 
 var (
