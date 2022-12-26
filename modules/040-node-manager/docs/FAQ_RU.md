@@ -352,7 +352,7 @@ spec:
 |---------------------------------------|----------------------------|-------------------|-----------------|
 | chaos                                 | -                          | -                 | -               |
 | cloudInstances.classReference         | -                          | +                 | -               |
-| cloudInstances.maxSurgePerZone        | -                          | +                 | -               |
+| cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
 | cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
@@ -362,7 +362,7 @@ spec:
 | kubernetesVersion                     | -                          | -                 | +               |
 | nodeTemplate                          | -                          | -                 | -               |
 | static                                | -                          | -                 | +               |
-| update.maxConcurrent                  | -                          | +                 | -               |
+| update.maxConcurrent                  | -                          | -                 | -               |
 
 Подробно о всех параметрах можно прочитать в описании custom resource [NodeGroup](cr.html#nodegroup).
 
