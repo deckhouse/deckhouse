@@ -6,7 +6,7 @@ Three layouts are supported. Below is more information about each of them.
 
 ## Standard
 
-In this placement strategy, nodes do not have public IP addresses allocated to them; they use Yandex.Cloud NAT gateway to connect to the Internet.
+In this placement strategy, nodes do not have public IP addresses allocated to them; they use Yandex Cloud NAT gateway to connect to the Internet.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTSpvzjcEBpD1qad9u_UgvsOrYT_Xtnxwg6Pzb64HQHLqQWcZi6hhCNRPKVUdYKX32nXEVJeCzACVRG/pub?w=812&h=655)
 <!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
