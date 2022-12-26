@@ -67,7 +67,7 @@ spec:
       labels:
         app: deckhouse
       annotations:
-        checksum/registry: {{ include (print $.Template.BasePath "/registry.yaml") . | sha256sum }}
+        checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
     spec:
       affinity:
         nodeAffinity:
