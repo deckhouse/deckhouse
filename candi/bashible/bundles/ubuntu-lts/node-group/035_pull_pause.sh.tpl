@@ -22,6 +22,7 @@ if [[ "$(docker image ls -q "${pause_container}" | wc -l)" -eq "0" ]]; then
   if ! docker pull "${pause_container}" >/dev/null 2>/dev/null; then
     docker pull registry.deckhouse.io/deckhouse/ce:pause-3.2
     docker tag registry.deckhouse.io/deckhouse/ce:pause-3.2 "${pause_container}"
+    exit 1
   fi
 fi
 {{- end }}

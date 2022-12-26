@@ -266,7 +266,7 @@ function main() {
           namespace: default
         reason: Failed
         type: Error
-        message: '$(cat $bashibleEventsFile | uniq)'
+        message: '$(cat $bashibleEventsFile | uniq -d)'
         involvedObject:
           kind: Node
 EOF
