@@ -44,7 +44,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"alertmanager-internal",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
-	"annotations-converter",
 	"cainjector",
 	"cert-exporter",
 	"cert-manager",
