@@ -186,7 +186,10 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			Limit:         objectBatchSize,
 			Continue:      next,
 			// https://kubernetes.io/docs/reference/using-api/api-concepts/#semantics-for-get-and-list
-			ResourceVersion: "0",
+			// set explicit behavior:
+			//   Return data at any resource version. The newest available resource version is preferred, but strong consistency is not required; data at any resource version may be served.
+			ResourceVersion:      "0",
+			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
 			return 0, err
@@ -202,7 +205,7 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
-			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
 			// fetch namespace from secret is more reliable
 			release.Namespace = secret.Namespace
 			release.HelmVersion = "3"
@@ -227,10 +230,11 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 
 	for {
 		cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{
-			LabelSelector:   "OWNER=TILLER,STATUS=DEPLOYED",
-			Limit:           objectBatchSize,
-			Continue:        next,
-			ResourceVersion: "0",
+			LabelSelector:        "OWNER=TILLER,STATUS=DEPLOYED",
+			Limit:                objectBatchSize,
+			Continue:             next,
+			ResourceVersion:      "0",
+			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
 			return 0, err
@@ -246,7 +250,7 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
-			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
 			// fetch namespace from secret is more reliable
 			release.Namespace = secret.Namespace
 			release.HelmVersion = "2"
