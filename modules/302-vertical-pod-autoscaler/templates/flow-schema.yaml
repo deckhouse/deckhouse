@@ -1,0 +1,36 @@
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: FlowSchema
+metadata:
+  name: {{ .Chart.Name }}-flowschema
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  distinguisherMethod:
+    type: ByUser
+  matchingPrecedence: 1000
+  priorityLevelConfiguration:
+    name: cluster-medium
+  rules:
+    - resourceRules:
+        - apiGroups:
+            - '*'
+          clusterScope: true
+          namespaces:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - 'list'
+      subjects:
+      - serviceAccount:
+          name: d8-vertical-pod-autoscaler-updater
+          namespace: kube-system
+        kind: ServiceAccount
+      - serviceAccount:
+          name: d8-vertical-pod-autoscaler-recommender
+          namespace: kube-system
+        kind: ServiceAccount
+      - serviceAccount:
+          name: d8-vertical-pod-autoscaler-admission-controller
+          namespace: kube-system
+        kind: ServiceAccount

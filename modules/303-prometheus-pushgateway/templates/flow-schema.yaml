@@ -1,0 +1,27 @@
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: FlowSchema
+metadata:
+  name: {{ .Chart.Name }}-flowschema
+  namespace: kube-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  distinguisherMethod:
+    type: ByUser
+  matchingPrecedence: 1000
+  priorityLevelConfiguration:
+    name: cluster-low
+  rules:
+    - resourceRules:
+        - apiGroups:
+            - '*'
+          clusterScope: true
+          namespaces:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - 'list'
+      subjects:
+      - group:
+          name: system:serviceaccounts:kube-{{ .Chart.Name }}
+        kind: Group
