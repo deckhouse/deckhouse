@@ -75,6 +75,8 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
+{{- if semverCompare "> 1.21" .clusterConfiguration.kubernetesVersion }}
   securityContext:
     seccompProfile:
       type: Unconfined
+{{- end }}
