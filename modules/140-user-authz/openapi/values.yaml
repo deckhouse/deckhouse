@@ -42,11 +42,6 @@ properties:
         default: {}
       webhookCertificate:
         type: object
-        default: {}
-        x-required-for-helm:
-          - ca
-          - key
-          - crt
         properties:
           ca:
             type: string
