@@ -2,7 +2,6 @@
 {{- define "helm_lib_flow_schema_manifest" }}
   {{- $context := index . 0 }}
   {{- $priorityLevelConfiguration := index . 1 }}
-  {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 ---
   {{- include "helm_lib_flow_schema_apiversion" (list $context) }}
 kind: FlowSchema
@@ -35,8 +34,7 @@ spec:
 {{- /* Usage: {{ include "helm_lib_flow_schema_apiversion" (list .) }} */ -}}
 {{- define "helm_lib_flow_schema_apiversion" }}
   {{- $context := index . 0 }}
-  {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
-  {{- if ge $kubernetesSemVer.Minor "26" }}
+  {{- if semverCompare ">= 1.26" $context.Values.global.discovery.kubernetesVersion }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
   {{- else }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta1

@@ -3,7 +3,7 @@
 kind: PriorityLevelConfiguration
 metadata:
   name: cluster-critical
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   type: Limited
   limited:
@@ -15,11 +15,11 @@ spec:
         queues: 16
       type: Queue
 ---
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: PriorityLevelConfiguration
 metadata:
   name: cluster-high
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   type: Limited
   limited:
@@ -31,11 +31,11 @@ spec:
         queues: 16
       type: Queue
 ---
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: PriorityLevelConfiguration
 metadata:
   name: cluster-medium
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   type: Limited
   limited:
@@ -47,11 +47,11 @@ spec:
         queues: 16
       type: Queue
 ---
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: PriorityLevelConfiguration
 metadata:
   name: cluster-low
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   type: Limited
   limited:
