@@ -421,11 +421,11 @@ type canarySettings struct {
 }
 
 func getCA(input *go_hook.HookInput) string {
-	return input.Values.Get("global.modulesImages.registryCA").String()
+	return input.Values.Get("global.modulesImages.registry.CA").String()
 }
 
 func isHTTP(input *go_hook.HookInput) bool {
-	registryScheme := input.Values.Get("global.modulesImages.registryScheme").String()
+	registryScheme := input.Values.Get("global.modulesImages.registry.scheme").String()
 	return registryScheme == "http"
 }
 
@@ -488,7 +488,7 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterU
 }
 
 func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {
-	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
+	repo := input.Values.Get("global.modulesImages.registry.base").String() // host/ns/repo
 
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
 	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)))

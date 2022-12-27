@@ -62,7 +62,7 @@ var (
 			"properties.clusterConfiguration.properties.apiVersion",
 			"properties.clusterConfiguration.properties.cloud.properties.provider",
 			// http and https
-			"properties.modulesImages.properties.registryScheme",
+			"properties.modulesImages.properties.registry.properties.scheme",
 		},
 		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1

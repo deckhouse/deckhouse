@@ -136,14 +136,11 @@ metadata:
 		})
 
 		Context("with license key in docker config", func() {
-			readFile = func(path string) ([]byte, error) {
-				return getDockerConfig(testRepo, testLicenseKey), nil
-			}
-
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.ConfigValuesSet(licenseKeyPath, "")
 				f.ValuesSet(globalRegistryPath, "test.repo")
+				f.ValuesSet(globalRegistryDockercfg, getDockerConfig(testRepo, testLicenseKey))
 				f.RunHook()
 			})
 
@@ -154,15 +151,12 @@ metadata:
 		})
 
 		Context("with revoked config map", func() {
-			readFile = func(path string) ([]byte, error) {
-				return getDockerConfig(testRepo, testLicenseKey), nil
-			}
-
 			BeforeEach(func() {
 				f.KubeStateSet(revokedCMManifest)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.ConfigValuesSet(licenseKeyPath, "")
 				f.ValuesSet(globalRegistryPath, "test.repo")
+				f.ValuesSet(globalRegistryDockercfg, getDockerConfig(testRepo, testLicenseKey))
 				f.ValuesSet(internalLicenseKeyPath, testLicenseKey)
 				f.RunHook()
 			})
@@ -195,12 +189,12 @@ func prepareDockerConfig(a authn.AuthConfig, registry string) []byte {
 	return j
 }
 
-func getDockerConfig(repo string, licenseKey string) []byte {
+func getDockerConfig(repo string, licenseKey string) string {
 	auth := authn.AuthConfig{
 		Username: "user",
 		Password: licenseKey,
 		Auth:     base64.StdEncoding.EncodeToString([]byte("user:" + licenseKey)),
 	}
 
-	return prepareDockerConfig(auth, repo)
+	return base64.StdEncoding.EncodeToString(prepareDockerConfig(auth, repo))
 }

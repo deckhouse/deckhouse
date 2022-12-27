@@ -128,13 +128,15 @@ func SetupHelmConfig(values string) *Config {
 
 func GetModulesImages() map[string]interface{} {
 	return map[string]interface{}{
-		"registry":          "registry.example.com",
-		"registryDockercfg": "Y2ZnCg==",
-		"registryAddress":   "registry.deckhouse.io",
-		"registryPath":      "/deckhouse/fe",
-		"registryCA":        "CACACA",
-		"registryScheme":    "https",
-		"tags":              library.DefaultImagesTags,
+		"registry": map[string]interface{}{
+			"base":      "registry.example.com",
+			"dockercfg": "Y2ZnCg==",
+			"address":   "registry.deckhouse.io",
+			"path":      "/deckhouse/fe",
+			"CA":        "CACACA",
+			"scheme":    "https",
+		},
+		"tags": library.DefaultImagesTags,
 	}
 }
 
@@ -146,7 +148,7 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 
 	// set some common values
-	hec.values.SetByPath("global.modulesImages.registry", "registry.example.com")
+	hec.values.SetByPath("global.modulesImages.registry.base", "registry.example.com")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.cert", "test")
 	hec.values.SetByPath("global.internal.modules.kubeRBACProxyCA.key", "test")
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))

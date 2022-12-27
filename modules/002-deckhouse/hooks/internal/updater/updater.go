@@ -338,7 +338,7 @@ func (du *DeckhouseUpdater) InManualMode() bool {
 func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *DeckhouseRelease) {
 	du.input.LogEntry.Infof("Applying release %s", predictedRelease.Name)
 
-	repo := du.input.Values.Get("global.modulesImages.registry").String()
+	repo := du.input.Values.Get("global.modulesImages.registry.base").String()
 
 	du.ChangeUpdatingFlag(true)
 	du.changeNotifiedFlag(false)

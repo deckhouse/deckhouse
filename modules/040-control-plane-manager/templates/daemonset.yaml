@@ -20,8 +20,8 @@ memory: 10Mi
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.tags.controlPlaneManager.etcd }}
 
 {{- $registry := dict }}
-{{- $_ := set $registry "address" $.Values.global.modulesImages.registryAddress }}
-{{- $_ := set $registry "path" $.Values.global.modulesImages.registryPath }}
+{{- $_ := set $registry "address" $.Values.global.modulesImages.registry.address }}
+{{- $_ := set $registry "path" $.Values.global.modulesImages.registry.path }}
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
@@ -242,7 +242,7 @@ spec:
 {{- end }}
 {{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}"
+        image: "{{ $.Values.global.modulesImages.registry.base }}:{{ $imageTag }}"
         command:
         - /pause
   {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

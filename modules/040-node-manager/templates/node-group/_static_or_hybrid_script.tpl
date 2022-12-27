@@ -48,7 +48,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Template" $context.Template }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Files" $context.Files }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "allowedBundles" $context.Values.nodeManager.allowedBundles }}
-  {{- $_ := set $bashible_bootstrap_script_tpl_context "registry" (dict "address" $context.Values.global.modulesImages.registryAddress "path" $context.Values.global.modulesImages.registryPath "scheme" $context.Values.global.modulesImages.registryScheme "ca" $context.Values.global.modulesImages.registryCA "dockerCfg" $context.Values.global.modulesImages.registryDockercfg) }}
+  {{- $_ := set $bashible_bootstrap_script_tpl_context "registry" (dict "address" $context.Values.global.modulesImages.registry.address "path" $context.Values.global.modulesImages.registry.path "scheme" $context.Values.global.modulesImages.registry.scheme "ca" $context.Values.global.modulesImages.registry.CA "dockerCfg" $context.Values.global.modulesImages.registry.dockercfg) }}
   {{- if hasKey $context.Values.global.clusterConfiguration "proxy" }}
     {{- $proxy := dict }}
     {{- if hasKey $context.Values.global.clusterConfiguration.proxy "httpProxy" }}

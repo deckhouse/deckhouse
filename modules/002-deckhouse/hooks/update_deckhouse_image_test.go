@@ -36,7 +36,9 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 	f := HookExecutionConfigInit(`{
         "global": {
           "modulesImages": {
-			"registry": "my.registry.com/deckhouse"
+			"registry": {
+				"base": "my.registry.com/deckhouse"
+			}
 		  }
         },
 		"deckhouse": {

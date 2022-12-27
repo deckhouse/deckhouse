@@ -28,7 +28,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: set module image value ::", f
 global:
   deckhouseVersion: "12345"
   modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
+    registry:
+      base: registry.deckhouse.io/deckhouse/fe
 deckhouse:
   internal: {}
 `, `{}`)
