@@ -27,11 +27,8 @@ const (
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
 		"cert-manager-webhook.d8-cert-manager.svc",
-		"annotations-converter-webhook.d8-cert-manager.svc",
 		"cert-manager-webhook.d8-cert-manager",
-		"annotations-converter-webhook.d8-cert-manager",
 		"cert-manager-webhook",
-		"annotations-converter-webhook",
 	}),
 
 	CN: cn,

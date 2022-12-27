@@ -106,15 +106,11 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 		}
 		r.Hosts = []string{
 			"cert-manager-webhook.d8-cert-manager.svc",
-			"annotations-converter-webhook.d8-cert-manager.svc",
 			"cert-manager-webhook.d8-cert-manager",
-			"annotations-converter-webhook.d8-cert-manager",
 			"cert-manager-webhook",
-			"annotations-converter-webhook",
 		}
 		r.Names = []csr.Name{
 			{O: "cert-manager-webhook.d8-cert-manager"},
-			{O: "annotations-converter-webhook.d8-cert-manager"},
 		}
 	})
 	if err != nil {
@@ -130,7 +126,6 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 		*ca,
 		certificate.WithGroups(
 			"cert-manager.d8-cert-manager",
-			"annotations-converter-webhook.d8-cert-manager",
 		),
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
@@ -138,11 +133,8 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 		}),
 		certificate.WithSANs(
 			"cert-manager-webhook.d8-cert-manager.svc",
-			"annotations-converter-webhook.d8-cert-manager.svc",
 			"cert-manager-webhook.d8-cert-manager",
-			"annotations-converter-webhook.d8-cert-manager",
 			"cert-manager-webhook",
-			"annotations-converter-webhook",
 		),
 	)
 	if err != nil {
