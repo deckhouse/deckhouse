@@ -2,14 +2,14 @@
 # lots of cluster-scoped list requests. These requests become preflight in clusters with many pods and hit etcd.
 # It leads to the growth of memory consumed by both etcd and kube-apiserver and can cause OOMKills.
 ---
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: FlowSchema
 metadata:
-  name: log-shipper-pods
-  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+  name: {{ .Chart.Name }}-flowschema
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   priorityLevelConfiguration:
-    name: log-shipper-pods
+    name: cluster-low
   distinguisherMethod:
     type: ByUser
   rules:
@@ -23,20 +23,4 @@ spec:
     - kind: ServiceAccount
       serviceAccount:
         name: log-shipper
-        namespace: d8-log-shipper
----
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
-kind: PriorityLevelConfiguration
-metadata:
-  name: log-shipper-pods
-  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
-spec:
-  type: Limited
-  limited:
-    assuredConcurrencyShares: 5
-    limitResponse:
-      queuing:
-        handSize: 4
-        queueLengthLimit: 50
-        queues: 16
-      type: Queue
+        namespace: d8-{{ .Chart.Name }}

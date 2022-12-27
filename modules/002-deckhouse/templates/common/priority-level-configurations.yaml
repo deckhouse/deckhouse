@@ -1,5 +1,5 @@
 ---
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: PriorityLevelConfiguration
 metadata:
   name: cluster-critical
