@@ -1,15 +1,15 @@
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
 kind: FlowSchema
 metadata:
-  name: {{ .Chart.Name }}-flowschema
-  namespace: kube-system
+  name: early-oom-flowschema
+  namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   distinguisherMethod:
     type: ByUser
   matchingPrecedence: 1000
   priorityLevelConfiguration:
-    name: cluster-high
+    name: cluster-low
   rules:
     - resourceRules:
         - apiGroups:
@@ -23,6 +23,6 @@ spec:
             - 'list'
       subjects:
         - serviceAccount:
-            name: d8-control-plane-manager
-            namespace: kube-system
+            name: early-oom
+            namespace: d8-cloud-instance-manager
           kind: ServiceAccount
