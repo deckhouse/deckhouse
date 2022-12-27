@@ -1,0 +1,60 @@
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: cluster-critical
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 50
+    limitResponse:
+      queuing:
+        handSize: 4
+        queueLengthLimit: 50
+        queues: 16
+      type: Queue
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: cluster-high
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 20
+    limitResponse:
+      queuing:
+        handSize: 4
+        queueLengthLimit: 50
+        queues: 16
+      type: Queue
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: cluster-medium
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 10
+    limitResponse:
+      queuing:
+        handSize: 4
+        queueLengthLimit: 50
+        queues: 16
+      type: Queue
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: cluster-low
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 5
+    limitResponse:
+      queuing:
+        handSize: 4
+        queueLengthLimit: 50
+        queues: 16
+      type: Queue
