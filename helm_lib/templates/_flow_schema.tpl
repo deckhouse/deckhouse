@@ -14,7 +14,7 @@ spec:
     type: ByUser
   matchingPrecedence: 1000
   priorityLevelConfiguration:
-    name: {{ $priorityLevelConfiguration }}/
+    name: {{ $priorityLevelConfiguration }}
   rules:
     - resourceRules:
         - apiGroups:
