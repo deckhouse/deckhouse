@@ -75,3 +75,6 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
+  securityContext:
+    seccompProfile:
+      type: Unconfined
