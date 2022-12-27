@@ -32,12 +32,9 @@ import (
 )
 
 const (
-	// ca expiration = 10 years
-	caExpiryDurationStr = "87600h"
-	// certificate expiration - 10 years
-	certExpiryDuration = 87600 * time.Hour
-	// when to recreate a certificate - 6 month (total expiration 10 years, so we will have enough time to recreate it)
-	certOutdatedDuration = 4380 * time.Hour
+	caExpiryDurationStr  = "87600h"          // 10 years
+	certExpiryDuration   = 87600 * time.Hour // 10 years
+	certOutdatedDuration = 4380 * time.Hour  // 6 month, just enough to renew certificate
 
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
