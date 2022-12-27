@@ -115,7 +115,7 @@ func (gss GenSelfSignedTLSHookConf) path() string {
 }
 
 type certValues struct {
-	Ca  string `json:"ca"`
+	CA  string `json:"ca"`
 	Crt string `json:"crt"`
 	Key string `json:"key"`
 }
@@ -124,7 +124,7 @@ type certValues struct {
 // in values.
 func convCertToValues(cert certificate.Certificate) certValues {
 	return certValues{
-		Ca:  cert.CA,
+		CA:  cert.CA,
 		Crt: cert.Cert,
 		Key: cert.Key,
 	}
