@@ -199,6 +199,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		cachePath := metaConfig.CachePath()
+		log.InfoF("State config for prefix %s:  %s", metaConfig.ClusterPrefix, cachePath)
 		if err = cache.Init(cachePath); err != nil {
 			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 		}

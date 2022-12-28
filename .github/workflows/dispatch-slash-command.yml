@@ -28,6 +28,7 @@ jobs:
     outputs:
       trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
       trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
+      trigger_for_pull_request: ${{steps.check.outputs.trigger_for_pull_request}}
     steps:
       - name: Check conditions for release issue
         id: check
@@ -68,6 +69,11 @@ jobs:
               return core.setOutput('trigger_for_changelog', 'true');
             }
 
+            // For slash commands on pull requests, e.g. 'e2e abort' command.
+            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'CONTRIBUTOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
+              core.notice(`Comment on pull request.`);
+              return core.setOutput('trigger_for_pull_request', 'true');
+            }
 
   trigger_for_release_issue:
     name: Trigger workflow by comment
@@ -89,6 +95,27 @@ jobs:
           script: |
             const ci = require('./.github/scripts/js/ci');
             return await ci.runSlashCommandForReleaseIssue({github, context, core});
+
+  trigger_for_pull_request:
+    name: Trigger workflow by comment from pull-request
+    runs-on: ubuntu-latest
+    needs:
+    - conditions
+    if: ${{needs.conditions.outputs.trigger_for_pull_request == 'true'}}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
+      - name: Run workflow
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/pr-command-dispatcher');
+            return await ci.runSlashCommandForPullRequest({github, context, core});
 
   trigger_for_changelog:
     name: Dispatch Changelog Event
