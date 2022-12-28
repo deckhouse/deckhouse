@@ -99,6 +99,8 @@ spec:
                       description: "Status of the condition summary."
             spec:
               properties:
+                fastShutdown:
+                  description: Снижает время drain'а машин до 5 минут.
                 nodeType: &nodeType
                   description: |
                     Тип узлов, которые представляет эта группа:
