@@ -276,12 +276,18 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
 
 ## How do I configure additional audit policies?
 
-1. Enable [the following flag](configuration.html#parameters-apiserver-auditpolicyenabled) in the `d8-system/deckhouse` `ConfigMap`:
+1. Enable [the auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) flag in the module configuration:
 
    ```yaml
-   controlPlaneManager: |
-     apiserver:
-       auditPolicyEnabled: true
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 1
+     settings:
+       apiserver:
+         auditPolicyEnabled: true
    ```
 
 2. Create the `kube-system/audit-policy` Secret containing a `base64`-encoded `yaml` file:
@@ -311,37 +317,43 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
    - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy).
    - [The code of the generator script used in GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
-   Create a Secret from the file:
-
-   ```bash
-   kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
-   ```
-
 ### How to omit Deckhouse built-in policy rules?
 
-Set `apiserver.basicAuditPolicyEnabled` to `false`.
+Set the [apiserver.basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) module parameter to `false`.
 
 An example:
 
 ```yaml
-controlPlaneManager: |
-  apiserver:
-    auditPolicyEnabled: true
-    basicAuditPolicyEnabled: false
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      basicAuditPolicyEnabled: false
 ```
 
 ### How stream audit log to stdout instead of files?
 
-Set `apiserver.auditLog.output` to `stdout`.
+Set the [apiserver.auditLog.output](configuration.html#parameters-apiserver-auditlog) parameter to `Stdout`.
 
 An example:
 
 ```yaml
-controlPlaneManager: |
-  apiserver:
-    auditPolicyEnabled: true
-    auditLog:
-      output: Stdout
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      auditLog:
+        output: Stdout
 ```
 
 ### How to deal with the audit log?
@@ -390,9 +402,15 @@ In specific cases, if an application cannot run in multiple instances, there is 
 ### An example
 
 ```yaml
-controlPlaneManager: |
-  nodeMonitorGracePeriodSeconds: 10
-  failedNodePodEvictionTimeoutSeconds: 50
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    nodeMonitorGracePeriodSeconds: 10
+    failedNodePodEvictionTimeoutSeconds: 50
 ```
 
 In this case, if the connection to the node is lost, the applications will be restarted in about 1 minute.

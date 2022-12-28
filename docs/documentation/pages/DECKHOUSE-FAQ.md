@@ -228,7 +228,7 @@ This case is only valid if you don't have release channel images in your air-gap
 
 * If you want to bootstrap a cluster, you have to use the exact tag of a Docker image to install the Deckhouse Platform.
 For example, if you want to install release v1.32.13, you have to use image `your.private.registry.com/deckhouse/install:v1.32.13`. And you have to use `devBranch: v1.32.13` instead of `releaseChannel: XXX` in `config.yml`.
-* If you already have a cluster up and running, you have to remove `releaseChannel` setting from the ConfigMap `d8-system/deckhouse` and set the appropriate `image` parameter for `d8-system/deckhouse` Deployment. Further updates have to be done by a manual update of the `image` parameter of the `d8-system/deckhouse` Deployment.
+* If you already have a cluster up and running, you have to remove `releaseChannel` setting from the `deckhouse` module configuration and set the appropriate `image` parameter for `d8-system/deckhouse` Deployment. Further updates have to be done by a manual update of the `image` parameter of the `d8-system/deckhouse` Deployment.
 For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.32.13` for release v1.32.13.
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
@@ -248,7 +248,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `ca.crt` near the script and add the `--ca-file ca.crt` option to the script.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
-* If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `d8-system/deckhouse` ConfigMap.
+* If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
