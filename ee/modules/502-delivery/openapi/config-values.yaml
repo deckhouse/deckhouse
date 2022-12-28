@@ -91,7 +91,7 @@ properties:
     description: |
       Node selector for the Argo CD server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -116,4 +116,4 @@ properties:
     description: |
       Node tolerations for the Argo CD server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).

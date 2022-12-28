@@ -199,7 +199,7 @@ metadata:
 
 ### kubectl
 
-Если настроен [внешний доступ к Kubernetes API]((../../modules/150-user-authn/configuration.html#параметры)), то `argocd`
+Если настроен [внешний доступ к Kubernetes API](../../modules/150-user-authn/configuration.html#parameters-publishapi), то `argocd`
 может использовать запросы к kube-apiserver:
 
 ```sh
