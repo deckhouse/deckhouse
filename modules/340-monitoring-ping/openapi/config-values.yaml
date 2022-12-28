@@ -3,7 +3,7 @@ properties:
   externalTargets:
     type: array
     description: |
-      To monitor additional IP addresses, insert their names/hosts into the module config in the deckhouse ConfigMap.
+      A list of additional hosts to monitor.
     items:
       type: object
       required: [host]

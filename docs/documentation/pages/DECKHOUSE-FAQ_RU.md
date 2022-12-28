@@ -6,12 +6,18 @@ lang: ru
 
 ## Как узнать все параметры Deckhouse?
 
-Все ключевые настройки конфигурации Deckhouse, включая параметры модулей, хранятся в ConfigMap'е `deckhouse` пространства имён `d8-system`.
+Настройки конфигурации Deckhouse, включая параметры модулей, хранятся в cluster-scoped ресурсах `ModuleConfig` и custom resource’ах. ModuleConfig `global` содержит глобальные настройки Deckhouse. Подробнее — [в документации](./).
 
-Чтобы посмотреть конфигурацию Deckhouse, воспользуйтесь командной:
+Вывести список всех ModuleConfig:
 
 ```shell
-kubectl -n d8-system get cm deckhouse -o yaml
+kubectl get mc
+```
+
+Вывести глобальные настройки:
+
+```shell
+kubectl get mc global -o yaml
 ```
 
 ## Как найти документацию по установленной у меня версии?

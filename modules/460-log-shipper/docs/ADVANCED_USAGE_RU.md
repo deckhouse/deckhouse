@@ -4,11 +4,20 @@ title: "Module log-shipper: advanced usage"
 
 ## Как включить debug-логи?
 
-Установите опцию debug для модуля в `true` в configmap Deckhouse как в приведенном ниже куске конфигурации:
+Включите параметр [debug](configuration.html#parameters-debug) модуля.
+
+Пример конфигурации модуля:
 
 ```yaml
-logShipper: |
-  debug: true
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: log-shipper
+spec:
+  version: 1
+  enabled: true
+  settings:
+    debug: true
 ```
 
 После этого в логах вы найдете много полезной информации о HTTP-запросах, переиспользовании подключения, детальные ошибки, и т.д.
