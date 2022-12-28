@@ -20,12 +20,11 @@ spec:
 - `spec.nodeGroups` must match NodeGroup where prometheus Pods run.
 - `spec.path` - node data path.
 
-Add to the Deckhouse configuration (configMap `d8-system/deckhouse`):
+Add to the following parameters to the `prometheus` module configuration:
 
 ```yaml
-prometheus: |
-  longtermStorageClass: localpath-system
-  storageClass: localpath-system
+longtermStorageClass: localpath-system
+storageClass: localpath-system
 ```
 
 Wait for the restart of Prometheus Pods.

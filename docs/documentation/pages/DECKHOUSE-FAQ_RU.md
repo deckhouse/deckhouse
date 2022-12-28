@@ -232,7 +232,7 @@ chmod 700 d8-push.sh
 
 * Если вы хотите создать кластер, то вы должны использовать точный тег образа Deckhouse, чтобы установить Deckhouse Platform.
 Например, если вы хотите установить релиз v1.32.13, то вы должны использовать образ `your.private.registry.com/deckhouse/install:v1.32.13`. Также вы должны указать `devBranch: v1.32.13` вместо `releaseChannel: XXX` в `config.yml`.
-* Если у вас уже есть рабочий кластер, то вы должны удалить `releaseChannel` из ConfigMap `d8-system/deckhouse` и указать выбранный образ Deckhouse в поле `image` в Deployment `d8-system/deckhouse`. Дальнейшее обновление необходимо производить также изменяя образ вручную.
+* Если у вас уже есть рабочий кластер, то вы должны удалить `releaseChannel` из конфигурации модуля `deckhouse` и указать выбранный образ Deckhouse в поле `image` в Deployment `d8-system/deckhouse`. Дальнейшее обновление необходимо производить также изменяя образ вручную.
 Например, для релиза v1.32.13 следует указывать в поле `image` значение `your.private.registry.com/deckhouse:v1.32.13`.
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
@@ -252,7 +252,7 @@ chmod 700 d8-push.sh
   * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию `--ca-file ca.crt`.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из ConfigMap `d8-system/deckhouse`.
+* Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
 * Проверьте, не осталось ли в кластере Pod'ов с оригинальным адресом registry:
 
   ```shell
