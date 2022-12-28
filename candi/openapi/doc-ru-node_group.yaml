@@ -99,7 +99,7 @@ spec:
                       description: "Status of the condition summary."
             spec:
               properties:
-                fastShutdown: &fastShutdown
+                quickShutdown: &quickShutdown
                   description: Снижает время drain'а машин до 5 минут.
                 nodeType: &nodeType
                   description: |
@@ -319,7 +319,7 @@ spec:
             status: *status
             spec:
               properties:
-                fastShutdown: *fastShutdown
+                quickShutdown: *quickShutdown
                 nodeType: *nodeType
                 cri:
                   description: |
@@ -361,7 +361,7 @@ spec:
             status: *status
             spec:
               properties:
-                fastShutdown:
+                quickShutdown:
                   description: Снижает время drain'а машин до 5 минут.
                 nodeType:
                   description: |

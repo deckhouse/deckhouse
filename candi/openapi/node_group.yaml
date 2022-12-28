@@ -162,7 +162,7 @@ spec:
               required:
                 - nodeType
               properties:
-                fastShutdown:
+                quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
                   default: false
@@ -779,7 +779,7 @@ spec:
               required:
                 - nodeType
               properties:
-                fastShutdown:
+                quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
                   default: false
@@ -1390,7 +1390,7 @@ spec:
               required:
                 - nodeType
               properties:
-                fastShutdown:
+                quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
                   default: false
