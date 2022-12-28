@@ -27,18 +27,6 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 ```
 {% endsnippetcut %}
 
-<div id="standard-layout-notes" style="display:none" markdown="1">
-**Внимание!**
-
-При использовании схемы расположения ресурсов **Standard**, в течение 3х минут после создания базовых сетевых ресурсов для всех подсетей необходимо включить `Cloud NAT`. Если этого не сделать, то процесс bootstrap'а **не сможет завершиться успешно**.
-
-Включить Cloud NAT можно вручную через веб-интерфейс.
-
-Пример:
-
-![Включение NAT](/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat_ru.png)
-</div>
-
 <script>
 $(document).ready(function() {
     if (sessionStorage.getItem('dhctl-layout').toLowerCase() === 'standard') {
