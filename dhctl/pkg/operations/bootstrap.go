@@ -389,7 +389,12 @@ func GetBastionHostFromCache() (string, error) {
 }
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
-	return log.Process("bootstrap", "Create master NodeGroup", func() error {
+	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
+		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
+		return nil
+	}
+
+	return log.Process("bootstrap", "Bootstrap additional master nodes", func() error {
 		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs)
 		if err != nil {
 			return err

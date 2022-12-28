@@ -66,14 +66,12 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		return log.Process("bootstrap", "Install Deckhouse", func() error {
-			kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
-			if err != nil {
-				return err
-			}
+		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		if err != nil {
+			return err
+		}
 
-			return operations.InstallDeckhouse(kubeCl, installConfig)
-		})
+		return operations.InstallDeckhouse(kubeCl, installConfig)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
