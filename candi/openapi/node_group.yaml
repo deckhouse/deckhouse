@@ -779,6 +779,10 @@ spec:
               required:
                 - nodeType
               properties:
+                fastShutdown:
+                  type: boolean
+                  description: Lowers machine drain timeout to 5 minutes.
+                  default: false
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -1386,6 +1390,10 @@ spec:
               required:
                 - nodeType
               properties:
+                fastShutdown:
+                  type: boolean
+                  description: Lowers machine drain timeout to 5 minutes.
+                  default: false
                 nodeType:
                   description: |
                     The type of nodes this group provides:
