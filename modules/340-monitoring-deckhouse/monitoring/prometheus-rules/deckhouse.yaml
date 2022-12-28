@@ -337,7 +337,8 @@
         Deckhouse config contains errors.
 
         Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
-        Edit Deckhouse config by running: `kubectl -n d8-system edit cm deckhouse`.
+
+        Edit Deckhouse global configuration by running `kubectl edit mc global` or configuration of the specific module by running `kubectl edit mc <MODULE_NAME>`
       summary: |
         Deckhouse config is invalid.
 

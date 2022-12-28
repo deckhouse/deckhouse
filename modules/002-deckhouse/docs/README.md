@@ -72,12 +72,12 @@ There are 3 options to pin a release:
   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
   ```
 
-- Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse ConfigMap.
+- Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse module configuration.
 
   In this case, you will hold a specified version and will not get any more updates.
 
   ```shell
   $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
-  $ kubectl -n d8-system edit cm deckhouse
+  $ kubectl edit mc deckhouse
     // remove releaseChannel
   ```

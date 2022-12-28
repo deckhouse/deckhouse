@@ -77,19 +77,23 @@ annotations:
 
 ## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
 
-Для начала, в ConfigMap `deckhouse` настройте `publishAPI`:
+Сгенерировать `kubeconfig` для удаленного доступа к кластеру через `kubectl` можно через веб-интерфейс `kubeconfigurator`.
 
-{% raw %}
+Настройте параметр [publishAPI](configuration.html#parameters-publishapi):
+- Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
 
-```yaml
-  userAuthn: |
-    publishAPI:
-      enable: true
-```
+  ```shell
+  kubectl edit mc user-authn
+  ```
 
-{% endraw %}
+- Добавьте следующую секцию в блок `settings` и сохраните изменения:
 
-После по адресу `kubeconfig.%publicDomainTemplate%` появится веб-интерфейс, позволяющий сгенерировать `kubeconfig`.
+  ```yaml
+  publishAPI:
+    enable: true
+  ```
+
+Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
 
 ### Настройка kube-apiserver
 
