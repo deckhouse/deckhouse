@@ -18,6 +18,7 @@ spec:
   # [<ru>] возможно, захотите изменить
   rootDiskSize: 70
   template: *!CHANGE_TEMPLATE_NAME*
+  mainNetwork: *!CHANGE_NETWORK_NAME*
 ---
 # [<en>] section containing the parameters of worker node group
 # [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
