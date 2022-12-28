@@ -165,7 +165,6 @@ spec:
                 quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
-                  default: false
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -782,7 +781,6 @@ spec:
                 quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
-                  default: false
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -1393,7 +1391,6 @@ spec:
                 quickShutdown:
                   type: boolean
                   description: Lowers machine drain timeout to 5 minutes.
-                  default: false
                 nodeType:
                   description: |
                     The type of nodes this group provides:
