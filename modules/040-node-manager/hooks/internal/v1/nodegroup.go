@@ -87,6 +87,9 @@ type NodeGroupSpec struct {
 
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	// Quick shutdown results in faster drain. Optional
+	QuickShutdown bool `json:"quickShutdown,omitempty"`
 }
 
 type CRI struct {
