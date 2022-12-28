@@ -20,12 +20,11 @@ spec:
 - `spec.nodeGroups` должен совпадать с NodeGroup prometheus'ов.
 - `spec.path` - путь на узле где будут лежать данные.
 
-Добавить в конфигурацию Deckhouse (configMap `d8-system/deckhouse`):
+Добавить в конфигурацию модуля `prometheus` следующие параметры:
 
 ```yaml
-prometheus: |
-  longtermStorageClass: localpath-system
-  storageClass: localpath-system
+longtermStorageClass: localpath-system
+storageClass: localpath-system
 ```
 
 Дождаться переката Pod'ов Prometheus.

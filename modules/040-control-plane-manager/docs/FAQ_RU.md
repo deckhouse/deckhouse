@@ -276,12 +276,18 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
 
 ## Как настроить дополнительные политики аудита?
 
-1. Включите [флаг](configuration.html#parameters-apiserver-auditpolicyenabled) в `ConfigMap` `d8-system/deckhouse`:
+1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
 
    ```yaml
-   controlPlaneManager: |
-     apiserver:
-       auditPolicyEnabled: true
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 1
+     settings:
+       apiserver:
+         auditPolicyEnabled: true
    ```
 
 2. Создайте Secret `kube-system/audit-policy` с файлом политик, закодированным в `base64`:
@@ -312,37 +318,43 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
    - [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/).
    - [Опираясь на код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
-   Создать Secret вручную из файла можно командой:
-
-   ```bash
-   kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
-   ```
-
 ### Как исключить встроенные политики аудита?
 
-Установите параметр `apiserver.basicAuditPolicyEnabled` в `false`.
+Установите параметр [apiserver.basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) модуля в `false`.
 
 Пример:
 
 ```yaml
-controlPlaneManager: |
-  apiserver:
-    auditPolicyEnabled: true
-    basicAuditPolicyEnabled: false
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      basicAuditPolicyEnabled: false
 ```
 
 ### Как вывести аудит-лог в стандартный вывод вместо файлов?
 
-Установите параметр `apiserver.auditLog.output` в значение `stdout`.
+Установите параметр [apiserver.auditLog.output](configuration.html#parameters-apiserver-auditlog) модуля в значение `Stdout`.
 
 Пример:
 
 ```yaml
-controlPlaneManager: |
-  apiserver:
-    auditPolicyEnabled: true
-    auditLog:
-      output: Stdout
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    apiserver:
+      auditPolicyEnabled: true
+      auditLog:
+        output: Stdout
 ```
 
 ### Как работать с журналом аудита?
@@ -391,9 +403,15 @@ kubectl -n kube-system delete secret audit-policy
 ### Пример
 
 ```yaml
-controlPlaneManager: |
-  nodeMonitorGracePeriodSeconds: 10
-  failedNodePodEvictionTimeoutSeconds: 50
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 1
+  settings:
+    nodeMonitorGracePeriodSeconds: 10
+    failedNodePodEvictionTimeoutSeconds: 50
 ```
 
 В этом случае при потере связи с узлом, приложения будут перезапущены через ~ 1 минуту.
