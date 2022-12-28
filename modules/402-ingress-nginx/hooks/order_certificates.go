@@ -101,9 +101,9 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 			return fmt.Errorf("can't get Secret %s: %v", secretName, err)
 		}
 
-		// If existing Certificate expires in more than 7 days — use it.
+		// If existing Certificate expires in more than 365 days — use it.
 		if secret != nil && len(secret.Cert) > 0 && len(secret.Key) > 0 {
-			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*7)
+			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*365) // 1 year
 			if err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 			fmt.Sprintf("nginx-ingress:%s", controller.Name),
 			caAuthority,
 			certificate.WithGroups("ingress-nginx:auth"),
-			certificate.WithSigningDefaultExpiry(87600*time.Hour),
+			certificate.WithSigningDefaultExpiry(10*365*24*time.Hour), // 10 years
 			certificate.WithSigningDefaultUsage([]string{
 				"signing",
 				"key encipherment",
