@@ -57,6 +57,7 @@ spec:
       containers:
       - name: psi-monitor
         image: {{ include "helm_lib_module_image" (list . "earlyOom") }}
+        args: ["30"]
         securityContext:
           privileged: true
         volumeMounts:
