@@ -43,6 +43,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-flannel/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/035-cni-simple-bridge/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"

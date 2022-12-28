@@ -20,6 +20,8 @@ import (
 	"fmt"
 )
 
+// WrapName wraps metric name with a prefix which is automatically fetched by flant-pricing in
+// the ee/modules/600-flant-integration/templates/pricing/config.yaml
 func WrapName(n string) string {
 	return fmt.Sprintf("d8_telemetry_%s", n)
 }
