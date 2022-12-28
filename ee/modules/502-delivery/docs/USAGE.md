@@ -178,7 +178,7 @@ To do so:
 
 ### kubectl
 
-If [external access to Kubernetes API]((../../modules/150-user-authn/configuration.html#parameters)) is configured, `argocd` can use requests to kube-apiserver:
+If [external access to Kubernetes API](../../modules/150-user-authn/configuration.html#parameters-publishapi) is configured, `argocd` can use requests to kube-apiserver:
 
 ```sh
 argocd login argocd.example.com --core
