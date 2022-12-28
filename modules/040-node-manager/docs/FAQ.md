@@ -386,7 +386,7 @@ There are two ways to solve this problem:
 2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 > Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
-> To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the `global.modules.placement.customTolerationKeys` field of the `d8-system/deckhouse` ConfigMap. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+> To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 
 ## How to allocate nodes to system components?
 
