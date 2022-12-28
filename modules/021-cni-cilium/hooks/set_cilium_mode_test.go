@@ -17,6 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -203,3 +207,35 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 })
+
+func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {
+	var (
+		secretTemplate = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cni-configuration
+  namespace: kube-system
+type: Opaque`
+	)
+
+	jsonByte, _ := generateJSONCiliumConf(mode, masqueradeMode)
+	secretTemplate = fmt.Sprintf("%s\ndata:\n  cni: %s", secretTemplate, base64.StdEncoding.EncodeToString([]byte(cni)))
+	if mode != "" {
+		secretTemplate = fmt.Sprintf("%s\n  cilium: %s", secretTemplate, base64.StdEncoding.EncodeToString(jsonByte))
+	}
+	return secretTemplate
+}
+
+func generateJSONCiliumConf(mode string, masqueradeMode string) ([]byte, error) {
+	var confMAP CiliumConfigStruct
+	if mode != "" {
+		confMAP.Mode = mode
+	}
+	if masqueradeMode != "" {
+		confMAP.MasqueradeMode = masqueradeMode
+	}
+
+	return json.Marshal(confMAP)
+}
