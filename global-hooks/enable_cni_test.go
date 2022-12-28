@@ -128,7 +128,7 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 		for cniName, module := range cniNameToModule {
 			entries = append(entries, table.Entry(fmt.Sprintf("When %s CNI enabled", cniName), cniName, module))
 		}
-		table.DescribeTable("ff", func(cniName, module string) {
+		table.DescribeTable("CNI specified", func(cniName, module string) {
 			// set valid CNI name
 			f.BindingContexts.Set(f.KubeStateSet(cniConfig(cniName) + deckhouseCM))
 			f.RunHook()
