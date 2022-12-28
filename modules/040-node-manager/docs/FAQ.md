@@ -350,21 +350,23 @@ spec:
 
 | The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
 |---------------------------------------|----------------------------|-------------------|-----------------|
-| kubelet.maxPods                       | -                          | -                 | +               |
-| kubelet.rootDir                       | -                          | -                 | +               |
+| chaos                                 | -                          | -                 | -               |
+| cloudInstances.classReference         | -                          | +                 | -               |
+| cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
 | cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
-| nodeTemplate                          | -                          | -                 | -               |
-| chaos                                 | -                          | -                 | -               |
-| kubernetesVersion                     | -                          | -                 | +               |
-| static                                | -                          | -                 | +               |
 | disruptions                           | -                          | -                 | -               |
-| cloudInstances.classReference         | -                          | +                 | -               |
+| kubelet.maxPods                       | -                          | -                 | +               |
+| kubelet.rootDir                       | -                          | -                 | +               |
+| kubernetesVersion                     | -                          | -                 | +               |
+| nodeTemplate                          | -                          | -                 | -               |
+| static                                | -                          | -                 | +               |
+| update.maxConcurrent                  | -                          | -                 | -               |
 
 Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource for more information about the parameters.
 
-Changing the `instancePrefix` parameter in the Deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones.
+Changing the `InstanceClass` or `instancePrefix` parameter in the Deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones. The number of `machinedeployments` ordered at the same time is determined by the `cloud Instances.maxSurgePerZone` parameter.
 
 During the disruption update, an evict of the pods from the node is performed. If any pod failes to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
 
