@@ -5,12 +5,18 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-All the essential Deskhouse settings (including module parameters) are stored in the `deckhouse` ConfigMap in the `d8-system` namespace.
+All the Deskhouse settings (including module parameters) are stored in cluster scoped ModuleConfig resources and custom resources. The `global` ModuleConfig contains global Deckhouse settings. Read more in [the documentation](./).
 
-To view Deckhouse settings use the following command:
+To get list of all ModuleConfigs:
 
 ```shell
-kubectl -n d8-system get cm deckhouse -o yaml
+kubectl get mc
+```
+
+To view global Deckhouse settings:
+
+```shell
+kubectl get mc global -o yaml
 ```
 
 ## How do I find the documentation for the version installed?

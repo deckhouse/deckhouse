@@ -4,11 +4,18 @@ title: "Module log-shipper: advanced usage"
 
 ## How to enable debugging logs?
 
-Set the debug option of the module to `true` in the Deckhouse configmap as the following snippet shows:
+Enable the [debug](configuration.html#parameters-debug) parameter of the module.
 
 ```yaml
-logShipper: |
-  debug: true
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: log-shipper
+spec:
+  version: 1
+  enabled: true
+  settings:
+    debug: true
 ```
 
 Then in logs, you will find a lot of helpful information about HTTP requests, connects reusing, detailed traces, and so on.

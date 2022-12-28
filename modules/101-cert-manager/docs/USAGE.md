@@ -28,7 +28,7 @@ Here:
 * you can issue a certificate with multiple DNS names (as in the example above),
 * you can validate different domains that are part of the same certificate using different Ingress controllers.
 
-Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
+Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
 ## Issuing a DNS wildcard certificate using Cloudflare
 
@@ -39,14 +39,10 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
    You will see the key for interacting with the Cloudflare API (as well as the account email).
 
-2. Edit the deckhouse ConfigMap by adding the following section:
-
-   ```shell
-   kubectl -n d8-system edit cm deckhouse
-   ```
+2. Edit the [cert-manager module configuration](configuration.html) and add the following parameters:
 
    ```yaml
-   certManager: |
+   settings:
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
@@ -54,7 +50,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
    or
 
    ```yaml
-   certManager: |
+   settings:
      cloudflareAPIToken: some-token
      cloudflareEmail: some@mail.somedomain
    ```
@@ -138,14 +134,10 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
    * Go to the [user management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) and create a user with the above policy.
 
-2. Edit the Deckhouse ConfigMap by adding the following section:
-
-   ```shell
-   kubectl -n d8-system edit cm deckhouse
-   ```
+2. Edit the [cert-manager module configuration](configuration.html) and add the following parameters:
 
    ```yaml
-   certManager: |
+   settings:
      route53AccessKeyID: AKIABROTAITAJMPASA4A
      route53SecretAccessKey: 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
    ```
