@@ -28,7 +28,7 @@ spec:
 * можно заказать сертификат с дополнительными именами (как в примере),
 * можно валидировать разные домены, входящие в один сертификат, через разные Ingress-контроллеры.
 
-Подробнее можно прочитать [здесь](https://cert-manager.io/docs/tutorials/acme/http-validation/).
+Подробнее можно прочитать [в документации cert-manager](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
 ## Заказ wildcard-сертификата с DNS в Cloudflare
 
@@ -39,14 +39,10 @@ spec:
 
    В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
 
-2. Редактируем конфигурационный ConfigMap deckhouse, добавляя такую секцию:
-
-   ```shell
-   kubectl -n d8-system edit cm deckhouse
-   ```
+2. Редактируем [настройки модуля cert-manager](configuration.html) и добавляем такую секцию:
 
    ```yaml
-   certManager: |
+   settings:
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
@@ -54,7 +50,7 @@ spec:
    или
 
    ```yaml
-   certManager: |
+   settings:
      cloudflareAPIToken: some-token
      cloudflareEmail: some@mail.somedomain
    ```
@@ -138,14 +134,10 @@ spec:
 
    * Заходим на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users). Создаем пользователя с созданной ранее политикой.
 
-2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
-
-   ```shell
-   kubectl -n d8-system edit cm deckhouse
-   ```
+2. Редактируем [настройки модуля cert-manager](configuration.html) и добавляем такую секцию:
 
    ```yaml
-   certManager: |
+   settings:
      route53AccessKeyID: AKIABROTAITAJMPASA4A
      route53SecretAccessKey: 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
    ```

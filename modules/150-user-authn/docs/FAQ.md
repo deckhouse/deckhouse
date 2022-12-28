@@ -77,19 +77,23 @@ On the other hand, for the Kubernetes Dashboard, it is a crucial functionality b
 
 ## How can I generate a kubeconfig and access Kubernetes API?
 
-Firstly, in the `deckhouse` ConfigMap configure `publishAPI`:
+You can generate `kubeconfig` for remote access to the cluster via `kubectl` via the `kubeconfigurator` web interface.
 
-{% raw %}
+Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
+- Open the `user-authn` module settings (create the moduleConfig `user-authn` resource if there is none):
 
-```yaml
-  userAuthn: |
-    publishAPI:
-      enable: true
-```
+  ```shell
+  kubectl edit mc user-authn
+  ```
 
-{% endraw %}
+- Add the following section to the `settings` block and save the changes:
 
-After that you can access a web interface at `kubeconfig.%publicDomainTemplate%` that allows you to generate `kubeconfig`.
+  ```yaml
+  publishAPI:
+    enable: true
+  ```
+
+The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
 
 ### Configuring kube-apiserver
 
