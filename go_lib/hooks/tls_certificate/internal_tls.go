@@ -32,9 +32,9 @@ import (
 )
 
 const (
-	caExpiryDurationStr  = "87600h"          // 10 years
-	certExpiryDuration   = 87600 * time.Hour // 10 years
-	certOutdatedDuration = 4380 * time.Hour  // 6 month, just enough to renew certificate
+	caExpiryDurationStr  = "87600h"                    // 10 years
+	certExpiryDuration   = (24 * time.Hour) * 365 * 10 // 10 years
+	certOutdatedDuration = (24 * time.Hour) * 365 / 2  // 6 month, just enough to renew certificate
 
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
