@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverMinimalNodesOSVersiopon)
 
 const (
-	minVersionValuesKey = "nodes:minimalOSVersion:ubuntu"
+	minVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
 )
 
 func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

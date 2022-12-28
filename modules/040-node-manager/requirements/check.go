@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey = "nodes:minimalOSVersion:ubuntu"
-	requirementsKey           = "nodesOSMinimalVersionUbuntu"
+	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
+	requirementsKey           = "nodesMinimalOSVersionUbuntu"
 )
 
 func init() {
