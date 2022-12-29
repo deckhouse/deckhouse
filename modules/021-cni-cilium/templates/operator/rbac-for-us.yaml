@@ -68,6 +68,13 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - cilium.io
   resources:
   - ciliumnetworkpolicies
