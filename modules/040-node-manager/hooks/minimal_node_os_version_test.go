@@ -33,7 +33,7 @@ metadata:
     node.deckhouse.io/group: group
 `
 
-	node1 = `
+	nodeUbuntu2004 = `
 ---
 apiVersion: v1
 kind: Node
@@ -45,7 +45,7 @@ status:
   nodeInfo:
     osImage: Ubuntu 20.04.3 LTS
 `
-	node2 = `
+	nodeUbuntu1804 = `
 ---
 apiVersion: v1
 kind: Node
@@ -57,7 +57,7 @@ status:
   nodeInfo:
     osImage: Ubuntu 18.04.5 LTS
 `
-	node3 = `
+	nodeCentos7 = `
 ---
 apiVersion: v1
 kind: Node
@@ -102,7 +102,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 	Context("One node with Ubuntu OS", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1))
+			f.BindingContexts.Set(f.KubeStateSet(nodeUbuntu2004))
 			f.RunHook()
 		})
 
@@ -117,7 +117,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 	Context("One node with Centos OS and requirements set", func() {
 		BeforeEach(func() {
 			requirements.SaveValue(minVersionValuesKey, "1.2.3")
-			f.BindingContexts.Set(f.KubeStateSet(node3))
+			f.BindingContexts.Set(f.KubeStateSet(nodeCentos7))
 			f.RunHook()
 		})
 
@@ -130,7 +130,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 	Context("Two nodes with Ubuntu OS", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + node2))
+			f.BindingContexts.Set(f.KubeStateSet(nodeUbuntu2004 + nodeUbuntu1804))
 			f.RunHook()
 		})
 
@@ -144,7 +144,7 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 
 	Context("Two nodes with Ubuntu OS and one node with CentOS", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + node2 + node3))
+			f.BindingContexts.Set(f.KubeStateSet(nodeUbuntu2004 + nodeUbuntu1804 + nodeCentos7))
 			f.RunHook()
 		})
 
