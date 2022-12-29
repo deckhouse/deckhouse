@@ -1,5 +1,4 @@
 ---
----
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALPINE }}
 docker:
@@ -21,10 +20,7 @@ git:
 - add: /
   to: /deckhouse
   includePaths:
-    - candi
-  excludePaths:
-    - "candi/docs"
-    - "candi/cloud-providers"
+    - "candi/openapi"
 shell:
   install:
     - "apk update && apk add ca-certificates"
