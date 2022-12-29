@@ -1,0 +1,17 @@
+docs:
+  fixes:
+    - summary: Fix Deckhouse configuration instructions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3441
+ingress-nginx:
+  fixes:
+    - summary: Change certificate expiry time
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3413
+node-manager:
+  fixes:
+    - summary: Increase early-oom PSI threshold to 30 (from 5).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3427
+user-authn:
+  fixes:
+    - summary: Fix insecure OIDC Ca patch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3439
+
