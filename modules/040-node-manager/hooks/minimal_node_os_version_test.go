@@ -23,6 +23,16 @@ import (
 )
 
 const (
+	nodeWithoutOS = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: group
+`
+
 	node1 = `
 ---
 apiVersion: v1
@@ -64,9 +74,22 @@ status:
 var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	Context("Nodes objects is not find", func() {
+	Context("Nodes objects are not found", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("Should have no minimal version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			_, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeFalse())
+		})
+	})
+
+	Context("One node without status.nodeInfo.osImage set", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeWithoutOS))
 			f.RunHook()
 		})
 
@@ -91,13 +114,14 @@ var _ = Describe("node-manager :: minimal_node_os_version ", func() {
 		})
 	})
 
-	Context("One node with Centos OS", func() {
+	Context("One node with Centos OS and requirements set", func() {
 		BeforeEach(func() {
+			requirements.SaveValue(minVersionValuesKey, "1.2.3")
 			f.BindingContexts.Set(f.KubeStateSet(node3))
 			f.RunHook()
 		})
 
-		It("Should have no minimal version", func() {
+		It("Should remove minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			_, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeFalse())
