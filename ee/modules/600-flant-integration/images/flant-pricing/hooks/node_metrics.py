@@ -139,6 +139,14 @@ class Node:
     pricing_node_type: str
     # jqFiter: virtualization
     virtualization: str
+    # jqFilter: is_legacy_counted
+    is_legacy_counted: bool
+    # jqFilter: is_managed
+    is_managed: bool
+    # jqFilter: is_controlplane
+    is_controlplane: bool
+    # jqFilter: is_controlplane_tainted
+    is_controlplane_tainted: bool
 
     def pricing_type(self):
         """
@@ -206,7 +214,7 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
     for s in node_snapshots:
         filtered = s["filterResult"]
         if filtered is None:
-            # The node did not match the jqFilter, e.g. control-plane node without expected taints
+            # Should not happen
             continue
 
         ng_name = filtered["nodeGroup"]
@@ -220,6 +228,10 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
                 node_group=node_group,
                 pricing_node_type=filtered["pricingNodeType"],
                 virtualization=filtered["virtualization"],
+                is_legacy_counted=filtered["is_legacy_counted"],
+                is_managed=filtered["is_managed"],
+                is_controlplane=filtered["is_controlplane"],
+                is_controlplane_tainted=filtered["is_controlplane_tainted"],
             )
         )
     return nodes
