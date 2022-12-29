@@ -17,6 +17,8 @@ limitations under the License.
 package resources
 
 import (
+	"strings"
+
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/api/flowcontrol/v1beta2"
 
@@ -50,6 +52,11 @@ func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObj
 		var fs v1beta2.FlowSchema
 
 		sdk.FromUnstructured(&object.Unstructured, &fs)
+
+		if !strings.HasPrefix(fs.Spec.PriorityLevelConfiguration.Name, "cluster-") {
+			continue
+		}
+		
 		for _, r := range fs.Spec.Rules {
 			for _, s := range r.Subjects {
 				if s.ServiceAccount != nil {
@@ -57,9 +64,19 @@ func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObj
 						return errors.EmptyRuleError
 					}
 				}
+
+				if s.Group != nil {
+					if strings.HasSuffix(s.Group.Name, sa.Unstructured.GetNamespace()) {
+						return errors.EmptyRuleError
+					}
+				}
 			}
 		}
 	}
 
-	return
+	return errors.NewLintRuleError(
+		"SA001",
+		sa.Identity(),
+		nil,
+		"Service account does not have matching FlowSchema")
 }
