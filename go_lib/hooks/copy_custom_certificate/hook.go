@@ -64,7 +64,7 @@ func RegisterHook(moduleName string) bool {
 				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "owner",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"helm"},
 					},
 				}},

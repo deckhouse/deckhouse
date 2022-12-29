@@ -24,7 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -39,16 +39,16 @@ func RegisterHook(namespace string) bool {
 				Name:                         "rbd_storageclass",
 				ApiVersion:                   "storage.k8s.io/v1",
 				Kind:                         "StorageClass",
-				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-				ExecuteHookOnEvents:          pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.Bool(false),
+				ExecuteHookOnEvents:          pointer.Bool(false),
 				FilterFunc:                   filterStorageClass,
 			},
 			{
 				Name:                         "rbd_secret",
 				ApiVersion:                   "v1",
 				Kind:                         "Secret",
-				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-				ExecuteHookOnEvents:          pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.Bool(false),
+				ExecuteHookOnEvents:          pointer.Bool(false),
 				FilterFunc:                   filterSecrets,
 				FieldSelector: &types.FieldSelector{
 					MatchExpressions: []types.FieldSelectorRequirement{
@@ -146,7 +146,7 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 			Data:     existingSecret.Data,
 			Type:     existingSecret.Type,
 			TypeMeta: existingSecret.TypeMeta,
-			ObjectMeta: v12.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      existingSecret.Name,
 				Namespace: namespace,
 				Labels:    existingSecret.Labels,

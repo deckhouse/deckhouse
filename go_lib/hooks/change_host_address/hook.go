@@ -65,7 +65,7 @@ func RegisterHook(appName, namespace string) bool {
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
 							Key:      "app",
-							Operator: "In",
+							Operator: metav1.LabelSelectorOpIn,
 							Values:   []string{appName},
 						},
 					},

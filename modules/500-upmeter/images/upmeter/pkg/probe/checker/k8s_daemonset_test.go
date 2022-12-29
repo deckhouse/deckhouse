@@ -296,7 +296,7 @@ func scheduledPod(name string) v1.Pod {
 								MatchExpressions: []v1.NodeSelectorRequirement{
 									{
 										Key:      "kubernetes.io/hostname",
-										Operator: "In",
+										Operator: v1.NodeSelectorOpIn,
 										Values:   []string{name},
 									},
 								},

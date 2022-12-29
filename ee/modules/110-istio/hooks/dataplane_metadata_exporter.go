@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "istio.io/rev",
-						Operator: "Exists",
+						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
 			},
@@ -67,16 +67,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "job-name",
-						Operator: "DoesNotExist",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 					{
 						Key:      "heritage",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"upmeter"},
 					},
 					{
 						Key:      "sidecar.istio.io/inject",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"false"},
 					},
 				},
@@ -91,7 +91,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "heritage",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"upmeter", "deckhouse"},
 					},
 				},
@@ -106,7 +106,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "heritage",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"upmeter", "deckhouse"},
 					},
 				},
@@ -121,7 +121,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "heritage",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"upmeter", "deckhouse"},
 					},
 				},
@@ -136,7 +136,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "heritage",
-						Operator: "NotIn",
+						Operator: metav1.LabelSelectorOpNotIn,
 						Values:   []string{"upmeter", "deckhouse"},
 					},
 				},

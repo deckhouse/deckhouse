@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "istio.io/rev",
-						Operator: "Exists",
+						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
 			},
@@ -86,12 +86,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "sidecar.istio.io/inject",
-						Operator: "In",
+						Operator: metav1.LabelSelectorOpIn,
 						Values:   []string{"true"},
 					},
 					{
 						Key:      "istio.io/rev",
-						Operator: "DoesNotExist",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 				},
 			},
@@ -106,11 +106,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
 							Key:      "istio.io/rev",
-							Operator: "DoesNotExist",
+							Operator: metav1.LabelSelectorOpDoesNotExist,
 						},
 						{
 							Key:      "istio-injection",
-							Operator: "NotIn",
+							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   []string{"enabled"},
 						},
 					},
@@ -120,7 +120,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "istio.io/rev",
-						Operator: "Exists",
+						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
 			},

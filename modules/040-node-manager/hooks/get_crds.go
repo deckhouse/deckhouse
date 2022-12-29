@@ -130,7 +130,7 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "heritage",
-						Operator: "In",
+						Operator: metav1.LabelSelectorOpIn,
 						Values:   []string{"deckhouse"},
 					},
 				},

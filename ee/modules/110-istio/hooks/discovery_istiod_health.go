@@ -37,11 +37,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "istio.io/rev",
-						Operator: "Exists",
+						Operator: metav1.LabelSelectorOpExists,
 					},
 					{
 						Key:      "app",
-						Operator: "In",
+						Operator: metav1.LabelSelectorOpIn,
 						Values:   []string{"istiod"},
 					},
 				},

@@ -207,7 +207,7 @@ func createNodeAffinityObject(nodeName string) *v1.NodeAffinity {
 					MatchExpressions: []v1.NodeSelectorRequirement{
 						{
 							Key:      "kubernetes.io/hostname",
-							Operator: "In",
+							Operator: v1.NodeSelectorOpIn,
 							Values:   []string{nodeName},
 						},
 					},
