@@ -329,6 +329,11 @@ func (in *NodeGroupSpec) DeepCopyInto(out *NodeGroupSpec) {
 	in.Disruptions.DeepCopyInto(&out.Disruptions)
 	in.Update.DeepCopyInto(&out.Update)
 	in.Kubelet.DeepCopyInto(&out.Kubelet)
+	if in.QuickShutdown != nil {
+		in, out := &in.QuickShutdown, &out.QuickShutdown
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

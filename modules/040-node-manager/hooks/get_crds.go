@@ -486,6 +486,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.Kubelet.IsEmpty() {
 		res["kubelet"] = nodeGroupSpec.Kubelet
 	}
+	if nodeGroupSpec.QuickShutdown != nil {
+		res["quickShutdown"] = nodeGroupSpec.QuickShutdown
+	}
 
 	return res
 }
