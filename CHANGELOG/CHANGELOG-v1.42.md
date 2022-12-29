@@ -79,10 +79,12 @@
  - **[istio]** Replace CA for the Ingress validation of api-proxy, fix kiali `ClusterRole`. [#3395](https://github.com/deckhouse/deckhouse/pull/3395)
  - **[log-shipper]** Fix TLS certificates error for Kafka destination. [#3215](https://github.com/deckhouse/deckhouse/pull/3215)
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
+ - **[node-manager]** Increase early-oom PSI threshold to 30 (from 5). [#3427](https://github.com/deckhouse/deckhouse/pull/3427)
  - **[node-manager]** Show errors on scale-from-zero capacity planning. [#3316](https://github.com/deckhouse/deckhouse/pull/3316)
  - **[prometheus]** Set up `maxSamples` of query for the Main and Longterm Prometheus objects from `50000000` to `100000000`. [#3124](https://github.com/deckhouse/deckhouse/pull/3124)
     the `prometheus` module will be restarted.
  - **[registrypackages]** Allow downgrading RPMs in registrypackages for CentOS. [#3353](https://github.com/deckhouse/deckhouse/pull/3353)
+ - **[user-authn]** Fix insecure OIDC Ca patch. [#3439](https://github.com/deckhouse/deckhouse/pull/3439)
  - **[user-authn]** Fix crowd proxy certificate generation. [#3355](https://github.com/deckhouse/deckhouse/pull/3355)
  - **[user-authn]** kubeconfig generation doc clarifications (public and non-public CA for published API). [#3237](https://github.com/deckhouse/deckhouse/pull/3237)
  - **[user-authn]** Fixed the `generate_crowd_basic_auth_proxy_cert.go` hook. [#3223](https://github.com/deckhouse/deckhouse/pull/3223)
@@ -93,6 +95,8 @@
 ## Chore
 
 
+ - **[candi]** Temporary disable `seccomp` for `kube-controller-manager`. [#3426](https://github.com/deckhouse/deckhouse/pull/3426)
+ - **[candi]** Support for the Standard layout in Yandex Cloud. [#3411](https://github.com/deckhouse/deckhouse/pull/3411)
  - **[candi]** Upgraded patch versions of Kubernetes images: v1.25.5. [#3376](https://github.com/deckhouse/deckhouse/pull/3376)
     "Kubernetes control-plane components will restart, kubelet will restart"
  - **[ceph-csi]** Added script for semi-automatic migration of volumes from in-tree RBD driver to Ceph CSI, as well as instruction and alert. [#2973](https://github.com/deckhouse/deckhouse/pull/2973)
