@@ -103,4 +103,4 @@ subnetworkCIDR: 10.0.0.0/24
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
-sshPublicKey: *!CHANGE_SSH_KEY*
+sshKey: *!CHANGE_SSH_KEY*
