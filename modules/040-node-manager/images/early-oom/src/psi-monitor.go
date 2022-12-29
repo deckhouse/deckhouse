@@ -19,11 +19,11 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -56,10 +56,12 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("failed to get memory threshold argument")
 	}
-	memoryThresholdStr := os.Args[1]
-	memoryThreshold, err := strconv.ParseFloat(memoryThresholdStr, 64)
-	if err != nil {
-		log.Fatalf("failed to parse first argument: %s", err)
+	memoryThreshold := flag.Float64("memory-threshold", 0, "Memory threshold for PSI memory avg10")
+
+	flag.Parse()
+
+	if *memoryThreshold <= 0 {
+		log.Fatalf("Please, provide positive value in memory-threshold flag: %v", *memoryThreshold)
 	}
 
 	server := &http.Server{Addr: "127.0.0.1:8080"}
@@ -86,7 +88,7 @@ func main() {
 		case sig := <-c:
 			shutdown(sig, server)
 		case <-t.C:
-			if iteration(memoryThreshold) {
+			if iteration(*memoryThreshold) {
 				t.Reset(recoveryInterval)
 			} else {
 				t.Reset(pollInterval)
