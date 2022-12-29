@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +35,6 @@ import (
 const (
 	pollInterval     = 5 * time.Second
 	recoveryInterval = 15 * time.Second
-	memoryThreshold  = 5.00
 
 	sysrqTriggerFile  = "/proc/sysrq-trigger"
 	sysrqOOMCharacter = "f"
@@ -52,6 +52,17 @@ func init() {
 func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
+
+	if len(os.Args) < 2 {
+		log.Fatal("failed to get memory threshold argument")
+	}
+	memoryThreshold := flag.Float64("memory-threshold", 0, "Memory threshold for PSI memory avg10")
+
+	flag.Parse()
+
+	if *memoryThreshold <= 0 {
+		log.Fatalf("Please, provide positive value in memory-threshold flag: %v", *memoryThreshold)
+	}
 
 	server := &http.Server{Addr: "127.0.0.1:8080"}
 	http.Handle("/metrics", promhttp.Handler())
@@ -77,7 +88,7 @@ func main() {
 		case sig := <-c:
 			shutdown(sig, server)
 		case <-t.C:
-			if iteration() {
+			if iteration(*memoryThreshold) {
 				t.Reset(recoveryInterval)
 			} else {
 				t.Reset(pollInterval)
@@ -105,7 +116,7 @@ func probePSISupport() error {
 	return nil
 }
 
-func iteration() bool {
+func iteration(memoryThreshold float64) bool {
 	fs, err := procfs.NewDefaultFS()
 	if err != nil {
 		log.Fatal(err)
