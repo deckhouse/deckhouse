@@ -41,7 +41,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 --- a/bpf/lib/nodeport.h	(revision 6eaecaf87e165f7551fcf560f2ff8968e5056fe2)
-+++ b/bpf/lib/nodeport.h	(date 1672306951406)
++++ b/bpf/lib/nodeport.h	(date 1672307921389)
 @@ -855,7 +855,7 @@
 
  /* See comment in tail_rev_nodeport_lb4(). */
@@ -128,12 +128,12 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 +	switch (proto) {
 +#ifdef ENABLE_IPV4
 +	case bpf_htons(ETH_P_IP):
-+		ret = rev_nodeport_lb4(ctx, ifindex, &ext_err, false);
++		ret = rev_nodeport_lb4(ctx, &ifindex, &ext_err, false);
 +	break;
 +#endif /* ENABLE_IPV4 */
 +#ifdef ENABLE_IPV6
 +	case bpf_htons(ETH_P_IPV6):
-+		ret = rev_nodeport_lb6(ctx, ifindex, &ext_err, false);
++		ret = rev_nodeport_lb6(ctx, &ifindex, &ext_err, false);
 +	break;
 +#endif /* ENABLE_IPV6 */
 +	default:
