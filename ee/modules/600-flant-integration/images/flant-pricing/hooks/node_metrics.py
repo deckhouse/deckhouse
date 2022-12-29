@@ -44,23 +44,35 @@ from shell_operator import hook
 def main(ctx: hook.Context):
     metric_group = "group_node_metrics"
     metric_configs = (
-        # snapshot, metric_name
-        ("nodes", "flant_pricing_count_nodes_by_type"),  # DEPRECATED
-        ("nodes_all", "flant_pricing_nodes"),
-        ("nodes_cp", "flant_pricing_controlplane_nodes"),
-        ("nodes_t_cp", "flant_pricing_controlplane_tainted_nodes"),
+        # metric_name, selector
+        (
+            # DEPRECATED
+            "flant_pricing_count_nodes_by_type",
+            lambda node: node.is_legacy_counted,
+        ),
+        (
+            "flant_pricing_nodes",
+            lambda node: node.is_managed,
+        ),
+        (
+            "flant_pricing_controlplane_nodes",
+            lambda node: node.is_controlplane,
+        ),
+        (
+            "flant_pricing_controlplane_tainted_nodes",
+            lambda node: node.is_controlplane_tainted,
+        ),
     )
 
     # Collect node groups to use them in nodes
     ng_by_name = parse_nodegroups(ctx.snapshots["ngs"])
+    nodes = parse_nodes(ctx.snapshots["nodes"], ng_by_name)
 
     # Parse nodes of interest into MetricGenerators per snapshot
     metric_generators = []
-    for snap_name, metric_name in metric_configs:
+    for metric_name, select in metric_configs:
         # Parse lists of nodes
-        node_snaps = ctx.snapshots[snap_name]
-        nodes = parse_nodes(node_snaps, ng_by_name)
-
+        nodes = [node for node in nodes if select(node)]
         # Build MetricGenerator instance, it yields metrics for each node type
         metric_generators.append(
             MetricGenerator(
