@@ -21,6 +21,7 @@ import (
 	"k8s.io/api/flowcontrol/v1beta2"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 )
 
@@ -34,11 +35,12 @@ func ServiceAccountMustHaveFlowSchema(linter *rules.ObjectLinter) {
 			continue
 		}
 
-		ensureServiceAccountHaveFlowSchema(scope, object)
+		lerr := ensureServiceAccountHaveFlowSchema(scope, object)
+		linter.ErrorsList.Add(lerr)
 	}
 }
 
-func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObject) {
+func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObject) errors.LintRuleError {
 	for _, object := range scope.Objects() {
 		// Skip non-pod controllers and modules which control VPA themselves
 		if object.Unstructured.GetKind() != "FlowSchema" {
@@ -46,6 +48,18 @@ func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObj
 		}
 
 		var fs v1beta2.FlowSchema
+
 		sdk.FromUnstructured(&object.Unstructured, &fs)
+		for _, r := range fs.Spec.Rules {
+			for _, s := range r.Subjects {
+				if s.ServiceAccount != nil {
+					if s.ServiceAccount.Namespace == sa.Unstructured.GetNamespace() && s.ServiceAccount.Name == sa.Unstructured.GetName() {
+						return errors.EmptyRuleError
+					}
+				}
+			}
+		}
 	}
+
+	return
 }
