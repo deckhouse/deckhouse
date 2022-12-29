@@ -55,6 +55,7 @@ build {
       "scripts/apt.sh",
       "scripts/vmware-guestinfo.sh",
       "scripts/cleanup.sh",
+      "scripts/grub.sh",
       "scripts/clean-ssh-hostkeys.sh",
       "scripts/harden-ubuntu-user.sh"
     ]
