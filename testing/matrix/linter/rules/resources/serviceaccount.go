@@ -56,7 +56,7 @@ func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObj
 		if !strings.HasPrefix(fs.Spec.PriorityLevelConfiguration.Name, "cluster-") {
 			continue
 		}
-		
+
 		for _, r := range fs.Spec.Rules {
 			for _, s := range r.Subjects {
 				if s.ServiceAccount != nil {

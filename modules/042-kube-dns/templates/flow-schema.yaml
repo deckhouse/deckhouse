@@ -1,1 +1,28 @@
-{{- include "helm_lib_flow_schema_manifest" (list . "cluster-low") }}
+---
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
+kind: FlowSchema
+metadata:
+  name: d8-kube-dns-flowschema
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  distinguisherMethod:
+    type: ByUser
+  matchingPrecedence: 1000
+  priorityLevelConfiguration:
+    name: cluster-low
+  rules:
+    - resourceRules:
+        - apiGroups:
+            - '*'
+          clusterScope: true
+          namespaces:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - 'list'
+      subjects:
+        - serviceAccount:
+            name: d8-kube-dns
+            namespace: kube-system
+          kind: ServiceAccount

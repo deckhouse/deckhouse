@@ -1,1 +1,27 @@
-{{- include "helm_lib_flow_schema_manifest" (list . "cluster-medium") }}
+---
+{{- include "helm_lib_flow_schema_apiversion" (list .) }}
+kind: FlowSchema
+metadata:
+  name: d8-cloud-instance-manager-flowschema
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  distinguisherMethod:
+    type: ByUser
+  matchingPrecedence: 1000
+  priorityLevelConfiguration:
+    name: cluster-medium
+  rules:
+    - resourceRules:
+        - apiGroups:
+            - '*'
+          clusterScope: true
+          namespaces:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - 'list'
+      subjects:
+        - group:
+            name: system:serviceaccounts:d8-cloud-instance-manager
+          kind: Group

@@ -37,6 +37,6 @@ spec:
   {{- if semverCompare ">= 1.26" $context.Values.global.discovery.kubernetesVersion }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
   {{- else }}
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
   {{- end }}
 {{- end }}

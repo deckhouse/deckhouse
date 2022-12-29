@@ -1,3 +1,8 @@
+# PriorityLevelConfiguration queuing is described here
+# https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#queuing and here
+# https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#prioritylevelconfiguration.
+# Additional info about queuing algoritm can be found here -
+# https://github.com/kubernetes/enhancements/tree/master/keps/sig-api-machinery/1040-priority-and-fairness.
 ---
 {{- include "helm_lib_flow_schema_apiversion" (list .) }}
 kind: PriorityLevelConfiguration
