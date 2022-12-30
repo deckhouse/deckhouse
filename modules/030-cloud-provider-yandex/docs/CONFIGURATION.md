@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: configuration"
+title: "Cloud provider — Yandex Cloud: configuration"
 ---
 
 > **Note!** If the parameters provided below are changed, the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `YandexInstanceClass` are changed. Details in the [node-manager module's documentation](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
@@ -20,7 +20,7 @@ You can filter out the unnecessary StorageClasses via the [exclude](#parameters-
 
 ### Important information concerning the increase of the PVC size
 
-Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) of volume-resizer, CSI, and Yandex.Cloud API, you have to do the following after increasing the PVC size:
+Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) of volume-resizer, CSI, and Yandex Cloud API, you have to do the following after increasing the PVC size:
 
 1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command.
 2. Delete the Pod.
@@ -30,6 +30,6 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## LoadBalancer
 
-The module subscribes to Service objects of the `LoadBalancer` type and creates the corresponding `NetworkLoadBalancer` and `TargetGroup` in Yandex.Cloud.
+The module subscribes to Service objects of the `LoadBalancer` type and creates the corresponding `NetworkLoadBalancer` and `TargetGroup` in Yandex Cloud.
 
-For more information, see the [Kubernetes Cloud Controller Manager for Yandex.Cloud documentation](https://github.com/flant/yandex-cloud-controller-manager).
+For more information, see the [Kubernetes Cloud Controller Manager for Yandex Cloud documentation](https://github.com/flant/yandex-cloud-controller-manager).

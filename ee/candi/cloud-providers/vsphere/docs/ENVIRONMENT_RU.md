@@ -161,7 +161,7 @@ govc permissions.set  -principal имя_пользователя -role kubernete
 
 1. Создайте файл `vsphere.auto.pkrvars.hcl` со следующим содержимым:
 
-   ```hcl
+   ```text
    vcenter_server = "<hostname или IP vCenter>"
    vcenter_username = "<имя пользователя>"
    vcenter_password = "<пароль>"

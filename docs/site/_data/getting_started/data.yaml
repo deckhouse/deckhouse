@@ -22,59 +22,20 @@ presets:
       en: |
         - The cluster consists of one master node and one worker node.
         - Kubernetes Control Plane and Deckhouse controller run on the master node.
-        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Deckhouse deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
         - Your applications should run on the worker node.
       ru: |
         - Кластер состоит из одного master-узла и одного worker-узла.
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
-        - Deckhouse запускает другие компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
-        - Ваши приложения должны работать на worker-узле.
-  ha:
-    name:
-      en: Multi-master
-      ru: Мультимастер
-    description:
-      en: |
-        - Highly Available Kubernetes Control Plane.
-        - The cluster consists of three master nodes and two worker nodes.
-        - Kubernetes Control Plane and Deckhouse controller run on master nodes.
-        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker nodes.
-        - Your applications should run on the worker nodes.
-      ru: |
-        - Управляющие компоненты кластера работают в режиме высокой доступности.
-        - Кластер состоит из трёх master-узлов и двух worker-узлов.
-        - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узлах.
-        - Deckhouse запускает другие компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узлах.
-        - Ваши приложения должны работать на worker-узлах.
-  production:
-    name:
-      en: Recommended for production
-      ru: Рекомендовано для production
-    description:
-      en: |
-        - Highly Available Kubernetes Control Plane.
-        - The cluster consists of three master nodes, two system nodes, several frontend nodes, and one worker node.
-        - Kubernetes Control Plane and Deckhouse controller run on master nodes.
-        - Deckhouse deploys system components (Prometheus, cert-manager, etc.) on system nodes.
-        - Deckhouse deploys Ingress Controller on frontend nodes. The number of frontend nodes depends on the number of availability zones in a cloud provider.
-        - Your applications should run on the worker node.
-      ru: |
-        - Управляющие компоненты кластера работают в режиме высокой доступности.
-        - Кластер состоит из трёх master-узлов, двух системных узлов, нескольких фронтовых узлов и одного worker-узла.
-        - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узлах.
-        - Deckhouse запускает системные компоненты (Prometheus, cert-manager и т.д.) на системных узлах.
-        - Deckhouse запускает Ingress Controller на фронтовых узлах. Количество фронтовых узлов зависит от количества зон доступности у облачного провайдера.
+        - Deckhouse запускает не системные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
   aws:
     iconPath: images/icons/platforms/amazon_aws.png
-    layouts:
-      without_nat:
-        name: WithoutNAT
-        recommended: true
-      with_nat:
-        name: WithNAT
+    layout:
+      code: without_nat
+      name: WithoutNAT
     pages_title:
       en: "Deckhouse Platform in Amazon AWS"
       ru: "Deckhouse Platform в Amazon AWS"
@@ -85,42 +46,39 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+#      step4:
+#        name:
+#          en: Setting up cluster
+#          ru: Настройка кластера
+#        template: getting_started/global/step_cluster_setup.html
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   gcp:
     iconPath: images/icons/platforms/google_cloude_engine.png
-    layouts:
-      without_nat:
-        name: WithoutNAT
-        recommended: true
-      standard:
-        name: Standard
+    layout:
+      code: without_nat
+      name: WithoutNAT
     pages_title:
       en: "Deckhouse Platform in Google Cloud"
       ru: "Deckhouse Platform в Google Cloud"
@@ -131,40 +89,34 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   azure:
     iconPath: images/icons/platforms/microsoft_azure.png
-    layouts:
-      standard:
-        name: Standard
-        recommended: true
+    layout:
+      code: standard
+      name: Standard
     pages_title:
       en: "Deckhouse Platform in Microsoft Azure"
       ru: "Deckhouse Platform в Microsoft Azure"
@@ -175,30 +127,25 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -206,12 +153,9 @@ installTypes:
   openstack:
     iconPath: images/icons/platforms/corp_cloud_open_stack.png
     ee_only: true
-    layouts:
-      standard:
-        name: Standard
-        recommended: true
-      simple_with_internal_network:
-        name: SimpleWithInternalNetwork
+    layout:
+      code: standard
+      name: Standard
     pages_title:
       en: "Deckhouse Platform on OpenStack"
       ru: "Deckhouse Platform на OpenStack"
@@ -222,30 +166,25 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -260,52 +199,43 @@ installTypes:
     pages_title:
       en: "Deckhouse Platform on VMware vSphere"
       ru: "Deckhouse Platform на VMware vSphere"
-    layouts:
-      standard:
-        name: Standard
-        recommended: true
+    layout:
+      code: standard
+      name: Standard
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   yandex:
     iconPath: images/icons/platforms/yandex_cloud.png
-    layouts:
-      without_nat:
-        name: WithoutNAT
-        recommended: true
-      with_nat_instance:
-        name: WithNATInstance
+    layout:
+      code: without_nat
+      name: WithoutNAT
     pages_title:
-      en: "Deckhouse Platform in Yandex.Cloud"
-      ru: "Deckhouse Platform в Яндекс.Облаке"
+      en: "Deckhouse Platform in Yandex Cloud"
+      ru: "Deckhouse Platform в Yandex Cloud"
     type: cloud
     name:
       en: "Yandex Cloud"
@@ -313,40 +243,31 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
+      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step6:
+      step5:
         name:
           en: Getting access to the cluster
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   existing:
     iconPath: images/icons/platforms/kubernetes.svg
-    layouts:
-      default:
-        name: Default
-        recommended: true
     pages_title:
       en: "Deckhouse Platform in existing cluster"
       ru: "Deckhouse Platform в существующем кластере"
@@ -357,35 +278,31 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+#      step3:
+#        name:
+#          en: Setting up cluster
+#          ru: Настройка кластера
+#        template: getting_started/global/step_cluster_setup.html
       step3:
-        name:
-          en: Setting up cluster
-          ru: Настройка кластера
-        template: getting_started/global/step_cluster_setup.html
-      step4:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
-      step5:
+      step4:
         name:
           en: Finishing installation
           ru: Завершение установки
         template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
-      step6:
+      step5:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   kind:
     iconPath: images/icons/platforms/kind.png
-    layouts:
-      default:
-        name: Default
-        recommended: true
     pages_title:
       en: "Deckhouse Platform in kind"
       ru: "Deckhouse Platform в kind"
@@ -396,20 +313,10 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
-        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing cluster
-          ru: Подготовка кластера
-        template: getting_started/<INSTALL_CODE>/STEP_PREPARE.md
-      step4:
-        name:
           en: Installation
           ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -417,10 +324,6 @@ installTypes:
   bm-private:
     iconPath: images/icons/platforms/lock.png
     ce_only: true
-    layouts:
-      default:
-        name: Default
-        recommended: true
     pages_title:
       en: "Deckhouse Platform in a private environment"
       ru: "Deckhouse Platform в закрытом окружении"
@@ -431,8 +334,8 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/bm/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -456,10 +359,6 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   bm:
     iconPath: images/icons/platforms/bare_metal.png
-    layouts:
-      default:
-        name: Default
-        recommended: true
     pages_title:
       en: "Deckhouse Platform for bare metal"
       ru: "Deckhouse Platform на bare metal"
@@ -470,8 +369,8 @@ installTypes:
     steps:
       step2:
         name:
-          en: A brief overview of installation
-          ru: Как будет происходить установка?
+          en: Installation information
+          ru: Информация об установке
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:

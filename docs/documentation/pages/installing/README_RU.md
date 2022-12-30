@@ -56,7 +56,7 @@ YAML-файл конфигурации установки содержит па�
   - [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform
   - [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack
   - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere
-  - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex.Cloud
+  - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
@@ -151,7 +151,7 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: admin@example.com
+    name: admin@deckhouse.io
   accessLevel: SuperAdmin
   portForwarding: true
 ---
@@ -160,7 +160,7 @@ kind: User
 metadata:
   name: admin
 spec:
-  email: admin@example.com
+  email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 

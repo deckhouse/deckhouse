@@ -238,7 +238,7 @@ apiVersions:
         description: |
           This subnet will be split into **three** equal parts.
 
-          They will serve as a basis for subnets in three Yandex.Cloud zones.
+          They will serve as a basis for subnets in three Yandex Cloud zones.
       existingZoneToSubnetIDMap:
         type: object
         description: |
@@ -254,7 +254,7 @@ apiVersions:
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
       labels:
         description: |
-          Labels to attach to resources created in the Yandex.Cloud.
+          Labels to attach to resources created in the Yandex Cloud.
 
           Note that you have to re-create all the machines to add new labels if labels were modified in the running cluster.
         type: object
@@ -323,7 +323,7 @@ apiVersions:
       provider:
         type: object
         description: |
-          Contains [settings to connect](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-yandex/environment.html) to the Yandex.Cloud API.
+          Contains [settings to connect](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-yandex/environment.html) to the Yandex Cloud API.
         additionalProperties: false
         properties:
           cloudID:

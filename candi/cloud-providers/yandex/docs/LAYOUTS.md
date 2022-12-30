@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: Layouts"
+title: "Cloud provider — Yandex Cloud: Layouts"
 ---
 
 Three layouts are supported. Below is more information about each of them.

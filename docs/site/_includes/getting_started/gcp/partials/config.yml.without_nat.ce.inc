@@ -1,72 +1,61 @@
-# [<en>] general cluster parameters (ClusterConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция с общими параметрами кластера (ClusterConfiguration)
-# [<ru>] используемая версия API Deckhouse Platform
+# [<en>] General cluster parameters.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: ClusterConfiguration
-# [<en>] type of the infrastructure: bare metal (Static) or Cloud (Cloud)
-# [<ru>] тип инфраструктуры: bare metal (Static) или облако (Cloud)
 clusterType: Cloud
-# [<en>] cloud provider-related settings
-# [<ru>] параметры облачного провайдера
 cloud:
-  # [<en>] type of the cloud provider
-  # [<ru>] используемый облачный провайдер
   provider: GCP
-  # [<en>] prefix to differentiate cluster objects (can be used, e.g., in routing)
-  # [<ru>] префикс для объектов кластера для их отличия (используется, например, при маршрутизации)
-  prefix: "cloud-demo"
-# [<en>] address space of the cluster's Pods
-# [<ru>] адресное пространство Pod’ов кластера
+  # [<en>] A prefix of objects that are created in the cloud during the installation.
+  # [<en>] You might consider changing this.
+  # [<ru>] Префикс объектов, создаваемых в облаке при установке.
+  # [<ru>] Возможно, захотите изменить.
+  prefix: cloud-demo
+# [<en>] Address space of the cluster's Pods.
+# [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
-# [<en>] address space of the cluster's services
-# [<ru>] адресное пространство для service’ов кластера
+# [<en>] Address space of the cluster's services.
+# [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-# [<en>] Kubernetes version to install
-# [<ru>] устанавливаемая версия Kubernetes
 kubernetesVersion: "1.23"
-# [<en>] cluster domain (used for local routing)
-# [<ru>] домен кластера
 clusterDomain: "cluster.local"
 ---
-# [<en>] section for bootstrapping the Deckhouse cluster (InitConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция первичной инициализации кластера Deckhouse (InitConfiguration)
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: InitConfiguration
-# [<en>] Deckhouse parameters
-# [<ru>] секция с параметрами Deckhouse
 deckhouse:
-  # [<en>] the release channel in use
-  # [<ru>] используемый канал обновлений
   releaseChannel: Stable
   configOverrides:
     global:
       modules:
-        # [<en>] template that will be used for system apps domains within the cluster
-        # [<en>] e.g., Grafana for %s.example.com will be available as grafana.example.com
-        # [<ru>] шаблон, который будет использоваться для составления адресов системных приложений в кластере
-        # [<ru>] например, Grafana для %s.example.com будет доступна на домене grafana.example.com
+        # [<en>] Template that will be used for system apps domains within the cluster.
+        # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+        # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+        # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
         publicDomainTemplate: "%s.example.com"
+    userAuthn:
+      controlPlaneConfigurator:
+        dexCAMode: DoNotNeed
+      publishAPI:
+        enable: true
+        https:
+          mode: Global
 ---
-# [<en>] section containing the parameters of the cloud provider
-# [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры облачного провайдера
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section containing the parameters of the cloud provider.
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
+# [<ru>] Секция, описывающая параметры облачного провайдера.
+# [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: GCPClusterConfiguration
-# [<en>] pre-defined layout from Deckhouse
-# [<ru>] layout — архитектура расположения ресурсов в облаке
 layout: WithoutNAT
-# [<en>] GCP access parameters
-# [<ru>] параметры доступа к облаку GCP
+# [<en>] GCP access parameters.
+# [<ru>] Параметры доступа к облаку GCP.
 provider:
   # [<en>] Example of serviceAccountJSON:
   # [<ru>] Пример заполнения serviceAccountJSON:
@@ -84,42 +73,34 @@ provider:
   #      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/somproject-sandbox.gserviceaccount.com"
   #    }
   serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
-  # [<en>] cluster region
-  # [<ru>] регион привязки кластера
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
+  # [<en>] Cluster region.
+  # [<ru>] Регион привязки кластера.
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
   region: europe-west3
-# [<en>] list of labels to attach to cluster resources.
-# [<ru>] список меток ресурсов кластера, используются для идентификации в качестве префиксов ресурсов
+# [<en>] List of labels to attach to cluster resources.
+# [<ru>] Список меток ресурсов кластера, используются для идентификации в качестве префиксов ресурсов.
 labels:
-  kube: example
-# [<en>] parameters of the master node group
-# [<ru>] параметры группы master-узлов
+  kube: d8-demo
 masterNodeGroup:
-  # [<en>] number of replicas
-  # [<en>] if more than 1 master node exists, control-plane will be automatically deployed on all master nodes
-  # [<ru>] количество реплик мастера
-  # [<ru>] если будет больше одного master-узла, то control-plane на всех master-узлах будет развернут автоматическии
   replicas: 1
-  # [<en>] Parameters of the VM image
-  # [<ru>] параметры инстанса
   instanceClass:
-    # [<en>] type of the instance
-    # [<ru>] тип используемого инстанса
-    # [<en>] you might consider changing this
-    # [<ru>] возможно, захотите изменить
+    # [<en>] Type of the instance.
+    # [<ru>] Тип используемого инстанса.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
     machineType: n1-standard-4
-    # [<en>] Image id
-    # [<ru>] используемый образ
-    # [<en>] you might consider changing this
-    # [<ru>] возможно, захотите изменить
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
-    # [<en>] disable public IP assignement for the cluster
-    # [<ru>] отключить назначение внешнего IP-адреса для кластера
+    # [<en>] Image ID.
+    # [<ru>] Используемый образ.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20221206
     disableExternalIP: false
-# [<en>] a subnet to use for cluster nodes
-# [<ru>] адресное пространство узлов кластера
+# [<en>] A subnet to use for cluster nodes.
+# [<ru>] Адресное пространство узлов кластера.
 subnetworkCIDR: 10.0.0.0/24
-# [<en>] public SSH key for accessing cloud nodes
-# [<ru>] публичная часть SSH-ключа для доступа к узлам облака
-sshKey: <SSH_PUBLIC_KEY>
+# [<en>] Public SSH key for accessing cloud nodes.
+# [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
+# [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
+# [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
+sshKey: *!CHANGE_SSH_KEY*

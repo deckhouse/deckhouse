@@ -1,44 +1,45 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-Если вы не включали в конфигурации Deckhouse другие модули, то единственным запущенным модулем после установки
-Deckhouse обладающим WEB-интерфейсом будет модуль [внутренней документации](/documentation/v1/modules/810-deckhouse-web/). Если вы не пользуетесь сервисами типа [nip.io](https://nip.io) или аналогами, то чтобы получить доступ к WEB-интерфейсу модуля нужно создать соответствующую DNS-запись.  
+Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
+- настроить работу DNS
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
 
-Создайте DNS-запись для доступа к WEB-интерфейсу модуля документации:
-<ul>
-  <li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
-  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
-    <ul>
-      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте соответствующую wildcard A-запись со значением публичного IP-адреса, который вы получили выше.
-      </li>
-      <li>
-        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
-        то добавьте А или CNAME-записи со значением публичного IP-адреса, который вы
-        получили выше, для DNS-имени <code example-hosts>deckhouse.example.com</code>.
-      </li>
-    </ul>
-  </li>
+*Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом модуля внутренней документации закреплено имя `deckhouse`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `deckhouse.kube.company.my`, и т.д.
 
-  <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статическую запись соответствия
-  имени <code example-hosts>deckhouse.example.com</code> публичному IP-адресу узла, на котором работает Ingress-контроллер.
-  </p><p>Например,
-  на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
-{% snippetcut selector="export-ip" %}
+Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
+
+Выполните следующую команду, чтобы настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io* (укажите публичный IP-адрес узла, где запущен Ingress-контролллер):
+{% snippetcut %}
+{% raw %}
 ```shell
-export PUBLIC_IP="<PUBLIC_IP>"
+BALANCER_IP=<INGRESS_CONTROLLER_IP> 
+kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
+echo "Domain template is '$(kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+{% endraw %}
 {% endsnippetcut %}
 
-<p>Добавьте необходимую запись в файл <code>/etc/hosts</code>:</p>
+Команда также выведет установленный шаблон DNS-имен. Пример вывода:
+```text
+moduleconfig.deckhouse.io/global patched
 
-{% snippetcut selector="example-hosts" %}
+Domain template is '%s.1.2.3.4.sslip.io'.
+```
+
+> Перегенерация сертификатов после изменения шаблона DNS-имен может занять до 5 минут.
+
+{% offtopic title="Другие варианты настройки..." %}
+Вместо сервиса *sslip.io* вы можете использовать другие варианты настройки.
+{% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
+
+Затем, выполните следующую команду, чтобы изменить шаблон DNS-имен в параметрах Deckhouse:
+<div markdown="0">
+{% snippetcut %}
 ```shell
-sudo -E bash -c "cat <<EOF >> /etc/hosts
-$PUBLIC_IP deckhouse.example.com
-EOF
-"
+kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
-</li></ul>
+</div>
+{% endofftopic %}

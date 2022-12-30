@@ -285,7 +285,7 @@ entries:
                   url: /modules/030-cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
-            - title: Yandex.Cloud
+            - title: Yandex Cloud
               folders:
                 - title:
                     en: Description

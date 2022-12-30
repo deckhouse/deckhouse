@@ -1,78 +1,65 @@
-# [<en>] general cluster parameters (ClusterConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция с общими параметрами кластера (ClusterConfiguration)
-# [<ru>] используемая версия API Deckhouse Platform
+# [<en>] General cluster parameters.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: ClusterConfiguration
-# [<en>] type of the infrastructure: bare metal (Static) or Cloud (Cloud)
-# [<ru>] тип инфраструктуры: bare metal (Static) или облако (Cloud)
 clusterType: Cloud
-# [<en>] cloud provider-related settings
-# [<ru>] параметры облачного провайдера
 cloud:
-  # [<en>] type of the cloud provider
-  # [<ru>] используемый облачный провайдер
   provider: vSphere
-  # [<en>] prefix to differentiate cluster objects (can be used, e.g., in routing)
-  # [<ru>] префикс для объектов кластера для их отличия (используется, например, при маршрутизации)
-  prefix: "cloud-demo"
-# [<en>] address space of the cluster's pods
-# [<ru>] адресное пространство pod’ов кластера
+  # [<en>] A prefix of objects that are created in the cloud during the installation.
+  # [<en>] You might consider changing this.
+  # [<ru>] Префикс объектов, создаваемых в облаке при установке.
+  # [<ru>] Возможно, захотите изменить.
+  prefix: cloud-demo
+# [<en>] Address space of the cluster's Pods.
+# [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
-# [<en>] address space of the cluster's services
-# [<ru>] адресное пространство для service’ов кластера
+# [<en>] Address space of the cluster's services.
+# [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-# [<en>] Kubernetes version to install
-# [<ru>] устанавливаемая версия Kubernetes
 kubernetesVersion: "1.23"
-# [<en>] cluster domain (used for local routing)
-# [<ru>] домен кластера
 clusterDomain: "cluster.local"
 ---
-# [<en>] section for bootstrapping the Deckhouse cluster (InitConfiguration)
-# [<en>] version of the Deckhouse API
-# [<ru>] секция первичной инициализации кластера Deckhouse (InitConfiguration)
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: InitConfiguration
-# [<en>] Deckhouse parameters
-# [<ru>] секция с параметрами Deckhouse
 deckhouse:
-  # [<en>] address of the Docker registry where the Deckhouse images are located
-  # [<ru>] адрес Docker registry с образами Deckhouse
   imagesRepo: registry.deckhouse.io/deckhouse/ee
-  # [<en>] a special string with your token to access Docker registry (generated automatically for your license token)
-  # [<ru>] строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
+  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
+  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
-  # [<en>] the release channel in use
-  # [<ru>] используемый канал обновлений
   releaseChannel: Stable
   configOverrides:
     global:
       modules:
-        # [<en>] template that will be used for system apps domains within the cluster
-        # [<en>] e.g., Grafana for %s.example.com will be available as grafana.example.com
-        # [<ru>] шаблон, который будет использоваться для составления адресов системных приложений в кластере
-        # [<ru>] например, Grafana для %s.example.com будет доступна на домене grafana.example.com
+        # [<en>] Template that will be used for system apps domains within the cluster.
+        # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+        # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+        # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
         publicDomainTemplate: "%s.example.com"
+    userAuthn:
+      controlPlaneConfigurator:
+        dexCAMode: DoNotNeed
+      publishAPI:
+        enable: true
+        https:
+          mode: Global
 ---
-# [<en>] section containing the parameters of the cloud provider
-# [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры облачного провайдера
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section containing the parameters of the cloud provider.
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
+# [<ru>] Секция, описывающая параметры облачного провайдера.
+# [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-# [<en>] type of the configuration section
-# [<ru>] тип секции конфигурации
 kind: VsphereClusterConfiguration
-# [<en>] pre-defined layout from Deckhouse
-# [<ru>] layout — архитектура расположения ресурсов в облаке
 layout: Standard
-# [<en>] vCenter access parameters
-# [<ru>] параметры доступа к vCenter
+# [<en>] vCenter API access parameters
+# [<ru>] параметры доступа к API vCenter
 provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
@@ -82,66 +69,62 @@ provider:
   # [<en>] Set to true if vCenter has a self-signed certificate,
   # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
-# [<en>] path to a Folder in which VirtualMachines will be create
-# [<en>] the folder itself will be created by the Deckhouse Installer
-# [<ru>] путь до Folder, в котором будут создаваться виртуальные машины
-# [<ru>] сам Folder будет создан Deckhouse Installer'ом
+# [<en>] Path to a Folder in which VirtualMachines will be created.
+# [<en>] The folder itself will be created by the Deckhouse Installer.
+# [<ru>] Путь до Folder, в котором будут создаваться виртуальные машины.
+# [<ru>] Сам Folder будет создан Deckhouse Installer'ом.
 vmFolderPath: *!CHANGE_FOLDER*
-# [<en>] region and zone tag category names
-# [<ru>] имена категорий тэгов регионов и зон
+# [<en>] Region and zone tag category names.
+# [<ru>] Имена категорий тэгов регионов и зон.
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
-# [<en>] region and zone tag names in which cluster will operate
-# [<ru>] имена тэгов зон и регионов, в которых будет работать кластер
+# [<en>] Region and zone tag names in which cluster will operate.
+# [<ru>] Имена тэгов зон и регионов, в которых будет работать кластер.
 region: *!CHANGE_REGION_TAG_NAME*
 zones:
 - *!CHANGE_ZONE_TAG_NAME*
-# [<en>] public SSH key for accessing cloud nodes
-# [<ru>] публичная часть SSH-ключа для доступа к узлам облака
-sshPublicKey: <SSH_PUBLIC_KEY>
-# [<en>] name of External Network which has access to the Internet
-# [<en>] ip addresses from External Network sets as ExternalIP of Node object
-# [<en>] optional parameter
-# [<ru>] имя External Network, у которой есть доступ в Интернет
-# [<ru>] ip адреса из External Network проставляются как ExternalIP объекта Node
-# [<ru>] опциональный параметр
+# [<en>] Public SSH key for accessing cloud nodes.
+# [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
+# [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
+# [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
+sshPublicKey: *!CHANGE_SSH_KEY*
+# [<en>] Name of the External Network which has access to the Internet.
+# [<en>] IP addresses from the External Network sets as ExternalIP of Node object.
+# [<en>] Optional parameter.
+# [<ru>] Имя External Network, у которой есть доступ в Интернет.
+# [<ru>] IP-адреса из External Network проставляются как ExternalIP объекта Node.
+# [<ru>] Опциональный параметр.
 externalNetworkNames:
 - *!CHANGE_NETWORK_NAME*
-# [<en>] name of Internal Network that will be used for traffic between nodes
-# [<en>] ip addresses from Internal Network sets as InternalIP of Node object
-# [<en>] optional parameter
-# [<ru>] имя Internal Network, которая будет использоваться для трафика между узлами, в данном примере идентично externalNetworkNames
-# [<ru>] ip адреса из Internal Network проставляются как InternalIP объекта Node
-# [<ru>] опциональный параметр
+# [<en>] Name of the Internal Network that will be used for traffic between nodes.
+# [<en>] IP addresses from the Internal Network sets as InternalIP of Node object.
+# [<en>] Optional parameter.
+# [<ru>] Имя Internal Network, которая будет использоваться для трафика между узлами, в данном примере идентично externalNetworkNames.
+# [<ru>] IP-адреса из Internal Network проставляются как InternalIP объекта Node.
+# [<ru>] Опциональный параметр.
 internalNetworkNames:
 - *!CHANGE_NETWORK_NAME*
-# [<en>] address space of the cluster's nodes
-# [<ru>] адресное пространство узлов кластера
+# [<en>] Address space of the cluster's nodes.
+# [<ru>] Адресное пространство узлов кластера.
 internalNetworkCIDR: 10.90.0.0/24
 masterNodeGroup:
-  # [<en>] number of replicas
-  # [<en>] if more than 1 master node exists, control-plane will be automatically deployed on all master nodes
-  # [<ru>] количество реплик мастера
-  # [<ru>] если будет больше одного master-узла, то control-plane на всех master-узлах будет развернут автоматическии
   replicas: 1
-  # [<en>] Parameters of the VM image
-  # [<ru>] Параметры инстанса
   instanceClass:
     numCPUs: 4
     memory: 8192
     rootDiskSize: 50
-    # [<en>] The name of the image created in step 4 at the "Building a VM image" stage,
-    # [<en>] taking into account the vCenter folder path. Example: "folder/my-ubuntu-packer-image".
-    # [<ru>] Имя образа, созданного в шаге 4 на этапе "Сборка образа виртуальных машин",
-    # [<ru>] с учетом папки размещения образа в vCenter. Пример: "folder/my-ubuntu-packer-image".
+    # [<en>] The name of the image, taking into account the vCenter folder path.
+    # [<en>] Example: "folder/my-ubuntu-packer-image".
+    # [<ru>] Имя образа, созданного с учетом папки размещения образа в vCenter.
+    # [<ru>] Пример: "folder/my-ubuntu-packer-image".
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
-    # [<en>] main network connected to node
-    # [<ru>] основная сеть подключенная к узлу
+    # [<en>] Main network connected to node.
+    # [<ru>] Основная сеть подключенная к узлу.
     mainNetwork: *!CHANGE_NETWORK_NAME*
-    # [<en>] additional networks connected to node
-    # [<en>] optional parameter
-    # [<ru>] дополнительные сети, подключенные к узлу
-    # [<ru>] опциональный параметр
+    # [<en>] Additional networks connected to node.
+    # [<en>] Optional parameter.
+    # [<ru>] Дополнительные сети, подключенные к узлу.
+    # [<ru>] Опциональный параметр.
     additionalNetworks:
     - *!CHANGE_NETWORK_NAME*

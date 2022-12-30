@@ -1,8 +1,8 @@
 ---
-title: "Cloud provider — Yandex.Cloud: examples"
+title: "Cloud provider — Yandex Cloud: examples"
 ---
 
-Below is an example of the Yandex.Cloud cloud provider configuration.
+Below is an example of the Yandex Cloud cloud provider configuration.
 
 ## An example of the module configuration
 

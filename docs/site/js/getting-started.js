@@ -46,20 +46,8 @@ function config_highlight() {
 }
 
 function config_update() {
-  update_parameter('dhctl-prefix', 'prefix', 'cloud-demo', null, '[config-yml]');
   update_parameter('dhctl-sshkey', 'sshPublicKey', '<SSH_PUBLIC_KEY>', null, '[config-yml]');
   update_parameter('dhctl-sshkey', 'sshKey', '<SSH_PUBLIC_KEY>', null, '[config-yml]');
-  update_parameter('dhctl-layout', 'layout', '<layout>', null, '[config-yml]');
-  let preset = sessionStorage.getItem('dhctl-preset');
-  if (preset && preset.length > 0) {
-    if (['production', 'ha'].includes(preset)) {
-      update_parameter('dhctl-preset', 'replicas', '1', 3);
-      update_parameter('dhctl-preset', '', 'replicas: 1', 'replicas: 3', '[config-yml]');
-      if ($('#platform_code') && $('#platform_code').text() === 'yandex') {
-        magic4yandex();
-      }
-    }
-  }
   update_license_parameters();
   update_domain_parameters();
 }
@@ -88,18 +76,18 @@ function update_domain_parameters() {
 
   // update user email
   $('code span').filter(function () {
-    return ((this.innerText.match('admin@example.com') || []).length > 0);
+    return ((this.innerText.match('admin@deckhouse.io') || []).length > 0);
   }).each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].innerText : null;
     if (content && content.length > 0 && dhctlDomain) {
-      $(this)[0].innerText = content.replace('admin@example.com', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
+      $(this)[0].innerText = content.replace('admin@deckhouse.io', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
   // update user email in the resources-yml or user-yml snippet
   $('[resources-yml],[user-yml]').each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
     if (content && content.length > 0 && dhctlDomain) {
-      $(this)[0].textContent = content.replace(/admin@example.com/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
+      $(this)[0].textContent = content.replace(/admin@deckhouse.io/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
 
@@ -320,20 +308,4 @@ function set_license_token_cookie() {
     let token = urlParams.get('license-token');
     $.cookie('license-token', token, {path: '/', expires: 365});
   }
-}
-
-function magic4yandex() {
-  $('code span').filter(function () {
-    return this.innerText === 'externalIPAddresses';
-  }).each(function (index) {
-    $(this).next().append("\n    <span class=\"pi\">-</span> <span class=\"s2\">\"</span><span class=\"s\">Auto\"</span>");
-    $(this).next().append("\n    <span class=\"pi\">-</span> <span class=\"s2\">\"</span><span class=\"s\">Auto\"</span>");
-  })
-
-  $('[config-yml]').each(function (index) {
-    let content = ($(this)[0]) ? $(this)[0].textContent : null;
-    if (content && content.length > 0) {
-      $(this)[0].textContent = content.replace("    externalIPAddresses:\n    - \"Auto\"\n", "    externalIPAddresses:\n    - \"Auto\"\n    - \"Auto\"\n    - \"Auto\"\n");
-    }
-  });
 }

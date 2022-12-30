@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: настройки"
+title: "Cloud provider — Yandex Cloud: настройки"
 ---
 
 > **Внимание!** При изменении настроек модуля **пересоздания существующих Machines НЕ происходит** (новые Machines будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `YandexInstanceClass`. Подробнее в документации модуля [node-manager](../../modules/040-node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
@@ -20,7 +20,7 @@ title: "Cloud provider — Yandex.Cloud: настройки"
 
 ### Важная информация об увеличении размера PVC
 
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и Yandex.Cloud API, после увеличения размера PVC необходимо:
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и Yandex Cloud API, после увеличения размера PVC необходимо:
 
 1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`.
 2. Удалить Pod.
@@ -30,6 +30,6 @@ title: "Cloud provider — Yandex.Cloud: настройки"
 
 ## LoadBalancer
 
-Модуль подписывается на объекты Service с типом `LoadBalancer` и создаёт соответствующие `NetworkLoadBalancer` и `TargetGroup` в Yandex.Cloud.
+Модуль подписывается на объекты Service с типом `LoadBalancer` и создаёт соответствующие `NetworkLoadBalancer` и `TargetGroup` в Yandex Cloud.
 
-Больше информации [в документации Kubernetes Cloud Controller Manager for Yandex.Cloud](https://github.com/flant/yandex-cloud-controller-manager).
+Больше информации [в документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).

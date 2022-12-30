@@ -105,7 +105,7 @@ apiVersions:
           ID существующей VPC Network.
       nodeNetworkCIDR:
         description: |
-          Данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex.Cloud.
+          Данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex Cloud.
       existingZoneToSubnetIDMap:
         description: |
           Одна или несколько ранее существовавших подсетей, сопоставленных с соответствующей зоной.
@@ -113,7 +113,7 @@ apiVersions:
           > **Внимание!** Deckhouse создаст таблицу маршрутизации, которую необходимо вручную привязать к указанными подсетям.
       labels:
         description: |
-          Лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
+          Лейблы, проставляемые на ресурсы, создаваемые в Yandex Cloud.
 
           Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       dhcpOptions:
@@ -159,7 +159,7 @@ apiVersions:
               Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex.Cloud.
+          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

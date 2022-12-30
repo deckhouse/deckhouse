@@ -1,3 +1,26 @@
+# [<en>] Section containing the parameters of instance class for worker nodes.
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-yandex/cr.html
+# [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: worker
+spec:
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  cores: 4
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  memory: 8192
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  diskSizeGB: 30
+---
+# [<en>] Section containing the parameters of worker node group.
+# [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -7,10 +30,18 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: worker
+    # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
+    # [<en>] You might consider changing this.
+    # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
+    # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
+    # [<en>] The minimum number of instances for the group in each zone.
+    # [<ru>] Минимальное количество инстансов в каждой зоне.
     minPerZone: 1
-    # [<en>] you might consider changing this
-    # [<ru>] возможно, захотите изменить
+    # [<en>] List of availability zones to create instances in.
+    # [<ru>] Список зон, в которых создаются инстансы.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
     zones:
     - ru-central1-a
   disruptions:
@@ -20,69 +51,55 @@ spec:
       node.deckhouse.io/group: worker
   nodeType: CloudEphemeral
 ---
-apiVersion: deckhouse.io/v1
-kind: YandexInstanceClass
-metadata:
-  name: worker
-spec:
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
-  cores: 4
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
-  memory: 8192
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
-  diskSizeGB: 30
----
+# [<en>] Section containing the parameters of Nginx Ingress controller.
+# [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры Nginx Ingress controller.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
-  # [<en>] the name of the Ingress class to use with the Ingress nginx controller
-  # [<ru>] имя Ingress-класса для использования Ingress Nginx controller
   ingressClass: nginx
-  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
-  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
-  controllerVersion: "1.1"
-  # [<en>] the way traffic goes to cluster from the outer network
-  # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
-  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
-  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
+  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
 ---
+# [<en>] RBAC and authorization settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] Настройки RBAC и авторизации.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: admin
 spec:
-  # [<ru>] список учётных записей Kubernetes RBAC
-  # [<en>] Kubernetes RBAC accounts list
   subjects:
   - kind: User
-    name: admin@example.com
-  # [<ru>] предустановленный шаблон уровня доступа
-  # [<en>] pre-defined access template
+    name: admin@deckhouse.io
   accessLevel: SuperAdmin
-  # [<ru>] разрешить пользователю делать kubectl port-forward
-  # [<en>] allow user to do kubectl port-forward
   portForwarding: true
 ---
+# [<en>] Parameters of the static user.
+# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#user
+# [<ru>] Данные статического пользователя.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
 spec:
-  email: admin@example.com
-  # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
-  # [<en>] generate your own or use it at your own risk (for testing purposes)
+  # [<en>] User e-mail.
+  # [<ru>] E-mail пользователя.
+  email: admin@deckhouse.io
+  # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
+  # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
-  # [<ru>] это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас
-  # [<ru>] сгенерируйте свой или используйте этот, но только для тестирования
+  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
   password: <GENERATED_PASSWORD_HASH>

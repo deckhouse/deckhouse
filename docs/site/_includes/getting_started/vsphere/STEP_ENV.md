@@ -138,7 +138,7 @@ cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
 
 1. Create a file name `vsphere.auto.pkrvars.hcl` with the following contents:
    {% snippetcut %}
-```hcl
+```text
 vcenter_server = "<hostname or IP of a vCenter>"
 vcenter_username = "<username>"
 vcenter_password = "<password>"

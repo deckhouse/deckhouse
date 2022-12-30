@@ -51,11 +51,17 @@ kubectl create -f user.yml
           <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
+argocd.example.com
 dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
+hubble.example.com
+istio.example.com
+istio-api-proxy.example.com
 kubeconfig.example.com
+openvpn-admin.example.com
+prometheus.example.com
 status.example.com
 upmeter.example.com</code>
 </pre>
@@ -69,11 +75,17 @@ upmeter.example.com</code>
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
+$PUBLIC_IP argocd.example.com
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
 $PUBLIC_IP dex.example.com
 $PUBLIC_IP grafana.example.com
+$PUBLIC_IP hubble.example.com
+$PUBLIC_IP istio.example.com
+$PUBLIC_IP istio-api-proxy.example.com
 $PUBLIC_IP kubeconfig.example.com
+$PUBLIC_IP openvpn-admin.example.com
+$PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
 $PUBLIC_IP upmeter.example.com
 EOF
