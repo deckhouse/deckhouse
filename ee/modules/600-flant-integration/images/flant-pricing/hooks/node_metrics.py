@@ -72,13 +72,14 @@ def main(ctx: hook.Context):
     metric_generators = []
     for metric_name, select in metric_configs:
         # Parse lists of nodes
-        nodes = [node for node in nodes if select(node)]
+        selected_nodes = [node for node in nodes if select(node)]
+
         # Build MetricGenerator instance, it yields metrics for each node type
         metric_generators.append(
             MetricGenerator(
-                name=metric_name,
+                metric=metric_name,
                 group=metric_group,
-                nodes=nodes,
+                nodes=selected_nodes,
             )
         )
 
@@ -125,29 +126,21 @@ def map_ng_to_pricing_type(ng_node_type, virtualization):
 
 @dataclass
 class NodeGroup:
-    # jqFiter: name
     name: str
-    # jqFiter: nodeType
     node_type: str
 
 
 @dataclass
 class Node:
-    # jqFiter: nodeGroup (name)
     node_group: NodeGroup
-    # jqFiter: pricingNodeType
     pricing_node_type: str
-    # jqFiter: virtualization
     virtualization: str
-    # jqFilter: is_legacy_counted
     is_legacy_counted: bool
-    # jqFilter: is_managed
     is_managed: bool
-    # jqFilter: is_controlplane
     is_controlplane: bool
-    # jqFilter: is_controlplane_tainted
     is_controlplane_tainted: bool
 
+    @property
     def pricing_type(self):
         """
         Deduces pricing type from node group type and pricing node type if not specified in the node
@@ -163,7 +156,7 @@ class Node:
 
 @dataclass
 class MetricGenerator:
-    name: str
+    metric: str
     group: str
     nodes: List[Node]
 
@@ -177,12 +170,12 @@ class MetricGenerator:
         # Count nodes by type
         count_by_type = {t: 0 for t in pricing_types}
         for node in self.nodes:
-            count_by_type[node.pricing_type()] += 1
+            count_by_type[node.pricing_type] += 1
 
         # Yield metrics
         for pricing_type, count in count_by_type.items():
             yield {
-                "name": self.name,
+                "name": self.metric,
                 "group": self.group,
                 "set": count,
                 "labels": {
@@ -201,8 +194,10 @@ def parse_nodegroups(ng_snapshots):
         if filtered is None:
             # should not happen
             continue
-        name, node_type = filtered["name"], filtered["nodeType"]
+
+        name, node_type = filtered["name"], filtered["node_type"]
         by_name[name] = NodeGroup(name=name, node_type=node_type)
+
     return by_name
 
 
@@ -217,7 +212,7 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
             # Should not happen
             continue
 
-        ng_name = filtered["nodeGroup"]
+        ng_name = filtered["node_group"]
         if ng_name not in nodegroup_by_name:
             # we don't charge for nodes which are not in node groups
             continue
@@ -226,7 +221,7 @@ def parse_nodes(node_snapshots, nodegroup_by_name):
         nodes.append(
             Node(
                 node_group=node_group,
-                pricing_node_type=filtered["pricingNodeType"],
+                pricing_node_type=filtered["pricing_node_type"],
                 virtualization=filtered["virtualization"],
                 is_legacy_counted=filtered["is_legacy_counted"],
                 is_managed=filtered["is_managed"],

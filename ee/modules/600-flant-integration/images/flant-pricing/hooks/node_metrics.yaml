@@ -17,8 +17,8 @@ kubernetes:
           operator: Exists
     jqFilter: |
       {
-          "nodeGroup":           .metadata.labels."node.deckhouse.io/group",
-          "pricingNodeType":    (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
+          "node_group":           .metadata.labels."node.deckhouse.io/group",
+          "pricing_node_type":  (.metadata.annotations."pricing.flant.com/nodeType"       // "unknown"),
           "virtualization":     (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown"),
           "is_legacy_counted": (
               .metadata.labels."node.deckhouse.io/group" != "master"
@@ -67,5 +67,5 @@ kubernetes:
     jqFilter: |
       {
           "name": .metadata.name,
-          "nodeType": .spec.nodeType
+          "node_type": .spec.nodeType
       }
