@@ -39,7 +39,7 @@ kubernetes:
               )
           ),
           "is_managed":      (.metadata.labels."node.deckhouse.io/group" != null),
-          "is_controlplane": (.metadata.labels."node.deckhouse.io/group" == "master)",
+          "is_controlplane": (.metadata.labels."node.deckhouse.io/group" == "master"),
           "is_controlplane_tainted": (
               .metadata.labels."node.deckhouse.io/group" == "master"
               and
