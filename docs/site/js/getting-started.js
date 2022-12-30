@@ -76,18 +76,18 @@ function update_domain_parameters() {
 
   // update user email
   $('code span').filter(function () {
-    return ((this.innerText.match('admin@example.com') || []).length > 0);
+    return ((this.innerText.match('admin@deckhouse.io') || []).length > 0);
   }).each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].innerText : null;
     if (content && content.length > 0 && dhctlDomain) {
-      $(this)[0].innerText = content.replace('admin@example.com', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
+      $(this)[0].innerText = content.replace('admin@deckhouse.io', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
   // update user email in the resources-yml or user-yml snippet
   $('[resources-yml],[user-yml]').each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
     if (content && content.length > 0 && dhctlDomain) {
-      $(this)[0].textContent = content.replace(/admin@example.com/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
+      $(this)[0].textContent = content.replace(/admin@deckhouse.io/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
 

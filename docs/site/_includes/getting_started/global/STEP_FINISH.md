@@ -12,7 +12,7 @@ Now that you have installed and properly configured Deckhouse, let's look at wha
 By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
 
 Here are credentials **generated** in the previous steps:
-- Username — `admin@example.com`
+- Username — `admin@deckhouse.io`
 - Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `resource.yml` file)
 
 Use them to access the web interface of the Deckhouse components.

@@ -17,11 +17,17 @@
          {%- endif -%} с адресом {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика{% endif %}, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
         <ul>
           <li><b title="Например, <em>&quot;api-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
+          <li><b title="Например, <em>&quot;argocd-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
           <li><b title="Например,  <em>&quot;dashboard-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dashboard</b></li>
           <li><b title="Например, <em>&quot;deckhouse-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">deckhouse</b></li>
           <li><b title="Например,  <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
           <li><b title="Например, <em>&quot;grafana-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
+          <li><b title="Например, <em>&quot;hubble-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
+          <li><b title="Например, <em>&quot;istio-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
+          <li><b title="Например, <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
           <li><b title="Например,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
+          <li><b title="Например,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
+          <li><b title="Например,  <em>&quot;prometheus-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
           <li><b title="Например, <em>&quot;status-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">status</b></li>
           <li><b title="Например,  <em>&quot;upmeter-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">upmeter</b></li>
         </ul>
@@ -61,7 +67,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
 {% snippetcut %}
 ```shell
-for i in api dashboard deckhouse dex grafana kubeconfig status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api argocd dashboard deckhouse dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 {% endsnippetcut %}
 </li>

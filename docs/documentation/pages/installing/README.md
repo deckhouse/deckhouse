@@ -150,7 +150,7 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: admin@example.com
+    name: admin@deckhouse.io
   accessLevel: SuperAdmin
   portForwarding: true
 ---
@@ -159,7 +159,7 @@ kind: User
 metadata:
   name: admin
 spec:
-  email: admin@example.com
+  email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 

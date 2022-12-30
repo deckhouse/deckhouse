@@ -7,7 +7,7 @@ spec:
   # [<en>] Kubernetes RBAC accounts list
   subjects:
   - kind: User
-    name: admin@example.com
+    name: admin@deckhouse.io
   # [<ru>] предустановленный шаблон уровня доступа
   # [<en>] pre-defined access template
   accessLevel: SuperAdmin
@@ -26,7 +26,7 @@ metadata:
 spec:
   # [<en>] user e-mail
   # [<ru>] e-mail пользователя
-  email: admin@example.com
+  email: admin@deckhouse.io
   # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
   # [<en>] generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
