@@ -40,6 +40,14 @@
     }
     &__title {
         margin: 0;
+
+      & span.text_alt {
+        display: block;
+        font-size: 35px;
+        line-height: 44px;
+        margin-top: 10px;
+        padding-bottom: 0;
+      }
     }
     &__diagram {
         margin-top: 75px;
