@@ -3,7 +3,6 @@
 <script type="text/javascript" src='{{ assets["getting-started-finish.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-
 ## Подключение к master-узлу
 Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
 

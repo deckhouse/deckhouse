@@ -1,5 +1,7 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["getting-started-finish.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
 ## Accessing to the master node
 Deckhouse have finished installation process. It remains to make some settings, for which you need to connect to the **master node**.
