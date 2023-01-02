@@ -36,6 +36,7 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
+  kubernetesVersion: 1.23.5
 `
 
 	f := SetupHelmConfig(``)

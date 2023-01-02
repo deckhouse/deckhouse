@@ -48,6 +48,7 @@ discovery:
   prometheusScrapeInterval: 30
   d8SpecificNodeCountByRole:
     system: 1
+  kubernetesVersion: 1.23.5
 modules:
   https:
     mode: CertManager

@@ -59,6 +59,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.23.5")
 			f.HelmRender()
 		})
 

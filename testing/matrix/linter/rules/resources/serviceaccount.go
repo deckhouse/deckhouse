@@ -51,7 +51,10 @@ func ensureServiceAccountHaveFlowSchema(scope *lintingScope, sa storage.StoreObj
 
 		var fs v1beta2.FlowSchema
 
-		sdk.FromUnstructured(&object.Unstructured, &fs)
+		err := sdk.FromUnstructured(&object.Unstructured, &fs)
+		if err != nil {
+			panic(err)
+		}
 
 		if !strings.HasPrefix(fs.Spec.PriorityLevelConfiguration.Name, "cluster-") {
 			continue
