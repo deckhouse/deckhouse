@@ -410,6 +410,7 @@ spec:
 ```
 
 ### Service accounts
+
 Every service account used in deckhouse modules should have appropriate flow schema to prevent API overloading.
 
 In deckhouse we have 4 predefined PriorityLevelConfigurations for use in flow schemas:
@@ -434,8 +435,8 @@ Example:
 ```
 
 **Attention!!!**
-  * Predefined schemas limit only `LIST` API requests. If you need to limit another requests, you should write full flowSchema manifest for module.
-  * Predefined schemas limit all service accounts in namespace. If you need to select specific service accounts in namespace, you should write full flowSchema manifest for module.
+* Predefined schemas limit only `LIST` API requests. If you need to limit another requests, you should write full flowSchema manifest for module.
+* Predefined schemas limit all service accounts in namespace. If you need to select specific service accounts in namespace, you should write full flowSchema manifest for module.
 
 ### Hooks
 
