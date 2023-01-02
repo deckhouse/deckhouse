@@ -409,6 +409,34 @@ spec:
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
 ```
 
+### Service accounts
+Every service account used in deckhouse modules should have appropriate flow schema to prevent API overloading.
+
+In deckhouse we have 4 predefined PriorityLevelConfigurations for use in flow schemas:
+
+name             | assuredConcurrencyShares | handSize | queueLengthLimit | queues
+-----------------|--------------------------|----------|------------------|-------
+cluster-low      |            5             |    4     |        50        |   16
+cluster-medium   |            10            |    4     |        50        |   16
+cluster-high     |            20            |    4     |        50        |   16
+cluster-critical |            50            |    4     |        50        |   16
+
+PriorityLevelConfiguration queuing is described [here](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#queuing)
+and [here](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/#prioritylevelconfiguration).
+Additional info about queuing algorithm can be found [here](https://github.com/kubernetes/enhancements/tree/master/keps/sig-api-machinery/1040-priority-and-fairness).
+
+For use in the templates there is helm helper function - `helm_lib_flow_schema_manifest`.
+
+Example:
+
+```yaml
+{{- include "helm_lib_flow_schema_manifest" (list . "cluster-high") }}
+```
+
+**Attention!!!**
+  * Predefined schemas limit only `LIST` API requests. If you need to limit another requests, you should write full flowSchema manifest for module.
+  * Predefined schemas limit all service accounts in namespace. If you need to select specific service accounts in namespace, you should write full flowSchema manifest for module.
+
 ### Hooks
 
 For more information about hooks, their structure, and binding to events, see the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/HOOKS.md).
