@@ -5,6 +5,8 @@ Installing Deckhouse on kind, will allow you to get a Kubernetes cluster with De
 Deckhouse will be installed in a **minimal** configuration, with Grafana based [monitoring](/documentation/v1/modules/300-prometheus/) enabled. Some features, such as [node management](/documentation/v1/modules/040-node-manager/) and [control plane management](/documentation/v1/modules/040-control-plane-manager/) will not work. To simplify, the [sslip.io](https://sslip.io ) service is used for working with DNS.
 
 > **Note!** Some providers are blocking work sslip.io and similar services. If you encounter such a problem, put the necessary domain names in the `hosts` file locally, or use a real domain and fix [DNS names template](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+>
+> **Note!** When using kind on Windows, monitoring (Grafana, Prometheus) may not be available or work incorrectly due to the need to use a special kernel for WSL. Read about the solution in [the kind documentation](https://kind.sigs.k8s.io/docs/user/using-wsl2/#kubernetes-service-with-session-affinity).
 
 {% offtopic title="Computer minimal requirements..." %}
 - Operating system: macOS, Windows or Linux.

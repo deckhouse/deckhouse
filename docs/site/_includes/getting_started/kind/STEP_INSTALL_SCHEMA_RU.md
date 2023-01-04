@@ -5,6 +5,8 @@
 Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/documentation/v1/modules/300-prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/documentation/v1/modules/040-node-manager/) и [управление control-plane](/documentation/v1/modules/040-control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io). 
 
 > **Внимание!** Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+>
+> **Внимание!** При использовании kind на Windows мониторинг (Grafana, Prometheus) может быть недоступен или работать некорректно. Это связано с необходимостью использовать специальное ядро для WSL. Решение проблемы описано [в документации kind](https://kind.sigs.k8s.io/docs/user/using-wsl2/#kubernetes-service-with-session-affinity).
 
 {% offtopic title="Минимальные требования к компьютеру..." %}
 - Операционная система macOS, Windows или Linux.
