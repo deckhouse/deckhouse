@@ -1,0 +1,39 @@
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: FlowSchema
+metadata:
+  name: {{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  priorityLevelConfiguration:
+    name: {{ $.Chart.Name }}
+  distinguisherMethod:
+    type: ByUser
+  rules:
+  - resourceRules:
+    - apiGroups: ["", "apps"]
+      clusterScope: true
+      namespaces: ["*"]
+      resources: ["pods", "replicasets", "deployments", "statefulsets", "daemonsets"]
+      verbs: ["list", "get"]
+    subjects:
+    - kind: ServiceAccount
+      serviceAccount:
+        name: {{ $.Chart.Name }}
+        namespace: d8-{{ $.Chart.Name }}
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: {{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 5
+    limitResponse:
+      queuing:
+        handSize: 4
+        queueLengthLimit: 50
+        queues: 16
+      type: Queue

@@ -1,0 +1,1 @@
+FROM falcosecurity/falco:0.33.1@sha256:53ade26aeb64bfd47c276bdd103709e69837bd95f1cd66b66661f84cedd37eef

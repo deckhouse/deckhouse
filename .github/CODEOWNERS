@@ -22,7 +22,8 @@
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
 502-delivery/               @shvgn
-600-flant-integration/      @shvgn
+600-flant-integration/       @shvgn
+650-runtime-audit-engine/   @nabokihms
 bashible-apiserver/         @yalosev
 candi/                      @RomanenkoDenys
 cloud-controller-manager/   @zuzzas

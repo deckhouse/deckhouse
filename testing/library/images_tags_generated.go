@@ -459,6 +459,10 @@ var DefaultImagesTags = map[string]interface{}{
 		"kubernetesCniUbuntu111":              "imageHash-registrypackages-kubernetesCniUbuntu111",
 		"virtWhatDebian1151Deb9u1":            "imageHash-registrypackages-virtWhatDebian1151Deb9u1",
 	},
+	"runtimeAuditEngine": map[string]interface{}{
+		"falco":             "imageHash-runtimeAuditEngine-falco",
+		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
+	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
