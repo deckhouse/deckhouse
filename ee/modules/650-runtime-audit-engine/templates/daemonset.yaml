@@ -166,7 +166,7 @@ spec:
           {{- end }}
         initContainers:
         - name: falco-driver-loader
-          image: {{ include "helm_lib_module_image" (list . "falco-driver-loader") }}
+          image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
           imagePullPolicy: IfNotPresent
           securityContext:
           volumeMounts:
