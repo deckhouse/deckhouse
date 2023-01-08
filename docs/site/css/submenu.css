@@ -92,6 +92,6 @@
     position: relative;
 }
 
-.submenu-parent:hover .submenu-container {
+.submenu-parent:not(.disabled):hover .submenu-container {
     display: block;
 }
