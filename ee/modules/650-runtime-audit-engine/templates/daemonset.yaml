@@ -59,7 +59,10 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: falco
-        {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
+        # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
+        # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
+        securityContext:
+          privileged: true
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
@@ -166,9 +169,17 @@ spec:
           {{- end }}
       initContainers:
       - name: falco-driver-loader
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
         imagePullPolicy: IfNotPresent
-        securityContext:
+        env:
+        - name: FALCO_BPF_PROBE
+          value: ""
+        # Always compile driver to prevent external internet requests in air-gapped environments
+        - name: ENABLE_COMPILE
+          value: "yes"
+        - name: ENABLE_DOWNLOAD
+          value: "no"
         volumeMounts:
           - mountPath: /root/.falco
             name: root-falco-fs
@@ -186,9 +197,14 @@ spec:
           - mountPath: /host/etc
             name: etc-fs
             readOnly: true
-        env:
-        - name: FALCO_BPF_PROBE
-          value: ""
+          - mountPath: /sys/kernel/debug
+            name: debug-fs
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "falco_resources" . | nindent 14 }}
+          {{- end }}
       terminationGracePeriodSeconds: 30
       volumes:
       - emptyDir: {}
@@ -221,7 +237,8 @@ spec:
             path: falco.yaml
           - key: falco_rules.yaml
             path: falco_rules.yaml
-          - key: k8s_audit_rules.yaml
-            path: k8s_audit_rules.yaml
+          # TODO(nabokihms): Add k8s audit rules
+          # - key: k8s_audit_rules.yaml
+          #   path: k8s_audit_rules.yaml
           name: {{ $.Chart.Name }}
         name: config-volume
