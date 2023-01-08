@@ -164,31 +164,31 @@ spec:
           {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
           {{- end }}
-        initContainers:
-        - name: falco-driver-loader
-          image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
-          imagePullPolicy: IfNotPresent
-          securityContext:
-          volumeMounts:
-            - mountPath: /root/.falco
-              name: root-falco-fs
-            - mountPath: /host/proc
-              name: proc-fs
-              readOnly: true
-            - mountPath: /host/boot
-              name: boot-fs
-              readOnly: true
-            - mountPath: /host/lib/modules
-              name: lib-modules
-            - mountPath: /host/usr
-              name: usr-fs
-              readOnly: true
-            - mountPath: /host/etc
-              name: etc-fs
-              readOnly: true
-          env:
-          - name: FALCO_BPF_PROBE
-            value: ""
+      initContainers:
+      - name: falco-driver-loader
+        image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        volumeMounts:
+          - mountPath: /root/.falco
+            name: root-falco-fs
+          - mountPath: /host/proc
+            name: proc-fs
+            readOnly: true
+          - mountPath: /host/boot
+            name: boot-fs
+            readOnly: true
+          - mountPath: /host/lib/modules
+            name: lib-modules
+          - mountPath: /host/usr
+            name: usr-fs
+            readOnly: true
+          - mountPath: /host/etc
+            name: etc-fs
+            readOnly: true
+        env:
+        - name: FALCO_BPF_PROBE
+          value: ""
       terminationGracePeriodSeconds: 30
       volumes:
       - emptyDir: {}
