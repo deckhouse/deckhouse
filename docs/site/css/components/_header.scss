@@ -139,6 +139,11 @@ html {
                     left: -5px;
                 }
             }
+            &.disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
             a {
                 color: $color-main;
                 text-decoration: none;

@@ -48,7 +48,7 @@
               </li>
               {% endfor %}
           {% endfor %}
-          <li class="header__navigation-item header__navigation-item_parent submenu-parent" data-proofer-ignore>
+          <li class="header__navigation-item header__navigation-item_parent submenu-parent {%- if page.no_alternative == true %} disabled{% endif %}" data-proofer-ignore>
             <a href="#">
                 {%- if page.lang == "ru" %}
                     Русский
