@@ -32,22 +32,21 @@ import (
 )
 
 const (
-	// ca expiration = 10 years
-	caExpiryDurationStr = "87600h"
-	// certificate expiration - 10 years
-	certExpiryDuration = 87600 * time.Hour
-	// when to recreate a certificate - 6 month (total expiration 10 years, so we will have enough time to recreate it)
-	certOutdatedDuration = 4380 * time.Hour
+	caExpiryDurationStr  = "87600h"                    // 10 years
+	certExpiryDuration   = (24 * time.Hour) * 365 * 10 // 10 years
+	certOutdatedDuration = (24 * time.Hour) * 365 / 2  // 6 month, just enough to renew certificate
 
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
 	keySize      = 256
+
+	SnapshotKey = "secret"
 )
 
 // DefaultSANs helper to generate list of sans for certificate
 // you can also use helpers:
 //
-//	ClusterDomainSAN(value) to generate sans with respect of cluster domain (ex: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
+//	ClusterDomainSAN(value) to generate sans with respect of cluster domain (e.g.: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
 //	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
 	return func(input *go_hook.HookInput) []string {
@@ -91,12 +90,12 @@ type GenSelfSignedTLSHookConf struct {
 	// FullValuesPathPrefix - prefix full path to store CA certificate TLS private key and cert
 	// full paths will be
 	//   FullValuesPathPrefix + .ca  - CA certificate
-	//   FullValuesPathPrefix + .cert - TLS private key
+	//   FullValuesPathPrefix + .crt - TLS private key
 	//   FullValuesPathPrefix + .key - TLS certificate
 	// Example: FullValuesPathPrefix =  'prometheusMetricsAdapter.internal.adapter'
 	// Values to store:
 	// prometheusMetricsAdapter.internal.adapter.ca
-	// prometheusMetricsAdapter.internal.adapter.cert
+	// prometheusMetricsAdapter.internal.adapter.crt
 	// prometheusMetricsAdapter.internal.adapter.key
 	// Data in values store as plain text
 	// In helm templates you need use `b64enc` function to encode
@@ -108,14 +107,24 @@ type GenSelfSignedTLSHookConf struct {
 	BeforeHookCheck func(input *go_hook.HookInput) bool
 }
 
-func (gss GenSelfSignedTLSHookConf) generatePaths() (caPath, certPath, keyPath string) {
-	prefix := strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+func (gss GenSelfSignedTLSHookConf) path() string {
+	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+}
 
-	caPath = strings.Join([]string{prefix, "ca"}, ".")
-	certPath = strings.Join([]string{prefix, "crt"}, ".")
-	keyPath = strings.Join([]string{prefix, "key"}, ".")
+type certValues struct {
+	CA  string `json:"ca"`
+	Crt string `json:"crt"`
+	Key string `json:"key"`
+}
 
-	return
+// The certificate mapping "cert" -> "crt". We are migrating to "crt" naming for certificates
+// in values.
+func convCertToValues(cert certificate.Certificate) certValues {
+	return certValues{
+		CA:  cert.CA,
+		Crt: cert.Cert,
+		Key: cert.Key,
+	}
 }
 
 // RegisterInternalTLSHook
@@ -133,7 +142,7 @@ func RegisterInternalTLSHook(conf GenSelfSignedTLSHookConf) bool {
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
-				Name:       "secret",
+				Name:       SnapshotKey,
 				ApiVersion: "v1",
 				Kind:       "Secret",
 				NamespaceSelector: &types.NamespaceSelector{
@@ -166,8 +175,6 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
-	caPath, certPath, keyPath := conf.generatePaths()
-
 	var usages []string
 	if conf.Usages == nil {
 		usages = []string{
@@ -194,7 +201,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 
 		cn, sans := conf.CN, conf.SANs(input)
 
-		if len(input.Snapshots["secret"]) == 0 {
+		if len(input.Snapshots[SnapshotKey]) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
 			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
@@ -203,7 +210,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 		} else {
 			// Certificate is in the snapshot => load it.
-			cert = input.Snapshots["secret"][0].(certificate.Certificate)
+			cert = input.Snapshots[SnapshotKey][0].(certificate.Certificate)
 			// update certificate if less than 6 month left. We create certificate for 10 years, so it looks acceptable
 			// and we don't need to create Crontab schedule
 			caOutdated, err := isOutdatedCA(cert.CA)
@@ -216,6 +223,8 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 				input.LogEntry.Errorf(err.Error())
 			}
 
+			// In case of errors, both these flags are false to avoid regeneration loop for the
+			// certificate.
 			if caOutdated || certOutdated {
 				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
 				if err != nil {
@@ -224,10 +233,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 		}
 
-		// Note that []byte values will be encoded in base64. Use strings here!
-		input.Values.Set(caPath, cert.CA)
-		input.Values.Set(certPath, cert.Cert)
-		input.Values.Set(keyPath, cert.Key)
+		input.Values.Set(conf.path(), convCertToValues(cert))
 		return nil
 	}
 }

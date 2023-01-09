@@ -17,109 +17,88 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8serror "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
-type WebhookSecretData struct {
-	CA     certificate.Authority
-	Server certificate.Authority
-}
-
 const (
-	webhookSnapshotTLS = "secrets"
+	certificateSecretName = "user-authz-webhook"
 )
 
-func applyWebhookSecretRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
-	}
+var ErrSkip = fmt.Errorf("skipping")
 
-	ws := &WebhookSecretData{}
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	BeforeHookCheck: func(input *go_hook.HookInput) bool {
+		// Migrate the secret structure in any case
+		err := dependency.WithExternalDependencies(migrateSecretStructure)(input)
+		if err != nil {
+			input.LogEntry.Errorf("migrating secret structure: %v", err)
+			return false // skip hook
+		}
 
-	webhookCA, ok := secret.Data["ca.crt"]
-	if !ok {
-		return nil, fmt.Errorf("'ca.crt' field not found")
-	}
-	webhookServerCrt, ok := secret.Data["webhook-server.crt"]
-	if !ok {
-		return nil, fmt.Errorf("'webhook-server.crt' field not found")
-	}
-	webhookServerKey, ok := secret.Data["webhook-server.key"]
-	if !ok {
-		return nil, fmt.Errorf("'webhook-server.key' field not found")
-	}
+		var (
+			secretExists        = len(input.Snapshots[tls_certificate.SnapshotKey]) > 0
+			multitenancyEnabled = input.Values.Get("userAuthz.enableMultiTenancy").Bool()
+		)
 
-	ws.CA.Cert = string(webhookCA)
-	ws.Server.Cert = string(webhookServerCrt)
-	ws.Server.Key = string(webhookServerKey)
-
-	return ws, nil
-}
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        internal.Queue(webhookSnapshotTLS),
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:              webhookSnapshotTLS,
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: internal.NsSelector(),
-			NameSelector:      &types.NameSelector{MatchNames: []string{"user-authz-webhook"}},
-			FilterFunc:        applyWebhookSecretRuleFilter,
-		},
+		return secretExists || multitenancyEnabled
 	},
-}, webhookSecretsHandler)
 
-func webhookSecretsHandler(input *go_hook.HookInput) error {
-	var webhookCA string
-	var webhookServerCrt string
-	var webhookServerKey string
+	SANs: tls_certificate.DefaultSANs([]string{"127.0.0.1"}),
+	CN:   "127.0.0.1",
 
-	snapshots := input.Snapshots[webhookSnapshotTLS]
+	Namespace:            internal.Namespace,
+	TLSSecretName:        certificateSecretName,
+	FullValuesPathPrefix: "userAuthz.internal.webhookCertificate",
+})
 
-	if len(snapshots) > 0 {
-		snapshot := snapshots[0].(*WebhookSecretData)
-		webhookCA = snapshot.CA.Cert
-		webhookServerCrt = snapshot.Server.Cert
-		webhookServerKey = snapshot.Server.Key
-	} else {
-		enableMultiTenancy := input.Values.Get("userAuthz.enableMultiTenancy").Bool()
-		if !enableMultiTenancy {
-			return nil
-		}
-		if input.Values.Exists("userAuthz.internal.webhookCA") {
-			return nil
-		}
-		var selfSignedCA certificate.Authority
-		selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "user-authz-webhook")
-		if err != nil {
-			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
-		}
-		webhookCert, err := certificate.GenerateSelfSignedCert(input.LogEntry, "user-authz-webhook", selfSignedCA, certificate.WithSANs("127.0.0.1"))
-		if err != nil {
-			return fmt.Errorf("cannot generate selfsigned cert: %v", err)
-		}
-
-		webhookCA = selfSignedCA.Cert
-		webhookServerKey = webhookCert.Key
-		webhookServerCrt = webhookCert.Cert
+// Migration: prior to Deckhouse 1.43, the certificate was stored in these fields. The library
+// expects another structure, so these webhook-* fields are not included in the snapshot.
+//
+//	webhook-server.crt
+//	webhook-server.key
+//	ca.crt
+//
+// We switch them to the standard structure:
+//
+//	tls.crt
+//	tls.key
+//	ca.crt
+//
+// TODO: (migration) remove in Deckhouse 1.44
+func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) error {
+	klient, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("getting kubernetes client: %v", err)
 	}
 
-	input.Values.Set("userAuthz.internal.webhookCA", webhookCA)
-	input.Values.Set("userAuthz.internal.webhookServerCrt", webhookServerCrt)
-	input.Values.Set("userAuthz.internal.webhookServerKey", webhookServerKey)
+	secret, err := klient.CoreV1().Secrets(internal.Namespace).Get(context.TODO(), certificateSecretName, metav1.GetOptions{})
+	if err != nil {
+		if k8serror.IsNotFound(err) {
+			// Secret does not exist, nothing to do
+			return nil
+		}
+		return fmt.Errorf("getting secret %s/%s: %v", internal.Namespace, certificateSecretName, err)
+	}
 
-	return nil
+	if secret.Data["webhook-server.crt"] == nil {
+		// Already migrated
+		return nil
+	}
+
+	err = klient.CoreV1().Secrets(internal.Namespace).Delete(context.TODO(), certificateSecretName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("deleting secret with outedated structure %s/%s: %v", internal.Namespace, certificateSecretName, err)
+	}
+
+	// We have just migrated the secret, so we need to skip the hook to avoid wrong snapshot.
+	return fmt.Errorf("skipping hook (secret %s/%s has been migrated)", internal.Namespace, certificateSecretName)
 }
