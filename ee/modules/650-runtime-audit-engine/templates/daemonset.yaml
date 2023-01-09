@@ -61,8 +61,7 @@ spec:
       - name: falco
         # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
         # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
-        securityContext:
-          privileged: true
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
@@ -169,7 +168,7 @@ spec:
           {{- end }}
       initContainers:
       - name: falco-driver-loader
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
         imagePullPolicy: IfNotPresent
         env:
