@@ -1,5 +1,22 @@
 require 'json'
 
+def parse_module_data(input, site)
+    if input.has_key?("featureStatus")
+       featureStatus = input["featureStatus"]
+       moduleName = input["title"]
+       if ! site.data["modulesFeatureStatus"]
+          site.data["modulesFeatureStatus"] = {}
+       end
+       site.data["modulesFeatureStatus"][moduleName] = featureStatus
+    else
+      if input.has_key?("folders")
+        input["folders"].each do |item|
+          parse_module_data(item, site)
+        end
+      end
+    end
+end
+
 Jekyll::Hooks.register :site, :post_read do |site|
   bundlesByModule = Hash.new()
   bundlesModules = Hash.new()
@@ -33,5 +50,8 @@ Jekyll::Hooks.register :site, :post_read do |site|
   site.data['bundles']['byModule'] = bundlesByModule
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
+
+  # Fill site.data.modulesFeatureStatus
+  parse_module_data(site.data["sidebars"]["main"]["entries"], site)
 
 end

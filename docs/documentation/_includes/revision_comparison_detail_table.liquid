@@ -18,6 +18,7 @@
 <tbody>
 {%- for module in modules %}
 {%- assign modulePath = module[1].path %}
+{%- assign moduleName = module[0] %}
 {%- assign moduleExternal = false %}
 
 {%- if revision == 'ce' and module[1].revision != 'ce' %}
@@ -31,9 +32,12 @@
 {%- if moduleExternal %}
 {%- assign modulePath = module[1].path | prepend: '/documentation/' | prepend: page.lang | prepend: site.url %}
 {%- endif %}
+
 <tr>
   <td style="text-align: left">
-    <a href="{{ modulePath }}">{{ module[0] }}</a>
+    <a href="{{ modulePath }}"
+    {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+    >{{ moduleName }}</a>
   </td>
   <td style="text-align: center; width: 170px;">
       {% if module[1].revision == 'ee' or module[1].revision == 'fe'  %}
