@@ -276,7 +276,7 @@
 .sidebar__item_hot > a:before,
 .sidebar__submenu > .sidebar__item_ee > a:before,
 .sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before,
-.sidebar__submenu > .sidebar__item_experimental > a:before {
+.sidebar__submenu > .sidebar__item_experimental > a:before, a.comparison-table__module-experimental:after {
     font-size: 8px;
     color: #fff;
     background: #0066FF;
@@ -292,15 +292,24 @@
     letter-spacing: 1px;
 }
 
+a.comparison-table__module-experimental {
+    position: relative;
+    display: inline-block;
+}
+
+a.comparison-table__module-experimental:after {
+    top: 0px;
+}
+
 .sidebar__item_hot>a:before {
     content: 'NEW!';
 }
 
-.sidebar__submenu > .sidebar__item_experimental > a:before {
+.sidebar__submenu > .sidebar__item_experimental > a:before, a.comparison-table__module-experimental:after {
     content: 'Experimental';
 }
 
-.sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before {
+.sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before, a.comparison-table__module-proprietaryOkmeter:after {
     content: 'Proprietary';
 }
 
