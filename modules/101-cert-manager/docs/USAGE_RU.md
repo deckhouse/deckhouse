@@ -199,7 +199,7 @@ spec:
      - "*.domain.com"
    ```
 
-## Заказ selfsigned-сертификата
+## Заказ self-signed-сертификата
 
 Все еще проще, чем с LetsEncypt. Просто меняем `letsencrypt` на `selfsigned`:
 
