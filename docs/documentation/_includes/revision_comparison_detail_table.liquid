@@ -36,7 +36,7 @@
 <tr>
   <td style="text-align: left">
     <a href="{{ modulePath }}"
-    {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+    {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
     >{{ moduleName }}</a>
   </td>
   <td style="text-align: center; width: 170px;">
