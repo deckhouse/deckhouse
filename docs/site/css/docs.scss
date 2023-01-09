@@ -303,6 +303,8 @@ a.comparison-table__module-experimental:after, a.comparison-table__module-propri
     font-weight: 700;
     white-space: nowrap;
     letter-spacing: 1px;
+    position: relative;
+    display: inline-block;
 }
 
 .sidebar__item_hot>a:before {
