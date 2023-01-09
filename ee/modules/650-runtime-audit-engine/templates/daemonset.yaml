@@ -69,6 +69,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
+
       - name: falco
         # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
         # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
@@ -134,16 +135,19 @@ spec:
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcosidekick") }}
+        env:
+        - name: LISTENADDRESS
+          value: "127.0.0.1"
         livenessProbe:
           httpGet:
-            path: /ping
-            port: http
+            path: /sidekick/ping
+            port: 8766
           initialDelaySeconds: 10
           periodSeconds: 5
         readinessProbe:
           httpGet:
-            path: /ping
-            port: http
+            path: /sidekick/ping
+            port: 8766
           initialDelaySeconds: 10
           periodSeconds: 5
         resources:
@@ -171,10 +175,10 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
-            - /ping
+            - /sidekick/ping
             upstreams:
             - upstream: http://127.0.0.1:2801/
-              path: /metrics
+              path: /sidekick/
               authorization:
                 resourceAttributes:
                   namespace: d8-{{ $.Chart.Name }}
@@ -202,6 +206,7 @@ spec:
           {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
           {{- end }}
+
       initContainers:
       - name: falco-driver-loader
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
