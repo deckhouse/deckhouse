@@ -276,7 +276,8 @@
 .sidebar__item_hot > a:before,
 .sidebar__submenu > .sidebar__item_ee > a:before,
 .sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before,
-.sidebar__submenu > .sidebar__item_experimental > a:before, a.comparison-table__module-experimental:after {
+.sidebar__submenu > .sidebar__item_experimental > a:before,
+a.comparison-table__module:after {
     font-size: 8px;
     color: #fff;
     background: #0066FF;
@@ -292,12 +293,12 @@
     letter-spacing: 1px;
 }
 
-a.comparison-table__module-experimental {
+a.comparison-table__module {
     position: relative;
     display: inline-block;
 }
 
-a.comparison-table__module-experimental:after {
+a.comparison-table__module:after {
     top: 0px;
 }
 
