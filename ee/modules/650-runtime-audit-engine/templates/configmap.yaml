@@ -328,10 +328,10 @@ data:
 
     http_output:
       # @ Enable http output for security notifications.
-      enabled: false
+      enabled: true
       # @ When set, this will override an auto-generated URL which matches the falcosidekick Service.
       # @ When including Falco inside a parent helm chart, you must set this since the auto-generated URL won't match (#280).
-      url: ""
+      url: "http://127.0.0.1:2801/"
       user_agent: "deckhouse/runtime-audit-engine"
 
     # Falco supports running a gRPC server with two main binding types

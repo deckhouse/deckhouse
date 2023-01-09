@@ -3,6 +3,11 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "falcosidekick_resources" }}
+cpu: 5m
+memory: 10Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -23,6 +28,12 @@ spec:
     - containerName: "falco"
       minAllowed:
       {{- include "falco_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 4000m
+        memory: 5Gi
+    - containerName: "falcosidekick"
+      minAllowed:
+      {{- include "falcosidekick_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 4000m
         memory: 5Gi
@@ -119,6 +130,29 @@ spec:
           name: config-volume
         - mountPath: /sys/kernel/debug
           name: debug-fs
+
+      - name: falcosidekick
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "falcosidekick") }}
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "falcosidekick_resources" . | nindent 14 }}
+          {{- end }}
+
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -136,8 +170,10 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /ping
             upstreams:
-            - upstream: http://127.0.0.1:8765/metrics
+            - upstream: http://127.0.0.1:2801/
               path: /metrics
               authorization:
                 resourceAttributes:

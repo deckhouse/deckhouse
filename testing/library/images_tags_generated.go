@@ -462,6 +462,7 @@ var DefaultImagesTags = map[string]interface{}{
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":             "imageHash-runtimeAuditEngine-falco",
 		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
+		"falcosidekick":     "imageHash-runtimeAuditEngine-falcosidekick",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",

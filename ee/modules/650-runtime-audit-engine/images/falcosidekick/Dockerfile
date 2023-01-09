@@ -1,0 +1,1 @@
+FROM falcosecurity/falcosidekick:2.26.0-amd64@sha256:e13135c2cb2f01457dcf4ebca941c78898ad80c33c94a95e9b94033693411a31
