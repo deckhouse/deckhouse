@@ -17,13 +17,13 @@ limitations under the License.
 package template_tests
 
 import (
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library"
 )
 
 func Test(t *testing.T) {
@@ -91,12 +91,21 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	mergeConf := library.MergeConf{
+		Targets: library.MergeTargets{
+			"/deckhouse/ee/modules/140-user-authz/templates/webhook": {library.ThrowError, "/deckhouse/modules/140-user-authz/templates/webhook"},
+		},
+		TempDir: "",
+	}
+
 	BeforeSuite(func() {
-		mergeEditions()
+		err := library.MergeEditions(mergeConf)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		restoreEditions()
+		err := library.RestoreEditions(mergeConf)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	BeforeEach(func() {
@@ -225,13 +234,3 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	})
 
 })
-
-func mergeEditions() {
-	err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
-	Expect(err).ShouldNot(HaveOccurred())
-}
-
-func restoreEditions() {
-	err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
-	Expect(err).ShouldNot(HaveOccurred())
-}

@@ -18,7 +18,6 @@ package template_tests
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -28,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
@@ -506,13 +506,24 @@ internal:
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+	mergeConf := library.MergeConf{
+		Targets: library.MergeTargets{
+			"/deckhouse/ee/candi/cloud-providers/openstack":                             {library.ThrowError, "/deckhouse/candi/cloud-providers/openstack"},
+			"/deckhouse/ee/candi/cloud-providers/vsphere":                               {library.ThrowError, "/deckhouse/candi/cloud-providers/vsphere"},
+			"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager": {library.ThrowError, "/deckhouse/modules/040-node-manager/cloud-providers/openstack"},
+			"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager":   {library.ThrowError, "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"},
+		},
+		TempDir: "",
+	}
 
 	BeforeSuite(func() {
-		mergeEditions()
+		err := library.MergeEditions(mergeConf)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		restoreEditions()
+		err := library.RestoreEditions(mergeConf)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	BeforeEach(func() {
@@ -1442,28 +1453,4 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 	}
 
 	return nil
-}
-
-func mergeEditions() {
-	err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", "/deckhouse/candi/cloud-providers/openstack")
-	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/candi/cloud-providers/vsphere")
-	Expect(err).ShouldNot(HaveOccurred())
-
-	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/openstack")
-	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
-	Expect(err).ShouldNot(HaveOccurred())
-}
-
-func restoreEditions() {
-	err := os.Remove("/deckhouse/candi/cloud-providers/openstack")
-	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Remove("/deckhouse/candi/cloud-providers/vsphere")
-	Expect(err).ShouldNot(HaveOccurred())
-
-	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
-	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
-	Expect(err).ShouldNot(HaveOccurred())
 }
