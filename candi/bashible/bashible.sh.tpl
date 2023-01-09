@@ -247,8 +247,7 @@ function main() {
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      bashibleEventsFile=$(mktemp -t events.XXXXXX)
-      echo "Failed to execute step "$step" ... retry in 10 seconds." 2>&1 | cut -f 5 -d ' ' | tee -a "${bashibleEventsFile}"
+      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
       sleep 10
       echo ===
       echo === Step: $step
@@ -259,28 +258,10 @@ function main() {
       fi
       {{- end }}
       {{- if ne .runType "ClusterBootstrap" }}
-      eventHash="$(cat $bashibleEventsFile | uniq -d)-$(echo -n "$(hostname -s)" | md5sum | awk '{print $1}' | cut -b -10)"
-      bb-kubectl apply -f - <<EOF
-        apiVersion: v1
-        kind: Event
-        metadata:
-          name: bashible-error-${eventHash}
-          namespace: default
-        reason: Failed
-        type: Error
-        lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
-        message: '$(cat $bashibleEventsFile | uniq -d)'
-        involvedObject:
-          kind: Node
-        source:
-          component: bashible
-          host: '$(hostname -s)'
-EOF
+      bb-event-error-create
       {{- end }}
     done
   done
-
-  rm ${bashibleEventsFile}
 
 {{ if eq .runType "Normal" }}
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}

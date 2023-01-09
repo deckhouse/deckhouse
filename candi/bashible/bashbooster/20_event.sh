@@ -122,3 +122,23 @@ bb-event-cleanup() {
     fi
     BB_EVENT_DEPTH["__delay__"]=$(( ${BB_EVENT_DEPTH["__delay__"]} - 1 ))
 }
+bb-event-error-create() {
+    eventHash="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/' | md5sum | awk '{print $1}' | cut -b -5)"
+    bb-kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Event
+        metadata:
+          name: bashible-error-${eventHash}
+          namespace: d8-cloud-instance-manager
+        reason: Failed
+        type: Error
+        lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
+        message: '$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r "s/.*Step: (.*)/\1/")'
+        involvedObject:
+          kind: Node
+          namespace: d8-cloud-instance-manager
+        source:
+          component: bashible
+          host: '$(hostname -s)'
+EOF
+}
