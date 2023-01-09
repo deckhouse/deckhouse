@@ -42,7 +42,7 @@ type MergeConf struct {
 }
 
 func MergeEditions(conf MergeConf) error {
-	if isGithub() {
+	if inDocker() {
 		return nil
 	}
 
@@ -79,7 +79,7 @@ func MergeEditions(conf MergeConf) error {
 }
 
 func RestoreEditions(conf MergeConf) error {
-	if isGithub() {
+	if inDocker() {
 		return nil
 	}
 
@@ -120,7 +120,7 @@ func exists(path string) (bool, error) {
 	return false, err
 }
 
-func isGithub() bool {
-	_, isGithub := os.LookupEnv("GITHUB_ACTIONS")
-	return isGithub
+func inDocker() bool {
+	inDocker, _ := exists("/.dockerenv")
+	return inDocker
 }
