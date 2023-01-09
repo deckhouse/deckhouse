@@ -508,10 +508,10 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 	mergeConf := library.MergeConf{
 		Targets: library.MergeTargets{
-			"/deckhouse/ee/candi/cloud-providers/openstack":                             {library.ThrowError, "/deckhouse/candi/cloud-providers/openstack"},
-			"/deckhouse/ee/candi/cloud-providers/vsphere":                               {library.ThrowError, "/deckhouse/candi/cloud-providers/vsphere"},
-			"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager": {library.ThrowError, "/deckhouse/modules/040-node-manager/cloud-providers/openstack"},
-			"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager":   {library.ThrowError, "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"},
+			"/deckhouse/ee/candi/cloud-providers/openstack":                             {Strategy: library.ThrowError, NewName: "/deckhouse/candi/cloud-providers/openstack"},
+			"/deckhouse/ee/candi/cloud-providers/vsphere":                               {Strategy: library.ThrowError, NewName: "/deckhouse/candi/cloud-providers/vsphere"},
+			"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager": {Strategy: library.ThrowError, NewName: "/deckhouse/modules/040-node-manager/cloud-providers/openstack"},
+			"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager":   {Strategy: library.ThrowError, NewName: "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"},
 		},
 		TempDir: "",
 	}

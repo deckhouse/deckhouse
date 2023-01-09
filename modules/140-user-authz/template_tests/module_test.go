@@ -93,7 +93,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	mergeConf := library.MergeConf{
 		Targets: library.MergeTargets{
-			"/deckhouse/ee/modules/140-user-authz/templates/webhook": {library.ThrowError, "/deckhouse/modules/140-user-authz/templates/webhook"},
+			"/deckhouse/ee/modules/140-user-authz/templates/webhook": {Strategy: library.ThrowError, NewName: "/deckhouse/modules/140-user-authz/templates/webhook"},
 		},
 		TempDir: "",
 	}
