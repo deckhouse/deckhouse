@@ -75,7 +75,6 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 //
 // TODO: (migration) remove in Deckhouse 1.44
 func migrateSecretStructure(input *go_hook.HookInput, dc dependency.Container) error {
-	input.Values.Get("userAuthz.enableMultiTenancy").Bool()
 
 	klient, err := dc.GetK8sClient()
 	if err != nil {
