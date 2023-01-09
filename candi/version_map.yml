@@ -285,7 +285,7 @@ k8s:
       aws: v1.23.4
       vsphere: v1.23.0
       azure: v1.23.10
-      gcp: 66064c62c6c23110c7a93faca5fba668018df732
+      gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
     csi:
       openstack: v1.23.1
       provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
