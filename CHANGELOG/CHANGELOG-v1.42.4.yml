@@ -1,0 +1,7 @@
+global-hooks:
+  fixes:
+    - summary: >-
+        Fixes in cluster configuration migration process and proxy template for EKS cluster
+        installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3381
+
