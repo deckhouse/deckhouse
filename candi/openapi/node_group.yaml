@@ -1475,7 +1475,7 @@ spec:
                     - maxPerZone
                   properties:
                     quickShutdown:
-                      description: Lowers CloudEphemeral machine drain'а timeout to 5 minutes.
+                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
