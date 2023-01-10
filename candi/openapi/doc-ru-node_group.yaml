@@ -99,8 +99,6 @@ spec:
                       description: "Status of the condition summary."
             spec:
               properties:
-                quickShutdown: &quickShutdown
-                  description: Снижает время drain'а машин до 5 минут.
                 nodeType: &nodeType
                   description: |
                     Тип узлов, которые представляет эта группа:
@@ -319,7 +317,6 @@ spec:
             status: *status
             spec:
               properties:
-                quickShutdown: *quickShutdown
                 nodeType: *nodeType
                 cri:
                   description: |
@@ -361,8 +358,6 @@ spec:
             status: *status
             spec:
               properties:
-                quickShutdown:
-                  description: Снижает время drain'а машин до 5 минут.
                 nodeType:
                   description: |
                     Тип узлов, которые представляет эта группа:
@@ -405,6 +400,8 @@ spec:
 
                     > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
                   properties:
+                    quickShutdown:
+                      description: Снижает время drain'а CloudEphemeral машин до 5 минут.
                     zones:
                       description: |
                         Переопределение перечня зон, в которых создаются инстансы.

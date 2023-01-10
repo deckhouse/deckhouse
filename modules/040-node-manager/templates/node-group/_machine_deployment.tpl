@@ -63,7 +63,7 @@ spec:
       class:
         kind: {{ $context.Values.nodeManager.internal.cloudProvider.machineClassKind }}
         name: {{ $machineClassName }}
-  {{- if $ng.quickShutdown }}
+  {{- if $ng.cloudInstances.quickShutdown }}
       drainTimeout: 5m
       maxEvictRetries: 9
   {{- end }}

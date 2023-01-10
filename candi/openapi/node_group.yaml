@@ -162,9 +162,6 @@ spec:
               required:
                 - nodeType
               properties:
-                quickShutdown:
-                  type: boolean
-                  description: Lowers machine drain timeout to 5 minutes.
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -778,9 +775,6 @@ spec:
               required:
                 - nodeType
               properties:
-                quickShutdown:
-                  type: boolean
-                  description: Lowers machine drain timeout to 5 minutes.
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -1388,9 +1382,6 @@ spec:
               required:
                 - nodeType
               properties:
-                quickShutdown:
-                  type: boolean
-                  description: Lowers machine drain timeout to 5 minutes.
                 nodeType:
                   description: |
                     The type of nodes this group provides:
@@ -1483,6 +1474,8 @@ spec:
                     - minPerZone
                     - maxPerZone
                   properties:
+                    quickShutdown:
+                      description: Lowers CloudEphemeral machine drain'а timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
