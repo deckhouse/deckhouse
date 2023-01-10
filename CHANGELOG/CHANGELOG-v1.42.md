@@ -74,6 +74,7 @@
  - **[ceph-csi]** Allow non-admin ceph account for cephfs. [#3212](https://github.com/deckhouse/deckhouse/pull/3212)
  - **[cloud-provider-openstack]** Fix ordering static nodes without security groups. [#3182](https://github.com/deckhouse/deckhouse/pull/3182)
  - **[deckhouse]** Fixed unrendered backquotes in the DeckhouseRelease resource. [#3367](https://github.com/deckhouse/deckhouse/pull/3367)
+ - **[global-hooks]** Fixes in cluster configuration migration process and proxy template for EKS cluster installation. [#3381](https://github.com/deckhouse/deckhouse/pull/3381)
  - **[ingress-nginx]** Fix client certificate update. [#3368](https://github.com/deckhouse/deckhouse/pull/3368)
  - **[ingress-nginx]** Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the Load Balancer to rebuild the endpoints. [#3121](https://github.com/deckhouse/deckhouse/pull/3121)
  - **[istio]** Replace CA for the Ingress validation of api-proxy, fix kiali `ClusterRole`. [#3395](https://github.com/deckhouse/deckhouse/pull/3395)
