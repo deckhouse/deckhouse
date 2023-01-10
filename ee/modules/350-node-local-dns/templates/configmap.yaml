@@ -16,7 +16,7 @@ data:
         success 39936
         denial 9984
         prefetch 10 1m 25%
-        serve_stale 1h verified
+        serve_stale 1h verify
       }
       reload 2s
       loop
