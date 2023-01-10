@@ -41,7 +41,7 @@ type Container interface {
 	MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client
 	GetK8sClient(options ...k8s.Option) (k8s.Client, error)
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
-	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
+	GetRegistryClient(repo, dockerConfig string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
 }
 
@@ -161,9 +161,9 @@ func (dc *dependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Clien
 	return client
 }
 
-func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error) {
+func (dc *dependencyContainer) GetRegistryClient(repo, dockerCfgBase64 string, options ...cr.Option) (cr.Client, error) {
 	if dc.isTestEnvironment() {
-		return TestDC.GetRegistryClient(repo, options...)
+		return TestDC.GetRegistryClient(repo, dockerCfgBase64, options...)
 	}
 
 	// Maybe we should use multitone here
@@ -171,7 +171,7 @@ func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Opti
 	// 	return dc.crClient, nil
 	// }
 
-	client, err := cr.NewClient(repo, options...)
+	client, err := cr.NewClient(repo, dockerCfgBase64, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (mdc *mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8
 	return k
 }
 
-func (mdc *mockedDependencyContainer) GetRegistryClient(string, ...cr.Option) (cr.Client, error) {
+func (mdc *mockedDependencyContainer) GetRegistryClient(string, string, ...cr.Option) (cr.Client, error) {
 	if mdc.CRClient != nil {
 		return mdc.CRClient, nil
 	}

@@ -19,11 +19,11 @@ package cr
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -48,7 +48,7 @@ type client struct {
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo string, options ...Option) (Client, error) {
+func NewClient(repo, dockerCfgBase64 string, options ...Option) (Client, error) {
 	opts := &registryOptions{}
 
 	for _, opt := range options {
@@ -61,7 +61,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	}
 
 	if !opts.withoutAuth {
-		authConfig, err := readAuthConfig("/etc/registrysecret/.dockerconfigjson")
+		authConfig, err := readAuthConfig(dockerCfgBase64)
 		if err != nil {
 			return nil, err
 		}
@@ -112,12 +112,12 @@ func (r *client) Digest(tag string) (string, error) {
 	return d.String(), nil
 }
 
-func readAuthConfig(configPath string) (authn.AuthConfig, error) {
-	dockerConfigBytes, err := os.ReadFile(configPath)
+func readAuthConfig(dockerCfgBase64 string) (authn.AuthConfig, error) {
+	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}
-	auths := gjson.GetBytes(dockerConfigBytes, "auths").Map()
+	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}
 
 	// The config should have at least one .auths.* entry

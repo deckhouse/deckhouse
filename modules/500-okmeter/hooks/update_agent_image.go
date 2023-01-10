@@ -46,8 +46,8 @@ func checkRelease(input *go_hook.HookInput, dc dependency.Container) error {
 	if tag == "" {
 		tag = "latest"
 	}
-
-	regCli, err := dc.GetRegistryClient(repo, cr.WithDisabledAuth())
+	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
+	regCli, err := dc.GetRegistryClient(repo, dockerCfg, cr.WithDisabledAuth())
 	if err != nil {
 		return err
 	}
