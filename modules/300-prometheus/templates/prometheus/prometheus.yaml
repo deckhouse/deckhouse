@@ -195,7 +195,7 @@ spec:
     {{- end }}
     {{- if .spec.tlsConfig }}
     tlsConfig:
-    {{- .spec.tlsConfig | toYaml | nindent 4 }}
+    {{- .spec.tlsConfig | toYaml | nindent 6 }}
     {{- end }}
   {{- end }}
 {{- end }}
