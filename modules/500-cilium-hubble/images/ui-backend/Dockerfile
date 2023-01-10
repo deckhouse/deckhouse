@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM quay.io/cilium/hubble-ui-backend:v0.8.5@sha256:2bce50cf6c32719d072706f7ceccad654bfa907b2745a496da99610776fe31ed as artifact
+FROM quay.io/cilium/hubble-ui-backend:v0.9.2@sha256:a3ac4d5b87889c9f7cc6323e86d3126b0d382933bd64f44382a92778b0cde5d7 as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /usr/bin/backend /usr/local/bin/hubble-ui-backend
