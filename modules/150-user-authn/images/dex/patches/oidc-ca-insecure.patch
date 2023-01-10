@@ -1,5 +1,5 @@
 diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
-index e345dca0..a7c3a7c4 100644
+index e345dca0..84e5da99 100644
 --- a/connector/oidc/oidc.go
 +++ b/connector/oidc/oidc.go
 @@ -3,9 +3,12 @@ package oidc
@@ -80,7 +80,7 @@ index e345dca0..a7c3a7c4 100644
  }
  
  func (c *oidcConnector) Close() error {
-@@ -238,7 +276,10 @@ func (c *oidcConnector) HandleCallback(s connector.Scopes, r *http.Request) (ide
+@@ -238,11 +276,14 @@ func (c *oidcConnector) HandleCallback(s connector.Scopes, r *http.Request) (ide
  	if errType := q.Get("error"); errType != "" {
  		return identity, &oauth2Error{errType, q.Get("error_description")}
  	}
@@ -92,3 +92,17 @@ index e345dca0..a7c3a7c4 100644
  	if err != nil {
  		return identity, fmt.Errorf("oidc: failed to get token: %v", err)
  	}
+-	return c.createIdentity(r.Context(), identity, token, createCaller)
++	return c.createIdentity(ctx, identity, token, createCaller)
+ }
+ 
+ // Refresh is used to refresh a session with the refresh token provided by the IdP
+@@ -253,6 +294,8 @@ func (c *oidcConnector) Refresh(ctx context.Context, s connector.Scopes, identit
+ 		return identity, fmt.Errorf("oidc: failed to unmarshal connector data: %v", err)
+ 	}
+ 
++	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
++
+ 	t := &oauth2.Token{
+ 		RefreshToken: string(cd.RefreshToken),
+ 		Expiry:       time.Now().Add(-time.Hour),
