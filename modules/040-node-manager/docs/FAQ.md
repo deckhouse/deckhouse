@@ -8,7 +8,7 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 
 To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
 
-1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`]). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter in the NodeGroup custom resource must be `Static` or `CloudStatic`.
+1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 2. Get the Base64-encoded script code to add and configure the node.
 
    Example of getting a Base64-encoded script code to add a node to the NodeGroup `worker`:
@@ -18,27 +18,28 @@ To add a new static node (e.g., VM or bare metal server) to the cluster, follow 
    ```
 
 3. Pre-configure the new node according to the specifics of your environment. For example:
-   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.) ;
-   - Install the necessary packages, for example, `ceph-common`;
+   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
+   - Install the necessary packages (e.g., `ceph-common`);
    - Configure network connectivity between the new node and the other nodes of the cluster.
 4. Connect to the new node over SSH and run the following command by inserting the Base64 string got in step 2:
 
    ```shell
-   echo <Base64-код-скрипта> | base64 -d | bash
+   echo <Base64-CODE> | base64 -d | bash
    ```
 
 ## How do I add a batch of static nodes to a cluster?
 
-If you don't have `NodeGroup` in your cluster, then you can find information how to do it [here](#how-do-i-add-a-static-node-to-a-cluster).
-If you already have `NodeGroup`, you can automate the bootstrap process with any automation platform that you prefer. We will use Ansible as an example.
+Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 
-1. Pick up one of Kubernetes API Server endpoints. Note that this IP have to be accessible from nodes that are prepared to be bootstrapped:
+You can automate the bootstrap process with any automation platform you prefer. The following is an example for Ansible.
+
+1. Pick up one of Kubernetes API Server endpoints. Note that this IP must be accessible from nodes that are being added to the cluster:
 
    ```shell
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse:
+2. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
 
    ```shell
    kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
@@ -81,7 +82,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
          when: bootstrapped.stat.exists == False
    ```
 
-4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file:
+4. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
 
    ```text
    [system]
@@ -99,7 +100,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
    node_group=worker
    ```
 
-5. Now you can simply run this playbook with your inventory file.
+5. Run the playbook with the inventory file.
 
 ## How to put an existing cluster node under the node-manager's control?
 
