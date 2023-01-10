@@ -67,18 +67,21 @@ COPY --from=rootfs / /
 FROM quay.io/cilium/cilium-envoy:3b70fad0b9514720f33db82841907821202c1f02@sha256:8cca16ce66a0960a207cbf518ee2e0d923ae2a49207b154cdc37c2d95f583180 as cilium-envoy
 
 #
+# Cilium builder image with tools and source code
+#
+FROM ${CILIUM_BUILDER_IMAGE} as cilium_builder
+RUN apt-get update && apt-get install patch curl -y
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.12.tar.gz | tar xvz -C /tmp/cilium-repo
+
+#
 # Hubble CLI
 #
-FROM ${CILIUM_BUILDER_IMAGE} as hubble
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.12.tar.gz | tar xvz -C /tmp/cilium-repo
+FROM cilium_builder as hubble
 RUN bash /tmp/cilium-repo/cilium-1.11.12/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
-FROM ${CILIUM_BUILDER_IMAGE} as builder
+FROM cilium_builder as builder
 
-RUN apt-get update && apt-get install patch -y
-
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.12.tar.gz | tar xvz -C /tmp/cilium-repo
 WORKDIR /tmp/cilium-repo/cilium-1.11.12
 
 COPY patches/001-netfilter-compatibility-mode.patch /
