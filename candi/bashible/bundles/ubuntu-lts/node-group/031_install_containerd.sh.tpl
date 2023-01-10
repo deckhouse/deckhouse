@@ -85,6 +85,8 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 {{- end }}
 
+  # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
+  bb-apt-install --force libseccomp2
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
 

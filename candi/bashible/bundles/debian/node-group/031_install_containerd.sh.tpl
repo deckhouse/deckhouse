@@ -90,6 +90,8 @@ containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sB
   fi
 {{- end }}
 
+  # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
+  bb-apt-install --force libseccomp2
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
 
