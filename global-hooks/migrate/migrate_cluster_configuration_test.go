@@ -121,8 +121,8 @@ var _ = Describe("Global :: migrate_cluster_configuration ::", func() {
 			f.RunHook()
 		})
 
-		It("Hook should fail", func() {
-			Expect(f).To(Not(ExecuteSuccessfully()))
+		It("Hook should not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
