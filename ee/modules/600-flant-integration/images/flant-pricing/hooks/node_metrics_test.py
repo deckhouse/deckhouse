@@ -10,8 +10,8 @@ from shell_operator import hook
 def test_node_metrics():
     out = hook.testrun(main, binding_context)
 
-    assert out.metrics.storage.data == expected_metrics
-    assert out.kubernetes.storage.data == []
+    assert out.metrics.data == expected_metrics
+    assert not out.kube_operations.data
 
 
 binding_context = [

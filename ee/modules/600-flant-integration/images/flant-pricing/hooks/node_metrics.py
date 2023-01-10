@@ -84,18 +84,10 @@ def main(ctx: hook.Context):
         )
 
     # Export metrics
-    ctx.output.metrics.expire(metric_group)
-    for m in gen_metrics(metric_generators):
-        ctx.output.metrics.collect(m)
-
-
-def gen_metrics(metric_generators):
-    """
-    Flattens metric generators into a single generator
-    """
+    ctx.metrics.expire(metric_group)
     for mg in metric_generators:
-        for m in mg.generate():
-            yield m
+        for metric in mg.generate():
+            ctx.metrics.collect(metric)
 
 
 # Node types for pricing from the annotation 'pricing.flant.com/nodeType'. Lowercase versions of
