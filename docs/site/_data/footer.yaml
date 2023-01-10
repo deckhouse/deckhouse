@@ -62,7 +62,7 @@ columns:
       - title: Обучение и консалтинг
         url: '/services/training.html'
       - title: Переезд с OpenShift
-        url: /services/moving_to_deckhouse.html
+        url: /services/moving_from_openshift.html
   - title: Информация
     items:
       - title: Партнеры

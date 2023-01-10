@@ -139,6 +139,17 @@ html {
                     left: -5px;
                 }
             }
+            &.disabled {
+                opacity: 0.3;
+                &:hover {
+                    & a {
+                        color: $color-main;
+                    }
+                }
+                & a {
+                    cursor: not-allowed;
+                }
+            }
             a {
                 color: $color-main;
                 text-decoration: none;
