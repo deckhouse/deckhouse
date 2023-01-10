@@ -58,7 +58,7 @@ apiVersions:
           replicas:
             type: integer
             minimum: 1
-            description: The number of master nodes to create.
+            description: The number of master nodes to create. It is recommended to have an odd number of masters to ensure a quorum.
           additionalNetworkTags:
             description: |
               The list of additional tags.

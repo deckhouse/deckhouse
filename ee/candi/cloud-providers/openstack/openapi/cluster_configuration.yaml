@@ -55,7 +55,7 @@ apiVersions:
             type: integer
             minimum: 1
             description: |
-              The number of master nodes to create.
+              The number of master nodes to create. It is recommended to have an odd number of masters to ensure a quorum.
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
