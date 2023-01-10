@@ -32,13 +32,13 @@ spec:
     containerPolicies:
     - containerName: frontend
       minAllowed:
-      {{- include "frontend_resources" . | nindent 8 }}
+        {{- include "frontend_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
     - containerName: backend
       minAllowed:
-      {{- include "backend_resources" . | nindent 8 }}
+        {{- include "backend_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
@@ -121,9 +121,9 @@ spec:
             {{- include "backend_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:
-          - name: hubble-ui-client-certs
-            mountPath: /var/lib/hubble-ui/certs
-            readOnly: true
+        - name: hubble-ui-client-certs
+          mountPath: /var/lib/hubble-ui/certs
+          readOnly: true
       volumes:
       - configMap:
           defaultMode: 420
