@@ -35,6 +35,13 @@ allow 127/8
 bindaddress 127.0.0.1
 driftfile /var/run/chrony/chrony.drift
 makestep 1.0 -1
+minsamples 32
+maxslewrate 500
+corrtimeratio 100
+maxdrift 500
+makestep 0.128 -1
+maxchange 1000 1 1
+maxclockerror 15
 rtcsync
 EOF
 for NTP_SERVER in ${NTP_SERVERS}; do
