@@ -32,11 +32,11 @@ data:
       init_config:
         # maxEventSize: 262144
         # webhookMaxBatchSize: 12582912
-        sslCertificate: /etc/falco/webhook/tls.crt
-      open_params: "http://127.0.0.1:9765/k8s-audit"
-    # - name: json
-    #   library_path: libjson.so
-    #   init_config: ""
+        sslCertificate: /etc/falco/webhook/falco.pem
+      open_params: "https://127.0.0.1:9765/k8s-audit"
+    - name: json
+      library_path: libjson.so
+      init_config: ""
 
     # Setting this list to empty ensures that the above plugins are *not*
     # loaded and enabled by default. If you want to use the above plugins,
@@ -45,7 +45,9 @@ data:
     # load_plugins: [cloudtrail, json]
     # @ Add here the names of the plugins that you want to be loaded by Falco. Please make sure that
     # plugins have been configured under the "plugins" section before adding them here.
-    load_plugins: []
+    load_plugins:
+    - "k8saudit"
+    - "json"
 
     # @ Watch config file and rules files for modification.
     # When a file is modified, Falco will propagate new config,
