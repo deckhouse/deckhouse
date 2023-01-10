@@ -27,7 +27,6 @@ var DefaultImagesTags = map[string]interface{}{
 		"relay":      "imageHash-ciliumHubble-relay",
 		"uiBackend":  "imageHash-ciliumHubble-uiBackend",
 		"uiFrontend": "imageHash-ciliumHubble-uiFrontend",
-		"uiProxy":    "imageHash-ciliumHubble-uiProxy",
 	},
 	"cloudProviderAws": map[string]interface{}{
 		"cloudControllerManager121": "imageHash-cloudProviderAws-cloudControllerManager121",
