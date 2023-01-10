@@ -97,8 +97,8 @@ spec:
           failureThreshold: 3
           httpGet:
             path: /healthz
-            port: 8766
-            scheme: HTTPS
+            port: 8765
+            scheme: HTTP
           initialDelaySeconds: 60
           periodSeconds: 15
           successThreshold: 1
@@ -107,8 +107,8 @@ spec:
           failureThreshold: 3
           httpGet:
             path: /healthz
-            port: 8766
-            scheme: HTTPS
+            port: 8765
+            scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 15
           successThreshold: 1
@@ -192,9 +192,6 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-metrics
                   name: {{ $.Chart.Name }}
-            - upstream: https://127.0.0.1:8765/healthz
-              path: /falco/healthz
-              upstreamInsecureSkipVerify: true
         ports:
         - containerPort: 8766
           name: https-metrics
