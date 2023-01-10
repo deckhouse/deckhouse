@@ -69,6 +69,7 @@ data:
   enable-auto-protect-node-port-range: "true"
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   bpf-lb-algorithm: "random"
+  bpf-lb-map-max: "512000"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
 
