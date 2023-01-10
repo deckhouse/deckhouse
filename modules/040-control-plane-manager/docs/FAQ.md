@@ -13,6 +13,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
 > Before adding nodes, ensure you have the required quotas in the cloud provider.
+
 > It is recommended to have an odd number of masters to ensure a quorum.
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
