@@ -141,8 +141,14 @@ html {
             }
             &.disabled {
                 opacity: 0.3;
-                cursor: not-allowed;
-                pointer-events: none;
+                &:hover {
+                    & a {
+                        color: $color-main;
+                    }
+                }
+                & a {
+                    cursor: not-allowed;
+                }
             }
             a {
                 color: $color-main;
