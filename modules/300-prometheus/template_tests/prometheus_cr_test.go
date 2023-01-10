@@ -18,9 +18,11 @@ package template_tests
 
 import (
 	"encoding/base64"
-	. "github.com/deckhouse/deckhouse/testing/helm"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
 var _ = Describe("Module :: prometheus :: helm template :: render prometheus cr", func() {
