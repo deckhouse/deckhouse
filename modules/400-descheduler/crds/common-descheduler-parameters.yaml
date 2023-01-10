@@ -1,0 +1,48 @@
+---
+nodeFit: &node-fit
+  type: boolean
+
+namespaceFilter: &namespace-filter
+  namespaces:
+    properties:
+      exclude:
+        items:
+          type: string
+        type: array
+      include:
+        items:
+          type: string
+        type: array
+    type: object
+
+priorityFilter: &priority-filter
+  thresholdPriority:
+    format: int32
+    type: integer
+  thresholdPriorityClassName:
+    type: string
+
+nodeFilter: &node-filter
+  labelSelector:
+    properties:
+      matchExpressions:
+        items:
+          properties:
+            key:
+              type: string
+            operator:
+              type: string
+            values:
+              items:
+                type: string
+              type: array
+          required:
+            - key
+            - operator
+          type: object
+        type: array
+      matchLabels:
+        additionalProperties:
+          type: string
+        type: object
+    type: object

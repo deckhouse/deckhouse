@@ -30,24 +30,19 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
   name: test
-  creationTimestamp: null
 spec:
   deploymentTemplate:
     nodeSelector:
       test: test
   deschedulerPolicy:
-    parameters:
+    globalParameters:
       evictFailedBarePods: true
     strategies:
       lowNodeUtilization:
-        params:
-          nodeResourceUtilizationThresholds:
-            useDeviationThresholds: true
-status:
-  ready: false
+        enabled: true
 `
 
-var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
+var _ = FDescribe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 

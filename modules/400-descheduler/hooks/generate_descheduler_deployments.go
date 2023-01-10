@@ -26,8 +26,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/api/v1alpha1"
 )
 
 const (
@@ -61,16 +59,9 @@ type DeschedulerDeploymentInfo struct {
 }
 
 func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	descheduler := &v1alpha1.Descheduler{}
-	err := sdk.FromUnstructured(obj, descheduler)
-	if err != nil {
-		return nil, err
-	}
+	unstructured.RemoveNestedField(obj.UnstructuredContent(), "status")
 
-	// don't fire up on status changes
-	descheduler.Status = v1alpha1.DeschedulerStatus{}
-
-	return descheduler, nil
+	return obj.UnstructuredContent(), nil
 }
 
 func deschedulerDeploymentReadiness(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -105,8 +96,8 @@ func generateValues(input *go_hook.HookInput) error {
 	for _, deploymentRaw := range deployments {
 		deployment := deploymentRaw.(*DeschedulerDeploymentInfo)
 
-		input.PatchCollector.MergePatch(map[string]v1alpha1.DeschedulerStatus{
-			"status": {Ready: deployment.Ready}},
+		input.PatchCollector.MergePatch(map[string]map[string]bool{
+			"status": {"ready": deployment.Ready}},
 			"deckhouse.io/v1alpha1", "Descheduler", "",
 			deployment.Name, object_patch.WithSubresource("status"))
 	}

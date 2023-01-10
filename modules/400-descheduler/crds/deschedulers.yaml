@@ -2,9 +2,6 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
-  creationTimestamp: null
   name: deschedulers.deckhouse.io
 spec:
   group: deckhouse.io
@@ -24,6 +21,15 @@ spec:
         openAPIV3Schema:
           description: Descheduler is a description of a single descheduler instance
           properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
             spec:
               description: Spec defines the behavior of a descheduler instance.
               properties:
@@ -54,7 +60,7 @@ spec:
                 deschedulerPolicy:
                   description: commonParameters and strategies follow descheduler's documentation https://github.com/kubernetes-sigs/descheduler#policy-and-strategies
                   properties:
-                    parameters:
+                    globalParameters:
                       description: Parameters that apply to all policies
                       properties:
                         evictFailedBarePods:
@@ -79,490 +85,128 @@ spec:
                           type: string
                       type: object
                     strategies:
-                      default:
-                        removePodsViolatingInterPodAntiAffinity: {}
-                        removePodsViolatingNodeAffinity: {}
                       description: 'List of strategies with corresponding parameters for a given Descheduler instances To enable a strategy with default parameters, specify it like this: removePodsViolatingNodeAffinity: {}'
                       properties:
                         highNodeUtilization:
                           properties:
-                            params:
-                              default:
-                                nodeResourceUtilizationThresholds:
-                                  thresholds:
-                                    cpu: 50
-                                    memory: 50
-                              properties:
-                                nodeFit:
-                                  type: boolean
-                                nodeResourceUtilizationThresholds:
-                                  properties:
-                                    numberOfNodes:
-                                      type: integer
-                                    targetThresholds:
-                                      additionalProperties:
-                                        type: number
+                            enabled:
+                              type: boolean
+                            nodeFilter: &node-filter
+                              labelSelector:
+                                properties:
+                                  matchExpressions:
+                                    items:
+                                      properties:
+                                        key:
+                                          type: string
+                                        operator:
+                                          type: string
+                                        values:
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
                                       type: object
-                                    thresholds:
-                                      additionalProperties:
-                                        type: number
-                                      type: object
-                                    useDeviationThresholds:
-                                      type: boolean
-                                  type: object
-                              type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    type: object
+                                type: object
+                            priorityFilter: &priority-filter
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                            namespaceFilter: &namespace-filter
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                            nodeFit: &node-fit
+                              type: boolean
                           type: object
                         lowNodeUtilization:
                           properties:
-                            params:
-                              default:
-                                nodeResourceUtilizationThresholds:
-                                  targetThresholds:
-                                    cpu: 50
-                                    memory: 50
-                                    pods: 50
-                                  thresholds:
-                                    cpu: 20
-                                    memory: 20
-                                    pods: 20
-                              properties:
-                                nodeFit:
-                                  type: boolean
-                                nodeResourceUtilizationThresholds:
-                                  properties:
-                                    numberOfNodes:
-                                      type: integer
-                                    targetThresholds:
-                                      additionalProperties:
-                                        type: number
-                                      type: object
-                                    thresholds:
-                                      additionalProperties:
-                                        type: number
-                                      type: object
-                                    useDeviationThresholds:
-                                      type: boolean
-                                  type: object
-                              type: object
-                          type: object
-                        podLifeTime:
-                          properties:
-                            params:
-                              default:
-                                podLifeTime:
-                                  maxPodLifeTimeSeconds: 86400
-                                  podStatusPhases:
-                                    - Pending
-                              properties:
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                podLifeTime:
-                                  properties:
-                                    maxPodLifeTimeSeconds:
-                                      type: integer
-                                    podStatusPhases:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removeDuplicates:
                           properties:
-                            params:
-                              properties:
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                removeDuplicates:
-                                  properties:
-                                    excludeOwnerKinds:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removeFailedPods:
                           properties:
-                            params:
-                              properties:
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                removeFailedPods:
-                                  properties:
-                                    excludeOwnerKinds:
-                                      items:
-                                        type: string
-                                      type: array
-                                    includingInitContainers:
-                                      type: boolean
-                                    minPodLifetimeSeconds:
-                                      type: integer
-                                    reasons:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removePodsHavingTooManyRestarts:
                           properties:
-                            params:
-                              default:
-                                podsHavingTooManyRestarts:
-                                  includingInitContainers: true
-                                  podRestartThreshold: 100
-                              properties:
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                podsHavingTooManyRestarts:
-                                  properties:
-                                    includingInitContainers:
-                                      type: boolean
-                                    podRestartThreshold:
-                                      format: int32
-                                      type: integer
-                                  type: object
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removePodsViolatingInterPodAntiAffinity:
                           properties:
-                            params:
-                              properties:
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removePodsViolatingNodeAffinity:
                           properties:
-                            params:
-                              default:
-                                nodeAffinityType:
-                                  - requiredDuringSchedulingIgnoredDuringExecution
-                              properties:
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeAffinityType:
-                                  items:
-                                    type: string
-                                  type: array
-                                nodeFit:
-                                  type: boolean
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removePodsViolatingNodeTaints:
                           properties:
-                            params:
-                              properties:
-                                excludedTaints:
-                                  items:
-                                    type: string
-                                  type: array
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                         removePodsViolatingTopologySpreadConstraint:
                           properties:
-                            params:
-                              properties:
-                                includeSoftConstraints:
-                                  type: boolean
-                                labelSelector:
-                                  properties:
-                                    matchExpressions:
-                                      items:
-                                        properties:
-                                          key:
-                                            type: string
-                                          operator:
-                                            type: string
-                                          values:
-                                            items:
-                                              type: string
-                                            type: array
-                                        required:
-                                          - key
-                                          - operator
-                                        type: object
-                                      type: array
-                                    matchLabels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                  x-kubernetes-map-type: atomic
-                                namespaces:
-                                  properties:
-                                    exclude:
-                                      items:
-                                        type: string
-                                      type: array
-                                    include:
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                                nodeFit:
-                                  type: boolean
-                                thresholdPriority:
-                                  format: int32
-                                  type: integer
-                                thresholdPriorityClassName:
-                                  type: string
-                              type: object
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
                           type: object
                       type: object
                   type: object
