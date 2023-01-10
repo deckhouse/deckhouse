@@ -6,20 +6,26 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 
 ## How do I add a static node to a cluster?
 
-To add a new static node (e.g., VM or bare-metal server) to the cluster, you need to:
+To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
 
-1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](examples.html#an-example-of-the-static-nodegroup-configuration).
-2. Get the script for installing and configuring the node:
+1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`]). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter in the NodeGroup custom resource must be `Static` or `CloudStatic`.
+2. Get the Base64-encoded script code to add and configure the node.
+
+   Example of getting a Base64-encoded script code to add a node to the NodeGroup `worker`:
 
    ```shell
    kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
    ```
 
-3. Before configuring Kubernetes on the node, make sure you have performed all the necessary actions for the node to work correctly in the cluster:
-   - Added all the necessary mount points (NFS, Ceph, etc.) to `/etc/fstab`;
-   - Installed the suitable `ceph-common` version on the node as well as other packages;
-   - Configured the network in the cluster;
-4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
+3. Pre-configure the new node according to the specifics of your environment. For example:
+   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.) ;
+   - Install the necessary packages, for example, `ceph-common`;
+   - Configure network connectivity between the new node and the other nodes of the cluster.
+4. Connect to the new node over SSH and run the following command by inserting the Base64 string got in step 2:
+
+   ```shell
+   echo <Base64-код-скрипта> | base64 -d | bash
+   ```
 
 ## How do I add a batch of static nodes to a cluster?
 
