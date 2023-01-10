@@ -24,14 +24,16 @@ data:
     # @ Plugins configuration. Add here all plugins and their configuration. Please
     # consult the plugins documentation for more info. Remember to add the plugins name in
     # "load_plugins: []" in order to load them in Falco.
+    #
+    # https://github.com/falcosecurity/plugins/tree/master/plugins/k8saudit
     plugins:
     - name: k8saudit
       library_path: libk8saudit.so
       init_config:
-      #   maxEventSize: 262144
-      #   webhookMaxBatchSize: 12582912
-      #   sslCertificate: /etc/falco/falco.pem
-      open_params: "http://:9765/k8s-audit"
+        # maxEventSize: 262144
+        # webhookMaxBatchSize: 12582912
+        sslCertificate: /etc/falco/webhook/tls.crt
+      open_params: "http://127.0.0.1:9765/k8s-audit"
     # - name: json
     #   library_path: libjson.so
     #   init_config: ""
