@@ -6,7 +6,7 @@
 > **Внимание!** Установка Deckhouse в существующий кластер EKS AWS (Amazon Elastic Kubernetes Service) в настоящий момент не поддерживается.
 {%- endif %}
 {%- if page.platform_code == 'bm-private' %}
-> **Внимание!** В версии Deckhouse 1.42 [изменились](https://github.com/deckhouse/deckhouse/pull/3185) параметры настройки работы через proxy-сервер. Текущее руководство рассчитано на версию Deckhouse 1.41.
+> **Внимание!** В версии Deckhouse 1.42 изменились [параметры](../../documentation/v1/installing/configuration.html#parameters-proxy) настройки работы через proxy-сервер ([подробнее](https://github.com/deckhouse/deckhouse/pull/3185)). Текущее руководство рассчитано на версию Deckhouse 1.42+.
 {%- endif %}
 {%- else %}
 {%- if page.platform_code == "azure" %}
@@ -16,6 +16,6 @@
 > **Caution!** Installing Deckhouse into an existing EKS AWS (Amazon Elastic Kubernetes Service) cluster is not currently supported.
 {%- endif %}
 {%- if page.platform_code == 'bm-private' %}
-> **Caution!** The settings for working through a proxy server have [changed](https://github.com/deckhouse/deckhouse/pull/3185) in Deckhouse 1.42. The guide is for Deckhouse 1.41.
+> **Caution!** The [settings for working through a proxy server](../../documentation/v1/installing/configuration.html#parameters-proxy) have changed in Deckhouse 1.42 ([issue](https://github.com/deckhouse/deckhouse/pull/3185)). The guide is for Deckhouse 1.42+.
 {%- endif %}
 {%- endif %}
