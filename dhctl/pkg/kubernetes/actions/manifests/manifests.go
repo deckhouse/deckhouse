@@ -118,33 +118,6 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
 			{Name: "deckhouse-registry"},
 		}
-
-		var volumeFound bool
-		for _, volume := range deckhousePodTemplate.Spec.Volumes {
-			volumeFound = volumeFound || volume.Name == deckhouseRegistryVolumeName
-		}
-
-		if !volumeFound {
-			deckhousePodTemplate.Spec.Volumes = append(deckhousePodTemplate.Spec.Volumes, apiv1.Volume{
-				Name: deckhouseRegistryVolumeName,
-				VolumeSource: apiv1.VolumeSource{
-					Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
-				},
-			})
-		}
-
-		var volumeMountFound bool
-		for _, volumeMount := range deckhouseContainer.VolumeMounts {
-			volumeMountFound = volumeMountFound || volumeMount.Name == deckhouseRegistryVolumeName
-		}
-
-		if !volumeMountFound {
-			deckhouseContainer.VolumeMounts = append(deckhouseContainer.VolumeMounts, apiv1.VolumeMount{
-				Name:      deckhouseRegistryVolumeName,
-				MountPath: "/etc/registrysecret",
-				ReadOnly:  true,
-			})
-		}
 	}
 
 	if params.KubeadmBootstrap && freshDeployment {
