@@ -66,7 +66,7 @@ jobs:
             }
 
             // For slash commands on pull requests, e.g. 'e2e abort' command.
-            // The right way is to give slash commands to the collabrator instead of the сontributor. Why?
+            // The right way is to give slash commands to the collaborator instead of the contributor. Why?
             // During the experiments it turned out that:
             // Member is a member of the github organization and the organization is public (here https://github.com/orgs/deckhouse/people)
             // Collaborator is a member of github and the organization is private (here https://github.com/orgs/deckhouse/people)
