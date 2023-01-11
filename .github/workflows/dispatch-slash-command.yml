@@ -70,7 +70,7 @@ jobs:
             }
 
             // For slash commands on pull requests, e.g. 'e2e abort' command.
-            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'CONTRIBUTOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
+            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'COLLABORATOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               core.notice(`Comment on pull request.`);
               return core.setOutput('trigger_for_pull_request', 'true');
             }
