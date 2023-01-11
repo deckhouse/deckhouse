@@ -337,7 +337,7 @@
     - alert: D8UpmeterProbeGarbageNamespaces
       expr: |
         (
-          count (kube_namespace_status_phase{namespace=~"upmeter-.*"})
+          sum (kube_namespace_status_phase{namespace=~"upmeter-.*"})
           /
           count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
         ) >= 2
