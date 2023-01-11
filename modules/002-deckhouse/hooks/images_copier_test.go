@@ -36,6 +36,7 @@ global:
     registry:
       dockercfg: eyJhdXRocyI6IHsicmVnaXN0cnkuZGVja2hvdXNlLmlvIjogeyJhdXRoIjogImRUcHdZWE56Q2c9PSJ9fX0=
       base: registry.deckhouse.io/deckhouse/fe
+      address: registry.deckhouse.io
     tags:
       module_1:
         image_1: "image-1-latest"
