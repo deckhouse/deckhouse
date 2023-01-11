@@ -1,0 +1,74 @@
+# TODO(nabokihms): Translate this doc
+spec:
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              requiredEngineVersion:
+                description: |
+                  Used to track compatibility between rules content and the Falco engine version.
+              requiredK8sAuditPluginVersion:
+                description: |
+                  Used to track compatibility between rules content and plugin versions.
+              rules:
+                description: |
+                  Describes Falco rules, that will be applied to monitor the runtime of the cluster.
+                  These rules helps detecting threats at runtime by observing the behavior of your applications and containers.
+
+                  Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
+                items:
+                  properties:
+                    rule:
+                      description: |
+                        Conditions under which an alert should be generated.
+                        A rule is accompanied by a descriptive output string that is sent with the alert.
+                      properties:
+                        name:
+                          description: |
+                            A short, unique name for the rule.
+                        condition:
+                          description: |
+                            A filtering expression that is applied against events to check whether they match the rule.
+                        desc:
+                          description: |
+                            A longer description of what the rule detects.
+                        output:
+                          description: |
+                            Specifies the message that should be output if a matching event occurs.
+                        priority:
+                          description: |
+                            A case-insensitive representation of the severity of the event.
+                        enabled:
+                          description: |
+                            If set to `false`, a rule is neither loaded nor matched against any events.
+                        tags:
+                          description: |
+                            A list of tags applied to the rule.
+                        source:
+                          description: |
+                            The event source for which this rule should be evaluated.
+                    macro:
+                      description: |
+                        Rule condition snippets that can be re-used inside rules and even other macros.
+                        Macros provide a way to name common patterns and factor out redundancies in rules.
+                      properties:
+                        name:
+                          description: |
+                            A short, unique name for the rule.
+                        condition:
+                          description: |
+                            A filtering expression that is applied against events to check whether they match the rule.
+                    list:
+                      description: |
+                        Collections of items that can be included in rules, macros, or other lists.
+                        Unlike rules and macros, lists cannot be parsed as filtering expressions.
+                      properties:
+                        name:
+                          type: string
+                        items:
+                          type: array
+                          items:
+                            x-kubernetes-int-or-string: true

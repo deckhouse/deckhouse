@@ -1,0 +1,131 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: falcoauditrules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: runtime-audit-engine
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: falcoauditrules
+    singular: falcoauditrule
+    kind: ClusterLogDestination
+    shortNames:
+    - far
+  preserveUnknownFields: false
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        required: ["spec"]
+        properties:
+          spec:
+            type: object
+            properties:
+              requiredEngineVersion:
+                type: int
+                description: |
+                  Used to track compatibility between rules content and the Falco engine version.
+              requiredK8sAuditPluginVersion:
+                type: string
+                description: |
+                  Used to track compatibility between rules content and plugin versions.
+                pattern: '^[1-9]\.+[0-9\.]*[0-9]$'
+              rules:
+                type: array
+                description: |
+                  Describes Falco rules, that will be applied to monitor the runtime of the cluster.
+                  These rules helps detecting threats at runtime by observing the behavior of your applications and containers.
+
+                  Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
+                items:
+                  type: object
+                  required:
+                    oneOf:
+                    - ["macro"]
+                    - ["list"]
+                    - ["rule"]
+                  properties:
+                    rule:
+                      type: object
+                      description: |
+                        Conditions under which an alert should be generated.
+                        A rule is accompanied by a descriptive output string that is sent with the alert.
+                      required:
+                      - "name"
+                      - "condition"
+                      - "desc"
+                      - "output"
+                      - "priority"
+                      properties:
+                        name:
+                          type: string
+                          description: |
+                            A short, unique name for the rule.
+                        condition:
+                          type: string
+                          description: |
+                            A filtering expression that is applied against events to check whether they match the rule.
+                        desc:
+                          type: string
+                          description: |
+                            A longer description of what the rule detects.
+                        output:
+                          type: string
+                          description: |
+                            Specifies the message that should be output if a matching event occurs.
+                        priority:
+                          type: string
+                          description: |
+                            A case-insensitive representation of the severity of the event.
+                          enum: ["Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug"]
+                        enabled:
+                          type: bool
+                          default: true
+                          description: |
+                            If set to `false`, a rule is neither loaded nor matched against any events.
+                        tags:
+                          type: array
+                          description: |
+                            A list of tags applied to the rule.
+                          items:
+                            type: string
+                        source:
+                          type: string
+                          description: |
+                            The event source for which this rule should be evaluated.
+                          default: "Syscall"
+                          enum: ["Syscall", "K8sAudit"]
+                    macro:
+                      type: object
+                      description: |
+                        Rule condition snippets that can be re-used inside rules and even other macros.
+                        Macros provide a way to name common patterns and factor out redundancies in rules.
+                      required: ["name", "condition"]
+                      properties:
+                        name:
+                          type: string
+                          description: |
+                            A short, unique name for the rule.
+                        condition:
+                          type: string
+                          description: |
+                            A filtering expression that is applied against events to check whether they match the rule.
+                    list:
+                      type: object
+                      description: |
+                        Collections of items that can be included in rules, macros, or other lists.
+                        Unlike rules and macros, lists cannot be parsed as filtering expressions.
+                      required: ["name", "items"]
+                      properties:
+                        name:
+                          type: string
+                        items:
+                          type: array
+                          items:
+                            x-kubernetes-int-or-string: true
