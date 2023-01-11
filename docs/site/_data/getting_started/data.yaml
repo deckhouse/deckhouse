@@ -54,11 +54,6 @@ installTypes:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-#      step4:
-#        name:
-#          en: Setting up cluster
-#          ru: Настройка кластера
-#        template: getting_started/global/step_cluster_setup.html
       step4:
         name:
           en: Installation
@@ -281,11 +276,6 @@ installTypes:
           en: Installation information
           ru: Информация об установке
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
-#      step3:
-#        name:
-#          en: Setting up cluster
-#          ru: Настройка кластера
-#        template: getting_started/global/step_cluster_setup.html
       step3:
         name:
           en: Installation
