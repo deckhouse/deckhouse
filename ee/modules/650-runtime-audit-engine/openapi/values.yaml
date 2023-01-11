@@ -8,13 +8,14 @@ properties:
     properties:
       webhookCertificate:
         type: object
+        x-examples:
+        - ca: "testca"
+          key: "testkey"
+          crt: "testcrt"
         properties:
           ca:
             type: string
-            x-examples: ["testca"]
           key:
             type: string
-            x-examples: ["testkey"]
           crt:
             type: string
-            x-examples: ["testcrt"]

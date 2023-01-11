@@ -67,8 +67,8 @@ spec:
                         Unlike rules and macros, lists cannot be parsed as filtering expressions.
                       properties:
                         name:
-                          type: string
+                          description: |
+                            The unique name for the list (as a slug).
                         items:
-                          type: array
-                          items:
-                            x-kubernetes-int-or-string: true
+                          description: |
+                            The list of values.

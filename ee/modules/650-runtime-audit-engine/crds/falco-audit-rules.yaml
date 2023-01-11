@@ -11,7 +11,7 @@ spec:
   names:
     plural: falcoauditrules
     singular: falcoauditrule
-    kind: ClusterLogDestination
+    kind: FalcoAuditRules
     shortNames:
     - far
   preserveUnknownFields: false
@@ -26,6 +26,7 @@ spec:
         properties:
           spec:
             type: object
+            required: ["rules"]
             properties:
               requiredEngineVersion:
                 type: int
@@ -45,11 +46,10 @@ spec:
                   Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
                 items:
                   type: object
-                  required:
-                    oneOf:
-                    - ["macro"]
-                    - ["list"]
-                    - ["rule"]
+                  oneOf:
+                  - required: ["macro"]
+                  - required: ["list"]
+                  - required: ["rule"]
                   properties:
                     rule:
                       type: object
@@ -125,7 +125,14 @@ spec:
                       properties:
                         name:
                           type: string
+                          description: |
+                            The unique name for the list (as a slug).
                         items:
                           type: array
+                          description: |
+                            The list of values.
                           items:
                             x-kubernetes-int-or-string: true
+                            anyOf:
+                            - type: integer
+                            - type: string
