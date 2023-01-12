@@ -119,8 +119,9 @@ func updateModuleConfigStatuses(input *go_hook.HookInput) error {
 		}
 	}
 
+	externalNames := d8config.Service().ExternalNames()
 	for _, cfg := range allConfigs {
-		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName)
+		moduleStatus := d8config.Service().StatusReporter().ForConfig(cfg, bundleName, externalNames)
 		statusPatch := makeStatusPatch(cfg, moduleStatus)
 		if statusPatch != nil {
 			// TODO Switch to debug level in 1.42 release.
@@ -160,6 +161,7 @@ func makeStatusPatch(cfg *d8cfg_v1alpha1.ModuleConfig, moduleStatus d8config.Sta
 		Status:  moduleStatus.Status,
 		State:   moduleStatus.State,
 		Version: moduleStatus.Version,
+		Type:    moduleStatus.Type,
 	}
 }
 
@@ -170,6 +172,8 @@ func isStatusChanged(currentStatus d8cfg_v1alpha1.ModuleConfigStatus, moduleStat
 	case currentStatus.Status != moduleStatus.Status:
 		return true
 	case currentStatus.Version != moduleStatus.Version:
+		return true
+	case currentStatus.Type != moduleStatus.Type:
 		return true
 	}
 	return false
