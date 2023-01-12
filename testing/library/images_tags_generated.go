@@ -14,7 +14,6 @@ var DefaultImagesTags = map[string]interface{}{
 		"cephcsi": "imageHash-cephCsi-cephcsi",
 	},
 	"certManager": map[string]interface{}{
-		"annotationsConverter":  "imageHash-certManager-annotationsConverter",
 		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
 		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
 		"certManagerController": "imageHash-certManager-certManagerController",
