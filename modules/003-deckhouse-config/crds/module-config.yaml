@@ -57,6 +57,9 @@ spec:
                 status:
                   type: string
                   description: "Module state explanation, version warning or last error"
+                type:
+                  type: string
+                  description: "Type of module: embedded or external module"
       subresources:
         status: {}
       additionalPrinterColumns:
