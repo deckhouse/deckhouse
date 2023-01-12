@@ -122,6 +122,8 @@ apiVersions:
         type: object
         description: |
           Global proxy setup (especially for working in air-gapped environments).
+
+          > Caution! To avoid interference with internal requests it is important to fill `noProxy` parameter with host subnets.
         additionalProperties: false
         properties:
           httpProxy:
