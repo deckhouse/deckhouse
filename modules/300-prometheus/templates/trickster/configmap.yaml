@@ -25,6 +25,7 @@ data:
           max_value_age_secs = {{ mul .Values.prometheus.retentionDays 86400 }}
           fast_forward_disable = false
           default_step = 30
+          req_rewriter_name = 'set-upstream-user'
 
             [origins.main.tls]
               insecure_skip_verify = true
@@ -32,19 +33,13 @@ data:
             [origins.main.health_check_headers]
               Authorization = 'Bearer $PROMETHEUS_TOKEN'
 
-            [origins.main.paths]
-              [origins.default.paths.root]
-                path = '/'
-
-                  [origins.main.paths.root.response_headers]
-                    Authorization = 'Bearer $PROMETHEUS_TOKEN'
-
         [origins.longterm]
           origin_type = 'prometheus'
           origin_url = 'https://prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
           max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
           fast_forward_disable = false
           default_step = 300
+          req_rewriter_name = 'set-upstream-user'
 
             [origins.longterm.tls]
               insecure_skip_verify = true
@@ -52,15 +47,14 @@ data:
             [origins.longterm.health_check_headers]
               Authorization = 'Bearer $PROMETHEUS_TOKEN'
 
-            [origins.longterm.paths]
-              [origins.longterm.paths.root]
-                path = '/'
-
-                  [origins.longterm.paths.root.response_headers]
-                    Authorization = 'Bearer $PROMETHEUS_TOKEN'
-
       [metrics]
         listen_port = 8001
         listen_address = "127.0.0.1"
       [logging]
         log_level = 'info'
+
+    [request_rewriters]
+      [request_rewriters.set-upstream-user]
+        instructions = [
+           ['header', 'set', 'Authorization', 'Bearer $PROMETHEUS_TOKEN'],
+        ]
