@@ -233,7 +233,7 @@ fi
 Запуск контейнера инсталлятора из публичного container registry Deckhouse в общем случае выглядит так:
 
 ```shell
-docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
 ```
 
 , где:
@@ -243,14 +243,14 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/<DECKHOUSE_
   - файл конфигурации
   - файл ресурсов и т.д.
 
-Пример запуска контейнера инсталлятора:
+Пример запуска контейнера инсталлятора Deckhouse CE:
 
 ```shell
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yml:/resources.yml" \
   -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/ce/install:stable bash
+  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 
 Установка Deckhouse запускается в контейнере инсталлятора с помощью команды `dhctl`:
