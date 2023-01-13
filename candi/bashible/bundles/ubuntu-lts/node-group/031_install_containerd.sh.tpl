@@ -77,7 +77,7 @@ fi
 
 if [[ "$should_install_containerd" == true ]]; then
 # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
-bb-apt-install libseccomp2 --force
+bb-apt-install --force libseccomp2
 
 {{- $ubuntuName := dict "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
