@@ -76,6 +76,8 @@ if [[ "$version_in_use" == "$desired_version" ]]; then
 fi
 
 if [[ "$should_install_containerd" == true ]]; then
+# we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
+bb-apt-install --force libseccomp2
 
 {{- $ubuntuName := dict "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
@@ -85,8 +87,6 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 {{- end }}
 
-  # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
-  bb-apt-install --force libseccomp2
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
 
