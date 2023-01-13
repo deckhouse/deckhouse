@@ -80,7 +80,7 @@ fi
 
 if [[ "$should_install_containerd" == true ]]; then
 # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
-bb-rp-install --force libseccomp2
+bb-apt-install libseccomp2
 
 # set default
 containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sBuster" (index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
