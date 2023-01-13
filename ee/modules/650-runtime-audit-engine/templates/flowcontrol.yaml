@@ -11,10 +11,10 @@ spec:
     type: ByUser
   rules:
   - resourceRules:
-    - apiGroups: ["", "apps"]
+    - apiGroups: ["", "apps", "deckhouse.io"]
       clusterScope: true
       namespaces: ["*"]
-      resources: ["pods", "replicasets", "deployments", "statefulsets", "daemonsets"]
+      resources: ["pods", "replicasets", "deployments", "statefulsets", "daemonsets", "falcoauditrules"]
       verbs: ["list", "get"]
     subjects:
     - kind: ServiceAccount
