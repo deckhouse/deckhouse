@@ -31,7 +31,7 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-      deckhouseRegistryWebhook:
+      deckhouseRegistryWebhookCert:
         type: object
         default: {}
         x-required-for-helm:

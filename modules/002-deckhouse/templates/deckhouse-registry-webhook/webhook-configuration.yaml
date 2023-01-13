@@ -25,7 +25,7 @@ webhooks:
     failurePolicy: Fail
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.deckhouse.internal.deckhouseRegistryWebhook.ca  | b64enc | quote }}
+      caBundle: {{ .Values.deckhouse.internal.deckhouseRegistryWebhookCert.ca  | b64enc | quote }}
       service:
         name: deckhouse-config-webhook
         namespace: d8-system
