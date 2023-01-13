@@ -111,7 +111,7 @@ extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
   {{- end }}
 
-  {{- if $tpl_context.apiserver.authnWebhookCA }}
+  {{- if $tpl_context.apiserver.authnWebhookURL }}
 extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "webhookCA" $tpl_context.apiserver.authnWebhookCA "webhookURL" $tpl_context.apiserver.authnWebhookURL) | b64enc }}
   {{- end }}
 
