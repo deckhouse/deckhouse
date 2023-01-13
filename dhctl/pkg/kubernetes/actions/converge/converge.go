@@ -688,8 +688,6 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		return nil
 	}
 
-	var allErrs *multierror.Error
-
 	if err := c.populateNodeToHost(); err != nil {
 		return err
 	}
@@ -702,11 +700,11 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
+			return fmt.Errorf("%s: %v", nodeName, err)
 		}
 	}
 
-	return allErrs.ErrorOrNil()
+	return nil
 }
 
 func (c *NodeGroupController) getNodesToDelete(nodeGroup *NodeGroupGroupOptions) map[string][]byte {
