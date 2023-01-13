@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -61,6 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func parseDeckhouseImage(input *go_hook.HookInput) error {
 	const (
 		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
+		deckhouseBasePath  = "global.modulesImages.registry.base"
 	)
 
 	deckhouseSnapshot := input.Snapshots["deckhouse"]
@@ -69,9 +71,18 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	}
 	image := deckhouseSnapshot[0].(string)
 
+	parts := strings.SplitN(image, ":", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("can't parse image from deckhouse deployment")
+	}
+
 	// Set deckhouse image only if it was not set before, e.g. by stabilize_release_channel hook
 	if input.Values.Get(deckhouseImagePath).String() == "" {
-		input.Values.Set(deckhouseImagePath, image)
+		if !input.Values.Get(deckhouseBasePath).Exists() {
+			return fmt.Errorf("registry base path doesn't exist yet")
+		}
+		base := input.Values.Get(deckhouseBasePath).String()
+		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, parts[1]))
 	}
 	return nil
 }

@@ -62,7 +62,7 @@ spec:
 				Expect(f).To(ExecuteSuccessfully())
 				deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 				Expect(deployment.Exists()).To(BeTrue())
-				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce:test"))
+				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/fe:test"))
 			})
 		})
 
