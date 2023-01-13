@@ -62,7 +62,7 @@ spec:
       containers:
       - name: deckhouse-registry-webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "deckhouseConfigWebhook") }}
+        image: {{ include "helm_lib_module_image" (list . "deckhouseRegistryWebhook") }}
         args:
           - --webhook-addr=":8443"
           - --health-addr=":8001"
