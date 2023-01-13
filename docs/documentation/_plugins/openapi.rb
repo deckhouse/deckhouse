@@ -332,7 +332,7 @@ module Jekyll
               end
             end
 
-            if get_hash_value(attributes, 'x-doc-deprecated')
+            if ( get_hash_value(attributes, 'x-doc-deprecated') or get_hash_value(attributes, 'deprecated') )
                 parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span data-tippy-content="%s">%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, pathString, parameterTitle, get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
                 parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, parameterTitle)
