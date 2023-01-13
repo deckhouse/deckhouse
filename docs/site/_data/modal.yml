@@ -64,3 +64,28 @@ request-education:
     en:
       title: "Error"
       text: "Something went wrong..."
+get-a-report:
+  header:
+    ru:
+      title: "Получите отчет о&nbsp;соответствии рекомендациям PCI&nbsp;SSC"
+      text: "Документ ориентирован на&nbsp;компании, которые используют платежные системы на&nbsp;базе контейнеров, и&nbsp;помогает защитить эти системы от&nbsp;актуальных угроз. Мы&nbsp;выяснили, насколько Deckhouse соответствует критериям PCI&nbsp;SSC."
+    en:
+      title: "Get a report"
+      text: "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Libero, magnam!"
+  success-message:
+    ru:
+      title: "Спасибо"
+      text: "Скачка файла начнется автоматически, если этого не произошло нажмите скачать"
+    en:
+      title: "Thank you"
+      text: "Check your email for details."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+  download-file:
+    file-name: "Deckhouse_PCI_SSC_requirements.pdf"
+
