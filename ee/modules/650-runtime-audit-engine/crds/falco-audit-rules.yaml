@@ -29,7 +29,7 @@ spec:
             required: ["rules"]
             properties:
               requiredEngineVersion:
-                type: int
+                type: integer
                 description: |
                   Used to track compatibility between rules content and the Falco engine version.
               requiredK8sAuditPluginVersion:
