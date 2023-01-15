@@ -1,3 +1,8 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package main
 
 import (
@@ -14,49 +19,6 @@ import (
 )
 
 type RawRule map[string]interface{}
-
-/*
-   name:
-     type: string
-     description: |
-       A short, unique name for the rule.
-   condition:
-     type: string
-     description: |
-       A filtering expression that is applied against events to check whether they match the rule.
-   desc:
-     type: string
-     description: |
-       A longer description of what the rule detects.
-   output:
-     type: string
-     description: |
-       Specifies the message that should be output if a matching event occurs.
-   priority:
-     type: string
-     description: |
-       A case-insensitive representation of the severity of the event.
-     enum: ["Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug"]
-   enabled:
-     type: boolean
-     default: true
-     description: |
-       If set to `false`, a rule is neither loaded nor matched against any events.
-   tags:
-     type: array
-     description: |
-       A list of tags applied to the rule.
-     items:
-       type: string
-   source:
-     type: string
-     description: |
-       The event source for which this rule should be evaluated.
-     default: "Syscall"
-     enum: ["Syscall", "K8sAudit"]
-
-
-*/
 
 type Rule struct {
 	Name      string        `yaml:"name"`
