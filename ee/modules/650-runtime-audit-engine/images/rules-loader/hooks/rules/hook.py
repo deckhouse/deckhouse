@@ -3,8 +3,12 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
+from os import remove, walk
+
 from shell_operator import hook
 from yaml import dump
+
+_FALCO_RULES_DIR = '/etc/falco/rules.d/'
 
 
 # Converts FalcoAuditRules CRD format to the native Falco rules
@@ -56,6 +60,9 @@ def convert_spec(spec: dict) -> list:
 
 
 def main(ctx: hook.Context):
+    filenames = set()
+
+    # Create and update files with rules
     for s in ctx.snapshots["rules"]:
         filtered = s["filterResult"]
         if filtered is None:
@@ -63,10 +70,18 @@ def main(ctx: hook.Context):
             continue
 
         filename = f'{filtered["name"]}.yaml'
+        filenames.add(filename)
 
-        with open(f'/etc/falco/rules.d/{filename}', "w") as file:
+        with open(f'{_FALCO_RULES_DIR}{filename}', "w") as file:
             spec = convert_spec(filtered["spec"])
             file.write(dump(spec))
+
+    # Delete missing rules
+    for (_, _, existing_rules) in walk(_FALCO_RULES_DIR):
+        for rule_name in existing_rules:
+            if rule_name not in filenames:
+                remove(rule_name)
+        break  # depth 1
 
     with open('/tmp/ready', "w") as file:
         file.write("ok")
