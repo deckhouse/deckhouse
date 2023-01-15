@@ -8,7 +8,7 @@ kubernetes:
   queue: /rules
   keepFullObjectsInMemory: false
   waitForSynchronization: false
-  apiVersion: v1
+  apiVersion: deckhouse.io/v1
   kind: FalcoAuditRules
   jqFilter: |
     {"name":  .metadata.name, "spec": .spec}
