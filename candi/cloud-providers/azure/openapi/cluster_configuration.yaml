@@ -99,7 +99,7 @@ apiVersions:
         properties:
           replicas:
             description: |
-              The number of master nodes to create. It is recommended to have an odd number of masters to ensure a quorum.
+              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
           zones:
