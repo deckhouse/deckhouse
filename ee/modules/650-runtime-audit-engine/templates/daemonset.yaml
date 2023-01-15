@@ -325,9 +325,11 @@ spec:
           defaultMode: 420
           name: {{ $.Chart.Name }}
           items:
+          - key: falco.yaml
+            path: falco.yaml
     {{- range $path, $_ := (.Files.Glob "rules/*") }}
-          - key: {{ $path }}
-            path: {{ $path }}
+          - key: {{ trimPrefix "rules/" $path }}
+            path: {{ trimPrefix "rules/" $path }}
     {{- end }}
       - name: webhook-tls
         secret:

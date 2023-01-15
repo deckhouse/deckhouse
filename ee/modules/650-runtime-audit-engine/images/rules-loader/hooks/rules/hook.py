@@ -70,4 +70,4 @@ def main(ctx: hook.Context):
 
 
 if __name__ == "__main__":
-    hook.run(main, configpath="config.yaml")
+    hook.run(main, configpath="rules/config.yaml")
