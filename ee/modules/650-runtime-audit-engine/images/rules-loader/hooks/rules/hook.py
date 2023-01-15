@@ -8,7 +8,7 @@ from os import remove, walk
 from shell_operator import hook
 from yaml import dump
 
-_FALCO_RULES_DIR = '/etc/falco/rules.d/'
+_FALCO_RULES_DIR = '/etc/falco/rules.d'
 
 
 # Converts FalcoAuditRules CRD format to the native Falco rules
@@ -72,7 +72,7 @@ def main(ctx: hook.Context):
         filename = f'{filtered["name"]}.yaml'
         filenames.add(filename)
 
-        with open(f'{_FALCO_RULES_DIR}{filename}', "w") as file:
+        with open(f'{_FALCO_RULES_DIR}/{filename}', "w") as file:
             spec = convert_spec(filtered["spec"])
             file.write(dump(spec))
 
@@ -80,7 +80,7 @@ def main(ctx: hook.Context):
     for (_, _, existing_rules) in walk(_FALCO_RULES_DIR):
         for rule_name in existing_rules:
             if rule_name not in filenames:
-                remove(rule_name)
+                remove(f'{_FALCO_RULES_DIR}/{rule_name}')
         break  # depth 1
 
     with open('/tmp/ready', "w") as file:
