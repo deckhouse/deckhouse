@@ -85,7 +85,7 @@ spec:
                             A case-insensitive representation of the severity of the event.
                           enum: ["Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug"]
                         enabled:
-                          type: bool
+                          type: boolean
                           default: true
                           description: |
                             If set to `false`, a rule is neither loaded nor matched against any events.
