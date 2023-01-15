@@ -11,38 +11,41 @@ from yaml import dump
 def convert_spec(spec: dict) -> list:
     result = []
 
-    if spec["requiredEngineVersion"] is not None:
+    required_engine_version = spec.get("requiredEngineVersion")
+    if required_engine_version is not None:
         result.append({
-            "required_engine_version": spec["requiredEngineVersion"],
+            "required_engine_version": required_engine_version,
         })
 
-    if spec["requiredK8sAuditPluginVersion"] is not None:
+    required_k8saudit_plugin_version = spec.get("requiredK8sAuditPluginVersion")
+    if required_k8saudit_plugin_version is not None:
         result.append({
             "required_plugin_versions": [
                 {
                     "name": "k8saudit",
-                    "version": spec["requiredK8sAuditPluginVersion"],
+                    "version": required_k8saudit_plugin_version,
                 },
             ],
         })
 
     for item in spec["rules"]:
-        if item["rule"] is not None:
-            converted_item = {
-                **item["rule"],
-                "source": item["rule"]["source"].lower(),
-            }
+        if item.get("rule") is not None:
+            converted_item = {**item["rule"]}
             converted_item["rule"] = converted_item.pop("name")
+
+            source = item["rule"].get("source")
+            if source is not None:
+                converted_item["source"] = source.lower()
 
             result.append(converted_item)
             continue
-        if item["macros"] is not None:
+        if item.get("macro") is not None:
             result.append({
-                "macro": item["macros"]["name"],
-                "condition": item["macros"]["condition"],
+                "macro": item["macro"]["name"],
+                "condition": item["macro"]["condition"],
             })
             continue
-        if item["list"] is not None:
+        if item.get("list") is not None:
             result.append({
                 "list": item["list"]["name"],
                 "items": item["list"]["items"],
