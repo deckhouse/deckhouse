@@ -34,11 +34,20 @@ cmdallow 127/8
 allow 127/8
 bindaddress 127.0.0.1
 driftfile /var/run/chrony/chrony.drift
-makestep 1.0 3
+makestep 1.0 -1
 rtcsync
 EOF
 for NTP_SERVER in ${NTP_SERVERS}; do
-  echo "pool ${NTP_SERVER} iburst" >> /var/run/chrony/chrony.conf
+  # Check, if there is an IP address, then pass it to file
+  if [[ $NTP_SERVER =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+      echo "pool ${NTP_SERVER} iburst" >> /var/run/chrony/chrony.conf
+  # Else, if there is a dot in the end of DNS-address, then pass it to file
+  elif [[ $NTP_SERVER =~ ^.*\.$ ]]; then
+      echo "pool ${NTP_SERVER} iburst" >> /var/run/chrony/chrony.conf
+  # In all other cases, we should add dot, then pass it to file
+  else
+      echo "pool ${NTP_SERVER}. iburst" >> /var/run/chrony/chrony.conf
+  fi
 done
 
 # remove stale pidfile
