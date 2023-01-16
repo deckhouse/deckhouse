@@ -125,7 +125,7 @@ bb-event-cleanup() {
 bb-event-error-create() {
     # eventName parameter aggregates hostname with bashible step name
     eventName="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/')"
-    eventLog="/var/lib/bashible/.bb-workspace/step.log"
+    eventLog="/var/lib/bashible/step.log"
     bb-kubectl apply -f - <<EOF
         apiVersion: v1
         kind: Event
