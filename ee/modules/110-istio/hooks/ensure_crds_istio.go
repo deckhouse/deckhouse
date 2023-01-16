@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -52,5 +53,9 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	sort.Sort(semver.Collection(semvers))
 
 	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
+
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		return ensure_crds.EnsureCRDsHandler("/deckhouse/ee/modules/110-istio/crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
+	}
 	return ensure_crds.EnsureCRDsHandler("/deckhouse/modules/110-istio/crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
 }
