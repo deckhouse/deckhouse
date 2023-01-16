@@ -18,6 +18,7 @@ package registryclient
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -48,7 +49,9 @@ func (r RegistryClient) CheckImage(registry, image string, authCfg authn.AuthCon
 		if !strings.Contains(err.Error(), "manifest unknown") {
 			return fmt.Errorf("registry error: %w", err)
 		}
+		log.Infof("authentication to the registry %s was successful, but manifest %s unknown", registry, image)
+		return nil
 	}
-
+	log.Infof("authentication to the registry %s was successful, manifest %s found", registry, image)
 	return nil
 }

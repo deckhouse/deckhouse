@@ -14,7 +14,9 @@ webhooks:
             - "d8-system"
     objectSelector:
       matchLabels:
-        test: test
+        app: registry
+        heritage: deckhouse
+        module: deckhouse
     rules:
       - operations: [ "CREATE", "UPDATE" ]
         apiGroups: [""]
@@ -27,7 +29,7 @@ webhooks:
     clientConfig:
       caBundle: {{ .Values.deckhouse.internal.deckhouseRegistryWebhookCert.ca  | b64enc | quote }}
       service:
-        name: deckhouse-config-webhook
+        name: deckhouse-registry-webhook
         namespace: d8-system
         path: /validate
 {{- end }}
