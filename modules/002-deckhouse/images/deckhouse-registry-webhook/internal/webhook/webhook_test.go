@@ -72,9 +72,12 @@ const admisstionReviewJSONTemplate = `
         "managedFields": []
       },
       "data": {
-		{{ if .DockerConfigB64 }}
-        ".dockerconfigjson": "{{ .DockerConfigB64 }}"
-		{{ end }}
+        {{- if .DockerConfigB64 }}
+        ".dockerconfigjson": "{{ .DockerConfigB64 }}",
+        {{- end }}
+        "scheme": "{{ .Scheme }}",
+        "address": "{{ .Address }}",
+        "path": "{{ .Path }}"
       },
       "type": "{{ .SecretType }}"
     },
@@ -87,6 +90,9 @@ type templateParams struct {
 	SecretType       string
 	DockerConfigJSON string
 	DockerConfigB64  string
+	Scheme           string
+	Address          string
+	Path             string
 }
 
 func AdmisstionJSON(params templateParams) string {
@@ -97,7 +103,9 @@ func AdmisstionJSON(params templateParams) string {
 	if params.DockerConfigB64 == "" {
 		params.DockerConfigB64 = base64.StdEncoding.EncodeToString([]byte(params.DockerConfigJSON))
 	}
-
+	params.Scheme = base64.StdEncoding.EncodeToString([]byte(params.Scheme))
+	params.Path = base64.StdEncoding.EncodeToString([]byte(params.Path))
+	params.Address = base64.StdEncoding.EncodeToString([]byte(params.Address))
 	t := template.Must(template.New("").Parse(admisstionReviewJSONTemplate))
 	_ = t.Execute(&output, params)
 
@@ -201,6 +209,51 @@ var _ = Describe("ValidatingWebhook", func() {
 				&wanted{
 					AdmissionAllowed: true,
 					BodySubstring:    "",
+					StatusCode:       http.StatusOK,
+				}),
+			Entry("Valid Secret with working creds + address",
+				AdmisstionJSON(templateParams{
+					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Address:          "registry.example.com",
+				}),
+				&wanted{
+					AdmissionAllowed: true,
+					BodySubstring:    "",
+					StatusCode:       http.StatusOK,
+				}),
+			Entry("Valid Secret with working creds + address + path",
+				AdmisstionJSON(templateParams{
+					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Address:          "registry.example.com",
+					Path:             "/sys/deckhouse-oss",
+				}),
+				&wanted{
+					AdmissionAllowed: true,
+					BodySubstring:    "",
+					StatusCode:       http.StatusOK,
+				}),
+			Entry("Valid Secret with working creds + scheme + address + path",
+				AdmisstionJSON(templateParams{
+					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Scheme:           "http",
+					Address:          "registry.example.com",
+					Path:             "/sys/deckhouse-oss",
+				}),
+				&wanted{
+					AdmissionAllowed: true,
+					BodySubstring:    "",
+					StatusCode:       http.StatusOK,
+				}),
+			Entry("Valid Secret with working creds + scheme + bad address + path",
+				AdmisstionJSON(templateParams{
+					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Scheme:           "http",
+					Address:          "registry.example.com\n",
+					Path:             "/sys/deckhouse-oss",
+				}),
+				&wanted{
+					AdmissionAllowed: false,
+					BodySubstring:    "invalid control character in URL",
 					StatusCode:       http.StatusOK,
 				}),
 		)

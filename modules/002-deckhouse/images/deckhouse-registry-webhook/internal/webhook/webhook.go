@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -29,9 +30,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	v12 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/core/v1"
-	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	admission "k8s.io/api/admission/v1"
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DockerConfig struct {
@@ -101,22 +102,47 @@ func (vw *ValidatingWebhook) Run(ctx context.Context) error {
 	return nil
 }
 
-func (vw *ValidatingWebhook) validateSecret(secret *v1.Secret) error {
+func (vw *ValidatingWebhook) checkURI(scheme, address, path string) error {
+	if address == "" {
+		return nil
+	}
+	if scheme == "" {
+		scheme = "https"
+	}
+	uri := fmt.Sprintf("%s://%s%s", scheme, address, path)
+	_, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vw *ValidatingWebhook) validateSecret(secret *core.Secret) error {
 	// Check secret type, it must be "kubernetes.io/dockerconfigjson"
-	if secret.Type != v1.SecretTypeDockerConfigJson {
-		return fmt.Errorf("secret should be %s type", v1.SecretTypeDockerConfigJson)
+	if secret.Type != core.SecretTypeDockerConfigJson {
+		return fmt.Errorf("secret should be %s type", core.SecretTypeDockerConfigJson)
 	}
 
 	// Secret must contain ".dockerconfigjson" field
-	dockerCfgRaw, ok := secret.Data[v1.DockerConfigJsonKey]
+	dockerCfgRaw, ok := secret.Data[core.DockerConfigJsonKey]
 	if !ok {
-		return fmt.Errorf("secret should contain %s field", v1.DockerConfigJsonKey)
+		return fmt.Errorf("secret should contain %s field", core.DockerConfigJsonKey)
+	}
+
+	// Check URI (scheme + address + path)
+	scheme := string(secret.Data["scheme"])
+	address := string(secret.Data["address"])
+	path := string(secret.Data["path"])
+	err := vw.checkURI(scheme, address, path)
+	if err != nil {
+		return err
 	}
 
 	dockerCfg := &DockerConfig{}
-	err := json.Unmarshal(dockerCfgRaw, dockerCfg)
+	err = json.Unmarshal(dockerCfgRaw, dockerCfg)
 	if err != nil {
-		return fmt.Errorf("can't umarshal docker config: %w", err)
+		return fmt.Errorf("сan't umarshal docker config: %w", err)
 	}
 
 	if len(dockerCfg.Auths) == 0 {
@@ -148,7 +174,7 @@ func (vw *ValidatingWebhook) ValidatingWebhook(w http.ResponseWriter, r *http.Re
 	logrus.Debug(string(body))
 
 	// Decode the request body into an admission review struct
-	review := &v12.AdmissionReview{}
+	review := &admission.AdmissionReview{}
 	err := json.Unmarshal(body, review)
 	if err != nil {
 		logrus.Errorf("can't unmarshal admission review: %v", err)
@@ -167,7 +193,7 @@ func (vw *ValidatingWebhook) ValidatingWebhook(w http.ResponseWriter, r *http.Re
 	// Decode secret
 	secretJSON := review.Request.Object.Raw
 
-	secret := &v1.Secret{}
+	secret := &core.Secret{}
 	err = json.Unmarshal(secretJSON, secret)
 	if err != nil {
 		logrus.Errorf("can't unmarshal secret: %v", err)
@@ -177,7 +203,7 @@ func (vw *ValidatingWebhook) ValidatingWebhook(w http.ResponseWriter, r *http.Re
 	}
 
 	// Respinse with same UID
-	review.Response = &v12.AdmissionResponse{
+	review.Response = &admission.AdmissionResponse{
 		UID: review.Request.UID,
 	}
 
@@ -186,7 +212,7 @@ func (vw *ValidatingWebhook) ValidatingWebhook(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		logrus.Errorf("validation of %s/%s secret failed: %v", secret.Namespace, secret.Name, err)
 		review.Response.Allowed = false
-		review.Response.Result = &v13.Status{
+		review.Response.Result = &meta.Status{
 			Message: err.Error(),
 		}
 	} else {
