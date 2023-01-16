@@ -6,11 +6,15 @@ title: "Managing control plane: FAQ"
 
 ## How do I add a master node to a static or hybrid cluster?
 
+> It is important to have an odd number of masters to ensure a quorum.
+
 Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [instruction](../040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
 > Before adding nodes, ensure you have the required quotas in the cloud provider.
+>
+> It is important to have an odd number of masters to ensure a quorum.
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 

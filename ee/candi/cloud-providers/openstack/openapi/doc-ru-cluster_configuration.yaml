@@ -27,7 +27,7 @@ apiVersions:
         properties:
           replicas:
             description: |
-              Количество создаваемых master-узлов.
+              Количество создаваемых master-узлов. Важно иметь нечётное количество мастеров для обеспечения кворума.
           instanceClass:
             description: |
               Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
