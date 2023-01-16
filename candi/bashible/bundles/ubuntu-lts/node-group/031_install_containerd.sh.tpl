@@ -85,6 +85,12 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 {{- end }}
 
+  # we need to force libseccomp2 installing due to issue https://github.com/containerd/containerd/discussions/6577
+  # the bb-event trick is that we don't need to restart the containerd service after installation, and truth be told, we can't yet
+  bb-event-off 'bb-package-installed' 'post-install'
+  bb-apt-install --force libseccomp2
+  bb-event-on 'bb-package-installed' 'post-install'
+
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
 
