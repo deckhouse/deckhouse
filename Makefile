@@ -212,8 +212,8 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
-docs-down: ## Stop all the documentation containers.
-	docker rm -f site_site_1 site_front_1 documentation; docker network rm deckhouse
+docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
+	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
 
 ##@ Update kubernetes control-plane patchversions
 
