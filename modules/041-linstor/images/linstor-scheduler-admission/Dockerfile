@@ -8,11 +8,11 @@ ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=v0.2.1-3-g2702142
 RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-scheduler-extender \
  && cd /usr/local/go/linstor-scheduler-extender \
  && git reset --hard v${LINSTOR_SCHEDULER_EXTENDER_VERSION} \
- && cd cmd/linstor-scheduler-extender \
+ && cd cmd/linstor-scheduler-admission \
  && go build -ldflags="-X github.com/piraeusdatastore/linstor-scheduler-extender/pkg/consts.Version=v${LINSTOR_SCHEDULER_EXTENDER_VERSION}" \
- && mv ./linstor-scheduler-extender /
+ && mv ./linstor-scheduler-admission /
 
 FROM $BASE_UBUNTU
-COPY --from=builder /linstor-scheduler-extender /
+COPY --from=builder /linstor-scheduler-admission /
 USER nonroot
-ENTRYPOINT ["/linstor-scheduler-extender"]
+ENTRYPOINT ["/linstor-scheduler-admission"]

@@ -1,7 +1,7 @@
 - name: kubernetes.linstor.scheduler_state
   rules:
     - alert: D8LinstorSchedulerPodIsNotReady
-      expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"linstor-scheduler-.*"}) != 1
+      expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"linstor-scheduler-.*",pod!~"linstor-scheduler-admission-.*"}) != 1
       for: 10m
       labels:
         severity_level: "6"
@@ -19,7 +19,7 @@
           2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod -l app=linstor-scheduler`
 
     - alert: D8LinstorSchedulerPodIsNotRunning
-      expr: absent(kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"linstor-scheduler-.*"})
+      expr: absent(kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"linstor-scheduler-.*",pod!~"linstor-scheduler-admission-.*"})
       for: 2m
       labels:
         severity_level: "6"
