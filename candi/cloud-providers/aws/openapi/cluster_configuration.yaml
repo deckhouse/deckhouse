@@ -32,7 +32,7 @@ apiVersions:
             type: integer
             minimum: 1
             description: |
-              The number of master nodes to create.
+              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
           instanceClass:
             type: object
             required: [instanceType, ami]
