@@ -13,6 +13,8 @@
 # limitations under the License.
 
 {{- if eq .cri "Containerd" }}
+
 # we need to force libseccomp2 install due issue https://github.com/containerd/containerd/discussions/6577
 bb-apt-install --force libseccomp2
+
 {{- end }}
