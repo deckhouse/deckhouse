@@ -57,7 +57,7 @@ spec:
                         description: |
                           Лейбл, в который записывается результирующее значение при замене.
 
-                          Поле является обезательным при `action: replace`.
+                          Поле является обязательным при `action: replace`.
                 tlsConfig:
                   description: Параметры TLS.
                   properties:
