@@ -43,7 +43,7 @@ bb-event-off() {
     if [[ -f "$HANDLERS" ]]
     then
         bb-log-debug "Removed handler '$HANDLER' from event '$EVENT'"
-        cat "$HANDLERS" | grep -v "^$HANDLER\$" > "$HANDLERS"
+        cat "$HANDLERS" | grep -v "^$HANDLER\$" > "$HANDLERS" || true
     fi
 }
 
