@@ -123,20 +123,23 @@ bb-event-cleanup() {
     BB_EVENT_DEPTH["__delay__"]=$(( ${BB_EVENT_DEPTH["__delay__"]} - 1 ))
 }
 bb-event-error-create() {
-    eventHash="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/' | md5sum | awk '{print $1}' | cut -b -5)"
+    # eventName parameter aggregates hostname with bashible step name
+    eventName="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/')"
+    eventLog="/var/lib/bashible/.bb-workspace/step.log"
     bb-kubectl apply -f - <<EOF
         apiVersion: v1
         kind: Event
         metadata:
-          name: bashible-error-${eventHash}
+          name: bashible-error-${eventName}
           namespace: d8-cloud-instance-manager
         reason: Failed
         type: Error
         lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
-        message: '$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r "s/.*Step: (.*)/\1/")'
+        message: '$(cat "${eventLog}" | tail -c 500)'
         involvedObject:
           kind: Node
           namespace: d8-cloud-instance-manager
+          name: '$(hostname -s)'
         source:
           component: bashible
           host: '$(hostname -s)'
