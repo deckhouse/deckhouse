@@ -1,6 +1,6 @@
 # Based on https://github.com/open-policy-agent/gatekeeper/blob/master/Dockerfile
 ARG BASE_ALPINE
-FROM openpolicyagent/gatekeeper:v3.9.0@sha256:fe1ef3bb611456d6bf301f9f2a219306564ee9ad17269f78da59eb0afb6c956a as base
+FROM openpolicyagent/gatekeeper:v3.10.0@sha256:ab55e50d7a188472b87bc336066c217ccde2b123042d0b30b3cb01bb9cfe04aa as base
 
 
 FROM $BASE_ALPINE
