@@ -34,7 +34,9 @@ type Splunk struct {
 
 	Index string `json:"index,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	IndexedFields []string `json:"indexed_fields,omitempty"`
+
+	TLS CommonTLS `json:"tls"`
 }
 
 func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
@@ -71,9 +73,19 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		TLS:   tls,
 		Index: spec.Index,
 		Encoding: Encoding{
-			Codec:           "text",
+			Codec:           "json",
 			TimestampFormat: "rfc3339",
-			OnlyFields:      []string{"message"},
+		},
+		IndexedFields: []string{
+			"namespace",
+			"container",
+			"image",
+			"pod",
+			"node",
+			"pod_ip",
+			"stream",
+			"pod_labels",
+			"pod_owner",
 		},
 		Endpoint:     spec.Endpoint,
 		DefaultToken: spec.Token,

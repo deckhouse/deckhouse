@@ -27,16 +27,28 @@
         "enabled": false
       },
       "encoding": {
-        "only_fields": [
-          "message"
-        ],
-        "codec": "text",
+        "codec": "json",
         "timestamp_format": "rfc3339"
       },
       "compression": "gzip",
       "default_token": "test-token",
       "endpoint": "192.168.1.1:9200",
-      "index": "{{ test }}"
+      "index": "{{ test }}",
+      "indexed_fields": [
+        "namespace",
+        "container",
+        "image",
+        "pod",
+        "node",
+        "pod_ip",
+        "stream",
+        "pod_labels",
+        "pod_owner"
+      ],
+      "tls": {
+        "verify_hostname": false,
+        "verify_certificate": false
+      }
     }
   }
 }
