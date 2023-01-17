@@ -46,3 +46,7 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+
+# Python dev environment
+__pycache__/
+.pytest_cache/
