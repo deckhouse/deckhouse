@@ -204,6 +204,7 @@ git:
   - global-hooks/**/*.go
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
+  - **/testdata
 - url: https://github.com/flant/shell-operator
   tag: v1.1.3
   add: /frameworks/shell
