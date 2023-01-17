@@ -167,9 +167,8 @@ var DefaultImagesTags = map[string]interface{}{
 		"metricsScraper": "imageHash-dashboard-metricsScraper",
 	},
 	"deckhouse": map[string]interface{}{
-		"deckhouseRegistryWebhook": "imageHash-deckhouse-deckhouseRegistryWebhook",
-		"imagesCopier":             "imageHash-deckhouse-imagesCopier",
-		"webhookHandler":           "imageHash-deckhouse-webhookHandler",
+		"imagesCopier":   "imageHash-deckhouse-imagesCopier",
+		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
 	"deckhouseConfig": map[string]interface{}{
 		"deckhouseConfigWebhook": "imageHash-deckhouseConfig-deckhouseConfigWebhook",
