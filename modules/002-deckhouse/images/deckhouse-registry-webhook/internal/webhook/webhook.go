@@ -43,16 +43,16 @@ type ValidatingWebhook struct {
 	addr           string
 	tlsCertFile    string
 	tlsKeyFile     string
-	imageToCheck   string
+	tagToCheck     string
 	srv            *http.Server
 	registryClient registryclient.RCInterface
 }
 
-func NewValidatingWebhook(addr, imageToCheck, tlsCertFile, tlsKeyFile string, registryClient registryclient.RCInterface) *ValidatingWebhook {
+func NewValidatingWebhook(addr, tagToCheck, tlsCertFile, tlsKeyFile string, registryClient registryclient.RCInterface) *ValidatingWebhook {
 	return &ValidatingWebhook{
 		tlsCertFile:    tlsCertFile,
 		tlsKeyFile:     tlsKeyFile,
-		imageToCheck:   imageToCheck,
+		tagToCheck:     tagToCheck,
 		addr:           addr,
 		registryClient: registryClient,
 	}
@@ -127,13 +127,19 @@ func (vw *ValidatingWebhook) validateSecret(secret *core.Secret) error {
 	// Secret must contain ".dockerconfigjson" field
 	dockerCfgRaw, ok := secret.Data[core.DockerConfigJsonKey]
 	if !ok {
-		return fmt.Errorf("secret should contain %s field", core.DockerConfigJsonKey)
+		return fmt.Errorf("secret must contain the '%s' field and it must be non-empty", core.DockerConfigJsonKey)
 	}
 
 	// Check URI (scheme + address + path)
 	scheme := string(secret.Data["scheme"])
 	address := string(secret.Data["address"])
+	if address == "" {
+		return fmt.Errorf("secret must contain the 'address' field and it must be non-empty")
+	}
 	path := string(secret.Data["path"])
+	if path == "" {
+		return fmt.Errorf("secret must contain the 'path' field and it must be non-empty")
+	}
 	err := vw.checkURI(scheme, address, path)
 	if err != nil {
 		return err
@@ -151,7 +157,8 @@ func (vw *ValidatingWebhook) validateSecret(secret *core.Secret) error {
 
 	// check registries in docker config
 	for registry, authCfg := range dockerCfg.Auths {
-		err = vw.registryClient.CheckImage(registry, vw.imageToCheck, authCfg)
+		image := fmt.Sprintf("%s:%s", path, vw.tagToCheck)
+		err = vw.registryClient.CheckImage(registry, image, authCfg)
 		if err != nil {
 			return err
 		}

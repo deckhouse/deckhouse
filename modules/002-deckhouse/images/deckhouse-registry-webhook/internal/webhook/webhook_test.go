@@ -124,14 +124,14 @@ var _ = Describe("ValidatingWebhook", func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second*1)
 		defer cancel()
 		r := FakeRegistryClient{}
-		vw := NewValidatingWebhook(":36363", "test-image", "", "", r)
+		vw := NewValidatingWebhook(":36363", "test-tag", "", "", r)
 		err := vw.Run(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("Test Webhook Handler", func() {
 		r := FakeRegistryClient{}
-		vw := NewValidatingWebhook(":36363", "test-image", "", "", r)
+		vw := NewValidatingWebhook(":36363", "test-tag", "", "", r)
 		DescribeTable("",
 			func(admissionReview string, want *wanted) {
 				r := httptest.NewRequest(http.MethodPost, "/validate", strings.NewReader(admissionReview))
@@ -160,6 +160,8 @@ var _ = Describe("ValidatingWebhook", func() {
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: "",
 					SecretType:       "Opaque",
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: false,
@@ -169,15 +171,19 @@ var _ = Describe("ValidatingWebhook", func() {
 			Entry("Field .dockerconfigjson is missed in the secret",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: "",
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: false,
-					BodySubstring:    "secret should contain .dockerconfigjson field",
+					BodySubstring:    "secret must contain the '.dockerconfigjson' field",
 					StatusCode:       http.StatusOK,
 				}),
 			Entry("Bad .dockerconfigjson data",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{"aaa": "bbb"}`, // {"aaa":"bbb"}
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: false,
@@ -187,6 +193,8 @@ var _ = Describe("ValidatingWebhook", func() {
 			Entry("Empty auths",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{ "auths": { } }`,
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: false,
@@ -196,6 +204,8 @@ var _ = Describe("ValidatingWebhook", func() {
 			Entry("Valid Secret with invalid creds",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "aW52YWxpZDppbnZhbGlkCg==" } } }`, // invalid:invalid
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: false,
@@ -205,20 +215,32 @@ var _ = Describe("ValidatingWebhook", func() {
 			Entry("Valid Secret with working creds",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Address:          "registry.example.com",
+					Path:             "/path",
 				}),
 				&wanted{
 					AdmissionAllowed: true,
 					BodySubstring:    "",
 					StatusCode:       http.StatusOK,
 				}),
-			Entry("Valid Secret with working creds + address",
+			Entry("Path field is empty",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
 					Address:          "registry.example.com",
 				}),
 				&wanted{
-					AdmissionAllowed: true,
-					BodySubstring:    "",
+					AdmissionAllowed: false,
+					BodySubstring:    "secret must contain the 'path' field and it must be non-empty",
+					StatusCode:       http.StatusOK,
+				}),
+			Entry("Address field is empty",
+				AdmisstionJSON(templateParams{
+					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
+					Path:             "/path",
+				}),
+				&wanted{
+					AdmissionAllowed: false,
+					BodySubstring:    "secret must contain the 'address' field and it must be non-empty",
 					StatusCode:       http.StatusOK,
 				}),
 			Entry("Valid Secret with working creds + address + path",
@@ -244,7 +266,7 @@ var _ = Describe("ValidatingWebhook", func() {
 					BodySubstring:    "",
 					StatusCode:       http.StatusOK,
 				}),
-			Entry("Valid Secret with working creds + scheme + bad address + path",
+			Entry("Address field with bad data",
 				AdmisstionJSON(templateParams{
 					DockerConfigJSON: `{ "auths": { "registry.example.com": { "auth": "dmFsaWQ6dmFsaWQK" } } }`, // valid:valid
 					Scheme:           "http",

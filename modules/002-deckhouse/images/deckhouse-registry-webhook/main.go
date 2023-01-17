@@ -31,12 +31,12 @@ import (
 )
 
 var (
-	webhookAddr  = flag.String("webhook-addr", ":8443", "Webhook address and port")
-	healthAddr   = flag.String("health-addr", ":8001", "Health address and port")
-	imageToCheck = flag.String("image-to-check", "the-name-of-a-nonexistent-image", "Nonexistent image name to check")
-	tlsCertFile  = flag.String("tls-cert-file", "/tls/tls.crt", "Path to the TLS certificate file")
-	tlsKeyFile   = flag.String("tls-key-file", "/tls/tls.key", "Path to the TLS key file")
-	logLevelStr  = flag.String("log-level", "info", "Log level")
+	webhookAddr = flag.String("webhook-addr", ":8443", "Webhook address and port")
+	healthAddr  = flag.String("health-addr", ":8001", "Health address and port")
+	tagToCheck  = flag.String("tag-to-check", "tag-to-chek", "Image tag name to check")
+	tlsCertFile = flag.String("tls-cert-file", "/tls/tls.crt", "Path to the TLS certificate file")
+	tlsKeyFile  = flag.String("tls-key-file", "/tls/tls.key", "Path to the TLS key file")
+	logLevelStr = flag.String("log-level", "info", "Log level")
 )
 
 var (
@@ -87,7 +87,7 @@ func main() {
 
 	registryClient := registryclient.NewRegistryClient()
 	// run webnhook
-	wh := webhook.NewValidatingWebhook(*webhookAddr, *imageToCheck, *tlsCertFile, *tlsKeyFile, registryClient)
+	wh := webhook.NewValidatingWebhook(*webhookAddr, *tagToCheck, *tlsCertFile, *tlsKeyFile, registryClient)
 	err = wh.Run(ctx)
 	if err != nil {
 		log.Errorf("error serving webhook: %v", err)
