@@ -4,6 +4,7 @@
 
 
  - Clusters with the `kubernetesVersion` parameter set to `Automatic` will be upgraded to Kubernetes `1.23`.
+ - If there is the `ClusterConfiguration.proxy` parameter configured, it is highly important to configure the `noProxy`  parameter with your Nodes CIDRs.
  - Multiple Pods, including Prometheus and Ingress Nginx Controller, will be restarted.
  - Prometheus, Trickster, Grafana will be restarted.
  - The following components will be restarted:
@@ -68,12 +69,15 @@
 
 
  - **[admission-policy-engine]** Add secret with credentials for a registry [#3310](https://github.com/deckhouse/deckhouse/pull/3310)
+ - **[candi]** Force `libseccomp2` installation while containerd install/update (due to issue https://github.com/containerd/containerd/discussions/6577). [#3504](https://github.com/deckhouse/deckhouse/pull/3504)
  - **[candi]** Fail node bootstrap if the node has an XFS partition with ftype=0 parameter. [#3103](https://github.com/deckhouse/deckhouse/pull/3103)
  - **[ceph-csi]** Restoring the previous secret name with ceph cluster credentials. [#3387](https://github.com/deckhouse/deckhouse/pull/3387)
  - **[ceph-csi]** Delete storage classes after changing immutable fields. [#3380](https://github.com/deckhouse/deckhouse/pull/3380)
  - **[ceph-csi]** Allow non-admin ceph account for cephfs. [#3212](https://github.com/deckhouse/deckhouse/pull/3212)
  - **[cloud-provider-openstack]** Fix ordering static nodes without security groups. [#3182](https://github.com/deckhouse/deckhouse/pull/3182)
  - **[deckhouse]** Fixed unrendered backquotes in the DeckhouseRelease resource. [#3367](https://github.com/deckhouse/deckhouse/pull/3367)
+ - **[docs]** Clarify usage of the `noProxy` parameter. [#3526](https://github.com/deckhouse/deckhouse/pull/3526)
+    If there is the `ClusterConfiguration.proxy` parameter configured, it is highly important to configure the `noProxy`  parameter with your Nodes CIDRs.
  - **[global-hooks]** Fixes in cluster configuration migration process and proxy template for EKS cluster installation. [#3381](https://github.com/deckhouse/deckhouse/pull/3381)
  - **[ingress-nginx]** Fix client certificate update. [#3368](https://github.com/deckhouse/deckhouse/pull/3368)
  - **[ingress-nginx]** Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the Load Balancer to rebuild the endpoints. [#3121](https://github.com/deckhouse/deckhouse/pull/3121)
@@ -82,9 +86,13 @@
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
  - **[node-manager]** Increase early-oom PSI threshold to 30 (from 5). [#3427](https://github.com/deckhouse/deckhouse/pull/3427)
  - **[node-manager]** Show errors on scale-from-zero capacity planning. [#3316](https://github.com/deckhouse/deckhouse/pull/3316)
+ - **[prometheus]** Fixed token-based authentication between Trickster and Prometheus. [#3519](https://github.com/deckhouse/deckhouse/pull/3519)
+ - **[prometheus]** Fix remoteWrite tlsConfig render. [#3510](https://github.com/deckhouse/deckhouse/pull/3510)
  - **[prometheus]** Set up `maxSamples` of query for the Main and Longterm Prometheus objects from `50000000` to `100000000`. [#3124](https://github.com/deckhouse/deckhouse/pull/3124)
     the `prometheus` module will be restarted.
+ - **[registrypackages]** Install flannel `1.1.2` binary to CentOS for `kubernetes-cni` newer than `0.9.1` due to missing flannel binary. [#3503](https://github.com/deckhouse/deckhouse/pull/3503)
  - **[registrypackages]** Allow downgrading RPMs in registrypackages for CentOS. [#3353](https://github.com/deckhouse/deckhouse/pull/3353)
+ - **[user-authn]** OIDC insecure userInfo endpoint. [#3501](https://github.com/deckhouse/deckhouse/pull/3501)
  - **[user-authn]** Fix insecure OIDC Ca patch. [#3439](https://github.com/deckhouse/deckhouse/pull/3439)
  - **[user-authn]** Fix crowd proxy certificate generation. [#3355](https://github.com/deckhouse/deckhouse/pull/3355)
  - **[user-authn]** kubeconfig generation doc clarifications (public and non-public CA for published API). [#3237](https://github.com/deckhouse/deckhouse/pull/3237)

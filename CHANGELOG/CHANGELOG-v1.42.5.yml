@@ -1,0 +1,34 @@
+candi:
+  fixes:
+    - summary: >-
+        Force `libseccomp2` installation while containerd install/update (due to issue
+        https://github.com/containerd/containerd/discussions/6577).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3504
+docs:
+  fixes:
+    - summary: Show the deprecated status of the OpenAPI parameter if the `deprecated` option is set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3536
+    - summary: Clarify usage of the `noProxy` parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3526
+      impact: >-
+        If there is the `ClusterConfiguration.proxy` parameter configured, it is highly important to
+        configure the `noProxy`  parameter with your Nodes CIDRs.
+    - summary: Fix small typos in docs and site info.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3406
+prometheus:
+  fixes:
+    - summary: Fixed token-based authentication between Trickster and Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3519
+    - summary: Fix remoteWrite tlsConfig render.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3510
+registrypackages:
+  fixes:
+    - summary: >-
+        Install flannel `1.1.2` binary to CentOS for `kubernetes-cni` newer than `0.9.1` due to
+        missing flannel binary.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3503
+user-authn:
+  fixes:
+    - summary: OIDC insecure userInfo endpoint.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3501
+
