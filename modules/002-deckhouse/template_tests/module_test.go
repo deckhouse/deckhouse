@@ -65,10 +65,6 @@ internal:
     crt: a
     key: b
     ca: c
-  deckhouseRegistryWebhookCert:
-    crt: a
-    key: b
-    ca: c
   currentReleaseImageName: test
 `
 
@@ -82,10 +78,6 @@ tolerations:
   operator: Exists
 internal:
   webhookHandlerCert:
-    crt: a
-    key: b
-    ca: c
-  deckhouseRegistryWebhookCert:
     crt: a
     key: b
     ca: c
