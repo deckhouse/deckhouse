@@ -142,7 +142,7 @@ func (vw *ValidatingWebhook) validateSecret(secret *core.Secret) error {
 	dockerCfg := &DockerConfig{}
 	err = json.Unmarshal(dockerCfgRaw, dockerCfg)
 	if err != nil {
-		return fmt.Errorf("сan't umarshal docker config: %w", err)
+		return fmt.Errorf("can't umarshal docker config: %w", err)
 	}
 
 	if len(dockerCfg.Auths) == 0 {
