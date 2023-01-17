@@ -256,8 +256,165 @@ chmod 700 d8-push.sh
 * Проверьте, не осталось ли в кластере Pod'ов с оригинальным адресом registry:
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
+  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) 
+    | .metadata.namespace + "\t" + .metadata.name' -r
   ```
+
+## Как переключить Deckhouse EE на CE?
+
+> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+
+Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия:
+
+1. Убедитесь, что используемые в кластере модули [поддерживаются в версии CE](revision-comparison.html). Отключите модули, которые не поддерживаются в Deckhouse CE.
+
+   > Обратите внимание, что в Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
+1. Выполните следующую команду:
+
+   ```shell
+   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --registry-url https://registry.deckhouse.io/deckhouse/ce && \
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ce:" $2}')    
+   ```
+
+1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
+
+   ```shell
+   kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+1. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse
+   ```
+
+1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   ```
+
+   Пример вывода, когда в очереди еще есть задания (`length 38`):
+
+   ```console
+   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   Queue 'main': length 38, status: 'run first task'
+   ```
+
+   Пример вывода, когда очередь пуста (`length 0`):
+
+   ```console
+   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   Queue 'main': length 0, status: 'waiting for task 0s'
+   ```
+
+1. На master-узле проверьте применение новых настроек.
+
+   В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
+
+   Пример:
+
+   ```console
+   # journalctl -u bashible -n 5
+   Jan 12 12:38:20 demo-master-0 bashible.sh[868379]: Configuration is in sync, nothing to do.
+   Jan 12 12:38:20 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   Jan 12 12:39:18 demo-master-0 systemd[1]: Started Bashible service.
+   Jan 12 12:39:19 demo-master-0 bashible.sh[869714]: Configuration is in sync, nothing to do.
+   Jan 12 12:39:19 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse EE:
+
+   ```shell
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee")))) 
+     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   ```
+
+   Иногда, могут оставаться запущенными некоторые static Pod'ы (например, `kubernetes-api-proxy-*`). Это связанно с тем, что kubelet не перезапускает Pod несмотря на изменение соответствующего манифеста, т.к. используемый образ одинаков для редакций Deckhouse CE и EE. Выполните на любом master-узле следующую команду, чтобы убедиться что соответствующие манифесты также были изменены:
+
+   ```shell
+   grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
+   ```
+
+   Вывод команды должен быть пуст.
+
+## Как переключить Deckhouse CE на EE?
+
+Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).  
+
+> Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.io`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+
+Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия:
+
+1. Выполните следующую команду:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/change-registry.sh)" -- --user license-token --password $LICENSE_TOKEN --registry-url https://registry.deckhouse.io/deckhouse/ee && \
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.spec.template.spec.containers[?(@.name=="deckhouse")].image}' | awk -F: '{print "registry.deckhouse.io/deckhouse/ee:" $2}') 
+   ```
+
+1. Дождитесь перехода Pod'а Deckhouse в статус `Ready`:
+
+   ```shell
+   kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+1. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse
+   ```
+
+1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   ```
+
+   Пример вывода, когда в очереди еще есть задания (`length 38`):
+
+   ```console
+   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   Queue 'main': length 38, status: 'run first task'
+   ```
+
+   Пример вывода, когда очередь пуста (`length 0`):
+
+   ```console
+   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   Queue 'main': length 0, status: 'waiting for task 0s'
+   ```
+
+1. На master-узле проверьте применение новых настроек.
+
+   В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
+
+   Пример:
+
+   ```console
+   # journalctl -u bashible -n 5
+   Jan 12 12:38:20 demo-master-0 bashible.sh[868379]: Configuration is in sync, nothing to do.
+   Jan 12 12:38:20 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   Jan 12 12:39:18 demo-master-0 systemd[1]: Started Bashible service.
+   Jan 12 12:39:19 demo-master-0 bashible.sh[869714]: Configuration is in sync, nothing to do.
+   Jan 12 12:39:19 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Проверьте, не осталось ли в кластере Pod'ов с адресом registry для Deckhouse CE:
+
+   ```shell
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce")))) 
+     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   ```
+
+   Иногда, могут оставаться запущенными некоторые static Pod'ы (например, `kubernetes-api-proxy-*`). Это связанно с тем, что kubelet не перезапускает Pod несмотря на изменение соответствующего манифеста, т.к. используемый образ одинаков для редакций Deckhouse CE и EE. Выполните на любом master-узле следующую команду, чтобы убедиться что соответствующие манифесты также были изменены:
+
+   ```shell
+   grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup
+   ```
+
+   Вывод команды должен быть пуст.
 
 ## Как изменить конфигурацию кластера
 
