@@ -48,10 +48,8 @@ func discoveryModulesImagesTags(input *go_hook.HookInput) error {
 	}
 
 	modulesTagsObj := readModulesImagesTags(input, externalModulesDir)
-	if modulesTagsObj != nil {
-		for k, v := range modulesTagsObj {
-			tagsObj[k] = v
-		}
+	for k, v := range modulesTagsObj {
+		tagsObj[k] = v
 	}
 
 	input.Values.Set("global.modulesImages.tags", tagsObj)
