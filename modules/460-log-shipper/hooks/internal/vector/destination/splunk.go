@@ -34,7 +34,9 @@ type Splunk struct {
 
 	Index string `json:"index,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	IndexedFields []string `json:"indexed_fields,omitempty"`
+
+	TLS CommonTLS `json:"tls"`
 }
 
 func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
@@ -62,6 +64,23 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
+	indexedFields := []string{
+		"namespace",
+		"container",
+		"image",
+		"pod",
+		"node",
+		"pod_ip",
+		"stream",
+		"pod_owner",
+		// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
+	}
+
+	// Send extra labels as indexed fields
+	for k := range cspec.ExtraLabels {
+		indexedFields = append(indexedFields, k)
+	}
+
 	return &Splunk{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -71,12 +90,13 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		TLS:   tls,
 		Index: spec.Index,
 		Encoding: Encoding{
+			OnlyFields:      []string{"message"}, // Do not encode fields used in indexes
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
-			OnlyFields:      []string{"message"},
 		},
-		Endpoint:     spec.Endpoint,
-		DefaultToken: spec.Token,
-		Compression:  "gzip",
+		IndexedFields: indexedFields,
+		Endpoint:      spec.Endpoint,
+		DefaultToken:  spec.Token,
+		Compression:   "gzip",
 	}
 }

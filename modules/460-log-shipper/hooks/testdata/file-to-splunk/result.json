@@ -36,7 +36,22 @@
       "compression": "gzip",
       "default_token": "test-token",
       "endpoint": "192.168.1.1:9200",
-      "index": "{{ test }}"
+      "index": "{{ test }}",
+      "indexed_fields": [
+        "namespace",
+        "container",
+        "image",
+        "pod",
+        "node",
+        "pod_ip",
+        "stream",
+        "pod_owner",
+        "app"
+      ],
+      "tls": {
+        "verify_hostname": false,
+        "verify_certificate": false
+      }
     }
   }
 }

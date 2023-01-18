@@ -198,6 +198,37 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Splunk integration
+
+It is possible to send logs from Deckhouse to Splunk.
+
+1. Endpoint must be equal to the Splunk instance name with the `8088` port and no path provided, e.g. `https://prd-p-xxxxxx.splunkcloud.com:8088`.
+2. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy a token.
+3. Provide a Splunk index to store logs, e.g., `logs`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: splunk
+spec:
+  type: Splunk
+  splunk:
+    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
+    token: xxxx-xxxx-xxxx
+    index: logs
+    tls:
+      verifyCertificate: false
+      verifyHostname: false
+```
+
+> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
+
+```yaml
+extraLabels:
+  pod_label_app: '{{ pod_labels.app }}'
+```
+
 ## Simple Logstash example
 
 To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side, and its codec should be set to `json`.

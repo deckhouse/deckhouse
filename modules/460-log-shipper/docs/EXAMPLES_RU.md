@@ -198,6 +198,37 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Пример интеграции со Splunk
+
+Существует возможность отсылать события из Deckhouse в Splunk.
+
+1. Endpoint должен быть таким же как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например, `https://prd-p-xxxxxx.splunkcloud.com:8088`.
+2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
+3. Укажите индекс Splunk для хранения логов, например, `logs`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: splunk
+spec:
+  type: Splunk
+  splunk:
+    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
+    token: xxxx-xxxx-xxxx
+    index: logs
+    tls:
+      verifyCertificate: false
+      verifyHostname: false
+```
+
+> NOTE: Splunk destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extraLabels`.
+
+```yaml
+extraLabels:
+  pod_label_app: '{{ pod_labels.app }}'
+```
+
 ## Простой пример Logstash
 
 Чтобы отправлять логи в Logstash, на стороне Logstash должен быть настроен входящий поток `tcp`, и его кодек должен быть — `json`.
