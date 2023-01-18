@@ -37,6 +37,7 @@ shell:
     - mkdir /src
     - wget https://github.com/deckhouse/yandex-cloud-controller-manager/archive/{{ $value.ccm.yandex }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
     - cd /src
+    - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
   {{- end }}
 {{- end }}
