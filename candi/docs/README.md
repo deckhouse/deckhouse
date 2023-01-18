@@ -91,7 +91,8 @@ internalNetworkCIDRs:
 - 192.168.0.0/24
 ```
 
-`internalNetworkCIDRs` — addresses from these networks will be considered as "internal"
+`internalNetworkCIDRs` — addresses from these networks will be considered as "internal".
+If every node in cluster has only one network interface `StaticClusterConfiguration` resource can be skipped.
 
 #### Preparations
 
