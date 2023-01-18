@@ -194,7 +194,7 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups() {
 
 func (n *clusterIsBootstrapCheck) outputMachineFailures() {
 	if time.Now().Before(n.startCheckTime) {
-		n.logger.LogDebugF("Waiting 1 minute for stabilize node group events\n")
+		n.logger.LogDebugF("Waiting 1 minute for stabilizing node group events\n")
 		return
 	}
 
@@ -215,7 +215,7 @@ func (n *clusterIsBootstrapCheck) outputMachineFailures() {
 }
 
 func (n *clusterIsBootstrapCheck) Name() string {
-	return "Waiting for cluster is bootstrapped"
+	return "Waiting for the cluster to become bootstrapped."
 }
 
 func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
@@ -224,9 +224,9 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 		n.logger.LogInfoF("\n")
 	}()
 
-	n.logger.LogInfoF("Waiting for cluster will be in 'bootstrapped' state:\n")
+	n.logger.LogInfoF("Waiting for the cluster to be in the 'bootstrapped' state:\n")
 
-	notBootstrappedMsg := "Cluster is not yet bootstrapped. Waiting for at least one non-master node in Ready status.\n"
+	notBootstrappedMsg := "The cluster has not been bootstrapped yet. Waiting for at least one non-master node in Ready status.\n"
 
 	ok, err := n.hasBootstrappedCM()
 	if err != nil {
@@ -236,7 +236,7 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 	}
 
 	if ok {
-		n.logger.LogInfoF("Cluster is bootstrapped. Waiting for resource creation.\n")
+		n.logger.LogInfoF("The cluster is bootstrapped. Waiting for the creation of resources.\n")
 		return true, nil
 	}
 
