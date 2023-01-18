@@ -64,7 +64,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
-	indexFields := []string{
+	indexedFields := []string{
 		"namespace",
 		"container",
 		"image",
@@ -78,7 +78,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 
 	// Send extra labels as indexed fields
 	for k := range cspec.ExtraLabels {
-		indexFields = append(indexFields, k)
+		indexedFields = append(indexedFields, k)
 	}
 
 	return &Splunk{
@@ -94,7 +94,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
 		},
-		IndexedFields: indexFields,
+		IndexedFields: indexedFields,
 		Endpoint:      spec.Endpoint,
 		DefaultToken:  spec.Token,
 		Compression:   "gzip",
