@@ -322,6 +322,15 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 
 	// Run --config for shell hook
 	if hec.GoHook == nil {
+		if isPythonHook, err := utils.FileExists(hec.HookPath + ".py"); err == nil && isPythonHook {
+			hec.HookPath = hec.HookPath + ".py"
+
+			// Python dependencies for the module hooks are expected to be here.
+			pythonDepsPath := filepath.Join(modulePath, "lib/python/dist")
+			pythonPath := strings.Join([]string{pythonDepsPath, os.Getenv("PYTHONPATH")}, ":")
+			hookEnvs = append(hookEnvs, "PYTHONPATH="+pythonPath)
+		}
+
 		hookEnvs = append(hookEnvs, "D8_IS_TESTS_ENVIRONMENT=yes")
 
 		stdout := bytes.Buffer{}
