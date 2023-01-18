@@ -20,6 +20,30 @@ function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
 }
 
+function bb-event-error-create() {
+    # eventName parameter aggregates hostname with bashible step name
+    eventName="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/')"
+    eventLog="/var/lib/bashible/step.log"
+    bb-kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Event
+        metadata:
+          name: bashible-error-${eventName}
+          namespace: d8-cloud-instance-manager
+        reason: Failed
+        type: Error
+        lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
+        message: '$(cat "${eventLog}" | tail -c 500)'
+        involvedObject:
+          kind: Node
+          namespace: d8-cloud-instance-manager
+          name: '$(hostname -s)'
+        source:
+          component: bashible
+          host: '$(hostname -s)'
+EOF
+}
+
 function annotate_node() {
   attempt=0
   until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
