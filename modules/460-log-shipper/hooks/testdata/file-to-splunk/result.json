@@ -27,6 +27,16 @@
         "enabled": false
       },
       "encoding": {
+        "except_fields": [
+          "namespace",
+          "container",
+          "image",
+          "pod",
+          "node",
+          "pod_ip",
+          "stream",
+          "pod_owner"
+        ],
         "codec": "json",
         "timestamp_format": "rfc3339"
       },
@@ -42,7 +52,6 @@
         "node",
         "pod_ip",
         "stream",
-        "pod_labels",
         "pod_owner"
       ],
       "tls": {

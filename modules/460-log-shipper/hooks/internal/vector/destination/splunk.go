@@ -64,6 +64,17 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
+	indexFields := []string{
+		"namespace",
+		"container",
+		"image",
+		"pod",
+		"node",
+		"pod_ip",
+		"stream",
+		"pod_owner",
+	}
+
 	return &Splunk{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -73,22 +84,13 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		TLS:   tls,
 		Index: spec.Index,
 		Encoding: Encoding{
+			ExceptFields:    indexFields, // Do not encode fields used in indexes
 			Codec:           "json",
 			TimestampFormat: "rfc3339",
 		},
-		IndexedFields: []string{
-			"namespace",
-			"container",
-			"image",
-			"pod",
-			"node",
-			"pod_ip",
-			"stream",
-			"pod_labels",
-			"pod_owner",
-		},
-		Endpoint:     spec.Endpoint,
-		DefaultToken: spec.Token,
-		Compression:  "gzip",
+		IndexedFields: indexFields,
+		Endpoint:      spec.Endpoint,
+		DefaultToken:  spec.Token,
+		Compression:   "gzip",
 	}
 }
