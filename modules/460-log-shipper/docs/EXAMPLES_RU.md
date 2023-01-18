@@ -222,7 +222,7 @@ spec:
       verifyHostname: false
 ```
 
-> NOTE: Splunk destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extreaLabels`.
+> NOTE: Splunk destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extraLabels`.
 
 ```yaml
 extraLabels:

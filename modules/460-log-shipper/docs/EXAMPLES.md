@@ -222,7 +222,7 @@ spec:
       verifyHostname: false
 ```
 
-> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extreaLabels` option.
+> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
 
 ```yaml
 extraLabels:
