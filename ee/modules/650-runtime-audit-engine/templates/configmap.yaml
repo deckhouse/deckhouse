@@ -8,9 +8,9 @@ data:
   falco.yaml: |-
     # @ The location of the rules files that will be consumed by Falco.
     rules_file:
-    - /etc/falco/falco_rules.yaml
-    - /etc/falco/falco_rules.local.yaml
-    - /etc/falco/k8s_audit_rules.yaml
+{{- range $path, $_ := (.Files.Glob "rules/*") }}
+    - /etc/falco/{{ trimPrefix "rules/" $path }}
+{{- end }}
     - /etc/falco/rules.d
 
     #
