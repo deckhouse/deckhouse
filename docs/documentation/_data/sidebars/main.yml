@@ -488,6 +488,7 @@ entries:
     - title:
         en: Delivery
         ru: Доставка
+      d8Revision: ee
       folders:
         - title:
             en: Description
