@@ -46,7 +46,6 @@
         "pod_ip",
         "stream",
         "pod_owner",
-        "pod_labels",
         "app"
       ],
       "tls": {
