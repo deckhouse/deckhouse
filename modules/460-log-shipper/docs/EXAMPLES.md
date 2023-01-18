@@ -223,6 +223,7 @@ spec:
 ```
 
 > NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extreaLabels` option.
+
 ```yaml
 extraLabels:
   pod_label_app: '{{ pod_labels.app }}'

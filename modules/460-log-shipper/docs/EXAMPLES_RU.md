@@ -223,6 +223,7 @@ spec:
 ```
 
 > NOTE: Splunk destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extreaLabels`.
+
 ```yaml
 extraLabels:
   pod_label_app: '{{ pod_labels.app }}'
