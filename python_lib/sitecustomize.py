@@ -31,7 +31,7 @@ def find_module_root(path):
     """
     while True:
         parent, name = os.path.split(path)
-        # Don't stick absolute paths to keep it portable on dev machines
+        # Don't stick to absolute path (/deckhouse/modules) to keep it portable
         if os.path.split(parent)[1] == "modules":
             break
         path = parent
@@ -39,13 +39,13 @@ def find_module_root(path):
 
 
 hook_path = os.path.abspath(sys.argv[0])
-mod_root, mod_name = find_module_root(hook_path)
+mod_root, mod_dirname = find_module_root(hook_path)
 
-# Add module python dependencies to PYTHONPATH
+# Add Python packages discovery for module hooks
 if mod_root:
     lib_path = os.path.join(mod_root, "lib", "python", "dist")
     sys.path.append(lib_path)
 
-# Add module name to env for simpler discovery, consumed by deckhouse python lib
-if mod_name:
-    os.environ["D8_MODULE_NAME"] = mod_name
+# Add module name to env for simpler discovery, consumed by Deckhouse hook lib for Python
+if mod_dirname:
+    os.environ["D8_MODULE_DIRNAME"] = mod_dirname
