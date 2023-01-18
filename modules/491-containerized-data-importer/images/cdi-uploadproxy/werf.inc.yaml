@@ -1,0 +1,15 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/artifact
+  add: /images/kubevirt/{{ $.ImageName }}:latest
+  excludePaths:
+  - 'sys'
+  to: /
+  before: setup
+# Source https://github.com/kubevirt/containerized-data-importer/blob/main/cmd/cdi-uploadproxy/BUILD.bazel
+docker:
+  ENTRYPOINT: ["/usr/bin/cdi-uploadproxy", "-alsologtostderr"]
+  USER: 1001
+  WORKDIR: /home/cdi-uploadproxy

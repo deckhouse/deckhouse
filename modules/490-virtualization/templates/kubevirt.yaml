@@ -1,0 +1,47 @@
+---
+apiVersion: kubevirt.io/v1
+kind: KubeVirt
+metadata:
+  name: kubevirt
+  namespace: d8-virtualization
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  certificateRotateStrategy: {}
+  configuration:
+    developerConfiguration:
+      featureGates:
+      - Macvtap
+      - HotplugVolumes
+      - GPU
+  customizeComponents:
+    patches:
+    - resourceType: Deployment
+      resourceName: virt-api
+      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
+      type: strategic
+    - resourceType: Deployment
+      resourceName: virt-controller
+      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
+      type: strategic
+    - resourceType: DaemonSet
+      resourceName: virt-handler
+      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
+      type: strategic
+    {{- if ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+    - resourceType: Deployment
+      resourceName: virt-api
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
+      type: json
+    - resourceType: Deployment
+      resourceName: virt-controller
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
+      type: json
+    - resourceType: DaemonSet
+      resourceName: virt-handler
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
+      type: json
+    {{- end }}
+  imagePullPolicy: IfNotPresent
+  infra:
+    replicas: 1
+  workloadUpdateStrategy: {}

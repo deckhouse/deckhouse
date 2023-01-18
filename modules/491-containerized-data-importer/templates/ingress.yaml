@@ -1,0 +1,50 @@
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cdi-uploadproxy
+  namespace: d8-cdi
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cdi-uploadproxy")) | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cdi-uploadproxy
+            port:
+              number: 443
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cdi-uploadproxy
+  namespace: d8-cdi
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cdi-uploadproxy")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  dnsNames:
+    - {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
+{{- end }}

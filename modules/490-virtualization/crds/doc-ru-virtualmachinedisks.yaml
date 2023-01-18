@@ -1,0 +1,29 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: VirtualMachineDisk представляет ресурс, описывающий диск для виртуальной машины
+          properties:
+            apiVersion:
+              description: APIVersion определяет версионную схему этого представления объекта.
+            kind:
+              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
+            spec:
+              description: VirtualMachineDiskSpec определяет желаемое состояние VirtualMachineDisk
+              properties:
+                size:
+                  description: Size представляет собой размер VirtualMachineDisk
+                source:
+                  description: TypedLocalObjectReference содержит информацию, чтобы найти конкретный типизированный объект в том же неймспейсе
+                  properties:
+                    apiGroup:
+                      description: APIGroup то группа для ресурса, на который делается ссылка. Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется APIGroup.
+                    kind:
+                      description: Kind это тип ресурса, на который делается ссылка.
+                    name:
+                      description: Name это имя ресурса, на который делается ссылка
+                storageClassName:
+                  description: StorageClassName представляет storage class для VirtualMachineDisk
+            status:
+              description: VirtualMachineDiskStatus определяет наблюдаемое состояние VirtualMachineDisk

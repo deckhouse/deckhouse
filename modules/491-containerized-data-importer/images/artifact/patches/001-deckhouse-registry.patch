@@ -1,0 +1,70 @@
+diff --git a/pkg/controller/clone-controller.go b/pkg/controller/clone-controller.go
+index fd48baf1..a5f8defd 100644
+--- a/pkg/controller/clone-controller.go
++++ b/pkg/controller/clone-controller.go
+@@ -675,6 +675,9 @@ func MakeCloneSourcePodSpec(sourceVolumeMode corev1.PersistentVolumeMode, image,
+ 					},
+ 				},
+ 			},
++			ImagePullSecrets: []corev1.LocalObjectReference{
++				{Name: "cdi-deckhouse-registry"},
++			},
+ 			NodeSelector:      workloadNodePlacement.NodeSelector,
+ 			Tolerations:       workloadNodePlacement.Tolerations,
+ 			Affinity:          workloadNodePlacement.Affinity,
+diff --git a/pkg/controller/datavolume-controller.go b/pkg/controller/datavolume-controller.go
+index 81edbf94..a7b1efbb 100644
+--- a/pkg/controller/datavolume-controller.go
++++ b/pkg/controller/datavolume-controller.go
+@@ -1650,6 +1650,9 @@ func (r *DatavolumeReconciler) createExpansionPod(pvc *corev1.PersistentVolumeCl
+ 					},
+ 				},
+ 			},
++			ImagePullSecrets: []corev1.LocalObjectReference{
++				{Name: "cdi-deckhouse-registry"},
++			},
+ 			NodeSelector: workloadNodePlacement.NodeSelector,
+ 			Tolerations:  workloadNodePlacement.Tolerations,
+ 			Affinity:     workloadNodePlacement.Affinity,
+diff --git a/pkg/controller/import-controller.go b/pkg/controller/import-controller.go
+index 9e688056..94643b34 100644
+--- a/pkg/controller/import-controller.go
++++ b/pkg/controller/import-controller.go
+@@ -1028,6 +1028,9 @@ func makeNodeImporterPodSpec(args *importerPodArgs) *corev1.Pod {
+ 					},
+ 				},
+ 			},
++			ImagePullSecrets: []corev1.LocalObjectReference{
++				{Name: "cdi-deckhouse-registry"},
++			},
+ 			RestartPolicy:     corev1.RestartPolicyOnFailure,
+ 			Volumes:           volumes,
+ 			NodeSelector:      args.workloadNodePlacement.NodeSelector,
+diff --git a/pkg/controller/upload-controller.go b/pkg/controller/upload-controller.go
+index d96ea549..362d7977 100644
+--- a/pkg/controller/upload-controller.go
++++ b/pkg/controller/upload-controller.go
+@@ -835,6 +835,9 @@ func (r *UploadReconciler) makeUploadPodSpec(args UploadPodArgs, resourceRequire
+ 					},
+ 				},
+ 			},
++			ImagePullSecrets: []corev1.LocalObjectReference{
++				{Name: "cdi-deckhouse-registry"},
++			},
+ 			NodeSelector:      workloadNodePlacement.NodeSelector,
+ 			Tolerations:       workloadNodePlacement.Tolerations,
+ 			Affinity:          workloadNodePlacement.Affinity,
+diff --git a/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go b/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
+index c3699ce7..d7fdf053 100644
+--- a/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
++++ b/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
+@@ -86,6 +86,9 @@ func (b *ResourceBuilder) CreateServiceAccount(name string) *corev1.ServiceAccou
+ 			Name:   name,
+ 			Labels: b.WithCommonLabels(nil),
+ 		},
++		ImagePullSecrets: []corev1.LocalObjectReference{
++			{Name: "deckhouse-registry"},
++		},
+ 	}
+ }
+ 

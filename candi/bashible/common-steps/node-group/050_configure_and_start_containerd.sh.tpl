@@ -108,6 +108,7 @@ oom_score = 0
     tolerate_missing_hugetlb_controller = true
     disable_hugetlb_controller = true
     ignore_image_defined_volumes = false
+    device_ownership_from_security_context = true
     [plugins."io.containerd.grpc.v1.cri".containerd]
       snapshotter = "overlayfs"
       default_runtime_name = "runc"
