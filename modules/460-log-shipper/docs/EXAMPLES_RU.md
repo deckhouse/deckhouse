@@ -222,6 +222,12 @@ spec:
       verifyHostname: false
 ```
 
+> NOTE: Splunk destination не поддерживает метки Pod'а для индексирования. Рассмотрите возможность добавления нужных меток при помощи опции `extreaLabels`.
+```yaml
+extraLabels:
+  pod_label_app: '{{ pod_labels.app }}'
+```
+
 ## Простой пример Logstash
 
 Чтобы отправлять логи в Logstash, на стороне Logstash должен быть настроен входящий поток `tcp`, и его кодек должен быть — `json`.

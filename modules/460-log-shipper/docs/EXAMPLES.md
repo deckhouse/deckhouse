@@ -222,6 +222,12 @@ spec:
       verifyHostname: false
 ```
 
+> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extreaLabels` option.
+```yaml
+extraLabels:
+  pod_label_app: '{{ pod_labels.app }}'
+```
+
 ## Simple Logstash example
 
 To send logs to Logstash, the `tcp` input should be configured on the Logstash instance side, and its codec should be set to `json`.
