@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
       PostData(this.url, this.serializeData()).then(res => {
         if (res.ok) {
+          this.downloadFile();
           this.successSubmit();
         } else {
           this.errorSubmit();
@@ -73,6 +74,17 @@ document.addEventListener("DOMContentLoaded", function() {
         this.success.style.display = 'none';
         this.error.style.display = 'none';
       }
+    }
+
+    downloadFile() {
+      if (!this.form.hasAttribute('data-download-file')) return
+
+      const fileName = this.form.getAttribute('data-download-file');
+      const a = document.createElement('a')
+
+      a.href = `/text_files/${fileName}`
+      a.download = fileName
+      a.click()
     }
   }
 

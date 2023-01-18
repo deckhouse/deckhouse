@@ -54,6 +54,17 @@ anchors_disabled: true
       </p>
     </div>
   </div>
+  <div class="container">
+      <h2 class="text text_h2">
+        PCI SSC
+      </h2>
+    <p class="text text_big">
+      Deckhouse соответствует большинству рекомендаций <a href="https://www.pcisecuritystandards.org/" target="_blank">PCI&nbsp;Security Standards Council</a> (PCI&nbsp;SSC)*. Платформа надежно защищена от&nbsp;угроз, актуальных для платежных систем, в&nbsp;которых применяются контейнерные технологии. Для оценки защищенности Deckhouse мы&nbsp;использовали «<a href="https://docs-prv.pcisecuritystandards.org/Guidance%20Document/Containers%20and%20Container%20Orchestration%20Tools/Guidance-for-Containers-and-Container-Ochestration-Tools-v1_0.pdf" target="_blank">Руководство по&nbsp;контейнерам и&nbsp;инструментам оркестровки контейнеров</a>». <a href="#" data-open-modal="get_a_report">Узнать больше</a>.
+    </p>
+    <p class="text text_small">
+      * PCI SSC — организация, которая помогает разрабатывать, применять и улучшать стандарты безопасности для защиты платежных систем.
+    </p>
+  </div>
 </section>
 
 <section class="features">
