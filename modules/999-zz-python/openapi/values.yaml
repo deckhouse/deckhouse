@@ -1,0 +1,17 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    required:
+      - statement
+      - count
+    type: object
+    default: {}
+    properties:
+      statement:
+        type: string
+        default: "default_unchanged_value_you_should_not_see"
+      count:
+        type: integer
+        default: 0

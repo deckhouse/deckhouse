@@ -1,0 +1,11 @@
+x-config-version: 2
+type: object
+properties:
+  statement:
+    type: string
+    description: The statement to observe
+  array:
+    type: array
+    description: The array to observe
+    items:
+      type: integer
