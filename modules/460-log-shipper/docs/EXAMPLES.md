@@ -203,7 +203,7 @@ spec:
 It is possible to send logs from Deckhouse to Splunk.
 
 1. Endpoint must be equal to the Splunk instance name with the `8088` port and no path provided, e.g. `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. To add a token to ingest logs, go to `Setting` -> `Data inputs` and add a new `HTTP Event Collector`, then copy a token.
+2. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy a token.
 3. Provide a Splunk index to store logs, e.g., `logs`.
 
 ```yaml

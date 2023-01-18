@@ -203,7 +203,7 @@ spec:
 Существует возможность отсылать события из Deckhouse в Splunk.
 
 1. Endpoint должен быть таким же как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например, `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs` и добавьте новый `HTTP Event Collector`, после скопируйте token.
+2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
 3. Укажите индекс Splunk для хранения логов, например, `logs`.
 
 ```yaml
