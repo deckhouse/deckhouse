@@ -23,3 +23,5 @@ spec:
     tls:
       verifyCertificate: false
       verifyHostname: false
+  extraLabels:
+    app: "{{ pod_labels.app }}"

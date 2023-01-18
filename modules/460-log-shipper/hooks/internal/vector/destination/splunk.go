@@ -73,6 +73,12 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		"pod_ip",
 		"stream",
 		"pod_owner",
+		"pod_labels",
+	}
+
+	// Send extra labels as indexed fields
+	for k := range cspec.ExtraLabels {
+		indexFields = append(indexFields, k)
 	}
 
 	return &Splunk{
@@ -84,8 +90,8 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		TLS:   tls,
 		Index: spec.Index,
 		Encoding: Encoding{
-			ExceptFields:    indexFields, // Do not encode fields used in indexes
-			Codec:           "json",
+			OnlyFields:      []string{"message"}, // Do not encode fields used in indexes
+			Codec:           "text",
 			TimestampFormat: "rfc3339",
 		},
 		IndexedFields: indexFields,

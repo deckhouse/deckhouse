@@ -27,17 +27,10 @@
         "enabled": false
       },
       "encoding": {
-        "except_fields": [
-          "namespace",
-          "container",
-          "image",
-          "pod",
-          "node",
-          "pod_ip",
-          "stream",
-          "pod_owner"
+        "only_fields": [
+          "message"
         ],
-        "codec": "json",
+        "codec": "text",
         "timestamp_format": "rfc3339"
       },
       "compression": "gzip",
@@ -52,7 +45,9 @@
         "node",
         "pod_ip",
         "stream",
-        "pod_owner"
+        "pod_owner",
+        "pod_labels",
+        "app"
       ],
       "tls": {
         "verify_hostname": false,
