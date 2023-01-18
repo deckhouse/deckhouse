@@ -45,29 +45,30 @@ func FromInput(input *go_hook.HookInput) *Composer {
 	for _, d := range destSnap {
 		dest := d.(v1alpha1.ClusterLogDestination)
 		res.Dest = append(res.Dest, dest)
-		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace)
+		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}
 
 	for _, s := range sourceSnap {
 		src := s.(v1alpha1.ClusterLoggingConfig)
 		res.Source = append(res.Source, src)
-		customResourceMetric(input, "ClusterLoggingConfig", src.Name, src.Namespace)
+		customResourceMetric(input, "ClusterLoggingConfig", src.Name, src.Namespace, src.Spec.Type)
 	}
 
 	for _, ns := range namespacedSourceSnap {
 		src := ns.(v1alpha1.PodLoggingConfig)
 		res.Source = append(res.Source, v1alpha1.NamespacedToCluster(src))
-		customResourceMetric(input, "PodLoggingConfig", src.Name, src.Namespace)
+		customResourceMetric(input, "PodLoggingConfig", src.Name, src.Namespace, v1alpha1.SourceKubernetesPods)
 	}
 
 	return res
 }
 
-func customResourceMetric(input *go_hook.HookInput, kind, name, namespace string) {
+func customResourceMetric(input *go_hook.HookInput, kind, name, namespace, _type string) {
 	input.MetricsCollector.Set(telemetry.WrapName("log_shipper_custom_resource"), 1, map[string]string{
 		"kind":         kind,
 		"cr_name":      name,
 		"cr_namespace": namespace,
+		"cr_type":      _type,
 	})
 }
 
