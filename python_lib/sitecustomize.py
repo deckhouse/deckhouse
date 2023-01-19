@@ -33,7 +33,7 @@ def find_module_root(path):
         parent, _ = os.path.split(path)
         # Don't stick to absolute path (/deckhouse/modules) to keep it portable
         if os.path.split(parent)[1] == "modules":
-            return parent
+            return path  # we are in the module root
         path = parent
 
 
