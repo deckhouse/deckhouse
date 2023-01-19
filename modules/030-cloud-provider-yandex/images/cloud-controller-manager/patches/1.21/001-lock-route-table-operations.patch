@@ -32,7 +32,7 @@ diff --git a/pkg/cloudprovider/yandex/routes.go b/pkg/cloudprovider/yandex/route
 +	klog.Info("ListRoutes called")
 +
 +	if routeAPILock.TryLock() {
-+		routeAPILock.Unlock()
++		defer routeAPILock.Unlock()
 +	} else {
 +		return nil, errors.New("VPC route API locked")
 +	}
