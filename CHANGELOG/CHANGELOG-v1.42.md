@@ -81,6 +81,7 @@
  - **[global-hooks]** Fixes in cluster configuration migration process and proxy template for EKS cluster installation. [#3381](https://github.com/deckhouse/deckhouse/pull/3381)
  - **[ingress-nginx]** Fix client certificate update. [#3368](https://github.com/deckhouse/deckhouse/pull/3368)
  - **[ingress-nginx]** Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the Load Balancer to rebuild the endpoints. [#3121](https://github.com/deckhouse/deckhouse/pull/3121)
+ - **[istio]** Switching default iptables in proxyv2 to iptables-legacy (after switching from Debian to Ubuntu). [#3579](https://github.com/deckhouse/deckhouse/pull/3579)
  - **[istio]** Replace CA for the Ingress validation of api-proxy, fix kiali `ClusterRole`. [#3395](https://github.com/deckhouse/deckhouse/pull/3395)
  - **[log-shipper]** Fix TLS certificates error for Kafka destination. [#3215](https://github.com/deckhouse/deckhouse/pull/3215)
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
