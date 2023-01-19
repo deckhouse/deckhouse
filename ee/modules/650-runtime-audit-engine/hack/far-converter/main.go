@@ -18,7 +18,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// RawRule represents decoded rules in Falco format.
 type RawRule map[string]interface{}
+
+// FalcoAuditRule is a structure to encode FalcoAuditRules custom resources.
+type FalcoAuditRule struct {
+	ApiVersion string
+	Kind       string
+	Metadata   Metadata
+	Spec       FalcoAuditRuleSpec
+}
+
+type FalcoAuditRuleSpecRule struct {
+	Rule  Rule  `yaml:"rule,omitempty"`
+	Macro Macro `yaml:"macro,omitempty"`
+	List  List  `yaml:"list,omitempty"`
+}
+
+type FalcoAuditRuleSpec struct {
+	RequiredEngineVersion         int                      `yaml:"requiredEngineVersion,omitempty"`
+	RequiredK8sAuditPluginVersion string                   `yaml:"requiredK8sAuditPluginVersion,omitempty"`
+	Rules                         []FalcoAuditRuleSpecRule `yaml:"rules"`
+}
+
+type Metadata struct {
+	Name string
+}
 
 type Rule struct {
 	Name      string        `yaml:"name"`
@@ -39,29 +64,6 @@ type Macro struct {
 type List struct {
 	Name  string        `yaml:"name"`
 	Items []interface{} `yaml:"items"`
-}
-
-type FalcoRuleSpecRule struct {
-	Rule  Rule  `yaml:"rule,omitempty"`
-	Macro Macro `yaml:"macro,omitempty"`
-	List  List  `yaml:"list,omitempty"`
-}
-
-type FalcoAuditRuleSpec struct {
-	RequiredEngineVersion         int                 `yaml:"requiredEngineVersion,omitempty"`
-	RequiredK8sAuditPluginVersion string              `yaml:"requiredK8sAuditPluginVersion,omitempty"`
-	Rules                         []FalcoRuleSpecRule `yaml:"rules"`
-}
-
-type Metadata struct {
-	Name string
-}
-
-type FalcoAuditRule struct {
-	ApiVersion string
-	Kind       string
-	Metadata   Metadata
-	Spec       FalcoAuditRuleSpec
 }
 
 func main() {
@@ -108,8 +110,18 @@ func convert(path string, rules []RawRule) FalcoAuditRule {
 			continue
 		}
 
+		if v, ok := r["required_plugin_versions"]; ok {
+			for _, p := range v.([]interface{}) {
+				plugin := p.(map[string]interface{})
+				if plugin["name"].(string) == "k8saudit" {
+					result.Spec.RequiredK8sAuditPluginVersion = plugin["version"].(string)
+				}
+			}
+			continue
+		}
+
 		if _, ok := r["macro"]; ok {
-			result.Spec.Rules = append(result.Spec.Rules, FalcoRuleSpecRule{
+			result.Spec.Rules = append(result.Spec.Rules, FalcoAuditRuleSpecRule{
 				Macro: Macro{
 					Name:      r["macro"].(string),
 					Condition: r["condition"].(string),
@@ -119,7 +131,7 @@ func convert(path string, rules []RawRule) FalcoAuditRule {
 		}
 
 		if _, ok := r["list"]; ok {
-			result.Spec.Rules = append(result.Spec.Rules, FalcoRuleSpecRule{
+			result.Spec.Rules = append(result.Spec.Rules, FalcoAuditRuleSpecRule{
 				List: List{
 					Name:  r["list"].(string),
 					Items: r["items"].([]interface{}),
@@ -154,7 +166,11 @@ func convert(path string, rules []RawRule) FalcoAuditRule {
 				}
 			}
 
-			result.Spec.Rules = append(result.Spec.Rules, FalcoRuleSpecRule{Rule: ruleToAdd})
+			if _, ok := r["exceptions"]; ok {
+				log.Printf("[WARNING] Exceptions are not supported (found in %q rule)", ruleToAdd.Name)
+			}
+
+			result.Spec.Rules = append(result.Spec.Rules, FalcoAuditRuleSpecRule{Rule: ruleToAdd})
 			continue
 		}
 	}
