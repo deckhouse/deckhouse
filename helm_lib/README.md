@@ -38,7 +38,7 @@ or enable by [global configuration](https://deckhouse.io/documentation/v1/deckho
 Returns value **_Yes_** if cluster highly available or HA mode enabled by config, else — returns **_No_**
 
 ### Arguments
-- Arguments list
+- list:
   - Dot object (.) with .Values, .Chart, etc
   - **_Yes_** value
   - **_No_** value
@@ -62,7 +62,7 @@ spec:
 ```
 
 ## helm_lib_ha_enabled
-Returns not empty string if cluster highly available or HA mode enabled by config, else returns empty string.
+Returns not empty string if cluster is highly available or HA mode enabled by config, else returns empty string.
 Usually this method using in conditions
 
 ### Arguments
@@ -90,3 +90,107 @@ spec:
 ```
 
 # High availability - render part of specs
+
+## helm_lib_pod_anti_affinity_for_ha
+Returns pod affinity spec if cluster is highly available or HA mode enabled by config.
+
+### Arguments
+- list:
+  - Dot object (.) with .Values, .Chart, etc
+  - dict: match labels for podAntiAffinity label selector
+
+### Examples
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  template:
+    spec:
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "app-name")) | nindent 6 }}
+```
+In HA mode will render to:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: app-name
+            topologyKey: kubernetes.io/hostname
+
+```
+
+## helm_lib_deployment_strategy_and_replicas_for_ha
+Returns deployment strategy and replicas for running not on master nodes, 
+if cluster is highly available or HA mode enabled by config, else returns only replicas
+
+### Arguments
+- Dot object (.) with .Values, .Chart, etc
+
+### Examples
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+
+```
+In HA mode will render to:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+
+```
+
+In not HA mode will render to:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  replicas: 1
+
+```
+
+## helm_lib_deployment_on_master_strategy_and_replicas_for_ha
+Returns deployment strategy and replicas for high availability components running on master nodes.
+
+### Arguments
+- Dot object (.) with .Values, .Chart, etc
+
+### Examples
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-some-ns
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+```
