@@ -4,7 +4,7 @@ title: "The runtime-audit-engine module: usage"
 
 ## How to collect events?
 
-Pods of runtime-audit-engine outputs all events to stdout. 
+Pods of runtime-audit-engine outputs all events to stdout.
 These events then can be collected by the `log-shipper` module and be sent to any supported destination.
 
 An example of `ClusterLoggingConfig` for `log-shipper`.
@@ -51,6 +51,7 @@ spec:
       expr: |
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
+
 > NOTE: Alerts are best work with an events storage like Elasticsearch or Loki. With an alert users can be notified that something is happening.
 > The next step is to find what using previously collected events.
 
