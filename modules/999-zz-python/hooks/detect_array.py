@@ -25,19 +25,19 @@ schedule:
 
 
 def main(ctx: hook.Context):
-    ctx.values.zzPython.internal.count += 1
-    if ctx.values.zzPython.array:
-        ctx.values.zzPython.internal.statement = "THE ARRAY IS HERE"
-    else:
-        ctx.values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
+    # ctx.values.zzPython.internal.count += 1
+    # if ctx.values.zzPython.array:
+    #     ctx.values.zzPython.internal.statement = "THE ARRAY IS HERE"
+    # else:
+    #     ctx.values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
 
     # At runtime, module name is discovered automatically, so we can use ctx shortcuts.
     # In tests, module name must be passed explicitly.
-    # ctx.internal.count += 1
-    # if ctx.config.array:
-    #     ctx.internal.statement = "THE ARRAY IS HERE"
-    # else:
-    #     ctx.internal.statement = "NO ARRAY IN CONFIG"
+    ctx.internal.count += 1
+    if ctx.config.array:
+        ctx.internal.statement = "THE ARRAY IS HERE"
+    else:
+        ctx.internal.statement = "NO ARRAY IN CONFIG"
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ properties:
       - statement
       - count
     type: object
-    default: {}
     properties:
       statement:
         type: string
