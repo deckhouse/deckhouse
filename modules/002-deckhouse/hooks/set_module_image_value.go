@@ -71,9 +71,9 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	}
 	image := deckhouseSnapshot[0].(string)
 
-	parts := strings.SplitN(image, ":", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("can't parse image from deckhouse deployment")
+	tagPosistion := strings.LastIndex(image, ":")
+	if len(image)-1 == tagPosistion {
+		return fmt.Errorf("can't parse image tag from deckhouse deployment")
 	}
 
 	// Set deckhouse image only if it was not set before, e.g. by stabilize_release_channel hook
@@ -82,7 +82,7 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 			return fmt.Errorf("registry base path doesn't exist yet")
 		}
 		base := input.Values.Get(deckhouseBasePath).String()
-		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, parts[1]))
+		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, image[tagPosistion+1:]))
 	}
 	return nil
 }

@@ -36,7 +36,6 @@ import (
 
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
-	deckhouseRegistryVolumeName = "registrysecret"
 
 	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
