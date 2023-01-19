@@ -22,7 +22,7 @@ function kubectl_exec() {
 
 function bb-event-error-create() {
     # eventName parameter aggregates hostname with bashible step name
-    eventName="$(echo -n "$(hostname -s)")-$(journalctl -xeu bashible.service -n 7 | grep -e "Step" | sed -r 's/.*\/(.*)\.sh/\1/')"
+    eventName="$(echo -n "$(hostname -s)")-${step}"
     eventLog="/var/lib/bashible/step.log"
     kubectl apply -f - <<EOF
         apiVersion: v1
@@ -33,10 +33,10 @@ function bb-event-error-create() {
         reason: Failed
         type: Error
         lastTimestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
-        message: '$(cat "${eventLog}" | tail -c 500)'
+        message: '$(tail -c 500 ${eventLog})'
         involvedObject:
           kind: Node
-          namespace: d8-cloud-instance-manager
+          namespace: default
           name: '$(hostname -s)'
         source:
           component: bashible
@@ -264,7 +264,7 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2>&1 | tee /var/lib/bashible/step.log
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
