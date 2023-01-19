@@ -24,53 +24,51 @@ module_name = "zzPython"
 # executable.
 
 
-def run_hook(config_values: dict = None, initial_values: dict = None):
+def run_hook(initial_values: dict = None):
+    """
+    Helper to run hook.main() with initial values.
 
-    # Values are config_values with .internal field added and controlled by hooks, so we mimic this
-    # behaviour in this helper. Since we use ctx.values, not config values directly, we don't need
-    # to fill config_values if they are empty. Config values are filled by module settings in module
-    # config and by defaults in openapi/config-values.yaml.
-
-    if initial_values is None:
-        initial_values = config_values
-
+    Values are config_values with .internal field added and controlled by hooks, so we mimic this
+    behaviour in this helper. Since we use ctx.values, not config values directly, we don't need
+    to fill config_values if they are empty. Config values are filled by module settings in module
+    config and by defaults in openapi/config-values.yaml.
+    """
     return hook.testrun(
         func=detect_array.main,
-        config_values=config_values,
         initial_values=initial_values,
     )
 
 
 def test_present_array_is_detected():
-    cv = DotMap()
-    cv.zzPython.array = [1]
+    values = DotMap()
+    values.zzPython.array = [1]
 
-    out = run_hook(config_values=cv)
+    out = run_hook(initial_values=values)
 
     assert out.values.zzPython.internal.statement == "THE ARRAY IS HERE"
 
 
 def test_empty_array_is_not_detected():
-    cv = DotMap()
-    cv.zzPython.array = []
+    values = DotMap()
+    values.zzPython.array = []
 
-    out = run_hook(config_values=cv)
+    out = run_hook(initial_values=values)
 
     assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_absent_array_is_not_detected():
-    cv = DotMap({"zzPython": {}})
+    values = DotMap({"zzPython": {}})
 
-    out = run_hook(config_values=cv)
+    out = run_hook(initial_values=values)
 
     assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_count_increses():
-    iv = DotMap()
-    iv.zzPython.internal.count = 12
+    values = DotMap()
+    values.zzPython.internal.count = 12
 
-    out = run_hook(initial_values=iv)
+    out = run_hook(initial_values=values)
 
     assert out.values.zzPython.internal.count == 13
