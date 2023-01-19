@@ -14,21 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import detect_array
-from deckhouse_sdk import hook, module
+from deckhouse_sdk import hook
+from dotmap import DotMap
 
 module_name = "zzPython"
 
+# Remember! This is a test, not a hook. It is not executed by Deckhouse. So this file must be not
+# executable.
+
 
 def run_hook(config_values: dict = None, initial_values: dict = None):
+
+    # Values are config_values with .internal field added and controlled by hooks, so we mimic this
+    # behaviour in this helper. Since we use ctx.values, not config values directly, we don't need
+    # to fill config_values if they are empty. Config values are filled by module settings in module
+    # config and by defaults in openapi/config-values.yaml.
+
     if initial_values is None:
         initial_values = config_values
 
-    # We have to pass module name to make ctx shortcuts work in the hook under test. We can do
-    # it either here, or via env variable D8_MODULE_ROOT, see Makefile.
-    #
-    # module_name=module_name,
     return hook.testrun(
         func=detect_array.main,
         config_values=config_values,
@@ -36,37 +41,36 @@ def run_hook(config_values: dict = None, initial_values: dict = None):
     )
 
 
-def config_values(d: dict):
-    # Discovers module name from D8_MODULE_ROOT env variable.
-    mod_name = module.get_name()
-    return {mod_name: d or {}}
-
-
-def internal_values(d: dict):
-    # Discovers module name from D8_MODULE_ROOT env variable.
-    mod_name = module.get_name()
-    return {mod_name: {"internal": d or {}}}
-
-
 def test_present_array_is_detected():
-    out = run_hook(config_values=config_values({"array": [1]}))
+    cv = DotMap()
+    cv.zzPython.array = [1]
+
+    out = run_hook(config_values=cv)
 
     assert out.values.zzPython.internal.statement == "THE ARRAY IS HERE"
 
 
 def test_empty_array_is_not_detected():
-    out = run_hook(config_values=config_values({"array": []}))
+    cv = DotMap()
+    cv.zzPython.array = []
+
+    out = run_hook(config_values=cv)
 
     assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_absent_array_is_not_detected():
-    out = run_hook(config_values=config_values({}))
+    cv = DotMap({"zzPython": {}})
+
+    out = run_hook(config_values=cv)
 
     assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_count_increses():
-    out = run_hook(initial_values=internal_values({"count": 12}))
+    iv = DotMap()
+    iv.zzPython.internal.count = 12
+
+    out = run_hook(initial_values=iv)
 
     assert out.values.zzPython.internal.count == 13
