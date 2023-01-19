@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from shell_operator import hook
+from deckhouse_sdk import hook
 
 config = """
 configVersion: v1
@@ -31,6 +31,8 @@ def main(ctx: hook.Context):
     # else:
     #     ctx.values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
 
+    # At runtime, module name is discovered automatically, so we can use ctx shortcuts.
+    # In tests, module name must be passed explicitly.
     ctx.internal.count += 1
     if ctx.config.array:
         ctx.internal.statement = "THE ARRAY IS HERE"

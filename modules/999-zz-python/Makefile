@@ -1,13 +1,13 @@
-DEPS_PATH=lib/python/dist/
+DEPS_PATH := lib/python/dist/
 
 .PHONY: all clean deps test
 clean:
 	rm -rf ${DEPS_PATH}
 
 deps:
-	pip install shell-operator -t ${DEPS_PATH} --upgrade
+	pip install deckhouse-sdk -t ${DEPS_PATH} --upgrade
 
 all: clean deps
 
 test:
-	pytest hooks
+	D8_MODULE_ROOT=$$(pwd) pytest hooks

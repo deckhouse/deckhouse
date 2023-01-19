@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
-Name: shell-operator
-Version: 0.0.10
+Name: deckhouse-sdk
+Version: 0.2.1
 Summary: Python SDK for Shell Operator hooks
 License: Apache-2.0
 Author: Eugene Shevchenko
@@ -16,21 +16,29 @@ Requires-Dist: dictdiffer (>=0.9.0,<0.10.0)
 Requires-Dist: dotmap (>=1.3.30,<2.0.0)
 Description-Content-Type: text/markdown
 
-# Shell Operator Python Framework
+# Deckhouse module SDK
 
-Simplifies writing [shell-operator](https://github.com/flant/shell-operator) hooks in Python.
+Deckhouse module SDK simplifies writing module hooks for operators:
+
+- [Deckhouse](https://github.com/deckhouse/deckhouse)
+- [Addon Operator](https://github.com/flant/addon-operator)
+- [Shell Operator](https://github.com/flant/shell-operator) (values are unaccessable)
+
+**NOTE**:
+- The API is in alpha stage
+
 
 ## Install
 
 ```bash
-pip install shell-operator
+pip install deckhouse-sdk
 ```
 
 ## Sample hook
 
 ```python
 # hello.py
-from shell_operator import hook
+from deckhouse_sdk import hook
 
 def main(ctx: hook.Context):
     # Manipulate kubernetes state
@@ -63,7 +71,7 @@ An example for pytest
 # hello_test.py
 
 from hello import main
-from shell_operator import hook
+from deckhouse_sdk import hook
 
 # Inputs
 #   initial_values = { ... }
