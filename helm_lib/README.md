@@ -111,7 +111,7 @@ spec:
     spec:
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "app-name")) | nindent 6 }}
 ```
-In HA mode will render to:
+In HA mode will render on:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -149,7 +149,7 @@ spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
 
 ```
-In HA mode will render to:
+In HA mode will render on:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -166,7 +166,7 @@ spec:
 
 ```
 
-In not HA mode will render to:
+In not HA mode will render on:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -193,4 +193,133 @@ metadata:
   namespace: d8-some-ns
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+```
+
+# Kube-rbac-proxy
+
+## helm_lib_kube_rbac_proxy_ca_certificate
+Renders configmap with kube-rbac-proxy CA certificate which uses to verify the kube-rbac-proxy clients.
+
+### Arguments
+- list:
+  - Dot object (.) with .Values, .Chart, etc
+  - string: namespace
+
+### Examples
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+---
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "d8-cloud-provider-openstack") }
+```
+Configmap with certificate should mount to kube-rbac-proxy container:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-app-ns
+spec:
+  template:
+    spec:
+      containers:
+      # app container protected with kube-rbac-proxy
+      - name: app-protected-kube-rbac-proxy
+        image: image-path
+        args:
+        - "--listen=127.0.0.1:8080"
+      # kube-rbac-proxy container
+      - name: kube-rbac-proxy
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 8443
+          name: https
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8000/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-app-ns
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: app
+        # mount configmap with certificate to kube-rbac-proxy
+        volumeMounts:
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
+      # volume with certificate
+      volumes:
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
+```
+
+# Module - ephemeral storage
+
+## helm_lib_module_ephemeral_storage_logs_with_extra
+Returns ephemeral-storage size for logs with extra space.
+50Mi for container logs `log-opts.max-file * log-opts.max-size` would be added to passed value.
+
+### Arguments
+- number: extra space in mebibytes
+
+### Examples
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-ns
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        args: []
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+```
+
+## helm_lib_module_ephemeral_storage_only_logs
+Returns ephemeral-storage size for only logs.
+50Mi for container logs `log-opts.max-file * log-opts.max-size` would be requested.
+
+### Arguments
+- Dot object (.) with .Values, .Chart, etc
+
+### Examples
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: d8-ns
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        args: []
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+
 ```
