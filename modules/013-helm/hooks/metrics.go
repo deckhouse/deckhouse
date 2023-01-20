@@ -26,6 +26,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -88,7 +89,10 @@ const (
 	// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
 	delta = 2
 	// objectBatchSize - how many secrets to list from k8s at once
-	objectBatchSize = int64(25)
+	objectBatchSize = int64(10)
+	// fetchSecretsInterval pause between fetching the helm secrets from apiserver
+	// need for avoiding apiserver overload
+	fetchSecretsInterval = 3 * time.Second
 )
 
 var (
@@ -107,7 +111,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/20 * * * *",
+			Crontab: "0 * * * *", // every hour
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
@@ -216,9 +220,10 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 
 		if secretsList.Continue == "" {
 			break
-		} else {
-			next = secretsList.Continue
 		}
+
+		next = secretsList.Continue
+		time.Sleep(fetchSecretsInterval)
 	}
 
 	return totalReleases, nil
@@ -261,9 +266,10 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 
 		if cmList.Continue == "" {
 			break
-		} else {
-			next = cmList.Continue
 		}
+
+		next = cmList.Continue
+		time.Sleep(fetchSecretsInterval)
 	}
 
 	return totalReleases, nil

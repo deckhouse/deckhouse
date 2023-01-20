@@ -45,7 +45,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 		})
 		Context("check for k8s version 1.21", func() {
@@ -127,7 +127,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Secrets("default").
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
 		})
 		It("must have no metrics about deprecation", func() {
@@ -154,7 +154,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				ConfigMaps("default").
 				Create(context.TODO(), &cm, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
 
 		})
@@ -189,7 +189,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Secrets("default").
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
 
 		})
@@ -216,7 +216,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 				Secrets("default").
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
 
 		})
