@@ -1474,6 +1474,9 @@ spec:
                     - minPerZone
                     - maxPerZone
                   properties:
+                    quickShutdown:
+                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
+                      type: boolean
                     zones:
                       description: |
                         List of availability zones to create instances in.

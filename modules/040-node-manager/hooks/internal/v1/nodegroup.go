@@ -127,6 +127,9 @@ type NotManaged struct {
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
 type CloudInstances struct {
+	// Quick shutdown results in faster drain. Optional
+	QuickShutdown *bool `json:"quickShutdown,omitempty"`
+
 	// List of availability zones to create instances in.
 	Zones []string `json:"zones"`
 
