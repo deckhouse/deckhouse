@@ -16,7 +16,7 @@
   {{- end -}}
 {{- end }}
 
-{{- /* Usage: {{- if (include "helm_lib_ha_enabled" .) }} /* -}}
+{{- /* Usage: {{- if (include "helm_lib_ha_enabled" .) }} */ -}}
 {{- /* returns empty value, which is treated by go template as false */ -}}
 {{- define "helm_lib_ha_enabled" }}
   {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
