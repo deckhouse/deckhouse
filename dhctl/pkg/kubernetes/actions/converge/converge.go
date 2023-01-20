@@ -702,6 +702,9 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
+			// We do not return an error immediately for the following reasons:
+			// - some nodes cannot be converged for some reason, but other nodes must be converged
+			// - after making a plan, before converging a node, we get confirmation from user for start converge
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
 		}
 	}
