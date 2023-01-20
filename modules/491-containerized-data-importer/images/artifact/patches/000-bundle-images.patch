@@ -1,0 +1,24 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index b4bad1af..8cc57f42 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -67,6 +67,19 @@ container_bundle(
+     },
+ )
+
++container_bundle(
++    name = "container-images-bundle",
++    images = {
++        "$(container_prefix)/cdi-operator:$(container_tag)": "//cmd/cdi-operator:cdi-operator-image",
++        "$(container_prefix)/cdi-controller:$(container_tag)": "//cmd/cdi-controller:cdi-controller-image",
++        "$(container_prefix)/cdi-apiserver:$(container_tag)": "//cmd/cdi-apiserver:cdi-apiserver-image",
++        "$(container_prefix)/cdi-cloner:$(container_tag)": "//cmd/cdi-cloner:cdi-cloner-image",
++        "$(container_prefix)/cdi-importer:$(container_tag)": "//cmd/cdi-importer:cdi-importer-image",
++        "$(container_prefix)/cdi-uploadproxy:$(container_tag)": "//cmd/cdi-uploadproxy:cdi-uploadproxy-image",
++        "$(container_prefix)/cdi-uploadserver:$(container_tag)": "//cmd/cdi-uploadserver:cdi-uploadserver-image",
++    },
++)
++
+ container_bundle(
+     name = "test-container-images-aarch64",
+     images = {

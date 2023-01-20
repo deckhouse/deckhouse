@@ -1,0 +1,10 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/artifact
+  add: /images/kubevirt/{{ $.ImageName }}:latest
+  excludePaths:
+  - 'sys'
+  to: /
+  before: setup

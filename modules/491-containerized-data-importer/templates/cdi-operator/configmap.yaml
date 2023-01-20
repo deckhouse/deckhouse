@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cdi-operator-leader-election-helper
+  namespace: d8-cdi
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}

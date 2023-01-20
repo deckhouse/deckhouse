@@ -1,0 +1,22 @@
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: CDI
+metadata:
+  name: cdi
+  namespace: d8-cdi
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  imagePullPolicy: IfNotPresent
+  infra:
+    nodeSelector:
+      kubernetes.io/os: linux
+    tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+  {{- if .Values.global.modules.publicDomainTemplate }}
+  config:
+    uploadProxyURLOverride: {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
+  {{- end }}
+  workload:
+    nodeSelector:
+      kubernetes.io/os: linux

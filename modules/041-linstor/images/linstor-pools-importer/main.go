@@ -547,6 +547,9 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 	return storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s-r%d", linstorPrefix, sp.StoragePoolName, r),
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "csi-clone",
+			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,

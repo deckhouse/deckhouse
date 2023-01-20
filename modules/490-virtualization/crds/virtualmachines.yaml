@@ -1,0 +1,205 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: virtualmachines.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: VirtualMachine
+    listKind: VirtualMachineList
+    plural: virtualmachines
+    shortNames:
+    - vm
+    - vms
+    singular: virtualmachine
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.ipAddress
+      name: IPAddress
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VirtualMachine represents the resource that defines virtual machine
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VirtualMachineSpec defines the desired state of VirtualMachine
+            properties:
+              bootDisk:
+                description: BootDisk defines the boot disk for virtual machine
+                properties:
+                  autoDelete:
+                    description: AutoDelete enables automatic removal of associated
+                      boot disk after removing the virtual machine
+                    type: boolean
+                  bus:
+                    description: 'Bus indicates the type of disk device to emulate.
+                      supported values: virtio, sata, scsi, usb.'
+                    type: string
+                  name:
+                    description: Name for virtual machine boot disk, if not specified
+                      defaults to {vm name}-boot
+                    type: string
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: Size represents the size for newly created disk
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  source:
+                    description: Source represents the source of a boot disk, if specified
+                      the new disk will be created
+                    properties:
+                      apiGroup:
+                        description: APIGroup is the group for the resource being
+                          referenced. If APIGroup is not specified, the specified
+                          Kind must be in the core API group. For any other third-party
+                          types, APIGroup is required.
+                        type: string
+                      kind:
+                        description: Kind is the type of resource being referenced
+                        type: string
+                      name:
+                        description: Name is the name of resource being referenced
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  storageClassName:
+                    description: StorageClassName represents the storage class for
+                      newly created disk
+                    type: string
+                required:
+                - size
+                type: object
+              cloudInit:
+                description: 'CloudInit represents a cloud-init nocloud user data
+                  source. More info: https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html'
+                properties:
+                  networkData:
+                    description: NetworkData contains NoCloud inline cloud-init networkdata.
+                    type: string
+                  networkDataBase64:
+                    description: NetworkDataBase64 contains NoCloud cloud-init networkdata
+                      as a base64 encoded string.
+                    type: string
+                  networkDataSecretRef:
+                    description: NetworkDataSecretRef references a k8s secret that
+                      contains NoCloud networkdata.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  secretRef:
+                    description: UserDataSecretRef references a k8s secret that contains
+                      NoCloud userdata.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  userData:
+                    description: UserData contains NoCloud inline cloud-init userdata.
+                    type: string
+                  userDataBase64:
+                    description: UserDataBase64 contains NoCloud cloud-init userdata
+                      as a base64 encoded string.
+                    type: string
+                type: object
+              diskAttachments:
+                description: DiskAttachments represents a lits of additional disks
+                  that should be attached to the virtual machine
+                items:
+                  description: Represents the source of existing disk
+                  properties:
+                    bus:
+                      description: 'Bus indicates the type of disk device to emulate.
+                        supported values: virtio, sata, scsi, usb.'
+                      type: string
+                    hotpluggable:
+                      description: Hotpluggable indicates whether the volume can be
+                        hotplugged and hotunplugged.
+                      type: boolean
+                    name:
+                      description: Name represents the name of the Disk in the same
+                        namespace
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              ipAddressClaimName:
+                description: IPAddressClaimName defines the name for associated VirtualMahcineIPAddressClaim
+                  resource, if not specified defaults to {vm name}
+                type: string
+              resources:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: ResourceList is a set of (resource name, quantity) pairs.
+                type: object
+              running:
+                description: Running state indicates the requested running state of
+                  the VirtualMachineInstance mutually exclusive with Running
+                type: boolean
+              sshPublicKey:
+                description: SSHPublicKey defines the SSH public key that should be
+                  automatically added to user inside the VM. This option requires
+                  cloud-init in the virtual machine.
+                type: string
+              userName:
+                description: UserName defines the user name that should be automatically
+                  created inside the VM. This option requires cloud-init in the virtual
+                  machine.
+                type: string
+            type: object
+          status:
+            description: VirtualMachineStatus defines the observed state of VirtualMachine
+            properties:
+              ipAddress:
+                description: IP address of Virtual Machine
+                type: string
+              phase:
+                description: Phase is a human readable, high-level representation
+                  of the status of the virtual machine
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

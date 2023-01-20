@@ -1,0 +1,15 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/artifact
+  add: /images/kubevirt/{{ $.ImageName }}:latest
+  excludePaths:
+  - 'sys'
+  to: /
+  before: setup
+# Source https://github.com/kubevirt/containerized-data-importer/blob/main/cmd/cdi-controller/controller.go
+docker:
+  ENTRYPOINT: ["/usr/bin/cdi-controller", "-alsologtostderr"]
+  USER: 1001
+  WORKDIR: /home/cdi-controller

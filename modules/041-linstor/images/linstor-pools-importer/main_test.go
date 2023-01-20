@@ -202,6 +202,9 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 	expected := storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "linstor-ssd-r2",
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "csi-clone",
+			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
@@ -243,6 +246,9 @@ func TestAllParametersAreSet(t *testing.T) {
 	sc := &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "linstor-ssd-r2",
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "csi-clone",
+			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
@@ -296,6 +302,9 @@ func TestAppendOldParameters(t *testing.T) {
 	sc := &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "linstor-ssd-r2",
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "csi-clone",
+			},
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
@@ -316,6 +325,7 @@ func TestAppendOldParameters(t *testing.T) {
 			Name: "linstor-ssd-r2",
 			Annotations: map[string]string{
 				"storageclass.kubernetes.io/is-default-class": "true",
+				"cdi.kubevirt.io/clone-strategy":              "csi-clone",
 			},
 			Labels: map[string]string{
 				"foo": "bar",

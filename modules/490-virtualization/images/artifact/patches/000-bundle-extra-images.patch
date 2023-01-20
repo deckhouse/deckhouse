@@ -1,0 +1,14 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 5bbf600f0..23df261dc 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -216,6 +216,9 @@ container_bundle(
+         "$(container_prefix)/$(image_prefix)virt-handler:$(container_tag)": "//cmd/virt-handler:virt-handler-image",
+         "$(container_prefix)/$(image_prefix)virt-launcher:$(container_tag)": "//cmd/virt-launcher:virt-launcher-image",
+         "$(container_prefix)/$(image_prefix)virt-operator:$(container_tag)": "//cmd/virt-operator:virt-operator-image",
++        "$(container_prefix)/$(image_prefix)libguestfs:$(container_tag)": "//cmd/libguestfs:libguestfs-tools-image",
++        "$(container_prefix)/$(image_prefix)virt-exportserver:$(container_tag)": "//cmd/virt-exportserver:virt-exportserver-image",
++        "$(container_prefix)/$(image_prefix)virt-exportproxy:$(container_tag)": "//cmd/virt-exportproxy:virt-exportproxy-image",
+     },
+ )
+ 

@@ -1,0 +1,14 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/artifact
+  add: /images/kubevirt/{{ $.ImageName }}:latest
+  excludePaths:
+  - 'sys'
+  to: /
+  before: setup
+# Source https://github.com/kubevirt/kubevirt/blob/main/cmd/virt-api/BUILD.bazel
+docker:
+  ENTRYPOINT: ["/usr/bin/virt-api"]
+  USER: 1001
