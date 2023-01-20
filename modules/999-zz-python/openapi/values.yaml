@@ -3,10 +3,8 @@ x-extend:
 type: object
 properties:
   internal:
-    required:
-      - statement
-      - count
     type: object
+    default: {}
     properties:
       statement:
         type: string
