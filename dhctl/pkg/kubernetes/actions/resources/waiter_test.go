@@ -153,7 +153,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min not zero and max not zero", func(t *testing.T) {
@@ -167,7 +167,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -183,7 +183,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -199,7 +199,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with one terra node without replicas", func(t *testing.T) {
@@ -231,7 +231,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with multiple terra node with replicas", func(t *testing.T) {
@@ -246,7 +246,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 
 	t.Run("with one terra node with replicas an ephemeral node group", func(t *testing.T) {
@@ -266,7 +266,7 @@ spec:
 		require.NoError(t, err)
 
 		require.Len(t, checkers, 1, "should get one check")
-		require.Equal(t, checkers[0].Name(), "Waiting for cluster is bootstrapped")
+		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
 	})
 }
 
