@@ -33,7 +33,15 @@ func parseFile(filename string) string {
 {{- end }}
 
 ### Usage
-` + "`" + "{{ .usage }}" + "`"
+` + "`" + "{{ .usage }}" + "`" + `
+
+{{- if .args }}
+### Arguments
+{{- range $i, $a := .args }}
+- {{ $a }}
+{{- end }}
+{{- end }}
+`
 
 	tmp := template.New("definition")
 	tmp, err := tmp.Parse(definitionTemplate)
@@ -49,6 +57,8 @@ func parseFile(filename string) string {
 			name := defineNameMatch[1]
 			usage := ""
 			description := make([]string, 0)
+			args := make([]string, 0)
+
 			commentIndx := indx - 1
 			for ; commentIndx >= 0; commentIndx-- {
 				comment := rComment.FindStringSubmatch(strs[commentIndx])
@@ -65,6 +75,17 @@ func parseFile(filename string) string {
 				description = append(description, comment[1])
 			}
 
+			argsIndx := indx + 1
+			for ; argsIndx < len(strs); argsIndx++ {
+				arg := rComment.FindStringSubmatch(strs[argsIndx])
+				if arg == nil {
+					break
+				}
+
+				args = append(args, arg[1])
+			}
+
+			// skip internal definitions
 			if len(description) == 0 {
 				continue
 			}
@@ -75,6 +96,7 @@ func parseFile(filename string) string {
 			err = tmp.Execute(&tpl, map[string]interface{}{
 				"name":        name,
 				"usage":       usage,
+				"args":        args,
 				"description": description,
 			})
 			if err != nil {
