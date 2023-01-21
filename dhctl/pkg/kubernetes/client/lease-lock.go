@@ -173,7 +173,7 @@ func (l *LeaseLock) startAutoRenew() {
 func (l *LeaseLock) tryAcquire(force bool) (*coordinationv1.Lease, error) {
 	var lease *coordinationv1.Lease
 
-	prefix := "Don't acquire lease lock."
+	prefix := "Can't acquire lease lock."
 	cannotRenew := func(err error) bool {
 		return strings.HasPrefix(err.Error(), prefix)
 	}
@@ -189,7 +189,7 @@ func (l *LeaseLock) tryAcquire(force bool) (*coordinationv1.Lease, error) {
 		if errors.IsAlreadyExists(err) {
 			lease, err = l.leasesCl.Get(context.TODO(), l.config.Name, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("%s Don't get current lease %v", prefix, err)
+				return fmt.Errorf("%s Can't get current lease %v", prefix, err)
 			}
 
 			lease, err = l.tryRenew(lease, force)
@@ -239,7 +239,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 			return nil, getCurrentLockerError(lease)
 		}
 
-		log.Warnf("Lease for %v finished on %v, Try renew lease\n", l.config.Identity, lease.Spec.RenewTime.Time)
+		log.Warnf("Lease for %v finished on %v, try to renew lease\n", l.config.Identity, lease.Spec.RenewTime.Time)
 	}
 
 	var newLease *coordinationv1.Lease
