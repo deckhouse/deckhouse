@@ -1,5 +1,5 @@
 {{- $containerd_versions := list }}
-{{- $selinux_version := dict "7" "http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm" "8" "http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/container-selinux-2.167.0-1.module_el8.6.0+926+8bef8ae7.noarch.rpm" "9" "http://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/container-selinux-2.189.0-1.el9.noarch.rpm" }}
+{{- $selinux_version := dict "7" "http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm" "8" "http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/container-selinux-2.167.0-1.module_el8.6.0+926+8bef8ae7.noarch.rpm" "9" "https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/container-selinux-2.198.0-1.el9.noarch.rpm" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.centos }}
     {{- if $versions.containerd.desiredVersion }}
@@ -37,7 +37,7 @@ docker:
     containerd-selinux: "2.167.0-1"
   {{- else if contains "el9" $image_version }}
     version: 9
-    containerd-selinux: "2.189.0-1"
+    containerd-selinux: "2.198.0-1"
   {{- end }}
     containerd: {{ $image_version }}
 ---
