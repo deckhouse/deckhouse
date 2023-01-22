@@ -83,7 +83,7 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 {{- end }}
 
-  bb-rp-install "containerd-io:${containerd_tag}"
+  bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "containerd-io:${containerd_tag}"
 fi
 
 # install crictl

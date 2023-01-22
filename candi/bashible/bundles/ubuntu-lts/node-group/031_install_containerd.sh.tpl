@@ -91,7 +91,7 @@ if [[ "$should_install_containerd" == true ]]; then
   bb-apt-install --force libseccomp2
   bb-event-on 'bb-package-installed' 'post-install'
 
-  bb-rp-install "containerd-io:${containerd_tag}"
+  bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "containerd-io:${containerd_tag}"
 fi
 
 # install crictl
