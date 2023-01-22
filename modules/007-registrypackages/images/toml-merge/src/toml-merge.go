@@ -24,10 +24,18 @@ import (
 	"toml-merge/internal/pkg/toml"
 )
 
+const version = "0.1"
+
 func usage() {
-	fmt.Printf(`This program merges several toml files into one.
-Usage: %s source_file ... target_file
-Tip: use "-" as target_file to write result to stdout.
+	fmt.Printf(`Usage: %s SOURCE ... DEST
+Merges several SOURCE toml files into DEST file.
+
+Use '-' as DEST to write result to stdout.
+
+Version %s.
+Copyright 2023 Flant JSC.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
 `, os.Args[0])
 }
 
