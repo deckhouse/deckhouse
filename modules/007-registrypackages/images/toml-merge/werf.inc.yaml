@@ -27,10 +27,10 @@ git:
       setup:
       - '**/*'
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-    to: /
+    to: /src
     stageDependencies:
       setup:
         - '**/*'
 shell:
   setup:
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o toml-merge toml-merge.go
+  - cd src && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /toml-merge toml-merge.go
