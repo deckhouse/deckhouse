@@ -3,6 +3,12 @@
 
 {{- if eq .cri "Containerd" }}
 
+# install toml-merge
+toml_merge_tag="{{ .images.registrypackages.tomlMerge01 }}"
+if ! bb-rp-is-installed? "toml-merge" "${toml_merge_tag}" ; then
+  bb-rp-install "toml-merge:${toml_merge_tag}"
+fi
+
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
   systemctl daemon-reload
@@ -72,7 +78,7 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 {{- end }}
 
-  bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "containerd-io:${containerd_tag}"
+  bb-rp-install containerd-io:${containerd_tag}"
 fi
 
 # install crictl
