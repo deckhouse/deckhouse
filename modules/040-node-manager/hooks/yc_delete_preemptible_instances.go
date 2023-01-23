@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -115,17 +116,12 @@ func applyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}
 
 	var nodeCount, readyNodeCount int64
-	switch v := nodeCountRaw.(type) {
-	case int64:
-		nodeCount = v
-	case float64:
-		nodeCount = int64(v)
-	}
-	switch v := readyNodeCountRaw.(type) {
-	case int64:
-		readyNodeCount = v
-	case float64:
-		readyNodeCount = int64(v)
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		nodeCount = int64(nodeCountRaw.(float64))
+		readyNodeCount = int64(readyNodeCountRaw.(float64))
+	} else {
+		nodeCount = nodeCountRaw.(int64)
+		readyNodeCount = readyNodeCountRaw.(int64)
 	}
 
 	if !nodeCountExists || !readyNodeCountExists {
@@ -333,20 +329,22 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 			break
 		}
 
-		if currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).Before(timeNow) {
-			// skip Machines in NodeGroups that violate Node readiness ratio
-			ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
-			if !ok {
-				continue
-			}
-			if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
-				continue
-			}
+		if currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).Before(timeNow) ||
+			currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
 
-			machinesToDelete = append(machinesToDelete, currentMachine.Name)
-		} else {
-			break
+			continue
 		}
+
+		// skip Machines in NodeGroups that violate Node readiness ratio
+		ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
+		if !ok {
+			continue
+		}
+		if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
+			continue
+		}
+
+		machinesToDelete = append(machinesToDelete, currentMachine.Name)
 	}
 
 	return
