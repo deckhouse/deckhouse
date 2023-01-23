@@ -8,7 +8,7 @@ import:
   add: /
   to: /
   includePaths:
-  - jq
+  - toml-merge
   - install
   - uninstall
   before: setup
