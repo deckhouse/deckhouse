@@ -33,7 +33,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("dataplane-controller"),
+	Queue: internal.Queue("dataplane-handler"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "namespaces_global_revision",
