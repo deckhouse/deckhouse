@@ -84,6 +84,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"linstor-node",
 	"linstor-pools-importer",
 	"linstor-scheduler",
+	"linstor-scheduler-admission",
 	"local-path-provisioner",
 	"log-shipper",
 	"machine-controller-manager",
