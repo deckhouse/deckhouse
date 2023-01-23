@@ -19,46 +19,33 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/yaml"
+	v1 "k8s.io/api/core/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const deschedulerCR = `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Descheduler
-metadata:
-  name: test
-spec:
-  deploymentTemplate:
-    nodeSelector:
-      test: test
-  deschedulerPolicy:
-    globalParameters:
-      evictFailedBarePods: true
-    strategies:
-      lowNodeUtilization:
-        enabled: true
-`
-
-var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
+var _ = FDescribe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 
-	Context("Cluster with descheduler object", func() {
+	Context("Cluster with configured descheduler", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(deschedulerCR)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("descheduler.tolerations", []v1.Toleration{
+				{
+					Key:   "test",
+					Value: "test",
+				},
+			})
+			f.ConfigValuesSet("descheduler.removePodsHavingTooManyRestarts", true)
+			f.KubeStateSet("")
 			f.RunHook()
 		})
-		It("Should set values appropriately", func() {
+		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			var obj map[string]interface{}
-			Expect(yaml.Unmarshal([]byte(deschedulerCR), &obj)).Should(Succeed())
+			Expect(f.ConfigValuesGet("descheduler").Map()).To(HaveLen(0))
 
-			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Value()).To(BeEquivalentTo(obj))
+			f.KubernetesGlobalResource("Descheduler", "default").Exists()
 		})
-
 	})
+
 })

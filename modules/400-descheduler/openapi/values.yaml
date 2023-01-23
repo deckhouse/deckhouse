@@ -8,6 +8,10 @@ properties:
     properties:
       deschedulers:
         type: array
-        default: []
+        default: [ ]
         items:
-          $ref: '/deckhouse/modules/400-descheduler/openapi/descheduler_v1alpha1.yaml'
+          additionalProperties:
+            type: object
+      legacyDescheduler:
+        additionalProperties:
+          type: object
