@@ -317,50 +317,37 @@ func deleteMachines(input *go_hook.HookInput) error {
 }
 
 func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap map[string]*NodeGroupStatus) (machinesToDelete []string) {
-	const (
-		durationIterations = int(preemptibleDeletionPeriod / hookExecutionSchedule)
-	)
-
 	sort.Slice(machines, func(i, j int) bool {
 		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
 	})
 
-	batch := len(machines) / durationIterations
+	// we spread deletion over preemptibleDeletionPeriod partitioned by hookExecutionSchedule
+	batch := len(machines) / int(preemptibleDeletionPeriod/hookExecutionSchedule)
 	if batch == 0 {
 		batch = 1
 	}
 
-	var (
-		currentSlidingDuration = preemptibleInstanceMaxLifetime
-	)
-	for t := 0; t < durationIterations; t++ {
-		currentSlidingDuration -= hookExecutionSchedule
+	const durationThresholdForDeletion = preemptibleInstanceMaxLifetime - preemptibleDeletionPeriod
+	for _, currentMachine := range machines {
+		if len(machinesToDelete) >= batch {
+			break
+		}
 
-		for _, currentMachine := range machines {
-			if len(machinesToDelete) >= batch {
-				break
+		if currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).Before(timeNow) {
+			// skip Machines in NodeGroups that violate Node readiness ratio
+			ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
+			if !ok {
+				continue
+			}
+			if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
+				continue
 			}
 
-			if expires(timeNow, currentMachine.nodeCreationTimestamp.Time, currentSlidingDuration) {
-				ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
-				if !ok {
-					continue
-				}
-
-				if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
-					continue
-				}
-
-				machinesToDelete = append(machinesToDelete, currentMachine.Name)
-			} else {
-				break
-			}
+			machinesToDelete = append(machinesToDelete, currentMachine.Name)
+		} else {
+			break
 		}
 	}
 
 	return
-}
-
-func expires(now, timestamp time.Time, expirationDuration time.Duration) bool {
-	return timestamp.Add(expirationDuration).Before(now)
 }
