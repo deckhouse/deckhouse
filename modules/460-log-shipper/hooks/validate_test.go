@@ -27,7 +27,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	dockerImage := "timberio/vector:0.24.2-debian"
+	dockerImage := "timberio/vector:0.27.0-debian"
 
 	script := `
 	set -e
@@ -45,6 +45,8 @@ func TestValidateConfigWithVector(t *testing.T) {
 		"-v", "/deckhouse:/deckhouse",
 		"-e", "VECTOR_SELF_POD_NAME=test", // to avoid warnings, this variable is set in the container env section
 		"-e", "VECTOR_SELF_NODE_NAME=test",
+		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
+		"-e", "KUBERNETES_SERVICE_PORT=6443",
 		"--entrypoint", "bash",
 		// Kubernetes in-cluster config values required for validation
 		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/token",
