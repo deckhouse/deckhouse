@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "YandexMachineClass", true)
@@ -49,7 +49,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 	Context("With proper machines", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs(
-				10, 10, "", "22h10m", "22h5m", "22h2m", "21h", "20h", "2h",
+				6, 6, "", "22h10m", "22h5m", "22h2m", "21h", "20h", "2h",
 			)))
 			f.RunHook()
 		})
@@ -68,7 +68,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 	Context("With proper machines", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs(
-				10, 10, "", "22h10m", "22h5m", "22h2m", "21h",
+				4, 4, "", "22h10m", "22h5m", "22h2m", "21h",
 			)))
 			f.RunHook()
 		})
