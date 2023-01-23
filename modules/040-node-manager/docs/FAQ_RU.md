@@ -1363,7 +1363,7 @@ Done
 
 Bashible на узлах мержит основной конфиг containerd для deckhouse с  конфигами из `/etc/containerd/conf.d/*.toml`.
 
-### Как добавить авторизацию в дополнительный registry.
+### Как добавить авторизацию в дополнительный registry ?
 
 Разверните скрипт `NodeGroupConfiguration`:
 

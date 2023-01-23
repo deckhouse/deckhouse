@@ -1359,7 +1359,7 @@ Done
 
 Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
 
-### How to add additional registry auth.
+### How to add additional registry auth ?
 
 Deploy `NodeGroupConfiguration` script:
 
