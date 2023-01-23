@@ -139,8 +139,7 @@ linstor node evacuate <node_name>
 
 It will move resources to other free nodes and replicate them.
 
-
-# Troubleshooting
+## Troubleshooting
 
 Problems can arise at different levels of component operation.
 This simple cheat sheet will help you quickly navigate through the diagnosis of various problems with LINSTOR-created volumes:
