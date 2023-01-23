@@ -126,7 +126,7 @@ func main() {
 		return nil
 	})
 
-	kpApp.Version("v0.0.0").Author("Flant")
+	kpApp.Version(app.AppVersion).Author("Flant")
 
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])

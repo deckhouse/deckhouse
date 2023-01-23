@@ -571,6 +571,8 @@ shell:
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
+    echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+
 ---
 artifact: release-channel-version-artifact
 from: {{ .Images.BASE_ALPINE }}

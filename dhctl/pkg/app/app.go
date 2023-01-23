@@ -15,13 +15,19 @@
 package app
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const AppName = "dhctl"
+const (
+	AppName     = "dhctl"
+	VersionFile = "/deckhouse/version"
+)
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 
@@ -37,6 +43,17 @@ var (
 func init() {
 	if os.Getenv("DHCTL_DEBUG") == "yes" {
 		IsDebug = true
+	}
+	file, err := os.OpenFile(VersionFile, os.O_RDONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	buf := make([]byte, 30)
+	n, err := file.Read(buf)
+	if n > 0 && (errors.Is(err, io.EOF) || err == nil) {
+		AppVersion = strings.TrimSpace(string(buf))
+		AppVersion = strings.Replace(AppVersion, "\n", "", -1)
 	}
 }
 
