@@ -72,7 +72,7 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env.0").String()).To(MatchJSON(`
   {
     "name": "NTP_SERVERS",
-    "value": "pool.ntp.org ntp.ubuntu.com"
+    "value": "pool.ntp.org. ntp.ubuntu.com."
   }
 `))
 

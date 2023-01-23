@@ -34,7 +34,7 @@ cmdallow 127/8
 allow 127/8
 bindaddress 127.0.0.1
 driftfile /var/run/chrony/chrony.drift
-makestep 1.0 3
+makestep 1.0 -1
 rtcsync
 EOF
 for NTP_SERVER in ${NTP_SERVERS}; do

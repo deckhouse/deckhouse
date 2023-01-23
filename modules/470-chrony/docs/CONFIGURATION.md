@@ -7,8 +7,14 @@ title: "The chrony module: configuration"
 ## An example of the configuration
 
 ```yaml
-chrony: |
-  ntpServers:
-  - pool.ntp.org
-  - ntp.ubuntu.com
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: chrony
+spec:
+  settings:
+    ntpServers:
+      - pool.ntp.org
+      - ntp.ubuntu.com
+  version: 1
 ```
