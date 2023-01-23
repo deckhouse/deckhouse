@@ -20,6 +20,38 @@ function kubectl_exec() {
   kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
 }
 
+function bb-event-error-create() {
+    # This function is used for creating event in the default namespace with reference of
+    # bashible step and used events.k8s.io/v1 apiVersion.
+    # eventName aggregates hostname with bashible step - sed keep only name and replace
+    # underscore with dash due to regexp.
+    # All of stderr outputs are stored in the eventLog file.
+    # step is used as argument for function call.
+    step="$1"
+    eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    eventLog="/var/lib/bashible/step.log"
+    kubectl apply -f - <<EOF
+        apiVersion: events.k8s.io/v1
+        kind: Event
+        metadata:
+          name: bashible-error-${eventName}
+          annotations:
+            timestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
+        regarding:
+          apiVersion: v1
+          kind: Node
+          name: '$(hostname -s)'
+          uid: "$(kubectl get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+        note: '$(tail -c 500 ${eventLog})'
+        reason: Failed
+        type: Warning
+        reportingController: bashible
+        reportingInstance: '$(hostname -s)'
+        eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
+        action: "Binding"
+EOF
+}
+
 function annotate_node() {
   attempt=0
   until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
@@ -256,7 +288,7 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step"
+    until /bin/bash -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -272,6 +304,9 @@ function main() {
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
+      {{- end }}
+      {{- if ne .runType "ClusterBootstrap" }}
+      bb-event-error-create "$step"
       {{- end }}
     done
   done
