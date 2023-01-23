@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -48,7 +49,7 @@ type client struct {
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo, dockerCfgBase64 string, options ...Option) (Client, error) {
+func NewClient(repo string, options ...Option) (Client, error) {
 	opts := &registryOptions{}
 
 	for _, opt := range options {
@@ -61,7 +62,7 @@ func NewClient(repo, dockerCfgBase64 string, options ...Option) (Client, error) 
 	}
 
 	if !opts.withoutAuth {
-		authConfig, err := readAuthConfig(dockerCfgBase64)
+		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +113,12 @@ func (r *client) Digest(tag string) (string, error) {
 	return d.String(), nil
 }
 
-func readAuthConfig(dockerCfgBase64 string) (authn.AuthConfig, error) {
+func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+	r, err := url.Parse(repo)
+	if err != nil {
+		return authn.AuthConfig{}, err
+	}
+
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
 		return authn.AuthConfig{}, err
@@ -121,12 +127,18 @@ func readAuthConfig(dockerCfgBase64 string) (authn.AuthConfig, error) {
 	authConfig := authn.AuthConfig{}
 
 	// The config should have at least one .auths.* entry
-	for _, a := range auths {
-		err := json.Unmarshal([]byte(a.Raw), &authConfig)
+	for repoNameRaw, repoAuth := range auths {
+		repoName, err := url.Parse(repoNameRaw)
 		if err != nil {
-			return authn.AuthConfig{}, err
+			continue
 		}
-		return authConfig, nil
+		if repoName.Host == r.Host {
+			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
+			if err != nil {
+				return authn.AuthConfig{}, err
+			}
+			return authConfig, nil
+		}
 	}
 
 	return authn.AuthConfig{}, fmt.Errorf("no auth data")
@@ -160,6 +172,7 @@ func GetHTTPTransport(ca string) (transport http.RoundTripper) {
 
 type registryOptions struct {
 	ca          string
+	dockerCfg   string
 	useHTTP     bool
 	withoutAuth bool
 }
@@ -180,9 +193,16 @@ func WithInsecureSchema(insecure bool) Option {
 	}
 }
 
-// WithDisabledAuth dont use authConfig
+// WithDisabledAuth don't use authConfig
 func WithDisabledAuth() Option {
 	return func(options *registryOptions) {
 		options.withoutAuth = true
+	}
+}
+
+// WithAuth use docker config base64 as authConfig
+func WithAuth(dockerCfg string) Option {
+	return func(options *registryOptions) {
+		options.dockerCfg = dockerCfg
 	}
 }
