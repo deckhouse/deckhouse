@@ -54,7 +54,7 @@ class PatchGenerator:
 
     def generate(self, change):
         """
-        Converts dictdiffer change to JSON patches.
+        Converts dictdiffer change to JSON patches suitable for Addon Operator.
         https://jsonpatch.com/#operations
         """
         op, path_segments, values = change
