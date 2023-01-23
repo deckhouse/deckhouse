@@ -324,7 +324,7 @@ var hookInitValues = `
 }
 `
 
-var _ = Describe("Istio hooks :: dataplane_controller :: metrics ::", func() {
+var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 
 	f := HookExecutionConfigInit(hookInitValues, "")
 	Context("Empty cluster and minimal settings", func() {
@@ -1014,7 +1014,7 @@ var _ = Describe("Istio hooks :: dataplane_controller :: metrics ::", func() {
 	)
 })
 
-var _ = Describe("Istio hooks :: dataplane_controller :: dataplane_upgrade ::", func() {
+var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", func() {
 
 	f := HookExecutionConfigInit(hookInitValues, "")
 
