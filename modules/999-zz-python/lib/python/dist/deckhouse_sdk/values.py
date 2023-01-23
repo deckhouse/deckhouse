@@ -6,7 +6,7 @@
 import operator
 from functools import reduce
 from typing import Iterable
-
+from dotmap import DotMap
 from dictdiffer import deepcopy, diff
 
 
@@ -63,6 +63,13 @@ class PatchGenerator:
         self.seen_array_paths = set()
 
     def generate(self, change):
+        for p in self.__generate(change):
+            # DotMap is not JSON serializable, casting to dict
+            if "value" in p and isinstance(p["value"], DotMap):
+                p["value"] = p["value"].toDict()
+            yield p
+
+    def __generate(self, change):
         """
         Converts dictdiffer change to JSON patches suitable for Addon Operator.
         https://jsonpatch.com/#operations
