@@ -17,6 +17,8 @@ metadata:
   name: linstor-node
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  annotations:
+    kubectl.kubernetes.io/default-container: linstor-satellite
 spec:
   targetRef:
     apiVersion: "apps/v1"

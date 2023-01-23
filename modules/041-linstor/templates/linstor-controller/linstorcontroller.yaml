@@ -36,6 +36,8 @@ metadata:
   name: linstor
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
+  annotations:
+    kubectl.kubernetes.io/default-container: linstor-controller
 spec:
   {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 2 }}
   {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
