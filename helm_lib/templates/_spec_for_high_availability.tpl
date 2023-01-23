@@ -2,7 +2,7 @@
 {{- /* returns pod affinity spec */ -}}
 {{- define "helm_lib_pod_anti_affinity_for_ha" }}
 {{- $context := index . 0 -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
-{{- $labels := index . 1 }}
+{{- $labels := index . 1 }} {{- /* Match labels for podAntiAffinity label selector */ -}}
   {{- if (include "helm_lib_ha_enabled" $context) }}
 affinity:
   podAntiAffinity:
@@ -19,6 +19,7 @@ affinity:
 {{- /* Usage: {{ include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }} */ -}}
 {{- /* returns deployment strategy and replicas for ha components running on master nodes */ -}}
 {{- define "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }}
+{{- /* Dot object (.) with .Values, .Chart, etc */ -}}
   {{- if (include "helm_lib_ha_enabled" .) }}
     {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 0 }}
 replicas: {{ index .Values.global.discovery "clusterMasterCount" }}
@@ -63,6 +64,7 @@ strategy:
 {{- /* Usage: {{ include "helm_lib_deployment_strategy_and_replicas_for_ha" }} */ -}}
 {{- /* returns deployment strategy and replicas for ha components running not on master nodes */ -}}
 {{- define "helm_lib_deployment_strategy_and_replicas_for_ha" }}
+{{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
 {{- if (include "helm_lib_ha_enabled" .) }}
 strategy:

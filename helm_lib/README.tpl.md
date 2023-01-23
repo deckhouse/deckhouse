@@ -8,7 +8,6 @@
 ### Usage
 `{{ include "helm_lib_envs_for_proxy" . }} `
 ### Arguments
-
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -24,16 +23,24 @@ list:
 -  No value 
 
 
-
 ## helm_lib_ha_enabled
  returns empty value, which is treated by go template as false 
 
 ### Usage
 `{{- if (include "helm_lib_ha_enabled" .) }} `
 ### Arguments
-
 -  Dot object (.) with .Values, .Chart, etc 
 
+
+## helm_lib_kube_rbac_proxy_ca_certificate
+ Renders configmap with kube-rbac-proxy CA certificate which uses to verify the kube-rbac-proxy clients. 
+
+### Usage
+`{{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "namespace") }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Namespace where will be created configmap  
 
 
 ## helm_lib_module_ephemeral_storage_logs_with_extra
@@ -42,7 +49,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 }} `
-
+### Arguments
+-  Extra space in mebibytes 
 
 
 ## helm_lib_module_ephemeral_storage_only_logs
@@ -51,6 +59,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_ephemeral_storage_only_logs" . }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_uri_scheme
@@ -58,6 +68,59 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_uri_scheme" . }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
+
+
+## helm_lib_module_https_mode
+ returns https mode for module 
+
+### Usage
+`{{ if (include "helm_lib_module_https_mode" .) }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
+
+
+## helm_lib_module_https_cert_manager_cluster_issuer_name
+ returns cluster issuer name  
+
+### Usage
+`{{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
+
+
+## helm_lib_module_https_ingress_tls_enabled
+ returns not empty string if tls should enable for ingress  
+
+### Usage
+`{{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
+
+
+## helm_lib_module_https_copy_custom_certificate
+ Renders secret with [custom certificate](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ in passed namespace with passed prefix 
+
+### Usage
+`{{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Namespace 
+-  Secret name prefix 
+
+
+## helm_lib_module_https_secret_name
+ returns custom certificate name 
+
+### Usage
+`{{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Secret name prefix 
 
 
 ## helm_lib_module_image
@@ -65,7 +128,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_image" (list . "<container-name>") }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Container name 
 
 
 ## helm_lib_module_image_no_fail
@@ -73,7 +139,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Container name 
 
 
 ## helm_lib_module_common_image
@@ -81,7 +150,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_common_image" (list . "<container-name>") }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Container name 
 
 
 ## helm_lib_module_common_image_no_fail
@@ -89,6 +161,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_common_image_no_fail" (list . "<container-name>") }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Container name 
 
 
 ## helm_lib_module_ingress_class
@@ -97,7 +173,6 @@ list:
 ### Usage
 `{{ include "helm_lib_module_ingress_class" . }} `
 ### Arguments
-
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -109,12 +184,15 @@ list:
 `{{ include "helm_lib_module_init_container_chown_nobody_volume" (list . "volume-name") }} `
 
 
-
 ## helm_lib_module_init_container_check_linux_kernel
  returns initContainer which checks the kernel version on the node for compliance to semver constraint 
 
 ### Usage
 `{{ include "helm_lib_module_init_container_check_linux_kernel" (list . ">= 4.9.17") }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Semver constraint 
 
 
 ## helm_lib_module_labels
@@ -123,8 +201,9 @@ list:
 ### Usage
 `{{ include "helm_lib_module_labels" (list . (dict "app" "test" "component" "testing")) }} `
 ### Arguments
-
+list:
 -  Dot object (.) with .Values, .Chart, etc 
+-  Additional labels dict 
 
 
 
@@ -136,7 +215,7 @@ list:
 ### Arguments
 list:
 -  Dot object (.) with .Values, .Chart, etc 
--  argv1 
+-  Name portion 
 
 
 ## helm_lib_module_pod_security_context_run_as_user_custom
@@ -144,7 +223,11 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_pod_security_context_run_as_user_custom" (list . 1000 1000) }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  User id 
+-  Group id 
 
 
 ## helm_lib_module_pod_security_context_run_as_user_nobody
@@ -152,7 +235,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs
@@ -160,7 +244,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_pod_security_context_run_as_user_root
@@ -168,7 +253,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_container_security_context_not_allow_privilege_escalation
@@ -178,13 +264,13 @@ list:
 `{{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . }} `
 
 
-
 ## helm_lib_module_container_security_context_read_only_root_filesystem
  returns SecurityContext parameters for Container with read only root filesystem 
 
 ### Usage
 `{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_container_security_context_privileged
@@ -194,13 +280,13 @@ list:
 `{{ include "helm_lib_module_container_security_context_privileged" . }} `
 
 
-
 ## helm_lib_module_container_security_context_privileged_read_only_root_filesystem
  returns SecurityContext parameters for Container running privileged with read only root filesystem 
 
 ### Usage
 `{{ include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all
@@ -208,7 +294,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add
@@ -216,7 +303,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  List of capabilities 
 
 
 ## helm_lib_module_container_security_context_capabilities_drop_all_and_add
@@ -224,6 +314,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  List of capabilities 
 
 
 ## helm_lib_module_storage_class_annotations
@@ -231,6 +325,11 @@ list:
 
 ### Usage
 `{{ include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Storage class index 
+-  Storage class name 
 
 
 ## helm_lib_grafana_dashboard_definitions_recursion
@@ -239,7 +338,11 @@ list:
 
 ### Usage
 `{{ include "helm_lib_grafana_dashboard_definitions_recursion" (list . <root dir> [current dir]) }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Dashboards root dir 
+-  Dashboards current dir 
 
 
 ## helm_lib_grafana_dashboard_definitions
@@ -247,7 +350,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_grafana_dashboard_definitions" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_single_dashboard
@@ -255,6 +359,12 @@ list:
 
 ### Usage
 `{{ include "helm_lib_single_dashboard" (list . "dashboard-name" "folder" $dashboard) }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Dashboard name 
+-  Folder 
+-  Dashboard definition 
 
 
 ## helm_lib_prometheus_rules_recursion
@@ -263,7 +373,12 @@ list:
 
 ### Usage
 `{{ include "helm_lib_prometheus_rules_recursion" (list . <namespace> <root dir> [current dir]) }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Namespace for creating rules 
+-  Rules root dir 
+-  Current dir (optional) 
 
 
 ## helm_lib_prometheus_rules
@@ -271,7 +386,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_prometheus_rules" (list . <namespace>) }} `
-
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Namespace for creating rules 
 
 
 ## helm_lib_prometheus_target_scrape_timeout_seconds
@@ -279,8 +397,41 @@ list:
 
 ### Usage
 `{{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} `
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  Target timeout in seconds 
 
 
+## helm_lib_node_selector
+ Returns node selector for workloads depend on strategy 
+
+### Usage
+``
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  strategy one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
+
+
+## helm_lib_tolerations
+ Returns tolerations for workloads depend on strategy 
+
+### Usage
+``
+### Arguments
+list:
+-  Dot object (.) with .Values, .Chart, etc 
+-  strategy one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
+
+
+## helm_lib_pdb_daemonset
+ Returns PDB max unavailable 
+
+### Usage
+`{{ include "helm_lib_pdb_daemonset" . }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_priority_class
@@ -289,8 +440,9 @@ list:
 ### Usage
 ``
 ### Arguments
-
+list:
 -  Dot object (.) with .Values, .Chart, etc 
+-  Priority class name 
 
 
 ## helm_lib_resources_management_pod_resources
@@ -298,7 +450,10 @@ list:
 
 ### Usage
 `{{ include "helm_lib_resources_management_pod_resources" (list <resources configuration> [ephemeral storage requests]) }} `
-
+### Arguments
+list:
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  Ephemeral storage requests 
 
 
 ## helm_lib_resources_management_original_pod_resources
@@ -306,7 +461,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_resources_management_original_pod_resources" <resources configuration> }} `
-
+### Arguments
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ## helm_lib_resources_management_vpa_spec
@@ -314,7 +470,13 @@ list:
 
 ### Usage
 `{{ include "helm_lib_resources_management_vpa_spec" (list <target apiversion> <target kind> <target name> <target container> <resources configuration> ) }} `
-
+### Arguments
+list:
+-  Target API version 
+-  Target Kind 
+-  Target Name 
+-  Target container name 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ## helm_lib_resources_management_cpu_units_to_millicores
@@ -324,7 +486,6 @@ list:
 `{{ include "helm_lib_resources_management_cpu_units_to_millicores" <cpu units> }} `
 
 
-
 ## helm_lib_resources_management_memory_units_to_bytes
  helper for converting memory units to bytes 
 
@@ -332,13 +493,13 @@ list:
 `{{ include "helm_lib_resources_management_memory_units_to_bytes" <memory units> }} `
 
 
-
 ## helm_lib_vpa_kube_rbac_proxy_resources
  helper for VPA resources for kube_rbac_proxy 
 
 ### Usage
 `{{ include "helm_lib_vpa_kube_rbac_proxy_resources" . }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_container_kube_rbac_proxy_resources
@@ -346,6 +507,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_container_kube_rbac_proxy_resources" . }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_pod_anti_affinity_for_ha
@@ -354,9 +517,9 @@ list:
 ### Usage
 `{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} `
 ### Arguments
-
+list:
 -  Dot object (.) with .Values, .Chart, etc 
-
+-  Match labels for podAntiAffinity label selector 
 
 
 ## helm_lib_deployment_on_master_strategy_and_replicas_for_ha
@@ -364,7 +527,8 @@ list:
 
 ### Usage
 `{{ include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }} `
-
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 
 
 
 ## helm_lib_deployment_strategy_and_replicas_for_ha
@@ -372,3 +536,5 @@ list:
 
 ### Usage
 `{{ include "helm_lib_deployment_strategy_and_replicas_for_ha" }} `
+### Arguments
+-  Dot object (.) with .Values, .Chart, etc 

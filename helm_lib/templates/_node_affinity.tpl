@@ -22,9 +22,10 @@
 - key: drbd.linbit.com/ignore-fail-over
 {{- end }}
 
+{{- /* Returns node selector for workloads depend on strategy */ -}}
 {{- define "helm_lib_node_selector" }}
-  {{- $context := index . 0 }}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }}
+  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }} {{- /* strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" */ -}}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
     {{- $module_values = (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
@@ -105,9 +106,10 @@ nodeSelector:
   {{- end }}
 {{- end }}
 
+{{- /* Returns tolerations for workloads depend on strategy */ -}}
 {{- define "helm_lib_tolerations" }}
-  {{- $context := index . 0 }}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }}
+  {{- $context := index . 0 }}  {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" */ -}}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
     {{- $module_values = (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}

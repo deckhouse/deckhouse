@@ -2,10 +2,10 @@
 {{- /* returns all the prometheus rules from <root dir>/ */ -}}
 {{- /* current dir is optional — used for recursion but you can use it for partially generating rules */ -}}
 {{- define "helm_lib_prometheus_rules_recursion" -}}
-  {{- $context := index . 0 }}
-  {{- $namespace := index . 1 }}
-  {{- $rootDir := index . 2 }}
-  {{- $currentDir := "" }}
+  {{- $context := index . 0 }}    {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $namespace := index . 1 }}  {{- /* Namespace for creating rules */ -}}
+  {{- $rootDir := index . 2 }}    {{- /* Rules root dir */ -}}
+  {{- $currentDir := "" }}        {{- /* Current dir (optional) */ -}}
   {{- if gt (len .) 3 }} {{- $currentDir = index . 3 }} {{- else }} {{- $currentDir = $rootDir }} {{- end }}
   {{- $currentDirIndex := (sub ($currentDir | splitList "/" | len) 1) }}
   {{- $rootDirIndex := (sub ($rootDir | splitList "/" | len) 1) }}
@@ -75,8 +75,8 @@ spec:
 {{- /* Usage: {{ include "helm_lib_prometheus_rules" (list . <namespace>) }} */ -}}
 {{- /* returns all the prometheus rules from monitoring/prometheus-rules/ */ -}}
 {{- define "helm_lib_prometheus_rules" -}}
-  {{- $context := index . 0 }}
-  {{- $namespace := index . 1 }}
+  {{- $context := index . 0 }}    {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $namespace := index . 1 }}  {{- /* Namespace for creating rules */ -}}
   {{- if ( $context.Values.global.enabledModules | has "operator-prometheus-crd" ) }}
 {{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
   {{- end }}
@@ -85,8 +85,8 @@ spec:
 {{- /* Usage: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} */ -}}
 {{- /* returns adjust timeout value to scrape interval / */ -}}
 {{- define "helm_lib_prometheus_target_scrape_timeout_seconds" -}}
-  {{- $context := index . 0 }}
-  {{- $timeout := index . 1 }}
+  {{- $context := index . 0 }}  {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $timeout := index . 1 }}  {{- /* Target timeout in seconds */ -}}
   {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
   {{- if gt $timeout $scrape_interval -}}
 {{ $scrape_interval }}s

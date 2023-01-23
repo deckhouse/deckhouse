@@ -37,7 +37,9 @@ func parseFile(filename string) string {
 
 {{- if .args }}
 ### Arguments
+{{- if .argsDesc }}
 {{ .argsDesc }}
+{{- end }}
 {{- range $i, $a := .args }}
 - {{ $a }}
 {{- end }}
@@ -114,7 +116,7 @@ func parseFile(filename string) string {
 		}
 	}
 
-	return strings.Join(all, "\n\n")
+	return strings.Join(all, "\n")
 }
 
 func main() {

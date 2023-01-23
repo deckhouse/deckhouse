@@ -1,7 +1,8 @@
 {{- /* Usage: {{ include "helm_lib_resources_management_pod_resources" (list <resources configuration> [ephemeral storage requests]) }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is */ -}}
 {{- define "helm_lib_resources_management_pod_resources" -}}
-  {{- $configuration     := index . 0 -}}
+  {{- $configuration     := index . 0 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+  {{- /* Ephemeral storage requests */ -}}
 
   {{- $ephemeral_storage := "50Mi" -}}
   {{- if eq (len .) 2 -}}
@@ -21,7 +22,7 @@
 {{- /* Usage: {{ include "helm_lib_resources_management_original_pod_resources" <resources configuration> }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is present */ -}}
 {{- define "helm_lib_resources_management_original_pod_resources" -}}
-  {{- $configuration := . -}}
+  {{- $configuration := . -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
 
   {{- if $configuration -}}
     {{- if eq $configuration.mode "Static" -}}
@@ -61,11 +62,11 @@
 {{- /* Usage: {{ include "helm_lib_resources_management_vpa_spec" (list <target apiversion> <target kind> <target name> <target container> <resources configuration> ) }} */ -}}
 {{- /* returns rendered vpa spec based on configuration and target reference */ -}}
 {{- define "helm_lib_resources_management_vpa_spec" -}}
-  {{- $targetAPIVersion := index . 0 -}}
-  {{- $targetKind       := index . 1 -}}
-  {{- $targetName       := index . 2 -}}
-  {{- $targetContainer  := index . 3 -}}
-  {{- $configuration    := index . 4 -}}
+  {{- $targetAPIVersion := index . 0 -}}  {{- /* Target API version */ -}}
+  {{- $targetKind       := index . 1 -}}  {{- /* Target Kind */ -}}
+  {{- $targetName       := index . 2 -}}  {{- /* Target Name */ -}}
+  {{- $targetContainer  := index . 3 -}}  {{- /* Target container name */ -}}
+  {{- $configuration    := index . 4 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
 
 targetRef:
   apiVersion: {{ $targetAPIVersion }}
@@ -141,6 +142,7 @@ updatePolicy:
 {{- /* Usage: {{ include "helm_lib_vpa_kube_rbac_proxy_resources" . }} */ -}}
 {{- /* helper for VPA resources for kube_rbac_proxy */ -}}
 {{- define "helm_lib_vpa_kube_rbac_proxy_resources" }}
+{{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 - containerName: kube-rbac-proxy
   minAllowed:
     {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 4 }}
@@ -152,6 +154,7 @@ updatePolicy:
 {{- /* Usage: {{ include "helm_lib_container_kube_rbac_proxy_resources" . }} */ -}}
 {{- /* helper for container resources for kube_rbac_proxy */ -}}
 {{- define "helm_lib_container_kube_rbac_proxy_resources" }}
+{{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 cpu: 10m
 memory: 25Mi
 {{- end }}
