@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,13 +17,15 @@ func reverse(ss []string) {
 	}
 }
 
+var (
+	rDefine  = regexp.MustCompile(`\{\{- define "([a-z_]+)"\s*-?\}\}`)
+	rComment = regexp.MustCompile(`\{\{-\s*/\*(.+)\*/\s*-?\}\}`)
+	rNewLine = regexp.MustCompile(`\n`)
+	rUsage   = regexp.MustCompile(`Usage: (.+)`)
+)
+
 func parseFile(filename string) string {
 	c, _ := os.ReadFile(filename)
-
-	rDefine := regexp.MustCompile(`\{\{- define "([a-z_]+)"\s*-?\}\}`)
-	rComment := regexp.MustCompile(`\{\{-\s*/\*(.+)\*/\s*-?\}\}`)
-	rNewLine := regexp.MustCompile(`\n`)
-	rUsage := regexp.MustCompile(`Usage: (.+)`)
 
 	strs := rNewLine.Split(string(c), -1)
 
@@ -126,13 +129,23 @@ func main() {
 	}
 
 	all := make([]string, 0)
-	for _, path := range paths {
-		res := parseFile(path)
-		all = append(all, res)
+	all = append(all, "Helm utils template definitions for Deckhouse modules.", "\n")
+	for _, p := range paths {
+		res := parseFile(p)
+		if res == "" {
+			continue
+		}
+
+		base := path.Base(p)
+		base = strings.Replace(base, "_", " ", -1)
+		base = strings.TrimSpace(base)
+		base = strings.Split(base, ".")[0]
+		base = strings.Title(base)
+		all = append(all, "# "+base, res)
 	}
 
 	a := strings.Join(all, "\n")
-	err = os.WriteFile("/deckhouse/helm_lib/README.tpl.md", []byte(a), 0o644)
+	err = os.WriteFile("/deckhouse/helm_lib/README.md", []byte(a), 0o644)
 	if err != nil {
 		panic(err)
 	}
