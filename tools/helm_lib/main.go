@@ -35,7 +35,7 @@ func reverse(ss []string) {
 
 var (
 	rDefine  = regexp.MustCompile(`\{\{- define "([a-z_]+)"\s*-?\}\}`)
-	rComment = regexp.MustCompile(`\{\{-\s*/\*(.+)\*/\s*-?\}\}`)
+	rComment = regexp.MustCompile(`\{\{-?\s*/\*(.+)\*/\s*-?\}\}`)
 	rNewLine = regexp.MustCompile(`\n`)
 	rUsage   = regexp.MustCompile(`Usage: (.+)`)
 )

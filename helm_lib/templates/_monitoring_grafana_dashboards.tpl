@@ -54,7 +54,7 @@
   {{- $context := index . 0 }}       {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
   {{- $resourceName := index . 1 }}  {{- /* Dashboard name */ -}}
   {{- $folder := index . 2 }}        {{- /* Folder */ -}}
-  {{- $definition := index . 3 }}    {{- /* Dashboard definition */ -}}
+  {{- $definition := index . 3 }}    {{/* Dashboard definition */}}
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
