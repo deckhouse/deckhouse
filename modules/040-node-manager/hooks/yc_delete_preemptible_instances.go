@@ -31,7 +31,12 @@ import (
 )
 
 const (
-	preemtibleVMDeletionDuration = 24 * time.Hour
+	hookExecutionSchedule          = 15 * time.Minute
+	preemptibleInstanceMaxLifetime = 24 * time.Hour
+	// we'll delete Machines that are almost ready to be terminated by the cloud provider
+	preemptibleDeletionPeriod = 4 * time.Hour
+	// we won't delete any Machines if it would violate overall Node readiness of a given NodeGroup
+	nodeGroupReadinessRatio = 0.9
 )
 
 type Node struct {
@@ -41,12 +46,13 @@ type Node struct {
 }
 
 type Machine struct {
-	Name                  string
+	Name             string
+	Terminating      bool
+	MachineClassKind string
+	MachineClassName string
+
 	nodeCreationTimestamp metav1.Time
 	nodeGroup             string
-	Terminating           bool
-	MachineClassKind      string
-	MachineClassName      string
 }
 
 type YandexMachineClass struct {
@@ -55,8 +61,8 @@ type YandexMachineClass struct {
 
 type NodeGroupStatus struct {
 	Name  string
-	Nodes float64
-	Ready float64
+	Nodes int64
+	Ready int64
 }
 
 func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -92,20 +98,34 @@ func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func applyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	icKind, icExists, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "cloudInstances", "classReference", "kind")
 	if err != nil {
-		return nil, fmt.Errorf("cannot access \"spec.cloudInstances.classReference.kind\" in a NodeGroup %s", obj.GetName())
+		return nil, fmt.Errorf("cannot access \"spec.cloudInstances.classReference.kind\" in a NodeGroup %s: %s", obj.GetName(), err)
 	}
 
 	if !icExists || (icKind != "YandexInstanceClass") {
 		return nil, nil
 	}
 
-	nodeCount, nodeCountExists, err := unstructured.NestedFloat64(obj.UnstructuredContent(), "status", "nodes")
+	nodeCountRaw, nodeCountExists, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "status", "nodes")
 	if err != nil {
-		return nil, fmt.Errorf("cannot access \"status.nodes\" in a NodeGroup %s", obj.GetName())
+		return nil, fmt.Errorf("cannot access \"status.nodes\" in a NodeGroup %s: %s", obj.GetName(), err)
 	}
-	readyNodeCount, readyNodeCountExists, err := unstructured.NestedFloat64(obj.UnstructuredContent(), "status", "ready")
+	readyNodeCountRaw, readyNodeCountExists, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "status", "ready")
 	if err != nil {
-		return nil, fmt.Errorf("cannot access \"status.ready\" in a NodeGroup %s", obj.GetName())
+		return nil, fmt.Errorf("cannot access \"status.ready\" in a NodeGroup %s: %s", obj.GetName(), err)
+	}
+
+	var nodeCount, readyNodeCount int64
+	switch v := nodeCountRaw.(type) {
+	case int64:
+		nodeCount = v
+	case float64:
+		nodeCount = int64(v)
+	}
+	switch v := readyNodeCountRaw.(type) {
+	case int64:
+		readyNodeCount = v
+	case float64:
+		readyNodeCount = int64(v)
 	}
 
 	if !nodeCountExists || !readyNodeCountExists {
@@ -158,8 +178,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "every-15",
-			Crontab: "0/15 * * * *",
+			Name: "every-15",
+			// string formatting is ugly, but serves a purpose of referencing an important constant
+			Crontab: fmt.Sprintf("0/%.0f * * * *", hookExecutionSchedule.Minutes()),
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -295,18 +316,9 @@ func deleteMachines(input *go_hook.HookInput) error {
 	return nil
 }
 
-// delete all after 23h mark
-// afterwards delete in 15 minutes increments, no more than batch size
 func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap map[string]*NodeGroupStatus) (machinesToDelete []string) {
 	const (
-		// 12 * 0.25 = 3 hours
-		durationIterations = 12
-		slidingStep        = 15 * time.Minute
-		nodeReadinessRatio = 0.9
-	)
-	var (
-		currentSlidingDuration = preemtibleVMDeletionDuration - time.Hour
-		cursor                 int
+		durationIterations = int(preemptibleDeletionPeriod / hookExecutionSchedule)
 	)
 
 	sort.Slice(machines, func(i, j int) bool {
@@ -318,15 +330,16 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 		batch = 1
 	}
 
+	var (
+		currentSlidingDuration = preemptibleInstanceMaxLifetime
+	)
 	for t := 0; t < durationIterations; t++ {
-		currentSlidingDuration -= slidingStep
+		currentSlidingDuration -= hookExecutionSchedule
 
-		for cursor < len(machines) {
+		for _, currentMachine := range machines {
 			if len(machinesToDelete) >= batch {
 				break
 			}
-
-			currentMachine := machines[cursor]
 
 			if expires(timeNow, currentMachine.nodeCreationTimestamp.Time, currentSlidingDuration) {
 				ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
@@ -334,12 +347,11 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 					continue
 				}
 
-				if (ngStatus.Ready / ngStatus.Nodes) < nodeReadinessRatio {
-					break
+				if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
+					continue
 				}
 
 				machinesToDelete = append(machinesToDelete, currentMachine.Name)
-				cursor++
 			} else {
 				break
 			}
