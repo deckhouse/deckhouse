@@ -4,10 +4,10 @@ title: "The runtime-audit-engine module: usage"
 
 ## How to collect events?
 
-Pods of runtime-audit-engine outputs all events to stdout.
-These events then can be collected by the `log-shipper` module and be sent to any supported destination.
+Pods of `runtime-audit-engine` outputs all events to stdout.
+These events then can be collected by the [log-shipper](../460-log-shipper/) module and be sent to any supported destination.
 
-An example of `ClusterLoggingConfig` for `log-shipper`.
+An example of [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) for `log-shipper`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -30,7 +30,9 @@ spec:
 
 ## How to alert?
 
-All metrics are automatically collected by Prometheus. Add a CustomPrometheusRule to enable alerts.
+All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules) to enable alerts.
+
+An example:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -61,7 +63,7 @@ The structure of native Falco rules is different from the CRD schema.
 It is due to limitations of schema validation capabilities in Kubernetes.
 
 To make the process of migrating native Falco rules to Deckhouse more convenient,
-there is a script that can help to convert a rule file for Falco to FalcoAuditRules custom resource.
+there is a script that can help to convert a rule file for Falco to [FalcoAuditRules](cr.html#falcoauditrules) custom resource.
 
 ```shell
 git clone github.com/deckhouse/deckhouse

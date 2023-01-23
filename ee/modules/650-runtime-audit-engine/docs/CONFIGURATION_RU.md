@@ -2,4 +2,6 @@
 title: "Модуль runtime-audit-engine: настройки"
 ---
 
-<!-- SCHEMA -->
+{% include module-bundle.liquid %}
+
+Модуль не имеет настроек.
