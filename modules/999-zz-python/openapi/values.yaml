@@ -4,19 +4,11 @@ type: object
 properties:
   internal:
     type: object
-    required:
-      - statement
-      - count
+    default: {}
     properties:
       statement:
         type: string
         default: "default_unchanged_value_you_should_not_see"
       count:
-        type: integer
-        default: 0
-      count21:
-        type: integer
-        default: 0
-      count3:
         type: integer
         default: 0
