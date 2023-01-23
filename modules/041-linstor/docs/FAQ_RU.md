@@ -139,6 +139,14 @@ linstor node evacuate <имя_узла>
 
 Все ресурсы переедут на другие свободные узлы и будут реплицированы.
 
+# Диагностика проблем
+
+Проблемы могут возникнуть на разных уровнях работы компонентов.
+Эта простая шпаргалка поможет вам быстро сориентироваться при диагностике различных проблем с томами созданными в LINSTOR:
+
+![LINSTOR шпаргалка](../../images/041-linstor/linstor-debug-cheatsheet.svg)
+<!--- Исходник: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
+
 ## Pod не может запуститься из-за ошибки `FailedMount`
 
 ### Pod завис на стадии `ContainerCreating`

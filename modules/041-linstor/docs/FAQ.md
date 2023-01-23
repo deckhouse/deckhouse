@@ -139,6 +139,15 @@ linstor node evacuate <node_name>
 
 It will move resources to other free nodes and replicate them.
 
+
+# Troubleshooting
+
+Problems can arise at different levels of component operation.
+This simple cheat sheet will help you quickly navigate through the diagnosis of various problems with LINSTOR-created volumes:
+
+![LINSTOR cheatsheet](../../images/041-linstor/linstor-debug-cheatsheet.svg)
+<!--- Source: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
+
 ## Pod cannot start with the `FailedMount` error
 
 ### Pod is stuck in the `ContainerCreating` phase
