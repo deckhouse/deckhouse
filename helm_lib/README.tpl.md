@@ -1,12 +1,27 @@
+
+
+
+## helm_lib_envs_for_proxy
+ Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
+ depends on [proxy settings](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+
+### Usage
+`{{ include "helm_lib_envs_for_proxy" . }} `
+### Arguments
+
+-  Dot object (.) with .Values, .Chart, etc 
+
+
 ## helm_lib_is_ha_to_value
  returns value <yes> if cluster is highly available, else — returns <no> 
 
 ### Usage
 `{{ include "helm_lib_is_ha_to_value" (list . <yes> <no>) }} `
 ### Arguments
+list:
 -  Dot object (.) with .Values, .Chart, etc 
--  argv1 
--  argv2 
+-  Yes value 
+-  No value 
 
 
 
@@ -16,6 +31,7 @@
 ### Usage
 `{{- if (include "helm_lib_ha_enabled" .) }} `
 ### Arguments
+
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -81,6 +97,7 @@
 ### Usage
 `{{ include "helm_lib_module_ingress_class" . }} `
 ### Arguments
+
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -106,6 +123,7 @@
 ### Usage
 `{{ include "helm_lib_module_labels" (list . (dict "app" "test" "component" "testing")) }} `
 ### Arguments
+
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -116,6 +134,7 @@
 ### Usage
 `{{ include "helm_lib_module_public_domain" (list . "<name-portion>") }} `
 ### Arguments
+list:
 -  Dot object (.) with .Values, .Chart, etc 
 -  argv1 
 
@@ -270,6 +289,7 @@
 ### Usage
 ``
 ### Arguments
+
 -  Dot object (.) with .Values, .Chart, etc 
 
 
@@ -334,6 +354,7 @@
 ### Usage
 `{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} `
 ### Arguments
+
 -  Dot object (.) with .Values, .Chart, etc 
 
 

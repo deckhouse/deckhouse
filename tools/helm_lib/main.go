@@ -37,6 +37,7 @@ func parseFile(filename string) string {
 
 {{- if .args }}
 ### Arguments
+{{ .argsDesc }}
 {{- range $i, $a := .args }}
 - {{ $a }}
 {{- end }}
@@ -92,11 +93,17 @@ func parseFile(filename string) string {
 
 			reverse(description)
 
+			argsDesc := ""
+			if len(args) > 1 {
+				argsDesc = "list:"
+			}
+
 			var tpl bytes.Buffer
 			err = tmp.Execute(&tpl, map[string]interface{}{
 				"name":        name,
 				"usage":       usage,
 				"args":        args,
+				"argsDesc":    argsDesc,
 				"description": description,
 			})
 			if err != nil {

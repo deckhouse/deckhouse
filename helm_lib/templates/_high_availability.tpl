@@ -2,8 +2,8 @@
 {{- /* returns value <yes> if cluster is highly available, else — returns <no> */ -}}
 {{- define "helm_lib_is_ha_to_value" }}
   {{- $context := index . 0 -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
-  {{- $yes := index . 1 -}} {{- /* argv1 */ -}}
-  {{- $no  := index . 2 -}} {{- /* argv2 */ -}}
+  {{- $yes := index . 1 -}} {{- /* Yes value */ -}}
+  {{- $no  := index . 2 -}} {{- /* No value */ -}}
 
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
 
