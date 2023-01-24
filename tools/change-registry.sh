@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright 2022 Flant JSC
 #
@@ -48,7 +48,7 @@ function bb-rp-get-token() {
   AUTH_HEADER="$(curl --retry 3 -sSLi "${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
-  curl --retry 3 -fsSL -u ${REGISTRY_USER}:${REGISTRY_PASS} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:*" | jq -r '.token'
+  curl --retry 3 -fsSL -u ${REGISTRY_USER}:${REGISTRY_PASS} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
 function parse_args() {
@@ -85,6 +85,7 @@ function parse_args() {
   REGISTRY_ADDRESS="$(cut -d "/" -f1 <<< "$TEMP_URL")"
   REGISTRY_PATH="${TEMP_URL#"$REGISTRY_ADDRESS"}"
   REGISTRY_SCHEME="$(sed "s/:\/\///" <<< "$REGISTRY_SCHEME")"
+  DECKHOUSE_TAG="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.containers[] | select(.name=="deckhouse") | .image | split(":")[-1]' -r)"
 
   if [[ "$REGISTRY_PATH" == "" ]]; then
     >&2 echo "Cannot parse path from registry url: $REGISTRY_URL. Registry url must have at least slash at the end. (for example, https://registry.example.com/ instead of https://registry.example.com)"
@@ -101,9 +102,9 @@ function parse_args() {
     exit 1
   fi
 
-  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z]$"
+  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z](:[0-9]{1,5})?$"
   if ! [[ $REGISTRY_ADDRESS =~ $domain_validator ]]; then
-    >&2 echo "Registry domain doesn't fit the regex "^[a-z0-9][-a-z0-9\.]*[a-z]$": $REGISTRY_ADDRESS."
+    >&2 echo "Registry domain doesn't fit the regex ${domain_validator}: $REGISTRY_ADDRESS."
     exit 1
   fi
 
@@ -118,6 +119,16 @@ function parse_args() {
     exit 1
   fi
 
+  URI="${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${DECKHOUSE_TAG}"
+  curl --retry 3 -fsSLq -o /dev/null \
+       -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+       -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+       -H "Authorization: Bearer $TOKEN" "$URI" 2>/dev/null
+  RESULT=$?
+  if [[ $RESULT -ne 0 ]]; then
+    >&2 echo "Cannot find image ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${DECKHOUSE_TAG}."
+    exit 1
+  fi
 }
 
 function create_dockerconfigjson() {
@@ -141,12 +152,9 @@ DOCKERCONFIGJSON="$(create_dockerconfigjson | base64 -w0)"
 REGISTRY_ADDRESS="$(echo -n $REGISTRY_ADDRESS | base64 -w0)"
 REGISTRY_PATH="$(echo -n $REGISTRY_PATH | base64 -w0)"
 REGISTRY_SCHEME="$(echo -n $REGISTRY_SCHEME | base64 -w0)"
-if  [[ "$REGISTRY_CAFILE" != "" ]]; then
-  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
-fi
 
 kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
 if  [[ "$REGISTRY_CAFILE" != "" ]]; then
-  REGISTRY_CAFILE="$(base64 -w0 < $REGISTRY_CAFILE)"
-  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CAFILE}\"}}"
+  REGISTRY_CA="$(base64 -w0 < ${REGISTRY_CAFILE})"
+  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CA}\"}}"
 fi

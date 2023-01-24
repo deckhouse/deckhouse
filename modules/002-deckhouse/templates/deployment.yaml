@@ -172,9 +172,6 @@ spec:
             name: tmp
           - mountPath: /.kube
             name: kube
-          - mountPath: /etc/registrysecret
-            name: registrysecret
-            readOnly: true
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -189,7 +186,4 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
-      - name: registrysecret
-        secret:
-          defaultMode: 420
-          secretName: deckhouse-registry
+

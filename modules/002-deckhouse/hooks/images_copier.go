@@ -296,25 +296,9 @@ func addD8ConfigToSecret(input *go_hook.HookInput) error {
 	return nil
 }
 
-func parseRegistryHost(image string) (string, error) {
-	if image == "" {
-		return "", fmt.Errorf("image is empty")
-	}
-	imagesSegments := strings.Split(image, "/")
-	if len(imagesSegments) == 0 {
-		return "", fmt.Errorf("registry cannot parse")
-	}
-
-	return imagesSegments[0], nil
-}
-
 func parseD8RegistryCredentials(input *go_hook.HookInput) (*registry, error) {
 	image := input.Values.Get("deckhouse.internal.currentReleaseImageName").String()
-	registryHost, err := parseRegistryHost(image)
-	if err != nil {
-		return nil, err
-	}
-
+	registryHost := input.Values.Get("global.modulesImages.registry.address").String()
 	dockerConfigEncoded := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 	dockerConfig, err := base64.StdEncoding.DecodeString(dockerConfigEncoded)
 	if err != nil {

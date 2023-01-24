@@ -19,11 +19,12 @@ package cr
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
+	"net/url"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -61,7 +62,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	}
 
 	if !opts.withoutAuth {
-		authConfig, err := readAuthConfig("/etc/registrysecret/.dockerconfigjson")
+		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -112,21 +113,32 @@ func (r *client) Digest(tag string) (string, error) {
 	return d.String(), nil
 }
 
-func readAuthConfig(configPath string) (authn.AuthConfig, error) {
-	dockerConfigBytes, err := os.ReadFile(configPath)
+func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+	r, err := url.Parse(repo)
 	if err != nil {
 		return authn.AuthConfig{}, err
 	}
-	auths := gjson.GetBytes(dockerConfigBytes, "auths").Map()
+
+	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
+	if err != nil {
+		return authn.AuthConfig{}, err
+	}
+	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}
 
 	// The config should have at least one .auths.* entry
-	for _, a := range auths {
-		err := json.Unmarshal([]byte(a.Raw), &authConfig)
+	for repoNameRaw, repoAuth := range auths {
+		repoName, err := url.Parse(repoNameRaw)
 		if err != nil {
-			return authn.AuthConfig{}, err
+			continue
 		}
-		return authConfig, nil
+		if repoName.Host == r.Host {
+			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
+			if err != nil {
+				return authn.AuthConfig{}, err
+			}
+			return authConfig, nil
+		}
 	}
 
 	return authn.AuthConfig{}, fmt.Errorf("no auth data")
@@ -160,6 +172,7 @@ func GetHTTPTransport(ca string) (transport http.RoundTripper) {
 
 type registryOptions struct {
 	ca          string
+	dockerCfg   string
 	useHTTP     bool
 	withoutAuth bool
 }
@@ -180,9 +193,16 @@ func WithInsecureSchema(insecure bool) Option {
 	}
 }
 
-// WithDisabledAuth dont use authConfig
+// WithDisabledAuth don't use authConfig
 func WithDisabledAuth() Option {
 	return func(options *registryOptions) {
 		options.withoutAuth = true
+	}
+}
+
+// WithAuth use docker config base64 as authConfig
+func WithAuth(dockerCfg string) Option {
+	return func(options *registryOptions) {
+		options.dockerCfg = dockerCfg
 	}
 }
