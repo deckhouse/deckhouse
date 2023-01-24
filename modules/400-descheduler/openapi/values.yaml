@@ -12,6 +12,3 @@ properties:
         items:
           additionalProperties:
             type: object
-      legacyDescheduler:
-        additionalProperties:
-          type: object

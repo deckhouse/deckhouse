@@ -48,6 +48,6 @@ properties:
 	err := validator.SchemaStorage.AddModuleValuesSchemas("nodeManager", []byte{}, []byte(schema))
 	require.NoError(t, err, "should load schema")
 	// Validate empty string
-	err = ValidateJSONValues(validator, "nodeManager", []byte(values))
+	err = ValidateJSONValues(validator, "nodeManager", []byte(values), false)
 	require.NoError(t, err, message)
 }

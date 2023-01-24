@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, createFirstDeschedulerCR)
 
 func createFirstDeschedulerCR(input *go_hook.HookInput) error {
-	config, ok := input.ConfigValues.GetOk("descheduler")
+	config, ok := input.ConfigValues.GetOk(".")
 	if !ok || len(config.Map()) == 0 {
 		return nil
 	}
@@ -105,14 +105,14 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 
 	if value := config.Get("nodeSelector"); value.Exists() {
-		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deploymentTemplate.nodeSelector", value)
+		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deploymentTemplate.nodeSelector", value.Value())
 		if err != nil {
 			return err
 		}
 	}
 
 	if value := config.Get("tolerations"); value.Exists() {
-		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deploymentTemplate.tolerations", value)
+		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deploymentTemplate.tolerations", value.Value())
 		if err != nil {
 			return err
 		}

@@ -42,9 +42,8 @@ var _ = FDescribe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func(
 		})
 		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ConfigValuesGet("descheduler").Map()).To(HaveLen(0))
 
-			f.KubernetesGlobalResource("Descheduler", "default").Exists()
+			Expect(f.KubernetesGlobalResource("Descheduler", "default").Exists()).To(BeTrue())
 		})
 	})
 
