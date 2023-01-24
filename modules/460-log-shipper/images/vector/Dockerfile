@@ -5,7 +5,7 @@ FROM $BASE_RUST as build
 
 RUN apt-get update \
     && apt-get install -yq \
-      ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
+      ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev protobuf-compiler
 
 WORKDIR /vector
 RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.git \
