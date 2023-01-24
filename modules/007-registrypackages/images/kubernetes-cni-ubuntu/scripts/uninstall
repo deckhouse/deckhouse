@@ -16,3 +16,4 @@
 set -Eeo pipefail
 apt-mark unhold kubernetes-cni
 dpkg -r kubernetes-cni
+rm -f /opt/cni/bin/flannel
