@@ -159,12 +159,13 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secretsDesired := make(map[string]*Secret)
 	for _, s := range secrets {
 		secret := s.(*Secret)
-		// remove annotations because desired secret doesn't have them
-		// annotations map have to be nil that secrets are equal
-		secret.Annotations = nil
+
 		// Secrets that are not in namespace `default` are existing Secrets.
 		if secret.Namespace != v1.NamespaceDefault {
 			path := SecretPath(secret)
+			// remove annotations because desired secret doesn't have them
+			// annotations map have to be nil that secrets are equal
+			secret.Annotations = nil
 			secretsExists[path] = secret
 			continue
 		}
