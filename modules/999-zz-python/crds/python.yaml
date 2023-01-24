@@ -46,7 +46,7 @@ spec:
                     type: string
     - name: v1beta1
       served: true
-      storage: true
+      storage: false
       schema:
         openAPIV3Schema:
           type: object
