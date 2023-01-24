@@ -105,7 +105,27 @@ To configure Prometheus to use LINSTOR for storing data:
 
 - Wait for the restart of Prometheus Pods.
 
-## linstor-node cannot start because the drbd module cannot be loaded
+## How to evict resources from a node?
+
+To do this, just run the command:
+
+```bash
+linstor node evacuate <node_name>
+```
+
+It will move resources to other free nodes and replicate them.
+
+## Troubleshooting
+
+Problems can arise at different levels of component operation.
+This simple cheat sheet will help you quickly navigate through the diagnosis of various problems with LINSTOR-created volumes:
+
+![LINSTOR cheatsheet](../../images/041-linstor/linstor-debug-cheatsheet.svg)
+<!--- Source: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
+
+Some typical problems are described here:
+
+### linstor-node cannot start because the drbd module cannot be loaded
 
 Check the status of the `linstor-node` Pods:
 
@@ -129,19 +149,9 @@ The most likely reasons why it cannot load the kernel module:
   Since the DRBD module we provide is compiled dynamically for your kernel (similar to dkms), it has no digital sign.
   We do not currently support running the DRBD module with a Secure Boot configuration.
 
-## How to evict resources from a node?
+### Pod cannot start with the `FailedMount` error
 
-To do this, just run the command:
-
-```bash
-linstor node evacuate <node_name>
-```
-
-It will move resources to other free nodes and replicate them.
-
-## Pod cannot start with the `FailedMount` error
-
-### Pod is stuck in the `ContainerCreating` phase
+#### **Pod is stuck in the `ContainerCreating` phase**
 
 If the Pod is stuck in the `ContainerCreating` phase, and you see the following errors in `kubectl describe pod`:
 
@@ -160,7 +170,7 @@ linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 
 The `InUse` flag will indicate which node the device is being used on.
 
-### Pod cannot start due to missing CSI driver
+#### **Pod cannot start due to missing CSI driver**
 
 An example error in `kubectl describe pod`:
 
@@ -188,7 +198,7 @@ If you see any nodes in the `EVICTED` state, then they have been unavailable for
 linstor node rst <name>
 ```
 
-### Errors like `Input/output error`
+#### **Errors like `Input/output error`**
 
 Such errors usually occur at the stage of creating the file system (mkfs).
 
