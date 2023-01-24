@@ -7,7 +7,7 @@ properties:
   labelsRegex:
     type: array
     description: |
-      Labels regexes to reduce identity cardinality.
+      Labels regexes to reduce [identity cardinality](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
 
       Each label should be set in the format of YAML quoted string with special symbols escaping.
     x-doc-examples:

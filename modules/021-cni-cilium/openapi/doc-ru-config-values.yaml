@@ -4,7 +4,7 @@ properties:
     description: Включает отладочный уровень логирования для компонентов Cilium.
   labelsRegex:
     description: |
-      Regex-ы лейблов для уменьшения количества создаваемых identity.
+      Regex-ы лейблов для уменьшения [количества создаваемых identity](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
 
       Каждый лейбл должен задаваться в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
