@@ -56,8 +56,10 @@ def walk_crds(crds_root):
                 # Skip dedicated doc yamls, common for Deckhouse internal modules
                 continue
             crd_path = os.path.join(dirpath, filename)
-            for y in yaml.safe_load_all(open(crd_path, "r", encoding="utf-8")):
-                yield y
+            for manifest in yaml.safe_load_all(open(crd_path, "r", encoding="utf-8")):
+                if manifest is None:
+                    continue
+                yield manifest
 
 
 def find_crds_root(hookpath):
