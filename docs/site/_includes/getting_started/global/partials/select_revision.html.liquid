@@ -1,7 +1,8 @@
 <script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-{% if page.platform_code == "bm-private" %}
+{% if page.platform_code == "bm-private" -%}
   <script type="text/javascript" src='{{ assets["getting-started-private.js"].digest_path }}'></script>
+  {%- include getting_started/global/partials/NOTICES.liquid %}
 {% endif %}
 <script type="text/javascript" src='{{ assets["getting-started-install.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>

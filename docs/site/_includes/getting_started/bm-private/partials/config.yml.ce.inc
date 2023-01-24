@@ -1,13 +1,9 @@
-# [<en>] General cluster parameters (ClusterConfiguration).
-# [<en>] Version of the Deckhouse API.
-# [<ru>] Секция с общими параметрами кластера (ClusterConfiguration).
-# [<ru>] Используемая версия API Deckhouse Platform.
+# [<en>] General cluster parameters.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] Type of the configuration section.
-# [<ru>] Тип секции конфигурации.
 kind: ClusterConfiguration
-# [<en>] Type of the infrastructure: bare metal (Static) or Cloud (Cloud).
-# [<ru>] Тип инфраструктуры: bare metal (Static) или облако (Cloud).
 clusterType: Static
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
@@ -15,30 +11,22 @@ podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-# [<en>] Kubernetes version to install.
-# [<ru>] Устанавливаемая версия Kubernetes.
 kubernetesVersion: "1.23"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
-packagesProxy:
-  uri: https://example.com
-  username: <PROXY-USERNAME>
-  password: <PROXY-PASSWORD>
+# [<en>] Proxy server settings.
+# [<ru>] Настройки proxy-сервера.
+proxy:
+  httpProxy: <HTTP_PROXY_ADDRESS>
+  httpsProxy: <HTTPS_PROXY_ADDRESS>
+  noProxy: <NO_PROXY_LIST>
 ---
-# [<en>] Section for bootstrapping the Deckhouse cluster (InitConfiguration).
-# [<en>] Version of the Deckhouse API.
-# [<ru>] Секция первичной инициализации кластера Deckhouse (InitConfiguration).
-# [<ru>] Используемая версия API Deckhouse.
+# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] Type of the configuration section.
-# [<ru>] Тип секции конфигурации.
 kind: InitConfiguration
-# [<en>] Deckhouse parameters.
-# [<ru>] Секция с параметрами Deckhouse.
 deckhouse:
-  # [<en>] The release channel in use.
-  # [<ru>] Используемый канал обновлений.
   releaseChannel: Stable
   configOverrides:
     global:
@@ -48,22 +36,18 @@ deckhouse:
         # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
         # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
         publicDomainTemplate: "%s.example.com"
-        # [<en>] Proxy server settings for accessing Deckhouse modules to the Internet.
-        # [<ru>] Настройки proxy-сервера для доступа в Интернет модулей Deckhouse.
-        proxy:
-          httpProxy: <HTTP_PROXY_ADDRESS>
-          httpsProxy: <HTTPS_PROXY_ADDRESS>
-          noProxy: <NO_PROXY_LIST>
     # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
     cniFlannelEnabled: true
     # [<en>] Cni-flannel module settings.
     # [<ru>] Настройки модуля cni-flannel.
+    # [<en>] You might consider changing this.
+    # [<ru>] Возможно, захотите изменить.
     cniFlannel:
       # [<en>] Flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks).
       # [<ru>] Режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей).
-      # [<en>] You might consider changing this.
-      # [<ru>] Возможно, захотите изменить.
       podNetworkMode: VXLAN
   # [<en>] Address of the Docker registry where the Deckhouse images are located.
   # [<ru>] Адрес Docker registry с образами Deckhouse.
@@ -79,12 +63,10 @@ deckhouse:
   registryCA: <REGISTRY_CA>
 ---
 # [<en>] Section with the parameters of the bare metal cluster (StaticClusterConfiguration).
-# [<en>] Version of the Deckhouse API.
+# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
 # [<ru>] Секция с параметрами bare metal кластера (StaticClusterConfiguration).
-# [<ru>] Используемая версия API Deckhouse.
+# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
-# [<en>] Type of the configuration section.
-# [<ru>] Тип секции конфигурации.
 kind: StaticClusterConfiguration
 # [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)

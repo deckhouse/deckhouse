@@ -1,3 +1,7 @@
+# [<en>] RBAC and authorization settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] Настройки RBAC и авторизации.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -15,10 +19,10 @@ spec:
   # [<en>] Allow user to do kubectl port-forward.
   portForwarding: true
 ---
-# [<en>] Section containing the parameters of the static user.
-# [<ru>] Секция, описывающая параметры статического пользователя.
-# [<en>] Version of the Deckhouse API.
-# [<ru>] Используемая версия API Deckhouse.
+# [<en>] Parameters of the static user.
+# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#user
+# [<ru>] Данные статического пользователя.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:

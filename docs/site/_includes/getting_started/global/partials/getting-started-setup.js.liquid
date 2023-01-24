@@ -12,16 +12,9 @@ function updateNode(selector, storageItemName) {
 function restoreData() {
   {%- if page.platform_code == 'bm-private' %}
   // proxy settings
-  updateNode('#modulesProxyEnabled', 'dhctl-modules-proxy-enabled');
-  updateNode('#modulesProxyHttpsUri', 'dhctl-modules-proxy-https-uri');
-  updateNode('#modulesProxyHttpUri', 'dhctl-modules-proxy-http-uri');
-  updateNode('#modulesNoProxyAddressList', 'dhctl-modules-noproxy-address-list');
-
-  // packagesProxy settings
-  updateNode('#packagesProxyEnabled', 'dhctl-packages-proxy-enabled');
-  updateNode('#packagesProxyPassword', 'dhctl-packages-proxy-password');
-  updateNode('#packagesProxyUsername', 'dhctl-packages-proxy-username');
-  updateNode('#packagesProxyURI', 'dhctl-packages-proxy-uri');
+  updateNode('#proxyHttpURI', 'dhctl-proxy-http-uri');
+  updateNode('#proxyHttpsURI', 'dhctl-proxy-https-uri');
+  updateNode('#noProxyAddressList', 'dhctl-noproxy-address-list');
 
   // registry settings
   updateNode('#registryCA', 'dhctl-registry-ca');
@@ -54,22 +47,21 @@ $(document).ready(function () {
       sessionStorage.setItem('dhctl-domain', $(this).val());
     }
   });
-  // $('#resourceprefix').change(function () {
-  //   sessionStorage.setItem('dhctl-prefix', $(this).val());
-  // });
   $('#sshkey').change(function () {
     sessionStorage.setItem('dhctl-sshkey', $(this).val());
   });
   {%- if page.platform_code == 'bm-private' %}
-  $('#packagesProxyURI').change(function () {
-    sessionStorage.setItem('dhctl-packages-proxy-uri', $(this).val());
+  // proxy
+  $('#proxyHttpURI').change(function () {
+    sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
   });
-  $('#packagesProxyUsername').change(function () {
-    sessionStorage.setItem('dhctl-packages-proxy-username', $(this).val());
+  $('#proxyHttpsURI').change(function () {
+    sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
   });
-  $('#packagesProxyPassword').change(function () {
-    sessionStorage.setItem('dhctl-packages-proxy-password', $(this).val());
+  $('#noProxyAddressList').change(function () {
+    sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
   });
+  // registry
   $('#registryImagesRepo').change(function () {
     sessionStorage.setItem('dhctl-registry-images-repo', $(this).val());
   });
@@ -83,35 +75,6 @@ $(document).ready(function () {
     } else {
       sessionStorage.setItem('dhctl-registry-scheme-http', "false");
       $('.registryca-block').css("display", "block");
-    }
-  });
-  // proxy
-  $('#modulesProxyEnabled').change(function () {
-    if (this.checked) {
-      sessionStorage.setItem('dhctl-modules-proxy-enabled', "true");
-      $('.modulesProxy-block').css("display", "block");
-    } else {
-      sessionStorage.setItem('dhctl-modules-proxy-enabled', "false");
-      $('.modulesProxy-block').css("display", "none");
-    }
-  });
-  $('#modulesProxyHttpsUri').change(function () {
-    sessionStorage.setItem('dhctl-modules-proxy-https-uri', $(this).val());
-  });
-  $('#modulesProxyHttpUri').change(function () {
-    sessionStorage.setItem('dhctl-modules-proxy-http-uri', $(this).val());
-  });
-  $('#modulesNoProxyAddressList').change(function () {
-    sessionStorage.setItem('dhctl-modules-noproxy-address-list', $(this).val());
-  });
-  // packagesProxy
-  $('#packagesProxyEnabled').change(function () {
-    if (this.checked) {
-      sessionStorage.setItem('dhctl-packages-proxy-enabled', "true");
-      $('.packagesProxy-block').css("display", "block");
-    } else {
-      sessionStorage.setItem('dhctl-packages-proxy-enabled', "false");
-      $('.packagesProxy-block').css("display", "none");
     }
   });
   $('#registryCA').change(function () {

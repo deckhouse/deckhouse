@@ -1,26 +1,20 @@
 $(document).ready(function () {
-  let modulesProxyEnabled = sessionStorage.getItem('dhctl-modules-proxy-enabled')
-  let modulesProxyHttpsUri = sessionStorage.getItem('dhctl-modules-proxy-https-uri')
-  let modulesProxyHttpUri = sessionStorage.getItem('dhctl-modules-proxy-http-uri')
-  let modulesNoProxyAddressList = sessionStorage.getItem('dhctl-modules-noproxy-address-list')
-  let packagesProxyEnabled = sessionStorage.getItem('dhctl-packages-proxy-enabled')
-  let packagesProxyUsername = sessionStorage.getItem('dhctl-packages-proxy-username')
-  let packagesProxyPassword = sessionStorage.getItem('dhctl-packages-proxy-password')
-  let packagesProxyURI = sessionStorage.getItem('dhctl-packages-proxy-uri')
+  let proxyHttpsURI = sessionStorage.getItem('dhctl-proxy-https-uri')
+  let proxyHttpURI = sessionStorage.getItem('dhctl-proxy-http-uri')
+  let noProxyAddressList = sessionStorage.getItem('dhctl-noproxy-address-list')
   let registryDockerCfg = sessionStorage.getItem('dhctl-registry-docker-cfg')
   let registryImagesRepo = sessionStorage.getItem('dhctl-registry-images-repo')
   let registrySchemeHTTP = sessionStorage.getItem('dhctl-registry-scheme-http')
   let registryCA = sessionStorage.getItem('dhctl-registry-ca')
 
-  if (modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0) {
-    modulesNoProxyAddressList = modulesNoProxyAddressList.replaceAll(' ', '')
+  if (noProxyAddressList && noProxyAddressList.length > 0) {
+    noProxyAddressList = noProxyAddressList.replaceAll(' ', '')
   }
 
-  if (modulesProxyEnabled && modulesProxyEnabled === "true" &&
-    ((modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0) || (modulesProxyHttpUri && modulesProxyHttpUri.length > 0))) {
-    if (modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0) {
-      update_parameter('dhctl-modules-proxy-https-uri', 'httpsProxy', '<HTTPS_PROXY_ADDRESS>', null, '[config-yml]');
-      if (!(modulesProxyHttpUri && modulesProxyHttpUri.length > 0)) {
+  if ( (proxyHttpsURI && proxyHttpsURI.length > 0) || (proxyHttpURI && proxyHttpURI.length > 0) ) {
+    if (proxyHttpsURI && proxyHttpsURI.length > 0) {
+      update_parameter('dhctl-proxy-https-uri', 'httpsProxy', '<HTTPS_PROXY_ADDRESS>', null, '[config-yml]');
+      if (!(proxyHttpURI && proxyHttpURI.length > 0)) {
         // Delete httpProxy section
         $('code span.na').filter(function () {
           return (this.innerText === "httpProxy");
@@ -33,9 +27,9 @@ $(document).ready(function () {
       }
     }
 
-    if (modulesProxyHttpUri && modulesProxyHttpUri.length > 0) {
-      update_parameter('dhctl-modules-proxy-http-uri', 'httpProxy', '<HTTP_PROXY_ADDRESS>', null, '[config-yml]');
-      if (!(modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0)) {
+    if (proxyHttpURI && proxyHttpURI.length > 0) {
+      update_parameter('dhctl-proxy-http-uri', 'httpProxy', '<HTTP_PROXY_ADDRESS>', null, '[config-yml]');
+      if (!(proxyHttpsURI && proxyHttpsURI.length > 0)) {
         // Delete httpsProxy section
         $('code span.na').filter(function () {
           return (this.innerText === "httpsProxy");
@@ -48,9 +42,9 @@ $(document).ready(function () {
       }
     }
 
-    if (modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0) {
-      modulesNoProxyAddressList = ('["' + modulesNoProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
-      update_parameter(modulesNoProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
+    if (noProxyAddressList && noProxyAddressList.length > 0) {
+      noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
+      update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
     }
   } else {
     // Delete proxy section
@@ -58,13 +52,13 @@ $(document).ready(function () {
       return (this.innerText === "proxy");
     }).each(function (index) {
       parent = $(this).parent();
-      delete_elements($(this).prev(), 12);
+      delete_elements($(this).prev(), 11);
       parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
     });
     updateTextInSnippet('[config-yml]', /\n\s+#[^#]+\n\s+proxy:\n\s+httpProxy: <HTTP_PROXY_ADDRESS>\n\s+httpsProxy: <HTTPS_PROXY_ADDRESS>\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
   }
 
-  if (!(modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0)) {
+  if (!(noProxyAddressList && noProxyAddressList.length > 0)) {
     // Delete noProxy section
     $('code span.na').filter(function () {
       return (this.innerText === "noProxy");
@@ -74,33 +68,6 @@ $(document).ready(function () {
       parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
     });
     updateTextInSnippet('[config-yml]', /\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
-  }
-
-  if (packagesProxyEnabled && packagesProxyEnabled === "true" &&
-    packagesProxyUsername && packagesProxyUsername.length > 0 &&
-    packagesProxyPassword && packagesProxyPassword.length > 0 &&
-    packagesProxyURI && packagesProxyURI.length > 0) {
-    update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
-    update_parameter('dhctl-packages-proxy-username', 'username', '<PROXY-USERNAME>', null, '[config-yml]');
-    update_parameter('dhctl-packages-proxy-password', 'password', '<PROXY-PASSWORD>', null, '[config-yml]');
-  } else if (packagesProxyEnabled && packagesProxyEnabled === "true" && packagesProxyURI && packagesProxyURI.length > 0) {
-    // Have proxy without auth.
-    update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
-    $('code span.na').filter(function () {
-      return (this.innerText === "packagesProxy");
-    }).each(function (index) {
-      delete_elements($(this).next().next().next().next().next(), 5);
-    });
-    updateTextInSnippet('[config-yml]', /\s+username: <PROXY-USERNAME>\n\s+password: <PROXY-PASSWORD>\n---/, "\n---");
-  } else {
-    // Have no info to fill packagesProxy array, delete it from config
-    console.log("Have no info to fill packagesProxy array...");
-    $('code span.na').filter(function () {
-      return (this.innerText === "packagesProxy");
-    }).each(function (index) {
-      delete_elements($(this), 10);
-    });
-    updateTextInSnippet('[config-yml]', /packagesProxy.+<PROXY-PASSWORD>\n---/s, "---");
   }
 
   if (registryImagesRepo && registryImagesRepo.length > 0) {

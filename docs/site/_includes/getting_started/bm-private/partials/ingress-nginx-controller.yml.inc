@@ -1,7 +1,7 @@
-# [<en>] Section containing the parameters of nginx ingress controller.
-# [<en>] Version of the Deckhouse API.
-# [<ru>] Секция, описывающая параметры nginx ingress controller.
-# [<ru>] Используемая версия API Deckhouse.
+# [<en>] Section containing the parameters of Nginx Ingress controller.
+# [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры Nginx Ingress controller.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:

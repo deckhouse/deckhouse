@@ -41,112 +41,48 @@
 {%- endunless %}
 {%- if page.platform_code == 'bm-private' %}
 
-<!-- packages proxy block -->
-<div class="form__row">
-  <div class="form__row--wrap">
-    <label for="packagesProxyEnabled" class="label" title="Enable it if a proxy server is used to download deb or rpm packages">
-      A proxy server is used to download deb or rpm packages
-    </label>
-    <input
-      type="checkbox" id="packagesProxyEnabled"
-      name="packagesProxyEnabled" />
-  </div>
-  <span class="info">
-     Enable it if you cannot directly retrieve deb or rpm packages on your network or if a proxy server is used.
-  </span>
-</div>
-<div class="packagesProxy-block" style="display: none;">
-    <div class="form__row">
-      <label class="label" title="Specify the address of the proxy server for downloading deb or rpm packages">
-        The address of the proxy server for downloading deb or rpm packages (e.g., <code>https://proxy.company.my</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyURI"
-        name="packagesProxyURI" placeholder=""
-        autocomplete="off" />
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Specify the username for authenticating with the proxy server">
-        The username for authenticating with the proxy server
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyUsername"
-        name="packagesProxyUsername" placeholder=""
-        autocomplete="off" />
-      <span class="info">
-         Leave it blank if the proxy server does not use authentication.
-      </span>
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Specify the password for authenticating with the proxy server">
-        The password for authenticating with the proxy server
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyPassword"
-        name="packagesProxyPassword" placeholder=""
-        autocomplete="off" />
-      <span class="info">
-         Leave it blank if the proxy server does not use authentication.
-      </span>
-    </div>
-</div>
-
 <!-- proxy block -->
-<div class="form__row">
-  <div class="form__row--wrap">
-    <label for="modulesProxyEnabled" class="label">
-      A proxy server is used to access the Internet of Deckhouse components
+  <div class="form__row">
+    <label class="label" title="The address of the HTTP proxy server">
+      The address of the HTTP proxy server (examples: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
     </label>
     <input
-      type="checkbox" id="modulesProxyEnabled"
-      name="modulesProxyEnabled" />
+      class="textfield"
+      type="text" id="proxyHttpURI"
+      name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info">
+         Leave it blank if you don't use the HTTP proxy server.
+      </span>
   </div>
-  <span class="info">
-     Some Deckhouse components need Internet access (<a data-proofer-ignore href="/documentation/v1/modules/600-flant-integration/#what-data-does-deckhouse-send">more info</a> about what data does Deckhouse send). Internet access may also be required if you configure modules to send data outside the private environment (metrics, logs, etc.). Enable it if Deckhouse modules need a proxy server in your network to access the Internet.
-  </span>
-</div>
-<div class="modulesProxy-block" style="display: none;">
-    <div class="form__row">
-      <label class="label" title="Specify the HTTP proxy server address for accessign Internet">
-        The address of the HTTP proxy server for accessing Internet (e.g. — <code>http://proxy.company.my:8080</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesProxyHttpUri"
-        name="modulesProxyHttpUri" placeholder=""
-        autocomplete="off" />
-    </div>
 
-    <div class="form__row">
-      <label class="label" title="Specify the HTTPS proxy server address for accessign Internet">
-        The address of the HTTPS proxy server for accessing Internet (e.g. — <code>https://proxy.company.my:8443</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesProxyHttpsUri"
-        name="modulesProxyHttpsUri" placeholder=""
-        autocomplete="off" />
-    </div>
+  <div class="form__row">
+    <label class="label" title="The address of the HTTPS proxy server">
+      The address of the HTTPS proxy server (examples: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpsURI"
+      name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info">
+        Leave it blank if you don't use the HTTP proxy server.
+      </span>
+  </div>
 
-    <div class="form__row">
-      <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
+  <div class="form__row">
+    <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
         A comma-separated list of IP addresses and domain names for which a proxy server is not used. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesNoProxyAddressList"
-        name="modulesNoProxyAddressList" placeholder=""
-        autocomplete="off" />
+    </label>
+    <input
+      class="textfield"
+      type="text" id="noProxyAddressList"
+      name="noProxyAddressList" placeholder=""
+      autocomplete="off"/>
       <span class="info">
          Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". Leave it blank if there are no such exceptions.
       </span>
-    </div>
-</div>
+  </div>
 
 <!-- registry block -->
 <div markdown="1">

@@ -41,114 +41,50 @@
 {%- endunless %}
 {%- if page.platform_code == 'bm-private' %}
 
-<!-- packages proxy block -->
-<div class="form__row">
-  <div class="form__row--wrap">
-    <label for="packagesProxyEnabled" class="label">
-      Для скачивания deb или rpm-пакетов используется proxy-сервер
-    </label>
-    <input
-      type="checkbox" id="packagesProxyEnabled"
-      name="packagesProxyEnabled" />
-  </div>
-  <span class="info">
-     Отметьте, если в вашей сети <strong>нет</strong> прямого доступа для скачивания deb или rpm-пакетов и используется proxy-сервер.
-  </span>
-</div>
-<div class="packagesProxy-block" style="display: none;">
-    <div class="form__row">
-      <label class="label" title="Укажите адрес proxy-сервера используемого для скачивания deb или rpm-пакетов">
-        Адрес proxy-сервера, используемого для скачивания deb или rpm-пакетов (например — <code>https://proxy.company.my</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyURI"
-        name="packagesProxyURI" placeholder=""
-        autocomplete="off" />
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Укажите имя для авторизации на proxy-сервере">
-        Имя для авторизации на proxy-сервере
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyUsername"
-        name="packagesProxyUsername" placeholder=""
-        autocomplete="off" />
-      <span class="info">
-         Оставьте пустым, если proxy-сервер не использует авторизацию.
-      </span>
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Укажите пароль для авторизации на proxy-сервере">
-        Пароль для авторизации на proxy-сервере
-      </label>
-      <input
-        class="textfield"
-        type="text" id="packagesProxyPassword"
-        name="packagesProxyPassword" placeholder=""
-        autocomplete="off" />
-      <span class="info">
-         Оставьте пустым, если proxy-сервер не использует авторизацию.
-      </span>
-    </div>
-</div>
-
 <!-- proxy block -->
-<div class="form__row">
-  <div class="form__row--wrap">
-    <label for="modulesProxyEnabled" class="label">
-      Для доступа в Интернет компонентов Deckhouse используется proxy-сервер
+  <div class="form__row">
+    <label class="label" title="Укажите адрес proxy-сервера для HTTP-трафика">
+      Адрес proxy-сервера для HTTP-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
     </label>
     <input
-      type="checkbox" id="modulesProxyEnabled"
-      name="modulesProxyEnabled" />
-  </div>
-  <span class="info">
-     Некоторым компонентам Deckhouse нужен доступ в Интернет (<a data-proofer-ignore href="/documentation/v1/modules/600-flant-integration/#какие-данные-отправляет-deckhouse">подробнее</a> о том, какие данные отправляет Deckhouse). Также доступ в Интернет может потребоваться, если вы настроите модули на отправку данных за пределы закрытого окружения (метрики мониторинга, логи и т.п.). Отметьте, если в вашей сети для доступа в Интернет модулям Deckhouse необходим proxy-сервер.
-  </span>
-</div>
-<div class="modulesProxy-block" style="display: none;">
-    <div class="form__row">
-      <label class="label" title="Укажите адрес HTTP proxy-сервера используемого для доступа в Интернет">
-        Адрес HTTP proxy-сервера, используемого для доступа в Интернет (например — <code>http://proxy.company.my:8080</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesProxyHttpUri"
-        name="modulesProxyHttpUri" placeholder=""
-        autocomplete="off" />
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Укажите адрес HTTPS proxy-сервера используемого для доступа в Интернет">
-        Адрес HTTPS proxy-сервера, используемого для доступа в Интернет (например — <code>https://proxy.company.my:8443</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesProxyHttpsUri"
-        name="modulesProxyHttpsUri" placeholder=""
-        autocomplete="off" />
-    </div>
-
-    <div class="form__row">
-      <label class="label" title="Список IP-адресов и доменных имен для которых проксирование не применяется">
-        Список IP-адресов и доменных имен для которых проксирование не применяется (через запятую). Для настройки wildcard-доменов используйте написание вида ".example.com". (например — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
-      </label>
-      <input
-        class="textfield"
-        type="text" id="modulesNoProxyAddressList"
-        name="modulesNoProxyAddressList" placeholder=""
-        autocomplete="off" />
-      <span class="info">
-         Укажите список IP-адресов, сетей и доменных имен, к которым есть доступ напрямую, без использования proxy-сервера. Для настройки wildcard-доменов используйте написание вида ".example.com". Оставьте пустым, если таких исключений нет.
+      class="textfield"
+      type="text" id="proxyHttpURI"
+      name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info">
+         Оставьте пустым, если proxy-сервер для HTTP-трафика не используется.
       </span>
-    </div>
-</div>
+  </div>
 
-<!-- registry block -->
+  <div class="form__row">
+    <label class="label" title="Укажите адрес proxy-сервера для HTTPS-трафика">
+      Адрес proxy-сервера для HTTPS-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpsURI"
+      name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info">
+        Оставьте пустым, если proxy-сервер для HTTPS-трафика не используется.
+      </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Список IP-адресов и доменных имен для которых проксирование не применяется">
+      Список IP-адресов и доменных имен для которых проксирование не применяется (через запятую).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="noProxyAddressList"
+      name="noProxyAddressList" placeholder=""
+      autocomplete="off"/>
+    <span class="info">
+         Укажите список IP-адресов, сетей и доменных имен, к которым есть доступ напрямую, без использования proxy-сервера. Для настройки wildcard-доменов используйте написание вида ".example.com" (пример: <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>). Оставьте пустым, если таких исключений нет.
+      </span>
+  </div>
+
+  <!-- registry block -->
 <div markdown="1">
 ### Параметры доступа к хранилищу образов контейнеров (или проксирующему registry)
 
