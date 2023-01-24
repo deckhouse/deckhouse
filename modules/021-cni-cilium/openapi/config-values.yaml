@@ -4,13 +4,16 @@ properties:
     type: boolean
     default: false
     description: Enabled debug logging for Cilium components.
-  cleanState:
-    type: boolean
-    default: false
+  labelsRegex:
+    type: array
     description: |
-      Clean all persistent state.
+      Labels regexes to reduce [identity cardinality](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
 
-      Must be reverted ASAP once all components are started with fresh state.
+      Each label should be set in the format of YAML quoted string with special symbols escaping.
+    x-doc-examples:
+      - ["k8s:!app\\.kubernetes\\.io", "k8s:io\\.cilium\\.k8s\\.policy"]
+    items:
+      type: string
   createNodeRoutes:
     type: boolean
     description: |
