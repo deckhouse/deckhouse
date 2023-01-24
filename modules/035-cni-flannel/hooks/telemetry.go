@@ -14,14 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package telemetry
+package hooks
 
 import (
-	"fmt"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
-// WrapName wraps metric name with a prefix which is automatically fetched by flant-pricing in
-// the ee/modules/600-flant-integration/templates/pricing/config.yaml
-func WrapName(n string) string {
-	return fmt.Sprintf("d8_telemetry_%s", n)
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnStartup: &go_hook.OrderedConfig{
+		Order: 20,
+	},
+}, setCNITelemetry)
+
+func setCNITelemetry(input *go_hook.HookInput) error {
+	input.MetricsCollector.Set(telemetry.WrapName("cni_plugin"), 1, map[string]string{"name": "flannel"})
+	return nil
 }

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,41 +124,33 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 	})
 
 	Context("Cluster has d8-cni-configuration secret and has deckhouse CM without cni module enabled", func() {
-		Context("With valid cni name", func() {
-			for cniName, module := range cniNameToModule {
-				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(cniConfig(cniName) + deckhouseCM))
-					f.RunHook()
-				})
+		entries := make([]table.TableEntry, 0, len(cniNameToModule))
+		for cniName, module := range cniNameToModule {
+			entries = append(entries, table.Entry(fmt.Sprintf("When %s CNI enabled", cniName), cniName, module))
+		}
+		table.DescribeTable("CNI specified", func(cniName, module string) {
+			// set valid CNI name
+			f.BindingContexts.Set(f.KubeStateSet(cniConfig(cniName) + deckhouseCM))
+			f.RunHook()
 
-				It("Enables cni module "+module, func() {
-					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet(module).Exists()).To(BeTrue())
-				})
+			// Enables cni module
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(module).Exists()).To(BeTrue())
 
-				It("Disables another cni modules", func() {
-					Expect(f).To(ExecuteSuccessfully())
-					for cniNameTOCompare, module := range cniNameToModule {
-						if cniNameTOCompare == cniName {
-							continue
-						}
-						Expect(f.ValuesGet(module).Exists()).To(BeFalse())
-					}
-				})
-
-				Context("Edit to invalid cni name", func() {
-					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSet(cniConfig(invalidCni)))
-						f.RunHook()
-					})
-
-					It("Does not change cni module", func() {
-						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.ValuesGet(module).Exists()).To(BeTrue())
-					})
-				})
+			// Disabled other CNI modules
+			for cniNameTOCompare, module := range cniNameToModule {
+				if cniNameTOCompare == cniName {
+					continue
+				}
+				Expect(f.ValuesGet(module).Exists()).To(BeFalse())
 			}
-		})
+
+			// edit to invalid CNI name
+			f.BindingContexts.Set(f.KubeStateSet(cniConfig(invalidCni)))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(module).Exists()).To(BeTrue())
+		}, entries...)
 
 		Context("With invalid cni name", func() {
 			BeforeEach(func() {
@@ -188,7 +181,5 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 		It("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
-
 	})
-
 })

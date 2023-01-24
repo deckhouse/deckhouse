@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package telemetry
+package hooks
 
 import (
-	"fmt"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// WrapName wraps metric name with a prefix which is automatically fetched by flant-pricing in
-// the ee/modules/600-flant-integration/templates/pricing/config.yaml
-func WrapName(n string) string {
-	return fmt.Sprintf("d8_telemetry_%s", n)
+func Test(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "")
 }
