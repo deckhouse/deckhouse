@@ -1,0 +1,9 @@
+istio:
+  fixes:
+    - summary: added kube-rbac-proxy CA certificate to d8-ingress-istio
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3317
+user-authz:
+  fixes:
+    - summary: Fix the Usage page in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3303
+
