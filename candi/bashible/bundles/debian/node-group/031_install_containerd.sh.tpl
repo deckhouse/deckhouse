@@ -103,8 +103,5 @@ containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sB
 fi
 
 # install crictl
-crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-if ! bb-rp-is-installed? "crictl" "${crictl_tag}" ; then
-  bb-rp-install "crictl:${crictl_tag}"
-fi
+bb-rp-install "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
 {{- end }}
