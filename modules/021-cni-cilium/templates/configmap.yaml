@@ -22,10 +22,13 @@ data:
   enable-ipv4: "true"
   enable-ipv6: "false"
 
-  clean-cilium-state: {{ .Values.cniCilium.cleanState | quote }}
   enable-bpf-tproxy: "true"
 
   bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
+
+  {{- if .Values.cniCilium.labelsRegex }}
+  labels: {{.Values.cniCilium.labelsRegex | join " " | quote }}
+  {{- end }}
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel: "vxlan"
