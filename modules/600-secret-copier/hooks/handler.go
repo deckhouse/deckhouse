@@ -244,6 +244,9 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 			Name:      secret.Name,
 			Namespace: secret.Namespace,
 			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/created-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
@@ -273,6 +276,9 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 			Name:      secret.Name,
 			Namespace: secret.Namespace,
 			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/updated-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
