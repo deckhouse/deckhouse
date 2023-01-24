@@ -39,7 +39,7 @@
     expr: |
       group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus-longterm"}[24h]) > 0)
       and
-      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus-longterm"}) / 60 / 60 / 24 < d8_prometheus_longterm_storage_retention_days{prometheus="longterm"})
+      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus-longterm"}) / 60 / 60 / 24 < d8_prometheus_storage_retention_days{prometheus="longterm"})
       and
       group by (service) (delta(prometheus_tsdb_retention_limit_bytes{service="prometheus-longterm"}[24h]) == 0)
     labels:
