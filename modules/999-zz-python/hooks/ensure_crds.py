@@ -19,19 +19,25 @@ import os
 import yaml
 from deckhouse_sdk import hook
 
+# we expect structure
+# modules/
+#   999-your-module-name/
+#       crds/
+#           crd1.yaml
+#           crd2.yaml
+#           subdir/
+#               crd3.yaml
+#       hooks/
+#           ensure_crds.py # this file
+
+
+config = """
+configVersion: v1
+onStartup: 5
+"""
+
 
 def main(ctx: hook.Context):
-    # we expect structure
-    # modules/
-    #   999-your-module-name/
-    #       crds/
-    #           crd1.yaml
-    #           crd2.yaml
-    #           subdir/
-    #               crd3.yaml
-    #       hooks/
-    #           ensure_crds.py # this file
-
     for crd in walk_crds(find_crds_root(__file__)):
         # TODO take conversions into account
         ctx.kubernetes.create_or_update(crd)
@@ -62,4 +68,4 @@ def find_crds_root(hookpath):
 
 
 if __name__ == "__main__":
-    hook.run(main)
+    hook.run(main, config=config)
