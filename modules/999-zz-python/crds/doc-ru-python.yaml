@@ -1,0 +1,13 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+          description: Интерпретатор Python.
+          properties:
+            spec:
+              description: Спецификация интерпретатора Python.
+              properties:
+                version:
+                  description: Версия интерпретатора Python.
+                modules:
+                  description: Список модулей Python, которые должны быть установлены.

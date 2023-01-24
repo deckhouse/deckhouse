@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: python.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: zz-python
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: pythons
+    singular: python
+    kind: Python
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Python Interpreter.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: Spec of Python Interpreter.
+              required:
+                - version
+              properties:
+                version:
+                  type: string
+                  description: Python version.
+                  enum:
+                    - "2.7"
+                    - "3.8"
+                    - "3.9"
+                    - "3.10"
+                    - "3.11"
+                modules:
+                  type: array
+                  description: A list of modules to install.
+                  items:
+                    type: string
