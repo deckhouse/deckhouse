@@ -15,10 +15,7 @@
 {{- if eq .cri "Containerd" }}
 
 # install toml-merge
-toml_merge_tag="{{ .images.registrypackages.tomlMerge01 }}"
-if ! bb-rp-is-installed? "toml-merge" "${toml_merge_tag}" ; then
-  bb-rp-install "toml-merge:${toml_merge_tag}"
-fi
+bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
