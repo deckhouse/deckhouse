@@ -645,7 +645,7 @@ spec:
 
 Create NodeGroupConfiguration for Nvidia drivers setup on NodeGroup `gpu`.
 
-#### Ubuntu
+### Ubuntu
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -680,7 +680,7 @@ spec:
   weight: 30
 ```
 
-#### Centos
+### Centos
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -798,6 +798,7 @@ Copy output data from the CUDA device to the host memory
 Test PASSED
 Done
 ```
+
 {% endraw %}
 
 ## How to deploy custom containerd configuration ?

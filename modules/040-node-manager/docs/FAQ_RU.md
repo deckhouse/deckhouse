@@ -646,9 +646,9 @@ spec:
   weight: 49
 ```
 
-Далее необходимо добавить NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`. 
+Далее необходимо добавить NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
 
-#### Ubuntu
+### Ubuntu
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -683,7 +683,7 @@ spec:
   weight: 30
 ```
 
-#### Centos
+### Centos
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
