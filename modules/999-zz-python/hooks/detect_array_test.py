@@ -20,8 +20,8 @@ from dotmap import DotMap
 
 module_name = "zzPython"
 
-# Remember! This is a test, not a hook. It is not executed by Deckhouse. So this file must be not
-# executable.
+# THIS FILE MUST NOT BE EXECUTABLE! Deckhouse runs all files with execute bit. Since tests are not
+# meant to be run, make sure to `chmod -x` them.
 
 
 def run_hook(initial_values: dict = None):

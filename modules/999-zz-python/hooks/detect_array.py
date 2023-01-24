@@ -31,14 +31,6 @@ def main(ctx: hook.Context):
     else:
         ctx.values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
 
-    # At runtime, module name is discovered automatically, so we can use ctx shortcuts.
-    # In tests, module name must be passed explicitly.
-    # ctx.internal.count += 1
-    # if ctx.config.array:
-    #     ctx.internal.statement = "THE ARRAY IS HERE"
-    # else:
-    #     ctx.internal.statement = "NO ARRAY IN CONFIG"
-
 
 if __name__ == "__main__":
     hook.run(main, config=config)
