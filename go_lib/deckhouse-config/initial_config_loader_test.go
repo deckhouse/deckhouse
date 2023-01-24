@@ -23,6 +23,7 @@ import (
 
 	kcm "github.com/flant/addon-operator/pkg/kube_config_manager"
 	"github.com/flant/kube-client/client"
+	"github.com/flant/kube-client/fake"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
@@ -46,7 +47,10 @@ func TestInitialConfigLoaderWithConfigMapDeckhouse(t *testing.T) {
 	})
 
 	// KubeClient
-	kubeClient := client.NewFake(nil)
+	mcGVR := d8cfg_v1alpha1.GroupVersionResource()
+	fakeCluster := fake.NewFakeCluster(fake.ClusterVersionV121)
+	fakeCluster.RegisterCRD(mcGVR.Group, mcGVR.Version, "ModuleConfig", false)
+	kubeClient := fakeCluster.Client
 	loader := NewInitialConfigLoader(kubeClient)
 
 	t.Run("No configMaps", func(t *testing.T) {

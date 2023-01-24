@@ -153,27 +153,24 @@ func (l *InitialConfigLoader) ModuleConfigListToInitialConfig(allConfigs []*d8cf
 
 		valuesKey := utils.ModuleNameToValuesKey(cfg.GetName())
 
+		// Run registered conversions if spec.settings are not empty and
+		// put module section to the ConfigMap data.
 		if len(cfg.Spec.Settings) > 0 && cfg.Spec.Version > 0 {
-			// Run registered conversions if version is not the latest.
-			sectionValues := cfg.Spec.Settings
 			chain := conversion.Registry().Chain(cfg.GetName())
-			if chain != nil && chain.LatestVersion() != cfg.Spec.Version {
-				_, newValues, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
-				if err != nil {
+
+			_, latestSettings, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
+			if err != nil {
+				if chain.LatestVersion() != cfg.Spec.Version {
 					return nil, fmt.Errorf("convert settings in ModuleConfig/%s from version %d to latest version %d: %v", cfg.GetName(), cfg.Spec.Version, chain.LatestVersion(), err)
 				}
-				sectionValues = newValues
+				return nil, fmt.Errorf("settings in ModuleConfig/%s with latest version %d: %v", cfg.GetName(), cfg.Spec.Version, err)
 			}
 
-			// Put module section to ConfigMap if ModuleConfig object has at least one field in values.
-			cfgValues := cfg.Spec.Settings
-			if len(cfgValues) > 0 {
-				sectionBytes, err := yaml.Marshal(sectionValues)
-				if err != nil {
-					return nil, err
-				}
-				data[valuesKey] = string(sectionBytes)
+			sectionBytes, err := yaml.Marshal(latestSettings)
+			if err != nil {
+				return nil, err
 			}
+			data[valuesKey] = string(sectionBytes)
 		}
 
 		// Prevent useless 'globalEnabled' key.

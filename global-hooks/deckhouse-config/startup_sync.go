@@ -152,10 +152,8 @@ func createInitialModuleConfigs(input *go_hook.HookInput, cmData map[string]stri
 			continue
 		}
 		// Update spec.settings to converted settings.
-		if res.IsConverted {
-			cfg.Spec.Settings = res.Settings
-			cfg.Spec.Version = res.Version
-		}
+		cfg.Spec.Settings = res.Settings
+		cfg.Spec.Version = res.Version
 		properCfgs = append(properCfgs, cfg)
 	}
 
@@ -218,14 +216,11 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 			input.LogEntry.Errorf("Invalid ModuleConfig/%s will be ignored due to validation error: %v", cfg.GetName(), res.Error)
 			continue
 		}
-		// Update spec.settings to converted settings.
-		if res.IsConverted {
-			cfg.Spec.Settings = res.Settings
-			cfg.Spec.Version = res.Version
-		}
+		cfg.Spec.Settings = res.Settings
+		cfg.Spec.Version = res.Version
+
 		// Note: this message appears only on startup.
-		// TODO(future) switch to Debug after 1.42 release.
-		input.LogEntry.Infof("ModuleConfig/%s is valid", cfg.GetName())
+		input.LogEntry.Debugf("ModuleConfig/%s is valid", cfg.GetName())
 		properCfgs = append(properCfgs, cfg)
 	}
 
