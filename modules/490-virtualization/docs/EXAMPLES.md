@@ -2,17 +2,17 @@
 title: "The virtualization module: configuration examples"
 ---
 
-## Get a list of available images
+## Getting a list of available images
 
 Deckhouse comes with several base images that you can use to create virtual machines. To get a list of them, run:
 
-```bash
+```shell
 kubectl get cvmi
 ```
 
-output example:
+Example of the output:
 
-```bash
+```console
 NAME           AGE
 alpine-3.16    30d
 centos-7       30d
@@ -27,7 +27,7 @@ ubuntu-20.04   30d
 ubuntu-22.04   30d
 ```
 
-## Create a virtual machine
+## Creating a virtual machine
 
 The minimal resource for creating a virtual machine looks like this:
 
@@ -53,8 +53,10 @@ spec:
     autoDelete: true
 ```
 
-In bootDisk, you can also specify the name of an existing virtual machine disk. In this case, it will be connected to it directly without performing a clone operation.  
-This parameter also defines the name of the disk to be created, if it is not specified, the default template is `<vm_name>-boot`
+In the [bootDisk](cr.html#virtualmachine-v1alpha1-spec-bootdisk) parameter, you can also specify the name of an existing virtual machine disk. In this case, it will be connected to it directly without performing a clone operation.
+This parameter also defines the name of the disk to be created. If it is not specified, the default template is `<vm_name>-boot`.
+
+An example:
 
 ```yaml
 bootDisk:
@@ -63,14 +65,16 @@ bootDisk:
   autoDelete: false
 ```
 
-The `autoDelete` option allows you to specify whether the disk should be deleted after deleting the virtual machine.
+The [autoDelete](cr.html#virtualmachine-v1alpha1-spec-bootdisk-autodelete) parameter allows you to specify whether the disk should be deleted after deleting the virtual machine.
 
 ## Working with IP addresses
 
 Each virtual machine is assigned a separate IP address, which it uses throughout its life.  
-For this, the IPAM (IP Address Management) mechanism is used, which represents two resources: `VirtualMachineIPAddressClaim` and `VirtualMachineIPAddressLease`
+For this, the IPAM (IP Address Management) mechanism is used, which represents two resources: [VirtualMachineIPAddressClaim](cr.html#virtualmachineipaddressclaim) and [VirtualMachineIPAddressLease](cr.html#virtualmachineipaddresslease).
 
-While `VirtualMachineIPAddressLease` is a clustered resource and reflects the fact that the address for the virtual machine has been issued. The `VirtualMachineIPAddressClaim` is a user resource and is used to request such an address. By creating a `VirtualMachineIPAddressClaim` you can request the desired IP address for the virtual machine, example:
+While `VirtualMachineIPAddressLease` is a clustered resource and reflects the fact that the address for the virtual machine has been issued. The `VirtualMachineIPAddressClaim` is a user resource and is used to request such an address. By creating a `VirtualMachineIPAddressClaim` you can request the desired IP address for the virtual machine.
+
+An example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -83,36 +87,39 @@ spec:
   static: true
 ```
 
-If the `VirtualMachineIPAddressClaim` was not created by the user beforehand, then it will be created automatically with the virtual machine creation.  
-In this case, the next free IP address in the vmCIDR range will be assigned.  
-When deleting the virtual machine, the `VirtualMachineIPAddressClaim` associated with it will also be deleted
+The desired IP address should be in the range of networks defined in the [vmCIDRs](configuration.html#parameters-vmcidrs) parameter of the module configuration and should not be occupied by any other virtual machine.
 
-To prevent this from happening, you need to mark such an IP address as static.  
-To do this, you need to edit the generated `VirtualMachineIPAddressClaim` and set the `static: true` field in it.
+If the `VirtualMachineIPAddressClaim` was not created by the user beforehand, then it will be created automatically with the virtual machine creation. In this case, the next free IP address in the `vmCIDRs` range will be assigned.  
 
-After deleting the VM, the static IP address remains reserved in the namespace, you can see the list of all issued IP addresses as follows:
+When deleting the virtual machine, the `VirtualMachineIPAddressClaim` associated with it will also be deleted. To prevent this from happening, you need to mark such an IP address as static. To do this, you need to edit the generated `VirtualMachineIPAddressClaim` and set the `static: true` field in it. After deleting the VM, the static IP address remains reserved in the namespace.
 
-```bash
+Use the following command to get the list of all issued IP addresses:
+
+```shell
 kubectl get vmip
 ```
 
-output example:
+Example of the output:
 
-```bash
+```console
 NAME    ADDRESS       STATIC   STATUS   VM      AGE
 vm1     10.10.10.0    false    Bound    vm1     9d
 vm100   10.10.10.10   true     Bound    vm100   172m
 ```
 
-`VirtualMachineIPAddressClaim` is named as the virtual machine by default, but it is possible to pass any other arbitrary name, for this you need to specify in the virtual machine spec:
+Just delete the `VirtualMachineIPAddressClaim` resource to free up the IP address:
 
-```yaml
-ipAddressClaimName: <name>
+```shell
+kubectl delete vmip vm100
 ```
 
-## Create disks for storing persistent data
+`VirtualMachineIPAddressClaim` is named as the virtual machine by default, but it is possible to pass any other arbitrary name by using the [ipAddressClaimName](cr.html#virtualmachine-v1alpha1-spec-ipaddressclaimname) parameter.
+
+## Creating disks for storing persistent data
 
 Additional disks should be created manually:
+
+En example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -124,7 +131,9 @@ spec:
   size: 10Gi
 ```
 
-It is possible to create a disk from an existing image, just specify source:
+It is possible to create a disk from an existing image, just specify the corresponding [ClusterVirtualMachineImage](cr.html#clustervirtualmachineimage) in the [source](cr.html#virtualmachinedisk-v1alpha1-spec-source) parameter.
+
+An example:
 
 ```yaml
 source:
@@ -132,7 +141,9 @@ source:
   name: centos-7
 ```
 
-Attaching additional disks is done using the `diskAttachments` parameter:
+Attaching additional disks is done using the [diskAttachments](cr.html#virtualmachine-v1alpha1-spec-diskattachments) parameter.
+
+An example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -161,7 +172,9 @@ spec:
 
 ## Using cloud-init
 
-Optionally, you can pass the cloud-init configuration:
+Optionally, you can pass the cloud-init configuration in the [cloud-init](cr.html#virtualmachine-v1alpha1-spec-cloudinit) parameter.
+
+An example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -187,10 +200,10 @@ spec:
       chpasswd: { expire: False }
 ```
 
-The cloud-init configuration can also be saved in secret and passed to the virtual machine like this:
+The cloud-init configuration can also be saved in Secret and passed to the virtual machine like this:
 
 ```yaml
-  cloudInit:
-    secretRef:
-      name: my-vmi-secret
+cloudInit:
+  secretRef:
+    name: my-vmi-secret
 ```

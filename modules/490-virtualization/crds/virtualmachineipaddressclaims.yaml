@@ -37,37 +37,25 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: VirtualMachineIPAddressClaim represents the resource that defines
-          IP address claim for virtual machine
+        description: The resource that defines IP address claim for virtual machine.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: VirtualMachineIPAddressClaimSpec defines the desired state
-              of VirtualMachineIPAddressClaim
             properties:
               address:
-                description: Address represents the requested IP address, if omitted
-                  the next available IP address will be assigned
+                description: The requested IP address. If omittedthe next available IP address will be assigned.
                 type: string
               leaseName:
-                description: LeaseName represents the issued VirtualMachineIPAddressLease,
-                  managed automatically
+                description: The issued `VirtualMachineIPAddressLease`, managed automatically.
                 type: string
               static:
                 default: true
-                description: Static represents that claim should not be removed with
-                  virtual machine after the first use
+                description: Represents that claim should not be removed with virtual machine after the first use.
                 type: boolean
             type: object
           status:

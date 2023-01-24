@@ -38,34 +38,26 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: VirtualMachineDisk represents the resource that defines disk
-          for virtual machine
+        description: The resource that defines disk for virtual machine.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: VirtualMachineDiskSpec defines the desired state of VirtualMachineDisk
+            description: Defines the desired state of `VirtualMachineDisk`.
             properties:
               size:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Size represents the size of VirtualMachineDisk
+                description: The size of VirtualMachineDisk.
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               source:
-                description: TypedLocalObjectReference contains enough information
-                  to let you locate the typed referenced object inside the same namespace.
+                description: Contains enough information to let locate the typed referenced object inside the same namespace.
                 properties:
                   apiGroup:
                     description: APIGroup is the group for the resource being referenced.
@@ -74,10 +66,10 @@ spec:
                       is required.
                     type: string
                   kind:
-                    description: Kind is the type of resource being referenced
+                    description: The type of resource being referenced.
                     type: string
                   name:
-                    description: Name is the name of resource being referenced
+                    description: The name of resource being referenced.
                     type: string
                 required:
                 - kind
@@ -85,7 +77,7 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               storageClassName:
-                description: StorageClassName represents the storage class for VirtualMachineDisk
+                description: The storage class for `VirtualMachineDisk`.
                 type: string
             type: object
           status:

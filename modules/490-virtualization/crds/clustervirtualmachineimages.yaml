@@ -22,136 +22,116 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterVirtualMachineImage represents the resource that defines
-          remotely available images on cluster level
+        description: Defines remotely available images on cluster level.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: ClusterVirtualMachineImageSpec defines the desired state
-              of ClusterVirtualMachineImage
+            description: The desired state of `ClusterVirtualMachineImage`.
             properties:
               remote:
-                description: DataVolumeSource represents the source for our VirtualMachineImage,
-                  this can be HTTP, S3, Registry or an existing PVC
+                description: The source for `VirtualMachineImage`, this can be HTTP, S3, Registry or an existing PVC.
                 properties:
                   blank:
-                    description: DataVolumeBlankImage provides the parameters to create
-                      a new raw blank image for the PVC
+                    description: The parameters to create a new raw blank image for the PVC.
                     type: object
                   http:
-                    description: DataVolumeSourceHTTP can be either an http or https
-                      endpoint, with an optional basic auth user name and password,
-                      and an optional configmap containing additional CAs
+                    description: Can be either an HTTP or HTTPS
+                      endpoint, with an optional basic auth username and password,
+                      and an optional ConfigMap containing additional CAs.
                     properties:
                       certConfigMap:
-                        description: CertConfigMap is a configmap reference, containing
-                          a Certificate Authority(CA) public key, and a base64 encoded
-                          pem certificate
+                        description: A ConfigMap reference, containing
+                          a Certificate Authority(CA) public key, and a Base64 encoded
+                          PEM certificate.
                         type: string
                       extraHeaders:
-                        description: ExtraHeaders is a list of strings containing
-                          extra headers to include with HTTP transfer requests
+                        description: A list of strings containing extra headers to include with HTTP transfer requests.
                         items:
                           type: string
                         type: array
                       secretExtraHeaders:
-                        description: SecretExtraHeaders is a list of Secret references,
-                          each containing an extra HTTP header that may include sensitive
-                          information
+                        description: A list of Secret references, each containing an extra HTTP header that may include sensitive information.
                         items:
                           type: string
                         type: array
                       secretRef:
-                        description: SecretRef A Secret reference, the secret should
-                          contain accessKeyId (user name) base64 encoded, and secretKey
-                          (password) also base64 encoded
+                        description: |
+                          A reference to the Secret.
+
+                          The Secret should contains accessKeyId (username) Base64 encoded, and secretKey
+                          (password) also Base64 encoded.
                         type: string
                       url:
-                        description: URL is the URL of the http(s) endpoint
+                        description: The URL of the HTTP(S) endpoint.
                         type: string
                     required:
                     - url
                     type: object
                   pvc:
-                    description: DataVolumeSourcePVC provides the parameters to create
-                      a Data Volume from an existing PVC
+                    description: Parameters to create a Data Volume from an existing PVC.
                     properties:
                       name:
-                        description: The name of the source PVC
+                        description: The name of the source PVC.
                         type: string
                       namespace:
-                        description: The namespace of the source PVC
+                        description: The namespace of the source PVC.
                         type: string
                     required:
                     - name
                     - namespace
                     type: object
                   registry:
-                    description: DataVolumeSourceS3 provides the parameters to create
-                      a Data Volume from an S3 source
+                    description: The parameters to create a Data Volume from an S3 source.
                     properties:
                       certConfigMap:
-                        description: CertConfigMap provides a reference to the Registry
-                          certs
+                        description: A reference to the Registry certs.
                         type: string
                       secretRef:
-                        description: SecretRef provides the secret reference needed
-                          to access the Registry source
+                        description: A reference to the Secret needed to access the Registry source.
                         type: string
                       url:
                         description: 'URL is the url of the registry source (starting
-                          with the scheme: docker, oci-archive)'
+                          with the scheme: `docker`, `oci-archive`).'
                         type: string
                     type: object
                   s3:
-                    description: DataVolumeSourceS3 provides the parameters to create
-                      a Data Volume from an S3 source
+                    description: Parameters to create a Data Volume from an S3 source.
                     properties:
                       certConfigMap:
-                        description: CertConfigMap is a configmap reference, containing
-                          a Certificate Authority(CA) public key, and a base64 encoded
-                          pem certificate
+                        description: A reference to the ConfigMap, containing a Certificate Authority(CA) public key, and a Base64 encoded PEM certificate.
                         type: string
                       secretRef:
-                        description: SecretRef provides the secret reference needed
-                          to access the S3 source
+                        description: A reference to the Secret needed to access the S3 source.
                         type: string
                       url:
-                        description: URL is the url of the S3 source
+                        description: URL of the S3 source.
                         type: string
                     required:
                     - url
                     type: object
                 type: object
               source:
-                description: TypedObjectReference contains enough information to let
-                  you locate the typed referenced object in the cluster.
+                description: Contains enough information to let locate the typed referenced object in the cluster.
                 properties:
                   apiGroup:
-                    description: APIGroup is the group for the resource being referenced.
-                      If APIGroup is not specified, the specified Kind must be in
-                      the core API group. For any other third-party types, APIGroup
-                      is required.
+                    description: |
+                      The Group for the resource being referenced.
+
+                      If it is not specified, the specified kind must be in the core API group. For any other third-party types, apiGroup is required.
                     type: string
                   kind:
-                    description: Kind is the type of resource being referenced
+                    description: The type of resource being referenced.
                     type: string
                   name:
-                    description: Name is the name of resource being referenced
+                    description: The name of resource being referenced.
                     type: string
                   namespace:
-                    description: Namespace is the namespace of resource being referenced
+                    description: The Namespace of resource being referenced.
                     type: string
                 required:
                 - kind
@@ -160,8 +140,7 @@ spec:
                 x-kubernetes-map-type: atomic
             type: object
           status:
-            description: ClusterVirtualMachineImageStatus defines the observed state
-              of ClusterVirtualMachineImage
+            description: Defines the observed state of ClusterVirtualMachineImage.
             type: object
         type: object
     served: true

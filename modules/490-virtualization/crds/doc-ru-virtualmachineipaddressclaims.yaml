@@ -3,21 +3,22 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: VirtualMachineIPAddressClaim представляет ссобой ресурс определяющий запрос IP адреса для виртуальной машины.
+          description: Ресурс определяющий запрос IP-адреса для виртуальной машины.
           properties:
-            apiVersion:
-              description: APIVersion определяет версионную схему этого представления объекта.
-            kind:
-              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
             spec:
-              description: VirtualMachineIPAddressClaimSpec определяет желаемое состояние VirtualMachineIPAddressClaim
               properties:
                 address:
-                  description: Address представляет запрошенный IP-адрес, если не указан, будет назначен следующий доступный IP-адрес.
+                  description: |
+                    IP-адрес, который будет запрошен.
+
+                    Если не указан, то будет назначен следующий доступный IP-адрес.
                 leaseName:
-                  description: LeaseName отображает имя выпущенного VirtualMachineIPAddressLease, управляется автоматически
+                  description: |
+                    Имя выпущенного `VirtualMachineIPAddressLease`.
+
+                    Управляется автоматически.
                 static:
-                  description: Static определяет поведение, что VirtualMachineIPAddressClaim не должен удалиться с виртуальной машиной после первого использования.
+                  description: Определяет, что `VirtualMachineIPAddressClaim` не должен удалиться с виртуальной машиной после первого использования.
             status:
               description: VirtualMachineIPAddressClaimStatus определяет наблюдаемое состояние VirtualMachineIPAddressClaim
               properties:

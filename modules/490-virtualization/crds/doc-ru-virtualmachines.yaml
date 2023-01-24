@@ -3,79 +3,99 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: VirtualMachine представляет собой ресурс, определяющий виртуальную машину.
+          description: Ресурс, определяющий виртуальную машину.
           properties:
-            apiVersion:
-              description: APIVersion определяет версионную схему этого представления объекта.
-            kind:
-              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
             spec:
-              description: VirtualMachineSpec определяет желаемое состояние VirtualMachine
               properties:
                 bootDisk:
-                  description: BootDisk определяет ссобой параметры загрузочного диска для виртуальной машины
+                  description: Параметры загрузочного диска виртуальной машины.
                   properties:
                     autoDelete:
-                      description: AutoDelete включат автоматическое удаление ассоциированного загрузочного диска после удаления виртуальной машины
+                      description: Включает автоматическое удаление ассоциированного загрузочного диска после удаления виртуальной машины.
                     bus:
-                      description: 'Bus указывает тип дискового устройства для эмуляции. поддерживаемые значения: virtio, sata, scsi, usb.'
+                      description: |
+                        Тип дискового устройства для эмуляции.
+
+                        Поддерживаемые значения: `virtio`, `sata`, `scsi`, `usb`.
                     name:
-                      description: Name указывает имя загрузочного диска виртуальной машины, если не указано, по умолчанию используется {vm name}-boot
+                      description: |
+                        Имя загрузочного диска виртуальной машины.
+
+                        Если не указано, то по умолчанию используется `{vm name}-boot`.
                     size:
-                      description: Size представляет размер создаваемого диска
+                      description: Размер создаваемого диска.
                     source:
-                      description: Source представляет собой источник для загрузочного диска, при указании новый диск будет создан из него
+                      description: |
+                        Источник для загрузочного диска.
+
+                        При указании новый диск будет создан из него.
                       properties:
                         apiGroup:
-                          description: APIGroup то группа для ресурса, на который делается ссылка. Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется APIGroup.
+                          description: |
+                            Группа API ресурса.
+
+                            Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется указание группы API.
                         kind:
-                          description: Kind это тип ресурса, на который делается ссылка.
+                          description: Тип ресурса.
                         name:
-                          description: Name это имя ресурса, на который делается ссылка.
+                          description: Имя ресурса.
                     storageClassName:
-                      description: StorageClassName это имя желаемого storage class для создаваемого диска.
+                      description: Имя желаемого storage class для создаваемого диска.
                 cloudInit:
-                  description: 'CloudInit представляет ссобой пользовательскую конфигурацию для cloud-init nocloud. More info: https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html'
+                  description: |
+                    Пользовательская конфигурация для cloud-init nocloud. [Подробнее...](https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html)
                   properties:
                     networkData:
-                      description: NetworkData позволяет передать параметры NoCloud cloud-init networkdata в виде строки.
+                      description: Параметры NoCloud cloud-init networkdata в виде строки.
                     networkDataBase64:
-                      description: NetworkDataBase64 позволяет передать параметры NoCloud cloud-init networkdata в виде строки закодированной в base64.
+                      description: Параметры NoCloud cloud-init networkdata в виде строки, закодированной в Base64.
                     networkDataSecretRef:
-                      description: NetworkDataSecretRef ссылкается на k8s секрет содержащий NoCloud networkdata.
+                      description: Ссылка на K8s Secret, содержащий NoCloud networkdata.
                       properties:
                         name:
-                          description: Name это имя ресурса, на который делается ссылка
+                          description: Имя ресурса.
                     secretRef:
-                      description: UserDataSecretRef ссылается на k8s секрет содержащий NoCloud userdata.
+                      description: Ссылка на K8s Secret, содержащий NoCloud userdata.
                       properties:
                         name:
-                          description: Name это имя ресурса, на который делается ссылка
+                          description: Имя ресурса.
                     userData:
-                      description: UserData позволяет передать параметры NoCloud cloud-init userdata в виде строки.
+                      description: Параметры NoCloud cloud-init userdata в виде строки.
                     userDataBase64:
-                      description: UserDataBase64 позволяет передать параметры NoCloud cloud-init userdata в виде строки закодированной в base64.
+                      description: Параметры NoCloud cloud-init userdata в виде строки, закодированной в Base64.
                 diskAttachments:
-                  description: DiskAttachments представляет собой список дополнительных дисков, которые должны быть подключены к виртуальной машине
+                  description: Список дополнительных дисков, которые должны быть подключены к виртуальной машине.
                   items:
-                    description: Представляет источник существующего диска
+                    description: Источник существующего диска.
                     properties:
                       bus:
-                        description: 'Bus указывает тип дискового устройства для эмуляции. поддерживаемые значения: virtio, sata, scsi, usb.'
+                        description: |
+                          Тип дискового устройства для эмуляции.
+
+                          Поддерживаемые значения: `virtio`, `sata`, `scsi`, `usb`.
                       hotpluggable:
-                        description: Hotpluggable указывает, может ли том быть подключен и отключен в горячем режиме.
+                        description: Указывает, может ли том быть подключен и отключен в горячем режиме.
                       name:
-                        description: Name представляет имя диска в том же неймспейсе
+                        description: Имя диска в том же пространстве имен.
                 ipAddressClaimName:
-                  description: IPAddressClaimName определяет имя связанного VirtualMachineIPAddressClaim, если не указано, по умолчанию используется {vm name}
+                  description: |
+                    Имя связанного `VirtualMachineIPAddressClaim`.
+
+                    Если не указано, то по умолчанию используется `{vm name}`.
                 resources:
-                  description: ResourceList это набор пар (имя ресурса, количество).
+                  description: Набор пар (имя ресурса, количество).
                 running:
-                  description: Running определяет текущее ожидаемое состояние виртуальной машины.
+                  description: Ожидаемое состояние виртуальной машины.
                 sshPublicKey:
-                  description: SSHPublicKey определяет открытый ключ SSH, который должен быть автоматически присвоен пользователю внутри виртуальной машины. Для этой опции требуется cloud-init внутри виртуальной машине.
+                  description: |
+                    Открытый ключ SSH, который должен быть автоматически присвоен пользователю внутри виртуальной машины.
+
+                    Для этой опции требуется `cloud-init` внутри виртуальной машины.
                 userName:
-                  description: UserName определяет имя пользователя, который должке автоматически создаваться внутри виртуальной машины. Для этой опции требуется cloud-init внутри виртуальной машине.
+                  description: |
+                    Имя пользователя, который должен автоматически создаваться внутри виртуальной машины.
+
+                    Для этой опции требуется `cloud-init` внутри виртуальной машины.
             status:
               description: VirtualMachineStatus определяет наблюдаемое состояние VirtualMachine
               properties:
