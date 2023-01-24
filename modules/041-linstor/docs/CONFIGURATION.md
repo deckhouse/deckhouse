@@ -90,21 +90,3 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
    Each StorageClass can be used to create volumes with one, two, or three replicas in your storage pools, respectively.
 
 You can always refer to [Advanced LINSTOR Configuration](advanced_usage.html) if needed, but we strongly recommend sticking to this simplified guide.
-
-## Additional features for configuring applications  
-
-### Placing the application "closer" to the data (data locality)
-
-In a hyperconverged infrastructure you may want your Pods to run on the same nodes as their data volumes, as it can help get the best performance from the storage.
-
-The linstor module provides a custom kube-scheduler `linstor` for such tasks, that takes into account the placement of data in storage and tries to place Pod first on those nodes where data is available locally.
-
-Specify the `schedulerName: linstor` parameter in the Pod description to use the `linstor` scheduler.
-
-[Example...](usage.html#using-the-linstor-scheduler)
-
-### Application reschedule in case of node problem (storage-based fencing)
-
-In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
-
-The linstor module automatically removes the Pods from the node where the problem occurred (network or storage issues, etc.) and adds specfic taint on it that guarantees restarting pods on other healthy nodes in a cluster.
