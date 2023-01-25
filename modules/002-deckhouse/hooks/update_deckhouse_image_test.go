@@ -25,10 +25,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -628,10 +630,9 @@ metadata:
 	})
 
 	Context("Notification: basic auth", func() {
-		type auth struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
+		// type auth struct {
+		// 	Basic updater.BasicAuth `json:"basic"`
+		// }
 		var (
 			username string
 			password string
@@ -645,7 +646,7 @@ metadata:
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
-			f.ValuesSet("deckhouse.update.notification.auth", auth{Username: "user", Password: "pass"})
+			f.ValuesSet("deckhouse.update.notification.auth", updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}})
 			f.ValuesDelete("deckhouse.update.windows")
 			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -653,7 +654,7 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Should not change postpone time", func() {
+		It("Should have basic auth in headers", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(username).To(Equal("user"))
 			Expect(password).To(Equal("pass"))
@@ -661,9 +662,9 @@ metadata:
 	})
 
 	Context("Notification: bearer token auth", func() {
-		type auth struct {
-			Token string `json:"token"`
-		}
+		// type auth struct {
+		// 	Token string `json:"bearerToken"`
+		// }
 		var (
 			headerValue string
 		)
@@ -676,7 +677,7 @@ metadata:
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
-			f.ValuesSet("deckhouse.update.notification.auth", auth{Token: "the_token"})
+			f.ValuesSet("deckhouse.update.notification.auth", updater.Auth{Token: pointer.String("the_token")})
 			f.ValuesDelete("deckhouse.update.windows")
 			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -684,7 +685,7 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Should have basica auth credentials in headers", func() {
+		It("Should have bearer token in headers", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(headerValue).To(Equal("Bearer the_token"))
 		})

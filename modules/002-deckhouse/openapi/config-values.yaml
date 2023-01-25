@@ -166,29 +166,42 @@ properties:
               When using update windows, the Deckhouse update after the notification will happen at the nearest possible update window, but not before the time specified in `minimalNotificationTime` expires.
           auth:
             type: object
+            oneOf:
+              - required: [ basic ]
+              - required: [ bearerToken ]
             description: |
               Authentication settings for the webhook.
 
               If the parameter is omitted, the webhook will be called without authentication.
             properties:
-              username:
+              basic:
+                type: object
+                description: |
+                  Basic authentication settings for the webhook.
+
+                  If the parameter is omitted, the webhook will be called without authentication.
+                required:
+                  - username
+                  - password
+                properties:
+                  username:
+                    type: string
+                    description: |
+                      The username for the webhook.
+
+                      The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+                  password:
+                    type: string
+                    description: |
+                        The password for the webhook.
+
+                        The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+              bearerToken:
                 type: string
                 description: |
-                  The username for the webhook.
+                    The token for the webhook.
 
-                  The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
-              password:
-                type: string
-                description: |
-                  The password for the webhook.
-
-                  The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
-              token:
-                type: string
-                description: |
-                  The token for the webhook.
-
-                  The token will be sent in the `Authorization` header in the format `Bearer <token>`.
+                    The token will be sent in the `Authorization` header in the format `Bearer <token>`.
   nodeSelector:
     type: object
     additionalProperties:

@@ -33,25 +33,29 @@ type NotificationConfig struct {
 	WebhookURL              string
 	SkipTLSVerify           bool
 	MinimalNotificationTime v1alpha1.Duration
-	Auth                    *Auth
+	Auth                    *Auth `json:"auth,omitempty"`
 }
 
 type Auth struct {
-	Username string
-	Password string
-	Token    string
+	Basic *BasicAuth `json:"basic,omitempty"`
+	Token *string    `json:"bearerToken,omitempty"`
+}
+
+type BasicAuth struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (a *Auth) Fill(req *http.Request) {
 	if a == nil {
 		return
 	}
-	if a.Username != "" && a.Password != "" {
-		req.SetBasicAuth(a.Username, a.Password)
+	if a.Basic != nil {
+		req.SetBasicAuth(a.Basic.Username, a.Basic.Password)
 		return
 	}
-	if a.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+a.Token)
+	if a.Token != nil {
+		req.Header.Set("Authorization", "Bearer "+*a.Token)
 	}
 }
 
