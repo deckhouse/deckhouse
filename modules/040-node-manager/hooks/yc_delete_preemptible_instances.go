@@ -115,6 +115,10 @@ func applyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, fmt.Errorf("cannot access \"status.ready\" in a NodeGroup %s: %s", obj.GetName(), err)
 	}
 
+	if !nodeCountExists || !readyNodeCountExists {
+		return nil, nil
+	}
+
 	var nodeCount, readyNodeCount int64
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		nodeCount = int64(nodeCountRaw.(float64))
@@ -122,10 +126,6 @@ func applyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	} else {
 		nodeCount = nodeCountRaw.(int64)
 		readyNodeCount = readyNodeCountRaw.(int64)
-	}
-
-	if !nodeCountExists || !readyNodeCountExists {
-		return nil, nil
 	}
 
 	if (nodeCount < 0) || (readyNodeCount < 0) {
