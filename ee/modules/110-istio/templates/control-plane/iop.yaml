@@ -1,3 +1,10 @@
+{{ $supportedProviders := list "aws" "gcp" "azure" }}
+{{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
+{{ $cloudPlatform := "none" }}
+{{ if has $currentProvider $supportedProviders }}
+  {{ $cloudPlatform = $currentProvider }}
+{{ end }}
+
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision"}}
@@ -77,6 +84,7 @@ spec:
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
     defaultConfig:
       proxyMetadata:
+        CLOUD_PLATFORM: {{ $cloudPlatform }}
         ISTIO_META_DNS_CAPTURE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
       holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
