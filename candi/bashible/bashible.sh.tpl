@@ -27,10 +27,11 @@ function bb-event-error-create() {
     # underscore with dash due to regexp.
     # All of stderr outputs are stored in the eventLog file.
     # step is used as argument for function call.
+    # If event creation failed, error from kubectl suppressed.
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     eventLog="/var/lib/bashible/step.log"
-    kubectl_exec apply -f - <<EOF
+    kubectl_exec apply -f - || true <<EOF
         apiVersion: events.k8s.io/v1
         kind: Event
         metadata:
