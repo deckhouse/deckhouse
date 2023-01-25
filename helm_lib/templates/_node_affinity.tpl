@@ -6,7 +6,7 @@
 {{- end }}
 
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "system-with-drbd-problems" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" "system-with-drbd-problems" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
