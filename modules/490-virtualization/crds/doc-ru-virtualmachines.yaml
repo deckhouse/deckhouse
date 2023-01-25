@@ -5,7 +5,10 @@ spec:
         openAPIV3Schema:
           description: Ресурс, определяющий виртуальную машину.
           properties:
+            apiVersion: {}
+            kind: {}
             spec:
+              description: Определяет желаемое состояние `VirtualMachine`.
               properties:
                 bootDisk:
                   description: Параметры загрузочного диска виртуальной машины.
@@ -97,7 +100,7 @@ spec:
 
                     Для этой опции требуется `cloud-init` внутри виртуальной машины.
             status:
-              description: VirtualMachineStatus определяет наблюдаемое состояние VirtualMachine
+              description: Определяет наблюдаемое состояние `VirtualMachine`.
               properties:
                 ipAddress:
                   description: IP адрес виртуальной машины

@@ -25,19 +25,23 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// VirtualMachineDiskSpec defines the desired state of VirtualMachineDisk
+// The desired state of `VirtualMachineDisk`.
 type VirtualMachineDiskSpec struct {
-	// StorageClassName represents the storage class for VirtualMachineDisk
+	// The storage class for `VirtualMachineDisk`.
 	StorageClassName string `json:"storageClassName,omitempty"`
-	// Size represents the size of VirtualMachineDisk
-	Size   resource.Quantity                 `json:"size,omitempty"`
+	// The size of VirtualMachineDisk.
+	Size resource.Quantity `json:"size,omitempty"`
+	// Contains enough information to let locate the typed referenced object inside the same namespace.
 	Source *corev1.TypedLocalObjectReference `json:"source,omitempty"`
 }
 
-// VirtualMachineDiskStatus defines the observed state of VirtualMachineDisk
+// The observed state of `VirtualMachineDisk`.
 type VirtualMachineDiskStatus struct {
-	Phase  string `json:"phase,omitempty"`
+	// Represents the current state of disk.
+	Phase string `json:"phase,omitempty"`
+	// Represents the virtual machine that currently uses this disk.
 	VMName string `json:"vmName,omitempty"`
+	// Represents fact that disk will be removed with associated virtual machine.
 	//+kubebuilder:default:=false
 	//+kubebuilder:validation:Required
 	Ephemeral bool `json:"ephemeral"`
@@ -52,7 +56,7 @@ type VirtualMachineDiskStatus struct {
 //+kubebuilder:printcolumn:JSONPath=".status.vmName",name=VM,type=string
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
-// VirtualMachineDisk represents the resource that defines disk for virtual machine
+// The resource that defines disk for virtual machine.
 type VirtualMachineDisk struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -63,7 +67,7 @@ type VirtualMachineDisk struct {
 
 //+kubebuilder:object:root=true
 
-// VirtualMachineDiskList contains a list of VirtualMachineDisk
+// Contains a list of `VirtualMachineDisk`.
 type VirtualMachineDiskList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

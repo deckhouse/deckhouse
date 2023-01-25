@@ -1,0 +1,67 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Defines remotely available images on cluster level.
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            spec:
+              description: The desired state of `ClusterVirtualMachineImage`.
+              properties:
+                remote:
+                  description: The source for `VirtualMachineImage`, this can be HTTP, S3, Registry or an existing PVC.
+                  properties:
+                    blank:
+                      description: DataVolumeBlankImage provides the parameters to create a new raw blank image for the PVC
+                    http:
+                      description: DataVolumeSourceHTTP can be either an http or https endpoint, with an optional basic auth user name and password, and an optional configmap containing additional CAs
+                      properties:
+                        certConfigMap:
+                          description: CertConfigMap is a configmap reference, containing a Certificate Authority(CA) public key, and a base64 encoded pem certificate
+                        extraHeaders:
+                          description: ExtraHeaders is a list of strings containing extra headers to include with HTTP transfer requests
+                        secretExtraHeaders:
+                          description: SecretExtraHeaders is a list of Secret references, each containing an extra HTTP header that may include sensitive information
+                        secretRef:
+                          description: SecretRef A Secret reference, the secret should contain accessKeyId (user name) base64 encoded, and secretKey (password) also base64 encoded
+                        url:
+                          description: URL is the URL of the http(s) endpoint
+                    pvc:
+                      description: DataVolumeSourcePVC provides the parameters to create a Data Volume from an existing PVC
+                      properties:
+                        name:
+                          description: The name of the source PVC
+                        namespace:
+                          description: The namespace of the source PVC
+                    registry:
+                      description: Parameters to create a Data Volume from an OCI registry.
+                      properties:
+                        certConfigMap:
+                          description: A reference to the Registry certs.
+                        secretRef:
+                          description: A reference to the Secret needed to access the Registry source.
+                        url:
+                          description: 'The url of the registry source (starting with the scheme: `docker`, `oci-archive`).'
+                    s3:
+                      description: DataVolumeSourceS3 provides the parameters to create a Data Volume from an S3 source
+                      properties:
+                        certConfigMap:
+                          description: CertConfigMap is a configmap reference, containing a Certificate Authority(CA) public key, and a base64 encoded pem certificate
+                        secretRef:
+                          description: SecretRef provides the secret reference needed to access the S3 source
+                        url:
+                          description: URL is the url of the S3 source
+                source:
+                  description: Contains enough information to let locate the typed referenced object in the cluster.
+                  properties:
+                    apiGroup:
+                      description: APIGroup is the group for the resource being referenced. If APIGroup is not specified, the specified Kind must be in the core API group. For any other third-party types, APIGroup is required.
+                    kind:
+                      description: Kind is the type of resource being referencedf aоjjjj¬k
+                    name:
+                      description: Name is the name of resource being referenced
+                    namespace:

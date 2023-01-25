@@ -22,13 +22,13 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
-// ClusterVirtualMachineImageSpec defines the desired state of ClusterVirtualMachineImage
+// The desired state of `ClusterVirtualMachineImage`.
 type ClusterVirtualMachineImageSpec struct {
 	Remote ReducedDataVolumeSource `json:"remote,omitempty"`
 	Source *TypedObjectReference   `json:"source,omitempty"`
 }
 
-// DataVolumeSource represents the source for our VirtualMachineImage, this can be HTTP, S3, Registry or an existing PVC
+// The source for `VirtualMachineImage`, this can be HTTP, S3, Registry or an existing PVC.
 type ReducedDataVolumeSource struct {
 	HTTP     *cdiv1.DataVolumeSourceHTTP      `json:"http,omitempty"`
 	S3       *cdiv1.DataVolumeSourceS3        `json:"s3,omitempty"`
@@ -37,28 +37,27 @@ type ReducedDataVolumeSource struct {
 	Blank    *cdiv1.DataVolumeBlankImage      `json:"blank,omitempty"`
 }
 
-// DataVolumeSourceS3 provides the parameters to create a Data Volume from an S3 source
+// Parameters to create a Data Volume from an OCI registry.
 type ReducedDataVolumeSourceRegistry struct {
-	// URL is the url of the registry source (starting with the scheme: docker, oci-archive)
+	// The url of the registry source (starting with the scheme: `docker`, `oci-archive`).
 	// +optional
 	URL *string `json:"url,omitempty"`
-	// SecretRef provides the secret reference needed to access the Registry source
+	// A reference to the Secret needed to access the Registry source.
 	// +optional
 	SecretRef *string `json:"secretRef,omitempty"`
-	// CertConfigMap provides a reference to the Registry certs
+	// A reference to the Registry certs.
 	// +optional
 	CertConfigMap *string `json:"certConfigMap,omitempty"`
 }
 
-// TypedObjectReference contains enough information to let you locate the
-// typed referenced object in the cluster.
+// Contains enough information to let locate the typed referenced object in the cluster.
 type TypedObjectReference struct {
 	corev1.TypedLocalObjectReference `json:",inline"`
-	// Namespace is the namespace of resource being referenced
+	// The Namespace of resource being referenced.
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
 }
 
-// ClusterVirtualMachineImageStatus defines the observed state of ClusterVirtualMachineImage
+// The observed state of `ClusterVirtualMachineImage`.
 type ClusterVirtualMachineImageStatus struct {
 }
 
@@ -66,7 +65,7 @@ type ClusterVirtualMachineImageStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster,shortName={"cvmi","cvmimage","cvmimages"}
 
-// ClusterVirtualMachineImage represents the resource that defines remotely available images on cluster level
+// Defines remotely available images on cluster level.
 type ClusterVirtualMachineImage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -77,7 +76,7 @@ type ClusterVirtualMachineImage struct {
 
 //+kubebuilder:object:root=true
 
-// ClusterVirtualMachineImageList contains a list of ClusterVirtualMachineImages
+// Contains a list of `ClusterVirtualMachineImages`.
 type ClusterVirtualMachineImageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

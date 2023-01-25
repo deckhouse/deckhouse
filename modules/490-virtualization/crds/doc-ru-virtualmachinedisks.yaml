@@ -5,6 +5,8 @@ spec:
         openAPIV3Schema:
           description: Ресурс, описывающий диск для виртуальной машины.
           properties:
+            apiVersion: {}
+            kind: {}
             spec:
               description: Определяет желаемое состояние `VirtualMachineDisk`.
               properties:
@@ -25,4 +27,11 @@ spec:
                 storageClassName:
                   description: Storage class для `VirtualMachineDisk`.
             status:
-              description: VirtualMachineDiskStatus определяет наблюдаемое состояние VirtualMachineDisk
+              description: Определяет наблюдаемое состояние `VirtualMachineDisk`.
+              properties:
+                ephemeral:
+                  description: Представляет факт, что диск будет удален вместе с соответствующей виртуальной машиной.
+                phase:
+                  description: Отображает текущее состояние диска.
+                vmName:
+                  description: Отображает виртуальную машину, которая в настоящее время использует этот диск.

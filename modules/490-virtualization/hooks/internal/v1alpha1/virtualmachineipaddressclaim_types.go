@@ -20,23 +20,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// VirtualMachineIPAddressClaimSpec defines the desired state of VirtualMachineIPAddressClaim
+// The desired state of `VirtualMachineIPAddressClaim`.
 type VirtualMachineIPAddressClaimSpec struct {
-	// Static represents that claim should not be removed with virtual machine after the first use
+	// Represents that claim should not be removed with virtual machine after the first use.
 	//+kubebuilder:default:=true
 	//+kubebuilder:validation:Required
 	Static *bool `json:"static,omitempty"`
-	// LeaseName represents the issued VirtualMachineIPAddressLease, managed automatically
+	// The issued `VirtualMachineIPAddressLease`, managed automatically.
 	LeaseName string `json:"leaseName,omitempty"`
-	// Address represents the requested IP address, if omitted the next available IP address will be assigned
+	// The requested IP address. If omittedthe next available IP address will be assigned.
 	Address string `json:"address,omitempty"`
 }
 
-// VirtualMachineIPAddressClaimStatus defines the observed state of VirtualMachineIPAddressClaim
+// The observed state of `VirtualMachineIPAddressClaim`.
 type VirtualMachineIPAddressClaimStatus struct {
-	// Phase represents the current state of IP address claim
+	// Represents the current state of IP address claim.
 	Phase string `json:"phase,omitempty"`
-	// VMName represents the virtual machine that currently uses this IP address
+	// Represents the virtual machine that currently uses this IP address.
 	VMName string `json:"vmName,omitempty"`
 }
 
@@ -49,7 +49,7 @@ type VirtualMachineIPAddressClaimStatus struct {
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:shortName={"vmip","vmips"}
 
-// VirtualMachineIPAddressClaim represents the resource that defines IP address claim for virtual machine
+// The resource that defines IP address claim for virtual machine.
 type VirtualMachineIPAddressClaim struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -60,7 +60,7 @@ type VirtualMachineIPAddressClaim struct {
 
 //+kubebuilder:object:root=true
 
-// VirtualMachineIPAddressClaimList contains a list of VirtualMachineIPAddressClaim
+// Contains a list of `VirtualMachineIPAddressClaim`.
 type VirtualMachineIPAddressClaimList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

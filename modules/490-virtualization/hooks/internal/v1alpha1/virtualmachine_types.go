@@ -24,74 +24,66 @@ import (
 	virtv1 "kubevirt.io/api/core/v1"
 )
 
-// VirtualMachineSpec defines the desired state of VirtualMachine
+// The desired state of `VirtualMachine`.
 type VirtualMachineSpec struct {
-	// Running state indicates the requested running state of the VirtualMachineInstance
-	// mutually exclusive with Running
+	// The requested running state of the `VirtualMachineInstance` mutually exclusive with Running.
 	Running *bool `json:"running,omitempty"`
-	// IPAddressClaimName defines the name for associated VirtualMahcineIPAddressClaim resource, if not specified defaults to {vm name}
-	IPAddressClaimName *string         `json:"ipAddressClaimName,omitempty"`
-	Resources          v1.ResourceList `json:"resources,omitempty"`
-	// UserName defines the user name that should be automatically created inside the VM. This option requires cloud-init in the virtual machine.
+	// The name for associated `VirtualMahcineIPAddressClaim` resource.
+	// If not specified, defaults to `{vm name}`.
+	IPAddressClaimName *string `json:"ipAddressClaimName,omitempty"`
+	// A set of (resource name, quantity) pairs.
+	Resources v1.ResourceList `json:"resources,omitempty"`
+	// The username that should be automatically created inside the VM.
+	// This option requires `cloud-init` in the virtual machine.
 	UserName *string `json:"userName,omitempty"`
-	// SSHPublicKey defines the SSH public key that should be automatically added to user inside the VM. This option requires cloud-init in the virtual machine.
+	// The SSH public key that should be automatically added to user inside the VM.
+	// This option requires `cloud-init` in the virtual machine.
 	SSHPublicKey *string   `json:"sshPublicKey,omitempty"`
 	BootDisk     *BootDisk `json:"bootDisk,omitempty"`
-	// CloudInit represents a cloud-init nocloud user data source.
-	// More info: https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html
+	// A cloud-init nocloud user data source. [More info...](https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html)
 	CloudInit *virtv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
-	// DiskAttachments represents a lits of additional disks that should be attached to the virtual machine
+	// Represents a lits of additional disks that should be attached to the virtual machine.
 	DiskAttachments *[]DiskSource `json:"diskAttachments,omitempty"`
 }
 
-// VirtualMachineStatus defines the observed state of VirtualMachine
+// The observed state of `VirtualMachine`.
 type VirtualMachineStatus struct {
-	// Phase is a human readable, high-level representation of the status of the virtual machine
+	// Phase is a human readable, high-level representation of the status of the virtual machine.
 	Phase virtv1.VirtualMachinePrintableStatus `json:"phase,omitempty"`
-	// IP address of Virtual Machine
+	// IP address of Virtual Machine.
 	IPAddress string `json:"ipAddress,omitempty"`
 }
 
-// BootDisk defines the boot disk for virtual machine
+// The boot disk for virtual machine.
 type BootDisk struct {
-	// Name for virtual machine boot disk, if not specified defaults to {vm name}-boot
+	// Name for virtual machine boot disk.
+	// If not specified defaults to `{vm name}-boot`.
 	Name string `json:"name,omitempty"`
-	// Source represents the source of a boot disk, if specified the new disk will be created
+	// The source of a boot disk.
+	// If specified, the new disk will be created.
 	Source *corev1.TypedLocalObjectReference `json:"source,omitempty"`
-	// StorageClassName represents the storage class for newly created disk
+	// The storage class for newly created disk.
 	StorageClassName string `json:"storageClassName,omitempty"`
-	// Size represents the size for newly created disk
+	// The size for newly created disk.
 	Size resource.Quantity `json:"size"`
-	// AutoDelete enables automatic removal of associated boot disk after removing the virtual machine
+	// Enables automatic removal of associated boot disk after removing the virtual machine.
 	AutoDelete bool `json:"autoDelete,omitempty"`
-	// Bus indicates the type of disk device to emulate.
-	// supported values: virtio, sata, scsi, usb.
+	// The type of disk device to emulate.
+	//
+	// Supported values: `virtio`, `sata`, `scsi`, `usb`.
 	Bus string `json:"bus,omitempty"`
 }
 
-// ImageSourceScope represents the source of the image.
-// +enum
-type ImageSourceScope string
-
-const (
-	// ImageSourceScopePublic indicates that disk should be
-	// created from public image. This is the default mode.
-	ImageSourceScopePublic ImageSourceScope = "public"
-
-	// ImageSourceScopePrivate indicates that disk should be
-	// created from private image from the same namespace.
-	ImageSourceScopePrivate ImageSourceScope = "private"
-)
-
-// Represents the source of existing disk
+// The source of existing disk.
 type DiskSource struct {
-	// Name represents the name of the Disk in the same namespace
+	// The name of the Disk in the same Namespace.
 	Name string `json:"name"`
-	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
+	// Indicates whether the volume can be hotplugged and hotunplugged.
 	// +optional
 	Hotpluggable bool `json:"hotpluggable,omitempty"`
-	// Bus indicates the type of disk device to emulate.
-	// supported values: virtio, sata, scsi, usb.
+	// The type of disk device to emulate.
+	//
+	// Supported values: `virtio`, `sata`, `scsi`, `usb`.
 	Bus virtv1.DiskBus `json:"bus,omitempty"`
 }
 
@@ -102,7 +94,7 @@ type DiskSource struct {
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:shortName={"vm","vms"}
 
-// VirtualMachine represents the resource that defines virtual machine
+// Defines virtual machine.
 type VirtualMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -113,7 +105,7 @@ type VirtualMachine struct {
 
 //+kubebuilder:object:root=true
 
-// VirtualMachineList contains a list of VirtualMachine
+// Contains a list of `VirtualMachine`.
 type VirtualMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -20,22 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// VirtualMachineIPAddressLeaseSpec defines the desired state of VirtualMachineIPAddressLease
+// The desired state of `VirtualMachineIPAddressLease`.
 type VirtualMachineIPAddressLeaseSpec struct {
-	// ClaimRef represents link to existing VirtualMachineIPAddressClaim
+	// The link to existing `VirtualMachineIPAddressClaim`.
 	ClaimRef *VirtualMachineIPAddressLeaseClaimRef `json:"claimRef,omitempty"`
 }
 
 type VirtualMachineIPAddressLeaseClaimRef struct {
-	// Namespace of the referenced VirtualMachineIPAddressClaim
+	// The Namespace of the referenced `VirtualMachineIPAddressClaim`.
 	Namespace string `json:"namespace"`
-	// Name of the referenced VirtualMachineIPAddressClaim
+	// The name of the referenced `VirtualMachineIPAddressClaim`.
 	Name string `json:"name"`
 }
 
-// VirtualMachineIPAddressLeaseStatus defines the observed state of VirtualMachineIPAddressLease
+// The observed state of `VirtualMachineIPAddressLease`.
 type VirtualMachineIPAddressLeaseStatus struct {
-	// Phase represents the current state of issued IP address lease
+	// Represents the current state of issued IP address lease.
 	Phase string `json:"phase,omitempty"`
 }
 
@@ -46,7 +46,7 @@ type VirtualMachineIPAddressLeaseStatus struct {
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:scope=Cluster,shortName={"vmipl","vmipls"}
 
-// VirtualMachineIPAddressLease is the resource that defines fact of issued lease for VirtualMachineIPAddressClaim
+// The resource that defines fact of issued lease for `VirtualMachineIPAddressClaim`.
 type VirtualMachineIPAddressLease struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -57,7 +57,7 @@ type VirtualMachineIPAddressLease struct {
 
 //+kubebuilder:object:root=true
 
-// VirtualMachineIPAddressLeaseList contains a list of VirtualMachineIPAddressLease
+// Contains a list of `VirtualMachineIPAddressLease`.
 type VirtualMachineIPAddressLeaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

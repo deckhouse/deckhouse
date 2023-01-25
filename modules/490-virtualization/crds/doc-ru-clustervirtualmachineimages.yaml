@@ -5,8 +5,10 @@ spec:
         openAPIV3Schema:
           description: Ресурс, определяющий удаленно доступные образы на уровне кластера.
           properties:
+            apiVersion: {}
+            kind: {}
             spec:
-              description: Определяет желаемое состояние ClusterVirtualMachineImage.
+              description: Определяет желаемое состояние `ClusterVirtualMachineImage`.
               properties:
                 remote:
                   description: |
@@ -76,4 +78,4 @@ spec:
                     namespace:
                       description: Namespace ресурса.
             status:
-              description: ClusterVirtualMachineImageStatus определяет наблюдаемое состояние ClusterVirtualMachineImage
+              description: Определяет наблюдаемое состояние `ClusterVirtualMachineImage`.
