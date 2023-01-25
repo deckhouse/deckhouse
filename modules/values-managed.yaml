@@ -1,6 +1,7 @@
 # CE Bundle "Managed"
 admissionPolicyEngineEnabled: true
 certManagerEnabled: true
+containerizedDataImporterEnabled: true
 dashboardEnabled: true
 deckhouseConfigEnabled: true
 deckhouseEnabled: true
