@@ -41,3 +41,34 @@ func TestConvertConfigValuesToLatest(t *testing.T) {
 	g.Expect(newVals).Should(HaveKey("param1"), "should keep old params")
 	g.Expect(newVals).Should(HaveKey("param2"), "should add new param")
 }
+
+func TestConvertConfigValuesToLatestReturnConsistentResults(t *testing.T) {
+	g := NewWithT(t)
+
+	const modName = "test-mod"
+	RegisterFunc(modName, 1, 2, func(settings *Settings) error {
+		return settings.Delete("obsoleteParam")
+	})
+
+	settingsV1 := map[string]interface{}{
+		"paramStr": "val1",
+		"paramInt": 100,
+		"paramNum": 100.0,
+	}
+	settingsV2 := map[string]interface{}{
+		"paramStr": "val1",
+		"paramInt": 100,
+		"paramNum": 100.0,
+	}
+
+	chain := Registry().Chain(modName)
+	g.Expect(chain).ShouldNot(BeNil())
+	_, convertedV1, err := chain.ConvertToLatest(1, settingsV1)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	_, convertedV2, err := chain.ConvertToLatest(2, settingsV2)
+	g.Expect(err).ShouldNot(HaveOccurred())
+
+	for k := range convertedV1 {
+		g.Expect(convertedV1[k]).Should(BeIdenticalTo(convertedV2[k]), "types should be identical")
+	}
+}

@@ -52,10 +52,23 @@ func (c *Chain) Add(conversion *Conversion) {
 	}
 }
 
-func (c *Chain) ConvertToLatest(fromVersion int, values map[string]interface{}) (int, map[string]interface{}, error) {
-	// Shortcut: return if fromVersion is already the latest.
+func (c *Chain) ConvertToLatest(fromVersion int, settings map[string]interface{}) (int, map[string]interface{}, error) {
+	currentSettings, err := SettingsFromMap(settings)
+	if err != nil {
+		return 0, nil, fmt.Errorf("bad input settings: %v", err)
+	}
+
+	// Conversions are implemented using JSON marshal-unmarshal,
+	// so type casting may occur, e.g. int64 field become float64.
+	// Run JSON marshal-unmarshal for latest settings, so result settings
+	// always be compatible.
 	if fromVersion == c.latestVersion {
-		return fromVersion, values, nil
+		normalized, err := currentSettings.Map()
+		if err != nil {
+			return 0, nil, fmt.Errorf("latest(%d) settings normalization failed: %v", fromVersion, err)
+		}
+
+		return fromVersion, normalized, nil
 	}
 
 	c.m.Lock()
@@ -72,10 +85,6 @@ func (c *Chain) ConvertToLatest(fromVersion int, values map[string]interface{}) 
 
 	tries := 0
 	currentVersion := fromVersion
-	currentValues, err := SettingsFromMap(values)
-	if err != nil {
-		return 0, nil, fmt.Errorf("bad input values: %v", err)
-	}
 
 	for {
 		conv := c.conversions[currentVersion]
@@ -83,14 +92,14 @@ func (c *Chain) ConvertToLatest(fromVersion int, values map[string]interface{}) 
 			return 0, nil, fmt.Errorf("convert from %d: conversion chain interrupt: no conversion from %d", fromVersion, currentVersion)
 		}
 		newVer := conv.Target
-		newValues, err := conv.Convert(currentValues)
+		newSettings, err := conv.Convert(currentSettings)
 		if err != nil {
 			return 0, nil, fmt.Errorf("convert from %d: conversion chain error for %d: %v", fromVersion, currentVersion, err)
 		}
 
 		// Stop after converting to the latest version.
 		if newVer == c.latestVersion {
-			newMap, err := newValues.Map()
+			newMap, err := newSettings.Map()
 			if err != nil {
 				return 0, nil, fmt.Errorf("convert from %d: map error for %d: %v", fromVersion, currentVersion, err)
 			}
@@ -98,7 +107,7 @@ func (c *Chain) ConvertToLatest(fromVersion int, values map[string]interface{}) 
 		}
 
 		currentVersion = newVer
-		currentValues = newValues
+		currentSettings = newSettings
 
 		// Prevent looped conversions.
 		tries++

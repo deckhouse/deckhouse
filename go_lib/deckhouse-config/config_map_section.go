@@ -82,11 +82,9 @@ func (s *configMapSection) convertValues() (int, map[string]interface{}, error) 
 	}
 
 	chain := conversion.Registry().Chain(s.name)
-	if chain != nil {
-		latestVersion, latestValues, err = chain.ConvertToLatest(latestVersion, latestValues)
-		if err != nil {
-			return 0, nil, err
-		}
+	latestVersion, latestValues, err = chain.ConvertToLatest(latestVersion, latestValues)
+	if err != nil {
+		return 0, nil, err
 	}
 
 	return latestVersion, latestValues, nil

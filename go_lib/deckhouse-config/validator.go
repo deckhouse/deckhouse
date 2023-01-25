@@ -49,9 +49,8 @@ type ValuesValidator interface {
 }
 
 type ValidationResult struct {
-	IsConverted bool
-	Settings    map[string]interface{}
-	Version     int
+	Settings map[string]interface{}
+	Version  int
 
 	Warning string
 	Error   string
@@ -126,22 +125,23 @@ func (c *ConfigValidator) ConvertToLatest(cfg *d8cfg_v1alpha1.ModuleConfig) Vali
 	// Run registered conversions if version is not the latest.
 	result.Settings = cfg.Spec.Settings
 	chain := conversion.Registry().Chain(cfg.GetName())
-	if chain.LatestVersion() != cfg.Spec.Version {
-		newVersion, newSettings, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
-		if err != nil {
+	newVersion, newSettings, err := chain.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
+	if err != nil {
+		if chain.LatestVersion() != cfg.Spec.Version {
 			result.Error = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", cfg.Spec.Version, chain.LatestVersion(), err)
-			return result
+		} else {
+			result.Error = fmt.Sprintf("spec.settings latest version %d: %v", cfg.Spec.Version, err)
 		}
-		// Clear settings and version if settings convert to an empty object.
-		// Set nil and 0 to not create spec.version and spec.settings fields on migration.
-		if len(newSettings) == 0 {
-			newSettings = nil
-			newVersion = 0
-		}
-		result.Settings = newSettings
-		result.Version = newVersion
-		result.IsConverted = true
+		return result
 	}
+	// Clear settings and version if settings convert to an empty object.
+	// Set nil and 0 to not create spec.version and spec.settings fields on migration.
+	if len(newSettings) == 0 {
+		newSettings = nil
+		newVersion = 0
+	}
+	result.Settings = newSettings
+	result.Version = newVersion
 
 	return result
 }
@@ -160,7 +160,7 @@ func (c *ConfigValidator) Validate(cfg *d8cfg_v1alpha1.ModuleConfig) ValidationR
 	err := c.validateSettings(cfg.GetName(), result.Settings)
 	if err != nil {
 		convMsg := ""
-		if result.IsConverted {
+		if cfg.Spec.Version != result.Version {
 			convMsg = fmt.Sprintf(" converted to %d", result.Version)
 		}
 		result.Error = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, cleanupMultilineError(err))

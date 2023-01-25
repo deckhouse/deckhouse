@@ -121,10 +121,8 @@ func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 			continue
 		}
 		// Update spec.settings to converted settings.
-		if res.IsConverted {
-			cfg.Spec.Settings = res.Settings
-			cfg.Spec.Version = res.Version
-		}
+		cfg.Spec.Settings = res.Settings
+		cfg.Spec.Version = res.Version
 		properCfgs = append(properCfgs, cfg)
 	}
 
