@@ -76,7 +76,7 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	if secret.Namespace != v1.NamespaceDefault {
 		// desired secret (target secret in a namespace) must not have annotations to satisfy DeepEqual function
-		secret.Annotations = nil
+		s.Annotations = nil
 	}
 
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
