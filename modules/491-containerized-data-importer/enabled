@@ -17,7 +17,6 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.21.0
   if values::array_has global.enabledModules "virtualization"; then
     enabled=true
   else
@@ -25,7 +24,7 @@ function __main__() {
   fi
   if [ "$enabled" = "false" ]; then
     # workaround: allow explicit enabling of the module
-    case "$(kubectl get -n d8-system cm/deckhouse -o jsonpath={.data.containerizedDataImporterEnabled})" in
+    case "$(kubectl get moduleconfig containerized-data-importer -o jsonpath={.spec.enabled} 2>/dev/null)" in
       # match all cases of true|y|yes|1
       [Tt][Rr][Uu][Ee]|[Yy]|[Yy][Ee][Ss]|1)
         enabled=true
