@@ -60,7 +60,7 @@ var MergeConf = linker.MergeConf{
 			Strategy: linker.ThrowError,
 			NewName:  "/deckhouse/modules/040-node-manager/cloud-providers/vsphere",
 		},
-		/*"/deckhouse/ee/modules/040-node-manager/openapi/config-values.yaml": {
+		"/deckhouse/ee/modules/040-node-manager/openapi/config-values.yaml": {
 			Strategy: linker.StashInTemp,
 			NewName:  "/deckhouse/modules/040-node-manager/openapi/config-values.yaml",
 		},
@@ -71,7 +71,7 @@ var MergeConf = linker.MergeConf{
 		"/deckhouse/ee/modules/040-node-manager/openapi/openapi-case-tests.yaml": {
 			Strategy: linker.StashInTemp,
 			NewName:  "/deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml",
-		},*/
+		},
 		// ee/modules/040-terraform-manager doesn't contain tests
 		// ee/modules/110-istio
 		"/deckhouse/ee/modules/110-istio": {
