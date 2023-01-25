@@ -30,7 +30,7 @@ function bb-event-error-create() {
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     eventLog="/var/lib/bashible/step.log"
-    kubectl apply -f - <<EOF
+    kubectl_exec apply -f - <<EOF
         apiVersion: events.k8s.io/v1
         kind: Event
         metadata:
@@ -41,7 +41,7 @@ function bb-event-error-create() {
           apiVersion: v1
           kind: Node
           name: '$(hostname -s)'
-          uid: "$(kubectl get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+          uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
         note: '$(tail -c 500 ${eventLog})'
         reason: Failed
         type: Warning
