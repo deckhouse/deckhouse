@@ -15,4 +15,4 @@ properties:
     items:
       type: string
       description: |
-        List of CIDRs used to allocate static IP addresses for Virtual Machines
+        List of CIDRs used to allocate static IP addresses for Virtual Machines.

@@ -3,27 +3,35 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: VirtualMachineDisk представляет ресурс, описывающий диск для виртуальной машины
+          description: Ресурс, описывающий диск для виртуальной машины.
           properties:
-            apiVersion:
-              description: APIVersion определяет версионную схему этого представления объекта.
-            kind:
-              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
+            apiVersion: {}
+            kind: {}
             spec:
-              description: VirtualMachineDiskSpec определяет желаемое состояние VirtualMachineDisk
+              description: Определяет желаемое состояние `VirtualMachineDisk`.
               properties:
                 size:
-                  description: Size представляет собой размер VirtualMachineDisk
+                  description: Размер `VirtualMachineDisk`.
                 source:
-                  description: TypedLocalObjectReference содержит информацию, чтобы найти конкретный типизированный объект в том же неймспейсе
+                  description: Ссылка на конкретный типизированный объект в том же пространстве имен.
                   properties:
                     apiGroup:
-                      description: APIGroup то группа для ресурса, на который делается ссылка. Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется APIGroup.
+                      description: |
+                        Группа API ресурса.
+
+                        Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется указание группы API.
                     kind:
-                      description: Kind это тип ресурса, на который делается ссылка.
+                      description: Тип ресурса.
                     name:
-                      description: Name это имя ресурса, на который делается ссылка
+                      description: Имя ресурса.
                 storageClassName:
-                  description: StorageClassName представляет storage class для VirtualMachineDisk
+                  description: Storage class для `VirtualMachineDisk`.
             status:
-              description: VirtualMachineDiskStatus определяет наблюдаемое состояние VirtualMachineDisk
+              description: Определяет наблюдаемое состояние `VirtualMachineDisk`.
+              properties:
+                ephemeral:
+                  description: Представляет факт, что диск будет удален вместе с соответствующей виртуальной машиной.
+                phase:
+                  description: Отображает текущее состояние диска.
+                vmName:
+                  description: Отображает виртуальную машину, которая в настоящее время использует этот диск.

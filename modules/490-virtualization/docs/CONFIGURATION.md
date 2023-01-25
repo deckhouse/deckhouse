@@ -15,6 +15,4 @@ vmCIDRs:
 
 The subnet for the VMs should not conflict with the subnet for the pods and the subnet for the services
 
-## Parameters
-
-<!-- SCHEMA -->
+{% include module-settings.liquid %}

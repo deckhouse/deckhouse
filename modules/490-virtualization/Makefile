@@ -31,8 +31,8 @@ help: ## Display this help.
 .PHONY: crds
 crds: controller-gen ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./hooks/internal/..." output:crd:artifacts:config=crds
-	find crds -mindepth 1 -maxdepth 1 ! -name 'doc-ru-*' -a ! -name kubevirt.yaml -exec sh -c 'mv $$0 $$(dirname $$0)/$${0##*_}' {} \;
-	find crds -mindepth 1 -maxdepth 1 ! -name 'doc-ru-*' -a ! -name kubevirt.yaml -exec hack/gen-ru-crd.sh {} \;
+	find crds -mindepth 1 -maxdepth 1 -name 'deckhouse.io_*' -exec hack/gen-crd.sh {} \;
+	find crds -mindepth 1 -maxdepth 1 -name 'deckhouse.io_*' -exec rm {} \;
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

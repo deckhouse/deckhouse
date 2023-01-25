@@ -3,24 +3,22 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: VirtualMachineIPAddressLease представляет ссобой ресурс отражающий ссобой факт выделенного IP адреса для VirtualMachineIPAddressClaim
+          description: Ресурс, отражающий факт выделенного IP-адреса для `VirtualMachineIPAddressClaim`.
           properties:
-            apiVersion:
-              description: APIVersion определяет версионную схему этого представления объекта.
-            kind:
-              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
+            apiVersion: {}
+            kind: {}
             spec:
-              description: VirtualMachineIPAddressLeaseSpec определяет желаемое состояние VirtualMachineIPAddressLease
+              description: Определяет желаемое состояние `VirtualMachineIPAddressLease`.
               properties:
                 claimRef:
-                  description: ClaimRef представляет собой ссылку на существующий VirtualMachineIPAddressClaim
+                  description: Ссылка на существующий `VirtualMachineIPAddressClaim`.
                   properties:
                     name:
-                      description: Name это имя ресурса, на который делается ссылка
+                      description: Имя ресурса
                     namespace:
-                      description: Namespace это неймспейс ресурса, на который делается ссылка
+                      description: Название пространства имен.
             status:
-              description: VirtualMachineIPAddressLeaseStatus определяет наблюдаемое состояние VirtualMachineIPAddressLease
+              description: Определяет наблюдаемое состояние `VirtualMachineIPAddressLease`.
               properties:
                 phase:
-                  description: Phase представляет текущее состояние выданной аренды IP-адреса.
+                  description: Представляет текущее состояние выданной аренды IP-адреса.

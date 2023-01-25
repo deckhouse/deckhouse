@@ -3,68 +3,79 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: ClusterVirtualMachineImage представляет собой ресурс, определяющий удаленно доступные образы на уровне кластера.
+          description: Ресурс, определяющий удаленно доступные образы на уровне кластера.
           properties:
-            apiVersion:
-              description: APIVersion определяет версионную схему этого представления объекта.
-            kind:
-              description: Kind определяет ссобой тип ресурса, который представляет этот объект.
+            apiVersion: {}
+            kind: {}
             spec:
-              description: ClusterVirtualMachineImageSpec определяет желаемое состояние ClusterVirtualMachineImage
+              description: Определяет желаемое состояние `ClusterVirtualMachineImage`.
               properties:
                 remote:
-                  description: DataVolumeSource представляет источник для нашего VirtualMachineImage, это может быть HTTP, S3, Registry или существующий PVC
+                  description: |
+                    Источник для `VirtualMachineImage`.
+
+                    Это может быть HTTP, S3, Registry или существующий PVC.
                   properties:
                     blank:
-                      description: DataVolumeBlankImage предоставляет параметры для создания нового пустого образа для PVC
+                      description: Параметры создания нового пустого образа для PVC.
                     http:
-                      description: DataVolumeSourceHTTP может быть http или https адресом, с необязательным именем пользователя и паролем для базовой аутентификации, а также содержать указание на конфигмап с дополнительными CA.
+                      description: Параметры HTTP(S) источника.
                       properties:
                         certConfigMap:
-                          description: CertConfigMap ссылка на конфигмап, содержащий публичный ключ для центров сертификации(CA), а также закодированный в base64 pem сертификат.
+                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации(CA), а также закодированный в Base64 PEM-сертификат.
                         extraHeaders:
-                          description: ExtraHeaders это список строк, содержащих дополнительные заголовки для включения в HTTP-запросы.
+                          description: Список дополнительных заголовков для включения в HTTP-запросы.
                         secretExtraHeaders:
-                          description: SecretExtraHeaders это список ссылок на секреты, каждый из которых может содержать дополнительные заголовки для HTTP-запросов, которые могут содержать кофидециальную информацию.
+                          description: |
+                            Список ссылок на Secret'ы.
+
+                            Каждый Secret может содержать дополнительные заголовки для HTTP-запросов, которые могут содержать конфиденциальную информацию.
                         secretRef:
-                          description: SecretRef cсылка на секрет, секрет должен содержать accessKeyId (имя пользователя) в кодировке base64 v secretKey (пароль) также в кодировке base64
+                          description: |
+                            Ссылка на Secret.
+
+                            Secret должен содержать accessKeyId (имя пользователя) в кодировке Base64 и secretKey (пароль) также в кодировке Base64.
                         url:
-                          description: URL представляет http(s) адрес
+                          description: URL представляет HTTP(S) адрес.
                     pvc:
-                      description: DataVolumeSourcePVC предоставляет параметры для создания тома данных из существующего PVC.
+                      description: Параметры для создания тома данных из существующего PVC.
                       properties:
                         name:
-                          description: Name предоставляет  имя для исходного PVC
+                          description: Имя PVC.
                         namespace:
-                          description: Namespace представляет неймспейс для исходного PVC
+                          description: Название пространства имен PVC.
                     registry:
-                      description: DataVolumeSourceRegistry предоставляет параметры для создания тома данных из существующего OCI registry
+                      description: Параметры для создания тома данных из существующего OCI registry.
                       properties:
                         certConfigMap:
-                          description: CertConfigMap представляет имя конфигмапа с сертификатами для registry
+                          description: Имя ConfigMap с сертификатами для registry.
                         secretRef:
-                          description: SecretRef представляет имя секрета необходимого для доступа к registry.
+                          description: Имя Secret'а, необходимого для доступа к registry.
                         url:
-                          description: 'URL предстваляет адрес до имаджа в registry (начиная со схемы: docker, oci-archive)'
+                          description: |
+                            Адрес образа в registry (начиная со схемы: `docker`, `oci-archive`).
                     s3:
-                      description: DataVolumeSourceS3 предоставляет параметры для создания тома данных из S3 источника
+                      description: Параметры для создания тома данных из хранилища S3.
                       properties:
                         certConfigMap:
-                          description: CertConfigMap ссылка на конфигмап, содержащий публичный ключ для центров сертификации(CA), а также закодированный в base64 pem сертификат.
+                          description: Ссылка на ConfigMap, содержащий публичный ключ для центров сертификации(CA), а также закодированный в Base64 PEM-сертификат.
                         secretRef:
-                          description: SecretRef представляет имя секрета необходимого для доступа к S3 источнику.
+                          description: Имя Secret'а необходимого для доступа к хранилищу S3.
                         url:
-                          description: URL предстваляет адрес до имаджа в S3
+                          description: Адрес образа в хранилище S3.
                 source:
-                  description: TypedObjectReference содержит информацию, чтобы найти конкретный типизированный объект в кластере.
+                  description: Ссылка на конкретный типизированный объект в кластере.
                   properties:
                     apiGroup:
-                      description: APIGroup то группа для ресурса, на который делается ссылка. Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется APIGroup.
+                      description: |
+                        Группа API ресурса.
+
+                        Если APIGroup не указан, указанный вид должен находиться в основной группе API. Для любых других сторонних типов требуется указание группы API.
                     kind:
-                      description: Kind это тип ресурса, на который делается ссылка.
+                      description: Тип ресурса.
                     name:
-                      description: Name это имя ресурса, на который делается ссылка
+                      description: Имя ресурса.
                     namespace:
-                      description: Namespace это неймспейс ресурса, на который делается ссылка
+                      description: Namespace ресурса.
             status:
-              description: ClusterVirtualMachineImageStatus определяет наблюдаемое состояние ClusterVirtualMachineImage
+              description: Определяет наблюдаемое состояние `ClusterVirtualMachineImage`.
