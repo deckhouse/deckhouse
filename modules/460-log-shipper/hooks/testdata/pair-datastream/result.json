@@ -32,7 +32,7 @@
       "inputs": [
         "transform/destination/test-es-dest/00_elastic_dedot"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.\"ap-p\"[0].a) { .app=.parsed_data.\"ap-p\"[0].a } \n .foo=\"bar\"",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.ap_p[0].a) { .app=.parsed_data.ap_p[0].a } \n .foo=\"bar\"",
       "type": "remap"
     },
     "transform/destination/test-es-dest/02_elastic_stream": {

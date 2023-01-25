@@ -62,4 +62,4 @@ spec:
       password: c2VjcmV0
   extraLabels:
     foo: bar
-    app: "{{ ap-p[0].a }}"
+    app: "{{ ap_p[0].a }}"
