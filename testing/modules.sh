@@ -35,7 +35,13 @@ if [[ -z "${FOCUS}" ]]; then
   TESTS_PATH="./modules/... ./global-hooks/..."
 else
   # Focus on $FOCUS module
-  TESTS_PATH="./$(find modules/ -type d -name "*-$FOCUS")/..."
+  MODULE=$(find -L modules/ -type d -name "*-$FOCUS")
+  if [[ -z "${MODULE}" ]]; then
+    echo "module \"$FOCUS\" doesn't exist"
+    execute_linker restore
+    exit 1
+  fi
+  TESTS_PATH="./${MODULE}/..."
 fi
 
 set +e
