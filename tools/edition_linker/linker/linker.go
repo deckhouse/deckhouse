@@ -14,7 +14,7 @@
  limitations under the License.
 */
 
-package library
+package linker
 
 import (
 	"fmt"
