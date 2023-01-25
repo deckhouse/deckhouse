@@ -54,7 +54,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 			f.RunHook()
 		})
 
-		It("Oldest 2 machines should be deleted, but the Machine that is older than 24h will not be deleted at all", func() {
+		It("Oldest 3 machines should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeTrue())
@@ -62,7 +62,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-3").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-4").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-5").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-6").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-6").Exists()).To(BeFalse())
 		})
 	})
 
@@ -80,6 +80,28 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-2").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-3").Exists()).To(BeTrue())
+		})
+
+	})
+
+	FContext("With 60 Machines older than 24h, one Machine machines younger than 20 hours, and one between 20 and 24 hours", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateNMachines(
+				62, 62, "test", durationWithCount{count: 60, duration: "30h"},
+				durationWithCount{count: 1, duration: "19h"}, durationWithCount{count: 1, duration: "22h"},
+			)))
+			f.RunHook()
+		})
+
+		It("No Machine should be deleted", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			for i := 0; i < 15; i++ {
+				machineName := fmt.Sprintf("test-0-test-%d", i)
+				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", machineName).Exists()).To(BeTrue())
+			}
+			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1-test-0").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-2-test-0").Exists()).To(BeFalse())
 		})
 	})
 
@@ -128,11 +150,13 @@ func generateNGsAndMCs(ngNodes, ngReady int, prefix string, durationStrings ...s
 	timeNow := time.Now().UTC()
 
 	var offsets []time.Duration
-	for _, d := range durationStrings {
+	for i, d := range durationStrings {
 		duration, err := time.ParseDuration(d)
 		if err != nil {
 			panic(err)
 		}
+
+		duration += time.Duration(i) * time.Millisecond
 
 		offsets = append(offsets, duration)
 	}

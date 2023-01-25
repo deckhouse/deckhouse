@@ -318,24 +318,22 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 	})
 
 	// we spread deletion over preemptibleDeletionPeriod partitioned by hookExecutionSchedule
+	// that is the calculated batch for Machines that are older than 20 hours, but younger than 24 hours
 	batch := len(machines) / int(preemptibleDeletionPeriod/hookExecutionSchedule)
 	if batch == 0 {
 		batch = 1
 	}
 
+	var criticallyOldMachinesToDelete []string
 	const durationThresholdForDeletion = preemptibleInstanceMaxLifetime - preemptibleDeletionPeriod
+
 	for _, currentMachine := range machines {
-		if len(machinesToDelete) >= batch {
-			break
-		}
-
-		if currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).Before(timeNow) ||
-			currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
-
+		// skip young Machines
+		if currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
 			continue
 		}
 
-		// skip Machines in NodeGroups that violate Node readiness ratio
+		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
 		ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
 		if !ok {
 			continue
@@ -344,7 +342,23 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 			continue
 		}
 
-		machinesToDelete = append(machinesToDelete, currentMachine.Name)
+		if (len(machinesToDelete) < batch) && (currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).After(timeNow)) {
+			machinesToDelete = append(machinesToDelete, currentMachine.Name)
+		}
+
+		if currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).Before(timeNow) {
+			criticallyOldMachinesToDelete = append(criticallyOldMachinesToDelete, currentMachine.Name)
+		}
+	}
+
+	// we'll delete a quarter of Machines older than 24 hours
+	if len(criticallyOldMachinesToDelete) > 0 {
+		criticallyOldMachinesToDeleteCount := len(criticallyOldMachinesToDelete) / 4
+		if criticallyOldMachinesToDeleteCount == 0 {
+			criticallyOldMachinesToDeleteCount = 1
+		}
+
+		machinesToDelete = append(machinesToDelete, criticallyOldMachinesToDelete[:criticallyOldMachinesToDeleteCount]...)
 	}
 
 	return
