@@ -246,6 +246,7 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 		dataVolumeSource, err := resolveDataVolumeSource(&diskSnap, &clusterImageSnap, source)
 		if err != nil {
 			input.LogEntry.Warnf("%s. Skip", err)
+			return nil
 		}
 
 		storage := &cdiv1.StorageSpec{
