@@ -1,5 +1,6 @@
 ---
 title: "The extended-monitoring module: configuration"
+force_searchable: true
 ---
 
 <!-- SCHEMA -->

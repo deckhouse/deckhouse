@@ -54,4 +54,10 @@ Jekyll::Hooks.register :site, :post_read do |site|
   # Fill site.data.modulesFeatureStatus
   parse_module_data(site.data["sidebars"]["main"]["entries"], site)
 
+  # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
+  site.pages.each do |page|
+    next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
+    next if page['force_searchable'] == true
+    page.data['searchable'] = false
+  end
 end

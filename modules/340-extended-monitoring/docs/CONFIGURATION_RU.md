@@ -1,5 +1,6 @@
 ---
 title: "Модуль extended-monitoring: настройки"
+force_searchable: true
 ---
 
 <!-- SCHEMA -->
