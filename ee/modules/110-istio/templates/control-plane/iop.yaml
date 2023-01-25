@@ -1,8 +1,10 @@
 {{ $supportedProviders := list "aws" "gcp" "azure" }}
-{{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
 {{ $cloudPlatform := "none" }}
-{{ if has $currentProvider $supportedProviders }}
-  {{ $cloudPlatform = $currentProvider }}
+{{ if hasKey .Values.global.clusterConfiguration "cloud" }}
+  {{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
+  {{ if has $currentProvider $supportedProviders }}
+    {{ $cloudPlatform = $currentProvider }}
+  {{ end }}
 {{ end }}
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
