@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "YandexMachineClass", true)
@@ -84,7 +84,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 
 	})
 
-	FContext("With 60 Machines older than 24h, one Machine machines younger than 20 hours, and one between 20 and 24 hours", func() {
+	Context("With 60 Machines older than 24h, one Machine machines younger than 20 hours, and one between 20 and 24 hours", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateNMachines(
 				62, 62, "test", durationWithCount{count: 60, duration: "30h"},
