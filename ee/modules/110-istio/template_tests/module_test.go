@@ -21,6 +21,16 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+clusterConfiguration:
+  apiVersion: deckhouse.io/v1
+  kind: ClusterConfiguration
+  clusterType: Cloud
+  kubernetesVersion: "Automatic"
+  podSubnetCIDR: "10.111.0.0/16"
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: "10.222.0.0/16"
+  cloud:
+    provider: OpenStack
 highAvailability: true
 enabledModules: ["operator-prometheus-crd","cert-manager","vertical-pod-autoscaler-crd","cni-cilium"]
 modules:
@@ -309,6 +319,41 @@ neighbour-0:
 			Expect(iopV13.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))
 			Expect(iopV13.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cloud provider OpenStack", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13.7"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.13.7"]`)
+			f.HelmRender()
+		})
+		It("CLOUD_PROVIDER env should be 'none'", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			iopV13 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x13x7")
+			Expect(iopV13.Exists()).To(BeTrue())
+			Expect(iopV13.Field("spec.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("none"))
+		})
+	})
+
+	Context("Cloud provider AWS", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterConfiguration.cloud.provider", "AWS")
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.13.7"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.13.7"]`)
+			f.HelmRender()
+		})
+		It("CLOUD_PROVIDER env should be 'aws'", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			iopV13 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x13x7")
+			Expect(iopV13.Exists()).To(BeTrue())
+			Expect(iopV13.Field("spec.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("aws"))
 		})
 	})
 
