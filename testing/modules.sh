@@ -31,10 +31,10 @@ function execute_linker() {
 execute_linker merge
 
 if [[ -z "${FOCUS}" ]]; then
-  echo "No focus"
+  # No focus
   TESTS_PATH="./modules/... ./global-hooks/..."
 else
-  echo "Focus on \"${FOCUS}\" module"
+  # Focus on $FOCUS module
   TESTS_PATH="./$(find modules/ -type d -name "*-$FOCUS")/..."
 fi
 
