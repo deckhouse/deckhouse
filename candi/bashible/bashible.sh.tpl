@@ -31,7 +31,7 @@ function bb-event-error-create() {
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     eventLog="/var/lib/bashible/step.log"
-    kubectl_exec apply -f - || true <<EOF
+    kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
         kind: Event
         metadata:
