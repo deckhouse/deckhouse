@@ -25,10 +25,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -624,6 +626,62 @@ metadata:
 			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
 			Expect(r136.Field("spec.applyAfter").String()).To(Equal("2222-11-11T23:23:23Z"))
 			Expect(r136.Field("metadata.annotations.release\\.deckhouse\\.io/notification-time-shift").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Notification: basic auth", func() {
+		var (
+			username string
+			password string
+		)
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			username, password, _ = r.BasicAuth()
+		}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesSet("deckhouse.update.notification.auth", updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}})
+			f.ValuesDelete("deckhouse.update.windows")
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should have basic auth in headers", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(username).To(Equal("user"))
+			Expect(password).To(Equal("pass"))
+		})
+	})
+
+	Context("Notification: bearer token auth", func() {
+		var (
+			headerValue string
+		)
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			headerValue = r.Header.Get("Authorization")
+		}))
+		AfterEach(func() {
+			defer svr.Close()
+		})
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
+			f.ValuesSet("deckhouse.update.notification.auth", updater.Auth{Token: pointer.String("the_token")})
+			f.ValuesDelete("deckhouse.update.windows")
+			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			f.RunHook()
+		})
+
+		It("Should have bearer token in headers", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(headerValue).To(Equal("Bearer the_token"))
 		})
 	})
 })

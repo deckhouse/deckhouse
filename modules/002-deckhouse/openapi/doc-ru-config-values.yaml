@@ -74,7 +74,7 @@ properties:
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
                 "applyTime": "2023-01-01T14:30:00Z00:00",
-                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
+                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
               }
               ```
 
@@ -93,6 +93,19 @@ properties:
               Механизм обновления гарантирует, что Deckhouse не обновится раньше указанного времени.
 
               При использовании окон обновлений, обновление Deckhouse после оповещения произойдет в ближайшее возможное окно обновлений, но не ранее чем истечет указанное в `minimalNotificationTime` время.
+          auth:
+            description: |
+              Структура, описывающая способ авторизации на webhook.
+
+              Если не указано — авторизация не используется.
+            properties:
+              username:
+                description: Имя пользователя для авторизации на webhook.
+              password:
+                description: Пароль для авторизации на webhook.
+              token:
+                description: Токен для авторизации на webhook.
+
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.

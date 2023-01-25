@@ -13,6 +13,18 @@ positive:
           to: '13:00'
   - update:
       mode: Auto
+  - update:
+      notification:
+        webhook: https://example.com/webhook
+        auth:
+          basic:
+            username: user
+            password: pass
+  - update:
+      notification:
+        webhook: https://example.com/webhook
+        auth:
+          bearerToken: token
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4

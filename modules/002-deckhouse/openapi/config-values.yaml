@@ -39,6 +39,10 @@ properties:
         notification:
           webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 6h
+          auth:
+            basic:
+              username: user
+              password: password
     properties:
       mode:
         type: string
@@ -137,7 +141,7 @@ properties:
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
                 "applyTime": "2023-01-01T14:30:00Z00:00",
-                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-22 14:30:00 UTC"
+                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
               }
               ```
 
@@ -161,6 +165,44 @@ properties:
               The update mechanism ensures that Deckhouse will not be updated before the specified time.
 
               When using update windows, the Deckhouse update after the notification will happen at the nearest possible update window, but not before the time specified in `minimalNotificationTime` expires.
+          auth:
+            type: object
+            oneOf:
+              - required: [ basic ]
+              - required: [ bearerToken ]
+            description: |
+              Authentication settings for the webhook.
+
+              If the parameter is omitted, the webhook will be called without authentication.
+            properties:
+              basic:
+                type: object
+                description: |
+                  Basic authentication settings for the webhook.
+
+                  If the parameter is omitted, the webhook will be called without authentication.
+                required:
+                  - username
+                  - password
+                properties:
+                  username:
+                    type: string
+                    description: |
+                      The username for the webhook.
+
+                      The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+                  password:
+                    type: string
+                    description: |
+                        The password for the webhook.
+
+                        The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+              bearerToken:
+                type: string
+                description: |
+                    The token for the webhook.
+
+                    The token will be sent in the `Authorization` header in the format `Bearer <token>`.
   nodeSelector:
     type: object
     additionalProperties:
