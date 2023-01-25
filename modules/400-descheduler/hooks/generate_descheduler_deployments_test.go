@@ -42,7 +42,7 @@ spec:
         enabled: true
 `
 
-var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
+var _ = FDescribe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 

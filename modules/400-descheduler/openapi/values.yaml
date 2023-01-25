@@ -10,5 +10,4 @@ properties:
         type: array
         default: [ ]
         items:
-          additionalProperties:
-            type: object
+          additionalProperties: true

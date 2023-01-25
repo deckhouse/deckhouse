@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, createFirstDeschedulerCR)
 
 func createFirstDeschedulerCR(input *go_hook.HookInput) error {
-	config, ok := input.ConfigValues.GetOk(".")
+	config, ok := input.ConfigValues.GetOk("descheduler")
 	if !ok || len(config.Map()) == 0 {
 		return nil
 	}
