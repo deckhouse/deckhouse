@@ -40,8 +40,9 @@ properties:
           webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 6h
           auth:
-            username: user
-            password: password
+            basic:
+              username: user
+              password: password
     properties:
       mode:
         type: string
