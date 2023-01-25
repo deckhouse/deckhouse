@@ -630,9 +630,6 @@ metadata:
 	})
 
 	Context("Notification: basic auth", func() {
-		// type auth struct {
-		// 	Basic updater.BasicAuth `json:"basic"`
-		// }
 		var (
 			username string
 			password string
@@ -662,9 +659,6 @@ metadata:
 	})
 
 	Context("Notification: bearer token auth", func() {
-		// type auth struct {
-		// 	Token string `json:"bearerToken"`
-		// }
 		var (
 			headerValue string
 		)
