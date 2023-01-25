@@ -73,6 +73,12 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Type:        secret.Type,
 		Data:        secret.Data,
 	}
+
+	if secret.Namespace != v1.NamespaceDefault {
+		// desired secret (target secret in a namespace) must not have annotations to satisfy DeepEqual function
+		secret.Annotations = nil
+	}
+
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
 
@@ -163,9 +169,6 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		// Secrets that are not in namespace `default` are existing Secrets.
 		if secret.Namespace != v1.NamespaceDefault {
 			path := SecretPath(secret)
-			// remove annotations because desired secret doesn't have them
-			// annotations map have to be nil that secrets are equal
-			secret.Annotations = nil
 			secretsExists[path] = secret
 			continue
 		}
