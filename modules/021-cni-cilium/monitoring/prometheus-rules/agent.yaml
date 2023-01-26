@@ -1,21 +1,5 @@
 - name: cni-cilium
   rules:
-  - alert: CiliumAgentControllersRunsFailing
-    expr: max by (pod,namespace) (cilium_controllers_failing) > 0
-    for: 15m
-    labels:
-      d8_module: cni-cilium
-      d8_component: agent
-      tier: cluster
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      summary: Some controllers (internal logical loops) are failing in agent {{ $labels.namespace }}/{{ $labels.pod }}
-      description: |
-        Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
-
   - alert: CiliumAgentUnreachableHealthEndpoints
     expr: max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
     for: 5m
