@@ -1,0 +1,77 @@
+diff --git a/pkg/virt-operator/resource/apply/patches.go b/pkg/virt-operator/resource/apply/patches.go
+index 2bd0c313d..31b88f893 100644
+--- a/pkg/virt-operator/resource/apply/patches.go
++++ b/pkg/virt-operator/resource/apply/patches.go
+@@ -15,6 +15,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+ 
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	v1 "kubevirt.io/api/core/v1"
+ 
+ 	"kubevirt.io/kubevirt/pkg/virt-operator/resource/generate/components"
+@@ -22,12 +23,12 @@ import (
+ )
+ 
+ type Customizer struct {
+-	Patches []v1.CustomizeComponentsPatch
+-
+-	hash string
++	Patches    []v1.CustomizeComponentsPatch
++	ObjectMeta metav1.ObjectMeta
++	hash       string
+ }
+ 
+-func NewCustomizer(customizations v1.CustomizeComponents) (*Customizer, error) {
++func NewCustomizer(customizations v1.CustomizeComponents, objectMeta metav1.ObjectMeta) (*Customizer, error) {
+ 	hash, err := getHash(customizations)
+ 	if err != nil {
+ 		return &Customizer{}, err
+@@ -38,8 +39,9 @@ func NewCustomizer(customizations v1.CustomizeComponents) (*Customizer, error) {
+ 	patches = append(patches, flagPatches...)
+ 
+ 	return &Customizer{
+-		Patches: patches,
+-		hash:    hash,
++		Patches:    patches,
++		ObjectMeta: objectMeta,
++		hash:       hash,
+ 	}, nil
+ }
+ 
+@@ -104,12 +106,21 @@ func (c *Customizer) GenericApplyPatches(objects interface{}) error {
+ 
+ 			patches := c.GetPatchesForResource(kind, name)
+ 
++			ownerRefBytes, err := json.Marshal(c.ObjectMeta.OwnerReferences)
++			if err != nil {
++				return err
++			}
++			patches = append(patches, v1.CustomizeComponentsPatch{
++				Patch: fmt.Sprintf(`{"metadata":{"ownerReferences":%s}}`, ownerRefBytes),
++				Type:  v1.StrategicMergePatchType,
++			})
++
+ 			patches = append(patches, v1.CustomizeComponentsPatch{
+ 				Patch: fmt.Sprintf(`{"metadata":{"annotations":{"%s":"%s"}}}`, v1.KubeVirtCustomizeComponentAnnotationHash, c.hash),
+ 				Type:  v1.StrategicMergePatchType,
+ 			})
+ 
+-			err := applyPatches(obj, patches)
++			err = applyPatches(obj, patches)
+ 			if err != nil {
+ 				return err
+ 			}
+diff --git a/pkg/virt-operator/resource/apply/reconcile.go b/pkg/virt-operator/resource/apply/reconcile.go
+index 5e8b4d0fd..f4261a056 100644
+--- a/pkg/virt-operator/resource/apply/reconcile.go
++++ b/pkg/virt-operator/resource/apply/reconcile.go
+@@ -459,7 +459,7 @@ func NewReconciler(kv *v1.KubeVirt, targetStrategy *install.Strategy, stores uti
+ 		return nil, err
+ 	}
+ 
+-	customizer, err := NewCustomizer(kv.Spec.CustomizeComponents)
++	customizer, err := NewCustomizer(kv.Spec.CustomizeComponents, kv.ObjectMeta)
+ 	if err != nil {
+ 		return nil, err
+ 	}
