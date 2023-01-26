@@ -36,20 +36,18 @@ function bb-event-error-create() {
         kind: Event
         metadata:
           name: bashible-error-${eventName}
-          annotations:
-            timestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
         regarding:
           apiVersion: v1
           kind: Node
           name: '$(hostname -s)'
           uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
         note: '$(tail -c 500 ${eventLog})'
-        reason: Failed
+        reason: BashibleStepFailed
         type: Warning
         reportingController: bashible
         reportingInstance: '$(hostname -s)'
         eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-        action: "Binding"
+        action: "BashibleStepExecution"
 EOF
 }
 
