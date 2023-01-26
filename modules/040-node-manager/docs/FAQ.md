@@ -596,7 +596,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Create NodeGroupConfiguration forcontainerd configuration on NodeGroup `gpu`:
+Create NodeGroupConfiguration for containerd configuration of NodeGroup `gpu`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
