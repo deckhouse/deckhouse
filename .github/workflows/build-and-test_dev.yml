@@ -417,7 +417,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          channel: "alpha"
       # </template: werf_install_step>
 
       - name: Set up Go 1.19
@@ -577,7 +577,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          channel: "alpha"
       # </template: werf_install_step>
 
       - name: Build and push deckhouse images
@@ -769,7 +769,7 @@ jobs:
       - name: Run doc web build
         uses: werf/actions/build@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          channel: "alpha"
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
@@ -852,7 +852,7 @@ jobs:
       - name: Run main web build
         uses: werf/actions/build@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          channel: "alpha"
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
@@ -1375,7 +1375,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          channel: "alpha"
       # </template: werf_install_step>
 
       - name: Prepare site structure
