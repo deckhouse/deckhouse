@@ -123,7 +123,7 @@ linstor node evacuate <имя_узла>
 ![LINSTOR шпаргалка](../../images/041-linstor/linstor-debug-cheatsheet.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
 
-Некоторые типичные проблемы, описанны здесь:
+Некоторые типичные проблемы описаны ниже.
 
 ### linstor-node не может запуститься из-за невозможности загрузки drbd-модуля
 
