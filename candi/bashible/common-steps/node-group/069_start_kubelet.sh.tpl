@@ -66,20 +66,12 @@ fi
 {{- end }}
 
 if bb-flag? kubelet-need-restart; then
+
 {{- if ne .runType "ImageBuilding" }}
-  bb-log-warning "'kubelet-need-restart' flag was set. Kubelet should be restarted!"
-  {{ if eq .runType "ClusterBootstrap" }}
-  bb-log-info "Restart kubelet service..."
-
+  bb-log-warning "'kubelet-need-restart' flag was set. Restart kubelet."
   systemctl restart "kubelet.service"
-
-  bb-log-info "Kubelet service was restarted."
-  {{ else }}
-  if ! bb-flag? reboot; then
-    bb-log-info "Restart kubelet service..."
-
-    systemctl restart "kubelet.service"
-
+  {{ if ne .runType "ClusterBootstrap" }}
+  if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then
     bb-log-info "Kubelet service was restarted. Sleep 60 seconds to prevent oscillation in Cloud LoadBalancer targets."
     # Issue with oscillating cloud LoadBalancer targets is tracked here.
     # https://github.com/kubernetes/kubernetes/issues/102367
@@ -95,13 +87,19 @@ if bb-flag? kubelet-need-restart; then
 fi
 
 {{- if ne .runType "ImageBuilding" }}
-if ! systemctl is-active --quiet "kubelet.service" && ! bb-flag? reboot; then
-  bb-log-warning "Kubelet service is not running. Start it..."
-  if systemctl start "kubelet.service"; then
-    bb-log-info "Kubelet has started."
-  else
-    bb-log-error "Kubelet has not started. Exit"
-    exit 1
-  fi
+if bb-flag? reboot; then
+  exit 0
+fi
+
+if systemctl is-active --quiet "kubelet.service"; then
+  exit 0
+fi
+
+bb-log-warning "Kubelet service is not running. Start it..."
+if systemctl start "kubelet.service"; then
+  bb-log-info "Kubelet has started."
+else
+  bb-log-error "Kubelet has not started. Exit"
+  exit 1
 fi
 {{- end }}
