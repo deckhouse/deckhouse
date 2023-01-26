@@ -81,11 +81,11 @@ def main(ctx: hook.Context):
                 return
 
 
-conversions = [
-    # to apiVersion, conv function
-    ("deckhouse.io/v1beta1", conv_v1alpha1_to_v1beta1),
-    ("deckhouse.io/v1", conv_v1beta1_to_v1),
-]
+# conversions = [
+#     # to apiVersion, conv function
+#     ("deckhouse.io/v1beta1", conv_v1alpha1_to_v1beta1),
+#     ("deckhouse.io/v1", conv_v1beta1_to_v1),
+# ]
 
 
 def conv_v1alpha1_to_v1beta1(obj):
