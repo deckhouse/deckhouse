@@ -18,8 +18,6 @@ The linstor module provides a custom kube-scheduler `linstor` for such tasks, th
 The linstor scheduler considers the placement of data in storage and tries to place Pods on nodes where data is available locally first.  
 Any Pod using linstor volumes will be automatically configured to use the `linstor` scheduler.
 
-[Example...](usage.html#using-the-linstor-scheduler)
-
 ### Application reschedule in case of node problem (storage-based fencing)
 
 In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
