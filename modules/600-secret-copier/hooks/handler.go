@@ -73,6 +73,12 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Type:        secret.Type,
 		Data:        secret.Data,
 	}
+
+	if secret.Namespace != v1.NamespaceDefault {
+		// desired secret (target secret in a namespace) must not have annotations to satisfy DeepEqual function
+		s.Annotations = nil
+	}
+
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
 
@@ -159,6 +165,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secretsDesired := make(map[string]*Secret)
 	for _, s := range secrets {
 		secret := s.(*Secret)
+
 		// Secrets that are not in namespace `default` are existing Secrets.
 		if secret.Namespace != v1.NamespaceDefault {
 			path := SecretPath(secret)
@@ -244,6 +251,9 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 			Name:      secret.Name,
 			Namespace: secret.Namespace,
 			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/created-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
@@ -273,6 +283,9 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 			Name:      secret.Name,
 			Namespace: secret.Namespace,
 			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/updated-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
