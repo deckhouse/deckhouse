@@ -118,5 +118,5 @@ var MergeConf = linker.MergeConf{
 			NewName:  "/deckhouse/modules/600-flant-integration",
 		},
 	},
-	TempDir: ".d8-module-bak",
+	TempDir: "/deckhouse/.d8-module-bak",
 }

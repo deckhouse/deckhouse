@@ -47,7 +47,7 @@ func MergeEditions(conf MergeConf) error {
 	}
 
 	if conf.TempDir != "" {
-		err := os.MkdirAll(filepath.Join(os.TempDir(), conf.TempDir), 0755)
+		err := os.MkdirAll(conf.TempDir, 0755)
 		if err != nil {
 			return err
 		}
@@ -63,7 +63,7 @@ func MergeEditions(conf MergeConf) error {
 			case ThrowError:
 				return fmt.Errorf("destination already exists - unable to merge path \"%s\" to \"%s\"", oldName, target.NewName)
 			case StashInTemp:
-				err := os.Rename(oldName, filepath.Join(os.TempDir(), conf.TempDir, filepath.Base(oldName)))
+				err := os.Rename(oldName, filepath.Join(conf.TempDir, filepath.Base(oldName)))
 				if err != nil {
 					return err
 				}
@@ -84,7 +84,7 @@ func RestoreEditions(conf MergeConf) error {
 	}
 
 	for oldName, target := range conf.Targets {
-		err := os.Remove(target.NewName)
+		err := os.RemoveAll(target.NewName)
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func RestoreEditions(conf MergeConf) error {
 		case ThrowError:
 			// Do nothing
 		case StashInTemp:
-			err := os.Rename(filepath.Join(os.TempDir(), conf.TempDir, filepath.Base(oldName)), oldName)
+			err := os.Rename(filepath.Join(conf.TempDir, filepath.Base(oldName)), oldName)
 			if err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func RestoreEditions(conf MergeConf) error {
 	}
 
 	if conf.TempDir != "" {
-		err := os.RemoveAll(filepath.Join(os.TempDir(), conf.TempDir))
+		err := os.RemoveAll(conf.TempDir)
 		if err != nil {
 			return err
 		}
