@@ -316,7 +316,7 @@ func handleNestedRBACForUs(m utils.Module, object storage.StoreObject, shortPath
 
 	switch {
 	case strings.HasPrefix(objectName, localPrefix):
-		if namespace != m.Namespace && namespace != "default" {
+		if namespace != m.Namespace {
 			return errors.NewLintRuleError(
 				"MANIFEST053",
 				object.Identity(),
