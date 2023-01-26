@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM quay.io/kiali/kiali:v1.62@sha256:ea49c6afb7de7cf9c1831fcd9480906c01b2322c10385a269fc2e61bd4e5fb8e as artifact
+FROM quay.io/kiali/kiali:v1.56@sha256:5d63cb0af6a4eb2a1af012bac7688db39851aa8e1532728156081c94da1bfdd8 as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /opt/kiali/ /opt/kiali/

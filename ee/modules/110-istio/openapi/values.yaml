@@ -117,6 +117,8 @@ properties:
         default:
           - version: "1.10.1"
             alertSeverity: 4
+          - version: "1.12.6"
+            alertSeverity: 4
         x-examples:
           - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
       globalVersion:
