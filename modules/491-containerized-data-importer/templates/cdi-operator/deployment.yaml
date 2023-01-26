@@ -88,6 +88,10 @@ spec:
         - name: PULL_POLICY
           value: IfNotPresent
         - name: MONITORING_NAMESPACE
+        - name: APISERVER_NODESELECTOR
+          value: {{ index (include "helm_lib_node_selector" (tuple . "master") | fromYaml) "nodeSelector" | default (dict) | toJson | quote }}
+        - name: APISERVER_TOLERATIONS
+          value: {{ index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | default (list) | toJson | quote }}
         image: {{ include "helm_lib_module_image" (list . "cdiOperator") }}
         imagePullPolicy: IfNotPresent
         ports:
