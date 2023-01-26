@@ -38,12 +38,12 @@ class Output:
         metrics: MetricsCollector,
         kube_operations: KubeOperationCollector,
         values_patches: ValuesPatchesCollector,
-        conversion_responses: ConversionsCollector,
+        conversions: ConversionsCollector,
     ):
         self.metrics = metrics
         self.kube_operations = kube_operations
         self.values_patches = values_patches
-        self.conversions = conversion_responses
+        self.conversions = conversions
 
     # TODO  logger: --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
     #
