@@ -82,3 +82,60 @@ spec:
                   description: A list of modules to install.
                   items:
                     type: string
+
+    - name: v1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Python Interpreter.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: Spec of Python Interpreter.
+              required:
+                - version
+              properties:
+                version:
+                  type: object
+                  description: Python version.
+                  properties:
+                    major:
+                      type: integer
+                      description: Major version of Python.
+                      default: 3
+                      enum:
+                        - 2
+                        - 3
+                    minor:
+                      type: integer
+                      description: Minor version of Python.
+                      minimum: 0
+                      maximum: 12
+                      default: 11
+                modules:
+                  type: array
+                  description: A list of modules to install.
+                  items:
+                    type: object
+                    description: A module to install.
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+                        description: Name of the module.
+                      version:
+                        type: string
+                        description: Version of the module.
+                      source:
+                        type: string
+                        description: Source of the module.
+                      extraArgs:
+                        type: array
+                        description: Extra arguments for pip install.
+                        items:
+                          type: string

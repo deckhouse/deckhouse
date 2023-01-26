@@ -6,8 +6,9 @@
 import operator
 from functools import reduce
 from typing import Iterable
-from dotmap import DotMap
+
 from dictdiffer import deepcopy, diff
+from dotmap import DotMap
 
 
 class ValuesPatchesCollector:
@@ -23,17 +24,7 @@ class ValuesPatchesCollector:
         self.data.append(payload)
 
     def update(self, updated_values: dict):
-        from pprint import pprint
-
-        print("initial_values")
-        pprint(self.initial_values)
-
-        print("updated_values")
-        pprint(updated_values)
-
         for patch in values_json_patches(self.initial_values, updated_values):
-            print("patch")
-            pprint(patch)
             self.collect(patch)
 
 
@@ -77,7 +68,7 @@ class PatchGenerator:
         op, path_segments, values = change
 
         if op == "add":
-            #   op    |______path_________|   value
+            #   op    |_______path________|   value
             #    |    |                   |  /
             # ('add', ['x', 'y', 'a'], [(2, 2)])
 

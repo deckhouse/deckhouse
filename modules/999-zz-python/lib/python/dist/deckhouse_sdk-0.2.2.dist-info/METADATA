@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: deckhouse-sdk
-Version: 0.2.1
+Version: 0.2.2
 Summary: Python SDK for Shell Operator hooks
 License: Apache-2.0
 Author: Eugene Shevchenko

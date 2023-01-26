@@ -11,6 +11,7 @@ from typing import Iterable
 
 from dotmap import DotMap
 
+from .conversions import ConversionsCollector
 from .kubernetes import KubeOperationCollector
 from .metrics import MetricsCollector
 from .module import get_binding_context, get_config
@@ -32,10 +33,17 @@ class Output:
     # themselves.
     values: DotMap = None
 
-    def __init__(self, metrics, kube_operations, values_patches):
+    def __init__(
+        self,
+        metrics: MetricsCollector,
+        kube_operations: KubeOperationCollector,
+        values_patches: ValuesPatchesCollector,
+        conversion_responses: ConversionsCollector,
+    ):
         self.metrics = metrics
         self.kube_operations = kube_operations
         self.values_patches = values_patches
+        self.conversions = conversion_responses
 
     # TODO  logger: --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
     #
@@ -48,6 +56,7 @@ class Output:
             ("METRICS_PATH", self.metrics),
             ("KUBERNETES_PATCH_PATH", self.kube_operations),
             ("VALUES_JSON_PATCH_PATH", self.values_patches),
+            ("CONVERSION_RESPONSE_PATH", self.conversions),
         )
 
         for path_env, collector in file_outputs:
@@ -150,6 +159,7 @@ def __run(
         MetricsCollector(),
         KubeOperationCollector(),
         ValuesPatchesCollector(initial_values),
+        ConversionsCollector(),
     )
 
     for bindctx in binding_context:
