@@ -44,8 +44,6 @@ spec:
       claimName: "test-volume"
 ```
 
-[Example...](usage.html#using-the-linstor-scheduler)
-
 ### Application reschedule in case of node problem (storage-based fencing)
 
 In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
