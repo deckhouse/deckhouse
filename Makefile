@@ -105,10 +105,16 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
+.PHONY: tests-modules tests-modules-merge tests-modules-restore tests-matrix tests-openapi tests-prometheus
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	testing/modules.sh
+
+tests-modules-merge: ## Prepare module structure for manual debugging
+	cd tools/edition_linker; go run . merge
+
+tests-modules-restore: ## Revert tests-modules-merge
+	cd tools/edition_linker; go run . restore
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
