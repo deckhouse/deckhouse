@@ -21,7 +21,12 @@
       color: $color-main;
       width: fit-content;
       font-weight: $font-weight-bold;
+      font-family: monospace, monospace;
       padding: 0;
+    }
+
+    &_name > .ancestors, &_title > .ancestors {
+      opacity: 55%;
     }
 
     &_type {
@@ -64,7 +69,7 @@
         color: #ff7a7a;
       }
     }
-    
+
     &_content {
       line-height: 1.2rem;
       font-size: 0.9rem;
