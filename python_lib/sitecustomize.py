@@ -31,9 +31,9 @@ def find_module_root(path):
     """
     while True:
         parent, _ = os.path.split(path)
-        # 1. Don't stick to absolute path (/deckhouse/modules) to keep it portable.
-        # 2. If we are in the root, it's likely we are not in Deckhouse pod.
-        if os.path.split(parent)[1] == "modules" or path == "/":
+        # 1. Discover module root for deckhouse or module webhooks root for webhook handler.
+        # 2. If we are in the root, it's likely we are not in Deckhouse pod or webhook handler pod.
+        if os.path.split(parent)[1] in ("modules", "webhooks") or path == "/":
             return path
         path = parent
 
