@@ -33,6 +33,7 @@ kubernetesCustomResourceConversion:
 
 def main(ctx: hook.Context):
     bctx = DotMap(ctx.binding_context)
+    print(bctx.pprint(pformat="json"))
     if (
         bctx.fromVersion == "deckhouse.io/v1alpha1"
         and bctx.toVersion == "deckhouse.io/v1beta1"
