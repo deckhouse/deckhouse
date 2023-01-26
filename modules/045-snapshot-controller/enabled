@@ -33,7 +33,7 @@ function __main__() {
   done
   if [ "$enabled" = "false" ]; then
     # workaround: allow explicit enabling of the module
-    case "$(kubectl get -n d8-system cm/deckhouse -o jsonpath={.data.snapshotControllerEnabled})" in
+    case "$(kubectl get moduleconfig snapshot-controller -o jsonpath={.spec.enabled} 2>/dev/null)" in
       # match all cases of true|y|yes|1
       [Tt][Rr][Uu][Ee]|[Yy]|[Yy][Ee][Ss]|1)
         enabled=true

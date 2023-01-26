@@ -179,6 +179,18 @@ spec:
   storageClassName: linstor-thindata-r2
   volumeMode: Block
   volumeName: pvc-50c071aa-ac84-4f8b-8d05-6002c31d4ee4
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: mydata4
+  namespace: ns1
+spec:
+  source:
+    kind: ClusterVirtualMachineImage
+    name: foo
+  storageClassName: linstor-thindata-r2
+  size: 12Gi
 `),
 			)
 			f.RunHook()
@@ -200,6 +212,10 @@ spec:
 			By("Should not update size of PVC")
 			pvc = f.KubernetesResource("PersistentVolumeClaim", "ns1", "disk-mydata3")
 			Expect(pvc.Field(`spec.resources.requests.storage`).String()).To(Equal("14Gi"))
+
+			By("Should not create DataVolume with missing ClusterVirtualMachineImage")
+			dataVolume = f.KubernetesResource("DataVolume", "ns1", "disk-mydata4")
+			Expect(dataVolume).To(BeEmpty())
 		})
 	})
 
