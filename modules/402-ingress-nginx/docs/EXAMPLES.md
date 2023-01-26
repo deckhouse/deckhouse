@@ -39,6 +39,8 @@ spec:
   inlet: "LoadBalancer"
 ```
 
+**ATTENTION!** In **GCP**, nodes must have an annotation allowing them to accept connections to external addresses for services with the NodePort type.
+
 ## An example for OpenStack
 
 ```yaml
