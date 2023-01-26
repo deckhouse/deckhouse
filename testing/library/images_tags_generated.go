@@ -457,6 +457,7 @@ var DefaultImagesTags = map[string]interface{}{
 		"kubernetesCniRedos111":               "imageHash-registrypackages-kubernetesCniRedos111",
 		"kubernetesCniUbuntu087":              "imageHash-registrypackages-kubernetesCniUbuntu087",
 		"kubernetesCniUbuntu111":              "imageHash-registrypackages-kubernetesCniUbuntu111",
+		"tomlMerge01":                         "imageHash-registrypackages-tomlMerge01",
 		"virtWhatDebian1151Deb9u1":            "imageHash-registrypackages-virtWhatDebian1151Deb9u1",
 	},
 	"snapshotController": map[string]interface{}{

@@ -14,6 +14,9 @@
 
 {{- if eq .cri "Containerd" }}
 
+# install toml-merge
+bb-rp-install "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
   systemctl daemon-reload
@@ -95,8 +98,5 @@ if [[ "$should_install_containerd" == true ]]; then
 fi
 
 # install crictl
-crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-if ! bb-rp-is-installed? "crictl" "${crictl_tag}" ; then
-  bb-rp-install "crictl:${crictl_tag}"
-fi
+bb-rp-install "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
 {{- end }}

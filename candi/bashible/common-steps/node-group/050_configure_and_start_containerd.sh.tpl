@@ -25,7 +25,7 @@ if bb-flag? containerd-need-restart; then
   bb-flag-unset containerd-need-restart
 fi
 
-bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
+bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
   {{- $max_concurrent_downloads := 3 }}
   {{- if hasKey .nodeGroup.cri "containerd" }}
@@ -45,7 +45,7 @@ if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_c
 fi
 
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
-bb-sync-file /etc/containerd/config.toml - << EOF
+bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 2
 root = "/var/lib/containerd"
 state = "/run/containerd"
@@ -184,6 +184,15 @@ oom_score = 0
     base_image_size = ""
     async_remove = false
 EOF
+
+# Check additional configs
+if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
+  containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/conf.d/*.toml -)"
+else
+  containerd_toml="$(cat /etc/containerd/deckhouse.toml)"
+fi
+
+bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock
