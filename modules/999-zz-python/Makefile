@@ -6,6 +6,7 @@ clean:
 
 deps:
 	pip install deckhouse-sdk -t ${DEPS_PATH} --upgrade
+	pip install pyyaml -t ${DEPS_PATH} --upgrade
 
 all: clean deps
 

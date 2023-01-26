@@ -23,10 +23,10 @@ kubernetesCustomResourceConversion:
 - name: python_conversions
   crdName: pythons.deckhouse.io
   conversions:
-  - fromVersion: v1alpha1
-    toVersion: v1beta1
-  - fromVersion: v1beta1
-    toVersion: v1
+  - fromVersion: deckhouse.io/v1alpha1
+    toVersion: deckhouse.io/v1beta1
+  - fromVersion: deckhouse.io/v1beta1
+    toVersion: deckhouse.io/v1
 
 """
 
