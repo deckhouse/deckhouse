@@ -27,8 +27,19 @@ kubernetesCustomResourceConversion:
     toVersion: deckhouse.io/v1beta1
   - fromVersion: deckhouse.io/v1beta1
     toVersion: deckhouse.io/v1
-
 """
+# configVersion: v1
+# kubernetesCustomResourceConversion:
+#   - name: alpha1_to_v1
+#     crdName: yandexinstanceclasses.deckhouse.io
+#     conversions:
+#     - fromVersion: deckhouse.io/v1alpha1
+#       toVersion: deckhouse.io/v1
+#   - name: v1_to_alpha1
+#     crdName: yandexinstanceclasses.deckhouse.io
+#     conversions:
+#     - fromVersion: deckhouse.io/v1
+#       toVersion: deckhouse.io/v1alpha1
 
 
 def main(ctx: hook.Context):
