@@ -27,28 +27,27 @@ function bb-event-error-create() {
     # underscore with dash due to regexp.
     # All of stderr outputs are stored in the eventLog file.
     # step is used as argument for function call.
+    # If event creation failed, error from kubectl suppressed.
     step="$1"
     eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     eventLog="/var/lib/bashible/step.log"
-    kubectl apply -f - <<EOF
+    kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
         kind: Event
         metadata:
           name: bashible-error-${eventName}
-          annotations:
-            timestamp: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")'
         regarding:
           apiVersion: v1
           kind: Node
           name: '$(hostname -s)'
-          uid: "$(kubectl get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+          uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
         note: '$(tail -c 500 ${eventLog})'
-        reason: Failed
+        reason: BashibleStepFailed
         type: Warning
         reportingController: bashible
         reportingInstance: '$(hostname -s)'
         eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-        action: "Binding"
+        action: "BashibleStepExecution"
 EOF
 }
 

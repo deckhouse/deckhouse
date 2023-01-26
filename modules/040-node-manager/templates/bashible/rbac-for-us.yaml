@@ -54,6 +54,24 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:bashible-events
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups: ["events.k8s.io"]
+    resources:
+    - events
+    verbs:
+    - get
+    - list
+    - create
+    - update
+    - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: bashible
@@ -102,6 +120,22 @@ subjects:
 - kind: Group
   name: system:bootstrappers:d8-node-manager
   apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:bashible-events
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:bashible-events
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
