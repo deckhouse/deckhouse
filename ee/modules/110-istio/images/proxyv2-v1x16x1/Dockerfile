@@ -42,5 +42,8 @@ COPY --from=artifact /etc/istio/extensions/stats-filter.compiled.wasm /etc/istio
 COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.wasm /etc/istio/extensions/metadata-exchange-filter.wasm
 COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.compiled.wasm /etc/istio/extensions/metadata-exchange-filter.compiled.wasm
 
+COPY iptables-wrapper-installer.sh /
+RUN /iptables-wrapper-installer.sh
+
 # The pilot-agent will bootstrap Envoy.
 ENTRYPOINT ["/usr/local/bin/pilot-agent"]
