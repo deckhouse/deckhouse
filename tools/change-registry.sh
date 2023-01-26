@@ -102,7 +102,7 @@ function parse_args() {
     exit 1
   fi
 
-  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z](:[0-9]{1,5})?$"
+  domain_validator="^[a-z0-9][-a-z0-9\.]*[a-z](:[0-9]{1,5})?(:\d+)?$"
   if ! [[ $REGISTRY_ADDRESS =~ $domain_validator ]]; then
     >&2 echo "Registry domain doesn't fit the regex ${domain_validator}: $REGISTRY_ADDRESS."
     exit 1
