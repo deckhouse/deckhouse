@@ -287,18 +287,15 @@ module Jekyll
     # 5 - object with language data which use if there is no data in primary language
     def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '')
         result = Array.new()
+        ancestorsPathString = ''
 
-        if name.nil?
+        if name.nil? or name == ''
             fullPath = ancestors + ['element']
             parameterTitle = get_i18n_term('element_of_array').capitalize
-        elsif name != ''
+        else
             fullPath = ancestors + [name]
             parameterTitle = name
-        else
-            puts 'ERROR: Empty parameter name!'
-            puts 'Parent: ', parent
-            puts 'Attributes: ', attributes
-            abort
+            ancestorsPathString = ancestors.slice(1, ancestors.length-1).join('.') + '.' if ancestors.length > 1
         end
 
         linkAnchor = fullPath.join('-').downcase
@@ -333,9 +330,9 @@ module Jekyll
             end
 
             if ( get_hash_value(attributes, 'x-doc-deprecated') or get_hash_value(attributes, 'deprecated') )
-                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span data-tippy-content="%s">%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, pathString, parameterTitle, get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
+                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span class="ancestors">%s</span><span>%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle,get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
-                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, parameterTitle)
+                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored"><span class="ancestors">%s</span><span>%s</span></span>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle)
             end
 
             if attributesType != ''
