@@ -37,4 +37,5 @@ jobs:
         days-before-issue-stale: 120
         days-before-issue-close: -1
         stale-issue-label: "status/needs-triage"
+        remove-issue-stale-when-updated: false
         labels-to-remove-when-unstale: ""
