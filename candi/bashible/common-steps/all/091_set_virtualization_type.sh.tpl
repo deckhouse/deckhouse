@@ -19,6 +19,10 @@ if [ ! -f "$kubeconfig" ]; then
   exit 0
 fi
 
+if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
+  exit 0
+fi
+
 # if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
 # this step runs normally after node reboot.
 if bb-flag? disruption && bb-flag? reboot; then
