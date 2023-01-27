@@ -99,7 +99,7 @@
 <div id="get_a_report_success" data-success-message style="display: none;">
   <h3 class="text text_h3 text_alt">{{ site.data.modal['get-a-report']['success-message'][page.lang]['title']}}</h3>
   <p class="text">{{ site.data.modal['get-a-report']['success-message'][page.lang]['text']}}</p>
-  <a href="/text_files/{{ site.data.modal['get-a-report']['download-file'][page.lang]['file-name'] }}" class="button button_alt" download="{{ site.data.modal['get-a-report']['download-file'][page.lang]['file-name'] }}">{% if page.lang == "ru" %} Скачать {% else %} Download the report {% endif %}</a>
+  <button class="button button_alt">{% if page.lang == "ru" %} Скачать {% else %} Download the report {% endif %}</button>
 </div>
 <div id="get_a_report_error" data-error-message style="display: none;">
   <h3 class="text text_h3 text_alt">{{ site.data.modal['get-a-report']['error-message'][page.lang]['title']}}</h3>

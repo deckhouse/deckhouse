@@ -80,11 +80,16 @@ document.addEventListener("DOMContentLoaded", function() {
       if (!this.form.hasAttribute('data-download-file')) return
 
       const fileName = this.form.getAttribute('data-download-file');
+      const downloadFileButton = this.success.querySelector('button.button');
       const a = document.createElement('a')
 
-      a.href = `/text_files/${fileName}`
-      a.download = fileName
-      a.click()
+      a.href = `/reports/pci_ssc_reports_files/${fileName}`;
+      a.download = fileName;
+      a.click();
+
+      downloadFileButton.addEventListener('click', () => {
+        a.click();
+      })
     }
   }
 
