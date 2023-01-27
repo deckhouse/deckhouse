@@ -26,3 +26,9 @@ The following parameters are pushed to the user's computer after connecting to t
 - a route to the local network;
 - a route to the cluster service network;
 - a route to the Pod network.
+
+## User's traffic audit
+
+The module has the ability to enable logging of all user connections made via VPN in json format. Traffic is grouped
+by `src_ip, dst_ip, src_port, dst_port, ip_proto` fields. Container logs can be collected and sent for storage or analysis
+using the [log-shipper](../460-log-shipper/) module.

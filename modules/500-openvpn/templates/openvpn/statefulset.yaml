@@ -18,6 +18,10 @@ memory: 10Mi
 cpu: 10m
 memory: 10Mi
 {{- end }}
+{{- define "openvpn_pmacct_resources" }}
+cpu: 10m
+memory: 70Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -57,6 +61,24 @@ spec:
       maxAllowed:
         cpu: 350m
         memory: 300Mi
+  {{- end }}
+  {{- if .Values.openvpn.pmacctEnabled }}
+    {{- if .Values.openvpn.tcpEnabled }}
+    - containerName: pmacct-tcp
+      minAllowed:
+        {{- include "openvpn_pmacct_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+    - containerName: pmacct-udp
+      minAllowed:
+        {{- include "openvpn_pmacct_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+    {{- end }}
   {{- end }}
     - containerName: ovpn-admin
       minAllowed:
@@ -208,6 +230,34 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "openvpn_udp_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.openvpn.tcpEnabled .Values.openvpn.pmacctEnabled }}
+# pmacct-tcp
+      - name: pmacct-tcp
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "pmacct") }}
+        command: [ "/usr/sbin/pmacctd" ]
+        args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,ip_proto", "-i", "tun-tcp", "-w", "-r", "60", "-S", "user"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_pmacct_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.openvpn.udpEnabled .Values.openvpn.pmacctEnabled }}
+# pmacct-udp
+      - name: pmacct-udp
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "pmacct") }}
+        command: [ "/usr/sbin/pmacctd" ]
+        args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,ip_proto", "-i", "tun-udp", "-w", "-r", "60", "-S", "user"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_pmacct_resources" . | nindent 12 }}
   {{- end }}
 {{- end }}
 # ovpn-admin
