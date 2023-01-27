@@ -12,3 +12,4 @@ all: clean deps
 
 test:
 	D8_MODULE_ROOT=$$(pwd) pytest hooks
+	D8_MODULE_ROOT=$$(pwd) pytest webhooks/conversion

@@ -74,7 +74,7 @@ def main(ctx: hook.Context):
         for obj in bctx.review.request.objects:
             try:
                 ctx.output.conversions.collect(
-                    conv_v1beta1_to_v1(conv_v1beta1_to_v1(obj)).toDict()
+                    conv_v1beta1_to_v1(conv_v1alpha1_to_v1beta1(obj)).toDict()
                 )
             except Exception as e:
                 ctx.output.conversions.error(str(e))
