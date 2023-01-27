@@ -24,6 +24,7 @@ if bb-flag? kubelet-need-restart; then
     # https://github.com/kubernetes/kubernetes/issues/102367
     # Remove the sleep once a solution is devised.
     sleep 60
+  fi
   {{- end }}
 {{- end }}
 
