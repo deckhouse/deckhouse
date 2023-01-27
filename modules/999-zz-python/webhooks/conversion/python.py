@@ -28,67 +28,39 @@ kubernetesCustomResourceConversion:
   - fromVersion: deckhouse.io/v1beta1
     toVersion: deckhouse.io/v1
 """
-# configVersion: v1
-# kubernetesCustomResourceConversion:
-#   - name: alpha1_to_v1
-#     crdName: yandexinstanceclasses.deckhouse.io
-#     conversions:
-#     - fromVersion: deckhouse.io/v1alpha1
-#       toVersion: deckhouse.io/v1
-#   - name: v1_to_alpha1
-#     crdName: yandexinstanceclasses.deckhouse.io
-#     conversions:
-#     - fromVersion: deckhouse.io/v1
-#       toVersion: deckhouse.io/v1alpha1
 
 
 def main(ctx: hook.Context):
-    bctx = DotMap(ctx.binding_context)
-    print(bctx.pprint(pformat="json"))
-    if (
-        bctx.fromVersion == "deckhouse.io/v1alpha1"
-        and bctx.toVersion == "deckhouse.io/v1beta1"
-    ):
+    try:
+        # DotMap is a dict with dot notation
+        bctx = DotMap(ctx.binding_context)
+
+        # print(bctx.pprint(pformat="json"))  # debug printing
+
         for obj in bctx.review.request.objects:
-            try:
-                ctx.output.conversions.collect(conv_v1alpha1_to_v1beta1(obj).toDict())
-            except Exception as e:
-                ctx.output.conversions.error(str(e))
-                return
+            converted = convert(bctx.fromVersion, bctx.toVersion, obj)
 
-    if (
-        bctx.fromVersion == "deckhouse.io/v1beta1"
-        and bctx.toVersion == "deckhouse.io/v1"
-    ):
-        for obj in bctx.review.request.objects:
-            try:
-                ctx.output.conversions.collect(conv_v1beta1_to_v1(obj).toDict())
-            except Exception as e:
-                ctx.output.conversions.error(str(e))
-                return
-
-    if (
-        bctx.fromVersion == "deckhouse.io/v1alpha1"
-        and bctx.toVersion == "deckhouse.io/v1"
-    ):
-        for obj in bctx.review.request.objects:
-            try:
-                ctx.output.conversions.collect(
-                    conv_v1beta1_to_v1(conv_v1alpha1_to_v1beta1(obj)).toDict()
-                )
-            except Exception as e:
-                ctx.output.conversions.error(str(e))
-                return
+            # DotMap is not JSON serializable, we need raw dict
+            ctx.output.conversions.collect(converted.toDict())
+    except Exception as e:
+        ctx.output.conversions.error(str(e))
+        return
 
 
-# conversions = [
-#     # to apiVersion, conv function
-#     ("deckhouse.io/v1beta1", conv_v1alpha1_to_v1beta1),
-#     ("deckhouse.io/v1", conv_v1beta1_to_v1),
-# ]
+def convert(v_from: str, v_to: str, obj: DotMap) -> DotMap:
+    # As we didnt't declare straight conversion from v1alpha1 -> v1, it will be done in two
+    # sequential requests. Hence, we take care only about v1alpha1 -> v1beta1 and v1beta1 -> v1
+    # conversions.
+    match v_from, v_to:
+        case "deckhouse.io/v1alpha1", "deckhouse.io/v1beta1":
+            return conv_v1alpha1_to_v1beta1(obj)
+        case "deckhouse.io/v1beta1", "deckhouse.io/v1":
+            return conv_v1beta1_to_v1(obj)
+        case _:
+            raise Exception(f"Conversion from {v_from} to {v_to} is not supported")
 
 
-def conv_v1alpha1_to_v1beta1(obj):
+def conv_v1alpha1_to_v1beta1(obj: DotMap) -> DotMap:
     new_obj = DotMap(obj)  # deep copy
     new_obj.apiVersion = "deckhouse.io/v1beta1"
     major, minor = new_obj.spec.version.split(".")
@@ -99,7 +71,7 @@ def conv_v1alpha1_to_v1beta1(obj):
     return new_obj
 
 
-def conv_v1beta1_to_v1(obj):
+def conv_v1beta1_to_v1(obj: DotMap) -> DotMap:
     new_obj = DotMap(obj)  # deep copy
     new_obj.apiVersion = "deckhouse.io/v1"
     new_obj.spec.modules = [{"name": m} for m in new_obj.spec.modules]
