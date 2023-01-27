@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: virt-controller
   namespace: d8-virtualization
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "kubevirt.io" "virt-controller")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
