@@ -3,8 +3,6 @@
 # Copyright 2023 Flant JSC Licensed under Apache License 2.0
 #
 
-from dotmap import DotMap
-
 
 class ConversionsCollector:
     """
@@ -17,8 +15,6 @@ class ConversionsCollector:
         self._data = []
 
     def collect(self, payload: dict):
-        if isinstance(payload, DotMap):
-            payload = payload.toDict()
         self._data.append(payload)
 
     @property
