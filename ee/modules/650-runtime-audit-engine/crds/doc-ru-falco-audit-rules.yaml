@@ -1,4 +1,3 @@
-# TODO(nabokihms): Translate this doc
 spec:
   versions:
   - name: v1alpha1
@@ -9,66 +8,66 @@ spec:
             properties:
               requiredEngineVersion:
                 description: |
-                  Used to track compatibility between rules content and the Falco engine version.
+                  Используется для определения совместимости с версией Falco.
               requiredK8sAuditPluginVersion:
                 description: |
-                  Used to track compatibility between rules content and plugin versions.
+                  Используется для определения совместимости с версией плагина для аудита Kubernetes.
               rules:
                 description: |
-                  Describes Falco rules, that will be applied to monitor the runtime of the cluster.
-                  These rules helps detecting threats at runtime by observing the behavior of your applications and containers.
+                  Описывает правила Falco, которые будут применены во время мониторинга кластера.
+                  Эти правила помогают обнаружить угрозы во время работы кластера по шаблонам поведения приложений и контейнеров.
 
-                  Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
+                  Для подробной информации смотрите [документацию Falco](https://falco.org/docs/rules/) и [справочник](https://falco.org/docs/reference/rules/).
                 items:
                   properties:
                     rule:
                       description: |
-                        Conditions under which an alert should be generated.
-                        A rule is accompanied by a descriptive output string that is sent with the alert.
+                        Правило по которому должно быть создано событие.
+                        Сопровождается подробным описание того, что произошло.
                       properties:
                         name:
                           description: |
-                            A short, unique name for the rule.
+                            Короткое уникально имя для правила.
                         condition:
                           description: |
-                            A filtering expression that is applied against events to check whether they match the rule.
+                            Фильтрующее выражение применяемое к событиям для проверки соответствия правилу.
                         desc:
                           description: |
-                            A longer description of what the rule detects.
+                            Длинное описание того что должно обнаружить правило.
                         output:
                           description: |
-                            Specifies the message that should be output if a matching event occurs.
+                            Сообщение которое должно быть отправлено если событие произошло.
                         priority:
                           description: |
-                            A case-insensitive representation of the severity of the event.
+                            Уровень опасности события.
                         enabled:
                           description: |
-                            If set to `false`, a rule is neither loaded nor matched against any events.
+                            Если значение `false`, правило не будет ни загружено, ни применено к событиям.
                         tags:
                           description: |
-                            A list of tags applied to the rule.
+                            Список меток, применяемых к правилу.
                         source:
                           description: |
-                            The event source for which this rule should be evaluated.
+                            Источник по данным которого сработало правило.
                     macro:
                       description: |
-                        Rule condition snippets that can be re-used inside rules and even other macros.
-                        Macros provide a way to name common patterns and factor out redundancies in rules.
+                        Правило, которое может быстро переиспользовано в других правилах или макросах.
+                        Макрос предоставляет возможность заменить сложные повторяющиеся выражения на имя макроса.
                       properties:
                         name:
                           description: |
-                            A short, unique name for the rule.
+                            Короткое уникальное имя для макроса.
                         condition:
                           description: |
-                            A filtering expression that is applied against events to check whether they match the rule.
+                            Фильтрующее выражение применяемое к событиям для проверки соответствия правилу.
                     list:
                       description: |
-                        Collections of items that can be included in rules, macros, or other lists.
-                        Unlike rules and macros, lists cannot be parsed as filtering expressions.
+                        Список значений, которые могут быть использованы в макросах, правилах и других списках.
+                        В отличии от макросов и правил, у списков нет условий (condition).
                       properties:
                         name:
                           description: |
-                            The unique name for the list (as a slug).
+                            Уникальное имя списка.
                         items:
                           description: |
-                            The list of values.
+                            Список значений.

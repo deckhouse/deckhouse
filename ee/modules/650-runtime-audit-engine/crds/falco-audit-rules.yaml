@@ -82,7 +82,7 @@ spec:
                         priority:
                           type: string
                           description: |
-                            A case-insensitive representation of the severity of the event.
+                            A severity of the event.
                           enum: ["Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug"]
                         enabled:
                           type: boolean
