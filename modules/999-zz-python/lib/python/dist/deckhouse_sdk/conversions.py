@@ -23,7 +23,13 @@ class ConversionsCollector:
 
     @property
     def data(self):
-        return {"convertedObjects": self._data}
+        """The data is a list of ONLY ONE object, because this object will be a single JSON
+        conversion response.
+
+        Returns:
+            list: the list of single response
+        """
+        return [{"convertedObjects": self._data}]
 
     def error(self, message: str):
         """Overwrites all previous data with a single error message.
