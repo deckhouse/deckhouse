@@ -15,7 +15,7 @@
 if bb-flag? kubelet-need-restart; then
 
 {{- if ne .runType "ImageBuilding" }}
-  bb-log-warning "'kubelet-need-restart' flag was set. Restart kubelet."
+  bb-log-warning "'kubelet-need-restart' flag was set, restarting kubelet."
   systemctl restart "kubelet.service"
   {{ if ne .runType "ClusterBootstrap" }}
   if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then
