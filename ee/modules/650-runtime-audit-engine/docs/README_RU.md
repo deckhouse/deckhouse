@@ -4,12 +4,12 @@ title: "Модуль runtime-audit-engine"
 
 ## Описание
 
-Модуль представляет из себя движок для поиска угроз безопасности. 
+Модуль представляет из себя движок для поиска угроз безопасности.
 Он может собирать события ядра Linux и аудита Kubernetes API, обогащать их метаданными о Pod'ах Kubernetes и генерировать события аудита безопасности согласно правилам.
 
 Этот модуль:
 * Находит угрозы в ваших окружениях, анализируя приложения и контейнеры.
-* Помогает обнаружить попытки использования известных CVE, криптовалютных майнеров. 
+* Помогает обнаружить попытки использования известных CVE, криптовалютных майнеров.
 * Улучшает безопасность Kubernetes, обнаруживая:
   * Оболочку командной строки, запущенную в контейнере или Pod'е в Kubernetes.
   * Контейнер, запущенный в привилегированном режиме, или монтирования не безопасных путей, например, `/proc`, в контейнер.
@@ -17,13 +17,13 @@ title: "Модуль runtime-audit-engine"
 
 ## Архитектура
 
-Ядро модуля - [Falco](https://falco.org/). 
+Ядро модуля - [Falco](https://falco.org/).
 Deckhouse выкладывает агенты Falco как DaemonSet на каждый узел для сбора событий ядра и аудита Kubernetes.
 
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.png)
 
 > NOTE: Для достижения максимальной безопасности, рекомендуется запускать Falco как единицу Systemd.
-> Однако, в кластерах Kubernetes с поддержкой автомасштабирования это может быть затруднительно. 
+> Однако, в кластерах Kubernetes с поддержкой автомасштабирования это может быть затруднительно.
 > Дополнительные средства безопасности, такие как multitenancy или политики контроля создаваемых ресурсов предоставляют достаточный уровень безопасности для предотвращения атак на Falco DaemonSet.
 
 Один Pod состоит из пяти контейнеров:
@@ -44,16 +44,15 @@ Deckhouse выкладывает агенты Falco как DaemonSet на каж
 
 ### Встроенные правила
 
-There is a pair of rule files included that cannot be switched off. 
+There is a pair of rule files included that cannot be switched off.
 These rules are aimed to highlight Deckhouse security problems and problems connected to the `runtime-audit-engine` module itself.
 
 - `/etc/falco/falco_rules.yaml` — правила для системных вызовов
 - `/etc/falco/k8s_audit_rules.yaml` — правила для аудита Kubernetes
 
-
 ### Пользовательские правила
 
-Чтобы добавить пользовательские правила, пользователи могут использовать ресурс `FalcoAuditRules`. 
+Чтобы добавить пользовательские правила, пользователи могут использовать ресурс `FalcoAuditRules`.
 Каждый агент Falco имеет sidecar-контейнер с экземпляром [shell-operator](https://github.com/flant/shell-operator).
 Этот экземпляр считывает правила из пользовательских ресурсов в Kubernetes и складывает их на файловую систему Pod'а в папку `/etc/falco/rules.d/`.
 Falco автоматически перечитывает конфигурацию при добавлении нового правила.
@@ -77,13 +76,14 @@ Falco автоматически перечитывает конфигураци
 
 ## Kubernetes Audit Webhook
 
-[Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) должен быть настроен для получения событий аудита от `kube-apiserver`. 
+[Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) должен быть настроен для получения событий аудита от `kube-apiserver`.
 Если модуль [control-plane-manager](../040-control-plane-manager/) включен, настройки будут автоматически применены при включении модуля `runtime-audit-engine`.
 
 Для кластеров Kubernetes, в которых control plane находится не под управлением Deckhouse, необходимо настроить webhook в ручную.
 1. Создайте файл kubeconfig для webhook с адресом `https://127.0.0.1:9765/k8s-audit` и CA (ca.crt) из секрета `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls`.
-    
+
     Пример:
+
     ```yaml
     apiVersion: v1
     kind: Config
@@ -101,6 +101,7 @@ Falco автоматически перечитывает конфигураци
       name: webhook
     current-context: webhook
     ```
+
 2. Добавьте флаг `--audit-webhook-config-file` для `kube-apiserver`, который будет указывать на файл созданный на предыдущем шаге.
 
 > NOTE: Не забудьте настроить audit policy, потому что, по умолчанию, Deckhouse собирает только события аудита для системных пространств имен.
