@@ -34,4 +34,32 @@ EOF
 
 cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
 
-exec /sbin/tini -- /usr/bin/deckhouse-controller start
+PID=0
+EXITCODE=0
+
+for SIG in SIGUSR1 SIGUSR2 SIGINT SIGTERM SIGHUP SIGQUIT; do
+  trap "signal_handler ${SIG}" "${SIG}"
+done
+
+signal_handler() {
+  case "${1}" in
+  "SIGUSR1" | "SIGUSR2")
+    kill "${PID}"
+    wait "${PID}"
+    run_deckhouse
+    ;;
+  *)
+    kill -"${1}" "${PID}"
+    ;;
+  esac
+}
+
+run_deckhouse() {
+  /usr/bin/deckhouse-controller start &
+  PID="${!}"
+  wait "${PID}"
+  EXITCODE="${?}"
+}
+
+run_deckhouse
+exit "${EXITCODE}"
