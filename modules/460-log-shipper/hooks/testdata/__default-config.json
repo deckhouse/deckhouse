@@ -19,7 +19,7 @@
   },
   "sinks": {
     "prometheus_sink": {
-      "type": "prometheus",
+      "type": "prometheus_exporter",
       "inputs": [
         "internal_metrics"
       ],

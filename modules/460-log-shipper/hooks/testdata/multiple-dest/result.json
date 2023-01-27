@@ -268,7 +268,7 @@
         "verify_certificate": true
       },
       "labels": {
-        "app": "{{ parsed_data.ap-p[0].a }}",
+        "app": "{{ parsed_data.ap_p[0].a }}",
         "container": "{{ container }}",
         "foo": "bar",
         "image": "{{ image }}",
