@@ -37,7 +37,7 @@ A single Pod consists of five containers:
 
 ## Audit Rules
 
-An ability to collect events on its own means nothing, because the amount of data that can be exported from a Linux kernel is too much to analyze by a human brain.
+An ability to collect events on its own means nothing, because the amount of data that can be exported from a Linux kernel is too big to analyze by a human.
 Rules aimed to solve this problem and collect only events according to certain pattens implied to detect any suspicious activity.
 
 The main part of a rule is a condition expression (for which the [conditions syntax](https://falco.org/docs/rules/conditions/) is used).
@@ -73,7 +73,7 @@ Yet there are known limitations for the eBPF driver:
 
 ### CPU / Memory
 
-Falco agents are deployed on every node. Resources consumption of each Pod depends on the number of rules / ingested events.
+Falco agents are deployed on every node. Resources consumption of each Pod depends on the number of rules or ingested events.
 
 ## Kubernetes Audit Webhook
 
@@ -103,5 +103,5 @@ For Kubernetes cluster with control plane out of Deckhouse control, it is possib
     ```
 2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest that points to the previously created file.
 
-> NOTE: Do not forget to configure audit policy, because, be default, Deckhouse only collect audit events from system namespaces.
+> NOTE: Do not forget to configure audit policy, because, by default, Deckhouse only collect audit events from system namespaces.
 > An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.

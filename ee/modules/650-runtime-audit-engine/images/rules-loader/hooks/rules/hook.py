@@ -33,6 +33,8 @@ def convert_spec(spec: dict) -> list:
         })
 
     for item in spec["rules"]:
+        # `item.get('key')` is not None is used instead of `'key' in item` to avoid exceptions if the value equals null.
+        # According to FalcoAuditRules CRD value cannot be null, yet it is not bulletproof from all perspectives.\
         if item.get("rule") is not None:
             converted_item = {**item["rule"]}
             converted_item["rule"] = converted_item.pop("name")

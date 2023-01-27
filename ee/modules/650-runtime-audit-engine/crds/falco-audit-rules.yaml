@@ -36,13 +36,12 @@ spec:
                 type: string
                 description: |
                   Used to track compatibility between rules content and plugin versions.
-                pattern: '^[1-9]\.+[0-9\.]*[0-9]$'
               rules:
                 type: array
                 minLength: 1
                 description: |
                   Describes Falco rules, that will be applied to monitor the runtime of the cluster.
-                  These rules helps detecting threats at runtime by observing the behavior of your applications and containers.
+                  These rules help detecting threats at runtime by observing the behavior of your applications and containers.
 
                   Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
                 items:
@@ -112,7 +111,7 @@ spec:
                         name:
                           type: string
                           description: |
-                            A short, unique name for the rule.
+                            A short, unique name for the macro.
                         condition:
                           type: string
                           description: |

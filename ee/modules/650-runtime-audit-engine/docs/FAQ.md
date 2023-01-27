@@ -4,8 +4,8 @@ title: "The runtime-audit-engine module: usage"
 
 ## How to collect events?
 
-Pods of `runtime-audit-engine` outputs all events to stdout.
-These events then can be collected by the [log-shipper](../460-log-shipper/) module and be sent to any supported destination.
+Pods of `runtime-audit-engine` output all events to stdout.
+These events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
 
 An example of [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) for `log-shipper`:
 
