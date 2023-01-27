@@ -27,11 +27,12 @@ def test_conversion_from_v1alpha1_to_v1beta1():
     result = out.conversions.data
 
     # check output data structure
-    assert isinstance(result, dict)
-    assert "convertedObjects" in result
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert "convertedObjects" in result[0]
 
     # check the number of converted objects
-    converted_objects = result["convertedObjects"]
+    converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check unchanged parts
@@ -99,11 +100,12 @@ def test_conversion_from_v1alpha1_to_v1():
     result = out.conversions.data
 
     # check output data structure
-    assert isinstance(result, dict)
-    assert "convertedObjects" in result
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert "convertedObjects" in result[0]
 
     # check the number of converted objects
-    converted_objects = result["convertedObjects"]
+    converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check unchanged parts

@@ -23,7 +23,7 @@ class ConversionsCollector:
 
     @property
     def data(self):
-        return {"convertedObjects": self._data}
+        return [{"convertedObjects": self._data}]
 
     def error(self, message: str):
         """Overwrites all previous data with a single error message.
