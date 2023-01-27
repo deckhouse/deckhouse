@@ -42,6 +42,7 @@ for SIG in SIGUSR1 SIGUSR2 SIGINT SIGTERM SIGHUP SIGQUIT; do
 done
 
 signal_handler() {
+  echo "{\"msg\": \"Catch signal ${1}\"}"
   case "${1}" in
   "SIGUSR1" | "SIGUSR2")
     kill "${PID}"
@@ -57,6 +58,7 @@ signal_handler() {
 run_deckhouse() {
   /usr/bin/deckhouse-controller start &
   PID="${!}"
+  echo "{\"msg\": \" New deckhouse PID ${PID}\"}"
   wait "${PID}"
   EXITCODE="${?}"
 }
