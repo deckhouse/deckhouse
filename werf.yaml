@@ -192,7 +192,7 @@ git:
   - shell_lib
   - deckhouse-controller/entrypoint.sh
   - jq_lib
-  - helm_lib
+  - helm_helpers
   - python_lib
   excludePaths:
   - docs
@@ -297,7 +297,7 @@ git:
   - shell_lib.sh
   - shell_lib
   - jq_lib
-  - helm_lib
+  - helm_helpers
   - testing
   - go.mod
   - go.sum
