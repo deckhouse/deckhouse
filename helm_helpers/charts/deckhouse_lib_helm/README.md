@@ -1,4 +1,4 @@
-Helm utils template definitions for Deckhouse modules.
+Helm utils template definitions for Deckhouse modules
 
 
 # Envs For Proxy
