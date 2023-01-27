@@ -95,7 +95,7 @@ if systemctl is-active --quiet "kubelet.service"; then
   exit 0
 fi
 
-bb-log-warning "Kubelet service is not running. Start it..."
+bb-log-warning "Kubelet service is not running. Starting it..."
 if systemctl start "kubelet.service"; then
   bb-log-info "Kubelet has started."
 else
