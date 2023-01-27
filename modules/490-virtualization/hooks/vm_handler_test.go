@@ -70,7 +70,18 @@ kind: VirtualMachine
 metadata:
   name: vm1
   namespace: default
+  labels:
+    aaa: bbb
+  annotations:
+    some: value
 spec:
+  nodeSelector:
+    disktype: ssd
+  tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"
   running: true
   resources:
     memory: 512M
@@ -368,6 +379,10 @@ status:
 			vm := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm1")
 			Expect(vm).To(Not(BeEmpty()))
 			Expect(vm.Field(`apiVersion`).String()).To(Equal("kubevirt.io/v1"))
+			Expect(vm.Field(`spec.template.metadata.labels.aaa`).String()).To(Equal("bbb"))
+			Expect(vm.Field(`spec.template.metadata.annotations.some`).String()).To(Equal("value"))
+			Expect(vm.Field(`spec.template.spec.nodeSelector.disktype`).String()).To(Equal("ssd"))
+			Expect(vm.Field(`spec.template.spec.tolerations`).Array()).To(HaveLen(1))
 			Expect(vm.Field(`spec.template.spec.volumes`).Array()).To(HaveLen(2))
 
 			d8vm := f.KubernetesResource("VirtualMachine", "default", "vm1")
