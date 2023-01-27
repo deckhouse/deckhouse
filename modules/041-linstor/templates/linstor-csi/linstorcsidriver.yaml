@@ -134,28 +134,10 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-controller")) | nindent 2 }}
 spec:
-  minAvailable: 0
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app.kubernetes.io/component: csi-controller
-      app.kubernetes.io/instance: linstor
-      app.kubernetes.io/managed-by: piraeus-operator
-      app.kubernetes.io/name: piraeus-csi
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
-  name: linstor-csi-node
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-node")) | nindent 2 }}
-spec:
-  minAvailable: 0
-  selector:
-    matchLabels:
-      app.kubernetes.io/component: csi-node
       app.kubernetes.io/instance: linstor
       app.kubernetes.io/managed-by: piraeus-operator
       app.kubernetes.io/name: piraeus-csi
@@ -183,6 +165,13 @@ spec:
   linstorHttpsClientSecret: linstor-client-https-cert
   priorityClassName: ""
   controllerReplicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  controllerStrategy:
+    type: RollingUpdate
+    {{- if (include "helm_lib_ha_enabled" .) }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    {{- end }}
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
   nodeAffinity: {}
   nodeTolerations:
