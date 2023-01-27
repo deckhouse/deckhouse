@@ -65,14 +65,12 @@ metadata:
   name: virt-operator
   namespace: d8-virtualization
 spec:
-  replicas: 1
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: virt-operator
       kubevirt.io: virt-operator
-  strategy:
-    type: RollingUpdate
   template:
     metadata:
       labels:
