@@ -401,7 +401,7 @@ spec:
                     > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
                   properties:
                     quickShutdown:
-                      description: Снижает время drain'а CloudEphemeral машин до 5 минут.
+                      description: Снижает время drain'а CloudEphemeral-машин до 5 минут.
                     zones:
                       description: |
                         Переопределение перечня зон, в которых создаются инстансы.
