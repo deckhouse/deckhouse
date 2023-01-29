@@ -217,13 +217,18 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 	}
 	cloudInitRaw, _ := yaml.Marshal(cloudInit)
 
+	annotations := d8vm.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["cni.cilium.io/ipAddress"] = ipAddress
+	annotations["cni.cilium.io/macAddress"] = "f6:e1:74:94:b8:1a"
+
 	vm.Spec.Running = d8vm.Spec.Running
 	vm.Spec.Template = &virtv1.VirtualMachineInstanceTemplateSpec{
 		ObjectMeta: v1.ObjectMeta{
-			Annotations: map[string]string{
-				"cni.cilium.io/ipAddress":  ipAddress,
-				"cni.cilium.io/macAddress": "f6:e1:74:94:b8:1a",
-			},
+			Labels:      d8vm.Labels,
+			Annotations: annotations,
 		},
 		Spec: virtv1.VirtualMachineInstanceSpec{
 			Domain: virtv1.DomainSpec{
@@ -245,6 +250,8 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 				NetworkSource: virtv1.NetworkSource{
 					Pod: &virtv1.PodNetwork{},
 				}}},
+			NodeSelector: d8vm.Spec.NodeSelector,
+			Tolerations:  d8vm.Spec.Tolerations,
 		},
 	}
 

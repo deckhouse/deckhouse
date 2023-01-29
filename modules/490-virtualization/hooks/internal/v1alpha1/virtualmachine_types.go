@@ -44,6 +44,12 @@ type VirtualMachineSpec struct {
 	CloudInit *virtv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
 	// Represents a lits of additional disks that should be attached to the virtual machine.
 	DiskAttachments *[]DiskSource `json:"diskAttachments,omitempty"`
+	// A selector which must be true for the vm to fit on a node.
+	// Selector which must match a node's labels for the vmi to be scheduled on that node.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// If toleration is specified, obey all the toleration rules.
+	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
 }
 
 // The observed state of `VirtualMachine`.
