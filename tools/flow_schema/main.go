@@ -65,7 +65,7 @@ spec:
 {{- range $k, $v := . }}
     - kind: ServiceAccount
       serviceAccount:
-        name: *
+        name: "*"
         namespace: {{ $k }}
 {{- end }}
 `

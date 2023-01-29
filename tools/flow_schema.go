@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate go run flow_schema/main.go -output ../modules/010-deckhouse-flow-schemas/templates/flowschema.yaml
+//go:generate go run flow_schema/main.go -output ../modules/001-flow-schema/templates/flowschema.yaml
