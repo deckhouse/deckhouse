@@ -3,7 +3,7 @@ ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG PIRAEUS_OPERATOR_GITREPO=https://github.com/piraeusdatastore/piraeus-operator
-ARG PIRAEUS_OPERATOR_VERSION=1.10.0
+ARG PIRAEUS_OPERATOR_VERSION=1.10.1
 
 # Copy patches
 COPY ./patches /patches

@@ -5,7 +5,7 @@ FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG LINSTOR_AFFINITY_CONTROLLER_GITREPO=https://github.com/piraeusdatastore/linstor-affinity-controller
 ARG LINSTOR_AFFINITY_CONTROLLER_VERSION=0.2.2
 ARG LINSTOR_WAIT_UNTIL_GITREPO=https://github.com/LINBIT/linstor-wait-until
-ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
+ARG LINSTOR_WAIT_UNTIL_VERSION=0.2.1
 
 RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
  && cd /usr/local/go/linstor-wait-until \

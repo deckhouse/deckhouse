@@ -2,7 +2,7 @@ ARG BASE_UBUNTU
 
 FROM $BASE_UBUNTU as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.2.0
+ARG DRBD_VERSION=9.2.1
 
 RUN apt-get update \
  && apt-get install -y make git \
