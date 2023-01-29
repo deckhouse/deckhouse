@@ -222,6 +222,10 @@
     flex: 1;
 }
 
+.layout-sidebar .layout-sidebar__content .docs {
+  min-height: 75vh;
+}
+
 .sidebar {
     list-style-type: none;
     margin: 0;
