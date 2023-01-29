@@ -799,8 +799,6 @@ Test PASSED
 Done
 ```
 
-{% endraw %}
-
 ## How to deploy custom containerd configuration ?
 
 Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
@@ -894,3 +892,5 @@ If, after 30 minutes, another node needs to be deployed in the cluster, `cluster
 Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
+
+{% endraw %}

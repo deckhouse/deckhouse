@@ -802,8 +802,6 @@ Test PASSED
 Done
 ```
 
-{% endraw %}
-
 ## Как развернуть кастомный конфиг containerd ?
 
 Bashible на узлах мержит основной конфиг containerd для deckhouse с  конфигами из `/etc/containerd/conf.d/*.toml`.
@@ -898,3 +896,5 @@ spec:
 После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
 
 Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или, как минимум, подходить для той нагрузки, которая запускает процесс увеличения кластера.
+
+{% endraw %}
