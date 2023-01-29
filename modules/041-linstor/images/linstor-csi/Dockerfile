@@ -3,9 +3,9 @@ ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG LINSTOR_CSI_GITREPO=https://github.com/linbit/linstor-csi
-ARG LINSTOR_CSI_VERSION=0.21.0-1-g5c227c0
+ARG LINSTOR_CSI_VERSION=0.22.1
 ARG LINSTOR_WAIT_UNTIL_GITREPO=https://github.com/LINBIT/linstor-wait-until
-ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
+ARG LINSTOR_WAIT_UNTIL_VERSION=0.2.1
 
 RUN git clone ${LINSTOR_CSI_GITREPO} /usr/local/go/linstor-csi/ \
  && cd /usr/local/go/linstor-csi \

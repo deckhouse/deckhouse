@@ -2,7 +2,7 @@ ARG BASE_UBUNTU
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
-ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
+ARG LINSTOR_WAIT_UNTIL_VERSION=0.2.1
 
 COPY . /usr/local/go/linstor-pools-importer
 RUN cd /usr/local/go/linstor-pools-importer \
