@@ -234,7 +234,7 @@ installTypes:
     type: cloud
     name:
       en: "Yandex Cloud"
-      ru: "Яндекс Облако"
+      ru: "Yandex Cloud"
     steps:
       step2:
         name:
