@@ -2,6 +2,7 @@
 title: "Модуль log-shipper: примеры"
 ---
 
+{% raw %}
 ## Чтение логов из всех Pod'ов кластера и направление их в Loki
 
 ```yaml
@@ -359,3 +360,4 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+{% endraw %}
