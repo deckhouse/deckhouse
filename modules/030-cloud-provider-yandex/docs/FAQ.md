@@ -30,7 +30,7 @@ reserved: true
 
 ## dhcpOptions-related problems and ways to address them
 
-Using DNS servers that differ from those provided by yandex cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`]({{"/modules/042-kube-dns/" | true_relative_url }} ) module.
+Using DNS servers that differ from those provided by Yandex Cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`](../042-kube-dns/) module.
 
 ### Editing parameters
 

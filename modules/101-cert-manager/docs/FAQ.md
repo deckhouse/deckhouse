@@ -2,6 +2,7 @@
 title: "The cert-manager module: FAQ"
 ---
 
+{% raw %}
 ## How do I check the certificate status?
 
 ```console
@@ -240,3 +241,4 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
     - www.example.com
   EOF
   ```
+{% endraw %}
