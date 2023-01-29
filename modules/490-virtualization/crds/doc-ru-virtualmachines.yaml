@@ -85,6 +85,13 @@ spec:
                     Имя связанного `VirtualMachineIPAddressClaim`.
 
                     Если не указано, то по умолчанию используется `{vm name}`.
+                nodeSelector:
+                  description: |
+                    Как в `spec.nodeSelector` у Pod'ов.
+
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                 resources:
                   description: Набор пар (имя ресурса, количество).
                 running:
@@ -94,6 +101,26 @@ spec:
                     Открытый ключ SSH, который должен быть автоматически присвоен пользователю внутри виртуальной машины.
 
                     Для этой опции требуется `cloud-init` внутри виртуальной машины.
+                tolerations:
+                  description: |
+                    Как в `spec.tolerations` у Pod'ов.
+
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
+                  items:
+                    description: ""
+                    properties:
+                      effect:
+                        description: ""
+                      key:
+                        description: ""
+                      operator:
+                        description: ""
+                      tolerationSeconds:
+                        description: ""
+                      value:
+                        description: ""
                 userName:
                   description: |
                     Имя пользователя, который должен автоматически создаваться внутри виртуальной машины.
