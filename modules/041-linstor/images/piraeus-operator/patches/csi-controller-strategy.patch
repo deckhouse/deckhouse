@@ -1,0 +1,48 @@
+diff --git a/pkg/apis/piraeus/v1/linstorcsidriver_types.go b/pkg/apis/piraeus/v1/linstorcsidriver_types.go
+index 6008500..9e80aa1 100644
+--- a/pkg/apis/piraeus/v1/linstorcsidriver_types.go
++++ b/pkg/apis/piraeus/v1/linstorcsidriver_types.go
+@@ -19,6 +19,7 @@ package v1
+ 
+ import (
+ 	"github.com/piraeusdatastore/piraeus-operator/pkg/apis/piraeus/shared"
++	appsv1 "k8s.io/api/apps/v1"
+ 	corev1 "k8s.io/api/core/v1"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ )
+@@ -89,6 +90,11 @@ type LinstorCSIDriverSpec struct {
+ 	// +optional
+ 	ControllerReplicas *int32 `json:"controllerReplicas"`
+ 
++	// controllerStrategy describes how to replace existing pods with new ones.
++	// +optional
++	// +nullable
++	ControllerStrategy appsv1.DeploymentStrategy `json:"controllerStrategy,omitempty"`
++
+ 	// Cluster URL of the linstor controller.
+ 	// If not set, will be determined from the current resource name.
+ 	// +optional
+diff --git a/pkg/apis/piraeus/v1/zz_generated.deepcopy.go b/pkg/apis/piraeus/v1/zz_generated.deepcopy.go
+index 2f1b224..51f1467 100644
+--- a/pkg/apis/piraeus/v1/zz_generated.deepcopy.go
++++ b/pkg/apis/piraeus/v1/zz_generated.deepcopy.go
+@@ -95,6 +95,7 @@ func (in *LinstorCSIDriverSpec) DeepCopyInto(out *LinstorCSIDriverSpec) {
+ 		*out = new(int32)
+ 		**out = **in
+ 	}
++	in.ControllerStrategy.DeepCopyInto(&out.ControllerStrategy)
+ 	in.Resources.DeepCopyInto(&out.Resources)
+ 	if in.NodeAffinity != nil {
+ 		in, out := &in.NodeAffinity, &out.NodeAffinity
+diff --git a/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go b/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
+index 3b7a0bb..0d3980f 100644
+--- a/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
++++ b/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
+@@ -993,6 +993,7 @@ func newCSIControllerDeployment(csiResource *piraeusv1.LinstorCSIDriver) *appsv1
+ 				MatchLabels: meta.Labels,
+ 			},
+ 			Replicas: csiResource.Spec.ControllerReplicas,
++			Strategy: csiResource.Spec.ControllerStrategy,
+ 			Template: template,
+ 		},
+ 	}
