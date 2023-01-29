@@ -1,0 +1,16 @@
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+kind: PriorityLevelConfiguration
+metadata:
+  name: deckhouse-prioritylevel
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 5
+    limitResponse:
+      queuing:
+        handSize: 8
+        queueLengthLimit: 50
+        queues: 32
+      type: Queue
