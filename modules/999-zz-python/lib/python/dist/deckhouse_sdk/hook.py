@@ -18,6 +18,7 @@ from .module import get_binding_context, get_config
 from .module import get_name as get_module_name
 from .module import get_values
 from .storage import FileStorage
+from .validations import ValidationsCollector
 from .values import ValuesPatchesCollector
 
 
@@ -39,11 +40,13 @@ class Output:
         kube_operations: KubeOperationCollector,
         values_patches: ValuesPatchesCollector,
         conversions: ConversionsCollector,
+        validations: ValidationsCollector,
     ):
         self.metrics = metrics
         self.kube_operations = kube_operations
         self.values_patches = values_patches
         self.conversions = conversions
+        self.validations = validations
 
     # TODO  logger: --log-proxy-hook-json / LOG_PROXY_HOOK_JSON (default=false)
     #
@@ -57,6 +60,7 @@ class Output:
             ("KUBERNETES_PATCH_PATH", self.kube_operations),
             ("VALUES_JSON_PATCH_PATH", self.values_patches),
             ("CONVERSION_RESPONSE_PATH", self.conversions),
+            ("VALIDATING_RESPONSE_PATH", self.validations),
         )
 
         for path_env, collector in file_outputs:
@@ -129,6 +133,7 @@ def __run(
         KubeOperationCollector(),
         ValuesPatchesCollector(initial_values),
         ConversionsCollector(),
+        ValidationsCollector(),
     )
 
     for bindctx in binding_context:
