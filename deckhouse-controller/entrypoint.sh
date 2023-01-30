@@ -34,6 +34,9 @@ EOF
 
 cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
 
+set +o pipefail
+set +e
+
 PID=0
 EXITCODE=0
 
