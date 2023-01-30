@@ -12,3 +12,5 @@ title: "Cloud provider — GCP"
 - Заказывает диски в GCP с помощью компонента `CSI storage`.
 - Включает необходимый CNI (использует [simple bridge](../../modules/035-cni-simple-bridge/)).
 - Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [GCPInstanceClass'ы](cr.html#gcpinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
+
+***Внимание!*** Начиная с версии Kubernetes 1.23, для корректной работы балансировщиков нагрузки на узлы необходимо добавить [аннотацию](../021-kube-proxy/docs/README_RU.md), разрешающую kube-proxy принимать подключения  на внешние IP-адреса. Это необходимо, поскольку healthcheck балансировщиков нагрузки использует внешний адрес балансировщика.
