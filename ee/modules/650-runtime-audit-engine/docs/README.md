@@ -31,7 +31,7 @@ A single Pod consists of five containers:
 
 1. `falco-driver-loader` — init container that compiles eBPF program and stores it into empty dir to provide access to it for Falco.
 2. `falco` — collects events, enriches them with metadata and stores them.
-3. `rules-loader` — collects custom resources (`FalcoAuditRules`) from Kubernetes and store them in a shared directory (empty dir).
+3. `rules-loader` — collects custom resources ([FalcoAuditRules](cr.html#falcoauditrules)) from Kubernetes and stores them in a shared directory (empty dir).
 4. `falcosidekick` — only exports events as metrics to be able to alert on them.
 5. `kube-rbac-proxy` — protects `falcosidekick` metrics endpoint.
 
