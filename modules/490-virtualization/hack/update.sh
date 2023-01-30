@@ -43,3 +43,8 @@ sed -i 's/namespace: kubevirt/namespace: d8-virtualization/g' \
   templates/kubevirt-operator/rbac-for-us.yaml
 sed -zi 's/  labels:\n\(    [^\n]*\n\)\+/  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}\n/g' \
   templates/kubevirt-operator/rbac-for-us.yaml
+
+builder_image=$(curl -LfsS "https://raw.githubusercontent.com/kubevirt/kubevirt/$1/hack/dockerized" | sed -n '/^KUBEVIRT_BUILDER_IMAGE=/ s/.*="\(.*\)"/\1/p')
+sed -i images/artifact/werf.inc.yaml \
+  -e '/{{- $version := ".*" }}/ s/".*"/"'"${1#*v}"'"/g' \
+  -e '/{{- $builderImage := ".*" }}/ s|".*"|"'"${builder_image}"'"|g'

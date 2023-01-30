@@ -8,11 +8,8 @@ metadata:
 spec:
   imagePullPolicy: IfNotPresent
   infra:
-    nodeSelector:
-      kubernetes.io/os: linux
-    tolerations:
-    - key: CriticalAddonsOnly
-      operator: Exists
+    {{- include "helm_lib_node_selector" (tuple . "system") | nindent 4 }}
+    {{- include "helm_lib_tolerations" (tuple . "system") | nindent 4 }}
   {{- if .Values.global.modules.publicDomainTemplate }}
   config:
     uploadProxyURLOverride: {{ include "helm_lib_module_public_domain" (list . "cdi-uploadproxy") }}
