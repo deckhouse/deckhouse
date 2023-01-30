@@ -94,8 +94,8 @@ def test_conversion_from_v1alpha1_to_v1beta1():
     }
 
 
-def test_conversion_from_v1alpha1_to_v1():
-    out = hook.testrun(func=python.main, binding_context=binding_context_v1a1_to_v1)
+def test_conversion_from_v1beta1_to_v1():
+    out = hook.testrun(func=python.main, binding_context=binding_context_v1b1_to_v1)
     result = out.conversions.data
 
     # check output data structure
@@ -177,7 +177,9 @@ def test_conversion_from_v1alpha1_to_v1():
 binding_context_v1a1_to_v1b1 = [
     {
         "binding": "python_conversions",
+        "type": "Conversion",
         "fromVersion": "deckhouse.io/v1alpha1",
+        "toVersion": "deckhouse.io/v1beta1",
         "review": {
             "apiVersion": "apiextensions.k8s.io/v1",
             "kind": "ConversionReview",
@@ -228,16 +230,16 @@ binding_context_v1a1_to_v1b1 = [
                 "uid": "78eed1d5-44b1-4836-8ed1-c22cae938c30",
             },
         },
-        "toVersion": "deckhouse.io/v1beta1",
-        "type": "Conversion",
     }
 ]
 
 
-binding_context_v1a1_to_v1 = [
+binding_context_v1b1_to_v1 = [
     {
         "binding": "python_conversions",
-        "fromVersion": "deckhouse.io/v1alpha1",
+        "type": "Conversion",
+        "fromVersion": "deckhouse.io/v1beta1",
+        "toVersion": "deckhouse.io/v1",
         "review": {
             "apiVersion": "apiextensions.k8s.io/v1",
             "kind": "ConversionReview",
@@ -282,13 +284,17 @@ binding_context_v1a1_to_v1 = [
                             "name": "python-3-10",
                             "uid": "5d9963f8-52fd-4137-970d-2ccfb50efc61",
                         },
-                        "spec": {"modules": ["dotmap", "pyyaml"], "version": "3.10"},
+                        "spec": {
+                            "modules": ["dotmap", "pyyaml"],
+                            "version": {
+                                "major": 3,
+                                "minor": 10,
+                            },
+                        },
                     }
                 ],
                 "uid": "78eed1d5-44b1-4836-8ed1-c22cae938c30",
             },
         },
-        "toVersion": "deckhouse.io/v1",
-        "type": "Conversion",
     }
 ]
