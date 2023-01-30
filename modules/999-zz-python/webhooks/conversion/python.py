@@ -45,6 +45,7 @@ def main(ctx: hook.Context):
             # DotMap is not JSON serializable, we need raw dict
             ctx.output.conversions.collect(converted.toDict())
     except Exception as e:
+        print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
         return
 
