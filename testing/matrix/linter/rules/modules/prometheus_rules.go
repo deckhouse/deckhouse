@@ -38,7 +38,7 @@ type rulesCacheStruct struct {
 	mu    sync.RWMutex
 }
 
-const promtoolPath = "/deckhouse/bin/promtool"
+const promtoolPath = "../../bin/promtool"
 
 var rulesCache = rulesCacheStruct{
 	cache: make(map[string]checkResult),

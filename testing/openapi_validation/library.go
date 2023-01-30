@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	deckhousePath = "/deckhouse/"
+	deckhousePath = "../../"
 
 	// magic number to limit count of concurrent parses. Way to avoid CPU throttling if it would be huge amount of files
 	parserConcurrentCount = 50

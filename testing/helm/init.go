@@ -132,7 +132,7 @@ func GetModulesImages() map[string]interface{} {
 			"base":      "registry.example.com",
 			"dockercfg": "Y2ZnCg==",
 			"address":   "registry.deckhouse.io",
-			"path":      "/deckhouse/fe",
+			"path":      "../../fe",
 			"CA":        "CACACA",
 			"scheme":    "https",
 		},

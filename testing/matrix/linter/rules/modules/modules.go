@@ -148,9 +148,9 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []uti
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
 		possibleModulesPaths = []string{
-			"/deckhouse/modules",
-			"/deckhouse/ee/modules",
-			"/deckhouse/ee/fe/modules",
+			"../../modules",
+			"../../ee/modules",
+			"../../ee/fe/modules",
 		}
 	} else {
 		possibleModulesPaths = []string{modulesDir}

@@ -29,7 +29,7 @@ import (
 )
 
 func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modulePath string) error {
-	openAPIDir := filepath.Join("/deckhouse", "global-hooks", "openapi")
+	openAPIDir := filepath.Join("../..", "global-hooks", "openapi")
 	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(openAPIDir)
 	if err != nil {
 		return fmt.Errorf("read global openAPI schemas: %v", err)

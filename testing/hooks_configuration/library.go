@@ -63,9 +63,9 @@ func GetAllHooks() ([]Hook, error) {
 
 	var hookDirs []string
 	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/hooks",
-		"/deckhouse/ee/modules/*/hooks",
-		"/deckhouse/ee/fe/modules/*/hooks",
+		"../../modules/*/hooks",
+		"../../ee/modules/*/hooks",
+		"../../ee/fe/modules/*/hooks",
 	} {
 		result, err := filepath.Glob(possibleDir)
 		if err != nil {
@@ -75,7 +75,7 @@ func GetAllHooks() ([]Hook, error) {
 		hookDirs = append(hookDirs, result...)
 	}
 
-	hookDirs = append(hookDirs, "/deckhouse/global-hooks")
+	hookDirs = append(hookDirs, "../../global-hooks")
 
 	for _, dir := range hookDirs {
 		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {

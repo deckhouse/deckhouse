@@ -42,7 +42,7 @@ properties:
                 x-examples: [ 536870912 ]
                 default: 0
   clusterConfiguration:
-    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+    $ref: '../../candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   clusterIsBootstrapped:
     type: boolean
     description: |

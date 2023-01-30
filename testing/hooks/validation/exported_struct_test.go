@@ -65,9 +65,9 @@ type structCheckResult struct {
 func collectGoHooks() []string {
 	var hookDirs []string
 	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/hooks",
-		"/deckhouse/ee/modules/*/hooks",
-		"/deckhouse/ee/fe/modules/*/hooks",
+		"../../modules/*/hooks",
+		"../../ee/modules/*/hooks",
+		"../../ee/fe/modules/*/hooks",
 	} {
 		result, err := filepath.Glob(possibleDir)
 		if err != nil {
@@ -77,7 +77,7 @@ func collectGoHooks() []string {
 		hookDirs = append(hookDirs, result...)
 	}
 
-	hookDirs = append(hookDirs, "/deckhouse/global-hooks")
+	hookDirs = append(hookDirs, "../../global-hooks")
 
 	gohooks := make([]string, 0)
 

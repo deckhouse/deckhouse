@@ -17,6 +17,6 @@ properties:
         x-examples:
         - [{"name": "test", "type": "test"}]
       providerClusterConfiguration:
-        $ref: '/deckhouse/candi/cloud-providers/azure/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+        $ref: '../../candi/cloud-providers/azure/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
       providerDiscoveryData:
-        $ref: '/deckhouse/candi/cloud-providers/azure/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
+        $ref: '../../candi/cloud-providers/azure/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'

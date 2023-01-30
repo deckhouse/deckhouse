@@ -90,38 +90,38 @@ func (s *TestMatrixSuite) delSymlink(name string) {
 }
 
 func (s *TestMatrixSuite) changeSymlinks() {
-	s.changeSymlink(
-		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
-		"/deckhouse/ee/candi/cloud-providers/openstack/")
-	s.changeSymlink(
-		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
-		"/deckhouse/ee/candi/cloud-providers/vsphere/")
 
-	s.delSymlink("/deckhouse/modules/040-node-manager/images_tags.json")
-	s.symlink(
-		"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager/",
-		"/deckhouse/modules/040-node-manager/cloud-providers/openstack",
-	)
-	s.symlink(
-		"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
-		"/deckhouse/modules/040-node-manager/cloud-providers/vsphere",
-	)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 // restoreSymlinks restores symlinks in module dir to original place
 func (s *TestMatrixSuite) restoreSymlinks() {
-	s.changeSymlink(
-		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
-		"/deckhouse/candi/cloud-providers/openstack/")
-	s.changeSymlink(
-		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
-		"/deckhouse/candi/cloud-providers/vsphere/")
 
-	s.symlink(
-		"../images_tags.json",
-		"/deckhouse/modules/040-node-manager/images_tags.json",
-	)
 
-	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
-	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+
+
+
+
+
+
+
+
+
+
+
+
 }

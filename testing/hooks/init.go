@@ -550,7 +550,7 @@ func (hec *HookExecutionConfig) RunHook() {
 	hookCmd = &exec.Cmd{
 		Path: hec.HookPath,
 		Args: []string{hec.HookPath},
-		Dir:  "/deckhouse",
+		Dir:  "../..",
 		Env:  hookEnvs,
 	}
 
