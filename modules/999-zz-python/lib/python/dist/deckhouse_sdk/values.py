@@ -8,7 +8,6 @@ from functools import reduce
 from typing import Iterable
 
 from dictdiffer import deepcopy, diff
-from dotmap import DotMap
 
 
 class ValuesPatchesCollector:
@@ -54,10 +53,18 @@ class PatchGenerator:
         self.seen_array_paths = set()
 
     def generate(self, change):
+        """Generate JSON patches for the dictdiffer change.
+
+        **NOTE**: make sure to pass JSON serizlizable values, e.g. raw dicts, if you use dict
+        wrappers like DotMap.
+
+        Args:
+            change (dict): the dictdiffer change
+
+        Yields:
+            dict: JSON patch dict
+        """
         for p in self.__generate(change):
-            # DotMap is not JSON serializable, casting to dict
-            if "value" in p and isinstance(p["value"], DotMap):
-                p["value"] = p["value"].toDict()
             yield p
 
     def __generate(self, change):

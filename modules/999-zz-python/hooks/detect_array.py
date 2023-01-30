@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from deckhouse_sdk import hook
+from dotmap import DotMap
 
 config = """
 configVersion: v1
@@ -25,11 +26,15 @@ schedule:
 
 
 def main(ctx: hook.Context):
-    ctx.values.zzPython.internal.count += 1
-    if ctx.values.zzPython.array:
-        ctx.values.zzPython.internal.statement = "THE ARRAY IS HERE"
+    values = DotMap(ctx.values)
+
+    values.zzPython.internal.count += 1
+    if values.zzPython.array:
+        values.zzPython.internal.statement = "THE ARRAY IS HERE"
     else:
-        ctx.values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
+        values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
+
+    ctx.values = values.toDict()
 
 
 if __name__ == "__main__":

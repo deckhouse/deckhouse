@@ -45,30 +45,30 @@ def test_present_array_is_detected():
 
     out = run_hook(initial_values=values)
 
-    assert out.values.zzPython.internal.statement == "THE ARRAY IS HERE"
+    assert DotMap(out.values).zzPython.internal.statement == "THE ARRAY IS HERE"
 
 
 def test_empty_array_is_not_detected():
     values = DotMap()
     values.zzPython.array = []
 
-    out = run_hook(initial_values=values)
+    out = run_hook(initial_values=values.toDict())
 
-    assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
+    assert DotMap(out.values).zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_absent_array_is_not_detected():
-    values = DotMap({"zzPython": {}})
+    values = {"zzPython": {}}  # no "array"
 
     out = run_hook(initial_values=values)
 
-    assert out.values.zzPython.internal.statement == "NO ARRAY IN CONFIG"
+    assert DotMap(out.values).zzPython.internal.statement == "NO ARRAY IN CONFIG"
 
 
 def test_count_increses():
     values = DotMap()
     values.zzPython.internal.count = 12
 
-    out = run_hook(initial_values=values)
+    out = run_hook(initial_values=values.toDict())
 
-    assert out.values.zzPython.internal.count == 13
+    assert DotMap(out.values).zzPython.internal.count == 13

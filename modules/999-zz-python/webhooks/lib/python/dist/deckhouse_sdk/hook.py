@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from typing import Iterable
 
-from dotmap import DotMap
+from dictdiffer import deepcopy
 
 from .conversions import ConversionsCollector
 from .kubernetes import KubeOperationCollector
@@ -31,7 +31,7 @@ class Output:
 
     # Values with outputs for tests, values patches are less convenient than values
     # themselves.
-    values: DotMap = None
+    values: dict = None
 
     def __init__(
         self,
@@ -83,39 +83,8 @@ class Context:
         self.snapshots = binding_context.get("snapshots", {})
         self.output = output
         self.module_name = module_name
-
-        # DotMap for values.dot.notation and config.dot.notation
-        # Helm: .Values.moduleName
-        # Hook: ctx.config
-        self.config_values = DotMap(config_values)
-        # Helm: .Values.moduleName.internal
-        # Hook: ctx.values
-        self.values = DotMap(initial_values)
-
-    @property
-    def config(self):
-        """Module config derived from module settings and config values schema"""
-        if not self.module_name:
-            raise ValueError("Module name is not set")
-        # The module name key actually can be absent, e.g. in tests, hence we are fine DotMap will
-        # tolerate that.
-        return self.config_values[self.module_name]
-
-    @property
-    def globals(self):
-        """Global values
-
-        'global' is a reserved word, so we canot use it"""
-        return self.config_values["global"]
-
-    @property
-    def internal(self):
-        """Internal values"""
-        if not self.module_name:
-            raise ValueError("Module name is not set")
-        # The module name key actually can be absent, e.g. in tests, hence we are fine DotMap will
-        # tolerate that.
-        return self.values[self.module_name].internal
+        self.config_values = deepcopy(config_values)
+        self.values = deepcopy(initial_values)
 
     @property
     def metrics(self):
@@ -151,9 +120,9 @@ def __run(
     if not binding_context:
         binding_context = [{}]
     if not config_values:
-        config_values = DotMap()
+        config_values = {}
     if not initial_values:
-        initial_values = DotMap()
+        initial_values = {}
 
     output = Output(
         MetricsCollector(),
