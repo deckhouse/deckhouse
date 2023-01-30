@@ -69,7 +69,7 @@ def validate_creation(obj):
     # Validate version
     spec_version = parse_version(obj.spec.version)
     if not validate_version(name_segments, spec_version):
-        return f"Name must comply with spec.version, got {name} and {spec_version}"
+        return f"Name must comply with spec.version, got {name} and {DotMap(spec_version).pprint(pformat='json')}"
 
     return None
 
@@ -80,7 +80,7 @@ def validate_update(obj):
     name_segments = name.split("-")
     spec_version = parse_version(obj.spec.version)
     if not validate_version(name_segments, spec_version):
-        return f"Name must comply with spec.version, got {name} and {spec_version}"
+        return f"Name must comply with spec.version, got {name} and {DotMap(spec_version).pprint(pformat='json')}"
     return None
 
 
@@ -96,9 +96,9 @@ def validate_version(name_segments: List[str], spec_version: dict) -> bool:
     return name_major == spec_major and name_minor == spec_minor
 
 
-def parse_version(version: str | dict) -> dict:
+def parse_version(version: str | dict | DotMap) -> dict:
+    # v1beta1 and v1
     if isinstance(version, dict):
-        # v1beta1 and v1
         return version
 
     # v1alpha1
