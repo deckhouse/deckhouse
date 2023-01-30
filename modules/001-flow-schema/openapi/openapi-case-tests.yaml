@@ -2,7 +2,7 @@ positive:
   configValues:
   - {}
   values:
-  - { internal: {} }
+  - { internal: {namespaces: ["test1", "test2"]} }
 negative:
   configValues:
   - { somethingInConfig: yes }
