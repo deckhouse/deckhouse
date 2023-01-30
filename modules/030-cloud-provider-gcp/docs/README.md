@@ -12,3 +12,5 @@ The `cloud-provider-gcp` module:
 - Provisions disks in GCP using the `CSI storage` component.
 - Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/)).
 - Registers with the [node-manager](../../modules/040-node-manager/) module so that [GCPInstanceClasses](cr.html#gcpinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
+
+**CAUTION!** Starting with Kubernetes 1.23, for load balancers to work correctly, you must add an [annotation](../021-kube-proxy/docs/README.md) to the nodes that enables kube-proxy to accept connections to external IP addresses. This is necessary because load balancers' healthcheck uses the load balancer's external address.
