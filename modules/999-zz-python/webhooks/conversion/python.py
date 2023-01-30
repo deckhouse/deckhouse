@@ -49,15 +49,10 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         bctx = DotMap(ctx.binding_context)
-
         # print(bctx.pprint(pformat="json"))  # debug printing
-
         for obj in bctx.review.request.objects:
-            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj)
-
+            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj.toDict())
             # print(converted.pprint(pformat="json"))  # debug printing
-
-            # DotMap is not JSON serializable, we need raw dict
             ctx.output.conversions.collect(converted)
     except Exception as e:
         print("conversion error", str(e))  # debug printing
