@@ -30,6 +30,6 @@ backtrace() {
 
 trap backtrace ERR
 
-for f in $(find /deckhouse/shell-operator/frameworks/shell/ -type f -iname "*.sh"; find /deckhouse/shell_lib/ -type f -iname "*.sh"); do
+for f in $(find $(dirname "$BASH_SOURCE")/shell-operator/frameworks/shell/ -type f -iname "*.sh"; find $(dirname "$BASH_SOURCE")/shell_lib/ -type f -iname "*.sh"); do
   source $f
 done
