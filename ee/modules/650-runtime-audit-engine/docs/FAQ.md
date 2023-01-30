@@ -2,12 +2,12 @@
 title: "The runtime-audit-engine module: usage"
 ---
 
-## How to collect events?
+## How to collect events
 
 Pods of `runtime-audit-engine` output all events to stdout.
-These events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
+Those events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
 
-An example of [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) for `log-shipper`:
+Below is an example [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -28,11 +28,11 @@ spec:
   type: KubernetesPods
 ```
 
-## How to alert?
+## How to create an alert
 
 All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules) to enable alerts.
 
-An example:
+Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -48,22 +48,21 @@ spec:
       annotations:
         description: |
           There is a suspicious activity on a node {{ $labels.node }}. 
-          Check you events journal for more details.
+          Check you events journal for details.
         summary: Falco detects a critical security incident
       expr: |
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
 
-> NOTE: Alerts are best work with an events storage like Elasticsearch or Loki. With an alert users can be notified that something is happening.
-> The next step is to find what using previously collected events.
+> NOTE: Alerts work best in combination with event storage such as Elasticsearch or Loki. Alerts warn the user about suspicious activity on a node.
+> Once an alert is received, we recommend that you check event storage and examine the events that triggered it.
 
-## How to deploy Falco rules that I found on the Internet?
+## How to apply the Falco rules found on the Internet
 
 The structure of native Falco rules is different from the CRD schema.
 It is due to limitations of schema validation capabilities in Kubernetes.
 
-To make the process of migrating native Falco rules to Deckhouse more convenient,
-there is a script that can help to convert a rule file for Falco to [FalcoAuditRules](cr.html#falcoauditrules) custom resource.
+The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#falcoauditrules) custom resource makes the process of migrating native Falco rules to Deckhouse more convenient.
 
 ```shell
 git clone github.com/deckhouse/deckhouse
@@ -71,7 +70,7 @@ cd deckhouse/ee/modules/650-runtime-audit-engine/hack/fav-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 
-Example of a script result:
+Example of a script output:
 
 ```yaml
 # /path/to/falco/rule_example.yaml
