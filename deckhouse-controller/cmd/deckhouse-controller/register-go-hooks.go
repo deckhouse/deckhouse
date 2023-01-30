@@ -26,6 +26,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/global-hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/global-hooks/resources"
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/001-flow-schema/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/003-deckhouse-config/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-operator-prometheus-crd/hooks"
