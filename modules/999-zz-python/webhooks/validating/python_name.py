@@ -86,7 +86,7 @@ def validate_update(obj):
 
 def validate_name_schema(name_segments: List[str]) -> bool:
     # Validate name structure
-    return len(name_segments) == 3 or name_segments[0] == "python"
+    return len(name_segments) == 3 and name_segments[0] == "python"
 
 
 def validate_version(name_segments: List[str], spec_version: dict) -> bool:
