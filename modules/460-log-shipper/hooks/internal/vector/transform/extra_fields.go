@@ -40,6 +40,9 @@ var (
 //	It definitely deserves refactoring. My assumption is that it generates VRL rules from extra labels.
 //	Example:
 //	  label_name: {{ values.app }} -> .label_name = .values.app
+//
+// NOTE: it seems like this function does not escape variable names with a minus sign
+// Example: {{ screw-driver }} leads to .parsed_data.screw-driver, which is invalid for vector.
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	var dataField string
 

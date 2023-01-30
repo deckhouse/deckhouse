@@ -16,7 +16,11 @@ limitations under the License.
 
 package vrl
 
-// TODO(nabokihms): figure out why do we need this rule
+// TODO(nabokihms): figure out why do we need this rule.
+//   The assumption is that it is required to send logs to datastream indexes in which logs were previously send
+//   by logstash. Elasticsearch can only show logs with either timestamp or @timestamp field.
+//   Thus, without this rule appending to logstash datastream indexes is not possible.
+//   Now it seems more like a weird kludge.
 
 // StreamRule puts the vector timestamp to the label recognized by Elasticsearch.
 const StreamRule Rule = `

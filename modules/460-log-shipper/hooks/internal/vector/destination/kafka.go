@@ -74,9 +74,8 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		TLS:   tls,
 		Topic: spec.Topic,
 		Encoding: Encoding{
-			Codec:           "text",
+			Codec:           "json",
 			TimestampFormat: "rfc3339",
-			OnlyFields:      []string{"message"},
 		},
 		Compression:      "gzip",
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
