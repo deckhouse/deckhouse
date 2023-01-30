@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from typing import List
 
 from deckhouse_sdk import hook
@@ -59,7 +60,7 @@ def validate(request: DotMap) -> str | None:
             raise Exception(f"Unknown operation {request.operation}")
 
 
-def validate_creation(obj):
+def validate_creation(obj: DotMap) -> str | None:
     # Validate name
     name = obj.metadata.name
     name_segments = name.split("-")
@@ -69,18 +70,20 @@ def validate_creation(obj):
     # Validate version
     spec_version = parse_version(obj.spec.version)
     if not validate_version(name_segments, spec_version):
-        return f"Name must comply with spec.version, got {name} and {DotMap(spec_version).pprint(pformat='json')}"
+        major, minor = spec_version["major"], spec_version["minor"]
+        return f"Name must comply with spec.version, got {name} and major={major}, minor={minor}"
 
     return None
 
 
-def validate_update(obj):
+def validate_update(obj: DotMap) -> str | None:
     # Validates version
     name = obj.metadata.name
     name_segments = name.split("-")
     spec_version = parse_version(obj.spec.version)
     if not validate_version(name_segments, spec_version):
-        return f"Name must comply with spec.version, got {name} and {DotMap(spec_version).pprint(pformat='json')}"
+        major, minor = spec_version["major"], spec_version["minor"]
+        return f"Name must comply with spec.version, got {name} and major={major}, minor={minor}"
     return None
 
 
@@ -91,21 +94,22 @@ def validate_name_schema(name_segments: List[str]) -> bool:
 
 def validate_version(name_segments: List[str], spec_version: dict) -> bool:
     # Validate version structure and numbers
-    name_major, name_minor = name_segments[1], name_segments[2]
-    spec_major, spec_minor = spec_version["major"], spec_version["minor"]
-    return name_major == spec_major and name_minor == spec_minor
+    name_major, name_minor = int(name_segments[1]), int(name_segments[2])
+    return name_major == spec_version["major"] and name_minor == spec_version["minor"]
 
 
-def parse_version(version: str | dict | DotMap) -> dict:
+def parse_version(version: str | dict) -> dict[str, int]:
     # v1beta1 and v1
     if isinstance(version, dict):
-        return version
+        # can be DotMap as well
+        major, minor = version["major"], version["minor"]
+    else:
+        # v1alpha1
+        major, minor = version.split(".")
 
-    # v1alpha1
-    major, minor = version.split(".")
     return {
-        "major": major,  # str
-        "minor": minor,  # str
+        "major": int(major),
+        "minor": int(minor),
     }
 
 

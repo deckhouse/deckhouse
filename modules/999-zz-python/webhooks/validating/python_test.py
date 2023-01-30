@@ -21,6 +21,15 @@ from deckhouse_sdk import hook
 # meant to be run, make sure to `chmod -x` them.
 
 
+def test_parse_version():
+    def f(v):
+        return python.parse_version(v)
+
+    assert f("3.11") == {"major": 3, "minor": 11}
+    assert f({"major": 3, "minor": 11}) == {"major": 3, "minor": 11}
+    assert f({"major": "3", "minor": "11"}) == {"major": 3, "minor": 11}
+
+
 def test_valid_v1alpha1():
     out = hook.testrun(
         func=python.main,
