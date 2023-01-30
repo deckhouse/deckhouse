@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-yandex/candi/openapi/instance_class.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("../crds/instance_class.yaml")

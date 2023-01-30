@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/402-ingress-nginx/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("../crds/*.yaml")
