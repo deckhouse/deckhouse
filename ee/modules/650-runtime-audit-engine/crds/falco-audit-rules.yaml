@@ -31,19 +31,19 @@ spec:
               requiredEngineVersion:
                 type: integer
                 description: |
-                  Used to track compatibility between rules content and the Falco engine version.
+                  Used to ensure compatibility between the rules content and the Falco engine version.
               requiredK8sAuditPluginVersion:
                 type: string
                 description: |
-                  Used to track compatibility between rules content and plugin versions.
+                  Used to ensure compatibility between the rules content and plugin versions.
               rules:
                 type: array
                 minLength: 1
                 description: |
-                  Describes Falco rules, that will be applied to monitor the runtime of the cluster.
-                  These rules help detecting threats at runtime by observing the behavior of your applications and containers.
+                  Describes the Falco rules that will be applied to monitor the cluster runtime.
+                  These rules help detect threats at runtime by observing the behavior of your applications and containers.
 
-                  Follow [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
+                  Refer to [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
                 items:
                   type: object
                   oneOf:
@@ -54,8 +54,8 @@ spec:
                     rule:
                       type: object
                       description: |
-                        Conditions under which an alert should be generated.
-                        A rule is accompanied by a descriptive output string that is sent with the alert.
+                        Defines the conditions under which an alert is to be generated.
+                        The rule is accompanied by a descriptive output string that is sent with an alert.
                       required:
                       - "name"
                       - "condition"
@@ -70,15 +70,15 @@ spec:
                         condition:
                           type: string
                           description: |
-                            A filtering expression that is applied against events to check whether they match the rule.
+                            A filtering expression that is applied to events to check whether they match the rule.
                         desc:
                           type: string
                           description: |
-                            A longer description of what the rule detects.
+                            A detailed description of what the rule detects.
                         output:
                           type: string
                           description: |
-                            Specifies the message that should be output if a matching event occurs.
+                            A message to output if a matching event occurs.
                         priority:
                           type: string
                           description: |
@@ -98,14 +98,14 @@ spec:
                         source:
                           type: string
                           description: |
-                            The event source for which this rule should be evaluated.
+                            The event source for which this rule is to be evaluated.
                           default: "Syscall"
                           enum: ["Syscall", "K8sAudit"]
                     macro:
                       type: object
                       description: |
-                        Rule condition snippets that can be re-used inside rules and even other macros.
-                        Macros provide a way to name common patterns and factor out redundancies in rules.
+                        Rule condition snippets that can be re-used inside other rules and even macros.
+                        Macros provide a way to name common patterns and eliminate redundancies in the rules.
                       required: ["name", "condition"]
                       properties:
                         name:
@@ -115,7 +115,7 @@ spec:
                         condition:
                           type: string
                           description: |
-                            A filtering expression that is applied against events to check whether they match the rule.
+                            A filtering expression that is applied to events to check whether they match the rule.
                     list:
                       type: object
                       description: |
@@ -126,11 +126,11 @@ spec:
                         name:
                           type: string
                           description: |
-                            The unique name for the list (as a slug).
+                            A unique name for the list (as a slug).
                         items:
                           type: array
                           description: |
-                            The list of values.
+                            A list of values.
                           items:
                             x-kubernetes-int-or-string: true
                             anyOf:
