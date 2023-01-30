@@ -7,11 +7,13 @@ metadata:
 data:
   falco.yaml: |-
     # @ The location of the rules files that will be consumed by Falco.
+    # The order of rule_files is important. Custom rules are above the default rules
+    # to avoid the possibility of overriding.
     rules_file:
+    - /etc/falco/rules.d
 {{- range $path, $_ := (.Files.Glob "rules/*") }}
     - /etc/falco/{{ trimPrefix "rules/" $path }}
 {{- end }}
-    - /etc/falco/rules.d
 
     #
     # Plugins that are available for use. These plugins are not loaded by
