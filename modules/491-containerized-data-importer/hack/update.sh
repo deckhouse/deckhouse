@@ -39,3 +39,8 @@ awk -v RS="\n---\n" '/\nkind: CustomResourceDefinition\n/ {print "---\n" $0}' "$
 
 sed -i 's/namespace: cdi/namespace: d8-cdi/g' templates/cdi-operator/rbac-for-us.yaml
 sed -zi 's/  labels:\n\(    [^\n]*\n\)\+/  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}\n/g' templates/cdi-operator/rbac-for-us.yaml
+
+builder_image=$(curl -LfsS "https://raw.githubusercontent.com/kubevirt/containerized-data-importer/$1/hack/build/config.sh" | sed -n '/^BUILDER_IMAGE=/ s/.*:-\(.*\)}/\1/p')
+sed -i images/artifact/werf.inc.yaml \
+  -e '/{{- $version := ".*" }}/ s/".*"/"'"${1#*v}"'"/g' \
+  -e '/{{- $builderImage := ".*" }}/ s|".*"|"'"${builder_image}"'"|g'

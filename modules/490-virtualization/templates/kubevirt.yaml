@@ -1,3 +1,9 @@
+{{- $nodeSelectorSystem := index (include "helm_lib_node_selector" (tuple . "system") | fromYaml) "nodeSelector" | default (dict) | toJson }}
+{{- $nodeSelectorMaster := index (include "helm_lib_node_selector" (tuple . "master") | fromYaml) "nodeSelector" | default (dict) | toJson }}
+{{- $tolerationsSystem := index (include "helm_lib_tolerations" (tuple . "system-with-drbd-problems") | fromYaml) "tolerations" | default (list) | toJson }}
+{{- $tolerationsAnyNode := index (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) "tolerations" | default (list) | toJson }}
+{{- $tolerationsMaster := index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | default (list) | toJson }}
+
 ---
 apiVersion: kubevirt.io/v1
 kind: KubeVirt
@@ -27,6 +33,26 @@ spec:
       resourceName: virt-handler
       patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
       type: strategic
+    - resourceType: Deployment
+      resourceName: virt-api
+      patch: '[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{{ $nodeSelectorMaster }}}]'
+      type: json
+    - resourceType: Deployment
+      resourceName: virt-api
+      patch: '[{"op":"replace","path":"/spec/template/spec/tolerations","value":{{ $tolerationsMaster }}}]'
+      type: json
+    - resourceType: Deployment
+      resourceName: virt-controller
+      patch: '[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{{ $nodeSelectorSystem }}}]'
+      type: json
+    - resourceType: Deployment
+      resourceName: virt-controller
+      patch: '[{"op":"replace","path":"/spec/template/spec/tolerations","value":{{ $tolerationsSystem }}}]'
+      type: json
+    - resourceType: DaemonSet
+      resourceName: virt-handler
+      patch: '[{"op":"replace","path":"/spec/template/spec/tolerations","value":{{ $tolerationsAnyNode }}}]'
+      type: json
     {{- if ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
     - resourceType: Deployment
       resourceName: virt-api
@@ -43,5 +69,5 @@ spec:
     {{- end }}
   imagePullPolicy: IfNotPresent
   infra:
-    replicas: 1
+    replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   workloadUpdateStrategy: {}
