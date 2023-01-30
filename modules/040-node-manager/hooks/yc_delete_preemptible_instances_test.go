@@ -54,7 +54,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 			f.RunHook()
 		})
 
-		It("Oldest 3 machines should be deleted", func() {
+		It("One Machines between 20-24 hours and one Machines older than 24 hours should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeTrue())
@@ -74,7 +74,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 			f.RunHook()
 		})
 
-		It("Oldest machine should be deleted", func() {
+		It("Oldest Machine should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeTrue())
@@ -93,10 +93,10 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 			f.RunHook()
 		})
 
-		It("No Machine should be deleted", func() {
+		It("15 older than 24 hours Machines and one machine between 20 and 24 hours old should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			for i := 0; i < 15; i++ {
+			for i := 0; i < 45; i++ {
 				machineName := fmt.Sprintf("test-0-test-%d", i)
 				Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", machineName).Exists()).To(BeTrue())
 			}
