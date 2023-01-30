@@ -63,12 +63,11 @@ metadata:
   name: cdi-operator
   namespace: d8-cdi
 spec:
-  replicas: 1
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: cdi-operator
-  strategy: {}
   template:
     metadata:
       labels:
@@ -88,6 +87,10 @@ spec:
         - name: PULL_POLICY
           value: IfNotPresent
         - name: MONITORING_NAMESPACE
+        - name: APISERVER_NODESELECTOR
+          value: {{ index (include "helm_lib_node_selector" (tuple . "master") | fromYaml) "nodeSelector" | default (dict) | toJson | quote }}
+        - name: APISERVER_TOLERATIONS
+          value: {{ index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | default (list) | toJson | quote }}
         image: {{ include "helm_lib_module_image" (list . "cdiOperator") }}
         imagePullPolicy: IfNotPresent
         ports:

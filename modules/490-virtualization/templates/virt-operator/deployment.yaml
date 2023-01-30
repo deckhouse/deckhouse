@@ -25,7 +25,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: virt-operator
   namespace: d8-virtualization
-  {{- include "helm_lib_module_labels" (list . (dict "app" "virt-operator")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "kubevirt.io" "virt-operator" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -65,14 +65,12 @@ metadata:
   name: virt-operator
   namespace: d8-virtualization
 spec:
-  replicas: 1
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: virt-operator
       kubevirt.io: virt-operator
-  strategy:
-    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -137,8 +135,8 @@ spec:
         - mountPath: /profile-data
           name: profile-data
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: kubevirt-operator
       volumes:

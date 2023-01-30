@@ -16,3 +16,7 @@ Internal patch which adds deckhouse ImagePullSecrets to kubevirt VMs
 Add default storage capabilities for LISNTOR
 
 - https://github.com/kubevirt/containerized-data-importer/pull/2537
+
+#### `003-apiserver-node-selector-and-tolerations.patch`
+
+Allow to override nodeSelector and tolerations for cdi-apiserver
