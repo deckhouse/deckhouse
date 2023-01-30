@@ -255,9 +255,10 @@ ansible:
         {{- .Env | default "unknown" | nindent 8 }}
       dest: /deckhouse/edition
 
-  # Because of https://github.com/flant/werf/issues/1741 just make symlink for the entry point
-  - name: "Make symlink for deckhouse entrypoint in the right location"
-    shell: ln -s /deckhouse/deckhouse-controller/entrypoint.sh /deckhouse/deckhouse
+  - name: "Override deckhouse entrypoint to use tini as supervisor"
+    shell: |
+      echo -e "#!/bin/bash\nexec tini -- /deckhouse/deckhouse-controller/entrypoint.sh" > /deckhouse/deckhouse
+      chmod +x /deckhouse/deckhouse
 
   - name: "Run deckhouse from nobody"
     file:
