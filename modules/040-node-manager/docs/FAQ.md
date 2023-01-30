@@ -579,6 +579,14 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
 
+## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+
+See [control-plane-management FAQ](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+
+## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+
+See [control-plane-management FAQ](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+
 ## How to use containerd with Nvidia GPU support?
 
 Create NodeGroup for GPU-nodes.

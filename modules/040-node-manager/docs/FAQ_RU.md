@@ -582,6 +582,14 @@ spec:
 
 Дополнительные шаги для конфигурации узлов задаются при помощи custom resource `NodeGroupConfiguration`.
 
+## Как добавить master-узлы в облачном кластере (single-master в multi-master)?
+
+Инструкция в [FAQ модуля control-plane-manager](../040-control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master)
+
+## Как уменьшить число master-узлов в облачном кластере (multi-master в single-master)?
+
+Инструкция в [FAQ модуля control-plane-manager](../040-control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master)
+
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
 Необходимо создать отдельную NodeGroup для GPU-нод.
