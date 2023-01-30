@@ -38,3 +38,6 @@ class ValidationsCollector:
         if message is not None:
             response["message"] = message
         self.collect(response)
+
+    def error(self, message: str):
+        self.collect({"allowed": False, message: f"Internal webhook error: {message}"})

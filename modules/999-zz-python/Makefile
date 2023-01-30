@@ -17,3 +17,4 @@ all: clean deps
 test:
 	PYTHONPATH=${DEPS_PATH} pytest hooks
 	PYTHONPATH=${WH_DEPS_PATH} pytest webhooks/conversion
+	PYTHONPATH=${WH_DEPS_PATH} pytest webhooks/validating
