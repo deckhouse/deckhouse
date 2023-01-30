@@ -47,7 +47,6 @@ def main(ctx: hook.Context):
     except Exception as e:
         print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
-        return
 
 
 def convert(v_from: str, v_to: str, obj: DotMap) -> DotMap:
