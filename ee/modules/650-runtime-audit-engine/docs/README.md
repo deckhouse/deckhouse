@@ -4,84 +4,84 @@ title: "The runtime-audit-engine module"
 
 ## Overview
 
-The module implements runtime threats detection engine. 
-It can collect Linux core system calls and Kubernetes API audit events, enrich them with metadata from Kubernetes Pods and generate security audit events by condition rules.
+The module implements a runtime threats detection engine. 
+It can collect Linux kernel system calls and Kubernetes API audit events, enrich them with metadata from Kubernetes Pods and generate security audit events according to conditional rules.
 
 This module:
 * Detects threats at runtime by observing the behavior of your applications and containers.
-* Helps to detect CVEs exploits, cryptocurrency mining attacks. 
+* Helps to detect CVEs exploits and cryptocurrency mining attacks. 
 * Improves Kubernetes security by detecting:
-  * A shell running inside a container or Pod in Kubernetes.
-  * A container running in privileged mode, or mounting a sensitive path, such as `/proc`, from the host.
-  * Unexpected read of a sensitive file, such as `/etc/shadow`.
+  * Shells running in containers or Pods in Kubernetes.
+  * Containers running in privileged mode or attempting to mount sensitive paths, such as `/proc`, on the host.
+  * Unauthorized attempts to read confidential files such as `/etc/shadow`.
 
 ## Architecture
 
-The core of the module is [Falco](https://falco.org/). 
-Deckhouse deploys Falco agents as a DaemonSet on every node, and they start consuming kernel / kube audit events.
+The module is based on the [Falco](https://falco.org/) system. 
+Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The agents then start consuming kernel / kube audit events.
 
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.png)
 
-> NOTE: To achieve the maximum level of security, Falco is recommended to be deployed as a systemd unit.
-> However, a Kubernetes cluster with the autoscaling feature enabled makes it harder to operate. 
-> Additional security measurements such as multitenancy and admission policy control mechanisms provide the required level of security to mitigate attacks on the Falco DaemonSet.
+> NOTE: We recommend deploying Falco as a systemd unit for maximum security.
+> However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
+> Additional security mechanisms such as multitenancy and admission policy control provide the required level of security to mitigate attacks on the Falco DaemonSet.
 
-A single Pod consists of five containers:
+There are five different containers in a single agent Pod:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.png)
 
-1. `falco-driver-loader` — init container that compiles eBPF program and stores it into empty dir to provide access to it for Falco.
-2. `falco` — collects events, enriches them with metadata and stores them.
-3. `rules-loader` — collects custom resources ([FalcoAuditRules](cr.html#falcoauditrules)) from Kubernetes and stores them in a shared directory (empty dir).
-4. `falcosidekick` — only exports events as metrics to be able to alert on them.
-5. `kube-rbac-proxy` — protects `falcosidekick` metrics endpoint.
+1. `falco-driver-loader` — this init container compiles the eBPF program and saves it in an empty dir to make it available to Falco.
+2. `falco` — collects events, enriches them with metadata and saves them.
+3. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
+4. `falcosidekick` — exports events as metrics on which alerts can be generated.
+5. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
 
 ## Audit Rules
 
-An ability to collect events on its own means nothing, because the amount of data that can be exported from a Linux kernel is too big to analyze by a human.
-Rules aimed to solve this problem and collect only events according to certain pattens implied to detect any suspicious activity.
+The event collection itself is a low-yielding activity because the amount of data coming from the Linux kernel is too large to be analyzed by a human.
+Rules address this problem by collecting events according to certain pattens that can help in detecting suspicious activities.
 
-The main part of a rule is a condition expression (for which the [conditions syntax](https://falco.org/docs/rules/conditions/) is used).
+The main part of a rule is a conditional expression (which uses the [conditions syntax](https://falco.org/docs/rules/conditions/)).
 
 ### Embedded rules
 
-There is a pair of rule files included that cannot be switched off. 
-These rules are aimed to highlight Deckhouse security problems and problems connected to the `runtime-audit-engine` module itself.
+There are several built-in rules that cannot be disabled.  
+These rules are aimed at detecting Deckhouse security problems as well as security problems affecting the `runtime-audit-engine` module.
 
-- `/etc/falco/falco_rules.yaml` — syscall rules
-- `/etc/falco/k8s_audit_rules.yaml` — Kubernetes audit rules
+- `/etc/falco/falco_rules.yaml` — syscall rules;
+- `/etc/falco/k8s_audit_rules.yaml` — Kubernetes audit rules.
 
 
 ### Custom audit rules
 
-To add custom security audit rules, users can use a custom resource definition `FalcoAuditRules`. 
-Each Falco agent Pod has a sidecar container with a [shell-operator](https://github.com/flant/shell-operator) instance.
-This sidecar reads rules from custom resources and stores it on Pod's filesystem in `/etc/falco/rules.d/` folder.
-Falco will automatically reload the configuration once a new rule appears.
+Users can use a `FalcoAuditRules` CRD to add custom security audit rules. 
+Each Falco agent Pod has a sidecar container running [shell-operator](https://github.com/flant/shell-operator).
+This sidecar reads rules from the custom resources and saves them in the Pod's `/etc/falco/rules.d/` directory.
+Falco automatically reloads the configuration when a new rule becomes available.
 
 ![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.png)
 
-This schema allows to use the IaC approach to maintain Falco rules.
+Such a schema allows the IaC approach to be used to maintain Falco rules.
 
 ## Requirements
 
 ### OS
 
-The module uses the eBPF Falco driver to ingest syscall data. It works better for environments where loading a kernel module is untrusted or not supported, e.g., GKE, EKS, and other Managed Kubernetes solutions.
-Yet there are known limitations for the eBPF driver:
+The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
+However, there are known limitations to the eBPF driver:
 * The eBPF probe may not work for every system.
-* At least Linux kernel version 4.14 is required, but the Falco project suggests an LTS kernel of 4.14/4.19 or above.
+* At least a Linux kernel version 4.14 is required, although the Falco project suggests an LTS kernel version 4.14/4.19 or higher.
 
 ### CPU / Memory
 
-Falco agents are deployed on every node. Resources consumption of each Pod depends on the number of rules or ingested events.
+Falco agents are running on every node. Therefore, the resource consumption of each Pod depends on the number of rules or ingested events.
 
 ## Kubernetes Audit Webhook
 
 [Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`. 
 If the [control-plane-manager](../040-control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
 
-For Kubernetes cluster with control plane out of Deckhouse control, it is possible to manually configure the webhook.
-1. Create a webhook kubeconfig file with the address `https://127.0.0.1:9765/k8s-audit` and CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
+You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse.
+1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
     
     Example:
     ```yaml
@@ -101,7 +101,7 @@ For Kubernetes cluster with control plane out of Deckhouse control, it is possib
       name: webhook
     current-context: webhook
     ```
-2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest that points to the previously created file.
+2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
 
-> NOTE: Do not forget to configure audit policy, because, by default, Deckhouse only collect audit events from system namespaces.
+> NOTE: Remember to configure the audit policy, because Deckhouse only collects audit events from the system namespaces by default.
 > An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
