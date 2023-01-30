@@ -731,6 +731,9 @@ import:
   add: /images_tags.json
   to: /deckhouse/modules/images_tags.json
   after: setup
+shell:
+  setup:
+    - ln -s /deckhouse/modules/images_tags.json /deckhouse/modules/040-node-manager/images_tags.json
 ---
 image: tests
 fromImage: tests-prebuild
@@ -739,6 +742,9 @@ import:
   add: /images_tags.json
   to: /deckhouse/modules/images_tags.json
   after: setup
+shell:
+  setup:
+    - ln -s /deckhouse/modules/images_tags.json /deckhouse/modules/040-node-manager/images_tags.json
 ---
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}

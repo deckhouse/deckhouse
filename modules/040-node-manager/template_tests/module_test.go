@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -506,6 +507,20 @@ internal:
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		err := os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
