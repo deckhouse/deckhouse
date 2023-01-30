@@ -40,12 +40,8 @@ set +e
 PID=0
 EXITCODE=0
 
-for SIG in SIGUSR1 SIGUSR2 SIGINT SIGTERM SIGHUP SIGQUIT; do
-  trap "signal_handler ${SIG}" "${SIG}"
-done
-
 signal_handler() {
-  echo "{\"msg\": \"Catch signal ${1}\"}"
+  echo "{\"level\":\"warning\", \"msg\": \"Catch signal ${1}\"}"
   case "${1}" in
   "SIGUSR1" | "SIGUSR2")
     kill "${PID}"
@@ -59,12 +55,16 @@ signal_handler() {
 }
 
 run_deckhouse() {
-  /usr/bin/deckhouse-controller start &
+  /sbin/tini -s -- /usr/bin/deckhouse-controller start &
   PID="${!}"
-  echo "{\"msg\": \" New deckhouse PID ${PID}\"}"
+  echo "{\"level\":\"info\", \"msg\": \"New deckhouse PID ${PID}\"}"
   wait "${PID}"
   EXITCODE="${?}"
 }
+
+for SIG in SIGUSR1 SIGUSR2 SIGINT SIGTERM SIGHUP SIGQUIT; do
+  trap "signal_handler ${SIG}" "${SIG}"
+done
 
 run_deckhouse
 exit "${EXITCODE}"
