@@ -5,9 +5,9 @@ title: "Модуль runtime-audit-engine: примеры конфигураци
 ## Как собирать события?
 
 Pod'ы `runtime-audit-engine` выводят все события в стандартный вывод.
-После эти события могут быть собраны [агентами log-shipper](../460-log-shipper/) и отправлены в хранилище логов.
+Далее [агенты log-shipper](../460-log-shipper/) могут собирать их и отправлять в хранилище логов.
 
-Пример [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) для `log-shipper`:
+Пример конфигурации [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -30,10 +30,10 @@ spec:
 
 ## Как оповещать о критических событиях?
 
-Метрики о событиях автоматически собираются в Prometheus.
-Добавьте [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules) в кластер, чтобы включить оповещения.
+Prometheus автоматически собирает метрики о событиях.
+Чтобы включить оповещения, добавьте в кластер правило [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules).
 
-Пример:
+Пример настройки такого правила:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -55,16 +55,15 @@ spec:
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
 
-> NOTE: Оповещения лучше всего работаю в комбинации с хранилищами событий, такими как Elasticsearch или Loki. Оповещения подсказывают о подозрительном поведении на узле.
-> Следующий шаг после получения оповещения - пойти в хранилище и посмотреть на сами события.
+> NOTE: Алерты лучше всего работают в комбинации с хранилищами событий, такими как Elasticsearch или Loki. Их задача — оповестить пользователя о подозрительном поведении на узле.
+> После получения алерта рекомендуется "пойти" в хранилище и посмотреть на события, которые его вызвали.
 
-## Как применить правила для Falco, которые я нашел в интернете?
+## Как применить правила для Falco, найденные в интернете?
 
 Структура правил Falco отличается от схемы CRD.
-Это связано с ограничением возможности проверки правильности ресурсов в Kubernetes.
+Это связано со сложностями при проверке правильности ресурсов в Kubernetes.
 
-Чтобы упростить процесс миграции для применения правил Falco в Deckhouse
-был добавлен скрипт для конвертации правил Falco в ресурсы [FalcoAuditRules](cr.html#falcoauditrules).
+Скрипт для конвертации правил Falco в ресурсы [FalcoAuditRules](cr.html#falcoauditrules) упрощает процесс миграции и позволять применять правила Falco в Deckhouse.
 
 ```shell
 git clone github.com/deckhouse/deckhouse
