@@ -35,10 +35,12 @@ def main(ctx: hook.Context):
         # DotMap is a dict with dot notation
         bctx = DotMap(ctx.binding_context)
 
-        # print(bctx.pprint(pformat="json"))  # debug printing
+        print(bctx.pprint(pformat="json"))  # debug printing
 
         for obj in bctx.review.request.objects:
             converted = convert(bctx.fromVersion, bctx.toVersion, obj)
+
+            print(converted.pprint(pformat="json"))  # debug printing
 
             # DotMap is not JSON serializable, we need raw dict
             ctx.output.conversions.collect(converted.toDict())
