@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
+from dataclasses import dataclass
+
 from deckhouse_sdk import hook
 from dotmap import DotMap
 
@@ -31,6 +34,18 @@ kubernetesCustomResourceConversion:
 
 
 def main(ctx: hook.Context):
+    conv = ConverterDispatcher(
+        ConverterAdapter(
+            from_version="deckhouse.io/v1alpha1",
+            to_version="deckhouse.io/v1beta1",
+            converter=Converter_from_v1alpha1_to_v1beta1(),
+        ),
+        ConverterAdapter(
+            from_version="deckhouse.io/v1beta1",
+            to_version="deckhouse.io/v1",
+            converter=Converter_from_v1beta1_to_v1(),
+        ),
+    )
     try:
         # DotMap is a dict with dot notation
         bctx = DotMap(ctx.binding_context)
@@ -38,46 +53,93 @@ def main(ctx: hook.Context):
         # print(bctx.pprint(pformat="json"))  # debug printing
 
         for obj in bctx.review.request.objects:
-            converted = convert(bctx.fromVersion, bctx.toVersion, obj)
+            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj)
 
             # print(converted.pprint(pformat="json"))  # debug printing
 
             # DotMap is not JSON serializable, we need raw dict
-            ctx.output.conversions.collect(converted.toDict())
+            ctx.output.conversions.collect(converted)
     except Exception as e:
         print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
 
 
-def convert(v_from: str, v_to: str, obj: DotMap) -> DotMap:
-    # As we didnt't declare straight conversion from v1alpha1 -> v1, it will be done in two
-    # sequential requests. Hence, we take care only about v1alpha1 -> v1beta1 and v1beta1 -> v1
-    # conversions.
-    match v_from, v_to:
-        case "deckhouse.io/v1alpha1", "deckhouse.io/v1beta1":
-            return conv_v1alpha1_to_v1beta1(obj)
-        case "deckhouse.io/v1beta1", "deckhouse.io/v1":
-            return conv_v1beta1_to_v1(obj)
-        case _:
-            raise Exception(f"Conversion from {v_from} to {v_to} is not supported")
+class Converter:
+    def forward(self, obj: dict) -> dict:
+        raise NotImplementedError()
+
+    def backward(self, obj: dict) -> dict:
+        raise NotImplementedError()
 
 
-def conv_v1alpha1_to_v1beta1(obj: DotMap) -> DotMap:
-    new_obj = DotMap(obj)  # deep copy
-    new_obj.apiVersion = "deckhouse.io/v1beta1"
-    major, minor = new_obj.spec.version.split(".")
-    new_obj.spec.version = {
-        "major": int(major),
-        "minor": int(minor),
-    }
-    return new_obj
+@dataclass
+class ConverterAdapter(Converter):
+    """Handy convert wrapper to wrap basic operations: deepcopy and changing apiVersion"""
+
+    from_version: str
+    to_version: str
+    converter: Converter
+
+    def forward(self, obj: dict) -> dict:
+        obj = deepcopy(obj)
+        obj["apiVersion"] = self.to_version
+        return self.converter.forward(obj)
+
+    def backward(self, obj: dict) -> dict:
+        obj = deepcopy(obj)
+        obj["apiVersion"] = self.from_version
+        return self.converter.backward(obj)
 
 
-def conv_v1beta1_to_v1(obj: DotMap) -> DotMap:
-    new_obj = DotMap(obj)  # deep copy
-    new_obj.apiVersion = "deckhouse.io/v1"
-    new_obj.spec.modules = [{"name": m} for m in new_obj.spec.modules]
-    return new_obj
+class ConverterDispatcher:
+    def __init__(self, *adapters: ConverterAdapter):
+        self._converters = {self._key_a(a): a for a in adapters}
+
+    def _keys(self, v_from, v_to):
+        return f"{v_from}:{v_to}", f"{v_to}:{v_from}"
+
+    def _key_a(self, a: ConverterAdapter):
+        return self._keys(a.from_version, a.to_version)[0]
+
+    def convert(self, v_from: str, v_to: str, obj: dict) -> dict:
+        key_fwd, key_bwd = self._keys(v_from, v_to)
+
+        if key_fwd in self._converters:
+            return self._converters[key_fwd].forward(obj)
+
+        if key_bwd in self._converters:
+            return self._converters[key_bwd].backward(obj)
+
+        raise Exception(f"Conversion from {v_from} to {v_to} is not supported")
+
+
+class Converter_from_v1alpha1_to_v1beta1(Converter):
+    def forward(self, obj: dict) -> dict:
+        obj = DotMap(obj)
+        major, minor = obj.spec.version.split(".")
+        obj.spec.version = {
+            "major": int(major),
+            "minor": int(minor),
+        }
+        return obj.toDict()
+
+    def backward(self, obj: dict) -> dict:
+        obj = DotMap(obj)
+        version = obj.spec.version
+        obj.spec.version = f"{version.major}.{version.minor}"
+        return obj
+
+
+class Converter_from_v1beta1_to_v1(Converter):
+    def forward(self, obj: dict) -> dict:
+        obj = DotMap(obj)
+        obj.spec.modules = [{"name": m} for m in obj.spec.modules]
+        return obj.toDict()
+
+    def backward(self, obj: dict) -> dict:
+        obj = DotMap(obj)
+        obj.spec.modules = [m.name for m in obj.spec.modules]
+        return obj
 
 
 if __name__ == "__main__":
