@@ -83,7 +83,7 @@ admissionPolicyEngine:
 				}
 				return nil
 			})
-			gatorCLI := exec.Command("gator", "verify", "-v", path.Join(tmpDir, "..."))
+			gatorCLI := exec.Command("/deckhouse/bin/gator", "verify", "-v", path.Join(tmpDir, "..."))
 			res, err := gatorCLI.Output()
 			if err != nil {
 				output := strings.ReplaceAll(string(res), strings.TrimPrefix(path.Join(tmpDir, "admission-policy-engine"), "/"), "")
