@@ -32,7 +32,8 @@ RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.
 WORKDIR /vector/vector
 RUN cargo fetch
 
-COPY --from=build-librdkafka /usr/local/include/librdkafka /usr/local/include/librdkafka
+COPY --from=build-librdkafka /usr/local/lib/librdkafka.a /usr/local/include/librdkafka.a
+COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
 
 RUN cargo build \
     --release \
@@ -51,7 +52,9 @@ RUN mkdir -p /etc/vector \
     && rm -rf /var/cache/apt/archives/*
 
 COPY --from=build-vector /vector/vector/target/release/vector /usr/bin/vector
-COPY --from=build-librdkafka /usr/local/include/librdkafka /usr/local/include/librdkafka
+
+COPY --from=build-librdkafka /usr/local/lib/librdkafka.a /usr/local/include/librdkafka.a
+COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
 
 COPY reloader /usr/bin/reloader
 ENTRYPOINT ["/usr/bin/vector"]
