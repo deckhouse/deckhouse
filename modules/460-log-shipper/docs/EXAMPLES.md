@@ -3,6 +3,7 @@ title: "Module log-shipper: examples"
 ---
 
 {% raw %}
+
 ## Getting logs from all cluster Pods and sending them to Loki
 
 ```yaml
@@ -361,4 +362,5 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
 {% endraw %}
