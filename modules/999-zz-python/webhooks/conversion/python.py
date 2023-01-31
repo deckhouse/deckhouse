@@ -122,7 +122,7 @@ class Converter_from_v1alpha1_to_v1beta1(Converter):
         obj = DotMap(obj)
         version = obj.spec.version
         obj.spec.version = f"{version.major}.{version.minor}"
-        return obj
+        return obj.toDict()
 
 
 class Converter_from_v1beta1_to_v1(Converter):
@@ -134,7 +134,7 @@ class Converter_from_v1beta1_to_v1(Converter):
     def backward(self, obj: dict) -> dict:
         obj = DotMap(obj)
         obj.spec.modules = [m.name for m in obj.spec.modules]
-        return obj
+        return obj.toDict()
 
 
 if __name__ == "__main__":
