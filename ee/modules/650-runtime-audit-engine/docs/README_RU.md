@@ -82,25 +82,25 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 1. Создайте файл kubeconfig для webhook с адресом `https://127.0.0.1:9765/k8s-audit` и CA (ca.crt) из секрета `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls`.
 
-    Пример:
+   Пример:
 
-    ```yaml
-    apiVersion: v1
-    kind: Config
-    clusters:
-    - name: webhook
-      cluster:
-        certificate-authority-data: BASE64_CA
-        server: "https://127.0.0.1:9765/k8s-audit"
-    users:
-    - name: webhook
-    contexts:
-    - context:
-       cluster: webhook
-       user: webhook
-      name: webhook
-    current-context: webhook
-    ```
+   ```yaml
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: webhook
+     cluster:
+       certificate-authority-data: BASE64_CA
+       server: "https://127.0.0.1:9765/k8s-audit"
+   users:
+   - name: webhook
+   contexts:
+   - context:
+      cluster: webhook
+      user: webhook
+     name: webhook
+   current-context: webhook
+   ```
 
 2. Добавьте к `kube-apiserver` флаг `--audit-webhook-config-file`, который будет указывать на файл, созданный на предыдущем шаге.
 

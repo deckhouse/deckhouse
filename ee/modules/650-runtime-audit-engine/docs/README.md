@@ -83,24 +83,24 @@ If the [control-plane-manager](../040-control-plane-manager/) module is enabled,
 You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse.
 1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
     
-    Example:
-    ```yaml
-    apiVersion: v1
-    kind: Config
-    clusters:
-    - name: webhook
-      cluster:
-        certificate-authority-data: BASE64_CA
-        server: "https://127.0.0.1:9765/k8s-audit"
-    users:
-    - name: webhook
-    contexts:
-    - context:
-       cluster: webhook
-       user: webhook
-      name: webhook
-    current-context: webhook
-    ```
+   Example:
+   ```yaml
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: webhook
+     cluster:
+       certificate-authority-data: BASE64_CA
+       server: "https://127.0.0.1:9765/k8s-audit"
+   users:
+   - name: webhook
+   contexts:
+   - context:
+      cluster: webhook
+      user: webhook
+     name: webhook
+   current-context: webhook
+   ```
 2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
 
 > NOTE: Remember to configure the audit policy, because Deckhouse only collects audit events from the system namespaces by default.

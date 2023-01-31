@@ -41,6 +41,7 @@ spec:
                 minLength: 1
                 description: |
                   Describes the Falco rules that will be applied to monitor the cluster runtime.
+
                   These rules help detect threats at runtime by observing the behavior of your applications and containers.
 
                   Refer to [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
@@ -55,6 +56,7 @@ spec:
                       type: object
                       description: |
                         Defines the conditions under which an alert is to be generated.
+
                         The rule is accompanied by a descriptive output string that is sent with an alert.
                       required:
                       - "name"
@@ -105,6 +107,7 @@ spec:
                       type: object
                       description: |
                         Rule condition snippets that can be re-used inside other rules and even macros.
+
                         Macros provide a way to name common patterns and eliminate redundancies in the rules.
                       required: ["name", "condition"]
                       properties:
@@ -120,6 +123,7 @@ spec:
                       type: object
                       description: |
                         Collections of items that can be included in rules, macros, or other lists.
+
                         Unlike rules and macros, lists cannot be parsed as filtering expressions.
                       required: ["name", "items"]
                       properties:
