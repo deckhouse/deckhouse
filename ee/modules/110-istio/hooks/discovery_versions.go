@@ -21,6 +21,7 @@ const (
 	revisionTemplate    = "v%sx%s"
 	imageSuffixTemplate = "V%sx%sx%s"
 	imageRegex          = `pilotV(?P<major>\d+)x(?P<minor>\d+)x(?P<patch>\d+)` // regex https://regex101.com/r/ESilDG/1
+	versionMapPath      = "istio.internal.versionMap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -62,7 +63,6 @@ func versionsDiscovery(input *go_hook.HookInput) error {
 		}
 		versionMap[ver.version] = ver.info
 	}
-	fmt.Println(versionMap)
-	input.Values.Set("istio.internal.versionMap", versionMap)
+	input.Values.Set(versionMapPath, versionMap)
 	return nil
 }

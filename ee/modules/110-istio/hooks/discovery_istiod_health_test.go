@@ -99,7 +99,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 	})
 
-	Context("Istiod pods with `Failed` phase", func() {
+	Context("Istiod pods in `Failed` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
@@ -112,10 +112,11 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.33":{"fullVersion":"","revision":"v1x33","imageSuffix":"","isReady":false},"1.88":{"fullVersion":"","revision":"v1x88","imageSuffix":"","isReady":false}}`))
 		})
 	})
 
-	Context("Istiod pods with `Running` phase", func() {
+	Context("Istiod pods in `Running` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
@@ -128,6 +129,29 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.33":{"fullVersion":"","revision":"v1x33","imageSuffix":"","isReady":false},"1.88":{"fullVersion":"","revision":"v1x88","imageSuffix":"","isReady":true}}`))
+		})
+	})
+
+	FContext("Both istiod pods with different revisions in `Running` phase", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.BindingContexts.Set(f.KubeStateSet(
+				podIstiodYaml(PodIstiodTemplateParams{
+					Revision: "v1x88",
+					Phase:    "Running",
+				}) + "---" +
+					podIstiodYaml(PodIstiodTemplateParams{
+						Revision: "v1x33",
+						Phase:    "Running",
+					})))
+			f.RunHook()
+		})
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.33":{"fullVersion":"","revision":"v1x33","imageSuffix":"","isReady":true},"1.88":{"fullVersion":"","revision":"v1x88","imageSuffix":"","isReady":true}}`))
 		})
 	})
 

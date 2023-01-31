@@ -52,6 +52,15 @@ func (vm IstioVersionsMap) IsRevisionReady(rev string) bool {
 	return false
 }
 
+func (vm IstioVersionsMap) SetRevisionStatus(rev string, isReady bool) {
+	for ver, istioVerInfo := range vm {
+		if istioVerInfo.Revision == rev {
+			istioVerInfo.IsReady = isReady
+			vm[ver] = istioVerInfo
+		}
+	}
+}
+
 func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {

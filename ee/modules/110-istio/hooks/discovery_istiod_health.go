@@ -75,11 +75,18 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	for _, podRaw := range input.Snapshots["istiod_pods"] {
 		pod := podRaw.(istiodPod)
-		if versionMap.GetVersionByRevision(pod.Revision) == globalVersion && pod.Phase == v1.PodRunning {
-			isGlobalVersionIstiodReady = true
+		if pod.Phase == v1.PodRunning {
+			versionMap.SetRevisionStatus(pod.Revision, true)
+			if versionMap.GetVersionByRevision(pod.Revision) == globalVersion {
+				isGlobalVersionIstiodReady = true
+			}
+		} else {
+			versionMap.SetRevisionStatus(pod.Revision, false)
 		}
+
 	}
 	input.Values.Set(isGlobalVersionIstiodReadyPath, isGlobalVersionIstiodReady)
+	input.Values.Set(versionMapPath, versionMap)
 	if !isGlobalVersionIstiodReady {
 		// There is a problem deleting the webhook configuration from helm. It must be deleted in the first place.
 		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global", object_patch.InForeground())
