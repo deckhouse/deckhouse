@@ -13,6 +13,7 @@ class ConversionsCollector:
 
     def __init__(self):
         self._data = []
+        self._err = None
 
     def collect(self, payload: dict):
         self._data.append(payload)
@@ -25,6 +26,8 @@ class ConversionsCollector:
         Returns:
             list: the list of single response
         """
+        if self._err is not None:
+            return [self._err]
         return [{"convertedObjects": self._data}]
 
     def error(self, message: str):
@@ -33,4 +36,4 @@ class ConversionsCollector:
         Args:
             message (str): error message
         """
-        self._data = [{"failedMessage": message}]
+        self._err = {"failedMessage": message}
