@@ -33,7 +33,9 @@ WORKDIR /vector/vector
 RUN cargo fetch
 
 COPY --from=build-librdkafka /usr/local/lib/librdkafka.a /usr/local/include/librdkafka.a
+COPY --from=build-librdkafka /usr/local/lib/librdkafka.so.1 /usr/local/include/librdkafka.so.1
 COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
+RUN ln -s /usr/local/lib/librdkafka.so.1 /usr/local/lib/librdkafka.so
 
 RUN cargo build \
     --release \
@@ -54,7 +56,9 @@ RUN mkdir -p /etc/vector \
 COPY --from=build-vector /vector/vector/target/release/vector /usr/bin/vector
 
 COPY --from=build-librdkafka /usr/local/lib/librdkafka.a /usr/local/include/librdkafka.a
+COPY --from=build-librdkafka /usr/local/lib/librdkafka.so.1 /usr/local/include/librdkafka.so.1
 COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
+RUN ln -s /usr/local/lib/librdkafka.so.1 /usr/local/lib/librdkafka.so
 
 COPY reloader /usr/bin/reloader
 ENTRYPOINT ["/usr/bin/vector"]
