@@ -8,4 +8,4 @@ title: "Модуль virtualization"
 
 Основные преимущества модуля:
 - Простой и понятный интерфейс для работы с виртуальными машинами как с [примитивами Kubernetes](cr.html) (работать с виртуальными машинами так же легко, как с Pod'ами);
-- Высокая производительность сетевого взаимодействия за счет использования CNI Сilium с поддержкой [MacVTap](https://github.com/kvaps/community/blob/macvtap-mode-for-pod-networking/design-proposals/macvtap-mode-for-pod-networking/macvtap-mode-for-pod-networking.md) (позволяет сэкономить вычислительные ресурсы, которые в противном случае расходовались бы на трансляцию адресов).
+- Высокая производительность сетевого взаимодействия за счет использования CNI Сilium с поддержкой [MacVTap](https://github.com/kvaps/community/blob/macvtap-mode-for-pod-networking/design-proposals/macvtap-mode-for-pod-networking/macvtap-mode-for-pod-networking.md) (исключает накладные расходы на трансляцию адресов).
