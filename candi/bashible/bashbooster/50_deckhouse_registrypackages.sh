@@ -104,8 +104,13 @@ bb-rp-install() {
     # shellcheck disable=SC2164
     pushd "${TMPDIR}" >/dev/null
     ./install
-     bb-exit-on-error "Failed to install package '${PACKAGE}'"
-    # shellcheck disable=SC2164
+    if bb-error?
+    then
+        popd >/dev/null
+        rm -rf "${TMPDIR}"
+        bb-log-error "Failed to install package '${PACKAGE}'"
+        return $BB_ERROR
+    fi
     popd >/dev/null
 
     # Write tag to hold file
