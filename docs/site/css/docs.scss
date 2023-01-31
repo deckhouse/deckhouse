@@ -102,7 +102,7 @@
 
 // search new classes
 
-.searchV2__content {
+.searchV2 {
     display: flex;
     gap: 1.5em;
 }
@@ -111,34 +111,63 @@
     flex: 1;
 }
 
-.searchV2__content .searchV2__results {
+.searchV2 .searchV2__results {
     list-style-type: none;
 }
 
-.searchV2__content .searchV2__results li {
+.searchV2 .searchV2__results li {
     padding: 0;
     margin: 0;
 }
 
-.searchV2__content .searchV2__results li:before {
+.searchV2 .searchV2__results li:before {
     display: none;
 }
 
-.searchV2__content .searchV2__results a {
+.searchV2 .searchV2__results a {
     color: #4075FF;
     text-decoration: none;
 }
 
-.searchV2__content .searchV2__results a:hover {
+.searchV2 .searchV2__results a:hover {
     text-decoration: none;
 }
 
-.searchV2__content .item_title_block {
+.searchV2 .searchV2__results_absent-block {
+    display: none;
+    font-size: 18px;
+    font-weight: 600;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: -0.4px;
+    margin-right: 2em;
+}
+
+.searchV2 .searchV2__results_absent-block.active {
+    display: block;
+}
+
+.searchV2 .searchV2__results_counter {
+    display: none;
+    font-size: 18px;
+    font-weight: 600;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: -0.4px;
+}
+
+.searchV2 .searchV2__results_counter.active {
+    display: block;
+}
+
+.searchV2 .searchV2__item_title-block {
     display: flex;
     align-items: center;
 }
 
-.searchV2__content .item_title_header {
+.searchV2 .searchV2__item_title-header {
     font-size: 18px;
     font-weight: 600;
     font-style: normal;
@@ -151,22 +180,22 @@
 
 }
 
-.searchV2__content .item_title_header.custom_resource {
+.searchV2 .searchV2__item_title-header.searchV2__item_custom-resource {
     //color: darkorange;
 }
 
-.searchV2__content .item_content_block, .item_content_block > p {
+.searchV2 .searchV2__item_content-block, .searchV2__item_content-block > p {
     margin-top: 0;
     margin-bottom: 1em;
 }
 
-.searchV2__content .item_content_block > .parameter_path {
+.searchV2 .searchV2__item_content-block > .searchV2__item_parameter-path {
     font-weight: 400;
     font-family: monospace;
     opacity: 55%;
 }
 
-.searchV2__content .deprecated {
+.searchV2 .deprecated {
     font-family: monospace, monospace;
     font-size: 80%;
     font-weight: normal;
@@ -177,36 +206,7 @@
     border-radius: 4px;
 }
 
-.searchV2__content .searchV2__results__absent {
-    display: none;
-    font-size: 18px;
-    font-weight: 600;
-    font-style: normal;
-    font-stretch: normal;
-    line-height: normal;
-    letter-spacing: -0.4px;
-    margin-right: 2em;
-}
-
-.searchV2__content .searchV2__results__absent.active {
-    display: block;
-}
-
-.searchV2__content .searchV2__results__counter {
-    display: none;
-    font-size: 18px;
-    font-weight: 600;
-    font-style: normal;
-    font-stretch: normal;
-    line-height: normal;
-    letter-spacing: -0.4px;
-}
-
-.searchV2__content .searchV2__results__counter.active {
-    display: block;
-}
-
-.searchV2__content .highlight {
+.searchV2 .highlight {
   background-color: #eec;
   color: #00122c;
 }

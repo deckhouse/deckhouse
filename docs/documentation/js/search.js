@@ -104,9 +104,9 @@
   function displayDocumentsSearchResults(results, store, containerClass, highlights = []) {
 
     if (results && results.length > 0) { // Are there any results?
-      $(containerClass + ' .searchV2__results__counter__data').text(results.length);
-      $(containerClass + ' .searchV2__results__counter').addClass('active');
-      $(containerClass + ' .searchV2__results__absent').removeClass('active');
+      $(containerClass + ' .searchV2__results_counter__data').text(results.length);
+      $(containerClass + ' .searchV2__results_counter').addClass('active');
+      $(containerClass + ' .searchV2__results_absent-block').removeClass('active');
       let appendString = '';
 
       for (let i = 0; i < results.length; i++) {  // Iterate over the results
@@ -115,12 +115,12 @@
         });
         appendString += `
            <li>
-             <div class="item_title_block">
+             <div class="searchV2__item_title-block">
                <a href="./${item.url.replace(/^\//, '')}">
-                 <span class="item_title_header">${item.title}</span>
+                 <span class="searchV2__item_title-header">${item.title}</span>
                </a>
              </div>
-             <div class="item_content_block">
+             <div class="searchV2__item_content-block">
                 ${getSnippet(item.content, highlights)}
              </div>
            </li>`;
@@ -128,16 +128,16 @@
       $(containerClass + ' .searchV2__results').html(appendString);
     } else {
       console.log("There are no results.");
-      $(containerClass + ' .searchV2__results__counter').removeClass('active');
-      $(containerClass + ' .searchV2__results__absent').addClass('active');
+      $(containerClass + ' .searchV2__results_counter').removeClass('active');
+      $(containerClass + ' .searchV2__results_absent-block').addClass('active');
     }
   }
 
   function displayParametersSearchResults(rawResults, store, containerClass, highlights = []) {
     if (rawResults && rawResults.length > 0) {
-      $(containerClass + ' .searchV2__results__counter__data').text(rawResults.length);
-      $(containerClass + ' .searchV2__results__counter').addClass('active');
-      $(containerClass + ' .searchV2__results__absent').removeClass('active');
+      $(containerClass + ' .searchV2__results_counter__data').text(rawResults.length);
+      $(containerClass + ' .searchV2__results_counter').addClass('active');
+      $(containerClass + ' .searchV2__results_absent-block').removeClass('active');
       let appendString = '';
 
       results = rawResults.filter(function(resultItem){
@@ -171,19 +171,19 @@
         else
           title = item.name
 
-        let titleClass='item_title_header';
-        if (item.isResource === 'true') titleClass += ' custom_resource';
+        let titleClass='searchV2__item_title-header';
+        if (item.isResource === 'true') titleClass += ' searchV2__item_custom-resource';
 
         appendString += `
            <li>
-             <div class="item_title_block">
+             <div class="searchV2__item_title-block">
                <a href="./${item.url.replace(/^\//, '')}">
                  <span class="${titleClass}">${title}</span>
                </a>
                ${deprecatedString}
              </div>
-             <div class="item_content_block">
-               <span class="parameter_path">${item.path}</span>
+             <div class="searchV2__item_content-block">
+               <span class="searchV2__item_parameter-path">${item.path}</span>
                <p>${getSnippet(item.content, highlights)}</p>
              </div>
            </li>`;
@@ -191,8 +191,8 @@
       $(containerClass + ' .searchV2__results').html(appendString);
     } else {
       console.log("There are no results.");
-      $(containerClass + ' .searchV2__results__counter').removeClass('active');
-      $(containerClass + ' .searchV2__results__absent').addClass('active');
+      $(containerClass + ' .searchV2__results_counter').removeClass('active');
+      $(containerClass + ' .searchV2__results_absent-block').addClass('active');
     }
   }
 
@@ -245,12 +245,12 @@
     let resultsParameters = parametersIdx.search(searchTerm); // Get lunr to perform a search on parameters
     displayDocumentsSearchResults(resultsDocuments, documents, '.searchV2__documents', stringsToHighlight);
     displayParametersSearchResults(resultsParameters, parameters, '.searchV2__parameters', stringsToHighlight);
-    if ( $('.searchV2__documents .searchV2__results__absent').hasClass('active') && $('.searchV2__parameters .searchV2__results__absent').hasClass('active') ) {
-        $('.searchV2__content').css({ 'flex-direction': 'column', 'gap': '0' });
+    if ( $('.searchV2__documents .searchV2__results_absent-block').hasClass('active') && $('.searchV2__parameters .searchV2__results_absent-block').hasClass('active') ) {
+        $('.searchV2').css({ 'flex-direction': 'column', 'gap': '0' });
     };
 
   } else {
-    $('.searchV2__content .searchV2__results__absent').addClass('active');
-    $('.searchV2__content').css({ 'flex-direction': 'column', 'gap': '0' });
+    $('.searchV2 .searchV2__results_absent-block').addClass('active');
+    $('.searchV2').css({ 'flex-direction': 'column', 'gap': '0' });
   }
 })();
