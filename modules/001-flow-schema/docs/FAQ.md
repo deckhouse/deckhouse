@@ -2,7 +2,7 @@
 title: "The flow-schema module: FAQ"
 ---
 
-##  How to check priority levels state?
+## How to check priority levels state?
 
 Execute:
 

@@ -2,7 +2,7 @@
 title: "Модуль flow-schema: FAQ"
 ---
 
-##  Как проверить состояние priority level'ов?
+## Как проверить состояние priority level'ов?
 
 Выполните:
 
