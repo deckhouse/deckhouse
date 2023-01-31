@@ -3,6 +3,7 @@ title: "Модуль cert-manager: FAQ"
 ---
 
 {% raw %}
+
 ## Как посмотреть состояние сертификата?
 
 ```console
@@ -244,4 +245,5 @@ CAA record does not match issuer
     - www.example.com
   EOF
   ```
+
 {% endraw %}
