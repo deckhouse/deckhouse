@@ -186,9 +186,9 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
 }
 
 function toggleDisabled(tab, inputDataAttr) {
-  if (tab === 'tab_withoutnat_ce' || tab === 'tab_standard_ce') {
+  if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
-  } else if (tab === 'tab_withoutnat_ee' || tab === 'tab_standard_ee') {
+  } else if (tab === 'tab_layout_ee' ) {
     const licenseToken = $(inputDataAttr).val();
     getLicenseToken(licenseToken)
   }
