@@ -11,6 +11,7 @@ deckhouseEnabled: true
 deckhouseWebEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
+flowSchemaEnabled: true
 helmEnabled: true
 ingressNginxEnabled: true
 kubeDnsEnabled: true
