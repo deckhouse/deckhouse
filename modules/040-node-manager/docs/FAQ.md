@@ -4,6 +4,14 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 ---
 {% raw %}
 
+## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+
+## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+
 ## How do I add a static node to a cluster?
 
 To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
@@ -578,14 +586,6 @@ When changing the CRI in the cluster, additional steps are required for the mast
 ## How to add node configuration step?
 
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
-
-## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
-
-See [control-plane-management FAQ](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
-
-## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
-
-See [control-plane-management FAQ](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
 ## How to use containerd with Nvidia GPU support?
 
