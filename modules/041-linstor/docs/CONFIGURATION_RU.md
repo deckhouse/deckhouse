@@ -1,5 +1,6 @@
 ---
 title: "Модуль linstor: настройки"
+force_searchable: true
 ---
 
 {% include module-bundle.liquid %}

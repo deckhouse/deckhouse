@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — VMware vSphere: настройки"
+force_searchable: true
 ---
 
 Модуль автоматически включается для всех облачных кластеров, развёрнутых в vSphere.
