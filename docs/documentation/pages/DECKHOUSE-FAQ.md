@@ -446,7 +446,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
 ## How do I upgrade the Kubernetes version in a cluster?
 
-To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](installing/configuration.html#parameters-kubernetesversion) parameter in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure by making the following steps:
+To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure by making the following steps:
 1. Run the command:
 
    ```shell

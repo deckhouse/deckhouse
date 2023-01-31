@@ -222,7 +222,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 - Use flavor with a zero disk size.
 - Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap).
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 

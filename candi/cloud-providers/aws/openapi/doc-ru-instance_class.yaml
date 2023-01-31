@@ -31,7 +31,7 @@ spec:
                   description: |
                     Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.
 
-                    Если не указан, то используется AMI, определенный в параметре [masterNodeGroup.instanceClass.ami](cluster_configuration.html#parameters-masternodegroup-instanceclass-ami) ресурса `AWSClusterConfiguration`.
+                    Если не указан, то используется AMI, определенный в параметре [masterNodeGroup.instanceClass.ami](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-ami) ресурса `AWSClusterConfiguration`.
 
                     Как найти нужный AMI (в каждом регионе AMI разные):
                     ```shell

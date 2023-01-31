@@ -90,10 +90,8 @@ provider:
   username: *!CHANGE_USERNAME*
 masterNodeGroup:
   replicas: 1
-  # [<en>] disk type array
-  # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#parameters-masternodegroup-volumetypemap
-  # [<ru>] Массив используемых типов дисков
-  # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#parameters-masternodegroup-volumetypemap
+  # [<en>] Disk type array.
+  # [<ru>] Массив используемых типов дисков.
   volumeTypeMap:
     # [<en>] <availability zone>: <volume type>
     # [<ru>] <availability zone>: <volume type>

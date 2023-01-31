@@ -50,7 +50,7 @@ apiVersions:
       cloud:
         type: object
         description: |
-          Cloud provider-related settings (if the `Cloud` [clusterType](#parameters-clustertype) is used).
+          Cloud provider-related settings (if the `Cloud` [clusterType](#clusterconfiguration-clustertype) is used).
         required: [provider]
         additionalProperties: false
         properties:
