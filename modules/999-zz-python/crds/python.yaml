@@ -102,6 +102,9 @@ spec:
                 version:
                   type: object
                   description: Python version.
+                  required:
+                    - major
+                    - minor
                   properties:
                     major:
                       type: integer
