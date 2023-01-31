@@ -1,0 +1,293 @@
+admission-policy-engine:
+  features:
+    - summary: Bump gatekeeper version to `3.10.0` to close CVE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3420
+candi:
+  features:
+    - summary: Add support for merging additional configs to `containerd.toml`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3596
+      impact: All `containerd` daemons will restart.
+    - summary: |-
+        Updated containerd version to `1.6.14`.
+        Added Deckhouse release requirement about minimal Ubuntu OS version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3388
+      impact: All `containerd` daemons will restart.
+    - summary: Create bashible events with errors in the default namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3351
+  fixes:
+    - summary: Fix error in bb-event-error-create bashible function.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3628
+    - summary: Bump `shell-operator` to `1.1.3`. Update base images to mitigate found CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3335
+      impact: >-
+        Components will be restarted in the following modules:
+
+        * every module using `csi-external-attacher`, `csi-external-provisioner`,
+        `csi-external-resizer`, `csi-external-snapshotter`, `csi-livenessprobe`,
+        `csi-node-registrar`, `kube-rbac-proxy`
+
+        * `basic-auth`
+
+        * `chrony`
+
+        * `cilium-hubble`
+
+        * `cloud-provider-aws`
+
+        * `cloud-provider-azure`
+
+        * `cloud-provider-gcp`
+
+        * `cloud-provider-openstack`
+
+        * `cloud-provider-vsphere`
+
+        * `cni-cilium`
+
+        * `control-plane-manager`
+
+        * `dashboard`
+
+        * `deckhouse`
+
+        * `deckhouse-web`
+
+        * `extended-monitoring`
+
+        * `flant-integration`
+
+        * `ingress-nginx`
+
+        * `istio`
+
+        * `keepalived`
+
+        * `kube-dns`
+
+        * `kube-proxy`
+
+        * `linstor`
+
+        * `log-shipper`
+
+        * `metallb`
+
+        * `monitoring-kubernetes`
+
+        * `monitoring-ping`
+
+        * `network-gateway`
+
+        * `node-local-dns`
+
+        * `node-manager`
+
+        * `openvpn`
+
+        * `prometheus`
+
+        * `registrypackages`
+
+        * `terraform-manager`
+
+        * `upmeter`
+
+        * `user-authn`
+
+        * `user-authz`
+cert-manager:
+  features:
+    - summary: Remove legacy `cert-manager` annotations converter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3425
+      impact: >-
+        `cert-manager` legacy Ingress annotation `certmanager.k8s.io/*`  will no longer be
+        supported.
+chrony:
+  fixes:
+    - summary: Use `NTPDaemonOnNodeDoesNotSynchronizeTime` alert only for cluster nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3577
+    - summary: >-
+        Add a dot to the end of each NTP server address to avoid resolving problems. Allow
+        correction of a large time difference.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3554
+ci:
+  features:
+    - summary: Make stale bot to put issues to the triage queue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3480
+    - summary: Stay failed e2e cluster for debug
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2534
+  fixes:
+    - summary: Migrate to stale action.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3544
+    - summary: Allow to exec slash command for collaborator instead contributor
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3522
+cloud-provider-yandex:
+  fixes:
+    - summary: >-
+        Changes to CCM:
+
+        - Introduced locking to Route Table operations, so that only one operation on a route table
+        can run simultaneously.
+
+        - Disabled useless Route Table updates on ListRoutes().
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3575
+cni-cilium:
+  features:
+    - summary: Added Deckouse config value for cilium entity labels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3573
+      impact: Cilium Pods should be restarted.
+  fixes:
+    - summary: Removed CiliumAgentControllersRunsFailing alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3639
+control-plane-manager:
+  fixes:
+    - summary: Make authn webhook CA optional.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3538
+deckhouse:
+  features:
+    - summary: Added Deckhouse image validation in the `change-registry.sh` script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3499
+    - summary: Added authentication settings to the update notification hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3399
+deckhouse-config:
+  fixes:
+    - summary: Support integer numbers for settings constrained with the float number in `multipleOf`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3612
+deckhouse-web:
+  features:
+    - summary: Improved search in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3591
+delivery:
+  fixes:
+    - summary: Fix deprecated PDB APIs for Kubernetes v1.25+
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3683
+dhctl:
+  features:
+    - summary: >-
+        Wait for the cluster bootstrapped state and output diagnostic messages about cloud ephemeral
+        nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3075
+    - summary: Add version number information to the `dhctl` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2933
+  fixes:
+    - summary: Fixing some cli messages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3593
+docs:
+  features:
+    - summary: Improved search in the documentation on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3591
+  fixes:
+    - summary: Fixed typo on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3487
+    - summary: Fix module status label in the comparison table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3483
+    - summary: Added note about using Deckhouse with kind on Windows.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3474
+    - summary: Vsphere getting started fix — added mandatory `mainNetwork field to NodeGroups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3435
+flant-integration:
+  features:
+    - summary: >-
+        Added more node metrics to address issues with the billing for control plane nodes without
+        expected taints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3093
+global-hooks:
+  features:
+    - summary: Add a metric to observe the current CNI plugin.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3372
+helm:
+  fixes:
+    - summary: Change deprecated resources check parameters. Make the load more uniform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3590
+helm_lib:
+  features:
+    - summary: Added support for module registry settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3574
+istio:
+  fixes:
+    - summary: >-
+        Added control of an environment variable for obtaining cloud provider metadata for istio
+        proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3624
+    - summary: Using the `iptables-wrapper-installer.sh` script in proxy images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3614
+linstor:
+  features:
+    - summary: Collect general statistics
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3615
+    - summary: >-
+        Introduce `linstor-scheduler-admission` for automatically setting `schedulerName` for Pods
+        using linstor volumes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3559
+  fixes:
+    - summary: Fix deprecated PDB APIs for Kubernetes v1.25+
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3683
+    - summary: fix rollingUpdate with two system nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3661
+    - summary: fix deckhouse registry regression
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3455
+    - summary: Tolerate DRBD problems.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3294
+log-shipper:
+  features:
+    - summary: Add type field for telemetry metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3582
+    - summary: Add indexes fields for Splunk destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3566
+node-local-dns:
+  fixes:
+    - summary: Changed "verified" to "verify"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3511
+    - summary: Switched stale cache behavior from `immediate` to `verified`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3428
+node-manager:
+  features:
+    - summary: >-
+        Added `quickShutdown` option to the NodeGroup CR. It will result in Machines draining in 5
+        minutes, insted of 2 hours, regardless of PDB or other obstacles.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3429
+  fixes:
+    - summary: fix bashible service checking
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3648
+prometheus:
+  fixes:
+    - summary: Trickster sample limit changed to 1500.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3557
+    - summary: Make each Grafana dashboard unique by UID.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3255
+registrypackages:
+  fixes:
+    - summary: Fix containerd build for CentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3597
+    - summary: Allow downgrading RPMs from registrypackages in any RPM-distro.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3358
+testing:
+  fixes:
+    - summary: Fix e2e tests for Yandex Cloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3460
+tools:
+  fixes:
+    - summary: Added support for port in registry address in change-registry.sh script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3644
+upmeter:
+  fixes:
+    - summary: Fixing D8UpmeterProbeGarbageNamespaces alert from upmeter module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3489
+user-authz:
+  fixes:
+    - summary: Enabled TLS certificate rotation for the authn webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3319
+virtualization:
+  features:
+    - summary: A new module that allows you to run virtual machines.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1357
+  fixes:
+    - summary: Fix deprecated PDB APIs for Kubernetes v1.25+.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3683
+    - summary: Handle labels, annotations, affinity and tolerations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3664
+    - summary: Bump versions, enable HA and configure placement.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3650
+    - summary: Minor fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3630
+
