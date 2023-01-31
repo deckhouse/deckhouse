@@ -47,6 +47,16 @@ nodeSelector:
   node-role.deckhouse.io/system: ""
     {{- end }}
 
+  {{- else if eq $strategy "monitoring-longterm" }}
+    {{- if $module_values.longtermNodeSelector }}
+nodeSelector: {{ $module_values.longtermNodeSelector | toJson }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole printf $strategy | int) 0 }}
+nodeSelector:
+  node-role.deckhouse.io/{{$strategy}}: ""
+    {{- else }}
+{{- include "helm_lib_node_selector" (tuple . "monitoring") }}
+    {{- end }}
+
   {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
     {{- if $module_values.nodeSelector }}
 nodeSelector: {{ $module_values.nodeSelector | toJson }}
