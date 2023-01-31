@@ -10,4 +10,4 @@ This module deploys [FlowSchema and PriorityLevelConfiguration](https://kubernet
 * `deckhouse.io` apigroup (Deckhouse custom resources). This helps in case of big amount various deckhouse CRs in cluster.
 * `cilium.io` apigroup (cilium custom resources). This helps in case of big amount of cilium policies in cluster.
 
-All requests to the API corresponding to `FlowSchema` are placed in the same queue.
+All requests to the API corresponding to `FlowSchema` are placed into the same queue.
