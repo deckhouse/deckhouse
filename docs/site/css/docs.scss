@@ -133,7 +133,7 @@
     text-decoration: none;
 }
 
-.searchV2 .searchV2__results_absent-block {
+.searchV2 .searchV2__results-absent-block {
     display: none;
     font-size: 18px;
     font-weight: 600;
@@ -144,11 +144,11 @@
     margin-right: 2em;
 }
 
-.searchV2 .searchV2__results_absent-block.active {
+.searchV2 .searchV2__results-absent-block.active {
     display: block;
 }
 
-.searchV2 .searchV2__results_counter {
+.searchV2 .searchV2__results-counter {
     display: none;
     font-size: 18px;
     font-weight: 600;
@@ -158,16 +158,16 @@
     letter-spacing: -0.4px;
 }
 
-.searchV2 .searchV2__results_counter.active {
+.searchV2 .searchV2__results-counter.active {
     display: block;
 }
 
-.searchV2 .searchV2__item_title-block {
+.searchV2 .searchV2__item-title-block {
     display: flex;
     align-items: center;
 }
 
-.searchV2 .searchV2__item_title-header {
+.searchV2 .searchV2__item-title-header {
     font-size: 18px;
     font-weight: 600;
     font-style: normal;
@@ -180,16 +180,16 @@
 
 }
 
-.searchV2 .searchV2__item_title-header.searchV2__item_custom-resource {
+.searchV2 .searchV2__item-title-header.searchV2__item-custom-resource {
     //color: darkorange;
 }
 
-.searchV2 .searchV2__item_content-block, .searchV2__item_content-block > p {
+.searchV2 .searchV2__item-content-block, .searchV2__item-content-block > p {
     margin-top: 0;
     margin-bottom: 1em;
 }
 
-.searchV2 .searchV2__item_content-block > .searchV2__item_parameter-path {
+.searchV2 .searchV2__item-content-block > .searchV2__item-parameter-path {
     font-weight: 400;
     font-family: monospace;
     opacity: 55%;
