@@ -75,6 +75,15 @@
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place:
+
+        ```
+        comm -13 \
+          <(kubectl -n {{$labels.namespace}} get po -l app={{$labels.label_app}} -o'custom-columns=NODE:.spec.nodeName' --no-headers --sort-by=.spec.nodeName) \
+          <(kubectl get no -o'custom-columns=NAME:.metadata.name' --no-headers)
+        ```
+
+
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
       (
