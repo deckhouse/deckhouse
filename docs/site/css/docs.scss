@@ -100,7 +100,99 @@
     filter: brightness(255);
 }
 
+// search new classes
 
+.searchV2 {
+    display: flex;
+    gap: 1.5em;
+}
+
+.searchV2__blocks {
+    flex: 1;
+}
+
+.searchV2 .searchV2__results {
+    list-style-type: none;
+}
+
+.searchV2 .searchV2__results li {
+    padding: 0;
+    margin: 0;
+}
+
+.searchV2 .searchV2__results li:before {
+    display: none;
+}
+
+.searchV2 .searchV2__results a:hover {
+    text-decoration: none;
+}
+
+.searchV2 .searchV2__results-absent-block,
+.searchV2 .searchV2__results-counter {
+    display: none;
+    font-size: 18px;
+    font-weight: 600;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: -0.4px;
+}
+
+.searchV2 .searchV2__results-absent-block.active {
+    display: block;
+}
+
+.searchV2 .searchV2__results-counter.active {
+    display: block;
+}
+
+.searchV2 .searchV2__item-title-block {
+    display: flex;
+    align-items: center;
+}
+
+.searchV2 .searchV2__item-title-header {
+    font-size: 18px;
+    font-weight: 600;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: -0.4px;
+    color: #0066FF;
+    margin-top: 2em;
+    margin-bottom: 1em;
+
+}
+
+.searchV2 .searchV2__item-content-block, .searchV2__item-content-block > p {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+.searchV2 .searchV2__item-content-block > .searchV2__item-parameter-path {
+    font-weight: 400;
+    font-family: monospace;
+    opacity: 55%;
+}
+
+.searchV2 .deprecated {
+    font-family: monospace, monospace;
+    font-size: 80%;
+    font-weight: normal;
+    line-height: 1rem;
+    margin-left: 10px;
+    background: #f9a3bb;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.searchV2 .highlight {
+  background-color: #eec;
+  color: #00122c;
+}
+
+// search class deprecated since 1.43
 .search {
     display: inline-block;
     margin-left: 5px;
