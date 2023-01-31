@@ -92,9 +92,21 @@ common:
   documents_found:
     en: Documents found
     ru: Найдено документов
-  empty_search_result:
-    en: No documents found
-    ru: Документов не найдено
+  parameters_found:
+    en: Parameters found
+    ru: Найдено параметров
+  parameters_and_resources_found:
+    en: Parameters and resources found
+    ru: Найдено параметров и ресурсов
+  empty_search_documents_result:
+    en: Documents not found.
+    ru: Документов не найдено.
+  empty_search_parameters_resources_result:
+    en: Parameters and resources not found.
+    ru: Параметров и ресурсов не найдено.
+  no_description:
+    en: There is no description...
+    ru: Нет описания...
   search_placeholder_text:
     en: Search...
     ru: Поиск...
