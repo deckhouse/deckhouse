@@ -14,7 +14,8 @@ RUN apt-get update \
     && cd librdkafka-2.0.2 \
     && ./configure \
     && make \
-    && make install
+    && make install \
+    && ldconfig -p | grep librdkafka
 
 
 ### 2: Build vector
