@@ -22,7 +22,7 @@ apiVersions:
           - `Cloud` — кластер, развернутый на ресурсах облачного провайдера.
       cloud:
         description: |
-          Параметры облачного провайдера (если используется [clusterType](#parameters-clustertype) `Cloud`).
+          Параметры облачного провайдера (если используется [clusterType](#clusterconfiguration-clustertype) `Cloud`).
         properties:
           provider:
             description: Облачный провайдер.

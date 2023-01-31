@@ -36,7 +36,7 @@ lang: ru
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 - [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse). С этой конфигурацией Deckhouse запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится, или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#parameters-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.  
+  В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится, или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.  
   
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
   

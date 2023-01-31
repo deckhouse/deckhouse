@@ -450,7 +450,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
 ## Как обновить версию Kubernetes в кластере?
 
-Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#parameters-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
+Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
 1. Выполните команду:
 
    ```shell

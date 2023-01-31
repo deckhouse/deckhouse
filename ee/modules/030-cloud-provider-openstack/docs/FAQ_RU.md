@@ -230,7 +230,7 @@ username = {{ nova_service_user_name }}
 
 - Используйте flavor с нулевым размером диска.
 - Задайте `rootDiskSize` в `OpenStackInstanceClass`.
-- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, то тип диска будет взят из [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap).
+- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, то тип диска будет взят из [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Рекомендация для эфемерных-узлов — локальный диск
 
