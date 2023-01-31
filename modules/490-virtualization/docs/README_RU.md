@@ -2,10 +2,10 @@
 title: "Модуль virtualization"
 ---
 
-Модуль позволяет управлять виртуальными машинами с помощью Kubernetes. Модуль использует проект [kubevirt](https://github.com/kubevirt/kubevirt).
+Модуль позволяет управлять виртуальными машинами с помощью Kubernetes. Базируется на проекте [KubeVirt](https://github.com/kubevirt/kubevirt).
 
-Для работы виртуальных машин используется стэк QEMU (KVM) + libvirtd и CNI Cilium (необходим включенный модуль [cni-cilium](../021-cni-cilium/)). В качестве хранилища гарантируется работа с [LINSTOR](../041-linstor) или [Ceph](../099-ceph-csi/), но также возможны и другие варианты хранилища.
+Для работы виртуальных машин используется стек QEMU (KVM) + libvirtd и CNI Cilium (необходим включенный модуль [cni-cilium](../021-cni-cilium/)). Модуль поддерживает работу с платформами хранения данных [LINSTOR](../041-linstor) или [Ceph](../099-ceph-csi/). Возможны и другие варианты хранилища.
 
 Основные преимущества модуля:
-- Простой интерфейс работы с виртуальными машинами как [примитивами Kubernetes](cr.html) (работа с ВМ аналогична работе с Pod'ами);
-- Высокая производительность сетевого взаимодействия за счет использования CNI cilium с поддержкой [MacVTap](https://github.com/kvaps/community/blob/macvtap-mode-for-pod-networking/design-proposals/macvtap-mode-for-pod-networking/macvtap-mode-for-pod-networking.md) (исключает накладные расходы на трансляцию адресов).
+- Простой и понятный интерфейс для работы с виртуальными машинами как с [примитивами Kubernetes](cr.html) (работать с виртуальными машинами так же легко, как с Pod'ами);
+- Высокая производительность сетевого взаимодействия за счет использования CNI Сilium с поддержкой [MacVTap](https://github.com/kvaps/community/blob/macvtap-mode-for-pod-networking/design-proposals/macvtap-mode-for-pod-networking/macvtap-mode-for-pod-networking.md) (позволяет сэкономить вычислительные ресурсы, которые в противном случае расходовались бы на трансляцию адресов).
