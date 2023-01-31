@@ -17,7 +17,7 @@ spec:
       condition: >
         spawned_process and proc.name in (chmod, chown) and proc.args contains "/tmp/"
       output: >
-        File below a known directory has permission or ownership change (user=%user.name
+        The file or directory below has had its permissions or ownership changed (user=%user.name
         command=%proc.cmdline file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2])
       priority: Warning
       tags: [filesystem]
