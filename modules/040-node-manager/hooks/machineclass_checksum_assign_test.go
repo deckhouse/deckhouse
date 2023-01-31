@@ -941,9 +941,23 @@ func newCloudProviderAvailabilityChecker() func(tYpE string) {
 // getAvailableCloudProviderTypes returns all cloud providers
 // containing corresponding checksum template in cloud-providers directory.
 func getAvailableCloudProviderTypes() set.Set {
+	const modulesDirCE = "/deckhouse/modules"
+	const modulesDirEE = "/deckhouse/ee/modules"
+	const modulesDirFE = "/deckhouse/ee/fe/modules"
+
 	ptypes := set.New()
 
-	dir := filepath.Join("/deckhouse", "modules", "040-node-manager", "cloud-providers")
+	ptypes.AddSet(getAvailableCloudProviderTypesInDir(modulesDirCE))
+	ptypes.AddSet(getAvailableCloudProviderTypesInDir(modulesDirEE))
+	ptypes.AddSet(getAvailableCloudProviderTypesInDir(modulesDirFE))
+
+	return ptypes
+}
+
+func getAvailableCloudProviderTypesInDir(modulesDir string) set.Set {
+	ptypes := set.New()
+
+	dir := filepath.Join(modulesDir, "040-node-manager", "cloud-providers")
 
 	files, err := os.ReadDir(dir)
 	if err != nil {
