@@ -1,5 +1,5 @@
 ---
-title: "Модуль deckhouse-flow-schema: настройки"
+title: "Модуль flow-schema: настройки"
 ---
 
 {% include module-bundle.liquid %}
