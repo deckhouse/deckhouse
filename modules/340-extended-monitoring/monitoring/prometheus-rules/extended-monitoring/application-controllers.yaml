@@ -53,11 +53,14 @@
 
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
-      kube_daemonset_status_number_unavailable
-      > on (namespace, daemonset)
       (
-        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
-      )
+        kube_daemonset_status_number_unavailable
+        >
+        on (namespace, daemonset)
+        (
+          max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+        )
+      ) + on (namespace, daemonset) group_left(label_app) kube_daemonset_labels * 0
     for: 5m
     labels:
       severity_level: "6"
