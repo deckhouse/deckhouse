@@ -48,6 +48,7 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 			FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
 			Revision:    fmt.Sprintf(revisionTemplate, major, minor),
 			ImageSuffix: fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+			IsReady:     false,
 		},
 	}, nil
 }
@@ -61,6 +62,7 @@ func versionsDiscovery(input *go_hook.HookInput) error {
 		}
 		versionMap[ver.version] = ver.info
 	}
+	fmt.Println(versionMap)
 	input.Values.Set("istio.internal.versionMap", versionMap)
 	return nil
 }
