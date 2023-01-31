@@ -70,9 +70,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
       summary: |-
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
       description: |-
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
         Currently at: {{ .Value }} unavailable replica(s)
         Threshold at: {{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }} unavailable replica(s)
 
