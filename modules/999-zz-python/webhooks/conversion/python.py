@@ -46,11 +46,16 @@ def main(ctx: hook.Context):
         ),
     )
     try:
-        # DotMap is a dict with dot notation
         bctx = ctx.binding_context
+        v_from, v_to = bctx["fromVersion"], bctx["toVersion"]
+        objects = bctx["review"]["request"]["objects"]
+        if not objects:
+            return
+
         # print(bctx.pprint(pformat="json"))  # debug printing
-        for obj in bctx["review"]["request"]["objects"]:
-            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj)
+
+        for obj in objects:
+            converted = conv.convert(v_from, v_to, obj)
             # print(converted.pprint(pformat="json"))  # debug printing
             ctx.output.conversions.collect(converted)
     except Exception as e:
