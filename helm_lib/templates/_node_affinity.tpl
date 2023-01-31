@@ -1,5 +1,5 @@
 {{- define "helm_lib_internal_check_node_selector_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "master" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "monitoring-longterm" "system" "master" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -50,11 +50,11 @@ nodeSelector:
   {{- else if eq $strategy "monitoring-longterm" }}
     {{- if $module_values.longtermNodeSelector }}
 nodeSelector: {{ $module_values.longtermNodeSelector | toJson }}
-    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole printf $strategy | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/{{$strategy}}: ""
     {{- else }}
-{{- include "helm_lib_node_selector" (tuple . "monitoring") }}
+{{- include "helm_lib_node_selector" (tuple $context "monitoring") }}
     {{- end }}
 
   {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
