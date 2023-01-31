@@ -18,7 +18,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from deckhouse_sdk import hook
-from dotmap import DotMap
 
 config = """
 configVersion: v1
@@ -48,10 +47,10 @@ def main(ctx: hook.Context):
     )
     try:
         # DotMap is a dict with dot notation
-        bctx = DotMap(ctx.binding_context)
-        print(bctx.pprint(pformat="json"))  # debug printing
-        for obj in bctx.review.request.objects:
-            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj.toDict())
+        bctx = ctx.binding_context
+        # print(bctx.pprint(pformat="json"))  # debug printing
+        for obj in bctx["review"]["request"]["objects"]:
+            converted = conv.convert(bctx.fromVersion, bctx.toVersion, obj)
             # print(converted.pprint(pformat="json"))  # debug printing
             ctx.output.conversions.collect(converted)
     except Exception as e:
@@ -110,31 +109,27 @@ class ConverterDispatcher:
 
 class Converter_from_v1alpha1_to_v1beta1(Converter):
     def forward(self, obj: dict) -> dict:
-        obj = DotMap(obj)
-        major, minor = obj.spec.version.split(".")
-        obj.spec.version = {
+        major, minor = obj["spec"]["version"].split(".")
+        obj["spec"]["version"] = {
             "major": int(major),
             "minor": int(minor),
         }
-        return obj.toDict()
+        return obj
 
     def backward(self, obj: dict) -> dict:
-        obj = DotMap(obj)
-        version = obj.spec.version
-        obj.spec.version = f"{version.major}.{version.minor}"
-        return obj.toDict()
+        version = obj["spec"]["version"]
+        obj["spec"]["version"] = f"{version.major}.{version.minor}"
+        return obj
 
 
 class Converter_from_v1beta1_to_v1(Converter):
     def forward(self, obj: dict) -> dict:
-        obj = DotMap(obj)
-        obj.spec.modules = [{"name": m} for m in obj.spec.modules]
-        return obj.toDict()
+        obj["spec"]["modules"] = [{"name": m} for m in obj["spec"]["modules"]]
+        return obj
 
     def backward(self, obj: dict) -> dict:
-        obj = DotMap(obj)
-        obj.spec.modules = [m.name for m in obj.spec.modules]
-        return obj.toDict()
+        obj["spec"]["modules"] = [m.name for m in obj["spec"]["modules"]]
+        return obj
 
 
 if __name__ == "__main__":
