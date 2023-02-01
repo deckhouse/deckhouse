@@ -1,7 +1,7 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
 args: 'make tests-modules'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin'
 # <template: unit_run_args>
 {!{- end -}!}
 
@@ -89,6 +89,8 @@ steps:
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Pull shell-operator
+    run: git clone --depth 1 --branch v1.1.3 https://github.com/flant/shell-operator
   - name: Run tests
     env:
       TESTS_IMAGE_NAME: {!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_18_BUSTER | quote }!}

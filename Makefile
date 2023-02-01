@@ -125,8 +125,9 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
 .PHONY: tests-modules tests-matrix tests-openapi tests-prometheus
-tests-modules: ## Run unit tests for modules hooks and templates.
+tests-modules: bin/jq ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
+	@bash -c "[ -f /.dockerenv ] && echo ln -s /deckhouse/bin/jq /usr/bin/jq || true"
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
