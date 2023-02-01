@@ -111,8 +111,6 @@ internal:
             enabled: true
           removePodsViolatingTopologySpreadConstraint:
             enabled: true
-    status:
-      ready: false
 `
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("descheduler", moduleValues)
@@ -127,63 +125,63 @@ apiVersion: "descheduler/v1alpha1"
 kind: "DeschedulerPolicy"
 evictFailedBarePods: true
 strategies:
-"RemoveDuplicates":
-  enabled: true
-  params:
+  "RemoveDuplicates":
+    enabled: true
+    params:
 
-"RemovePodsViolatingNodeAffinity":
-  enabled: true
-  params:
-    nodeAffinityType:
-      - "requiredDuringSchedulingIgnoredDuringExecution"
+  "RemovePodsViolatingNodeAffinity":
+    enabled: true
+    params:
+      nodeAffinityType:
+        - "requiredDuringSchedulingIgnoredDuringExecution"
 
-"RemovePodsViolatingInterPodAntiAffinity":
-  enabled: true
-  params:
+  "RemovePodsViolatingInterPodAntiAffinity":
+    enabled: true
+    params:
 
-"LowNodeUtilization":
-  enabled: true
-  params:
-    nodeResourceUtilizationThresholds:
-      thresholds:
-        "cpu": 40
-        "memory": 50
-        "pods": 40
-      targetThresholds:
-        "cpu": 80
-        "memory": 90
-        "pods": 80
+  "LowNodeUtilization":
+    enabled: true
+    params:
+      nodeResourceUtilizationThresholds:
+        thresholds:
+          "cpu": 40
+          "memory": 50
+          "pods": 40
+        targetThresholds:
+          "cpu": 80
+          "memory": 90
+          "pods": 80
 
-"HighNodeUtilization":
-  enabled: true
-  params:
-    nodeResourceUtilizationThresholds:
-      thresholds:
-        "cpu": 50
-        "memory": 50
+  "HighNodeUtilization":
+    enabled: true
+    params:
+      nodeResourceUtilizationThresholds:
+        thresholds:
+          "cpu": 50
+          "memory": 50
 
-"RemovePodsViolatingNodeTaints":
-  enabled: true
-  params:
+  "RemovePodsViolatingNodeTaints":
+    enabled: true
+    params:
 
-"RemovePodsViolatingTopologySpreadConstraint":
-  enabled: true
-  params:
+  "RemovePodsViolatingTopologySpreadConstraint":
+    enabled: true
+    params:
 
-"RemovePodsHavingTooManyRestarts":
-  enabled: true
-  params:
-    podsHavingTooManyRestarts:
-      podRestartThreshold: 100
-      includingInitContainers: true
+  "RemovePodsHavingTooManyRestarts":
+    enabled: true
+    params:
+      podsHavingTooManyRestarts:
+        podRestartThreshold: 100
+        includingInitContainers: true
 
-"PodLifeTime":
-  enabled: true
-  params:
-    podLifeTime:
-      maxPodLifeTimeSeconds: 86400
-      podStatusPhases:
-        - "Pending"
+  "PodLifeTime":
+    enabled: true
+    params:
+      podLifeTime:
+        maxPodLifeTimeSeconds: 86400
+        podStatusPhases:
+          - "Pending"
 `))
 			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-test").Exists()).To(BeTrue())
 		})

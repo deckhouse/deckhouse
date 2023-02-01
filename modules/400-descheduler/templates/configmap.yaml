@@ -1,29 +1,29 @@
-{ { - define "additional_parameters" } }
-  { { - if .nodeFilter } }
+{{- define "additional_parameters" }}
+  {{- if .nodeFilter }}
 nodeFilter:
-  { { - .nodeFilter | toYaml | nindent 2 } }
-    { { - end } }
+  {{- .nodeFilter | toYaml | nindent 2 }}
+    {{- end }}
 
-    { { - if .priorityFilter } }
+    {{- if .priorityFilter }}
 priorityFilter:
-  { { - .priorityFilter | toYaml | nindent 2 } }
-    { { - end } }
+  {{- .priorityFilter | toYaml | nindent 2 }}
+    {{- end }}
 
-    { { - if .namespaceFilter } }
+    {{- if .namespaceFilter }}
 namespaceFilter:
-  { { - .namespaceFilter | toYaml | nindent 2 } }
-    { { - end } }
+  {{- .namespaceFilter | toYaml | nindent 2 }}
+    {{- end }}
 
-    { { - if .nodeFit } }
+    {{- if .nodeFit }}
 nodeFit:
-  { { - .nodeFit | toYaml | nindent 2 } }
-    { { - end } }
-  { { - end } }
+  {{- .nodeFit | toYaml | nindent 2 }}
+    {{- end }}
+  {{- end }}
 
-  { { - range $d := .Values.descheduler.internal.deschedulers } }
-  { { - $deschedulerSpec := $d.spec } }
-  { { - $globalParameters := $deschedulerSpec.deschedulerPolicy.globalParameters } }
-  { { - $strategies := $deschedulerSpec.deschedulerPolicy.strategies } }
+  {{- range $d := .Values.descheduler.internal.deschedulers }}
+  {{- $deschedulerSpec := $d.spec }}
+  {{- $globalParameters := $deschedulerSpec.deschedulerPolicy.globalParameters }}
+  {{- $strategies := $deschedulerSpec.deschedulerPolicy.strategies }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -35,120 +35,120 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha1"
     kind: "DeschedulerPolicy"
-  { { - if $globalParameters } }
-  { { - $globalParameters | toYaml | nindent 4 } }
-  { { - end } }
-  strategies:
-  { { - if hasKey $strategies "removeDuplicates" } }
-  "RemoveDuplicates":
-    enabled: true
-    params:
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemoveDuplicates":
-    enabled: false
-  { { - end } }
+  {{- if $globalParameters }}
+    {{- $globalParameters | toYaml | nindent 4 }}
+  {{- end }}
+    strategies:
+  {{- if hasKey $strategies "removeDuplicates" }}
+      "RemoveDuplicates":
+        enabled: true
+        params:
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemoveDuplicates":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "removePodsViolatingNodeAffinity" } }
-  "RemovePodsViolatingNodeAffinity":
-    enabled: true
-    params:
-      nodeAffinityType:
-        - "requiredDuringSchedulingIgnoredDuringExecution"
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemovePodsViolatingNodeAffinity":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "removePodsViolatingNodeAffinity" }}
+      "RemovePodsViolatingNodeAffinity":
+        enabled: true
+        params:
+          nodeAffinityType:
+            - "requiredDuringSchedulingIgnoredDuringExecution"
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemovePodsViolatingNodeAffinity":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "removePodsViolatingInterPodAntiAffinity" } }
-  "RemovePodsViolatingInterPodAntiAffinity":
-    enabled: true
-    params:
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemovePodsViolatingInterPodAntiAffinity":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "removePodsViolatingInterPodAntiAffinity" }}
+      "RemovePodsViolatingInterPodAntiAffinity":
+        enabled: true
+        params:
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemovePodsViolatingInterPodAntiAffinity":
+        enabled: false
+  {{- end }}
 
 
-  { { - if hasKey $strategies "lowNodeUtilization" } }
-  "LowNodeUtilization":
-    enabled: true
-    params:
-      nodeResourceUtilizationThresholds:
-        thresholds:
-          "cpu": 40
-          "memory": 50
-          "pods": 40
-        targetThresholds:
-          "cpu": 80
-          "memory": 90
-          "pods": 80
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "LowNodeUtilization":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "lowNodeUtilization" }}
+      "LowNodeUtilization":
+        enabled: true
+        params:
+          nodeResourceUtilizationThresholds:
+            thresholds:
+              "cpu": 40
+              "memory": 50
+              "pods": 40
+            targetThresholds:
+              "cpu": 80
+              "memory": 90
+              "pods": 80
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "LowNodeUtilization":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "highNodeUtilization" } }
-  "HighNodeUtilization":
-    enabled: true
-    params:
-      nodeResourceUtilizationThresholds:
-        thresholds:
-          "cpu": 50
-          "memory": 50
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "HighNodeUtilization":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "highNodeUtilization" }}
+      "HighNodeUtilization":
+        enabled: true
+        params:
+          nodeResourceUtilizationThresholds:
+            thresholds:
+              "cpu": 50
+              "memory": 50
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "HighNodeUtilization":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "removePodsViolatingNodeTaints" } }
-  "RemovePodsViolatingNodeTaints":
-    enabled: true
-    params:
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemovePodsViolatingNodeTaints":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "removePodsViolatingNodeTaints" }}
+      "RemovePodsViolatingNodeTaints":
+        enabled: true
+        params:
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemovePodsViolatingNodeTaints":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "removePodsViolatingTopologySpreadConstraint" } }
-  "RemovePodsViolatingTopologySpreadConstraint":
-    enabled: true
-    params:
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemovePodsViolatingTopologySpreadConstraint":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "removePodsViolatingTopologySpreadConstraint" }}
+      "RemovePodsViolatingTopologySpreadConstraint":
+        enabled: true
+        params:
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemovePodsViolatingTopologySpreadConstraint":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "removePodsHavingTooManyRestarts" } }
-  "RemovePodsHavingTooManyRestarts":
-    enabled: true
-    params:
-      podsHavingTooManyRestarts:
-        podRestartThreshold: 100
-        includingInitContainers: true
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "RemovePodsHavingTooManyRestarts":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "removePodsHavingTooManyRestarts" }}
+      "RemovePodsHavingTooManyRestarts":
+        enabled: true
+        params:
+          podsHavingTooManyRestarts:
+            podRestartThreshold: 100
+            includingInitContainers: true
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemovePodsHavingTooManyRestarts":
+        enabled: false
+  {{- end }}
 
-  { { - if hasKey $strategies "podLifeTime" } }
-  "PodLifeTime":
-    enabled: true
-    params:
-      podLifeTime:
-        maxPodLifeTimeSeconds: 86400
-        podStatusPhases:
-          - "Pending"
-  { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
-  { { - else } }
-  "PodLifeTime":
-    enabled: false
-  { { - end } }
+  {{- if hasKey $strategies "podLifeTime" }}
+      "PodLifeTime":
+        enabled: true
+        params:
+          podLifeTime:
+            maxPodLifeTimeSeconds: 86400
+            podStatusPhases:
+              - "Pending"
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "PodLifeTime":
+        enabled: false
+  {{- end }}
 {{- end }}
