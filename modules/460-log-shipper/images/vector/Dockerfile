@@ -48,8 +48,7 @@ COPY --from=build-vector /vector/vector/target/release/vector /usr/bin/vector
 
 COPY --from=build-vector /usr/local/lib/librdkafka.* /usr/local/lib/
 COPY --from=build-vector /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
-
-RUN ls /usr/local/lib/
+RUN echo '/usr/local/lib' >> /etc/ld.so.conf
 
 COPY reloader /usr/bin/reloader
 ENTRYPOINT ["/usr/bin/vector"]
