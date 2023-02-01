@@ -34,11 +34,9 @@ import (
 const (
 	// Preemptible instances are forcibly stopped by Yandex.Cloud after 24 hours
 	// https://cloud.yandex.com/en-ru/docs/compute/concepts/preemptible-vm
-	hookExecutionSchedule          = 15 * time.Minute
-	preemptibleInstanceMaxLifetime = 24 * time.Hour
+	hookExecutionSchedule = 15 * time.Minute
 	// we'll delete Machines that are almost ready to be terminated by the cloud provider
-	preemptibleDeletionPeriod    = 4 * time.Hour
-	durationThresholdForDeletion = preemptibleInstanceMaxLifetime - preemptibleDeletionPeriod
+	durationThresholdForDeletion = 24*time.Hour - 4*time.Hour
 
 	// we won't delete any Machines if it would violate overall Node readiness of a given NodeGroup
 	nodeGroupReadinessRatio = 0.9
@@ -169,7 +167,8 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	AllowFailure: true,
-	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
+	// this hook relies on information set by update_node_group_status hook
+	Queue: "/modules/node-manager/update_ngs_statuses",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name: "every-15",
@@ -235,7 +234,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 		ic, ok := mcRaw.(string)
 		if !ok {
-			return fmt.Errorf("failed to assert to *YandexMachineClass")
+			return fmt.Errorf("failed to assert to string")
 		}
 
 		preemptibleMachineClassesSet.Add(ic)
@@ -317,45 +316,28 @@ func deleteMachines(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	for _, m := range getMachinesToDelete(timeNow, machines) {
+	for _, m := range getMachinesToDelete(machines) {
 		input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", m)
 	}
 
 	return nil
 }
 
-func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDelete []string) {
+func getMachinesToDelete(machines []*Machine) (machinesToDelete []string) {
 	sort.Slice(machines, func(i, j int) bool {
 		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
 	})
 
-	// we spread deletion over preemptibleDeletionPeriod partitioned by hookExecutionSchedule
-	// that is the calculated batch for Machines that are older than 20 hours, but younger than 24 hours
-	batch := len(machines) / int(preemptibleDeletionPeriod/hookExecutionSchedule)
+	// take 10% of old Machines
+	batch := len(machines) / 10
 	if batch == 0 {
 		batch = 1
 	}
 
-	var criticallyOldMachinesToDelete []string
-
 	for _, currentMachine := range machines {
-		if (len(machinesToDelete) < batch) && (currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).After(timeNow)) {
+		if len(machinesToDelete) < batch {
 			machinesToDelete = append(machinesToDelete, currentMachine.Name)
 		}
-
-		if currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).Before(timeNow) {
-			criticallyOldMachinesToDelete = append(criticallyOldMachinesToDelete, currentMachine.Name)
-		}
-	}
-
-	// we'll delete a quarter of Machines older than 24 hours
-	if len(criticallyOldMachinesToDelete) > 0 {
-		criticallyOldMachinesToDeleteCount := len(criticallyOldMachinesToDelete) / 4
-		if criticallyOldMachinesToDeleteCount == 0 {
-			criticallyOldMachinesToDeleteCount = 1
-		}
-
-		machinesToDelete = append(machinesToDelete, criticallyOldMachinesToDelete[:criticallyOldMachinesToDeleteCount]...)
 	}
 
 	return
