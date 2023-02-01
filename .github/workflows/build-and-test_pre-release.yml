@@ -662,8 +662,6 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
-      - name: Pull shell-operator
-        run: git clone --depth 1 --branch v1.1.3 https://github.com/flant/shell-operator
       - name: Run tests
         env:
           TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.18.5-buster@sha256:eb4b3bd59da4604b0ab27d3837e39dacfba4a48cdd289419a3c49993c0eadba4"
@@ -673,7 +671,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin ${TESTS_IMAGE_NAME} make tests-modules
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-modules
     # </template: tests_before_build_template>
 
   matrix_tests:
@@ -741,8 +739,6 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
-      - name: Pull shell-operator
-        run: git clone --depth 1 --branch v1.1.3 https://github.com/flant/shell-operator
       - name: Run tests
         env:
           TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.18.5-buster@sha256:eb4b3bd59da4604b0ab27d3837e39dacfba4a48cdd289419a3c49993c0eadba4"
