@@ -87,6 +87,7 @@
  - **[node-local-dns]** Remove the module from the `Managed` bundle. [#3309](https://github.com/deckhouse/deckhouse/pull/3309)
  - **[node-manager]** Increase early-oom PSI threshold to 30 (from 5). [#3427](https://github.com/deckhouse/deckhouse/pull/3427)
  - **[node-manager]** Show errors on scale-from-zero capacity planning. [#3316](https://github.com/deckhouse/deckhouse/pull/3316)
+ - **[prometheus]** Fix Alertmanager CA file (caused Unauthorized error). [#3723](https://github.com/deckhouse/deckhouse/pull/3723)
  - **[prometheus]** Fixed token-based authentication between Trickster and Prometheus. [#3519](https://github.com/deckhouse/deckhouse/pull/3519)
  - **[prometheus]** Fix remoteWrite tlsConfig render. [#3510](https://github.com/deckhouse/deckhouse/pull/3510)
  - **[prometheus]** Set up `maxSamples` of query for the Main and Longterm Prometheus objects from `50000000` to `100000000`. [#3124](https://github.com/deckhouse/deckhouse/pull/3124)
