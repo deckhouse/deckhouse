@@ -112,8 +112,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_deckhouse") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
   matrix_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
