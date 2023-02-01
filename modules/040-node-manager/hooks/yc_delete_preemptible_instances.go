@@ -32,10 +32,14 @@ import (
 )
 
 const (
+	// Preemptible instances are forcibly stopped by Yandex.Cloud after 24 hours
+	// https://cloud.yandex.com/en-ru/docs/compute/concepts/preemptible-vm
 	hookExecutionSchedule          = 15 * time.Minute
 	preemptibleInstanceMaxLifetime = 24 * time.Hour
 	// we'll delete Machines that are almost ready to be terminated by the cloud provider
-	preemptibleDeletionPeriod = 4 * time.Hour
+	preemptibleDeletionPeriod    = 4 * time.Hour
+	durationThresholdForDeletion = preemptibleInstanceMaxLifetime - preemptibleDeletionPeriod
+
 	// we won't delete any Machines if it would violate overall Node readiness of a given NodeGroup
 	nodeGroupReadinessRatio = 0.9
 )
@@ -54,10 +58,6 @@ type Machine struct {
 
 	nodeCreationTimestamp metav1.Time
 	nodeGroup             string
-}
-
-type YandexMachineClass struct {
-	Name string
 }
 
 type NodeGroupStatus struct {
@@ -161,9 +161,7 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	if ok && preemptible {
-		return &YandexMachineClass{
-			Name: obj.GetName(),
-		}, nil
+		return obj.GetName(), nil
 	}
 
 	return nil, nil
@@ -235,12 +233,12 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		ic, ok := mcRaw.(*YandexMachineClass)
+		ic, ok := mcRaw.(string)
 		if !ok {
 			return fmt.Errorf("failed to assert to *YandexMachineClass")
 		}
 
-		preemptibleMachineClassesSet.Add(ic.Name)
+		preemptibleMachineClassesSet.Add(ic)
 	}
 
 	if preemptibleMachineClassesSet.Size() == 0 {
@@ -298,6 +296,20 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
+		// skip young Machines
+		if machine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
+			continue
+		}
+
+		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
+		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.nodeGroup]
+		if !ok {
+			continue
+		}
+		if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
+			continue
+		}
+
 		machines = append(machines, machine)
 	}
 
@@ -305,14 +317,14 @@ func deleteMachines(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	for _, m := range getMachinesToDelete(timeNow, machines, nodeGroupNameToNodeGroupStatus) {
+	for _, m := range getMachinesToDelete(timeNow, machines) {
 		input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", m)
 	}
 
 	return nil
 }
 
-func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap map[string]*NodeGroupStatus) (machinesToDelete []string) {
+func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDelete []string) {
 	sort.Slice(machines, func(i, j int) bool {
 		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
 	})
@@ -325,23 +337,8 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine, ngToNgStatusMap
 	}
 
 	var criticallyOldMachinesToDelete []string
-	const durationThresholdForDeletion = preemptibleInstanceMaxLifetime - preemptibleDeletionPeriod
 
 	for _, currentMachine := range machines {
-		// skip young Machines
-		if currentMachine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
-			continue
-		}
-
-		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
-		ngStatus, ok := ngToNgStatusMap[currentMachine.nodeGroup]
-		if !ok {
-			continue
-		}
-		if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
-			continue
-		}
-
 		if (len(machinesToDelete) < batch) && (currentMachine.nodeCreationTimestamp.Time.Add(preemptibleInstanceMaxLifetime).After(timeNow)) {
 			machinesToDelete = append(machinesToDelete, currentMachine.Name)
 		}
