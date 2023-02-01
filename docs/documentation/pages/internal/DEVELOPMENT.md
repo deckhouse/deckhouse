@@ -46,8 +46,8 @@ Periodicity and timing of updates in the release channels when a minor version c
 There can be several possibilities if a bug is detected in the release progressed to the `Beta` channel (or above):
 1. The bug is in the new functionality:
     1. The release in question contains only the new functionality (that no one uses yet) – in this case, switching versions is canceled (this release will not be advanced to more stable release channels), and the appropriate notification is posted. The bug will be fixed in the subsequent releases.
-    1. The release in question contains other urgently needed changes, or the new functionality is in high demand – in this case, the bug is fixed via hotfix releases.
-1. The bug is in the existing functionality: the bug is fixed via hotfix releases.
+    2. The release in question contains other urgently needed changes, or the new functionality is in high demand – in this case, the bug is fixed via hotfix releases.
+2. The bug is in the existing functionality: the bug is fixed via hotfix releases.
 
 Patch-releases are not stand-alone releases but a set of fixes that are backported to all active releases ASAP (if necessary). Since these changes are backported to all active releases, they should be kept to the minimum necessary!
 
@@ -55,16 +55,16 @@ Patch-releases are not stand-alone releases but a set of fixes that are backport
 
 Periodicity and timing of patch-release updates in the release channels:
 1. The Deckhouse team can change patch-release versions in the `Alpha` channel at any time at its own discretion with any periodicity and without prior warning.
-1. For the `Beta` and `Early Access` channels, the Deckhouse team can switch to a patch-release version at any time at its own discretion but not earlier than two hours after switching to this version in the `Alpha` and `Beta` release channels, accordingly.
-1. For the `Stable` and `Rock Solid` channels, the switching to the patch-release version can be performed on any day:
+2. For the `Beta` and `Early Access` channels, the Deckhouse team can switch to a patch-release version at any time at its own discretion but not earlier than two hours after switching to this version in the `Alpha` and `Beta` release channels, accordingly.
+3. For the `Stable` and `Rock Solid` channels, the switching to the patch-release version can be performed on any day:
    1. `Stable`, `Rock Solid` — not earlier than the next day after the switching to this version in the `Early Access` and `Stable` release channels, accordingly.
-1. These rules may be breached if there is a **real need** to make urgent changes due to a critical bug/vulnerability (note that all actions **must be coordinated with the team leaders**).
+4. These rules may be breached if there is a **real need** to make urgent changes due to a critical bug/vulnerability (note that all actions **must be coordinated with the team leaders**).
 
 ### Canceling a scheduled version change
 
 1. If degradation of the previously existing functionality is discovered in the release (patch-release), the planned upgrade to this version is suspended.
-1. If a new version (patch-release) is released to fix the degradation, the version switching is performed according to the previous section. If the patch-release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
-1. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the release channels (there is no point in changing the version to the one known to result in degradation).
+2. If a new version (patch-release) is released to fix the degradation, the version switching is performed according to the previous section. If the patch-release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
+3. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the release channels (there is no point in changing the version to the one known to result in degradation).
 
 ## Style Guide
 
@@ -228,7 +228,10 @@ There are four strategies in total:
 2. `monitoring` - uses the same logic as the `system` and `frontend` strategies but includes an extra step after all of the above:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
-3. `master` - this strategy uses the following logic:
+3. `monitoring-longterm` - uses the same logic as the `system` and `frontend` strategies but includes an extra step before all of the above:
+    * If a longtermNodeSelector is defined, it will be used, then node with the name of the strategy will be validated, otherwise continue with logic described above in the `monitoring` section.
+
+4. `master` - this strategy uses the following logic:
     * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes and nodes with labels designating these nodes as masters in the cluster, then the components of such modules run on system nodes.
 
@@ -431,7 +434,7 @@ In Deckhouse, conversion webhooks are located in the module's `/modules/MODULE/w
 
 #### kubectl
 
-We do not recommended using kubectl in hooks. It leads to a loss of idempotency since the hook depends on the cluster state in addition to the input parameters (that creates some difficulties during debugging/testing).
+We do not recommend using kubectl in hooks. It leads to a loss of idempotency since the hook depends on the cluster state in addition to the input parameters (that creates some difficulties during debugging/testing).
 * Use the [built-in shell-operator functionality](https://github.com/flant/addon-operator/blob/main/HOOKS.md#kubernetes) (it is fully integrated into Deckhouse) to track objects;
 * Use the shell_lib functionality (the `kubernetes::`-prefixed functions in particular: kubernetes::create_yaml, kubernetes::patch_jq, kubernetes::delete_if_exists, etc.) to create, edit, and delete objects.
 
@@ -811,14 +814,14 @@ docker exec -ti deckhouse-testing bash
 
 **Caution!**
 1. Note that the first run takes some time.
-1. Currently, you cannot view stout during debugging due to Goland bugs. Use the following command:
+2. Currently, you cannot view stout during debugging due to Goland bugs. Use the following command:
 
    ```bash
    tail -f /tmp/deckhouse-testing-debug.log
    ```
 
-1. In some cases, the Stop button does not stop the debugging process. Suppose you run some "heavy" task that takes a long time to complete and eats up CPU resources (e.g., all the tests). In this case, you need to exec to the deckhouse-testing container and kill the relevant processes.
-1. Suppose the hotkey stopped responding (and the Debug button in the Debug Tests configuration is gone) for some reason. In this case, you need to find the running testing/run script and kill it.
+3. In some cases, the Stop button does not stop the debugging process. Suppose you run some "heavy" task that takes a long time to complete and eats up CPU resources (e.g., all the tests). In this case, you need to exec to the deckhouse-testing container and kill the relevant processes.
+4. Suppose the hotkey stopped responding (and the Debug button in the Debug Tests configuration is gone) for some reason. In this case, you need to find the running testing/run script and kill it.
 
 #### Configuring
 

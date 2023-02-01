@@ -27,10 +27,6 @@ import (
 )
 
 var _ = Describe("Module :: prometheus :: helm template :: render Prometheus main and longterm node selectors in CR", func() {
-	deckhouseNodeRole := func(node string) string {
-		return fmt.Sprintf(`{"node-role.deckhouse.io/%s": ""}`, node)
-	}
-
 	const (
 		customNodeSelector = `
 nodeSelector:
@@ -41,6 +37,10 @@ longtermNodeSelector:
   longterm-prometheus: ""
 `
 	)
+
+	deckhouseNodeRole := func(node string) string {
+		return fmt.Sprintf(`{"node-role.deckhouse.io/%s": ""}`, node)
+	}
 
 	getGlobalValues := func(nodeCount string) string {
 		return fmt.Sprintf(`
