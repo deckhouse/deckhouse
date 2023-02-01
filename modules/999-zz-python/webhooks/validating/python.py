@@ -38,7 +38,7 @@ def main(ctx: hook.Context):
         # DotMap is a dict with dot notation
         request = DotMap(ctx.binding_context).review.request
 
-        print("request", request.pprint(pformat="json"))  # debug printing
+        # print("request", request.pprint(pformat="json"))  # debug printing
 
         errmsg = validate(request)
         if errmsg is None:

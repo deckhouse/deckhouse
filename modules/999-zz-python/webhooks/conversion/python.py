@@ -48,13 +48,14 @@ def main(ctx: hook.Context):
     )
     try:
         bctx = ctx.binding_context
+
+        print("BINDING CONTEXT")
+        print(json.dumps(bctx, indent=2))  # debug printing
+
         v_from, v_to = bctx["fromVersion"], bctx["toVersion"]
         objects = bctx["review"]["request"]["objects"]
         if not objects:
             return
-
-        print("BINDING CONTEXT")
-        print(json.dumps(bctx, indent=2))  # debug printing
 
         for obj in objects:
             converted = conv.convert(v_from, v_to, obj)
