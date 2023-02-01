@@ -90,32 +90,43 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
     availability = (up+unknown)/(down+up+unknown)
 
 
-## Что измеряет апметр: группы и пробы
+## Группы доступности и пробы
 
 
-### Группа доступности control-plane
+### Группа control-plane
 
 #### apiserver
-запрос на /version
-раз в 5 секунд
+
+Проверяет доступность kube-apiserver. Делает апрос на /version.
+
+- Интревал: 5 секунд
 
 #### basic-functionality
-создать cm, удалить cm, проверить что получилось
-раз в 5 секунд
+
+Проверяет работоспособность kube-apiserver на цикле жизни ConfigMap. Создает ConfigMap, удостоверятся в ее наличии, удаляет ConfigMap, проверить что ее нет.
+
+- Предварительно проверяет доступность аписервера. Если аписервер недоступен, то проба в статусе Unknown
+- Интревал: 5 секунд
 
 #### namespace
-создать ns, удалить ns, проверить что получилось
-раз в 1 минуту
+
+Проверяет работоспособность kube-apiserver на цикле жизни Namespace. Создает Namespace, удостоверятся в его наличии, удаляет Namespace, проверить что его нет.
+
+- Интревал: 1 минута
 
 #### controller-manager
-Создать StatefulSet, проверить что создался pod (он не шедулится, его состояние нам не важно)
-раз в 1 минуту
+
+Проверяет работосопосбность kube-controller-manager на жизненном цикле пода контроллера. Создает StatefulSet, проверяет что создался Pod (его состояние нам не важно, может оставаться в статусе Pending). Удаляет StatefulSet, проверяет Pod удалился.
+
+- Интревал: 1 минута
 
 #### scheduler
-создать под, проверить что он куда-то зашедулится
-раз в 1 минуту
 
-### Группа доступности deckhouse
+Проверяет работоспособность kube-scheduler. Создет Pod и проверяет заполенность поля `.spec.nodeName`.
+
+- Интревал: 1 минута
+
+### Группа deckhouse
 
 Одна проба
 
@@ -175,7 +186,7 @@ pod (хотя бы 1 pod Ready)
 keys (запрос /keys)
 Период 10с
 
-### Группа доступности load-balancing
+### Группа load-balancing
 load-balancer-configuration
 ccm запущен (хотя бы 1 pod Ready)
 Период 10с
@@ -187,7 +198,7 @@ metallb speaker (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
 
-### Группа доступности monitoring-and-autoscaling
+### Группа monitoring-and-autoscaling
 prometheus
 Pod, запущен prometheus (хотя бы 1 pod Ready).
 раз в 10 секунд
@@ -233,21 +244,21 @@ Horizontal-pod-autoscaler (вычисляемая проба)
 monitoring-and-autoscaling/prometheus-metrics-adapter
 control-plane/controller-manager
 
-### Группа доступности Nginx
+### Группа Nginx
 Пробы создаются динамически для имеющихся контроллеров
 
 [имя контролллера]
 Pod ready
 Раз в 5 секунд
 
-### Группа доступности Node Groups
+### Группа Node Groups
 Пробы создаются динамически для нод-групп, у которых NG.spec.CloudInstances.minPerZone > 0
 
 [имя группы узлов]
 Количество узлов в нод-группе соответствует ожидаемому в каждой зоне
 Раз в 10 секунд
 
-### Группа доступности Synthetic
+### Группа Synthetic
 
 **Задача.** Проверить сетевую связность между нодами, покрывая все пары со временем в случайном порядке.
 
