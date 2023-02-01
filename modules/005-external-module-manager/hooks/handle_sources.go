@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_deckhouse_release",
-			Crontab: "*/3 * * * *",
+			Crontab: "*/1 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(handleSource))
@@ -249,7 +249,6 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 	}
 
 	return "v" + moduleMetadata.Version.String(), nil
-
 }
 
 func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir string, moduleSource v1alpha1.ExternalModuleSource, moduleName, moduleVersion string, registryOptions []cr.Option) error {
