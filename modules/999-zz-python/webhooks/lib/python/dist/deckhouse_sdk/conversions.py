@@ -12,11 +12,10 @@ class ConversionsCollector:
     """
 
     def __init__(self):
-        self._converted_objects = []
-        self._err_message = None
+        self._data = []
 
     def collect(self, payload: dict):
-        self._converted_objects.append(payload)
+        self._data.append(payload)
 
     @property
     def data(self):
@@ -26,9 +25,7 @@ class ConversionsCollector:
         Returns:
             list: the list of single response
         """
-        if self._err_message is not None:
-            return [{"failedMessage": self._err_message}]
-        return [{"convertedObjects": self._converted_objects}]
+        return [{"convertedObjects": self._data}]
 
     def error(self, message: str):
         """Overwrites all previous data with a single error message.
@@ -36,4 +33,4 @@ class ConversionsCollector:
         Args:
             message (str): error message
         """
-        self._err_message = message
+        self._data = [{"failedMessage": message}]
