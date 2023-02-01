@@ -35,5 +35,4 @@ func Test(t *testing.T) {
 	}()
 
 	RunSpecs(t, "")
-
 }
