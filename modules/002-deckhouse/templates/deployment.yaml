@@ -142,6 +142,8 @@ spec:
               value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
+            - name: EXTERNAL_MODULES_DIR
+              value: "/deckhouse/external-modules/"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
@@ -172,6 +174,8 @@ spec:
             name: tmp
           - mountPath: /.kube
             name: kube
+          - mountPath: /deckhouse/external-modules
+            name: external-modules
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -186,4 +190,8 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
+      - name: external-modules
+        hostPath:
+          path: /var/lib/deckhouse/external-modules
+          type: Directory
 

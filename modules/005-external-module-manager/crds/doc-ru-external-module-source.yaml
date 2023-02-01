@@ -1,0 +1,39 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию источника сторонних модулей Deckhouse.
+          properties:
+            spec:
+              properties:
+                registry:
+                  properties:
+                    repo:
+                      type: string
+                      description: Адрес docker репозитория.
+                    dockerCfg:
+                      description: Строка Base64 с вашим токеном для доступа к реестру Docker.
+            status:
+              properties:
+                syncTime:
+                  description: 'Время, когда репозиторий последний раз был синхронизирован.'
+                availableModules:
+                  type: array
+                  description: Список доступных для установки модулей в данном репозитории.
+                message:
+                  type: string
+                  description: Сообщение с детальной ошибкой.
+                moduleErrors:
+                  type: array
+                  description: Сообщения с ошибками установки модулей.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: syncTime
+          jsonPath: .status.syncTime
+          type: date
+          format: date-time
+          description: 'Время последней синхронизации docker репозитория.'
