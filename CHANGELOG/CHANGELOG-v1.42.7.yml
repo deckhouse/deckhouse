@@ -1,0 +1,9 @@
+docs:
+  features:
+    - summary: Display the full parameter path in OpenAPI spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3598
+prometheus:
+  fixes:
+    - summary: Fix Alertmanager CA file (caused Unauthorized error).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3723
+
