@@ -24,9 +24,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	. "github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
-var _ = Describe("Module :: prometheus :: helm template :: render Prometheus main and longterm node selectors in CR", func() {
+var _ = Describe("Module :: prometheus :: helm template :: render Prometheus main and longterm node selectors and tolerations in CR", func() {
 	const (
 		customNodeSelector = `
 nodeSelector:
@@ -36,30 +37,8 @@ nodeSelector:
 longtermNodeSelector:
   longterm-prometheus: ""
 `
-	)
 
-	deckhouseNodeRole := func(node string) string {
-		return fmt.Sprintf(`{"node-role.deckhouse.io/%s": ""}`, node)
-	}
-
-	getGlobalValues := func(nodeCount string) string {
-		return fmt.Sprintf(`
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
-modules:
-  https:
-    mode: CustomCertificate
-  publicDomainTemplate: "%%s.example.com"
-  placement: {}
-discovery:
-  d8SpecificNodeCountByRole:
-    %s
-    system: 1
-    master: 1
-`, nodeCount)
-	}
-
-	getPrometheusValues := func(nodeSelector, longtermNodeSelector string) string {
-		return fmt.Sprintf(`
+		prometheusConfigTemplate = `
 auth: {}
 vpa: {}
 grafana: {}
@@ -100,7 +79,88 @@ longtermScrapeInterval: 5m
 mainMaxDiskSizeGigabytes: 300
 retentionDays: 15
 scrapeInterval: 30s
-`, nodeSelector, longtermNodeSelector)
+`
+
+		defaultTolerationsTemplate = `
+[
+  {
+    "key": "dedicated.deckhouse.io",
+    "operator": "Equal",
+    "value": "%s"
+  },
+  {
+    "key": "dedicated.deckhouse.io",
+    "operator": "Equal",
+    "value": "monitoring"
+  },
+  {
+    "key": "dedicated.deckhouse.io",
+    "operator": "Equal",
+    "value": "system"
+  }
+]
+`
+		tolerations = `
+tolerations:
+  - key: "dedicated.deckhouse.io"
+    operator: "Equal"
+    value: "my-tolerations"
+`
+
+		longtermTolerations = `
+longtermTolerations:
+  - key: "dedicated.deckhouse.io"
+    operator: "Equal"
+    value: "my-longterm-tolerations"
+`
+		expectedTolerationsTemplate = `
+[
+  {
+    "key": "dedicated.deckhouse.io",
+    "operator": "Equal",
+    "value": "%s"
+  }
+]
+`
+	)
+
+	expectedDefaultTolerations := func(value string) string {
+		return fmt.Sprintf(defaultTolerationsTemplate, value)
+	}
+
+	expectedTolerations := func(value string) string {
+		return fmt.Sprintf(expectedTolerationsTemplate, value)
+	}
+
+	deckhouseNodeRole := func(node string) string {
+		return fmt.Sprintf(`{"node-role.deckhouse.io/%s": ""}`, node)
+	}
+
+	getGlobalValues := func(nodeCount string) string {
+		return fmt.Sprintf(`
+enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+modules:
+  https:
+    mode: CustomCertificate
+  publicDomainTemplate: "%%s.example.com"
+  placement: {}
+discovery:
+  d8SpecificNodeCountByRole:
+    %s
+    system: 1
+    master: 1
+`, nodeCount)
+	}
+
+	prometheusWithOptions := func(option1, option2 string) string {
+		return fmt.Sprintf(prometheusConfigTemplate, option1, option2)
+	}
+
+	prometheusInstance := func(h *Config, name string) KubeObject {
+		prometheus := h.KubernetesResource("Prometheus", "d8-monitoring", name)
+		Expect(prometheus.Exists()).To(BeTrue())
+
+		return prometheus
 	}
 
 	f := SetupHelmConfig(``)
@@ -110,14 +170,12 @@ scrapeInterval: 30s
 		func(nodeCount, nodeSelector, longtermNodeSelector, expectedMainSelector, expectedLongtermNodeSelector string) {
 			f.ValuesSetFromYaml("global", getGlobalValues(nodeCount))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("prometheus", getPrometheusValues(nodeSelector, longtermNodeSelector))
+			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(nodeSelector, longtermNodeSelector))
 			f.HelmRender()
 
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			prometheusMain := f.KubernetesResource("Prometheus", "d8-monitoring", "main")
-			prometheusLongterm := f.KubernetesResource("Prometheus", "d8-monitoring", "longterm")
-			Expect(prometheusMain.Exists()).To(BeTrue())
-			Expect(prometheusLongterm.Exists()).To(BeTrue())
+			prometheusMain := prometheusInstance(f, "main")
+			prometheusLongterm := prometheusInstance(f, "longterm")
 
 			Expect(prometheusMain.Field("spec.nodeSelector").String()).To(MatchJSON(expectedMainSelector))
 			Expect(prometheusLongterm.Field("spec.nodeSelector").String()).To(MatchJSON(expectedLongtermNodeSelector))
@@ -127,5 +185,25 @@ scrapeInterval: 30s
 		Entry("Separate prometheus-longterm node", "prometheus-longterm: 1", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("prometheus-longterm")),
 		Entry("Separate monitoring node", "monitoring: 1", "", "", deckhouseNodeRole("monitoring"), deckhouseNodeRole("monitoring")),
 		Entry("Custom main and longterm node selectors", "", customNodeSelector, customLongtermNodeSelector, `{"main-prometheus": ""}`, `{"longterm-prometheus": ""}`),
+	)
+
+	DescribeTable(
+		"Tolerations for main and longterm Prometheus deployments were rendered correctly",
+		func(tolerations, longtermTolerations, expectedTolerations, expectedLongtermTolerations string) {
+			f.ValuesSetFromYaml("global", getGlobalValues(""))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(tolerations, longtermTolerations))
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			prometheusMain := prometheusInstance(f, "main")
+			prometheusLongterm := prometheusInstance(f, "longterm")
+
+			Expect(prometheusMain.Field("spec.tolerations").String()).To(MatchJSON(expectedTolerations))
+			Expect(prometheusLongterm.Field("spec.tolerations").String()).To(MatchJSON(expectedLongtermTolerations))
+		},
+
+		Entry("No custom tolerations specified for main and longterm", "", "", expectedDefaultTolerations("prometheus"), expectedDefaultTolerations("prometheus-longterm")),
+		Entry("Custom tolerations specified for main and longterm", tolerations, longtermTolerations, expectedTolerations("my-tolerations"), expectedTolerations("my-longterm-tolerations")),
 	)
 })

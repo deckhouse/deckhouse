@@ -170,7 +170,7 @@ tolerations:
 - operator: Exists
 
 {{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
-  {{- else if $module_values.tolerations }}
+  {{- else if and $module_values.tolerations (ne "monitoring-longterm" $strategy) }}
 tolerations:
 {{ $module_values.tolerations | toYaml }}
 {{- /* For longterm Prometheus monitoring module a separate longtermTolerations field will be picked */ -}}
@@ -195,11 +195,11 @@ tolerations:
     {{- end }}
 
 {{- /* Monitoring: Nodes for longterm Pometheus monitoring component: */ -}}
-  {{- else if eq $strategy "monitoring" }}
+  {{- else if eq $strategy "monitoring-longterm" }}
 tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
-  value: {{ print "%s-longterm" $context.Chart.Name | quote }}
+  value: {{ printf "%s-longterm" $context.Chart.Name | quote }}
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "monitoring"

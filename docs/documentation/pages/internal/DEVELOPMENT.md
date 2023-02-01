@@ -279,6 +279,21 @@ The helper gets the global context and the desired strategy as the input to set 
     value: "system"
   ```
 
+* For the `monitoring-longterm` strategy, the rules will look as follows:
+
+  ```yaml
+  tolerations:
+  - key: dedicated.deckhouse.io
+    operator: Equal
+    value: {{ .Chart.Name }}-longterm
+  - key: dedicated.deckhouse.io
+    operator: Equal
+    value: {{ strategy_name }}
+  - key: dedicated.deckhouse.io
+    operator: Equal
+    value: "system"
+  ```
+
 * For the `any-node` strategy, the rules will look as follows:
 
   ```yaml
