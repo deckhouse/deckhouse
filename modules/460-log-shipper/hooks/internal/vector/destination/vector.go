@@ -74,7 +74,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 		TLS:     tls,
 		Version: "2",
 		Address: spec.Endpoint,
-		// TODO(nabokikhms): Only available for vector the first version sink, consider different load balancing solution
+		// TODO(nabokihms): Only available for vector the first version sink, consider different load balancing solution
 		//
 		// Keepalive: VectorKeepalive{
 		//	TimeSecs: 7200,
