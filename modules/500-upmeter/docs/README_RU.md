@@ -236,7 +236,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из трех независимых проверок. Проверяет, что хотя бы 1 под в состоянии Ready у деплойментов machine-controller-manager, cloud-controller-manager, bashible-apiserver
 
-Интервал: 10 секунд. Предварительно проверяет доступность аписервера в каждой проверке. Если аписервер недоступен, статус пробы становится *Unknown*.
+Интервал: 10 секунд. Предварительно проверяет доступность аписервера в каждой проверке.
 
 
 #### grafana
@@ -255,7 +255,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из двух проверок:
 
-- хотя бы 1 под StatefulSet prometheus-longterm в состоянии Ready
+- хотя бы 1 под StatefulSet prometheus-longterm в состоянии Ready, предварительно проверяет доступность аписервера;
 - API отвечает "1" через сервис на запрос /api/v1/query?query=vector(1)
 
 Интервал обеих проверок: 10 секунд.
@@ -264,13 +264,13 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Хотя бы 1 под Dashboard в состоянии Ready
 
-Интервал: 10 секунд
+Интервал: 10 секунд. Предварительно проверяет доступность аписервера.
 
 #### dex
 
 Состоит из двух проверок:
 
-- хотя бы 1 под Dex в состоянии Ready
+- хотя бы 1 под Dex в состоянии Ready, предварительно проверяет доступность аписервера;
 - API отвечает через сервис на запрос /keys
 
 Интервал обеих проверок: 10 секунд.
@@ -281,7 +281,8 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Хотя бы 1 под cloud-controller-manager в состоянии Ready
 
-Интервал: 10 секунд
+Интервал: 10 секунд. Предварительно проверяет доступность аписервера.
+
 
 #### metallb
 
@@ -290,7 +291,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 - хотя бы 1 под MetalLB Controller в состоянии Ready
 - хотя бы 1 под MetalLB Speaker в состоянии Ready
 
-Интервал обеих проверок: 10 секунд.
+Интервал обеих проверок: 10 секунд. Предварительно проверяет доступность аписервера в обеих проверках.
 
 ### Группа monitoring-and-autoscaling
 
@@ -298,7 +299,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из двух проверок:
 
-- хотя бы 1 под StatefulSet prometheus-main в состоянии Ready
+- хотя бы 1 под StatefulSet prometheus-main в состоянии Ready, предварительно проверяет доступность аписервера;
 - API отвечает "1" через сервис на запрос /api/v1/query?query=vector(1)
 
 Интервал обеих проверок: 10 секунд.
@@ -307,7 +308,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из двух проверок:
 
-- хотя бы 1 под Deployment trickster в состоянии Ready
+- хотя бы 1 под Deployment trickster в состоянии Ready, предварительно проверяет доступность аписервера;
 - API отвечает "1" через сервис на запрос /trickster/main/api/v1/query?query=vector(1)
 
 Интервал обеих проверок: 10 секунд.
@@ -316,7 +317,7 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из двух проверок:
 
-- хотя бы 1 под Deployment prometheus-metrics-adapter в состоянии Ready
+- хотя бы 1 под Deployment prometheus-metrics-adapter в состоянии Ready, предварительно проверяет доступность аписервера;
 - API отвечает "1" через сервис на запрос /apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m
 
 Интервал обеих проверок: 5 секунд.
@@ -325,47 +326,46 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Состоит из трех независимых проверок.  Проверяет, что хотя бы 1 под в состоянии Ready у деплойментов vpa-updater, vpa-recommender, vpa-admission-controller.
 
-Интервал: 10 секунд.
+Интервал: 10 секунд. Предварительно проверяет доступность аписервера во всех трех проверках.
 
 #### metric-sources
 
-Node-exporter (all desired pods are ready)
-на всех нодах, где должны быть поды, они есть и они все в состоянии Ready
-Не учитываются ноды
-которым меньше 10 минут
-которые в процессе удаления (deletionTimestamp)
-Закордоненные
-раз в 10 секунд
-kube-state-metrics (хотя бы 1 pod Ready)
-раз в 10 секунд
+
+- Все поды node-exporter в состоянии Ready на всех нодах, где должны быть, предварительно проверяет доступность аписервера. Однако не учитываются ноды,
+  - которым меньше 10 минут
+  - которые в процессе удаления (deletionTimestamp)
+  - Закордоненные
+
+- хотя бы один под kube-state-metrics в состоянии Ready, предварительно проверяет доступность аписервера.
+
+Интервал обеих проверок: 10 секунд.
 
 #### key-metrics-present
 
-в prometheus есть метрики от kube-state-metrics
-раз в 15 секунд
-в prometheus есть метрики от node-exporter
-раз в 15 секунд
-в prometheus есть метрики от kubelet
-раз в 15 секунд
+- в prometheus есть метрики от kube-state-metrics
+- в prometheus есть метрики от node-exporter
+- в prometheus есть метрики от kubelet
+
+Интервал всех проверок: 15 секунд.
 
 #### Horizontal-pod-autoscaler (вычисляемая проба)
-прошли все проверки для проб
-monitoring-and-autoscaling/prometheus-metrics-adapter
-control-plane/controller-manager
+
+Это вычисляемая проба. Она не делает самостоятельных проверок, только комбинирует статусы других
+
+- control-plane/controller-manager
+- monitoring-and-autoscaling/prometheus-metrics-adapter
 
 ### Группа Nginx
-Пробы создаются динамически для имеющихся контроллеров
 
-[имя контролллера]
-Pod ready
-Раз в 5 секунд
+Пробы создаются динамически для имеющихся контроллеров. Каждая проба называется по имени контроллера. Она проверяет, что хотя бы один под в состоянии Ready. Предварительно проверяет доступность аписервера.
+
+Интервал: 5 секунд.
 
 ### Группа Node Groups
-Пробы создаются динамически для нод-групп, у которых NG.spec.CloudInstances.minPerZone > 0
 
-[имя группы узлов]
-Количество узлов в нод-группе соответствует ожидаемому в каждой зоне
-Раз в 10 секунд
+Пробы создаются динамически для нод-групп, у которых `NG.spec.CloudInstances.minPerZone` > 0. Каждая проба называется по имени нод-группы. Она проверяет, что количество нод в нод-группе соответствует ожидаемому в каждой зоне. Предварительно проверяет доступность аписервера.
+
+Интервал: 10 секунд.
 
 ### Группа Synthetic
 
@@ -376,25 +376,34 @@ Pod ready
 задействованы 8 узлов: 3 мастера и 5 не-мастеров.
 
 Смок-мини не масштабируется с размером кластера. Поэтому для больших кластеров он не приносит
-оперативную информацию. Недоступность сети подов у малого количества узлов в большом кластере имеем
-слабый эффект на статус пробы.
+оперативную информацию. Недоступность сети подов у малого количества узлов в большом кластере имеет
+слабый эффект на статусы проб.
 
 #### access
 
-хотя бы один pod smoke-mini, который отвечает 200кой. Список pod’ов берется из DNS.
-раз в 5 секунд
-dns
-smoke, хотя бы один pod smoke-mini отвечает 200кой на /dns. Он резолвит “kubernetes.default”
-раз в 200 миллисекунд
-Internal, upmeter-agent резолвит внутренний домен kubernetes.default.svc.<<global.discovery.clusterDomain>>
-раз в 200 миллисекунд
-neighbour
-хотя бы один pod smoke-mini отвечает 200кой на /neighbor.
-Список pod’ов берется из DNS.
-smoke-mini опрашивает соседние поды по имени Headless сервиса
-раз в 5 секунд
-neighbour-via-service
-хотя бы один pod smoke-mini отвечает 200кой на /neighbour-via-service
-Список pod’ов берется из DNS.
-Smoke-mini делает 4 запроса на общий сервис ClusterIP и отвечает 200, если было не больше 2 ошибок
-раз в 5 секунд
+Проверяет, что хотя бы один pod smoke-mini отвечает HTTP-статусом 200. Список подов берется из DNS.
+
+Интервал: 5 секунд.
+
+#### dns
+
+Две проверки:
+
+- хотя бы один pod smoke-mini отвечает HTTP-статусом 200 на /dns. Он резолвит `kubernetes.default`
+- upmeter-agent резолвит внутренний домен `kubernetes.default.svc.<<global.discovery.clusterDomain>>`
+
+Интервал: 200 миллисекунд.
+
+#### neighbour
+
+Хотя бы один pod smoke-mini отвечает HTTP-статусом 200 на /neighbor. Список pod’ов берется из DNS.
+smoke-mini опрашивает соседние поды по имени Headless сервиса.
+
+Интервал: 5 секунд.
+
+#### neighbour-via-service
+
+Хотя бы один pod smoke-mini отвечает HTTP-статусом 200 на /neighbour-via-service. Список pod’ов берется из DNS.
+Smoke-mini делает 4 запроса на общий сервис ClusterIP и отвечает 200, если было не больше 2 ошибок.
+
+Интервал: 5 секунд.
