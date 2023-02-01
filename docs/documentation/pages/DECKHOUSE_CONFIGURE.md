@@ -178,7 +178,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
-  * Deckhouse examines nodes to determine a [longtermNodeSelector](modules/300-prometheus/configuration.html#parameters-longtermretentiondays) in the following order:
+  * Deckhouse examines nodes to determine a [longtermNodeSelector](modules/300-prometheus/configuration.html#parameters-longtermnodeselector) in the following order:
     * It checks if a node with the `node-role.deckhouse.io/monitoring-longterm` label is present in the cluster.
     * Otherwise, the logic for the [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector) section will be executed.
   * Tolerations to add (note that tolerations are added all at once):
