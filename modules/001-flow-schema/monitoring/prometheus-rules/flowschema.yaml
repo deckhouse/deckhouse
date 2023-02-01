@@ -15,4 +15,4 @@
       description: |
         To show APF schema queue requests, use the expr `apiserver_flowcontrol_current_inqueue_requests{flow_schema="kube-controller-manager"}`.
 
-        Attention: This is experimental alert !
+        Attention: This is an experimental alert!
