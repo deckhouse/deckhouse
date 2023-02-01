@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -52,15 +53,21 @@ def main(ctx: hook.Context):
         if not objects:
             return
 
-        # print(bctx.pprint(pformat="json"))  # debug printing
+        print("BINDING CONTEXT")
+        print(json.dumps(bctx, indent=2))  # debug printing
 
         for obj in objects:
             converted = conv.convert(v_from, v_to, obj)
-            # print(converted.pprint(pformat="json"))  # debug printing
+
+            # print(json.dumps(converted, indent=2))  # debug printing
+
             ctx.output.conversions.collect(converted)
     except Exception as e:
         print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
+
+    print("CONVERSION RESPONSE")
+    print(json.dumps(ctx.output.conversions.data[0], indent=2))  # debug printing
 
 
 class Converter:
