@@ -229,7 +229,7 @@ There are four strategies in total:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
 3. `monitoring-longterm` - uses the same logic as the `system` and `frontend` strategies but includes an extra step before all of the above:
-    * If a longtermNodeSelector is defined, it will be used, then node with the name of the strategy will be validated, otherwise continue with logic described above in the `monitoring` section.
+    * If a `longtermNodeSelector` is defined, it will be used, then node with the name of the strategy will be validated, otherwise continue with logic described above in the `monitoring` section.
 
 4. `master` - this strategy uses the following logic:
     * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
