@@ -66,47 +66,20 @@ internal:
         strategies:
           highNodeUtilization:
             enabled: true
-            params:
-              nodeResourceUtilizationThresholds:
-                thresholds:
-                  cpu: 50
-                  memory: 50
           lowNodeUtilization:
             enabled: true
-            params:
-              nodeResourceUtilizationThresholds:
-                targetThresholds:
-                  cpu: 50
-                  memory: 50
-                  pods: 50
-                thresholds:
-                  cpu: 20
-                  memory: 20
-                  pods: 20
           podLifeTime:
             enabled: true
-            params:
-              podLifeTime:
-                maxPodLifeTimeSeconds: 86400
-                podStatusPhases:
-                - Pending
           removeDuplicates:
             enabled: true
           removeFailedPods:
             enabled: true
           removePodsHavingTooManyRestarts:
             enabled: true
-            params:
-              podsHavingTooManyRestarts:
-                includingInitContainers: true
-                podRestartThreshold: 100
           removePodsViolatingInterPodAntiAffinity:
             enabled: true
           removePodsViolatingNodeAffinity:
             enabled: false
-            params:
-              nodeAffinityType:
-              - requiredDuringSchedulingIgnoredDuringExecution
           removePodsViolatingNodeTaints:
             enabled: true
           removePodsViolatingTopologySpreadConstraint:
@@ -120,68 +93,57 @@ internal:
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy-test")
-			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`
-apiVersion: "descheduler/v1alpha1"
-kind: "DeschedulerPolicy"
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
+apiVersion: descheduler/v1alpha1
 evictFailedBarePods: true
+kind: DeschedulerPolicy
 strategies:
-  "RemoveDuplicates":
-    enabled: true
-    params:
-
-  "RemovePodsViolatingNodeAffinity":
-    enabled: true
-    params:
-      nodeAffinityType:
-        - "requiredDuringSchedulingIgnoredDuringExecution"
-
-  "RemovePodsViolatingInterPodAntiAffinity":
-    enabled: true
-    params:
-
-  "LowNodeUtilization":
-    enabled: true
-    params:
-      nodeResourceUtilizationThresholds:
-        thresholds:
-          "cpu": 40
-          "memory": 50
-          "pods": 40
-        targetThresholds:
-          "cpu": 80
-          "memory": 90
-          "pods": 80
-
-  "HighNodeUtilization":
-    enabled: true
-    params:
-      nodeResourceUtilizationThresholds:
-        thresholds:
-          "cpu": 50
-          "memory": 50
-
-  "RemovePodsViolatingNodeTaints":
-    enabled: true
-    params:
-
-  "RemovePodsViolatingTopologySpreadConstraint":
-    enabled: true
-    params:
-
-  "RemovePodsHavingTooManyRestarts":
-    enabled: true
-    params:
-      podsHavingTooManyRestarts:
-        podRestartThreshold: 100
-        includingInitContainers: true
-
-  "PodLifeTime":
-    enabled: true
-    params:
-      podLifeTime:
-        maxPodLifeTimeSeconds: 86400
-        podStatusPhases:
-          - "Pending"
+    HighNodeUtilization:
+        enabled: true
+        params:
+            nodeResourceUtilizationThresholds:
+                thresholds:
+                    cpu: 50
+                    memory: 50
+    LowNodeUtilization:
+        enabled: true
+        params:
+            nodeResourceUtilizationThresholds:
+                targetThresholds:
+                    cpu: 80
+                    memory: 90
+                    pods: 80
+                thresholds:
+                    cpu: 40
+                    memory: 50
+                    pods: 40
+    PodLifeTime:
+        enabled: true
+        params:
+            podLifeTime:
+                maxPodLifeTimeSeconds: 86400
+                podStatusPhases:
+                    - Pending
+    RemoveDuplicates:
+        enabled: true
+        params: null
+    RemovePodsHavingTooManyRestarts:
+        enabled: true
+        params:
+            podsHavingTooManyRestarts:
+                includingInitContainers: true
+                podRestartThreshold: 100
+    RemovePodsViolatingInterPodAntiAffinity:
+        enabled: true
+        params: null
+    RemovePodsViolatingNodeAffinity:
+        enabled: false
+    RemovePodsViolatingNodeTaints:
+        enabled: true
+        params: null
+    RemovePodsViolatingTopologySpreadConstraint:
+        enabled: true
+        params: null
 `))
 			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-test").Exists()).To(BeTrue())
 		})
