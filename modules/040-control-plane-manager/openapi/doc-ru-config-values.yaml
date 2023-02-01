@@ -79,10 +79,10 @@ properties:
         properties:
           webhookURL:
             description: |
-              URL авторизациионного webhook'а.
+              URL
           webhookCA:
             description: |
-              CA авторизациионного webhook'a.
+              CA webhook'а авторизации.
       loadBalancer:
         description: |
           Создание сервиса `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.
