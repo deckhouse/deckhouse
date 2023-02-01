@@ -24,7 +24,7 @@ Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The age
 
 > NOTE: Falco developers recommend deploying Falco as a systemd unit for maximum security.
 > However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
-> Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control provide the required level of security to mitigate attacks on the Falco DaemonSet.
+> Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
 
 There are five different containers in a single agent Pod:
 ![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.png)
