@@ -124,7 +124,7 @@ scrapeInterval: 30s
 		},
 
 		Entry("Single node configuration", "", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("system")),
-		Entry("Separate monitoring-longterm node", "monitoring-longterm: 1", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("monitoring-longterm")),
+		Entry("Separate prometheus-longterm node", "prometheus-longterm: 1", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("prometheus-longterm")),
 		Entry("Separate monitoring node", "monitoring: 1", "", "", deckhouseNodeRole("monitoring"), deckhouseNodeRole("monitoring")),
 		Entry("Custom main and longterm node selectors", "", customNodeSelector, customLongtermNodeSelector, `{"main-prometheus": ""}`, `{"longterm-prometheus": ""}`),
 	)

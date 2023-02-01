@@ -50,9 +50,9 @@ nodeSelector:
   {{- else if eq $strategy "monitoring-longterm" }}
     {{- if $module_values.longtermNodeSelector }}
 nodeSelector: {{ $module_values.longtermNodeSelector | toJson }}
-    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
+    {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole (printf "%s-longterm" $camel_chart_name) | int) 0 }}
 nodeSelector:
-  node-role.deckhouse.io/{{$strategy}}: ""
+  node-role.deckhouse.io/{{$context.Chart.Name}}-longterm: ""
     {{- else }}
 {{- include "helm_lib_node_selector" (tuple $context "monitoring") }}
     {{- end }}

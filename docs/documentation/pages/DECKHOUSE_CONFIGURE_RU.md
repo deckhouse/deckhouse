@@ -175,13 +175,13 @@ user-authn          Disabled   1                    12h
 
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
-  * Порядок поиска узлов (для определения `nodeSelector`):
+  * Порядок поиска узлов (для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector)):
     * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
     * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
     * Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Порядок поиска узлов (для определения [longtermNodeSelector](modules/300-prometheus/configuration.html#parameters-longtermnodeselector)):
-    * Наличие узла с лейблом `node-role.deckhouse.io/prometheus-longterm`.
-    * Далее, порядок поиска узлов как для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector).
+    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME-longterm`.
+    * Далее, порядок поиска узлов, описанный в разделе для `nodeSelector` выше.
   * Добавляемые toleration'ы (добавляются одновременно все):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
 
