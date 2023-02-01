@@ -37,7 +37,7 @@ RUN cargo build \
     && strip target/release/vector
 
 
-### 3: Final image
+### 2: Final image
 FROM $BASE_UBUNTU
 RUN mkdir -p /etc/vector \
     && apt-get update \
