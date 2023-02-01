@@ -26,11 +26,13 @@
 {{- end }}
 
 ---
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: d8-istio-sidecar-injector-global
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "istio-full-version" $fullVersion) ) | nindent 2 }}
 webhooks:
 {{- /* Case 1: Namespace-wide injection */}}
 {{ include "mwh_common" (list . "namespace-") }}
