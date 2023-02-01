@@ -221,3 +221,21 @@ function setFooterOffset(scrolled, bottomFixPoint, sidebarWrapper, screenHeight,
     })
   }
 }
+
+$( document ).ready(() => {
+  const button = $('[data-open-scheme]');
+  const wrap = $('.functionality-block__diagram-wrap')
+  const imageHeight = $('.functionality-block__diagram-wrap img').height();
+
+  $(button).click(() => {
+    if (wrap.hasClass('open')) {
+      wrap.removeClass('open');
+      wrap.height(125);
+      button.text('Подробнее');
+    } else {
+      wrap.addClass('open');
+      wrap.height(imageHeight);
+      button.text('Скрыть');
+    }
+  })
+})

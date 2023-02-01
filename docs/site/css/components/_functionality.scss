@@ -1,0 +1,29 @@
+.functionality-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0;
+
+  &__diagram {
+    width: 100%;
+    padding-bottom: 110px;
+  }
+
+  &__diagram-wrap {
+    overflow: hidden;
+    height: 125px;
+    transition: all 1s ease;
+
+    & img {
+      display: block;
+      width: 1000px;
+      margin: 0 auto;
+    }
+  }
+
+  button.button {
+    position: absolute;
+    bottom: 30px;
+  }
+}
