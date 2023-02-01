@@ -112,117 +112,140 @@ status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
 
 Проверяет работоспособность kube-apiserver на цикле жизни Namespace. Создает Namespace, удостоверятся в его наличии, удаляет Namespace, проверить что его нет.
 
+- Предварительно проверяет доступность аписервера. Если аписервер недоступен, то проба в статусе Unknown
 - Интревал: 1 минута
 
 #### controller-manager
 
 Проверяет работосопосбность kube-controller-manager на жизненном цикле пода контроллера. Создает StatefulSet, проверяет что создался Pod (его состояние нам не важно, может оставаться в статусе Pending). Удаляет StatefulSet, проверяет Pod удалился.
 
+- Предварительно проверяет доступность аписервера. Если аписервер недоступен, то проба в статусе Unknown
 - Интревал: 1 минута
 
 #### scheduler
 
 Проверяет работоспособность kube-scheduler. Создет Pod и проверяет заполенность поля `.spec.nodeName`.
 
+- Предварительно проверяет доступность аписервера. Если аписервер недоступен, то проба в статусе Unknown
 - Интревал: 1 минута
 
 ### Группа deckhouse
 
-Одна проба
-
 #### cluster-configuration
 
-Апметр перезаписывает одно поле в CR, а хук в декхаусе дублирует его же в другое поле в этой же CR, тогда апметр делает вывод, что конфигурация кластера, то есть Декхаус, в рабочем состоянии
-Период: 1 минута
-Проверяет доступность Control Plane
-Таймаут 5с
-Если недоступен, то проба переходит в Unknown
-Проверяет, что состояние пода декхауса — Ready
-Таймаут 5с
-Если Running, но не Ready
-под запущен до 20 минут, то проба переходит в Unknown
-под запущен более 20 минут, то проба переходит в Down
-Если Terminating, то проверка переходит в состояние Unknown
-Если не Running, то проверка переходит в состояние Down
-Пишет в CR
-Таймаут 5 сек
-Если CR нет, то агент его создает
-Поле spec.initial (int) случайное значение
-Ждет изменения в CR
-Таймаут 30с
-Поле spec.mirror (int) должно быть переопределено хуком Декхауса. Хук берет значение из spec.initial и записывает в spec.mirror.
-Проба ждет, когда поле spec.mirror станет равным spec.initial
-Группа доступности extensions
-cluster-autoscaler
+Проверяет работу конфигурации кластера. Декхаус управляет конфигурацией за счет хуков, поэтому эта проба проверяет работу хука.
+
+Для этой пробы существует CRD UpmeterHookProbe. Апметр создаает CR UpmeterHookProbe, если его нет, по одному на каждый под upmeter-agent.
+
+В CR апметр перезаписывает поле `spec.initial` случайным значением и ждет, пока поле `spec.mirror` станет равным этому же значению. Хук Декхауса дублирует значение из этого поля в поле `spec.mirror`. Если значение синхронизируется за 30 секунд, проба принимает статус Up.
+
+- Период: 1 минута
+- Предварительно проверяет доступность аписервера. Если аписервер недоступен, то проба в статусе Unknown
+- Предварительно проверяет статус пода Декхауса.
+  - Если статус пода Terminating, статус пробы становится Unknown.
+  - Если статус пода Running, но не Ready менее 20 минут, статус пробы становится Unknown.
+  - Если статус пода Running, но не Ready более 20 минут, статус пробы становится Down.
+
+### Группа extensions
+
+#### cluster-autoscaler
+
 cluster-autoscaler (хотя бы 1 pod Ready)
 Период 10с
-cluster-scaling
+
+#### cluster-scaling
+
 bashible-apiserver (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
+
 mcm (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
+
 ccm (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
-grafana
+
+#### grafana
+
 pod (хотя бы 1 pod Ready)
 Период 10с
-openvpn
+
+#### openvpn
+
 pod (хотя бы 1 pod Ready)
 Период 10с
-prometheus-longterm
+
+#### prometheus-longterm
+
 pod (хотя бы 1 pod Ready)
 Период 10с
+
 Api, через сервис запрос /api/v1/query?query=vector(1) вернул нам 1
 Период 10с
-dashboard
+
+#### dashboard
+
 pod (хотя бы 1 pod Ready)
 Период 10с
-dex
+
+#### dex
+
 pod (хотя бы 1 pod Ready)
 Период 10с
+
 keys (запрос /keys)
 Период 10с
 
 ### Группа load-balancing
-load-balancer-configuration
+
+#### load-balancer-configuration
+
 ccm запущен (хотя бы 1 pod Ready)
 Период 10с
-metallb
+
+#### metallb
+
 metallb controller (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
+
 metallb speaker (хотя бы 1 pod Ready)
 Период 10с
 Таймаут 5с
 
 ### Группа monitoring-and-autoscaling
-prometheus
+
+#### prometheus
+
 Pod, запущен prometheus (хотя бы 1 pod Ready).
 раз в 10 секунд
 api, через сервис запрос /api/v1/query?query=vector(1) вернул нам 1
 раз в 10 секунд
-trickster
+
+#### trickster
 Pod (хотя бы 1 pod Ready)
 раз в 10 секунд
 Api
 (проверяем что через сервис запрос /trickster/main/api/v1/query?query=vector(1) вернул нам 1)
 раз в 10 секунд
-prometheus-metrics-adapter
+
+#### prometheus-metrics-adapter
 Pod, запущен prometheus-metrics-adapter (хотя бы 1 pod Ready).
 раз в 5 секунд
 api отдает метрики (/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m вернул нам не нулевое значение)
 раз в 5 секунд
-vertical-pod-autoscaler
+
+#### vertical-pod-autoscaler
 vpa-updater (хотя бы 1 pod Ready).
 раз в 10 секунд
 vpa-recommender (хотя бы 1 pod Ready).
 раз в 10 секунд
 vpa-admission-controller (хотя бы 1 pod Ready)
 раз в 10 секунд
-metric-sources
+
+#### metric-sources
 Node-exporter (all desired pods are ready)
 на всех нодах, где должны быть поды, они есть и они все в состоянии Ready
 Не учитываются ноды
@@ -232,14 +255,16 @@ Node-exporter (all desired pods are ready)
 раз в 10 секунд
 kube-state-metrics (хотя бы 1 pod Ready)
 раз в 10 секунд
-key-metrics-present
+
+#### key-metrics-present
 в prometheus есть метрики от kube-state-metrics
 раз в 15 секунд
 в prometheus есть метрики от node-exporter
 раз в 15 секунд
 в prometheus есть метрики от kubelet
 раз в 15 секунд
-Horizontal-pod-autoscaler (вычисляемая проба)
+
+#### Horizontal-pod-autoscaler (вычисляемая проба)
 прошли все проверки для проб
 monitoring-and-autoscaling/prometheus-metrics-adapter
 control-plane/controller-manager
