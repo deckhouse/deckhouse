@@ -222,15 +222,17 @@ function setFooterOffset(scrolled, bottomFixPoint, sidebarWrapper, screenHeight,
   }
 }
 
-$( document ).ready(() => {
+window.onload = () => {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')
+  const wrapHeight = wrap.height()
   const imageHeight = $('.functionality-block__diagram-wrap img').height();
+  console.log(imageHeight);
 
   $(button).click(() => {
     if (wrap.hasClass('open')) {
       wrap.removeClass('open');
-      wrap.height(125);
+      wrap.height(wrapHeight);
       button.text('Подробнее');
     } else {
       wrap.addClass('open');
@@ -238,4 +240,4 @@ $( document ).ready(() => {
       button.text('Скрыть');
     }
   })
-})
+}
