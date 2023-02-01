@@ -123,7 +123,7 @@ class Converter_from_v1alpha1_to_v1beta1(Converter):
 
     def backward(self, obj: dict) -> dict:
         version = obj["spec"]["version"]
-        obj["spec"]["version"] = f"{version.major}.{version.minor}"
+        obj["spec"]["version"] = f'{version["major"]}.{version["minor"]}'
         return obj
 
 
@@ -133,7 +133,7 @@ class Converter_from_v1beta1_to_v1(Converter):
         return obj
 
     def backward(self, obj: dict) -> dict:
-        obj["spec"]["modules"] = [m.name for m in obj["spec"]["modules"]]
+        obj["spec"]["modules"] = [m["name"] for m in obj["spec"]["modules"]]
         return obj
 
 
