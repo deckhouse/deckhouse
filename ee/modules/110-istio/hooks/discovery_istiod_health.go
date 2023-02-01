@@ -28,6 +28,12 @@ type istiodPod struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "disocvery_istiod_health",
+			Crontab: "*/5 * * * *",
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "istiod_pods",
