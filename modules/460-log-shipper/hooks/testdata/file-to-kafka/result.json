@@ -28,10 +28,7 @@
       },
       "bootstrap_servers": "192.168.1.1:9200",
       "encoding": {
-        "only_fields": [
-          "message"
-        ],
-        "codec": "text",
+        "codec": "json",
         "timestamp_format": "rfc3339"
       },
       "topic": "logs",
