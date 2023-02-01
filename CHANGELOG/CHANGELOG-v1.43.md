@@ -113,6 +113,7 @@
     - Introduced locking to Route Table operations, so that only one operation on a route table can run simultaneously.
     - Disabled useless Route Table updates on ListRoutes(). [#3575](https://github.com/deckhouse/deckhouse/pull/3575)
  - **[control-plane-manager]** Make authn webhook CA optional. [#3538](https://github.com/deckhouse/deckhouse/pull/3538)
+ - **[deckhouse]** Temporarily removed the requirement for a minimal Ubuntu node version. [#3714](https://github.com/deckhouse/deckhouse/pull/3714)
  - **[deckhouse-config]** Support integer numbers for settings constrained with the float number in `multipleOf`. [#3612](https://github.com/deckhouse/deckhouse/pull/3612)
  - **[helm]** Change deprecated resources check parameters. Make the load more uniform. [#3590](https://github.com/deckhouse/deckhouse/pull/3590)
  - **[istio]** Using the `iptables-wrapper-installer.sh` script in proxy images. [#3614](https://github.com/deckhouse/deckhouse/pull/3614)
