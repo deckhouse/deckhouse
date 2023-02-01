@@ -180,7 +180,7 @@ user-authn          Disabled   1                    12h
     * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
     * Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Порядок поиска узлов (для определения [longtermNodeSelector](modules/300-prometheus/configuration.html#parameters-longtermnodeselector)):
-    * Наличие узла с лейблом `node-role.deckhouse.io/monitoring-longterm`.
+    * Наличие узла с лейблом `node-role.deckhouse.io/prometheus-longterm`.
     * Далее, порядок поиска узлов как для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector).
   * Добавляемые toleration'ы (добавляются одновременно все):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
