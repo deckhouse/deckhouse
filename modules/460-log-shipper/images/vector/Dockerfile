@@ -1,8 +1,12 @@
 ARG BASE_UBUNTU
 ARG BASE_RUST
 
-### 1: Build librdkafka
-FROM $BASE_UBUNTU as build-librdkafka
+### 1: Build vector
+FROM $BASE_RUST as build-vector
+
+RUN apt-get update \
+    && apt-get install -yq \
+      ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev protobuf-compiler software-properties-common
 
 # Install librdkafka-dev >=2.0 because bundled version (1.9.2) has bugs with CA certificates location.
 # https://github.com/confluentinc/librdkafka/commit/f8830a28652532009e3f16854cb9d5004d9de06b
@@ -16,13 +20,6 @@ RUN apt-get update \
     && make \
     && make install
 
-### 2: Build vector
-FROM $BASE_RUST as build-vector
-
-RUN apt-get update \
-    && apt-get install -yq \
-      ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev protobuf-compiler software-properties-common
-
 WORKDIR /vector
 RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.git \
     && cd vector
@@ -30,9 +27,6 @@ RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.
 # Download and cache dependencies
 WORKDIR /vector/vector
 RUN cargo fetch
-
-COPY --from=build-librdkafka /usr/local/lib/librdkafka.* /usr/local/lib/
-COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
 
 RUN cargo build \
     --release \
@@ -52,8 +46,8 @@ RUN mkdir -p /etc/vector \
 
 COPY --from=build-vector /vector/vector/target/release/vector /usr/bin/vector
 
-COPY --from=build-librdkafka /usr/local/lib/librdkafka.* /usr/local/lib/
-COPY --from=build-librdkafka /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
+COPY --from=build-vector /usr/local/lib/librdkafka.* /usr/local/lib/
+COPY --from=build-vector /usr/local/lib/pkgconfig/rdkafka.pc /usr/local/lib/pkgconfig/rdkafka.pc
 
 COPY reloader /usr/bin/reloader
 ENTRYPOINT ["/usr/bin/vector"]
