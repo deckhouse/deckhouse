@@ -17,9 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"errors"
-	"sort"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,13 +58,11 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 func handleNamespaces(input *go_hook.HookInput) error {
 	snap := input.Snapshots["namespaces"]
 	if len(snap) == 0 {
-		return errors.New("deckhouse namespaces not found")
+		input.LogEntry.Warnln("deckhouse namespaces not found")
+		return nil
 	}
 
 	nsSlice := set.NewFromSnapshot(snap).Slice()
-	sort.Slice(nsSlice, func(i, j int) bool {
-		return nsSlice[i] < nsSlice[j]
-	})
 
 	input.Values.Set(namespacesValuesPath, nsSlice)
 	return nil

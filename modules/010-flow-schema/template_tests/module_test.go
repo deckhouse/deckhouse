@@ -41,6 +41,11 @@ discovery:
   kubernetesVersion: "1.26.1"
 `
 
+	moduleEmptyValuesForFlowSchemaModule = `
+internal:
+  namespaces: []
+`
+
 	moduleValuesForFlowSchemaModule = `
 internal:
   namespaces:
@@ -51,6 +56,23 @@ internal:
 
 var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	Context("Cluster without deckhouse namespaces, kubernetes 1.23", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesK8s123)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("flowSchema", moduleEmptyValuesForFlowSchemaModule)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			fs := f.KubernetesResource("FlowSchema", "", "d8-serviceaccounts")
+			pl := f.KubernetesResource("PriorityLevelConfiguration", "", "d8-serviceaccounts")
+			Expect(fs.Exists()).To(BeFalse())
+			Expect(pl.Exists()).To(BeTrue())
+		})
+	})
 
 	Context("Cluster with deckhouse namespaces, kubernetes 1.23", func() {
 		BeforeEach(func() {

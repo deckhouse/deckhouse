@@ -1,9 +1,10 @@
+{{- if gt (len .Values.flowSchema.internal.namespaces) 0 }}
 ---
-{{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
+  {{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
-{{- else }}
+  {{- else }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
-{{- end }}
+  {{- end }}
 kind: FlowSchema
 metadata:
   name: d8-serviceaccounts
@@ -22,9 +23,10 @@ spec:
       resources: ["*"]
       verbs: ["list"]
     subjects:
-{{- range $ns := .Values.flowSchema.internal.namespaces }}
+  {{- range $ns := .Values.flowSchema.internal.namespaces }}
     - kind: ServiceAccount
       serviceAccount:
         name: "*"
         namespace: {{ $ns | quote }}
+  {{- end }}
 {{- end }}

@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Modules :: flow-schema :: hooks :: discover deckhouse namespaces ::", func() {
-	f := HookExecutionConfigInit(`{"flowSchema":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"flowSchema":{"internal": {"namespaces": []}}}`, `{}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -33,8 +33,9 @@ var _ = Describe("Modules :: flow-schema :: hooks :: discover deckhouse namespac
 			f.RunHook()
 		})
 
-		It("Hook should fail", func() {
-			Expect(f).ToNot(ExecuteSuccessfully())
+		It("Hook should execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(namespacesValuesPath).String()).To(MatchJSON(`[]`))
 		})
 	})
 

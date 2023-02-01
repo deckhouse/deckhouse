@@ -8,6 +8,7 @@ properties:
     properties:
       namespaces:
         type: array
+        default: []
         items:
           type: string
         x-examples:
