@@ -12,17 +12,16 @@ metadata:
 spec:
   deschedulerPolicy:
     # укажите параметры, применяющиеся ко всем стратегиям
-    parameters:
+    globalParameters:
       evictFailedBarePods: true
     strategies:
       # включите конкретную стратегию, указав её параметры
       podLifeTime:
-        params:
-          podLifeTime:
-            maxPodLifeTimeSeconds: 86400
-            podStatusPhases:
-              - Pending
+        enabled: true
 
-      # включите стратегию, но заполните её параметры автоматически значениями по умолчанию
-      removeDuplicates: { }
+      # включите стратегию и укажите дополнительные параметры
+      removeDuplicates:
+        enabled: true
+        parameters:
+          nodeFit: true
 ```

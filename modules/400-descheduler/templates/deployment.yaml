@@ -47,17 +47,19 @@ kind: Deployment
 metadata:
   name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
+  { { - include "helm_lib_module_labels" (list $ (dict "app" "descheduler" "name" $d.metadata.name)) | nindent 2 } }
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: descheduler-{{ $d.metadata.name }}
+      app: descheduler
+      name: { { $d.metadata.name } }
   template:
     metadata:
       labels:
-        app: descheduler-{{ $d.metadata.name }}
+        app: descheduler
+        name: { { $d.metadata.name } }
       annotations:
         checksum/config: {{ $deschedulerSpec | toJson | sha256sum }}
     spec:

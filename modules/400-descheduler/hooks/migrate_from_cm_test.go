@@ -40,10 +40,26 @@ var _ = Describe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func()
 			f.KubeStateSet("")
 			f.RunHook()
 		})
+
 		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesGlobalResource("Descheduler", "legacy").Exists()).To(BeTrue())
+			legacyCR := f.KubernetesGlobalResource("Descheduler", "legacy")
+			Expect(legacyCR.ToYaml()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: legacy
+spec:
+  deploymentTemplate:
+    tolerations:
+    - key: test
+      value: test
+  deschedulerPolicy:
+    strategies:
+      removePodsHavingTooManyRestarts:
+        enabled: true
+`))
 		})
 	})
 

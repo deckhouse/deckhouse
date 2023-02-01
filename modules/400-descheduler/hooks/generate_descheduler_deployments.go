@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"strings"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -71,10 +71,13 @@ func deschedulerDeploymentReadiness(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
-	name := strings.TrimPrefix(deployment.Name, "descheduler-")
+	deschedulerName, ok := deployment.GetLabels()["name"]
+	if !ok {
+		return nil, fmt.Errorf("deployment %q does not have the \"name\" label", deployment.GetName())
+	}
 
 	deschedulerDeploymentInfo := &DeschedulerDeploymentInfo{
-		Name:  name,
+		Name:  deschedulerName,
 		Ready: deployment.Status.ReadyReplicas == deployment.Status.Replicas,
 	}
 

@@ -1,16 +1,19 @@
-{ { - template "additional_parameters" } }
+{ { - define "additional_parameters" } }
   { { - if .nodeFilter } }
 nodeFilter:
   { { - .nodeFilter | toYaml | nindent 2 } }
     { { - end } }
+
     { { - if .priorityFilter } }
 priorityFilter:
   { { - .priorityFilter | toYaml | nindent 2 } }
     { { - end } }
+
     { { - if .namespaceFilter } }
 namespaceFilter:
   { { - .namespaceFilter | toYaml | nindent 2 } }
     { { - end } }
+
     { { - if .nodeFit } }
 nodeFit:
   { { - .nodeFit | toYaml | nindent 2 } }
@@ -19,7 +22,7 @@ nodeFit:
 
   { { - range $d := .Values.descheduler.internal.deschedulers } }
   { { - $deschedulerSpec := $d.spec } }
-  { { - $commonParameters := $deschedulerSpec.deschedulerPolicy.globalParameters } }
+  { { - $globalParameters := $deschedulerSpec.deschedulerPolicy.globalParameters } }
   { { - $strategies := $deschedulerSpec.deschedulerPolicy.strategies } }
 ---
 apiVersion: v1
@@ -50,6 +53,8 @@ data:
   "RemovePodsViolatingNodeAffinity":
     enabled: true
     params:
+      nodeAffinityType:
+        - "requiredDuringSchedulingIgnoredDuringExecution"
   { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
   { { - else } }
   "RemovePodsViolatingNodeAffinity":
@@ -71,6 +76,15 @@ data:
   "LowNodeUtilization":
     enabled: true
     params:
+      nodeResourceUtilizationThresholds:
+        thresholds:
+          "cpu": 40
+          "memory": 50
+          "pods": 40
+        targetThresholds:
+          "cpu": 80
+          "memory": 90
+          "pods": 80
   { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
   { { - else } }
   "LowNodeUtilization":
@@ -81,6 +95,10 @@ data:
   "HighNodeUtilization":
     enabled: true
     params:
+      nodeResourceUtilizationThresholds:
+        thresholds:
+          "cpu": 50
+          "memory": 50
   { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
   { { - else } }
   "HighNodeUtilization":
@@ -111,6 +129,9 @@ data:
   "RemovePodsHavingTooManyRestarts":
     enabled: true
     params:
+      podsHavingTooManyRestarts:
+        podRestartThreshold: 100
+        includingInitContainers: true
   { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
   { { - else } }
   "RemovePodsHavingTooManyRestarts":
@@ -121,6 +142,10 @@ data:
   "PodLifeTime":
     enabled: true
     params:
+      podLifeTime:
+        maxPodLifeTimeSeconds: 86400
+        podStatusPhases:
+          - "Pending"
   { { - include "additional_parameters" $strategies.removeDuplicates | nindent 10 } }
   { { - else } }
   "PodLifeTime":

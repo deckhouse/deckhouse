@@ -24,8 +24,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const deschedulerCR = `
----
+const (
+	deschedulerCR = `---
 apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
@@ -42,7 +42,22 @@ spec:
         enabled: true
 `
 
-var _ = FDescribe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
+	deschedulerDeployment = `---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: descheduler-test
+  namespace: d8-descheduler
+  labels:
+    app: descheduler
+    name: test
+status:
+  replicas: 1
+  readyReplicas: 1
+`
+)
+
+var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 
@@ -52,6 +67,7 @@ var _ = FDescribe("Modules :: descheduler :: hooks :: generate_descheduler_deplo
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
+
 		It("Should set values appropriately", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			var obj map[string]interface{}
@@ -59,6 +75,17 @@ var _ = FDescribe("Modules :: descheduler :: hooks :: generate_descheduler_deplo
 
 			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Value()).To(BeEquivalentTo(obj))
 		})
+	})
 
+	Context("Set status", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR + deschedulerDeployment)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should set Descheduler CR status appropriately", func() {
+			Expect(f.KubernetesGlobalResource("Descheduler", "test").Field("status.ready").Bool()).To(BeTrue())
+		})
 	})
 })
