@@ -17,7 +17,7 @@ spec:
     name: d8-serviceaccounts
   rules:
   - resourceRules:
-    - apiGroups: ["", "deckhouse.io", "cilium.io"]
+    - apiGroups: ["", "apps/v1", "deckhouse.io", "cilium.io"]
       clusterScope: true
       namespaces: ["*"]
       resources: ["*"]

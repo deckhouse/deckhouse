@@ -6,6 +6,7 @@ title: "Модуль flow-schema"
 
 `FlowSchema` устанавливает `PriorityLevel` для `list` запросов от всех сервис-аккаунтов в неймспейсах Deckhouse (у которых установлен label `heritage: deckhouse`) к:
 * `v1` apigroup (Pod'ы, Secret'ы, ConfigMap'ы,  ноды, и т.д.). Это помогает в случае большого количества основных ресурсов в кластере (например, Secret'ов ил Pod'ов).
+* `apps/v1` apigroup (DaemonSet'ы, Deployment'ы, StatefulSet'ы, ReplicaSet'ы, и т.д.). Это помогает в случае развертывания большого количества приложений в кластере (например, Deployment'ов).
 * `deckhouse.io` apigroup (кастомные ресурсы Deckhouse). Это помогает в случае большого количества различных кастомных ресурсов Deckhouse в кластере.
 * `cilium.io` apigroup (кастомные ресурсы cilium). Это помогает в случае большого количества политик cilium в кластере.
 

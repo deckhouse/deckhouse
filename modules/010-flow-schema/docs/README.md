@@ -6,7 +6,8 @@ This module deploys [FlowSchema and PriorityLevelConfiguration](https://kubernet
 
 
 `FlowSchema` sets `PriorityLevel` for `list` requests from all service accounts in Deckhouse namespaces (having label `heritage: deckhouse`) to:
-* `v1` apigroup (Pods, Secrets, ConfigMaps, Nodes, etc.). This helps in case of a large number of core resources in the cluster (for example, secrets or pods).
+* `v1` apigroup (Pods, Secrets, ConfigMaps, Nodes, etc.). This helps in case of a large number of core resources in the cluster (for example, Secrets or Pods).
+* `apps/v1` apigroup (DaemonSets, Deployments, StatefulSets, ReplicaSets, etc.). This helps in case of a large number of deployed applications in the cluster (for example, Deployments).
 * `deckhouse.io` apigroup (Deckhouse custom resources). This helps in case of a large number various deckhouse CRs in the cluster.
 * `cilium.io` apigroup (cilium custom resources). This helps in case of a large number of cilium policies in the cluster.
 
