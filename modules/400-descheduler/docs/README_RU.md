@@ -19,11 +19,6 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 
 Включить, выключить, настроить стратегии можно в CR [`Descheduler`](CR_RU.md).
 
-По умолчанию **включены** следующие стратегии:
-
-* [RemovePodsViolatingInterPodAntiAffinity](#removepodsviolatinginterpodantiaffinity)
-* [RemovePodsViolatingNodeAffinity](#removepodsviolatingnodeaffinity)
-
 ### HighNodeUtilization
 
 Данная стратегия находит узлы, которые недостаточно используются, и удаляет модули в надежде, что эти модули будут

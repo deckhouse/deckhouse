@@ -19,11 +19,6 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 
 You can enable, disable, and configure a strategy in the [`Descheduler` CR](CR_RU.md).
 
-The following strategies are **enabled** by default:
-
-* [RemovePodsViolatingInterPodAntiAffinity](#removepodsviolatinginterpodantiaffinity)
-* [RemovePodsViolatingNodeAffinity](#removepodsviolatingnodeaffinity)
-
 ### HighNodeUtilization
 
 This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled
