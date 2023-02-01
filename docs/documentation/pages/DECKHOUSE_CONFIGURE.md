@@ -182,7 +182,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * It checks if a node with the `node-role.deckhouse.io/monitoring-longterm` label is present in the cluster.
     * Otherwise, the logic for the [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector) section will be executed.
   * Tolerations to add (note that tolerations are added all at once):
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`
 
       E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>.
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>.
