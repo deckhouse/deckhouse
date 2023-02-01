@@ -29,27 +29,27 @@ def test_conversion_from_v1alpha1_to_v1beta1():
     )
     result = out.conversions.data
 
-    # check output data structure
+    # check output data structure, which is the library responsibility
     assert isinstance(result, list)
     assert len(result) == 1
     assert "convertedObjects" in result[0]
 
-    # check the number of converted objects
+    # check the number of converted objects, which is the hook responsibility
     converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check unchanged parts
-    v1b1 = converted_objects[0]
-    assert v1b1["kind"] == "Python"
-    assert v1b1["metadata"]["name"] == "python-3-10"
-    assert v1b1["spec"]["modules"] == ["dotmap", "pyyaml"]
+    converted_v1b1 = converted_objects[0]
+    assert converted_v1b1["kind"] == "Python"
+    assert converted_v1b1["metadata"]["name"] == "python-3-10"
+    assert converted_v1b1["spec"]["modules"] == ["dotmap", "pyyaml"]
 
     # check converted parts
-    assert v1b1["apiVersion"] == "deckhouse.io/v1beta1"
-    assert v1b1["spec"]["version"] == {"major": 3, "minor": 10}
+    assert converted_v1b1["apiVersion"] == "deckhouse.io/v1beta1"
+    assert converted_v1b1["spec"]["version"] == {"major": 3, "minor": 10}
 
     # check as a whole
-    assert v1b1 == obj_v1b1
+    assert converted_v1b1 == obj_v1b1
 
 
 def test_conversion_from_v1beta1_to_v1():
@@ -59,30 +59,30 @@ def test_conversion_from_v1beta1_to_v1():
     )
     result = out.conversions.data
 
-    # check output data structure
+    # check output data structure, which is the library responsibility
     assert isinstance(result, list)
     assert len(result) == 1
     assert "convertedObjects" in result[0]
 
-    # check the number of converted objects
+    # check the number of converted objects, which is the hook responsibility
     converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check unchanged parts
-    v1 = converted_objects[0]
-    assert v1["kind"] == "Python"
-    assert v1["metadata"]["name"] == "python-3-10"
+    converted_v1 = converted_objects[0]
+    assert converted_v1["kind"] == "Python"
+    assert converted_v1["metadata"]["name"] == "python-3-10"
+    assert converted_v1["spec"]["version"] == {"major": 3, "minor": 10}
 
     # check converted parts
-    assert v1["apiVersion"] == "deckhouse.io/v1"
-    assert v1["spec"]["version"] == {"major": 3, "minor": 10}
-    assert v1["spec"]["modules"] == [
+    assert converted_v1["apiVersion"] == "deckhouse.io/v1"
+    assert converted_v1["spec"]["modules"] == [
         {"name": "dotmap"},
         {"name": "pyyaml"},
     ]
 
     # check as a whole
-    assert v1 == obj_v1
+    assert converted_v1 == obj_v1
 
 
 def test_backward_conversion_from_v1_to_v1beta1():
@@ -92,18 +92,18 @@ def test_backward_conversion_from_v1_to_v1beta1():
     )
     result = out.conversions.data
 
-    # check output data structure
+    # check output data structure, which is the library responsibility
     assert isinstance(result, list)
     assert len(result) == 1
     assert "convertedObjects" in result[0]
 
-    # check the number of converted objects
+    # check the number of converted objects, which is the hook responsibility
     converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check as a whole
-    v1b1 = converted_objects[0]
-    assert v1b1 == obj_v1b1
+    converted_v1b1 = converted_objects[0]
+    assert converted_v1b1 == obj_v1b1
 
 
 def test_backward_conversion_from_v1beta1_to_v1alpha():
@@ -113,21 +113,21 @@ def test_backward_conversion_from_v1beta1_to_v1alpha():
     )
     result = out.conversions.data
 
-    # check output data structure
+    # check output data structure, which is the library responsibility
     assert isinstance(result, list)
     assert len(result) == 1
     assert "convertedObjects" in result[0]
 
-    # check the number of converted objects
+    # check the number of converted objects, which is the hook responsibility
     converted_objects = result[0]["convertedObjects"]
     assert len(converted_objects) == 1
 
     # check as a whole
-    v1a1 = converted_objects[0]
-    assert v1a1 == obj_v1a1
+    converted_v1a1 = converted_objects[0]
+    assert converted_v1a1 == obj_v1a1
 
 
-def __conv_request(obj, to_version):
+def __conv_request(obj: dict, to_version: str):
     return [
         {
             "binding": "python_conversions",
