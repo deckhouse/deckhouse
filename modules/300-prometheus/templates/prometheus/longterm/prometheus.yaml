@@ -134,7 +134,7 @@ spec:
   secrets:
   - prometheus-api-client-tls
   {{- include "helm_lib_node_selector" (tuple . "monitoring-longterm") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring-longterm") | nindent 2 }}
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
   {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
   {{- if $storageClass }}

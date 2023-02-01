@@ -6,7 +6,7 @@
 {{- end }}
 
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "system-with-drbd-problems" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "monitoring-longterm" "system" "system-with-drbd-problems" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -173,6 +173,10 @@ tolerations:
   {{- else if $module_values.tolerations }}
 tolerations:
 {{ $module_values.tolerations | toYaml }}
+{{- /* For longterm Prometheus monitoring module a separate longtermTolerations field will be picked */ -}}
+  {{- else if and $module_values.longtermTolerations (eq "monitoring-longterm" $strategy) }}
+tolerations:
+{{ $module_values.longtermTolerations | toYaml }}
 
 {{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
   {{- else if eq $strategy "monitoring" }}
@@ -180,6 +184,22 @@ tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "monitoring"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "system"
+    {{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" $context }}
+    {{- end }}
+
+{{- /* Monitoring: Nodes for longterm Pometheus monitoring component: */ -}}
+  {{- else if eq $strategy "monitoring" }}
+tolerations:
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: {{ print "%s-longterm" $context.Chart.Name | quote }}
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "monitoring"

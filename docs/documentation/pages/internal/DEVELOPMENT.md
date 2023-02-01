@@ -249,7 +249,7 @@ An example:
   {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
 ```
 
-The helper gets the global context and the desired strategy as the input to set the tolerations parameter.
+The helper gets the global context and the desired strategy as the input to set the `tolerations` parameter.
 
 * If the module has the `tolerations` variable in values, it will be used to set this parameter.
 * If the `frontend` or `system` strategy is used, the following rules will be added to the manifest:
