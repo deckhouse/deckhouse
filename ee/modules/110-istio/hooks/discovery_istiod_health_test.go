@@ -133,7 +133,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 		})
 	})
 
-	FContext("Both istiod pods with different revisions in `Running` phase", func() {
+	Context("Both istiod pods with different revisions in `Running` phase", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.internal.globalVersion", "1.88")
 			f.BindingContexts.Set(f.KubeStateSet(

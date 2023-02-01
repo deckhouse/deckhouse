@@ -313,11 +313,11 @@ var hookInitValues = `
   { "internal":
     { "versionMap":
       {
-         "1.15": { revision: "v1x15", fullVersion: "1.15.15" },
-         "1.42": { revision: "v1x42", fullVersion: "1.42.42" },
-         "1.71": { revision: "v1x71", fullVersion: "1.71.71" },
-         "1.77": { revision: "v1x77", fullVersion: "1.77.77" },
-         "1.155": { revision: "v1x155", fullVersion: "1.155.155" }
+         "1.15": { revision: "v1x15", fullVersion: "1.15.15", isReady: true },
+         "1.42": { revision: "v1x42", fullVersion: "1.42.42", isReady: true },
+         "1.71": { revision: "v1x71", fullVersion: "1.71.71", isReady: true },
+         "1.77": { revision: "v1x77", fullVersion: "1.77.77", isReady: true },
+         "1.155": { revision: "v1x155", fullVersion: "1.155.155", isReady: true }
       }
     }
   }
@@ -1101,6 +1101,32 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			})
 		})
 
+		Context("Deployment with auto-upgrade label has a pod with old istio version but istiod not ready", func() {
+			BeforeEach(func() {
+				f.ValuesSet("istio.internal.globalVersion", "1.42")
+
+				clusterState := strings.Join([]string{istioNsYAML, istioDeployWithAutoupgradeYAML, istioRsYAML, istioRSPod0YAML, istioRSPod1YAML}, "---\n")
+				f.BindingContexts.Set(f.KubeStateSet(clusterState))
+				f.ValuesSetFromYaml("istio.internal.versionMap", []byte(`
+"1.42":
+   revision: "v1x42"
+   fullVersion: "1.42.42"
+   isReady: false
+`))
+
+				f.RunHook()
+			})
+
+			It("Hook must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				d := f.KubernetesResource("Deployment", nsName, deployName)
+				Expect(d.Exists()).Should(BeTrue())
+				Expect(f.KubernetesResource("ReplicaSet", nsName, rsName).Exists()).Should(BeTrue())
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
+			})
+		})
+
 		Context("Name space with auto-upgrade label. Deployment has a pod with old istio version", func() {
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
@@ -1230,6 +1256,31 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			})
 		})
 
+		Context("DaemonSet with auto-upgrade label has a pod with old istio version and istiod not ready", func() {
+			BeforeEach(func() {
+				f.ValuesSet("istio.internal.globalVersion", "1.42")
+				f.ValuesSetFromYaml("istio.internal.versionMap", []byte(`
+"1.42":
+   revision: "v1x42"
+   fullVersion: "1.42.42"
+   isReady: false
+`))
+
+				clusterState := strings.Join([]string{istioNsYAML, istioDsWithAutoupgradeYAML, istioDsPod0YAML, istioDsPod1YAML}, "---\n")
+				f.BindingContexts.Set(f.KubeStateSet(clusterState))
+
+				f.RunHook()
+			})
+
+			It("Hook must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				d := f.KubernetesResource("DaemonSet", nsName, dsName)
+				Expect(d.Exists()).Should(BeTrue())
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
+			})
+		})
+
 		Context("Name space with auto-upgrade label. DaemonSet has a pod with old istio version", func() {
 			BeforeEach(func() {
 				f.ValuesSet("istio.internal.globalVersion", "1.42")
@@ -1356,6 +1407,31 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
 				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
+			})
+		})
+
+		Context("StatefulSet with auto-upgrade label has a pod with old istio version and istio not ready", func() {
+			BeforeEach(func() {
+				f.ValuesSet("istio.internal.globalVersion", "1.42")
+
+				clusterState := strings.Join([]string{istioNsYAML, istioStsWithAutoupgradeYAML, istioSTSPod0YAML, istioSTSPod1YAML}, "---\n")
+				f.BindingContexts.Set(f.KubeStateSet(clusterState))
+				f.ValuesSetFromYaml("istio.internal.versionMap", []byte(`
+"1.42":
+   revision: "v1x42"
+   fullVersion: "1.42.42"
+   isReady: false
+`))
+
+				f.RunHook()
+			})
+
+			It("Hook must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				d := f.KubernetesResource("StatefulSet", nsName, stsName)
+				Expect(d.Exists()).Should(BeTrue())
+				Expect(d.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{}`))
 			})
 		})
 
@@ -1507,7 +1583,6 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(d2.Field("spec.template.metadata.annotations").String()).To(MatchJSON(`{"istio.deckhouse.io/full-version": "1.42.42"}`))
 			})
 		})
-
 	})
 
 })

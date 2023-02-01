@@ -34,19 +34,19 @@ func (vm IstioVersionsMap) GetVersionByFullVersion(fullVer string) string {
 	return ""
 }
 
-func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
+func (vm IstioVersionsMap) IsFullVersionReady(fullVer string) bool {
 	for _, istioVerInfo := range vm {
-		if istioVerInfo.Revision == rev {
-			return true
+		if istioVerInfo.FullVersion == fullVer {
+			return istioVerInfo.IsReady
 		}
 	}
 	return false
 }
 
-func (vm IstioVersionsMap) IsRevisionReady(rev string) bool {
+func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
-			return istioVerInfo.IsReady
+			return true
 		}
 	}
 	return false
