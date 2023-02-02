@@ -31,6 +31,11 @@ func Test(t *testing.T) {
 }
 
 const (
+	globalValuesK8s121 = `
+discovery:
+  kubernetesVersion: "1.21.8"
+`
+
 	globalValuesK8s123 = `
 discovery:
   kubernetesVersion: "1.23.5"
@@ -71,6 +76,36 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 			pl := f.KubernetesResource("PriorityLevelConfiguration", "", "d8-serviceaccounts")
 			Expect(fs.Exists()).To(BeFalse())
 			Expect(pl.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with deckhouse namespaces, kubernetes 1.21", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesK8s121)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("flowSchema", moduleValuesForFlowSchemaModule)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			fs := f.KubernetesResource("FlowSchema", "", "d8-serviceaccounts")
+			pl := f.KubernetesResource("PriorityLevelConfiguration", "", "d8-serviceaccounts")
+			Expect(fs.Exists()).To(BeTrue())
+			Expect(pl.Exists()).To(BeTrue())
+			Expect(fs.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
+			Expect(fs.Field("spec.rules.0.subjects").String()).To(MatchYAML(`
+- kind: ServiceAccount
+  serviceAccount:
+    name: '*'
+    namespace: test1
+- kind: ServiceAccount
+  serviceAccount:
+    name: '*'
+    namespace: test2
+`))
+			Expect(pl.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
+			Expect(pl.Field("spec.limited.assuredConcurrencyShares").String()).To(Equal("5"))
 		})
 	})
 
