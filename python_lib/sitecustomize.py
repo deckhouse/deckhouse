@@ -18,32 +18,36 @@ import sys
 
 
 def find_module_root(path):
-    """Returns module root path and module name for hook being executed.
+    """Returns module root path in Deckhouse pod or Webhook Handler pod.
 
-    E.g. for hook
-        /deckhouse/modules/999-my-module/hooks/my_hook.py
-    module root is
-        /deckhouse/modules/999-my-module
+    E.g. for hook path /deckhouse/modules/987-module-name/hooks/detect_array.py
+    For Deckhouse, module root is
+        $ANY_PARENT/modules/987-module-name
+    For Webhook Handler, the root is
+        $ANY_PARENT/987-module-name/webhooks
 
     Args:
         path (str): hook absolute path
+
     Returns:
-        (str): module root
+        (str): hook 'module' root
     """
     while True:
         parent, _ = os.path.split(path)
-        # Not using absolute path (/deckhouse/modules) to keep it portable
-        if os.path.split(parent)[1] == "modules":
-            return path  # we are in the module root
+        # Discover module root for deckhouse, or module webhooks root for webhook handler.
+        if os.path.split(parent)[1] == "modules" or path == "/":
+            # If we are in the FS root, it's likely we are not in Deckhouse pod or webhook handler
+            # pod, so we just break the loop.
+            return path
+        if os.path.split(parent)[1] == "webhooks":
+            return parent
         path = parent
 
 
 hook_path = os.path.abspath(sys.argv[0])
 mod_root = find_module_root(hook_path)
 
-# Add Python packages discovery for module hooks, $D8_MODULE_ROOT/lib/python/dist
+# Add Python packages discovery for module hooks
 if mod_root:
     lib_path = os.path.join(mod_root, "lib", "python", "dist")
     sys.path.append(lib_path)
-
-    os.environ["D8_MODULE_ROOT"] = mod_root
