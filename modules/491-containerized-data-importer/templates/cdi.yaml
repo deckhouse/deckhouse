@@ -8,6 +8,7 @@ metadata:
 spec:
   imagePullPolicy: IfNotPresent
   infra:
+    replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
     {{- include "helm_lib_node_selector" (tuple . "system") | nindent 4 }}
     {{- include "helm_lib_tolerations" (tuple . "system") | nindent 4 }}
   {{- if .Values.global.modules.publicDomainTemplate }}

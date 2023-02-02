@@ -20,3 +20,9 @@ Add default storage capabilities for LISNTOR
 #### `003-apiserver-node-selector-and-tolerations.patch`
 
 Allow to override nodeSelector and tolerations for cdi-apiserver
+
+#### `004-replicas.patch`
+
+Ability to specify replicas
+
+- https://github.com/kubevirt/containerized-data-importer/pull/2563
