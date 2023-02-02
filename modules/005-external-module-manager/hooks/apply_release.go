@@ -31,7 +31,6 @@ import (
 	"k8s.io/utils/pointer"
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
