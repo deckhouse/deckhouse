@@ -14,9 +14,9 @@ apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
 layout: Standard
 provider:
-  server: test.local.org
-  username: test@dvdv.org
-  password: testtest
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
   insecure: true
 vmFolderPath: dev
 regionTagCategory: k8s-region
@@ -33,7 +33,7 @@ masterNodeGroup:
     memory: 8192
     template: dev/golden_image
     datastore: dev/lun_1
-    mainNetwork: k8s-msk/test_187
+    mainNetwork: net3-k8s
 nodeGroups:
 - name: khm
   replicas: 1
@@ -44,7 +44,7 @@ nodeGroups:
     memory: 8192
     template: dev/golden_image
     datastore: dev/lun_1
-    mainNetwork: k8s-msk/test_187
+    mainNetwork: net3-k8s
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 zones:
 - ru-central1-a

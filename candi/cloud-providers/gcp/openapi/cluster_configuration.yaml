@@ -3,6 +3,46 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in GCP.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: GCPClusterConfiguration
+        layout: WithoutNAT
+        sshKey: "<SSH_PUBLIC_KEY>"
+        subnetworkCIDR: 10.36.0.0/24
+        masterNodeGroup:
+          replicas: 1
+          zones:
+            - europe-west3-b
+          instanceClass:
+            machineType: n1-standard-4
+            image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20220831
+            diskSizeGb: 20
+        nodeGroups:
+          - name: static
+            replicas: 1
+            zones:
+              - europe-west3-b
+            instanceClass:
+              machineType: n1-standard-4
+              image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20220831
+              diskSizeGb: 20
+              additionalNetworkTags:
+                - tag1
+              additionalLabels:
+                kube-node: static
+        provider:
+          region: europe-west3
+          serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, masterNodeGroup, sshKey]
     properties:
