@@ -17,26 +17,51 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 500},
-}, createFirstDeschedulerCR)
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
+}, dependency.WithExternalDependencies(createFirstDeschedulerCR))
 
-func createFirstDeschedulerCR(input *go_hook.HookInput) error {
-	config, ok := input.ConfigValues.GetOk("descheduler")
-	if !ok || len(config.Map()) == 0 {
-		return nil
+func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container) error {
+	kubeCl, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
+	cm, err := kubeCl.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "descheduler-config-migration", metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		input.LogEntry.Infof("nothing to migrate: %s", err)
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	configJSON, ok := cm.Data["config"]
+	if !ok {
+		return fmt.Errorf("failed to get \"config\" field from CM \"descheduler-config-migration\"")
+	}
+
+	if !gjson.Valid(configJSON) {
+		return fmt.Errorf("config json is invalid: %s", configJSON)
+	}
+	config := gjson.Parse(configJSON)
+
 	var deschedulerCr []byte
-	deschedulerCr, err := sjson.SetBytes(deschedulerCr, "apiVersion", "deckhouse.io/v1alpha1")
+	deschedulerCr, err = sjson.SetBytes(deschedulerCr, "apiVersion", "deckhouse.io/v1alpha1")
 	if err != nil {
 		return err
 	}
@@ -125,6 +150,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput) error {
 	}
 
 	input.PatchCollector.Create(object, object_patch.IgnoreIfExists())
+	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "descheduler-config-migration")
 
 	return nil
 }
