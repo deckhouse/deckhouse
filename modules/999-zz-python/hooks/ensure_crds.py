@@ -17,7 +17,7 @@
 import os
 
 import yaml
-from deckhouse_sdk import hook
+from deckhouse import hook
 
 # we expect structure
 # modules/

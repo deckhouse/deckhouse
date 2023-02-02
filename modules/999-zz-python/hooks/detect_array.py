@@ -16,7 +16,7 @@
 
 import sys
 
-from deckhouse_sdk import hook
+from deckhouse import hook
 from dotmap import DotMap
 
 config = """

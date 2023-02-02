@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import detect_array
-from deckhouse_sdk import hook
+from deckhouse import hook
 from dotmap import DotMap
 
 module_name = "zzPython"

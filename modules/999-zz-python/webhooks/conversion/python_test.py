@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import python
-from deckhouse_sdk import hook
+from deckhouse import hook
 from dotmap import DotMap
 
 # THIS FILE MUST NOT BE EXECUTABLE! Deckhouse runs all files with execute bit. Since tests are not

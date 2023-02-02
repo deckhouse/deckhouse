@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
-Name: deckhouse-sdk
-Version: 0.4.2
-Summary: Python SDK for Shell Operator hooks
+Name: deckhouse
+Version: 0.4.3
+Summary: Wrapper for hooks for Deckhouse, Addon Operator, and Shell Operator by Flant
 License: Apache-2.0
 Author: Eugene Shevchenko
 Author-email: evgeny.shevchenko@flant.com
@@ -15,9 +15,9 @@ Classifier: Programming Language :: Python :: 3.11
 Requires-Dist: dictdiffer (>=0.9.0,<0.10.0)
 Description-Content-Type: text/markdown
 
-# Deckhouse module SDK
+# Deckhouse python library
 
-Deckhouse module SDK simplifies writing module hooks for operators:
+Simplifies writing module hooks for Kubernetes operators:
 
 - [Deckhouse](https://github.com/deckhouse/deckhouse)
 - [Addon Operator](https://github.com/flant/addon-operator)
@@ -30,14 +30,14 @@ Deckhouse module SDK simplifies writing module hooks for operators:
 ## Install
 
 ```bash
-pip install deckhouse-sdk
+pip install deckhouse
 ```
 
 ## Sample hook
 
 ```python
 # hello.py
-from deckhouse_sdk import hook
+from deckhouse import hook
 
 def main(ctx: hook.Context):
     # Manipulate kubernetes state
@@ -70,7 +70,7 @@ An example for pytest
 # hello_test.py
 
 from hello import main
-from deckhouse_sdk import hook
+from deckhouse import hook
 
 # Inputs
 #   initial_values = { ... }

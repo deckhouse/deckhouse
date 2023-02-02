@@ -18,7 +18,7 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 
-from deckhouse_sdk import hook
+from deckhouse import hook
 
 config = """
 configVersion: v1
