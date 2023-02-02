@@ -16,7 +16,7 @@ deckhouse_sdk/__pycache__/storage.cpython-310.pyc,,
 deckhouse_sdk/__pycache__/validations.cpython-310.pyc,,
 deckhouse_sdk/__pycache__/values.cpython-310.pyc,,
 deckhouse_sdk/conversions.py,sha256=xCF0rsQEvJrF-LoFpoDJaRWQ30y3QO2hozBADxb6bAc,1056
-deckhouse_sdk/hook.py,sha256=5D7FAcIzV0JmghzksaxK7-ZB5jbGNEm8Y2dM4XrOO_Y,5671
+deckhouse_sdk/hook.py,sha256=FIOaQ1alRaYdc4iOSWDJx1dfrILVX3XOfm9GE-1FjUo,5671
 deckhouse_sdk/kubernetes.py,sha256=VLnbdSwYrpKtqwmTwyJIfkm8t2GMLSP5jxLnu-Ri9bM,7952
 deckhouse_sdk/metrics.py,sha256=cew7PXXtB73LjzVMwo9zbh8cNXh20kqOL4DPDt0MB_E,552
 deckhouse_sdk/module.py,sha256=gxyF2R7rWGL-R1OgHsEWUMG9vmEOAnnmqlCnAEQ8oO0,1075

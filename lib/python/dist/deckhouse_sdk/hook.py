@@ -168,8 +168,8 @@ def run(func, configpath=None, config=None):
     output = __run(
         func,
         binding_context=get_binding_context(),
-        config_values=get_values(),
-        initial_values=get_config(),
+        config_values=get_config(),
+        initial_values=get_values(),
     )
 
     output.flush()
