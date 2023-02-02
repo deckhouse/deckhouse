@@ -2,6 +2,16 @@ kind: OpenStackClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в OpenStack.
+
+      Используется cloud-провайдером если control plane кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
     properties:
       sshPublicKey:
         description: |

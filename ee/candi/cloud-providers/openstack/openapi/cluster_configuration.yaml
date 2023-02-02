@@ -3,6 +3,61 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in OpenStack.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: OpenStackClusterConfiguration
+        layout: Standard
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        zones:
+          - ru-3a
+        standard:
+          internalNetworkDNSServers:
+            - 8.8.8.8
+          internalNetworkCIDR: 192.168.195.0/24
+          internalNetworkSecurity: false
+          externalNetworkName: "external-network"
+        provider:
+          authURL: '<AUTH_URL>'
+          domainName: '<DOMAIN_NAME>'
+          tenantID: '<TENANT_ID>'
+          username: '<USERNAME>'
+          password: '<PASSWORD>'
+          region: 'ru-3'
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            rootDiskSize: 20
+            flavorName: m1.large
+            imageName: "debian-11-genericcloud-amd64-20220911-1135"
+          volumeTypeMap:
+            ru-3a: "fast.ru-3a"
+        nodeGroups:
+          - name: front
+            replicas: 2
+            instanceClass:
+              flavorName: m1.large
+              imageName: "debian-11-genericcloud-amd64-20220911-1135"
+              rootDiskSize: 20
+              configDrive: false
+              floatingIPPools:
+                - public
+                - shared
+              additionalSecurityGroups:
+                - sec_group_1
+                - sec_group_2
+            zones:
+              - ru-1a
+              - ru-1b
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
     properties:

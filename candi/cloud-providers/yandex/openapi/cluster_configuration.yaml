@@ -3,23 +3,53 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in Yandex Cloud.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
     x-examples:
-    - sshPublicKey: "ssh-rsa AAAAAAA"
-      apiVersion: deckhouse.io/v1
-      kind: YandexClusterConfiguration
-      masterNodeGroup:
-        replicas: 1
-        instanceClass:
-          cores: 1
-          memory: 1024
-          imageID: fd8nb7ecsbvj76dfaa8b
-      provider:
-        cloudID: clnb7ecsbvj76dfaa8b
-        folderID: fldrb7ecsbvj76dfaa8b
-        serviceAccountJSON: '{"account": "a"}'
-      nodeNetworkCIDR: '127.0.0.1/8'
-      labels: { "label-2": "b" }
-      layout: Standard
+      - apiVersion: deckhouse.io/v1
+        kind: YandexClusterConfiguration
+        layout: Standard
+        nodeNetworkCIDR: '127.0.0.1/8'
+        labels: { "label-2": "b" }
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            cores: 4
+            memory: 8192
+            imageID: fd8nb7ecsbvj76dfaa8b
+        nodeGroups:
+          - name: worker
+            replicas: 1
+            zones:
+              - ru-central1-a
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd8nb7ecsbvj76dfaa8b
+              coreFraction: 50
+              externalIPAddresses:
+                - "198.51.100.5"
+                - "Auto"
+        provider:
+          cloudID: "<CLOUD_ID>"
+          folderID: "<FOLDER_ID>"
+          serviceAccountJSON: |
+            {
+            "id": "id",
+            "service_account_id": "service_account_id",
+            "key_algorithm": "RSA_2048",
+            "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+            }
     additionalProperties: false
     required: [apiVersion, kind, masterNodeGroup, nodeNetworkCIDR, sshPublicKey, layout, provider]
     properties:

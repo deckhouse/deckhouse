@@ -3,11 +3,15 @@ apiVersions:
   - apiVersion: deckhouse.io/v1
     openAPISpec:
       description: |
-        Структура, описывающая конфигурацию облачного кластера в vSphere.
+        Описывает конфигурацию облачного кластера в vSphere.
 
-        Cloud-провайдер использует эту структуру для настройки, если control plane кластера размещен в облаке.
+        Используется cloud-провайдером если control plane кластера размещен в облаке.
 
-        Находится в Secret'е `d8-provider-cluster-configuration` пространства имен `kube-system`.
+        Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+        ```shell
+        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        ```
       properties:
         masterNodeGroup:
           description: |

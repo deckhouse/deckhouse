@@ -5,11 +5,61 @@ apiVersions:
     type: object
     additionalProperties: false
     description: |
-      A structure describing the configuration of a cloud cluster in vSphere.
+      Describes the configuration of a cloud cluster in vSphere.
 
-      The cloud provider uses this structure for its configuration if a cluster's control plane is hosted in the cloud.
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
 
-      It is located in the `d8-provider-cluster-configuration` Secret in the `kube-system` namespace.
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: VsphereClusterConfiguration
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        layout: Standard
+        vmFolderPath: 'folder/prefix'
+        regionTagCategory: k8s-region
+        zoneTagCategory: k8s-zone
+        region: region2
+        zones:
+          - region2-a
+        externalNetworkNames:
+          - net3-k8s
+        internalNetworkNames:
+          - K8S_3
+        internalNetworkCIDR: 172.16.2.0/24
+        baseResourcePool: kubernetes/cloud
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            numCPUs: 4
+            memory: 8192
+            template: Templates/ubuntu-focal-20.04
+            mainNetwork: net3-k8s
+            additionalNetworks:
+              - K8S_3
+            datastore: lun10
+            rootDiskSize: 20
+            runtimeOptions:
+              nestedHardwareVirtualization: false
+        nodeGroups:
+          - name: worker
+            replicas: 1
+            zones:
+              - ru-central1-a
+            instanceClass:
+              numCPUs: 4
+              memory: 8192
+              template: Templates/ubuntu-focal-20.04
+              datastore: lun10
+              mainNetwork: net3-k8s
+        provider:
+          server: '<SERVER>'
+          username: '<USERNAME>'
+          password: '<PASSWORD>'
+          insecure: true
     required: [apiVersion, kind, masterNodeGroup, regionTagCategory, zoneTagCategory, sshPublicKey, vmFolderPath, region, zones, layout, provider]
     properties:
       apiVersion:
