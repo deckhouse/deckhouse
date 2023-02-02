@@ -128,7 +128,6 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				continue
 			}
 			modulesChanged = true
-			deckhouse_config.Service().AddExternalModuleName(release.ModuleName, release.ModuleSource)
 
 			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
 				"status": {
