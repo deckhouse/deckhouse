@@ -124,13 +124,12 @@ else
         if [ "\${num_legacy_lines}" -gt "\${num_nft_lines}" ]; then
             mode=legacy
         else
-            iptables-nft-restore 2>/dev/null << EOF_RESTORE
+            if iptables-nft-restore >/dev/null 2>&1 << EOF_RESTORE
 * filter
 -N IPTABLES_WRAPPER
 -A IPTABLES_WRAPPER -m comment --comment "the dummy rule to detect iptables api (nft or legacy)" -j RETURN
 COMMIT
-EOF_RESTORE;
-           if [ $? -eq 0 ]; then
+EOF_RESTORE; then
                mode=nft
            else
                mode=legacy
