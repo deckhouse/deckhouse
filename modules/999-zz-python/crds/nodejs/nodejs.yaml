@@ -1,0 +1,115 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodejss.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: zz-python
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodejss
+    singular: nodejs
+    kind: NodeJS
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: NodeJS Interpreter.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: Spec of NodeJS Interpreter.
+              required:
+                - version
+              properties:
+                version:
+                  type: object
+                  description: NodeJS version.
+                  required:
+                    - major
+                    - minor
+                  properties:
+                    major:
+                      type: integer
+                      description: Major version of NodeJS.
+                      default: 18
+                      minimum: 14
+                      maximum: 19
+                    minor:
+                      type: integer
+                      description: Minor version of NodeJS.
+                      minimum: 0
+                      maximum: 99
+                      default: 0
+                modules:
+                  type: array
+                  description: A list of modules to install.
+                  items:
+                    type: string
+
+    - name: v1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: NodeJS Interpreter.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              description: Spec of NodeJS Interpreter.
+              required:
+                - version
+              properties:
+                version:
+                  type: object
+                  description: NodeJS version.
+                  required:
+                    - major
+                    - minor
+                  properties:
+                    major:
+                      type: integer
+                      description: Major version of NodeJS.
+                      default: 18
+                      minimum: 14
+                      maximum: 19
+                    minor:
+                      type: integer
+                      description: Minor version of NodeJS.
+                      minimum: 0
+                      maximum: 99
+                      default: 0
+                modules:
+                  type: array
+                  description: A list of modules to install.
+                  items:
+                    type: object
+                    description: A module to install.
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+                        description: Name of the module.
+                      version:
+                        type: string
+                        description: Version of the module.
+                      source:
+                        type: string
+                        description: Source of the module.
+                      extraArgs:
+                        type: array
+                        description: Extra arguments for pip install.
+                        items:
+                          type: string

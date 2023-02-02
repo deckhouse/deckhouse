@@ -38,16 +38,15 @@ onStartup: 5
 
 
 def main(ctx: hook.Context):
-    for crd in walk_crds(find_crds_root(__file__)):
-        # TODO take conversions into account
+    for crd in iter_yamls(find_crds_root(__file__)):
         ctx.kubernetes.create_or_update(crd)
 
 
-def walk_crds(crds_root):
-    if not os.path.exists(crds_root):
+def iter_yamls(root_path: str):
+    if not os.path.exists(root_path):
         return
 
-    for dirpath, _, filenames in os.walk(top=crds_root):
+    for dirpath, dirnames, filenames in os.walk(top=root_path):
         for filename in filenames:
             if not filename.endswith(".yaml"):
                 # Wee only seek manifests
@@ -55,17 +54,24 @@ def walk_crds(crds_root):
             if filename.startswith("doc-"):
                 # Skip dedicated doc yamls, common for Deckhouse internal modules
                 continue
+
             crd_path = os.path.join(dirpath, filename)
-            for manifest in yaml.safe_load_all(open(crd_path, "r", encoding="utf-8")):
-                if manifest is None:
-                    continue
+            with open(crd_path, "r", encoding="utf-8") as f:
+                for manifest in yaml.safe_load_all(f):
+                    if manifest is None:
+                        continue
+                    yield manifest
+
+        for dirname in dirnames:
+            subroot = os.path.join(dirpath, dirname)
+            for manifest in iter_yamls(subroot):
                 yield manifest
 
 
 def find_crds_root(hookpath):
-    hooks_dir = os.path.dirname(hookpath)
-    module_dir = os.path.dirname(hooks_dir)
-    crds_root = os.path.join(module_dir, "crds")
+    hooks_root = os.path.dirname(hookpath)
+    module_root = os.path.dirname(hooks_root)
+    crds_root = os.path.join(module_root, "crds")
     return crds_root
 
 

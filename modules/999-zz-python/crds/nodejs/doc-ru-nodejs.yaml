@@ -1,0 +1,24 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+          description: Интерпретатор NodeJS.
+          properties:
+            spec:
+              description: Спецификация интерпретатора NodeJS.
+              properties:
+                version:
+                  description: Версия интерпретатора NodeJS.
+                modules:
+                  description: Список модулей NodeJS, которые должны быть установлены.
+    - name: v1
+      schema:
+          description: Интерпретатор NodeJS.
+          properties:
+            spec:
+              description: Спецификация интерпретатора NodeJS.
+              properties:
+                version:
+                  description: Версия интерпретатора NodeJS.
+                modules:
+                  description: Список модулей NodeJS, которые должны быть установлены.
