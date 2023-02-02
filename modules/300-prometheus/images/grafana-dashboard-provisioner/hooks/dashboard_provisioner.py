@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +18,11 @@ import os
 import tempfile
 import json
 import shutil
+import glob
+
+for f in glob.glob("/frameworks/shell/*.sh"):
+    with open(f, "r") as script:
+        exec(script.read())
 
 def __config__():
     config = {
