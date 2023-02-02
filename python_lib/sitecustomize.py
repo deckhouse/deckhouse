@@ -47,5 +47,3 @@ mod_root = find_module_root(hook_path)
 if mod_root:
     lib_path = os.path.join(mod_root, "lib", "python", "dist")
     sys.path.append(lib_path)
-
-    os.environ["D8_MODULE_ROOT"] = mod_root

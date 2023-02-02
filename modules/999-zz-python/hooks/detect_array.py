@@ -16,6 +16,7 @@
 
 from deckhouse_sdk import hook
 from dotmap import DotMap
+import sys
 
 config = """
 configVersion: v1
@@ -26,6 +27,8 @@ schedule:
 
 
 def main(ctx: hook.Context):
+    print("sys.path", sys.path)
+
     values = DotMap(ctx.values)
 
     values.zzPython.internal.count += 1
