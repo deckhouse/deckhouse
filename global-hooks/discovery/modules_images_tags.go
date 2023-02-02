@@ -37,6 +37,12 @@ func discoveryModulesImagesTags(input *go_hook.HookInput) error {
 
 	tagsFile := "/deckhouse/modules/images_tags.json"
 
+	tagsObj, err := parseImagesTagsFile(tagsFile)
+	if err != nil {
+		return err
+	}
+
+	// external modules
 	if env := os.Getenv("EXTERNAL_MODULES_DIR"); env != "" {
 		externalModulesDir = filepath.Join(env, "modules")
 	}
@@ -44,11 +50,6 @@ func discoveryModulesImagesTags(input *go_hook.HookInput) error {
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		tagsFile = os.Getenv("D8_TAGS_TMP_FILE")
 		externalModulesDir = "testdata/modules-images-tags/external-modules"
-	}
-
-	tagsObj, err := parseImagesTagsFile(tagsFile)
-	if err != nil {
-		return err
 	}
 
 	if externalModulesDir == "" {
