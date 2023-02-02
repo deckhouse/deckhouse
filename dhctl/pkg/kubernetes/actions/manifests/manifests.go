@@ -174,6 +174,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
+	hostPathDirectory := apiv1.HostPathDirectory
+
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
@@ -196,6 +198,15 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					Name: "kube",
 					VolumeSource: apiv1.VolumeSource{
 						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
+					},
+				},
+				{
+					Name: "external-modules",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse/external-modules",
+							Type: &hostPathDirectory,
+						},
 					},
 				},
 			},
@@ -267,6 +278,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
+		},
+		{
+			Name:  "EXTERNAL_MODULES_DIR",
+			Value: "/deckhouse/external-modules/",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
