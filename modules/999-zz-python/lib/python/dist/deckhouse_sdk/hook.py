@@ -14,9 +14,7 @@ from dictdiffer import deepcopy
 from .conversions import ConversionsCollector
 from .kubernetes import KubeOperationCollector
 from .metrics import MetricsCollector
-from .module import get_binding_context, get_config
-from .module import get_name as get_module_name
-from .module import get_values
+from .module import get_binding_context, get_config, get_values
 from .storage import FileStorage
 from .validations import ValidationsCollector
 from .values import ValuesPatchesCollector
@@ -81,12 +79,10 @@ class Context:
         config_values: dict,
         initial_values: dict,
         output: Output,
-        module_name: str,
     ):
         self.binding_context = binding_context
         self.snapshots = binding_context.get("snapshots", {})
         self.output = output
-        self.module_name = module_name
         self.config_values = deepcopy(config_values)
         self.values = deepcopy(initial_values)
 
@@ -108,7 +104,6 @@ def __run(
     binding_context: list,
     config_values: dict,
     initial_values: dict,
-    module_name: str,
 ):
     """
     Run the hook function with config. Accepts config path or config text.
@@ -142,7 +137,6 @@ def __run(
             config_values=config_values,
             initial_values=initial_values,
             output=output,
-            module_name=module_name,
         )
         func(hookctx)
         output.values = hookctx.values
@@ -174,9 +168,8 @@ def run(func, configpath=None, config=None):
     output = __run(
         func,
         binding_context=get_binding_context(),
-        config_values=get_values(),
-        initial_values=get_config(),
-        module_name=get_module_name(),
+        config_values=get_config(),
+        initial_values=get_values(),
     )
 
     output.flush()
@@ -187,7 +180,6 @@ def testrun(
     binding_context: Iterable = None,
     config_values: dict = None,
     initial_values: dict = None,
-    module_name: str = get_module_name(),
 ) -> Output:
     """
     Test-run the hook function. Accepts binding context and initial values.
@@ -200,5 +192,5 @@ def testrun(
     :return: output means for metrics and kubernetes
     """
 
-    output = __run(func, binding_context, config_values, initial_values, module_name)
+    output = __run(func, binding_context, config_values, initial_values)
     return output
