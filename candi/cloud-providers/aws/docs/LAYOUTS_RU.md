@@ -19,9 +19,12 @@ title: "Cloud provider — AWS: схемы размещения"
 apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithoutNAT
+vpcNetworkCIDR: "10.241.0.0/16"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: <SSH_PUBLIC_KEY>
 provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
+  providerAccessKeyId: '<AWS_ACCESS_KEY>'
+  providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 masterNodeGroup:
   # Количество master-узлов.
@@ -47,10 +50,7 @@ nodeGroups:
       instanceType: t2.medium
       ami: ami-0caef02b518350c8b
     additionalTags:
-      backup: me
-vpcNetworkCIDR: "10.241.0.0/16"
-nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: "<SSH_PUBLIC_KEY>"
+      backup: srv1
 tags:
   team: torpedo
 ```

@@ -17,6 +17,9 @@ title: "Cloud provider — Yandex Cloud: схемы размещения"
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
 provider:
   cloudID: <CLOUD_ID>
   folderID: <FOLDER_ID>
@@ -55,9 +58,6 @@ nodeGroups:
       toy: example
 labels:
   billing: prod
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
