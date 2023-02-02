@@ -88,4 +88,7 @@ def __main__():
     with open("/tmp/ready", "w") as f:
         f.write("ok")
 
+    hook_path = '/hooks/dashboard_provisioner.py'
+    os.chmod(hook_path, 0o755)
+
 hook.run()
