@@ -136,12 +136,15 @@ data:
 )
 
 var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
+	BeforeEach(func() {
+		Skip("keepalived is planned for removal")
+	})
+
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "KeepalivedInstance", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
@@ -153,7 +156,6 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Single keepalived instance in empty cluster", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(keepalivedInstance))
 			f.RunHook()
 		})
@@ -167,7 +169,6 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Two keepalived instances with non-unique vrrpInstances[].id", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(keepalivedInstance + keepalivedInstanceWithNotUniqueID))
 			f.RunHook()
 		})
@@ -180,7 +181,6 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Keepalived instance and one node", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(nodeOne + keepalivedInstance))
 			f.RunHook()
 		})
@@ -194,7 +194,6 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Two nodes + secret + keepalived instance", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(nodeOne + nodeTwo + secret + keepalivedInstance))
 			f.RunHook()
 		})
@@ -208,7 +207,6 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Four nodes with multiple labels and keepalived instance with multiple node selectors", func() {
 		BeforeEach(func() {
-			Skip("keepalived is planned for removal")
 			f.BindingContexts.Set(f.KubeStateSet(nodeOne + nodeTwo + nodeThree + nodeFour + keepalivedInstanceWithSomeSelectors))
 			f.RunHook()
 		})
