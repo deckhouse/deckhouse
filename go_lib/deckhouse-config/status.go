@@ -30,6 +30,7 @@ type Status struct {
 	State   string
 	Version string
 	Status  string
+	Type    string
 }
 
 type StatusReporter struct {
@@ -44,14 +45,22 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName string) Status {
+func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName string, externalModulesToRepo map[string]string) Status {
 	// Special case: unknown module name.
-	if !s.possibleNames.Has(cfg.GetName()) {
+	repo, isExternal := externalModulesToRepo[cfg.GetName()]
+
+	if !s.possibleNames.Has(cfg.GetName()) && !isExternal {
 		return Status{
 			State:   "N/A",
 			Version: "",
 			Status:  "Ignored: unknown module name",
+			Type:    "N/A",
 		}
+	}
+
+	moduleType := "Embedded"
+	if isExternal {
+		moduleType = fmt.Sprintf("External: %s", repo)
 	}
 
 	chain := conversion.Registry().Chain(cfg.GetName())
@@ -66,6 +75,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 				State:   "N/A",
 				Version: "",
 				Status:  invalidMsg,
+				Type:    moduleType,
 			}
 		}
 	}
@@ -94,6 +104,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 			State:   "Enabled",
 			Version: version,
 			Status:  versionWarning,
+			Type:    moduleType,
 		}
 	}
 
@@ -137,6 +148,7 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 		Version: version,
 		State:   stateMsg,
 		Status:  strings.Join(statusMsgs, ", "),
+		Type:    moduleType,
 	}
 }
 

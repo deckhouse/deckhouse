@@ -47,6 +47,7 @@ type ModuleConfigSpec struct {
 type ModuleConfigStatus struct {
 	State   string `json:"state"`
 	Version string `json:"version"`
+	Type    string `json:"type"`
 	Status  string `json:"status"`
 }
 

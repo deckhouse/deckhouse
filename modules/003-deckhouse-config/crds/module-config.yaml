@@ -57,6 +57,9 @@ spec:
                 status:
                   type: string
                   description: "Module state explanation, version warning or last error"
+                type:
+                  type: string
+                  description: "Type of module: embedded or external module"
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -76,6 +79,10 @@ spec:
             in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
             lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
           jsonPath: .metadata.creationTimestamp
+        - name: Type
+          type: string
+          description: "Type of module: embedded or external module"
+          jsonPath: .status.type
         - name: Status
           type: string
           description: "Module state explanation, version warning or last error"
