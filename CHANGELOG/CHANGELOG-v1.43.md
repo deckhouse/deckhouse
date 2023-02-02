@@ -119,6 +119,7 @@
  - **[istio]** Using the `iptables-wrapper-installer.sh` script in proxy images. [#3614](https://github.com/deckhouse/deckhouse/pull/3614)
  - **[node-local-dns]** Switched stale cache behavior from `immediate` to `verified`. [#3428](https://github.com/deckhouse/deckhouse/pull/3428)
  - **[node-manager]** fix bashible service checking [#3648](https://github.com/deckhouse/deckhouse/pull/3648)
+ - **[prometheus]** Fix Alertmanager CA file (caused Unauthorized error). [#3726](https://github.com/deckhouse/deckhouse/pull/3726)
  - **[prometheus]** Make each Grafana dashboard unique by UID. [#3255](https://github.com/deckhouse/deckhouse/pull/3255)
  - **[registrypackages]** Allow downgrading RPMs from registrypackages in any RPM-distro. [#3358](https://github.com/deckhouse/deckhouse/pull/3358)
  - **[user-authz]** Enabled TLS certificate rotation for the authn webhook. [#3319](https://github.com/deckhouse/deckhouse/pull/3319)
