@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 from deckhouse_sdk import hook
 from dotmap import DotMap
-import sys
 
 config = """
 configVersion: v1
@@ -29,7 +30,8 @@ schedule:
 def main(ctx: hook.Context):
     print("sys.path", sys.path)
 
-    values = DotMap(ctx.values)
+    values = DotMap(ctx.values)  # deep copy
+    print("VALUES BEFORE", values.pprint(pformat="json"))
 
     values.zzPython.internal.count += 1
     if values.zzPython.array:
@@ -37,7 +39,8 @@ def main(ctx: hook.Context):
     else:
         values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
 
-    ctx.values = values.toDict()
+    print("VALUES AFTER", values.pprint(pformat="json"))
+    ctx.values = values.toDict()  # make values JSON serializable
 
 
 if __name__ == "__main__":
