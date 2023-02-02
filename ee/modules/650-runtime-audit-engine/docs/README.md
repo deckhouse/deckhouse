@@ -20,14 +20,16 @@ This module:
 The module is based on the [Falco](https://falco.org/) system. 
 Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The agents then start consuming kernel / kube audit events.
 
-![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.png)
+![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
+<!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
 > NOTE: Falco developers recommend deploying Falco as a systemd unit for maximum security.
 > However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
 > Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
 
 There are five different containers in a single agent Pod:
-![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.png)
+![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
+<!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco-driver-loader` — this init container compiles the eBPF program and saves it in an empty dir to make it available to Falco.
 2. `falco` — collects events, enriches them with metadata and saves them.
@@ -58,7 +60,8 @@ Each Falco agent Pod has a sidecar container running [shell-operator](https://gi
 This sidecar reads rules from the custom resources and saves them in the Pod's `/etc/falco/rules.d/` directory.
 Falco automatically reloads the configuration when a new rule becomes available.
 
-![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.png)
+![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
+<!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
 
 Such a schema allows the IaC approach to be used to maintain Falco rules.
 

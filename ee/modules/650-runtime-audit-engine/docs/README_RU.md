@@ -20,13 +20,15 @@ title: "Модуль runtime-audit-engine"
 Ядро модуля основано на системе обнаружения угроз [Falco](https://falco.org/).
 Deckhouse запускает агенты Falco (объединены в DaemonSet) на каждом узле, после чего те приступают к сбору событий ядра и данных, полученных в ходе аудита Kubernetes.
 
-![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.png)
+![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
+<!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
 > NOTE: Для максимальной безопасности разработчики Falco рекомендуют запускать Falco как systemd-сервис, однако в кластерах Kubernetes с поддержкой автомасштабирования это может быть затруднительно.
 > Дополнительные средства безопасности Deckhouse (реализованные другими модулями), такие как multitenancy или политики контроля создаваемых ресурсов, предоставляют достаточный уровень безопасности для предотвращения атак на DaemonSet Falco.
 
 Один Pod Falco состоит из пяти контейнеров:
-![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.png)
+![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
+<!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco-driver-loader` — контейнер для запуска; собирает eBPF-программу и сохраняет ее в общую папку для дальнейшего использования системой Falco.
 2. `falco` — собирает события, обогащает их метаданными и сохраняет.
@@ -56,7 +58,8 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Этот экземпляр считывает правила из custom resource'ов Kubernetes и сохраняет их в директорию `/etc/falco/rules.d/` Pod'а.
 При добавлении нового правила Falco автоматически обновляет конфигурацию.
 
-![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.png)
+![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
+<!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
 
 Такая схема позволяет использовать подход "Инфраструктура как код" при работе с правилами Falco.
 
