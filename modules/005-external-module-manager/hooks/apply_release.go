@@ -86,6 +86,8 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
+			deployedRelease := pred.releases[pred.currentReleaseIndex]
+			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 			continue
 		}
 
