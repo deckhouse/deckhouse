@@ -78,7 +78,7 @@ spec:
         - image:  {{ include "helm_lib_module_image" (list . "werfArgocdCmpSidecar") }}
           imagePullPolicy: IfNotPresent
           name: werf-argocd-cmp-sidecar
-          {{- include "helm_lib_module_pod_security_context_run_as_user_custom" (list . 999 999) | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom" (list . 999 999) | nindent 10 }}
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
