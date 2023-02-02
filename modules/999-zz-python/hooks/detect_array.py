@@ -31,7 +31,9 @@ def main(ctx: hook.Context):
     print("sys.path", sys.path)
 
     values = DotMap(ctx.values)  # deep copy
-    print("VALUES BEFORE", values.pprint(pformat="json"))
+
+    # print("VALUES BEFORE")
+    # values.pprint(pformat="json")
 
     values.zzPython.internal.count += 1
     if values.zzPython.array:
@@ -39,7 +41,9 @@ def main(ctx: hook.Context):
     else:
         values.zzPython.internal.statement = "NO ARRAY IN CONFIG"
 
-    print("VALUES AFTER", values.pprint(pformat="json"))
+    # print("VALUES AFTER")
+    # values.pprint(pformat="json")
+
     ctx.values = values.toDict()  # make values JSON serializable
 
 
