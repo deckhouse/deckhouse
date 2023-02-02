@@ -33,9 +33,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoveryModulesImagesTags)
 
 func discoveryModulesImagesTags(input *go_hook.HookInput) error {
-	// Discover main deckhouse images tags file
+	var externalModulesDir string
+
 	tagsFile := "/deckhouse/modules/images_tags.json"
-	externalModulesDir := filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules")
+
+	if env := os.Getenv("EXTERNAL_MODULES_DIR"); env != "" {
+		externalModulesDir = filepath.Join(env, "modules")
+	}
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		tagsFile = os.Getenv("D8_TAGS_TMP_FILE")
@@ -47,13 +51,17 @@ func discoveryModulesImagesTags(input *go_hook.HookInput) error {
 		return err
 	}
 
+	if externalModulesDir == "" {
+		input.Values.Set("global.modulesImages.tags", tagsObj)
+		return nil
+	}
+
 	modulesTagsObj := readModulesImagesTags(input, externalModulesDir)
 	for k, v := range modulesTagsObj {
 		tagsObj[k] = v
 	}
 
 	input.Values.Set("global.modulesImages.tags", tagsObj)
-
 	return nil
 }
 
