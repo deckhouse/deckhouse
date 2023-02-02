@@ -88,6 +88,13 @@ func (srv *ConfigService) SetExternalNames(allExternalNamesToRepos map[string]st
 	srv.externalNames = allExternalNamesToRepos
 }
 
+func (srv *ConfigService) AddExternalModuleName(moduleName, moduleSource string) {
+	srv.externalNamesLock.Lock()
+	defer srv.externalNamesLock.Unlock()
+
+	srv.externalNames[moduleName] = moduleSource
+}
+
 func (srv *ConfigService) ExternalNames() map[string]string {
 	srv.externalNamesLock.RLock()
 	defer srv.externalNamesLock.RUnlock()

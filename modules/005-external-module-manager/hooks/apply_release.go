@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
 )
 
@@ -73,7 +75,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			input.PatchCollector.MergePatch(status, "deckhouse.io/v1alpha1", "ExternalModuleRelease", "", rel.Name, object_patch.WithSubresource("/status"))
 		}
 
-		moduleReleases[rel.Module] = append(moduleReleases[rel.Module], rel)
+		moduleReleases[rel.ModuleName] = append(moduleReleases[rel.ModuleName], rel)
 	}
 
 	for module, releases := range moduleReleases {
@@ -117,7 +119,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.desiredReleaseIndex >= 0 {
 			release := pred.releases[pred.desiredReleaseIndex]
 
-			symlinkName := path.Join(externalModulesDir, "modules", module)
+			symlinkName := path.Join(externalModulesDir, "modules", "950-"+module) // TODO: calculate index somehow
 			modulePath := path.Join(externalModulesDir, module, "v"+release.Version.String())
 			err := enableModule(symlinkName, modulePath)
 			if err != nil {
@@ -125,6 +127,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				continue
 			}
 			modulesChanged = true
+			deckhouse_config.Service().AddExternalModuleName(release.ModuleName, release.ModuleSource)
 
 			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
 				"status": {
@@ -175,20 +178,22 @@ func filterRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 
 	return enqueueRelease{
-		Name:     release.Name,
-		Version:  release.Spec.Version,
-		Module:   release.Spec.ModuleName,
-		Status:   release.Status.Phase,
-		Approved: releaseApproved,
+		Name:         release.Name,
+		Version:      release.Spec.Version,
+		ModuleName:   release.Spec.ModuleName,
+		ModuleSource: release.Labels["source"],
+		Status:       release.Status.Phase,
+		Approved:     releaseApproved,
 	}, nil
 }
 
 type enqueueRelease struct {
-	Name     string
-	Version  *semver.Version
-	Module   string
-	Status   string
-	Approved bool
+	Name         string
+	Version      *semver.Version
+	ModuleName   string
+	ModuleSource string
+	Status       string
+	Approved     bool
 }
 
 func (er enqueueRelease) GetVersion() *semver.Version {
