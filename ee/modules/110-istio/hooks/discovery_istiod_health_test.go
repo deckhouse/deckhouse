@@ -35,7 +35,7 @@ metadata:
   name: d8-istio-sidecar-injector-global
   labels:
     module: istio
-    istio-full-version: 1.88.55
+    istio.deckhouse.io/full-version: 1.88.55
 webhooks: []
 `
 

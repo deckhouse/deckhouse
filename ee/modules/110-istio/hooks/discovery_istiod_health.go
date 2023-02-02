@@ -70,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Values:   []string{"istio"},
 					},
 					{
-						Key:      "istio-full-version",
+						Key:      "istio.deckhouse.io/full-version",
 						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
@@ -105,7 +105,7 @@ func applyIstiodPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 func applyIstiodInjectorWebhook(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	labels := obj.GetLabels()
-	fullVer := labels["istio-full-version"]
+	fullVer := labels["istio.deckhouse.io/full-version"]
 	return fullVer, nil
 }
 
@@ -138,6 +138,9 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		pod := podRaw.(istiodPod)
 		podVer := versionMap.GetVersionByRevision(pod.Revision)
 		podFullVer := versionMap.GetFullVersionByRevision(pod.Revision)
+		// health cheks for istiod
+		// if istio revision pod is running and istiod revision is not global -> ready
+		// if istio revision pod is running and istiod revision is global and injector webhook has actual full version -> ready
 		if pod.Phase == v1.PodRunning {
 			if podVer != globalVersion {
 				versionMap.SetRevisionStatus(pod.Revision, true)
