@@ -44,9 +44,11 @@ RUN mkdir -p /etc/vector \
     && apt-get install -yq ca-certificates tzdata inotify-tools gettext procps wget \
     && rm -rf /var/cache/apt/archives/*
 
-# libssl
+# libssl.1
 RUN wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb \
     && dpkg -i libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb
+# libcurl.4
+RUN apt-get install -yq libcurl4
 
 COPY --from=build-vector /vector/vector/target/release/vector /usr/bin/vector
 
