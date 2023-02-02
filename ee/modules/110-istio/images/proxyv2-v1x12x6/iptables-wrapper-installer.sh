@@ -129,11 +129,12 @@ else
 -N IPTABLES_WRAPPER
 -A IPTABLES_WRAPPER -m comment --comment "the dummy rule to detect iptables api (nft or legacy)" -j RETURN
 COMMIT
-EOF_RESTORE; then
-               mode=nft
-           else
-               mode=legacy
-           fi
+EOF_RESTORE
+            then
+                mode=nft
+            else
+                mode=legacy
+            fi
         fi
     fi
 fi
