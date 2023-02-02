@@ -10,10 +10,6 @@ memory: 50Mi
 cpu: 50m
 memory: 50Mi
 {{- end }}
-{{- define "openvpn_sync_ccd_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
 {{- define "openvpn_migration_resources" }}
 cpu: 10m
 memory: 10Mi
@@ -36,12 +32,6 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: sync-ccd
-      minAllowed:
-        {{- include "openvpn_sync_ccd_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 50m
-        memory: 50Mi
   {{- if .Values.openvpn.udpEnabled }}
     - containerName: openvpn-udp
       minAllowed:
@@ -120,26 +110,6 @@ spec:
   {{- end }}
 {{- end }}
       containers:
-# sync-ccd
-      - name: sync-ccd
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "openvpn") }}
-        command: [ '/sync_ccd.sh', "{{ .Values.openvpn.tunnelNetwork }}", "{{ .Values.openvpn.udpTunnelNetwork }}" ]
-        volumeMounts:
-          - name: ccd-tcp
-            mountPath: /etc/openvpn/ccd-tcp
-          - name: ccd-udp
-            mountPath: /etc/openvpn/ccd-udp
-          - name: scripts
-            mountPath: /sync_ccd.sh
-            subPath: sync_ccd.sh
-            readOnly: true
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            {{- include "openvpn_sync_ccd_resources" . | nindent 12 }}
-  {{- end }}
 {{- if .Values.openvpn.tcpEnabled }}
 # openvpn-tcp
       - name: openvpn-tcp
@@ -158,11 +128,11 @@ spec:
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
-          - name: ccd-tcp
-            mountPath: /etc/openvpn/ccd-tcp
+          - name: ccd
+            mountPath: /etc/openvpn/ccd
           - name: config
-            mountPath: /etc/openvpn/openvpn-tcp.conf
-            subPath: openvpn-tcp.conf
+            mountPath: /etc/openvpn/openvpn.conf
+            subPath: openvpn.conf
             readOnly: true
           - name: scripts
             mountPath: /entrypoint.sh
@@ -193,11 +163,11 @@ spec:
         volumeMounts:
           - name: certs
             mountPath: /etc/openvpn/certs
-          - name: ccd-udp
-            mountPath: /etc/openvpn/ccd-udp
+          - name: ccd
+            mountPath: /etc/openvpn/ccd
           - name: config
-            mountPath: /etc/openvpn/openvpn-udp.conf
-            subPath: openvpn-udp.conf
+            mountPath: /etc/openvpn/openvpn.conf
+            subPath: openvpn.conf
             readOnly: true
           - name: scripts
             mountPath: /entrypoint.sh
@@ -238,7 +208,9 @@ spec:
             {{- if .Values.openvpn.udpEnabled }}
             --mgmt=udp="127.0.0.1:9090"
             {{- end }}
+            {{- if .Values.openvpn.tcpEnabled }}
             --mgmt=tcp="127.0.0.1:8989"
+            {{- end }}
             --ccd --ccd.path="/mnt/ccd"
             {{- $externalHost := "" }}
             {{- if hasKey .Values.openvpn "inlet" }}
@@ -264,7 +236,7 @@ spec:
           - mountPath: /mnt/easyrsa
             name: certs
             readOnly: false
-          - name: ccd-tcp
+          - name: ccd
             mountPath: /mnt/ccd
           - name: tmp
             mountPath: /tmp
@@ -333,11 +305,7 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
-      - name: ccd-tcp
-        emptyDir:
-          medium: Memory
-          sizeLimit: 128Mi
-      - name: ccd-udp
+      - name: ccd
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi

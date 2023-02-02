@@ -59,17 +59,10 @@ properties:
   tunnelNetwork:
     type: string
     description: |
-      Tunnel network for TCP OpenVPN server.
+      Tunnel network for OpenVPN server.
     x-doc-default: '172.25.175.0/24'
     default: '172.25.175.0/24'
     x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
-  udpTunnelNetwork:
-    type: string
-    description: |
-      Tunnel network for UDP OpenVPN server.
-    x-doc-default: '172.25.176.0/24'
-    default: '172.25.176.0/24'
-    x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
   pushDefaultGatewayToClient:
     type: boolean
     default: false

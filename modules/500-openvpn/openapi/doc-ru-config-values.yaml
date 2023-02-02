@@ -38,10 +38,7 @@ properties:
       Порт, который вывешивается наружу на `externalIP` или балансировщике.
   tunnelNetwork:
     description: |
-      Подсеть используемая для TCP-туннеля OpenVPN сервера.
-  udpTunnelNetwork:
-    description: |
-      Подсеть используемая для UDP-туннеля OpenVPN сервера.
+      Подсеть используемая для туннеля OpenVPN сервера.
   pushDefaultGatewayToClient:
     description: |
       Направить весь трафик клиентов через VPN. У клиентов при подключении будет добавлен маршрут по умолчанию через VPN-туннель.
