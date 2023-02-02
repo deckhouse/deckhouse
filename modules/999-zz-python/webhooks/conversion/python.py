@@ -30,6 +30,11 @@ kubernetesCustomResourceConversion:
     toVersion: deckhouse.io/v1beta1
   - fromVersion: deckhouse.io/v1beta1
     toVersion: deckhouse.io/v1
+  #  EXPLICIT BACKWARDS CONVERSIONS
+  - fromVersion: deckhouse.io/v1beta1
+    toVersion: deckhouse.io/v1alpha1
+  - fromVersion: deckhouse.io/v1
+    toVersion: deckhouse.io/v1beta1
 """
 
 
