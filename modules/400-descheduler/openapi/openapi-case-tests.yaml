@@ -1,9 +1,9 @@
 positive:
   values:
     - internal:
-        deschedulers: {}
+      - deschedulers: {}
     - internal:
-        deschedulers:
+      - deschedulers:
         - apiVersion: deckhouse.io/v1alpha1
           metadata:
             name: test
