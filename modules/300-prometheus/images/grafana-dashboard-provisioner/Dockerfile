@@ -5,4 +5,4 @@ RUN apk add --no-cache curl sqlite rsync python3 && \
   curl https://slugify.vercel.app/ > slugify && \
   chmod +x slugify && \
   mv slugify /usr/local/bin/
-ENTRYPOINT ["python3"]
+ENTRYPOINT ["python3", "/hooks/dashboard_provisioner.py"]
