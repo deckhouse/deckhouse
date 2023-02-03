@@ -42,7 +42,7 @@ spec:
                         - registry.deckhouse.io/deckhouse/external-modules
                     dockerCfg:
                       type: string
-                      description: Base64 string with your token to access Docker registry.
+                      description: Container registry access token in Base64.
             status:
               type: object
               properties:
