@@ -219,7 +219,7 @@ An example:
 
 The helper gets the global context and the desired strategy as the input to set the nodeSelector parameter.
 
-There are five strategies in total:
+There are four strategies in total:
 1. `frontend`, `system` - these two use the following logic:
     * Use the value of the `nodeSelector` variable if it is present in module values. Otherwise:
     * If nodes with the `node-role.deckhouse.io/{{ .Chart.Name }}=""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for this chart's components. Otherwise:
@@ -228,10 +228,7 @@ There are five strategies in total:
 2. `monitoring` - uses the same logic as the `system` and `frontend` strategies but includes an extra step after all of the above:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
-3. `monitoring-longterm` - uses the same logic as the `system` and `frontend` strategies but includes an extra step before all of the above:
-    * If a `longtermNodeSelector` is defined, it will be used, then node with the `{{ .Chart.Name }}-longterm` label will be validated, otherwise continue with logic described above in the `monitoring` strategy.
-
-4. `master` - this strategy uses the following logic:
+3`master` - this strategy uses the following logic:
     * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes and nodes with labels designating these nodes as masters in the cluster, then the components of such modules run on system nodes.
 
@@ -271,21 +268,6 @@ The helper gets the global context and the desired strategy as the input to set 
   - key: dedicated.deckhouse.io
     operator: Equal
     value: {{ .Chart.Name }}
-  - key: dedicated.deckhouse.io
-    operator: Equal
-    value: {{ strategy_name }}
-  - key: dedicated.deckhouse.io
-    operator: Equal
-    value: "system"
-  ```
-
-* For the `monitoring-longterm` strategy, the rules will look as follows:
-
-  ```yaml
-  tolerations:
-  - key: dedicated.deckhouse.io
-    operator: Equal
-    value: {{ .Chart.Name }}-longterm
   - key: dedicated.deckhouse.io
     operator: Equal
     value: {{ strategy_name }}
