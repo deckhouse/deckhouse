@@ -97,7 +97,7 @@ func (s *Settings) Clear() {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	s.jsonBytes = []byte{}
+	s.jsonBytes = []byte("{}")
 }
 
 // delete removes field by path without locks.

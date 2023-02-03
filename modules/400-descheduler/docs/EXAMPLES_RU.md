@@ -2,7 +2,7 @@
 title: "Модуль descheduler: примеры"
 ---
 
-## Example CR
+## Пример CR
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -24,4 +24,17 @@ spec:
         enabled: true
         parameters:
           nodeFit: true
+```
+
+## Пример CR для NodeGroup (labelSelector ноды)
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: example-specific-ng
+spec:
+  deploymentTemplate:
+    nodeSelector:
+      node.deckhouse.io/group: worker
 ```

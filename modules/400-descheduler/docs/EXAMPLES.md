@@ -25,3 +25,16 @@ spec:
         parameters:
           nodeFit: true
 ```
+
+## Example CR for specific NodeGroup (Node labelSelector)
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: example-specific-ng
+spec:
+  deploymentTemplate:
+    nodeSelector:
+      node.deckhouse.io/group: worker
+```
