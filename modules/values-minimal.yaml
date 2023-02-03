@@ -1,4 +1,3 @@
 # CE Bundle "Minimal"
 deckhouseConfigEnabled: true
 deckhouseEnabled: true
-externalModuleManagerEnabled: true
