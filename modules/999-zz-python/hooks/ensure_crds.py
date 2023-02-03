@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 
 import yaml
@@ -46,15 +47,21 @@ def main(ctx: hook.Context):
 
     for crd in iter_manifests(find_crds_root(__file__)):
         try:
-            # If Webhook Handler has conversion webhooks for a CRD, it adds '.spec.conversion' to
-            # the CRD dynamically. If we blindly re-create the CRDs, we will lose the conversion
+            # If Webhook Handler has a conversion webhook for a CRD, it adds '.spec.conversion' to
+            # the CRD dynamically. If we blindly re-create the CRD, we will lose the conversion
             # webhook configuration, and conversions will stop working. So we need to read the
             # existing CRD to preserve '.spec.conversion' field.
             # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
 
             name = crd["metadata"]["name"]
-            existing_crd = ext_api.read_custom_resource_definition(name=name)
-            crd["spec"]["conversion"] = existing_crd.spec.conversion.to_dict()
+
+            # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
+            # avoid inner library types.
+            existing_crd_json = ext_api.read_custom_resource_definition(
+                name=name, _preload_content=False
+            ).read()
+            existing_crd = json.loads(existing_crd_json)
+            crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
 
         except client.rest.ApiException as e:
             if e.status == 404:
