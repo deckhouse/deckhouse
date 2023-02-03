@@ -20,7 +20,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       matchNames:
-      - d8-runtime-audit-events
+      - d8-runtime-audit-engine
   labelsFilter:
   - operator: Regex
     values: ["\{.*"] # to collect only JSON logs
