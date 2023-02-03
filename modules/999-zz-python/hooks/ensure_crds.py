@@ -18,7 +18,7 @@ import os
 
 import yaml
 from deckhouse import hook
-from kubernetes import client, config
+from kubernetes import client, config as kube_config
 
 # we expect structure
 # modules/
@@ -42,7 +42,7 @@ onStartup: 5
 
 def main(ctx: hook.Context):
 
-    config.load_kube_config()
+    kube_config.load_kube_config()
     ext_api = client.ApiextensionsV1Api()
 
     for crd in iter_maifests(find_crds_root(__file__)):
