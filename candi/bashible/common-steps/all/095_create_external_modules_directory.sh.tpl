@@ -12,6 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /var/lib/deckhouse/external-modules
 mkdir -p /var/lib/deckhouse/external-modules/modules
 chmod -R 777 /var/lib/deckhouse/external-modules
