@@ -94,19 +94,19 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 	}
 	if value := config.Get("removePodsViolatingInterPodAntiAffinity"); value.Exists() {
 		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled", value.Bool())
-		if err != nil {
-			return err
-		}
 	} else {
 		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled", true)
 	}
+	if err != nil {
+		return err
+	}
 	if value := config.Get("removePodsViolatingNodeAffinity"); value.Exists() {
 		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled", value.Bool())
-		if err != nil {
-			return err
-		}
 	} else {
 		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled", true)
+	}
+	if err != nil {
+		return err
 	}
 	if value := config.Get("removePodsViolatingNodeTaints"); value.Exists() && value.Bool() {
 		deschedulerCr, err = sjson.SetBytes(deschedulerCr, "spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints.enabled", true)

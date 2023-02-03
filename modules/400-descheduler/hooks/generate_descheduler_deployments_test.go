@@ -74,6 +74,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deploy
 			Expect(yaml.Unmarshal([]byte(deschedulerCR), &obj)).Should(Succeed())
 
 			Expect(f.ValuesGet("descheduler.internal.deschedulers.0").Value()).To(BeEquivalentTo(obj))
+			Expect(f.ValuesGet("descheduler.internal.deschedulers.1").Exists()).To(BeFalse())
 		})
 	})
 

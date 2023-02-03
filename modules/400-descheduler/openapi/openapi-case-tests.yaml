@@ -1,0 +1,17 @@
+positive:
+  values:
+    - internal:
+        deschedulers: {}
+    - internal:
+        deschedulers:
+        - apiVersion: deckhouse.io/v1alpha1
+          metadata:
+            name: test
+          spec:
+            deploymentTemplate: {}
+            deschedulerPolicy:
+              globalParameters:
+                evictFailedBarePods: true
+              strategies:
+                highNodeUtilization:
+                  enabled: true
