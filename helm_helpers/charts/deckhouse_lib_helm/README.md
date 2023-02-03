@@ -137,7 +137,7 @@ list:
 
 list:
 -  Dot object (.) with .Values, .Chart, etc 
--   Namespace where CA configmap will be created  
+-  Namespace where CA configmap will be created  
 
 ## Module Ephemeral Storage
 
