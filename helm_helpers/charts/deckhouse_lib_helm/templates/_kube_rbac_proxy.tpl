@@ -2,7 +2,7 @@
 {{- /* Renders configmap with kube-rbac-proxy CA certificate which uses to verify the kube-rbac-proxy clients. */ -}}
 {{- define "helm_lib_kube_rbac_proxy_ca_certificate" -}}
   {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
-  {{- $namespace := index . 1 }} {{- /* Namespace where will be created configmap  */ -}}
+  {{- $namespace := index . 1 }} {{- /*  Namespace where CA configmap will be created  */ -}}
 ---
 apiVersion: v1
 data:

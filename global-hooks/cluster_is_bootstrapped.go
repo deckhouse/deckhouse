@@ -31,7 +31,7 @@ const (
 
 const clusterBootstrapFlagPath = "global.clusterIsBootstrapped"
 
-// bootstraped contains typo.
+// bootstraped contains typo
 // for fix it need do migration
 // keep it, but move into const for fix in future
 const clusterBootstrappedConfigMap = "d8-cluster-is-bootstraped"
