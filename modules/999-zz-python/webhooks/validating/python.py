@@ -46,7 +46,7 @@ def main(ctx: hook.Context):
         else:
             ctx.output.validations.deny(errmsg)
     except Exception as e:
-        print("validating error", str(e))  # debug printing
+        # print("validating error", str(e))  # debug printing
         ctx.output.validations.error(str(e))
 
 

@@ -54,8 +54,8 @@ def main(ctx: hook.Context):
     try:
         bctx = ctx.binding_context
 
-        print("BINDING CONTEXT")
-        print(json.dumps(bctx, indent=2))  # debug printing
+        # print("BINDING CONTEXT")
+        # print(json.dumps(bctx, indent=2))  # debug printing
 
         v_from, v_to = bctx["fromVersion"], bctx["toVersion"]
         objects = bctx["review"]["request"]["objects"]
@@ -72,8 +72,8 @@ def main(ctx: hook.Context):
         print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
 
-    print("CONVERSION RESPONSE")
-    print(json.dumps(ctx.output.conversions.data[0], indent=2))  # debug printing
+    # print("CONVERSION RESPONSE")
+    # print(json.dumps(ctx.output.conversions.data[0], indent=2))  # debug printing
 
 
 class Converter:
