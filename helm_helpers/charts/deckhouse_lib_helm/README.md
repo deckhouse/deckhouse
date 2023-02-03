@@ -543,7 +543,10 @@ list:
 
 #### Arguments
 
+list:
 -  Dot object (.) with .Values, .Chart, etc 
+-  User id 
+-  Group id 
 
 ## Module Storage Class
 

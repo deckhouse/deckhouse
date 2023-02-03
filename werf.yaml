@@ -180,7 +180,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-02-03"
+fromCacheVersion: "2023-02-03.1"
 git:
 - add: /
   to: /deckhouse

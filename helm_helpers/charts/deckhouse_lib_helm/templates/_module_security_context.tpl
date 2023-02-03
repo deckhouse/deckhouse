@@ -116,9 +116,11 @@ securityContext:
 {{- /* returns SecurityContext parameters for Container with read only root filesystem, all dropped, and custom user ID */ -}}
 {{- define "helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom" -}}
 {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+{{- /* User id */ -}}
+{{- /* Group id */ -}}
 securityContext:
-  runAsUser: {{ index . 1 }}  {{- /* User id */ -}}
-  runAsGroup: {{ index . 2 }} {{- /* Group id */ -}}
+  runAsUser: {{ index . 1 }}
+  runAsGroup: {{ index . 2 }}
   runAsNonRoot: true
   readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
