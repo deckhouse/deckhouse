@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_deckhouse_release",
-			Crontab: "*/1 * * * *",
+			Crontab: "*/3 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(handleSource))
