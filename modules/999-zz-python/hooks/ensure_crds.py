@@ -18,6 +18,7 @@ import os
 
 import yaml
 from deckhouse import hook
+from kubernetes import client, config
 
 # we expect structure
 # modules/
@@ -37,12 +38,32 @@ onStartup: 5
 """
 
 
+
+
 def main(ctx: hook.Context):
-    for crd in iter_yamls(find_crds_root(__file__)):
+
+    config.load_kube_config()
+    ext_api = client.ApiextensionsV1Api()
+    # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
+
+    for crd in iter_maifests(find_crds_root(__file__)):
+        # If Webhook Handler has conversion webhooks for a CRD, it adds .spec.conversion to the CRD
+        # dynamically as self-discovery mechanism. If we blindly re-create the CRDs, we will lose
+        # the conversion webhook configuration. So we need to read the existing CRD and merge the
+        # conversion configuration.
+        try:
+            existing_crd = ext_api.read_custom_resource_definition(name=crd["metadata"]["name"])
+            crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
+        except client.rest.ApiException as e:
+            if e.status == 404:
+                # CRD does not exist, create it
+                pass
+            else:
+                raise e
         ctx.kubernetes.create_or_update(crd)
 
 
-def iter_yamls(root_path: str):
+def iter_maifests(root_path: str):
     if not os.path.exists(root_path):
         return
 
@@ -64,7 +85,7 @@ def iter_yamls(root_path: str):
 
         for dirname in dirnames:
             subroot = os.path.join(dirpath, dirname)
-            for manifest in iter_yamls(subroot):
+            for manifest in iter_maifests(subroot):
                 yield manifest
 
 
