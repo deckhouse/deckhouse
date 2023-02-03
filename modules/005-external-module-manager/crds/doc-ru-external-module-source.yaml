@@ -13,7 +13,7 @@ spec:
                   properties:
                     repo:
                       type: string
-                      description: Адрес docker репозитория.
+                      description: Адрес репозитория образов контейнеров.
                     dockerCfg:
                       description: Строка Base64 с вашим токеном для доступа к реестру Docker.
             status:
