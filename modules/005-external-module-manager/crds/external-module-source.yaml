@@ -37,7 +37,7 @@ spec:
                   properties:
                     repo:
                       type: string
-                      description: Repository address.
+                      description: URL of the container registry.
                       x-examples:
                         - registry.deckhouse.io/deckhouse/external-modules
                     dockerCfg:
