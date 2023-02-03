@@ -49,7 +49,7 @@ data:
 `
 )
 
-var _ = FDescribe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
+var _ = Describe("Modules :: descheduler :: hooks :: migrate_from_cm ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 
@@ -125,7 +125,7 @@ spec:
 			f.RunHook()
 		})
 
-		FIt("Should create the default Descheduler CR", func() {
+		It("Should create the default Descheduler CR", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.KubernetesGlobalResource("Descheduler", "legacy").Exists()).To(BeFalse())

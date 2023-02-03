@@ -54,7 +54,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
-	mcVersion, exists, err := unstructured.NestedFloat64(moduleConfig.UnstructuredContent(), "spec", "enabled")
+	mcVersion, exists, err := unstructured.NestedFloat64(moduleConfig.UnstructuredContent(), "spec", "version")
 	if err != nil {
 		return err
 	}
