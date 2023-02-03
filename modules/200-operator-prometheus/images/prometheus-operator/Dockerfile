@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_18_BUSTER
-FROM $BASE_GOLANG_18_BUSTER as artifact
+ARG BASE_GOLANG_18_BULLSEYE
+FROM $BASE_GOLANG_18_BULLSEYE as artifact
 
 RUN apt update && apt install -qfy \
   bash make git ca-certificates openssh-client openssl
