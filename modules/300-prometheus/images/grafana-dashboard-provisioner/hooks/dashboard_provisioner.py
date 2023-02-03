@@ -19,10 +19,17 @@ import tempfile
 import json
 import shutil
 import glob
+import re
 
 for f in glob.glob("/frameworks/shell/*.sh"):
     with open(f, "r") as script:
         exec(script.read())
+
+def slugify(value):
+    value = value.lower()
+    value = re.sub(r"[^\w\s-]", "", value).strip()
+    value = re.sub(r"[-\s]+", "-", value)
+    return value
 
 def __config__():
     config = {

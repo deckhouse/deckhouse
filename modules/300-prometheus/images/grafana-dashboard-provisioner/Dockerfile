@@ -1,8 +1,6 @@
-ARG BASE_SHELL_OPERATOR
-FROM $BASE_SHELL_OPERATOR
-COPY hooks/ /hooks
-RUN apk add --no-cache curl sqlite rsync python3 && \
-  curl https://slugify.vercel.app/ > slugify && \
-  chmod +x slugify && \
-  mv slugify /usr/local/bin/
-ENTRYPOINT ["python3", "/hooks/dashboard_provisioner.py"]
+ARG BASE_PYTHON_ALPINE
+FROM $BASE_PYTHON_ALPINE
+COPY requirements.txt hooks/dashboard_provisioner.py /
+WORKDIR /
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && \apk add --no-cache curl sqlite rsync python3 jq
+ENTRYPOINT ["python3", "/dashboard_provisioner.py"]
