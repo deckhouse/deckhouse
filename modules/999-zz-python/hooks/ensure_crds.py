@@ -21,9 +21,9 @@ from deckhouse import hook
 from kubernetes import client
 from kubernetes import config as kube_config
 
-# we expect structure
+# We expect structure with possible subdirectories like this:
 # modules/
-#   999-your-module-name/
+#   987-your-module-name/
 #       crds/
 #           crd1.yaml
 #           crd2.yaml
@@ -44,16 +44,18 @@ def main(ctx: hook.Context):
     kube_config.load_incluster_config()
     ext_api = client.ApiextensionsV1Api()
 
-    for crd in iter_maifests(find_crds_root(__file__)):
+    for crd in iter_manifests(find_crds_root(__file__)):
         try:
             # If Webhook Handler has conversion webhooks for a CRD, it adds '.spec.conversion' to
             # the CRD dynamically. If we blindly re-create the CRDs, we will lose the conversion
             # webhook configuration, and conversions will stop working. So we need to read the
             # existing CRD to preserve '.spec.conversion' field.
             # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
+
             name = crd["metadata"]["name"]
             existing_crd = ext_api.read_custom_resource_definition(name=name)
-            crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
+            crd["spec"]["conversion"] = existing_crd.spec.conversion.to_dict()
+
         except client.rest.ApiException as e:
             if e.status == 404:
                 # CRD does not exist, create it
@@ -64,7 +66,7 @@ def main(ctx: hook.Context):
         ctx.kubernetes.create_or_update(crd)
 
 
-def iter_maifests(root_path: str):
+def iter_manifests(root_path: str):
     if not os.path.exists(root_path):
         return
 
@@ -86,7 +88,7 @@ def iter_maifests(root_path: str):
 
         for dirname in dirnames:
             subroot = os.path.join(dirpath, dirname)
-            for manifest in iter_maifests(subroot):
+            for manifest in iter_manifests(subroot):
                 yield manifest
 
 
