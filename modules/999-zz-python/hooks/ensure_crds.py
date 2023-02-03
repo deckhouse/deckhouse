@@ -18,7 +18,8 @@ import os
 
 import yaml
 from deckhouse import hook
-from kubernetes import client, config as kube_config
+from kubernetes import client
+from kubernetes import config as kube_config
 
 # we expect structure
 # modules/
@@ -38,11 +39,9 @@ onStartup: 5
 """
 
 
-
-
 def main(ctx: hook.Context):
 
-    kube_config.load_kube_config()
+    kube_config.load_incluster_config()
     ext_api = client.ApiextensionsV1Api()
 
     for crd in iter_maifests(find_crds_root(__file__)):
@@ -52,7 +51,8 @@ def main(ctx: hook.Context):
             # webhook configuration, and conversions will stop working. So we need to read the
             # existing CRD to preserve '.spec.conversion' field.
             # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
-            existing_crd = ext_api.read_custom_resource_definition(name=crd["metadata"]["name"])
+            name = crd["metadata"]["name"]
+            existing_crd = ext_api.read_custom_resource_definition(name=name)
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
         except client.rest.ApiException as e:
             if e.status == 404:
