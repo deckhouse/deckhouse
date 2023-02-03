@@ -160,7 +160,7 @@ tolerations:
 - operator: Exists
 
 {{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
-  {{- else if and $module_values.tolerations }}
+  {{- else if $module_values.tolerations }}
 tolerations:
 {{ $module_values.tolerations | toYaml }}
 
