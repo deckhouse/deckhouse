@@ -94,5 +94,3 @@ def __main__():
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
-
-hook.run()
