@@ -19,7 +19,7 @@ spec:
             status:
               properties:
                 syncTime:
-                  description: 'Время, когда репозиторий последний раз был синхронизирован.'
+                  description: 'Время последней синхронизации с container registry.'
                 availableModules:
                   type: array
                   description: Список доступных для установки модулей в данном репозитории.
