@@ -60,6 +60,9 @@ spec:
   listenLocal: true
   query:
     maxSamples: 100000000
+  additionalArgs:
+    - name: scrape.timestamp-tolerance
+      value: 10ms
   containers:
   - name: prometheus
     startupProbe:

@@ -1,16 +1,14 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_17_BUSTER
-FROM $BASE_GOLANG_17_BUSTER as artifact
+ARG BASE_GOLANG_18_BUSTER
+FROM $BASE_GOLANG_18_BUSTER as artifact
 
 RUN apt update && apt install -qfy \
-  bash make git patch ca-certificates openssh-client openssl
+  bash make git ca-certificates openssh-client openssl
 RUN mkdir /prometheus-operator && cd /prometheus-operator \
-  && git clone -b "v0.56.3" --single-branch https://github.com/prometheus-operator/prometheus-operator.git
+  && git clone -b "v0.62.0" --single-branch https://github.com/prometheus-operator/prometheus-operator.git
 
 WORKDIR /prometheus-operator/prometheus-operator
-COPY patches/scrape-timestamp-align.patch ./
-RUN patch -p1 < scrape-timestamp-align.patch && \
-    go mod tidy && \
+RUN go mod tidy && \
     make operator
 
 FROM $BASE_ALPINE
