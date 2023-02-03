@@ -44,14 +44,14 @@ def main(ctx: hook.Context):
 
     config.load_kube_config()
     ext_api = client.ApiextensionsV1Api()
-    # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
 
     for crd in iter_maifests(find_crds_root(__file__)):
-        # If Webhook Handler has conversion webhooks for a CRD, it adds .spec.conversion to the CRD
-        # dynamically as self-discovery mechanism. If we blindly re-create the CRDs, we will lose
-        # the conversion webhook configuration. So we need to read the existing CRD and merge the
-        # conversion configuration.
         try:
+            # If Webhook Handler has conversion webhooks for a CRD, it adds '.spec.conversion' to
+            # the CRD dynamically. If we blindly re-create the CRDs, we will lose the conversion
+            # webhook configuration, and conversions will stop working. So we need to read the
+            # existing CRD to preserve '.spec.conversion' field.
+            # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
             existing_crd = ext_api.read_custom_resource_definition(name=crd["metadata"]["name"])
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
         except client.rest.ApiException as e:
@@ -60,6 +60,7 @@ def main(ctx: hook.Context):
                 pass
             else:
                 raise e
+
         ctx.kubernetes.create_or_update(crd)
 
 
