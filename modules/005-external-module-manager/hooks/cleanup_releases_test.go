@@ -59,7 +59,7 @@ metadata:
   name: echoserver-v0.0.6
 spec:
   moduleName: echoserver
-  version: 0.0.5
+  version: 0.0.6
 status:
   phase: Deployed
 ---
