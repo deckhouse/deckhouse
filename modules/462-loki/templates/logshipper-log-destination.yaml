@@ -1,0 +1,25 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: d8-{{ .Chart.Name }}
+spec:
+  type: Loki
+  loki:
+    endpoint: "http://loki.d8-{{ .Chart.Name }}:3100"
+{{- if .Values.loki.storeSystemLogs }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: d8-namespaces-to-{{ .Chart.Name }}
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+  destinationRefs:
+  - d8-loki
+{{- end }}

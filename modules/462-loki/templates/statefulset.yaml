@@ -1,0 +1,108 @@
+{{- define "loki_resources" }}
+cpu: 50m
+memory: 512Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: {{ .Chart.Name }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: loki
+      minAllowed:
+        {{- include "loki_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 2Gi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  replicas: 1
+  serviceName: loki
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 4800
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
+      containers:
+      - name: loki
+        image: {{ include "helm_lib_module_image" (list . "loki") }}
+        command: [ '/usr/bin/loki', '-config.file=/etc/loki/config.yaml' ]
+        volumeMounts:
+          - name: config
+            mountPath: /etc/loki/config.yaml
+            subPath: config.yaml
+          - name: storage
+            mountPath: /loki
+        ports:
+          - name: http-metrics
+            containerPort: 3100
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: http-metrics
+          initialDelaySeconds: 45
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http-metrics
+          initialDelaySeconds: 45
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "loki_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Chart.Name }}
+          defaultMode: 0644
+{{- $storageClass := .Values.loki.effectiveStorageClass }}
+{{- if $storageClass }}
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.loki.diskSizeGigabytes | default '2' }}Gi
+      storageClassName: {{ $storageClass }}
+{{- else }}
+      - name: storage
+        emptyDir:
+          sizeLimit: {{ .Values.loki.diskSizeGigabytes | default '2' }}Gi
+{{- end }}

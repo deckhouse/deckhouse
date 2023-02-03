@@ -1,0 +1,15 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: d8-{{ .Chart.Name }}
+spec:
+  type: loki
+  access: proxy
+  url: "http://loki.d8-{{ .Chart.Name }}:3100"
+  basicAuth: false
+  jsonData:
+    timeInterval: 30s
+    maxLines: 5000
+{{- end }}

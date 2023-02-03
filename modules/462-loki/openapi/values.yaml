@@ -1,0 +1,12 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      activated:
+        type: boolean
+        default: false
+        x-examples: [false, true]

@@ -1,0 +1,70 @@
+type: object
+properties:
+  diskSizeGigabytes:
+    description: |
+      Размер диска для хранения логов. Размер PVC при указании `effectiveStorageClass`
+  retentionPeriod:
+    description: |
+      Сколько часов логи будут храниться прежде чем будут удалены.
+  storeSystemLogs:
+    type: boolean
+    default: true
+    x-doc-default: 'true'
+    description: |
+      Сохранять логи из d8-* неймспейсов в loki. Должен быть включен модуль [log-shipper](../460-log-shipper).
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  resourcesRequests:
+    description: |
+      Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла.
+
+      Если модуль `vertical-pod-autoscaler` выключен, максимальные значения становятся значениями по умолчанию.
+    properties:
+      mode:
+        description: |
+          Режим управления реквестами ресурсов.
+      vpa:
+        description: |
+          Настройки режима управления VPA.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки для CPU.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU.
+          memory:
+            description: |
+              Значение для запроса memory.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса memory.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса memory.
+      static:
+        description: |
+          Настройки статического режима управления.
+        properties:
+          cpu:
+            description: |
+              Значение для запроса CPU.
+          memory:
+            description: |
+              Значение для запроса memory.

@@ -1,0 +1,20 @@
+---
+title: "The loki module: configuration"
+---
+
+<!-- SCHEMA -->
+
+## An example of the configuration
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: loki
+spec:
+  settings:
+    effectiveStorageClass: ceph-csi-rbd
+    diskSizeGigabytes: 10
+    retentionPeriod: 48h
+  version: 1
+```
