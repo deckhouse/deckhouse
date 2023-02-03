@@ -54,18 +54,41 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
+	mcVersion, exists, err := unstructured.NestedFloat64(moduleConfig.UnstructuredContent(), "spec", "enabled")
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("moduleConfig does not exists, that should not be happening")
+	}
+	if mcVersion != 1 {
+		input.LogEntry.Infof("moduleConfig is not version 1, skipping migration")
+		return nil
+	}
+
+	moduleEnabled, exists, err := unstructured.NestedBool(moduleConfig.UnstructuredContent(), "spec", "enabled")
+	if err != nil {
+		return err
+	}
+	if exists && !moduleEnabled {
+		input.LogEntry.Infof("module explicitly disabled, skipping migration")
+		return nil
+	}
+
 	deschedulerSettings, exists, err := unstructured.NestedMap(moduleConfig.UnstructuredContent(), "spec", "settings")
 	if err != nil {
 		return err
 	}
 
+	var deschedulerConfigJSON []byte
 	if !exists || len(deschedulerSettings) == 0 {
-		input.LogEntry.Info("Config for descheduler is empty, nothing to migrate")
-	}
-
-	deschedulerConfigJSON, err := json.Marshal(deschedulerSettings)
-	if err != nil {
-		return err
+		input.LogEntry.Info("Config for descheduler is empty, but module is enabled, migrating without config")
+		deschedulerConfigJSON = []byte("{}")
+	} else {
+		deschedulerConfigJSON, err = json.Marshal(deschedulerSettings)
+		if err != nil {
+			return err
+		}
 	}
 
 	_, err = kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), &corev1.ConfigMap{

@@ -93,6 +93,13 @@ func (s *Settings) SetFromJSON(path string, jsonRawValue string) error {
 	return nil
 }
 
+func (s *Settings) Clear() {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.jsonBytes = []byte{}
+}
+
 // delete removes field by path without locks.
 func (s *Settings) delete(path string) error {
 	newValues, err := sjson.DeleteBytes(s.jsonBytes, path)
