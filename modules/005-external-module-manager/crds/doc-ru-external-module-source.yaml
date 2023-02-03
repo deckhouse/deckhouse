@@ -36,4 +36,4 @@ spec:
           jsonPath: .status.syncTime
           type: date
           format: date-time
-          description: 'Время последней синхронизации docker репозитория.'
+          description: 'Время последней синхронизации с container registry.'
