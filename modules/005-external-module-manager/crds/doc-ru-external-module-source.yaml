@@ -15,7 +15,7 @@ spec:
                       type: string
                       description: Адрес репозитория образов контейнеров.
                     dockerCfg:
-                      description: Строка Base64 с вашим токеном для доступа к реестру Docker.
+                      description: Строка с токеном доступа к container registry в Base64.
             status:
               properties:
                 syncTime:
