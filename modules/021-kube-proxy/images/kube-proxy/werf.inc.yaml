@@ -10,15 +10,10 @@ git:
     to: /iptables-wrapper-installer.sh
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "=1.21" $version }}
-    add: /src/_output/bin/kube-proxy
-    to: /usr/local/bin/kube-proxy
-  {{- else }}
     add: /usr/local/bin
     to: /usr/local/bin
     includePaths:
       - kube-proxy
-  {{- end }}
     before: setup
 shell:
   beforeInstall:
@@ -27,33 +22,5 @@ shell:
     - /iptables-wrapper-installer.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "=1.21" $version }}
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
-git:
-- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync
-  install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-  - cd /src
-  - |
-    cat <<EOF > .kube-version
-    KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}'
-    KUBE_GIT_MAJOR='{{ $v.Major }}'
-    KUBE_GIT_MINOR='{{ $v.Minor }}'
-    KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
-    KUBE_GIT_TREE_STATE='archive'
-    EOF
-  - export KUBE_GIT_VERSION_FILE=.kube-version
-  - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
-  - make all WHAT=cmd/kube-proxy
-  {{- else }}
 from: registry.k8s.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeProxy }}
-  {{- end }}
 {{- end }}
