@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.21"
+      kubernetesVersion: "1.23"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -112,11 +112,11 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.21"
         - "1.22"
         - "1.23"
         - "1.24"
         - "1.25"
+        - "1.26"
         - "Automatic"
       proxy:
         type: object

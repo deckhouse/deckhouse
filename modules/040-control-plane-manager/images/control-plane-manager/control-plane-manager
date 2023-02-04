@@ -89,7 +89,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.21"]="1.21" ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" ["1.25"]="1.25" )
+declare -A supported_kubernetes_versions=( ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" ["1.25"]="1.25" ["1.26"]="1.26" )
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
@@ -319,9 +319,6 @@ function converge_component() {
   checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/${component}999checksum.yaml
 
   case $KUBERNETES_VERSION in
-    1.21)
-      experimental_option="--experimental-patches $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
-      ;;
     *)
       experimental_option=""
       ;;
