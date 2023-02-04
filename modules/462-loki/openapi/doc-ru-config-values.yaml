@@ -3,7 +3,7 @@ properties:
   diskSizeGigabytes:
     description: |
       Размер диска для хранения логов. Размер PVC при указании `effectiveStorageClass`
-  retentionPeriod:
+  retentionPeriodHours:
     description: |
       Сколько часов логи будут храниться прежде чем будут удалены.
   storeSystemLogs:

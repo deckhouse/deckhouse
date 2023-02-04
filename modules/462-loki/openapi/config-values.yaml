@@ -11,7 +11,7 @@ properties:
       Disk size for log store. PVC size if `effectiveStorageClass` set.
     x-doc-default: 2
     default: 2
-  retentionPeriod:
+  retentionPeriodHours:
     type: integer
     description: |
       How many hours logs will be kept before they are deleted.

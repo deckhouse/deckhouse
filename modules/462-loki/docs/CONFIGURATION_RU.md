@@ -15,6 +15,6 @@ spec:
   settings:
     effectiveStorageClass: ceph-csi-rbd
     diskSizeGigabytes: 10
-    retentionPeriod: 48h
+    retentionPeriodHours: 48
   version: 1
 ```

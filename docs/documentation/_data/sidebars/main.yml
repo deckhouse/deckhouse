@@ -674,6 +674,16 @@ entries:
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
+            - title: loki
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/462-loki/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/462-loki/configuration.html
             - title: flant-integration
               d8Revision: ee
               folders:
