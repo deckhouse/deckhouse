@@ -368,7 +368,7 @@ docker:
 ---
 artifact: deckhouse-controller
 fromImage: base-for-go
-fromCacheVersion: "20210414"
+fromCacheVersion: "20230202"
 git:
 - add: /
   to: /deckhouse
