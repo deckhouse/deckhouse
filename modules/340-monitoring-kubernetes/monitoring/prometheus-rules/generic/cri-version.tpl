@@ -47,7 +47,7 @@
       )
     labels:
       tier: cluster
-      severity_level: "6"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
