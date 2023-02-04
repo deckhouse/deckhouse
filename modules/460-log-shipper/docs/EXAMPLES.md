@@ -200,6 +200,43 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Index template for Elasticsearch
+
+It is possible to route logs to particular indexes based on metadata using index templating:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ namespace }}-%F"
+```
+
+For the above example for each Kubernetes namespace a dedicated index in Elasticsearch will be created.
+
+This feature works well combining with `extraLabels`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ service }}-{{ namespace }}-%F"
+  extraLabels:
+    service: "{{ service_name }}"
+```
+
+1. If a log message is in JSON format, the `service_name` field of this JSON document is moved to the metadata level.
+2. The new metadata field `service` is used for the index template.
+
 ## Splunk integration
 
 It is possible to send logs from Deckhouse to Splunk.
