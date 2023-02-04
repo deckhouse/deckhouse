@@ -135,26 +135,14 @@ spec:
   - prometheus-api-client-tls
   {{- if .Values.prometheus.longtermNodeSelector }}
   nodeSelector: {{ .Values.prometheus.longtermNodeSelector | toJson }}
-  {{- else if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "prometheus-longterm" | int) 0 }}
-  nodeSelector:
-    node-role.deckhouse.io/prometheus-longterm: ""
   {{- else }}
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2}}
   {{- end }}
   {{- if .Values.prometheus.longtermTolerations }}
   tolerations:
-  {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
+      {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
   {{- else }}
-  tolerations:
-    - key: dedicated.deckhouse.io
-      operator: Equal
-      value: "prometheus-longterm"
-    - key: dedicated.deckhouse.io
-      operator: Equal
-      value: "monitoring"
-    - key: dedicated.deckhouse.io
-      operator: Equal
-      value: "system"
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
   {{- end }}
 
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}

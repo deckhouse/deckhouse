@@ -163,8 +163,8 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 
 If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
 1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
-2. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
-3. You can set both parameters to `false` to disable their automatic calculation.
+1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
+1. You can set both parameters to `false` to disable their automatic calculation.
 
 You cannot set `nodeSelector` and `tolerations` for modules:
 - that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`);
@@ -178,9 +178,6 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
-  * Deckhouse examines nodes to determine a [longtermNodeSelector](modules/300-prometheus/configuration.html#parameters-longtermnodeselector) in the following order:
-    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME-longterm</code> label is present in the cluster.
-    * Otherwise, the logic described in above `nodeSelector` section will be executed.
   * Tolerations to add (note that tolerations are added all at once):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`
 

@@ -24,10 +24,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
-	. "github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
-var _ = Describe("Module :: prometheus :: helm template :: render Prometheus main and longterm node selectors and tolerations in CR", func() {
+var _ = Describe("Module :: prometheus :: helm template :: render Prometheus longterm node selectors and tolerations in CR", func() {
 	const (
 		customNodeSelector = `
 nodeSelector:
@@ -156,54 +155,48 @@ discovery:
 		return fmt.Sprintf(prometheusConfigTemplate, option1, option2)
 	}
 
-	prometheusInstance := func(h *Config, name string) KubeObject {
-		prometheus := h.KubernetesResource("Prometheus", "d8-monitoring", name)
-		Expect(prometheus.Exists()).To(BeTrue())
-
-		return prometheus
-	}
-
 	f := SetupHelmConfig(``)
 
 	DescribeTable(
-		"Node selectors for main and longterm Prometheus deployments were rendered correctly",
-		func(nodeCount, nodeSelector, longtermNodeSelector, expectedMainSelector, expectedLongtermNodeSelector string) {
+		"Node selectors for longterm Prometheus deployments were rendered correctly",
+		func(nodeCount, nodeSelector, longtermNodeSelector, expectedNodeSelector string) {
 			f.ValuesSetFromYaml("global", getGlobalValues(nodeCount))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(nodeSelector, longtermNodeSelector))
 			f.HelmRender()
 
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			prometheusMain := prometheusInstance(f, "main")
-			prometheusLongterm := prometheusInstance(f, "longterm")
+			prometheus := f.KubernetesResource("Prometheus", "d8-monitoring", "longterm")
+			Expect(prometheus.Exists()).To(BeTrue())
 
-			Expect(prometheusMain.Field("spec.nodeSelector").String()).To(MatchJSON(expectedMainSelector))
-			Expect(prometheusLongterm.Field("spec.nodeSelector").String()).To(MatchJSON(expectedLongtermNodeSelector))
+			Expect(prometheus.Field("spec.nodeSelector").String()).To(MatchJSON(expectedNodeSelector))
 		},
 
-		Entry("Single node configuration", "", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("system")),
-		Entry("Separate prometheus-longterm node", "prometheus-longterm: 1", "", "", deckhouseNodeRole("system"), deckhouseNodeRole("prometheus-longterm")),
-		Entry("Separate monitoring node", "monitoring: 1", "", "", deckhouseNodeRole("monitoring"), deckhouseNodeRole("monitoring")),
-		Entry("Custom main and longterm node selectors", "", customNodeSelector, customLongtermNodeSelector, `{"main-prometheus": ""}`, `{"longterm-prometheus": ""}`),
+		Entry("Single node configuration", "", "", "", deckhouseNodeRole("system")),
+		Entry("Separate monitoring node", "monitoring: 1", "", "", deckhouseNodeRole("monitoring")),
+		Entry("No custom main and set longterm node selectors", "monitoring: 1", "", customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
+		Entry("Custom main and no longterm node selectors", "monitoring: 1", customNodeSelector, "", `{"main-prometheus": ""}`),
+		Entry("Custom main and longterm node selectors", "", customNodeSelector, customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
 	)
 
 	DescribeTable(
-		"Tolerations for main and longterm Prometheus deployments were rendered correctly",
-		func(tolerations, longtermTolerations, expectedTolerations, expectedLongtermTolerations string) {
+		"Tolerations for longterm Prometheus deployments were rendered correctly",
+		func(tolerations, longtermTolerations, expectedTolerations string) {
 			f.ValuesSetFromYaml("global", getGlobalValues(""))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(tolerations, longtermTolerations))
 			f.HelmRender()
 
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			prometheusMain := prometheusInstance(f, "main")
-			prometheusLongterm := prometheusInstance(f, "longterm")
+			prometheus := f.KubernetesResource("Prometheus", "d8-monitoring", "longterm")
+			Expect(prometheus.Exists()).To(BeTrue())
 
-			Expect(prometheusMain.Field("spec.tolerations").String()).To(MatchJSON(expectedTolerations))
-			Expect(prometheusLongterm.Field("spec.tolerations").String()).To(MatchJSON(expectedLongtermTolerations))
+			Expect(prometheus.Field("spec.tolerations").String()).To(MatchJSON(expectedTolerations))
 		},
 
-		Entry("No custom tolerations specified for main and longterm", "", "", expectedDefaultTolerations("prometheus"), expectedDefaultTolerations("prometheus-longterm")),
-		Entry("Custom tolerations specified for main and longterm", tolerations, longtermTolerations, expectedTolerations("my-tolerations"), expectedTolerations("my-longterm-tolerations")),
+		Entry("No custom tolerations specified for main and longterm", "", "", expectedDefaultTolerations("prometheus")),
+		Entry("Custom main and no longterm tolerations", tolerations, "", expectedTolerations("my-tolerations")),
+		Entry("No custom main and set longterm tolerations", "", longtermTolerations, expectedTolerations("my-longterm-tolerations")),
+		Entry("Custom main and longterm tolerations", tolerations, longtermTolerations, expectedTolerations("my-longterm-tolerations")),
 	)
 })
