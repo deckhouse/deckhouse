@@ -298,6 +298,7 @@ git:
   - testing
   - go.mod
   - go.sum
+  - .golangci.yaml
   excludePaths:
   - docs
   - modules/*/docs
