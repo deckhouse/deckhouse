@@ -200,6 +200,43 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Шаблон индекса для Elasticsearch
+
+Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ namespace }}-%F"
+```
+
+В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
+
+Эта функция так же хорошо работает в комбинации с `extraLabels`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ service }}-{{ namespace }}-%F"
+  extraLabels:
+    service: "{{ service_name }}"
+```
+
+1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
+2. Новое поле метаданных `service` используется в шаблоне индекса.
+
 ## Пример интеграции со Splunk
 
 Существует возможность отсылать события из Deckhouse в Splunk.
