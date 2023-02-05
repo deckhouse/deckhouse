@@ -39,6 +39,14 @@ The module supports platforms for which there is a corresponding cloud provider 
 The following Managed Kubernetes services are also supported (not all service functionality may be available):
 - Google Kubernetes Engine(GKE).
 
+## Node types
+
+The following node types are supported:
+- `CloudEphemeral` — such nodes are automatically ordered, created, and deleted in the configured cloud provider.
+- `CloudPermanent` — they differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../030-cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
+- `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the node even if one of the cloud providers is enabled.
+
 ## Node grouping and group management
 
 Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) custom resource.
