@@ -39,7 +39,7 @@ properties:
       Names of available bashible OS bundles to reduce Helm release size.
   allowedKubernetesVersions:
     type: array
-    enum:
+    default:
       - "1.22"
       - "1.23"
       - "1.24"
