@@ -11,7 +11,9 @@ properties:
     default: true
     x-doc-default: 'true'
     description: |
-      Сохранять логи из d8-* неймспейсов в loki. Должен быть включен модуль [log-shipper](../460-log-shipper).
+      Сохранять логи из пространства имен `d8-*` в loki.
+
+      Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
