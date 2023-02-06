@@ -262,6 +262,44 @@ spec:
     endpoint: logstash.default:12345
 ```
 
+## Collect Kubernetes Events
+
+Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../340-extended-monitoring/) module configuration.
+
+Enable `events-exporter` by adjusting `extended-monitoring` settings:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+spec:
+  version: 1
+  settings:
+    events:
+      exporterEnabled: true
+```
+
+Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` Pod:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubernetes-events
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: events-exporter
+    namespaceSelector:
+      matchNames:
+      - d8-monitoring
+  destinationRefs:
+  - -destination-ref-
+```
+
 ## Logs filters
 
 Only Nginx container logs:
@@ -299,7 +337,6 @@ spec:
 Only error logs of backend microservices:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -331,7 +368,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       labelSelector:
-        matchNames:
+        matchLabels:
           environment: production
   destinationRefs:
   - loki-storage
