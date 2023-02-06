@@ -35,6 +35,10 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	// check symlinks exist on the startup
+	OnBeforeHelm: &go_hook.OrderedConfig{
+		Order: 5,
+	},
 	Queue: "/modules/external-module-source/apply-release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -84,10 +88,23 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		pred.calculateRelease()
 
+		symlinkName := path.Join(externalModulesDir, "modules", "900-"+module) // TODO: calculate index somehow
+
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
 			deployedRelease := pred.releases[pred.currentReleaseIndex]
 			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
+
+			// check symlink exists on FS
+			if !isModuleExistsOnFS(symlinkName) {
+				modulePath := path.Join(externalModulesDir, module, "v"+deployedRelease.Version.String())
+				err := enableModule(symlinkName, modulePath)
+				if err != nil {
+					input.LogEntry.Errorf("Module restore failed: %v", err)
+					continue
+				}
+			}
+
 			continue
 		}
 
@@ -120,11 +137,11 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 		if pred.desiredReleaseIndex >= 0 {
 			release := pred.releases[pred.desiredReleaseIndex]
 
-			symlinkName := path.Join(externalModulesDir, "modules", "950-"+module) // TODO: calculate index somehow
 			modulePath := path.Join(externalModulesDir, module, "v"+release.Version.String())
+
 			err := enableModule(symlinkName, modulePath)
 			if err != nil {
-				input.LogEntry.Errorf("Module release failed: %v", err)
+				input.LogEntry.Errorf("Module deploy failed: %v", err)
 				continue
 			}
 			modulesChanged = true
@@ -149,6 +166,14 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func isModuleExistsOnFS(symlinkPath string) bool {
+	if _, err := os.Lstat(symlinkPath); err == nil {
+		return true
+	}
+
+	return false
 }
 
 func enableModule(symlinkPath, modulePath string) error {
