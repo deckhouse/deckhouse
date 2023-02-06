@@ -16,6 +16,7 @@
 
 import json
 import os
+from pprint import pprint
 
 import yaml
 from deckhouse import hook
@@ -41,22 +42,36 @@ onStartup: 5
 
 
 def main():
-    hook.run(handle, config=config)
+    crd_getter = CRDGetter()
+    hook.run(handler(crd_getter), config=config)
 
 
-from pprint import pprint
+class CRDGetter:
+    def __init__(self) -> None:
+        kube_config.load_incluster_config()
+        self.ext_api = client.ApiextensionsV1Api()
+
+    def get(self, name: str) -> dict:
+        existing_crd_json = self.ext_api.read_custom_resource_definition(
+            name=name, _preload_content=False
+        ).read()
+
+        return json.loads(existing_crd_json)
 
 
 def zzz(s):
-    print(f"ZZZ: {s}")
+    # print(f"ZZZ: {s}")
+    pass
 
 
-def handle(ctx: hook.Context):
-    zzz("Starting handle")
-    kube_config.load_incluster_config()
-    zzz("Loaded kubeconfig")
-    ext_api = client.ApiextensionsV1Api()
-    zzz("Created ext_api")
+def handler(crd_getter):
+    def handle(ctx: hook.Context):
+        return __handle(ctx, crd_getter)
+
+    return handle
+
+
+def __handle(ctx: hook.Context, crd_getter: CRDGetter):
 
     for crd in iter_manifests(find_crds_root(__file__)):
         try:
@@ -71,11 +86,7 @@ def handle(ctx: hook.Context):
 
             # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
             # avoid inner library types.
-            existing_crd_json = ext_api.read_custom_resource_definition(
-                name=name, _preload_content=False
-            ).read()
-            zzz(f"Read CRD {name}")
-            existing_crd = json.loads(existing_crd_json)
+            existing_crd = crd_getter.get(name=name)
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
 
         except client.rest.ApiException as e:
@@ -86,7 +97,7 @@ def handle(ctx: hook.Context):
                 raise e
 
         zzz("CRD Output")
-        pprint(crd)
+        # pprint(crd)
         ctx.kubernetes.create_or_update(crd)
 
 
@@ -109,11 +120,6 @@ def iter_manifests(root_path: str):
                     if manifest is None:
                         continue
                     yield manifest
-
-        for dirname in dirnames:
-            subroot = os.path.join(dirpath, dirname)
-            for manifest in iter_manifests(subroot):
-                yield manifest
 
 
 def find_crds_root(hookpath):
