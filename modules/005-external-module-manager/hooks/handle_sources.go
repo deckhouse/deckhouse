@@ -85,8 +85,8 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return newex, err
 }
 
-func getSourceChecksums(checksumFilePath string) (map[string]map[string]string, error) {
-	var sourcesChecksum map[string]map[string]string
+func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
+	var sourcesChecksum sourceChecksum
 
 	if _, err := os.Stat(checksumFilePath); err == nil {
 		checksumFile, err := os.Open(checksumFilePath)
@@ -103,10 +103,10 @@ func getSourceChecksums(checksumFilePath string) (map[string]map[string]string, 
 		return sourcesChecksum, nil
 	}
 
-	return make(map[string]map[string]string), nil
+	return make(sourceChecksum), nil
 }
 
-func saveSourceChecksums(checksumFilePath string, checksums map[string]map[string]string) error {
+func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) error {
 	data, _ := json.Marshal(checksums)
 
 	return os.WriteFile(checksumFilePath, data, 0666)
@@ -156,15 +156,14 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		sc.AvailableModules = tags
 		moduleErrors := make([]v1alpha1.ModuleError, 0)
 
-		// fetch release image
-		modulesChecksum := make(map[string]string)
+		mChecksum := make(moduleChecksum)
 
 		if data, ok := sourcesChecksum[ex.Name]; ok {
-			modulesChecksum = data
+			mChecksum = data
 		}
 
 		for _, moduleName := range tags {
-			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, modulesChecksum, opts)
+			moduleVersion, err := fetchModuleVersion(input.LogEntry, dc, ex, moduleName, mChecksum, opts)
 			if err != nil {
 				moduleErrors = append(moduleErrors, v1alpha1.ModuleError{
 					Name:  moduleName,
@@ -194,7 +193,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		if len(sc.ModuleErrors) > 0 {
 			sc.Msg = "Some errors occurred. Inspect status for details"
 		} else {
-			sourcesChecksum[ex.Name] = modulesChecksum
+			sourcesChecksum[ex.Name] = mChecksum
 		}
 		updateSourceStatus(input, ex.Name, sc)
 	}
@@ -423,3 +422,7 @@ func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.Exter
 
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "ExternalModuleSource", "", name, object_patch.WithSubresource("/status"))
 }
+
+type moduleChecksum map[string]string
+
+type sourceChecksum map[string]moduleChecksum
