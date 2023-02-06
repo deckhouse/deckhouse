@@ -461,7 +461,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_aws_containerd_1_23
@@ -879,7 +879,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_azure_containerd_1_23
@@ -1285,7 +1285,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_gcp_containerd_1_23
@@ -1699,7 +1699,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_23
@@ -2105,7 +2105,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_openstack_containerd_1_23
@@ -2515,7 +2515,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_vsphere_containerd_1_23
@@ -2921,7 +2921,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_23
