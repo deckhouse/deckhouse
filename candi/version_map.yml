@@ -217,7 +217,7 @@ k8s:
     bashible: *bashible_k8s_ge_1_22
     ccm:
       openstack: v1.26.0
-      yandex: v0.25.2 # TODO update
+      yandex: v0.26.0
       aws: v1.26.0
       vsphere: v1.25.0 # TODO update
       azure: v1.26.4
