@@ -28,7 +28,7 @@ properties:
     description: |
       Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла.
 
-      Если модуль `vertical-pod-autoscaler` выключен, максимальные значения становятся значениями по умолчанию.
+      Если модуль [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) выключен, то максимальные значения становятся значениями по умолчанию.
     properties:
       mode:
         description: |
