@@ -1,8 +1,8 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_16_ALPINE
+ARG BASE_GOLANG_19_ALPINE
 
 # Based on https://github.com/nabokihms/events_exporter/blob/main/Dockerfile
-FROM $BASE_GOLANG_16_ALPINE as artifact
+FROM $BASE_GOLANG_19_ALPINE as artifact
 RUN apk add --no-cache --update alpine-sdk bash
 
 WORKDIR /usr/local/src/events_exporter
@@ -16,7 +16,7 @@ ARG GOPROXY
 
 ENV GOARCH=amd64
 RUN apk add --no-cache make git && \
-    git clone --branch v0.0.3 --depth 1 https://github.com/nabokihms/events_exporter.git . && \
+    git clone --branch v0.0.4 --depth 1 https://github.com/nabokihms/events_exporter.git . && \
     make build
 
 

@@ -179,7 +179,7 @@ spec:
   url: http://loki.loki:3100
 ```
 
-## Поддержка elasticsearch < 6.X
+## Поддержка Elasticsearch < 6.X
 
 Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
 Сделать это можно следующим образом:
@@ -297,6 +297,44 @@ spec:
   type: Logstash
   logstash:
     endpoint: logstash.default:12345
+```
+
+## Сбор событий Kubernetes
+
+События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
+
+Включите events-exporter изменив параметры модуля `extended-monitoring`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+spec:
+  version: 1
+  settings:
+    events:
+      exporterEnabled: true
+```
+
+Выложите в кластер следующий `ClusterLoggingConfig` чтобы собирать сообщения с Pod'а `events-exporter`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubernetes-events
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: events-exporter
+    namespaceSelector:
+      matchNames:
+      - d8-monitoring
+  destinationRefs:
+  - -destination-ref-
 ```
 
 ## Фильтрация логов
