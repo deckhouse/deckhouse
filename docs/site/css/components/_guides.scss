@@ -1,0 +1,125 @@
+@import "components/common/_variables.scss";
+
+.guides {
+    position: relative;
+    min-height: 800px;
+    width: 700px;
+    margin: 0px auto;
+
+    &__header {
+        font-size: $font-size-h3;
+        color: $color-main;
+        margin: 2em 0 2em 0;
+    }
+
+    &__content {
+        display: flex;
+        gap: 2em;
+        flex-wrap: wrap;
+        //align-items: center;
+        justify-content: flex-start;
+        overflow: auto;
+
+        &-item {
+            //margin: 0 .8% 20px;
+            flex: 1;
+            padding: 1.5em 1em;
+            cursor: pointer;
+            min-width: 33%;
+            min-height: 200px;
+            border: 2px solid $color-main;
+            border-radius: 10px;
+            vertical-align: top;
+            line-height: 1.5;
+
+            &-header {
+                font-size: $font-size-h2;
+                font-weight: $font-weight-semibold;
+                color: $color-alt;
+            }
+
+            img {
+                max-width: 50px;
+                max-height: 50px;
+                margin-right: 10px;
+            }
+
+            &:hover {
+                background: $color-smooth;
+            }
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        p {
+            font-weight: $font-weight-semibold;
+            color: $color-main;
+            font-size: $font-size-base;
+        }
+
+    }
+
+    &__alert {
+        display: none;
+        padding: 15px;
+        margin-bottom: 15px;
+        font-size: 16px;
+        //letter-spacing: -0.3px;
+        line-height: 24px;
+        border-radius: 1em;
+        border: 1px solid;
+        border-style: solid;
+        border-left-width: 0.5em;
+        //border-right-width: 0.5em;
+        //background-color: $color-smooth;
+
+
+        &.active {
+            display: block;
+        }
+
+        &.info {
+            //color: $color-inverse;
+            //background-color: $color-alt;
+            border-color: $color-alt;
+
+            a {
+                color: $color-alt;
+                //color: $color-smooth;
+                //text-decoration: underline;
+            }
+
+            //a:hover {
+            //    text-decoration: none;
+            //}
+
+            p {
+                color: $color-main;
+                //color: $color-smooth;
+            }
+        }
+
+        &.warning {
+            //color: #856404;
+            //background-color: #fff3cd;
+            border-color: #fff3cd;;
+            a {
+                color: $color-alt;
+            }
+
+            p {
+                color: $color-main;
+            }
+        }
+    }
+
+}
+
+  @media (min-width: $container-breakpoint-lg) {
+      .guides {
+          width: $container-width-lg * 0.75;
+      }
+  }
+

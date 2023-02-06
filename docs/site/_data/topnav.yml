@@ -5,10 +5,10 @@ topnav:
       items:
       - title: Getting started
         url: /gs/
+      - title: Guides
+        url: /guides/production.html
       - title: Documentation
         url: /documentation/v1/deckhouse-overview.html
-      - title: Community
-        url: /community/about.html
       - title: Products
         url: '#'
         items:
@@ -36,15 +36,17 @@ topnav:
             url: /regulations.html
           - title: Blog
             external_url: 'https://blog.deckhouse.io/'
+          - title: Community
+            url: /community/about.html
   ru:
     - title: Topnav
       items:
       - title: Быстрый старт
         url: /gs/
+      - title: Руководства
+        url: /guides/production.html
       - title: Документация
         url: /documentation/v1/deckhouse-overview.html
-      - title: Сообщество
-        url: /community/about.html
       - title: Продукты
         url: '#'
         items:
@@ -84,7 +86,8 @@ topnav:
             url: /license.html
           - title: Правила лицензирования
             url: /license_rules.html
-
+          - title: Сообщество
+            url: /community/about.html
           - title: Блог
             external_url: 'https://blog.deckhouse.io/'
           - title: Вакансии

@@ -1,0 +1,7 @@
+{% for entry in site.data.sidebars.guides.entries %}
+  <a class="guides__content-item" href="{{ entry.url }}">
+    {% if entry.icon %}<img class="guides__content-item-icon" src="{{ entry.icon }}" />{% endif %}
+    <span class="guides__content-item-header" >{{ entry.title[page.lang] }}</span>
+    <p>{{ entry.description[page.lang] }}</p>
+  </a>
+{% endfor %}

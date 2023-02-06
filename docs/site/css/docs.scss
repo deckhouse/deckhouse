@@ -1,3 +1,5 @@
+@import "components/common/_variables.scss";
+
 .breadcrumbs-container {
     display: flex;
     flex-direction: row;
@@ -292,6 +294,7 @@
 .layout-sidebar__sidebar {
     width: 260px;
     margin-right: 40px;
+    margin-top: 40px;
     display: block;
 }
 
@@ -1295,4 +1298,71 @@ ul .resources__prop_title {
     user-select: none;
     filter: blur(4px);
   }
+}
+
+#toc-sidebar {
+    position: fixed;
+    width: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    margin: 0 auto;
+    margin-bottom: 50px;
+    padding: 0;
+    padding-right: 10px;
+    list-style-type: none;
+}
+
+#toc-sidebar a {
+    color: $color-main;
+    text-decoration: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#toc-sidebar a:hover {
+    color: $color-alt;
+}
+
+#toc-sidebar a.active {
+    font-weight: $font-weight-bold;
+}
+
+#toc-sidebar ul {
+    font-size: 16px;
+    font-weight: $font-weight-regular;
+    font-style: normal;
+    font-stretch: normal;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#toc-sidebar ul li {
+    padding: 0.6em 0;
+    position: relative;
+}
+
+#toc-sidebar > ul > li {
+    position: relative;
+}
+
+#toc-sidebar ul ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    font-weight: $font-weight-regular;
+    font-style: normal;
+    font-stretch: normal;
+}
+
+#toc-sidebar ul ul > li {
+    position: relative;
+    margin-left: 15px;
+    padding: 1em 0 0 0;
 }
