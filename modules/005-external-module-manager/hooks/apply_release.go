@@ -88,7 +88,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 
 		pred.calculateRelease()
 
-		symlinkName := path.Join(externalModulesDir, "modules", "900-"+module) // TODO: calculate index somehow
+		symlinkName := path.Join(externalModulesDir, "modules", "900-"+module)
 
 		if pred.currentReleaseIndex == len(pred.releases)-1 {
 			// latest release deployed
