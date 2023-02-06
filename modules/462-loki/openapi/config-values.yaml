@@ -8,7 +8,7 @@ properties:
   diskSizeGigabytes:
     type: integer
     description: |
-      Disk size for log store. PVC size if `effectiveStorageClass` set.
+      Disk size for storing logs or the size of the PVC when specifying the [storageClass](#parameters-storageclass) parameters.
     x-doc-default: 2
     default: 2
   retentionPeriodHours:
