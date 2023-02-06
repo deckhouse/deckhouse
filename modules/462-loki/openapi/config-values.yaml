@@ -57,9 +57,9 @@ properties:
     required: ["mode"]
     type: object
     description: |
-      Max amounts of CPU and memory resources that the pod can request when selecting a node.
+      Max amounts of CPU and memory resources that the Pod can request when selecting a node.
 
-      If the `vertical-pod-autoscaler` module is disabled, then these values become the default ones.
+      If the [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) module is disabled, then these values become the default ones.
     default: {}
     x-examples:
     - mode: VPA
