@@ -2,7 +2,7 @@ type: object
 properties:
   diskSizeGigabytes:
     description: |
-      Размер диска для хранения логов. Размер PVC при указании `effectiveStorageClass`
+      Размер диска для хранения логов или размер PVC при указании параметра [storageClass](#parameters-storageclass).
   retentionPeriodHours:
     description: |
       Сколько часов логи будут храниться прежде чем будут удалены.
