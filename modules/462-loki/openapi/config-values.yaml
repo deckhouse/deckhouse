@@ -22,7 +22,9 @@ properties:
     default: true
     x-doc-default: 'true'
     description: |
-      Store logs from d8-* namespaces into loki. [log-shipper](../460-log-shipper) module must be enabled.
+      Store logs from `d8-*` namespaces into loki.
+
+      The [log-shipper](../460-log-shipper) module must be enabled.
   nodeSelector:
     type: object
     additionalProperties:
