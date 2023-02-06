@@ -16,7 +16,6 @@
 
 import json
 import os
-from pprint import pprint
 
 import yaml
 from deckhouse import hook
@@ -52,16 +51,13 @@ class CRDGetter:
         self.ext_api = client.ApiextensionsV1Api()
 
     def get(self, name: str) -> dict:
+        # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
+        # avoid inner library types.
         existing_crd_json = self.ext_api.read_custom_resource_definition(
             name=name, _preload_content=False
         ).read()
 
         return json.loads(existing_crd_json)
-
-
-def zzz(s):
-    # print(f"ZZZ: {s}")
-    pass
 
 
 def handler(crd_getter):
@@ -81,23 +77,17 @@ def __handle(ctx: hook.Context, crd_getter: CRDGetter):
             # existing CRD to preserve '.spec.conversion' field.
             # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
 
-            name = crd["metadata"]["name"]
-            zzz(f"Reading CRD {name}")
-
-            # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
-            # avoid inner library types.
-            existing_crd = crd_getter.get(name=name)
+            existing_crd = crd_getter.get(name=crd["metadata"]["name"])
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
 
         except client.rest.ApiException as e:
             if e.status == 404:
-                # CRD does not exist, create it
+                # CRD is new for the cluster
                 pass
             else:
+                # Unexpected error
                 raise e
 
-        zzz("CRD Output")
-        # pprint(crd)
         ctx.kubernetes.create_or_update(crd)
 
 
@@ -105,7 +95,7 @@ def iter_manifests(root_path: str):
     if not os.path.exists(root_path):
         return
 
-    for dirpath, dirnames, filenames in os.walk(top=root_path):
+    for dirpath, _, filenames in os.walk(top=root_path):
         for filename in filenames:
             if not filename.endswith(".yaml"):
                 # Wee only seek manifests
