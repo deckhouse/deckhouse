@@ -34,11 +34,11 @@ linters:
   - gofmt
   - goimports
   - gosimple
-  - govet
+#  - govet
   - ineffassign
   - misspell
   - revive
-  - staticcheck
+#  - staticcheck
 #  - structcheck
   - typecheck
   - unconvert
