@@ -40,10 +40,23 @@ onStartup: 5
 """
 
 
-def main(ctx: hook.Context):
+def main():
+    hook.run(handle, config=config)
 
+
+from pprint import pprint
+
+
+def zzz(s):
+    print(f"ZZZ: {s}")
+
+
+def handle(ctx: hook.Context):
+    zzz("Starting handle")
     kube_config.load_incluster_config()
+    zzz("Loaded kubeconfig")
     ext_api = client.ApiextensionsV1Api()
+    zzz("Created ext_api")
 
     for crd in iter_manifests(find_crds_root(__file__)):
         try:
@@ -54,12 +67,14 @@ def main(ctx: hook.Context):
             # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
 
             name = crd["metadata"]["name"]
+            zzz(f"Reading CRD {name}")
 
             # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
             # avoid inner library types.
             existing_crd_json = ext_api.read_custom_resource_definition(
                 name=name, _preload_content=False
             ).read()
+            zzz(f"Read CRD {name}")
             existing_crd = json.loads(existing_crd_json)
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
 
@@ -70,6 +85,8 @@ def main(ctx: hook.Context):
             else:
                 raise e
 
+        zzz("CRD Output")
+        pprint(crd)
         ctx.kubernetes.create_or_update(crd)
 
 
@@ -107,4 +124,4 @@ def find_crds_root(hookpath):
 
 
 if __name__ == "__main__":
-    hook.run(main, config=config)
+    main()
