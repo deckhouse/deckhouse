@@ -50,9 +50,11 @@ def main():
 
 @dataclass
 class CRDGetter:
+    """Getting CRD dict by name from cluster, abstracting from kubernetes client."""
+
     ext_api: client.ApiextensionsV1Api
 
-    def get(self, name: str) -> dict:
+    def get(self, name: str) -> dict | None:
         try:
             existing_crd_json = self.ext_api.read_custom_resource_definition(
                 name=name,
