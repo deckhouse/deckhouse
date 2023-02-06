@@ -18,19 +18,15 @@
 from dataclasses import dataclass
 
 from deckhouse import hook
-from ensure_crds import CRDGetter, handler
-from kubernetes import client
+from ensure_crds import handler
 
 
 @dataclass
-class CRDGetterMock(CRDGetter):
+class CRDGetterMock:
     crds: dict
 
     def get(self, name: str) -> dict:
         crd = self.crds.get(name, None)
-        print("mock get", name, crd)
-        if crd is None:
-            raise client.rest.ApiException(status=404)
         return crd
 
 

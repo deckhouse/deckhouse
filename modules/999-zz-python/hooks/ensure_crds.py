@@ -16,6 +16,7 @@
 
 import json
 import os
+from dataclasses import dataclass
 
 import yaml
 from deckhouse import hook
@@ -41,23 +42,32 @@ onStartup: 5
 
 
 def main():
-    crd_getter = CRDGetter()
+    kube_config.load_incluster_config()
+    crd_getter = CRDGetter(client.ApiextensionsV1Api())
+
     hook.run(handler(crd_getter), config=config)
 
 
+@dataclass
 class CRDGetter:
-    def __init__(self) -> None:
-        kube_config.load_incluster_config()
-        self.ext_api = client.ApiextensionsV1Api()
+    ext_api: client.ApiextensionsV1Api
 
     def get(self, name: str) -> dict:
-        # We just want to put JSON into ctx.kubrentes collector, so we use _preload_content=False to
-        # avoid inner library types.
-        existing_crd_json = self.ext_api.read_custom_resource_definition(
-            name=name, _preload_content=False
-        ).read()
+        try:
+            existing_crd_json = self.ext_api.read_custom_resource_definition(
+                name=name,
+                _preload_content=False,  # avoid inner library types, we just want JSON
+            ).read()
 
-        return json.loads(existing_crd_json)
+            return json.loads(existing_crd_json)
+
+        except client.rest.ApiException as e:
+            if e.status == 404:
+                # CRD is new for the cluster
+                return None
+
+            # Unexpected error
+            raise e
 
 
 def handler(crd_getter):
@@ -68,25 +78,15 @@ def handler(crd_getter):
 
 
 def __handle(ctx: hook.Context, crd_getter: CRDGetter):
-
     for crd in iter_manifests(find_crds_root(__file__)):
-        try:
-            # If Webhook Handler has a conversion webhook for a CRD, it adds '.spec.conversion' to
-            # the CRD dynamically. If we blindly re-create the CRD, we will lose the conversion
-            # webhook configuration, and conversions will stop working. So we need to read the
-            # existing CRD to preserve '.spec.conversion' field.
-            # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
-
-            existing_crd = crd_getter.get(name=crd["metadata"]["name"])
+        # If Webhook Handler has a conversion webhook for a CRD, it adds '.spec.conversion' to
+        # the CRD dynamically. If we blindly re-create the CRD, we will lose the conversion
+        # webhook configuration, and conversions will stop working. So we need to read the
+        # existing CRD to preserve '.spec.conversion' field.
+        # https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/ApiextensionsV1Api.md#read_custom_resource_definition
+        existing_crd = crd_getter.get(name=crd["metadata"]["name"])
+        if existing_crd is not None:
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
-
-        except client.rest.ApiException as e:
-            if e.status == 404:
-                # CRD is new for the cluster
-                pass
-            else:
-                # Unexpected error
-                raise e
 
         ctx.kubernetes.create_or_update(crd)
 
