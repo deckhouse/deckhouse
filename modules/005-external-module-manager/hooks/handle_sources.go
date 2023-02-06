@@ -33,10 +33,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -60,23 +58,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                "ExternalModuleSource",
 			ExecuteHookOnEvents: pointer.Bool(true),
 			FilterFunc:          filterSource,
-		},
-		{
-			// d8-external-modules-checksums
-			Name:                         "checksum",
-			ApiVersion:                   "v1",
-			Kind:                         "ConfigMap",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-external-modules-checksum"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			FilterFunc: filterChecksumCM,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -104,33 +85,44 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return newex, err
 }
 
-func filterChecksumCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm corev1.ConfigMap
+func getSourceChecksums(checksumFilePath string) (map[string]map[string]string, error) {
+	var sourcesChecksum map[string]map[string]string
 
-	err := sdk.FromUnstructured(obj, &cm)
-	if err != nil {
-		return nil, err
+	if _, err := os.Stat(checksumFilePath); err == nil {
+		checksumFile, err := os.Open(checksumFilePath)
+		if err != nil {
+			return nil, err
+		}
+		defer checksumFile.Close()
+
+		err = json.NewDecoder(checksumFile).Decode(&sourcesChecksum)
+		if err != nil {
+			return nil, err
+		}
+
+		return sourcesChecksum, nil
 	}
 
-	return cm.BinaryData, nil
+	return make(map[string]map[string]string), nil
+}
+
+func saveSourceChecksums(checksumFilePath string, checksums map[string]map[string]string) error {
+	data, _ := json.Marshal(checksums)
+
+	return os.WriteFile(checksumFilePath, data, 0666)
 }
 
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
+	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
+	checksumFilePath := path.Join(externalModulesDir, "checksum.json")
 	ts := time.Now().UTC()
 
-	checksumCM := input.Snapshots["checksum"]
-	var sourcesChecksum map[string][]byte
-	if len(checksumCM) > 0 {
-		sourcesChecksum = checksumCM[0].(map[string][]byte)
-		if len(sourcesChecksum) == 0 {
-			sourcesChecksum = make(map[string][]byte, 0)
-		}
+	sourcesChecksum, err := getSourceChecksums(checksumFilePath)
+	if err != nil {
+		return err
 	}
 
 	snap := input.Snapshots["sources"]
-
-	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
-
 	for _, sn := range snap {
 		ex := sn.(v1alpha1.ExternalModuleSource)
 		sc := v1alpha1.ExternalModuleSourceStatus{
@@ -168,7 +160,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		modulesChecksum := make(map[string]string)
 
 		if data, ok := sourcesChecksum[ex.Name]; ok {
-			_ = json.Unmarshal(data, &modulesChecksum)
+			modulesChecksum = data
 		}
 
 		for _, moduleName := range tags {
@@ -202,18 +194,16 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 		if len(sc.ModuleErrors) > 0 {
 			sc.Msg = "Some errors occurred. Inspect status for details"
 		} else {
-			data, _ := json.Marshal(modulesChecksum)
-			sourcesChecksum[ex.Name] = data
+			sourcesChecksum[ex.Name] = modulesChecksum
 		}
 		updateSourceStatus(input, ex.Name, sc)
 	}
 
-	// update checksum configmap
-	patch := map[string]map[string][]byte{
-		"binaryData": sourcesChecksum,
+	// save checksums
+	err = saveSourceChecksums(checksumFilePath, sourcesChecksum)
+	if err != nil {
+		return err
 	}
-
-	input.PatchCollector.MergePatch(patch, "v1", "ConfigMap", "d8-system", "d8-external-modules-checksum", object_patch.IgnoreMissingObject())
 
 	return nil
 }
