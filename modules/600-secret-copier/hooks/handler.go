@@ -59,7 +59,7 @@ func SecretPath(s *Secret) string {
 }
 
 func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	fmt.Sprintf("sddd %s", 1)
+	fmt.Sprintf("szxxxxxddd %s", 1)
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
