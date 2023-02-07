@@ -620,6 +620,8 @@ spec:
 Аннотация ниже добавляет описанный выше preStop-хук в контейнер istio-proxy прикладного пода:
 `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
 
+## Обновление Istio
+
 ## Обновление control-plane Istio
 
 * Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
@@ -644,3 +646,7 @@ kubectl get pods -A -o json | jq --arg revision "v1x13" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
+### Автоматическое обновление data-plane Istio
+
+Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс, `Deployment`, `DaemonSet` или `StatefulSet`.
