@@ -24,7 +24,7 @@ searchable: false
 
     ```shell
     for dashboard in *.json; do
-      for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
+      for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | tr -d "[]" | sort | uniq); do
         sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
       done
     done
