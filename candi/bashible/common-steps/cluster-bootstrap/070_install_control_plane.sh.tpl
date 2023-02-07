@@ -13,9 +13,6 @@
 # limitations under the License.
 
 {{- $experimentalOption := "" -}}
-{{- if semverCompare "<1.22" .kubernetesVersion -}}
-  {{- $experimentalOption = "--experimental-patches /var/lib/bashible/kubeadm/patches" -}}
-{{- end }}
 
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/

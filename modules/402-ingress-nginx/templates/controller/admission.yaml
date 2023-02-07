@@ -36,7 +36,7 @@ webhooks:
     sideEffects: None
     timeoutSeconds: 30
     admissionReviewVersions:
-    - v1
+      - v1
     clientConfig:
       service:
         namespace: d8-ingress-nginx
@@ -66,7 +66,7 @@ webhooks:
     sideEffects: None
     timeoutSeconds: 5
     admissionReviewVersions:
-    - v1
+      - v1
     clientConfig:
       service:
         namespace: d8-ingress-nginx
