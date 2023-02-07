@@ -681,6 +681,10 @@ entries:
                     ru: Описание
                   url: /modules/462-loki/
                 - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/462-loki/examples.html
+                - title:
                     en: Configuration
                     ru: Настройки
                   url: /modules/462-loki/configuration.html
