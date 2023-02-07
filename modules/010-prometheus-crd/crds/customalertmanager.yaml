@@ -849,23 +849,8 @@ spec:
                                     If not specified, default API URL will be used.
                                   type: string
                                 botToken:
-                                  description: Telegram bot token The secret needs to be
-                                    in the same namespace as the AlertmanagerConfig object
-                                    and accessible by the Prometheus Operator.
-                                  properties:
-                                    key:
-                                      description: The key of the secret to select from.  Must
-                                        be a valid secret key.
-                                      type: string
-                                    name:
-                                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                      type: string
-                                    optional:
-                                      description: Specify whether the Secret or its key
-                                        must be defined
-                                      type: boolean
+                                  description: The secret in the `d8-monitoring` namespace that contains Telegram bot token.
+                                  properties: *data-in-secret-properties
                                   required:
                                     - key
                                   type: object
@@ -886,23 +871,8 @@ spec:
                                         v0.22+.
                                       properties:
                                         credentials:
-                                          description: The secret's key that contains the
-                                            credentials of the request
-                                          properties:
-                                            key:
-                                              description: The key of the secret to select
-                                                from.  Must be a valid secret key.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent. More info:
-                                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the Secret or
-                                                its key must be defined
-                                              type: boolean
+                                          description: The secret in the `d8-monitoring` namespace that contains the credentials of the request.
+                                          properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
@@ -918,71 +888,23 @@ spec:
                                         BasicAuth takes precedence.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
-                                          properties:
-                                            key:
-                                              description: The key of the secret to select
-                                                from.  Must be a valid secret key.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent. More info:
-                                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the Secret or
-                                                its key must be defined
-                                              type: boolean
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
+                                          properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
-                                          properties:
-                                            key:
-                                              description: The key of the secret to select
-                                                from.  Must be a valid secret key.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent. More info:
-                                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the Secret or
-                                                its key must be defined
-                                              type: boolean
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
+                                          properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     bearerTokenSecret:
-                                      description: The secret's key that contains the bearer
-                                        token to be used by the client for authentication.
-                                        The secret needs to be in the same namespace as
-                                        the AlertmanagerConfig object and accessible by
-                                        the Prometheus Operator.
-                                      properties:
-                                        key:
-                                          description: The key of the secret to select from.  Must
-                                            be a valid secret key.
-                                          type: string
-                                        name:
-                                          description: 'Name of the referent. More info:
-                                            https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                          type: string
-                                        optional:
-                                          description: Specify whether the Secret or its
-                                            key must be defined
-                                          type: boolean
+                                      description: The secret in the `d8-monitoring` namespace that contains the bearer token to be used by the client for authentication.
+                                      properties: *data-in-secret-properties
                                       required:
                                         - key
                                       type: object
@@ -999,68 +921,23 @@ spec:
                                             the OAuth2 client id
                                           properties:
                                             configMap:
-                                              description: ConfigMap containing data to
-                                                use for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key to select.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the ConfigMap
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: Secret containing data to use
-                                                for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the Secret
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                           type: object
                                         clientSecret:
-                                          description: The secret containing the OAuth2
-                                            client secret
-                                          properties:
-                                            key:
-                                              description: The key of the secret to select
-                                                from.  Must be a valid secret key.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent. More info:
-                                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the Secret or
-                                                its key must be defined
-                                              type: boolean
+                                          description: The secret in the `d8-monitoring` namespace that contains OAuth2 client data.
+                                          properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
@@ -1097,45 +974,15 @@ spec:
                                             server certificates.
                                           properties:
                                             configMap:
-                                              description: ConfigMap containing data to
-                                                use for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key to select.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the ConfigMap
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: Secret containing data to use
-                                                for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the Secret
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
                                               required:
                                                 - key
                                               type: object
@@ -1146,45 +993,15 @@ spec:
                                             doing client-authentication.
                                           properties:
                                             configMap:
-                                              description: ConfigMap containing data to
-                                                use for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key to select.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the ConfigMap
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: Secret containing data to use
-                                                for the targets.
-                                              properties:
-                                                key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
-                                                  type: string
-                                                name:
-                                                  description: 'Name of the referent. More
-                                                    info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
-                                                optional:
-                                                  description: Specify whether the Secret
-                                                    or its key must be defined
-                                                  type: boolean
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
                                               required:
                                                 - key
                                               type: object
@@ -1194,23 +1011,8 @@ spec:
                                           description: Disable target certificate validation.
                                           type: boolean
                                         keySecret:
-                                          description: Secret containing the client key
-                                            file for the targets.
-                                          properties:
-                                            key:
-                                              description: The key of the secret to select
-                                                from.  Must be a valid secret key.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent. More info:
-                                                https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the Secret or
-                                                its key must be defined
-                                              type: boolean
+                                          description: The Secret in the `d8-monitoring` namespace that contains the client key file for the targets.
+                                          properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object

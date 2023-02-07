@@ -188,79 +188,44 @@ spec:
 
 ## Отправка алертов в Telegram
 
-Prometheus-operator не поддерживает прямую отправку алертов в Telegram, поэтому Alertmanager настраивается на отправку алертов через webhook в приложение, которое отправляет полученные данные в Telegram.
+Prometheus-operator поддерживает прямую отправку алертов в Telegram с помощью настроек Alertmanager.
 
-Задеплойте приложение, которое отправляет полученные от webhook данные в Telegram:
+Создайте секрет в пространстве имен `d8-monitoring` с токеном Telegram бота.
 
 ```yaml
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-   name: telegram-alertmanager
-   namespace: d8-monitoring
-   labels:
-     app: telegram
-spec:
-   template:
-     metadata:
-       name: telegram-alertmanager
-       labels:
-         app: telegram
-     spec:
-       containers:
-         - name: telegram-alertmanager
-           image: janwh/alertmanager-telegram
-           ports:
-             - containerPort: 8080
-           env:
-             - name: TELEGRAM_CHAT_ID
-               value: "-30490XXXXX"
-             - name: TELEGRAM_TOKEN
-               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
-   replicas: 1
-   selector:
-     matchLabels:
-       app: telegram
----
 apiVersion: v1
-kind: Service
+kind: Secret
 metadata:
- labels:
-   app: telegram
- name: telegram-alertmanager
- namespace: d8-monitoring
-spec:
- type: ClusterIP
- selector:
-   app: telegram
- ports:
-   - protocol: TCP
-     port: 8080
+  name: telegram-bot-secret
+  namespace: d8-monitoring
+stringData:
+  token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-`TELEGRAM_CHAT_ID` и `TELEGRAM_TOKEN` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
-
-Задеплойте CRD CustomAlertManager:
+Задеплойте CR CustomAlertManager:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
-  name: webhook
+  name: telegram
 spec:
+  type: Internal
   internal:
     receivers:
-    - name: webhook
-      webhookConfigs:
-      - sendResolved: true
-        url: http://telegram-alertmanager:8080/alerts
+      - name: telegram
+        telegramConfigs:
+          - botToken:
+              name: telegram-bot-secret
+              key: token
+            chatID: -30490XXXXX
     route:
       groupBy:
-      - job
+        - job
       groupInterval: 5m
       groupWait: 30s
-      receiver: webhook
+      receiver: telegram
       repeatInterval: 12h
-  type: Internal
 ```
+
+Поле `token` в секрете и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
