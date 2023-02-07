@@ -2696,7 +2696,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_26
@@ -5246,7 +5246,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_26
