@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $experimentalOption := "" -}}
+{{- $experimentalOption := "" }}
+
 
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
