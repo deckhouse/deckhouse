@@ -527,63 +527,79 @@ spec:
                                 stateMessage:
                                   description: Полное описание проблемы.
                           telegramConfigs:
-                            description: List of Telegram configurations.
+                            description: Список конфигураций для отправки оповещений через Telegram.
                             items:
-                              description: TelegramConfig configures notifications via Telegram.
-                                See https://prometheus.io/docs/alerting/latest/configuration/#telegram_config
+                              description: |
+                                Конфигурация определяет параметры отправки оповещений с помощью Telegram. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
                               properties:
                                 apiURL:
-                                  description: The Telegram API URL i.e. https://api.telegram.org.
-                                    If not specified, default API URL will be used.
+                                  description: |
+                                    Адрес Telegram API, например https://api.telegram.org.
+                                    Если не указано, будет использоваться адрес API по умолчанию.
                                   type: string
                                 botToken:
-                                  description: The secret in the `d8-monitoring` namespace that contains Telegram bot token.
+                                  description: |
+                                    Ключ секрета, содержащий токен Telegram бота.
+
+                                    Секрет должен находиться в пространстве имен `d8-monitoring`.
                                   properties: *data-in-secret-properties
                                   required:
                                     - key
                                   type: object
                                 chatID:
-                                  description: The Telegram chat ID.
+                                  description: Идентификатор чата Telegram.
                                   format: int64
                                   type: integer
                                 disableNotifications:
-                                  description: Disable telegram notifications
+                                  description: Отключить/включить уведомления Telegram.
                                   type: boolean
                                 httpConfig:
-                                  description: HTTP client configuration.
+                                  description: Конфигурация HTTP-клиента.
                                   properties:
                                     authorization:
-                                      description: Authorization header configuration for
-                                        the client. This is mutually exclusive with BasicAuth
-                                        and is only available starting from Alertmanager
-                                        v0.22+.
+                                      description: |
+                                        Конфигурация заголовка авторизации для клиента.
+
+                                        Это взаимоисключающая опция с разделом BasicAuth.
                                       properties:
                                         credentials:
-                                          description: The secret in the `d8-monitoring` namespace that contains the credentials of the request.
+                                          description: |
+                                            Секрет, содержащий полномочия для выполнения запроса.
+
+                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         type:
-                                          description: Set the authentication type. Defaults
-                                            to Bearer, Basic will cause an error
+                                          description: |
+                                            Устанавливает тип аутентификации.
+
+                                            По-умолчанию Bearer, Basic будет вызывать ошибку.
                                           type: string
                                       type: object
                                     basicAuth:
-                                      description: BasicAuth for the client. This is mutually
-                                        exclusive with Authorization. If both are defined,
-                                        BasicAuth takes precedence.
+                                      description: |
+                                        Параметры базовой аутентификации клиента.
+
+                                        Это взаимоисключающая опция с разделом Authorization. Если оба определены, BasicAuth имеет приоритет.
                                       properties:
                                         password:
-                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
+                                          description: |
+                                            Секрет, который содержит пароль для аутентификации.
+
+                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         username:
-                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
+                                          description: |
+                                            Секрет, который содержит имя пользователя для аутентификации.
+
+                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -591,32 +607,38 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     bearerTokenSecret:
-                                      description: The secret in the `d8-monitoring` namespace that contains the bearer token to be used by the client for authentication.
+                                      description: |
+                                        Секрет содержащий токен носителя, который будет использоваться клиентом для аутентификации.
+
+                                        Секрет должен находиться в пространстве имен `d8-monitoring`.
                                       properties: *data-in-secret-properties
                                       required:
                                         - key
                                       type: object
                                     followRedirects:
-                                      description: FollowRedirects specifies whether the
-                                        client should follow HTTP 3xx redirects.
+                                      description: Указывает, должен ли клиент следовать перенаправлениям HTTP 3xx.
                                       type: boolean
                                     oauth2:
-                                      description: OAuth2 client credentials used to fetch
-                                        a token for the targets.
+                                      description: Учетные данные клиента OAuth2, используемые для получения токена target'а.
                                       properties:
                                         clientId:
-                                          description: The secret or configmap containing
-                                            the OAuth2 client id
+                                          description: Секрет или ConfigMap, содержащие идентификатор клиента OAuth2.
                                           properties:
                                             configMap:
-                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                ConfigMap, который содержит данные, используемые для target'а.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                Секрет, который содержит данные, используемые в target'е.
+
+                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -624,7 +646,10 @@ spec:
                                               x-kubernetes-map-type: atomic
                                           type: object
                                         clientSecret:
-                                          description: The secret in the `d8-monitoring` namespace that contains OAuth2 client data.
+                                          description: |
+                                            Секрет, который содержит клиентские данные OAuth2.
+
+                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -633,17 +658,15 @@ spec:
                                         endpointParams:
                                           additionalProperties:
                                             type: string
-                                          description: Parameters to append to the token
-                                            URL
+                                          description: Параметры для добавления к URL-адресу токена.
                                           type: object
                                         scopes:
-                                          description: OAuth2 scopes used for the token
-                                            request
+                                          description: Области действия OAuth2, используемые для запроса токена.
                                           items:
                                             type: string
                                           type: array
                                         tokenUrl:
-                                          description: The URL to fetch the token from
+                                          description: URL-адрес для получения токена.
                                           minLength: 1
                                           type: string
                                       required:
@@ -652,24 +675,29 @@ spec:
                                         - tokenUrl
                                       type: object
                                     proxyURL:
-                                      description: Optional proxy URL.
+                                      description: Опциональный URL-адрес прокси.
                                       type: string
                                     tlsConfig:
-                                      description: TLS configuration for the client.
+                                      description: Конфигурация TLS для клиента.
                                       properties:
                                         ca:
-                                          description: Certificate authority used when verifying
-                                            server certificates.
+                                          description: Центр сертификации, используемый при проверке сертификатов сервера.
                                           properties:
                                             configMap:
-                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                ConfigMap, который содержит данные для использования в target'е.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                Секрет, который содержит данные для использования в target'е.
+
+                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -677,18 +705,23 @@ spec:
                                               x-kubernetes-map-type: atomic
                                           type: object
                                         cert:
-                                          description: Client certificate to present when
-                                            doing client-authentication.
+                                          description: Сертификат клиента для представления при выполнении аутентификации клиента.
                                           properties:
                                             configMap:
-                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                ConfigMap, который содержит данные для использования в target'е.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-cm-properties
                                               required:
                                                 - key
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secret:
-                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              description: |
+                                                Секрет, который содержит данные для использования в target'е.
+
+                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -696,33 +729,35 @@ spec:
                                               x-kubernetes-map-type: atomic
                                           type: object
                                         insecureSkipVerify:
-                                          description: Disable target certificate validation.
+                                          description: Отключает проверку целевого сертификата.
                                           type: boolean
                                         keySecret:
-                                          description: The Secret in the `d8-monitoring` namespace that contains the client key file for the targets.
+                                          description: |
+                                            Секрет, который содержит файл клиентского ключа target'а.
+
+                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         serverName:
-                                          description: Used to verify the hostname for the
-                                            targets.
+                                          description: Используется для проверки имени хоста для target'а.
                                           type: string
                                       type: object
                                   type: object
                                 message:
-                                  description: Message template
+                                  description: Шаблон сообщения
                                   type: string
                                 parseMode:
-                                  description: Parse mode for telegram message
+                                  description: Режим разбора сообщения Telegram.
                                   enum:
                                     - MarkdownV2
                                     - Markdown
                                     - HTML
                                   type: string
                                 sendResolved:
-                                  description: Whether to notify about resolved alerts.
+                                  description: Уведомлять ли о урегулированных предупреждениях.
                                   type: boolean
                               type: object
                             type: array
