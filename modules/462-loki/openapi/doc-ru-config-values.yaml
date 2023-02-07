@@ -1,5 +1,14 @@
 type: object
 properties:
+  storageClass:
+    description: |
+      Имя storageClass'а, который использовать.
+
+      Если не указано — используется StorageClass существующей PVC Loki, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
+
+      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть Pod придется руками
+
+      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Loki будет перезаказан, а все данные удалены.
   diskSizeGigabytes:
     description: |
       Размер диска для хранения логов или размер PVC при указании параметра [storageClass](#parameters-storageclass).

@@ -6,4 +6,4 @@ title: "Модуль loki"
 
 Модуль использует проект [Grafana Loki](https://grafana.com/oss/loki/).
 
-Модуль разворачивает хранилище логов на базе Grafana Loki, при необходимости настраивает модуль log-shipper на использование loki и добавляет в Grafana соответствующий datasource. 
+Модуль разворачивает хранилище логов на базе Grafana Loki, при необходимости настраивает модуль log-shipper на использование loki и добавляет в Grafana соответствующий datasource.

@@ -3,6 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: d8-{{ .Chart.Name }}
+  lables:
+    module: {{ .Chart.Name }}
 spec:
   type: Loki
   loki:
@@ -13,6 +15,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
   name: d8-namespaces-to-{{ .Chart.Name }}
+  lables:
+    module: {{ .Chart.Name }}
 spec:
   type: KubernetesPods
   kubernetesPods:
