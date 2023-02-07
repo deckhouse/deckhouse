@@ -20,6 +20,7 @@ import json
 import shutil
 import glob
 import re
+from deckhouse import hook
 
 for f in glob.glob("/frameworks/shell/*.sh"):
     with open(f, "r") as script:
@@ -31,24 +32,7 @@ def slugify(value):
     value = re.sub(r"[-\s]+", "-", value)
     return value
 
-def __config__():
-    config = {
-        "configVersion": "v1",
-        "kubernetes": [
-            {
-                "name": "dashboard_resources",
-                "apiVersion": "deckhouse.io/v1",
-                "kind": "GrafanaDashboardDefinition",
-                "includeSnapshotsFrom": [
-                    "dashboard_resources"
-                ],
-                "jqFilter": '{"name": .metadata.name, "folder": .spec.folder, "definition": .spec.definition}'
-            }
-        ]
-    }
-    return json.dumps(config)
-
-def __main__():
+def main():
     tmp_dir = tempfile.mkdtemp(prefix="dashboard.")
     existing_uids_file = tempfile.mktemp(prefix="uids.")
 
@@ -94,3 +78,6 @@ def __main__():
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
+
+if __name__ == "__main__":
+    hook.run(main, configpath="dashboard_provisioner.yaml")
