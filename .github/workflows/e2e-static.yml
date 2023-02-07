@@ -571,7 +571,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_21
@@ -996,7 +996,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_22
@@ -1421,7 +1421,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_23
@@ -1846,7 +1846,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_24
@@ -2271,7 +2271,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_docker_1_25
@@ -3121,7 +3121,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_21
@@ -3546,7 +3546,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_22
@@ -3971,7 +3971,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_23
@@ -4396,7 +4396,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_24
@@ -4821,7 +4821,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
 
       - name: Save test results
-        if: always()
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v2
         with:
           name: test_output_static_containerd_1_25
