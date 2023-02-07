@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -31,24 +32,36 @@ import (
 )
 
 const (
-	preemtibleVMDeletionDuration = 24 * time.Hour
+	// Preemptible instances are forcibly stopped by Yandex.Cloud after 24 hours
+	// https://cloud.yandex.com/en-ru/docs/compute/concepts/preemptible-vm
+	hookExecutionSchedule = 15 * time.Minute
+	// we'll delete Machines that are almost ready to be terminated by the cloud provider
+	durationThresholdForDeletion = 24*time.Hour - 4*time.Hour
+
+	// we won't delete any Machines if it would violate overall Node readiness of a given NodeGroup
+	nodeGroupReadinessRatio = 0.9
 )
 
 type Node struct {
 	Name              string
+	NodeGroup         string
 	CreationTimestamp metav1.Time
 }
 
 type Machine struct {
-	Name                  string
-	NodeCreationTimestamp metav1.Time
-	Terminating           bool
-	MachineClassKind      string
-	MachineClassName      string
+	Name             string
+	Terminating      bool
+	MachineClassKind string
+	MachineClassName string
+
+	nodeCreationTimestamp metav1.Time
+	nodeGroup             string
 }
 
-type YandexMachineClass struct {
-	Name string
+type NodeGroupStatus struct {
+	Name  string
+	Nodes int64
+	Ready int64
 }
 
 func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -81,9 +94,60 @@ func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}, nil
 }
 
+func applyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	icKind, icExists, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "cloudInstances", "classReference", "kind")
+	if err != nil {
+		return nil, fmt.Errorf("cannot access \"spec.cloudInstances.classReference.kind\" in a NodeGroup %s: %s", obj.GetName(), err)
+	}
+
+	if !icExists || (icKind != "YandexInstanceClass") {
+		return nil, nil
+	}
+
+	nodeCountRaw, nodeCountExists, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "status", "nodes")
+	if err != nil {
+		return nil, fmt.Errorf("cannot access \"status.nodes\" in a NodeGroup %s: %s", obj.GetName(), err)
+	}
+	readyNodeCountRaw, readyNodeCountExists, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "status", "ready")
+	if err != nil {
+		return nil, fmt.Errorf("cannot access \"status.ready\" in a NodeGroup %s: %s", obj.GetName(), err)
+	}
+
+	if !nodeCountExists || !readyNodeCountExists {
+		return nil, nil
+	}
+
+	var nodeCount, readyNodeCount int64
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		nodeCount = int64(nodeCountRaw.(float64))
+		readyNodeCount = int64(readyNodeCountRaw.(float64))
+	} else {
+		nodeCount = nodeCountRaw.(int64)
+		readyNodeCount = readyNodeCountRaw.(int64)
+	}
+
+	if (nodeCount < 0) || (readyNodeCount < 0) {
+		return nil, nil
+	}
+
+	return &NodeGroupStatus{
+		Name:  obj.GetName(),
+		Nodes: nodeCount,
+		Ready: readyNodeCount,
+	}, nil
+}
+
 func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	labels := obj.GetLabels()
+
+	ng, ok := labels["node.deckhouse.io/group"]
+	if !ok {
+		return nil, nil
+	}
+
 	return &Node{
 		Name:              obj.GetName(),
+		NodeGroup:         ng,
 		CreationTimestamp: obj.GetCreationTimestamp(),
 	}, nil
 }
@@ -95,9 +159,7 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	if ok && preemptible {
-		return &YandexMachineClass{
-			Name: obj.GetName(),
-		}, nil
+		return obj.GetName(), nil
 	}
 
 	return nil, nil
@@ -105,11 +167,13 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	AllowFailure: true,
-	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
+	// this hook relies on information set by update_node_group_status hook
+	Queue: "/modules/node-manager/update_ngs_statuses",
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "every-15",
-			Crontab: "0/15 * * * *",
+			Name: "every-15",
+			// string formatting is ugly, but serves a purpose of referencing an important constant
+			Crontab: fmt.Sprintf("0/%.0f * * * *", hookExecutionSchedule.Minutes()),
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -144,15 +208,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                "Node",
 			FilterFunc:          applyNodeFilter,
 		},
+		{
+			Name:                "nodegroupstatuses",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "deckhouse.io/v1",
+			Kind:                "NodeGroup",
+			FilterFunc:          applyNodeGroupFilter,
+		},
 	},
 }, deleteMachines)
 
 func deleteMachines(input *go_hook.HookInput) error {
 	var (
-		timeNow                      = time.Now().UTC()
-		preemptibleMachineClassesSet = set.Set{}
-		nodeCreationTimestampSet     = make(map[string]metav1.Time)
-		machines                     []*Machine
+		timeNow                        = time.Now().UTC()
+		machines                       []*Machine
+		preemptibleMachineClassesSet   = set.Set{}
+		nodeNameToNodeMap              = make(map[string]*Node)
+		nodeGroupNameToNodeGroupStatus = make(map[string]*NodeGroupStatus)
 	)
 
 	for _, mcRaw := range input.Snapshots["mcs"] {
@@ -160,12 +232,12 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		ic, ok := mcRaw.(*YandexMachineClass)
+		ic, ok := mcRaw.(string)
 		if !ok {
-			return fmt.Errorf("failed to assert to *YandexMachineClass")
+			return fmt.Errorf("failed to assert to string")
 		}
 
-		preemptibleMachineClassesSet.Add(ic.Name)
+		preemptibleMachineClassesSet.Add(ic)
 	}
 
 	if preemptibleMachineClassesSet.Size() == 0 {
@@ -182,7 +254,20 @@ func deleteMachines(input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to assert to *Node")
 		}
 
-		nodeCreationTimestampSet[node.Name] = node.CreationTimestamp
+		nodeNameToNodeMap[node.Name] = node
+	}
+
+	for _, ngStatusRaw := range input.Snapshots["nodegroupstatuses"] {
+		if ngStatusRaw == nil {
+			continue
+		}
+
+		ngStatus, ok := ngStatusRaw.(*NodeGroupStatus)
+		if !ok {
+			return fmt.Errorf("failed to assert to *NodeGroupStatus")
+		}
+
+		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = ngStatus
 	}
 
 	for _, machineRaw := range input.Snapshots["machines"] {
@@ -203,9 +288,24 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		if creationTimestamp, ok := nodeCreationTimestampSet[machine.Name]; ok {
-			machine.NodeCreationTimestamp = creationTimestamp
+		if node, ok := nodeNameToNodeMap[machine.Name]; ok {
+			machine.nodeCreationTimestamp = node.CreationTimestamp
+			machine.nodeGroup = node.NodeGroup
 		} else {
+			continue
+		}
+
+		// skip young Machines
+		if machine.nodeCreationTimestamp.Time.Add(durationThresholdForDeletion).After(timeNow) {
+			continue
+		}
+
+		// skip Machines in NodeGroups that violate NodeGroup readiness ratio
+		ngStatus, ok := nodeGroupNameToNodeGroupStatus[machine.nodeGroup]
+		if !ok {
+			continue
+		}
+		if (float64(ngStatus.Ready) / float64(ngStatus.Nodes)) < nodeGroupReadinessRatio {
 			continue
 		}
 
@@ -216,69 +316,29 @@ func deleteMachines(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	for _, m := range getMachinesToDelete(timeNow, machines) {
+	for _, m := range getMachinesToDelete(machines) {
 		input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", m)
 	}
 
 	return nil
 }
 
-// delete all after 23h mark
-// afterwards delete in 15 minutes increments, no more than batch size
-func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDelete []string) {
-	const (
-		// 12 * 0.25 = 3 hours
-		durationIterations = 12
-		slidingStep        = 15 * time.Minute
-	)
-	var (
-		currentSlidingDuration = preemtibleVMDeletionDuration - time.Hour
-	)
-
+func getMachinesToDelete(machines []*Machine) (machinesToDelete []string) {
 	sort.Slice(machines, func(i, j int) bool {
-		return machines[i].NodeCreationTimestamp.Before(&machines[j].NodeCreationTimestamp)
+		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
 	})
 
-	batch := len(machines) / durationIterations
+	// take 10% of old Machines
+	batch := len(machines) / 10
 	if batch == 0 {
 		batch = 1
 	}
 
-	var (
-		cursor int
-	)
-
-	// short-circuit if there are Nodes older than 23 hours
-	for _, m := range machines {
-		if expires(timeNow, m.NodeCreationTimestamp.Time, currentSlidingDuration) {
-			machinesToDelete = append(machinesToDelete, m.Name)
-			cursor++
-		}
-	}
-	if len(machinesToDelete) != 0 {
-		return machinesToDelete
-	}
-
-	for t := 0; t < durationIterations; t++ {
-		currentSlidingDuration -= slidingStep
-
-		for cursor < len(machines) {
-			if len(machinesToDelete) >= batch {
-				break
-			}
-
-			if expires(timeNow, machines[cursor].NodeCreationTimestamp.Time, currentSlidingDuration) {
-				machinesToDelete = append(machinesToDelete, machines[cursor].Name)
-				cursor++
-			} else {
-				break
-			}
+	for _, currentMachine := range machines {
+		if len(machinesToDelete) < batch {
+			machinesToDelete = append(machinesToDelete, currentMachine.Name)
 		}
 	}
 
 	return
-}
-
-func expires(now, timestamp time.Time, expirationDuration time.Duration) bool {
-	return timestamp.Add(expirationDuration).Before(now)
 }
