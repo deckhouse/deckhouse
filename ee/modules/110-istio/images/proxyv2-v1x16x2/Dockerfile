@@ -8,7 +8,7 @@ WORKDIR /
 # https://hub.docker.com/layers/istio/proxyv2/1.16.2/images/sha256-d50597afa2ac9a9ddad16d1f4065c83326d4b21526e1c4fc997e7f9f21d65c53?context=explore
 # from image layer 14
 ARG proxy_version=istio-proxy:fa88959eb040f004889985399669f7a824a7e18e
-ARG istio_version=1.13.7
+ARG istio_version=1.16.2
 ARG SIDECAR=envoy
 
 RUN apt-get update && \
