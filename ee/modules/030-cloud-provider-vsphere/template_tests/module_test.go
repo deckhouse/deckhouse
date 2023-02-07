@@ -380,13 +380,10 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    externalNetworkNames:
-      - aaa
-      - bbb
-    internalNetworkNames:
-      - ccc
-      - ddd
-    vmFolderPath: dev/test
+
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
 
 labels:
   region: "myregtagcat"
@@ -467,7 +464,6 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    vmFolderPath: dev/test
 
 labels:
   region: "myregtagcat"
@@ -542,7 +538,6 @@ vcenter:
     datacenters:
     - X1
     server: myhost
-    vmFolderPath: dev/test
 `))
 		})
 	})
