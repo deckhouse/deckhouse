@@ -79,7 +79,7 @@ properties:
         properties:
           webhookURL:
             description: |
-              URL
+              URL webhook'а авторизации.
           webhookCA:
             description: |
               CA webhook'а авторизации.
