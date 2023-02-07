@@ -52,15 +52,15 @@ endif
 ifeq ($(FOCUS),"")
 	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 else
-	CE_MODULES = $(shell find ./modules/ -maxdepth 1 -regextype sed -regex ".*[0-9]\{3\}-${FOCUS}")
+	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
 		CE_MODULES_RECURSE = ${CE_MODULES}/...
 	endif
-	EE_MODULES = $(shell find ./ee/modules/ -maxdepth 1 -regextype sed -regex ".*[0-9]\{3\}-${FOCUS}")
+	EE_MODULES = $(shell find ./ee/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(EE_MODULES),)
 		EE_MODULES_RECURSE = ${EE_MODULES}/...
 	endif
-	FE_MODULES = $(shell find ./ee/fe/modules/ -maxdepth 1 -regextype sed -regex ".*[0-9]\{3\}-${FOCUS}")
+	FE_MODULES = $(shell find ./ee/fe/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(FE_MODULES),)
 		FE_MODULES_RECURSE = ${FE_MODULES}/...
 	endif
