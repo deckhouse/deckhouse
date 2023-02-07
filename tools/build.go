@@ -223,6 +223,7 @@ func cwd() string {
 
 func main() {
 	var edition string
+
 	flag.StringVar(&edition, "edition", "", "Deckhouse edition")
 
 	flag.Parse()
