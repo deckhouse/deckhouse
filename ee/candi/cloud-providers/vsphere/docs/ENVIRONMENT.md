@@ -72,7 +72,7 @@ StorageClasses will be created automatically for each Datastore that is tagged w
 > We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 >
 > This all-encompassing Role should be enough for all Deckhouse components.
-> If you require a more granular Role, please, contact Flant support.
+> If you need a more granular Role, please contact your Deckhouse support.
 
 You have to create a role with a following list of permissions and attach
 it to one or more Datacenter.
