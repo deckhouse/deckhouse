@@ -505,20 +505,25 @@ internal:
       type: "Containerd"
 `
 
+const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
+const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
+const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+		err := os.Symlink(openstackCIMPath, openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager", "/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+		err := os.Remove(openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+		err = os.Remove(vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
