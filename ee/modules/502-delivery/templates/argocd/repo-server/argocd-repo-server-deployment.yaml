@@ -92,6 +92,8 @@ spec:
             name: plugins
           - mountPath: /tmp
             name: tmp
+          - mountPath: /nonexistent
+            name: werf-tmp
         - command:
             - sh
             - -c
@@ -307,3 +309,5 @@ spec:
           name: var-files
         - emptyDir: {}
           name: plugins
+        - emptyDir: {}
+          name: werf-tmp
