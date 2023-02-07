@@ -212,6 +212,12 @@ spec:
             memory: {{ $resourcesRequestsStatic.memory | default "128Mi" | quote }}
   {{- end }}
         volumeMounts:
+        - name: workload-socket
+          mountPath: /var/run/secrets/workload-spiffe-uds
+        - name: credential-socket
+          mountPath: /var/run/secrets/credential-uds
+        - name: workload-certs
+          mountPath: /var/run/secrets/workload-spiffe-credentials
         - mountPath: /etc/istio/proxy
           name: istio-envoy
         - mountPath: /var/run/secrets/istio
@@ -252,6 +258,12 @@ spec:
               divisor: 1m
               resource: requests.cpu
         name: podinfo
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir: {}
+        name: credential-socket
+      - emptyDir: {}
+        name: workload-certs
       - emptyDir: {}
         name: istio-envoy
       - emptyDir: {}

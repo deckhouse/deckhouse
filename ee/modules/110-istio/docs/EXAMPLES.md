@@ -622,23 +622,23 @@ The annotation below adds the preStop hook to istio-proxy container in applicati
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x13` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x16` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Upgrade algorithm (i.e. to `1.13`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.13"]`).
-  * Wait for the corresponding pod `istiod-v1x13-xxx-yyy` to appear in `d8-istiod` namespace.
+* Upgrade algorithm (i.e. to `1.16`):
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.16"]`).
+  * Wait for the corresponding pod `istiod-v1x16-xxx-yyy` to appear in `d8-istiod` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x13`.
+    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x16`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application workability.
-  * Reconfigure `globalVersion` to `1.13` and remove the `additionalVersions` configuration.
+  * Reconfigure `globalVersion` to `1.16` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision, execute the following command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x12" \
+kubectl get pods -A -o json | jq --arg revision "v1x13" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

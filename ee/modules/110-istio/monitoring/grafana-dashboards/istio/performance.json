@@ -98,7 +98,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[1m])) / (round(sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[1m])), 0.001)/1000))",
+          "expr": "(sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__interval_sx4])) / (round(sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__interval_sx4])), 0.001)/1000))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -106,7 +106,7 @@
           "refId": "A"
         },
         {
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace!=\"d8-istio\",container=\"istio-proxy\"}[1m]))/ (round(sum(rate(istio_requests_total[1m])), 0.001)/1000))/ (sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[1m])) >bool 10)",
+          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__interval_sx4]))/ (round(sum(rate(istio_requests_total[$__interval_sx4])), 0.001)/1000))/ (sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[$__interval_sx4])) >bool 10)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -191,14 +191,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-ingressgateway",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace!=\"d8-istio\",container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -303,7 +303,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(container_memory_working_set_bytes{namespace!=\"d8-istio\",container=\"istio-proxy\"}) / count(container_memory_working_set_bytes{namespace!=\"d8-istio\",container=\"istio-proxy\"})",
+          "expr": "sum(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"}) / count(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per istio proxy",
@@ -388,14 +388,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(istio_response_bytes_sum{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[1m]))",
+          "expr": "sum(rate(istio_response_bytes_sum{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-ingressgateway",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(istio_response_bytes_sum{source_workload_namespace!=\"d8-istio\", reporter=\"source\"}[1m])) + sum(rate(istio_request_bytes_sum{source_workload_namespace!=\"d8-istio\", reporter=\"source\"}[1m]))",
+          "expr": "sum(rate(istio_response_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__interval_sx4])) + sum(rate(istio_request_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -594,7 +594,7 @@
           "expr": "sum(container_memory_working_set_bytes{container=\"istio-proxy\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -678,10 +678,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -767,7 +767,7 @@
         {
           "expr": "sum(container_fs_usage_bytes{container=\"istio-proxy\"})",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -868,7 +868,7 @@
           "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
           "instant": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Virtual Memory",
           "refId": "I",
           "step": 2
@@ -876,7 +876,7 @@
         {
           "expr": "process_resident_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Resident Memory",
           "refId": "H",
           "step": 2
@@ -885,7 +885,7 @@
           "expr": "go_memstats_heap_sys_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "heap sys",
           "refId": "A"
         },
@@ -893,14 +893,14 @@
           "expr": "go_memstats_heap_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "heap alloc",
           "refId": "D"
         },
         {
           "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Alloc",
           "refId": "F",
           "step": 2
@@ -909,7 +909,7 @@
           "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Heap in-use",
           "refId": "E",
           "step": 2
@@ -917,7 +917,7 @@
         {
           "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Stack in-use",
           "refId": "G",
           "step": 2
@@ -926,7 +926,7 @@
           "expr": "sum(container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "C",
           "step": 2
@@ -935,7 +935,7 @@
           "expr": "container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ container }} (k8s)",
           "refId": "B",
           "step": 2
@@ -1019,28 +1019,28 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
         },
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[1m])) by (container)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__interval_sx4])) by (container)",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ container }} (k8s)",
           "refId": "B",
           "step": 2
         },
         {
-          "expr": "rate(process_cpu_seconds_total{app=\"istiod\"}[1m])",
+          "expr": "rate(process_cpu_seconds_total{app=\"istiod\"}[$__interval_sx4])",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "pilot (self-reported)",
           "refId": "C",
           "step": 2
@@ -1128,14 +1128,14 @@
           "format": "time_series",
           "hide": true,
           "instant": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Open FDs (pilot)",
           "refId": "A"
         },
         {
           "expr": "container_fs_usage_bytes{ container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "B",
           "step": 2
@@ -1222,7 +1222,7 @@
         {
           "expr": "go_goroutines{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Number of Goroutines",
           "refId": "A",
           "step": 2
@@ -1275,7 +1275,27 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-5m",

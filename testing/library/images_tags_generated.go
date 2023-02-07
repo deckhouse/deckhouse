@@ -210,10 +210,13 @@ var DefaultImagesTags = map[string]interface{}{
 		"metadataExporter":  "imageHash-istio-metadataExporter",
 		"operatorV1x12x6":   "imageHash-istio-operatorV1x12x6",
 		"operatorV1x13x7":   "imageHash-istio-operatorV1x13x7",
+		"operatorV1x16x2":   "imageHash-istio-operatorV1x16x2",
 		"pilotV1x12x6":      "imageHash-istio-pilotV1x12x6",
 		"pilotV1x13x7":      "imageHash-istio-pilotV1x13x7",
+		"pilotV1x16x2":      "imageHash-istio-pilotV1x16x2",
 		"proxyv2V1x12x6":    "imageHash-istio-proxyv2V1x12x6",
 		"proxyv2V1x13x7":    "imageHash-istio-proxyv2V1x13x7",
+		"proxyv2V1x16x2":    "imageHash-istio-proxyv2V1x16x2",
 	},
 	"keepalived": map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
