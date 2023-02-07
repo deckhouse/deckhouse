@@ -58,7 +58,7 @@ Periodicity and timing of patch-release updates in the release channels:
 1. For the `Beta` and `Early Access` channels, the Deckhouse team can switch to a patch-release version at any time at its own discretion but not earlier than two hours after switching to this version in the `Alpha` and `Beta` release channels, accordingly.
 1. For the `Stable` and `Rock Solid` channels, the switching to the patch-release version can be performed on any day:
    1. `Stable`, `Rock Solid` — not earlier than the next day after the switching to this version in the `Early Access` and `Stable` release channels, accordingly.
-1. These rules may be breached if there is a **real need** to make urgent changes due to a critical bug/vulnerability (note that all actions **must be coordinated with the team leaders**).
+1. These rules may be breached if there is a **real need** to make urgent changes due to a critical bug/vulnerability (do these actions **at your own risk**).
 
 ### Canceling a scheduled version change
 
@@ -431,7 +431,7 @@ In Deckhouse, conversion webhooks are located in the module's `/modules/MODULE/w
 
 #### kubectl
 
-We do not recommended using kubectl in hooks. It leads to a loss of idempotency since the hook depends on the cluster state in addition to the input parameters (that creates some difficulties during debugging/testing).
+We do not recommend using kubectl in hooks. It leads to a loss of idempotency since the hook depends on the cluster state in addition to the input parameters (that creates some difficulties during debugging/testing).
 * Use the [built-in shell-operator functionality](https://github.com/flant/addon-operator/blob/main/HOOKS.md#kubernetes) (it is fully integrated into Deckhouse) to track objects;
 * Use the shell_lib functionality (the `kubernetes::`-prefixed functions in particular: kubernetes::create_yaml, kubernetes::patch_jq, kubernetes::delete_if_exists, etc.) to create, edit, and delete objects.
 
