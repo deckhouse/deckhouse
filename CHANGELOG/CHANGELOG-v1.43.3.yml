@@ -1,0 +1,9 @@
+delivery:
+  fixes:
+    - summary: Add tmp dir for werf in `argocd-repo-server` sidecar.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3779
+istio:
+  fixes:
+    - summary: iptables-wrapper fix for istio sidecar.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3746
+
