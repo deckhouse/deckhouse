@@ -24,6 +24,7 @@ kind: ClusterLoggingConfig
 metadata:
   name: development-logs
 spec:
+  type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
       matchNames:

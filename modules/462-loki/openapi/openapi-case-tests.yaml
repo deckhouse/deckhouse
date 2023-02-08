@@ -36,6 +36,8 @@ positive:
   values:
     - internal:
         effectiveStorageClass: test
+    - internal:
+        effectiveStorageClass: false
 negative:
   configValues:
     - somethingInConfig: yes
