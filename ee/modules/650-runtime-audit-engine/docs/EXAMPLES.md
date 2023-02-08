@@ -2,7 +2,7 @@
 title: "Module runtime-audit-engine: examples"
 ---
 
-### Add a single rule
+## Adding a single rule
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -23,7 +23,7 @@ spec:
       tags: [filesystem]
 ```
 
-### Add two rules with macro and list
+## Adding two rules with macro and list
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

@@ -2,7 +2,7 @@
 title: "Модуль runtime-audit-engine: примеры"
 ---
 
-### Добавление одного правила
+## Добавление одного правила
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -23,7 +23,7 @@ spec:
       tags: [filesystem]
 ```
 
-### Добавление двух правил с макросом и списком
+## Добавление двух правил с макросом и списком
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

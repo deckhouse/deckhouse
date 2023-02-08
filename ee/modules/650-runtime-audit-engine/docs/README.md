@@ -23,7 +23,7 @@ Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The age
 ![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
-> NOTE: Falco developers recommend deploying Falco as a systemd unit for maximum security.
+> Falco developers recommend deploying Falco as a systemd unit for maximum security.
 > However, a Kubernetes cluster with the autoscaling feature enabled makes it hard to operate. 
 > Additional security mechanisms of Deckhouse (implemented by other modules), such as multitenancy and admission policy control, provide the required level of security to mitigate attacks on the Falco DaemonSet.
 
@@ -83,7 +83,7 @@ Falco agents are running on every node. Therefore, the resource consumption of e
 [Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`. 
 If the [control-plane-manager](../040-control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
 
-You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse.
+You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse:
 1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
     
    Example:

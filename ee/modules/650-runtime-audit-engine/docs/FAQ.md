@@ -54,7 +54,7 @@ spec:
         sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
 ```
 
-> NOTE: Alerts work best in combination with event storage such as Elasticsearch or Loki. Alerts warn the user about suspicious activity on a node.
+> Alerts work best in combination with event storage, such as Elasticsearch or Loki. Alerts warn the user about suspicious activity on a node.
 > Once an alert is received, we recommend that you check event storage and examine the events that triggered it.
 
 ## How to apply the Falco rules found on the Internet
@@ -62,7 +62,7 @@ spec:
 The structure of native Falco rules is different from the CRD schema.
 It is due to limitations of schema validation capabilities in Kubernetes.
 
-The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#falcoauditrules) custom resource makes the process of migrating native Falco rules to Deckhouse more convenient.
+The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#falcoauditrules) custom resource makes the process of migrating native Falco rules to Deckhouse more convenient:
 
 ```shell
 git clone github.com/deckhouse/deckhouse
