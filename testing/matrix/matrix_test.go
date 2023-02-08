@@ -97,7 +97,6 @@ func (s *TestMatrixSuite) changeSymlinks() {
 		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/ee/candi/cloud-providers/vsphere/")
 
-	s.delSymlink("/deckhouse/modules/040-node-manager/images_tags.json")
 	s.symlink(
 		"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager/",
 		"/deckhouse/modules/040-node-manager/cloud-providers/openstack",
@@ -116,11 +115,6 @@ func (s *TestMatrixSuite) restoreSymlinks() {
 	s.changeSymlink(
 		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/candi/cloud-providers/vsphere/")
-
-	s.symlink(
-		"../images_tags.json",
-		"/deckhouse/modules/040-node-manager/images_tags.json",
-	)
 
 	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
 	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
