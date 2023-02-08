@@ -14,7 +14,7 @@ metadata:
 spec:
   type: KubernetesPods
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -45,8 +45,8 @@ spec:
       matchLabels:
         app: booking
   destinationRefs:
-    - loki-storage
-    - es-storage
+  - loki-storage
+  - es-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -334,12 +334,16 @@ spec:
       matchNames:
       - d8-monitoring
   destinationRefs:
-  - -destination-ref-
+  - loki-storage
 ```
 
 ## Фильтрация логов
 
-Только логи контейнера Nginx:
+Пользователи могут фильтровать логи используя следующие фильтры:
+* `labelFilter` - применяется к метаданным, например, имени контейнера (`container`), пространству имен (`namespace`), или имени Pod'а (`pod_name`).
+* `logFilter` - применяется к полям самого сообщения, если оно в JSON-формате.
+
+### Сборка логов только для контейнера `nginx`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -356,39 +360,48 @@ spec:
   - loki-storage
 ```
 
-Не debug и не JSON-логи:
+### Аудит событий kubelet'а
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: non-debug-logs
+  name: kubelet-audit-logs
 spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
   logFilter:
-  - operator: NotRegex
-    values: ["DEBUG.*"]
+  - field: userAgent  
+    operator: Regex
+    values: ["kubelet.*"]
   destinationRefs:
   - loki-storage
 ```
 
-Только ошибки микросервисов бекэнда:
+### Системные логи Deckhouse
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: backend-logs
+  name: system-logs
 spec:
-  type: KubernetesPods
+  type: File
+  file:
+    include:
+    - /var/log/syslog
   labelFilter:
-    - field: pod_labels.app
-      operator: In
-      values: [web-server, queue-worker]
-  logFilter:
-    - field: error
-      operator: Exists
+  - field: message
+    operator: Regex
+    values:
+    - .*d8-kubelet-forker.*
+    - .*containerd.*
+    - .*bashible.*
+    - .*kernel.*
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ```
 
 > NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.

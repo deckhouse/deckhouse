@@ -14,7 +14,7 @@ metadata:
 spec:
   type: KubernetesPods
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -45,8 +45,8 @@ spec:
       matchLabels:
         app: booking
   destinationRefs:
-    - loki-storage
-    - es-storage
+  - loki-storage
+  - es-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -334,12 +334,16 @@ spec:
       matchNames:
       - d8-monitoring
   destinationRefs:
-  - -destination-ref-
+  - loki-storage
 ```
 
-## Logs filters
+## Log filters
 
-Only Nginx container logs:
+Users can filter logs by applying two filters:
+* `labelFilter` - applies to the top level metadata, e.g., container, namespace, or pod name.
+* `logFilter` - applies to fields of a message if in JSON format.
+
+### Collect only logs of the `nginx` container
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -356,37 +360,46 @@ spec:
   - loki-storage
 ```
 
-Non-debug non-JSON logs:
+### Audit of kubelet actions
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: non-debug-logs
+  name: kubelet-audit-logs
 spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
   logFilter:
-  - operator: NotRegex
-    values: ["DEBUG.*"]
+  - field: userAgent  
+    operator: Regex
+    values: ["kubelet.*"]
   destinationRefs:
   - loki-storage
 ```
 
-Only error logs of backend microservices:
+### Deckhouse system logs
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: backend-logs
+  name: system-logs
 spec:
-  type: KubernetesPods
+  type: File
+  file:
+    include:
+    - /var/log/syslog
   labelFilter:
-  - field: pod_labels.app
-    operator: In
-    values: [web-server, queue-worker]
-  logFilter:
-  - field: error
-    operator: Exists
+  - field: message
+    operator: Regex
+    values:
+    - .*d8-kubelet-forker.*
+    - .*containerd.*
+    - .*bashible.*
+    - .*kernel.*
   destinationRefs:
   - loki-storage
 ```
