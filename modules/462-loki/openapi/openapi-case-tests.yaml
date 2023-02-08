@@ -34,7 +34,8 @@ positive:
           memory: 1.5Gi
           cpu: 0.2
   values:
-    - internal: {}
+    - internal:
+        effectiveStorageClass: test
 negative:
   configValues:
     - somethingInConfig: yes
