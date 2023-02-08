@@ -54,12 +54,8 @@ spec:
       containers:
         - name: vmi-router
           args:
-          - --db=/var/lib/kubevirt/vmi-router/routes.db
           {{- range .Values.virtualization.vmCIDRs }}
           - --cidr={{ . }}
-          {{- end }}
-          {{- with .Values.virtualization.internal.routeLocal }}
-          - --route-local
           {{- end }}
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "vmiRouter") }}
@@ -69,18 +65,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/kubevirt/vmi-router
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
               {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "vmi_router_resources" . | nindent 14 }}
               {{- end }}
-      volumes:
-        - name: data
-          hostPath:
-            path: /var/lib/kubevirt/vmi-router
-            type: ""
 {{- end }}
