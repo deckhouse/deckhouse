@@ -115,7 +115,7 @@
  - **[control-plane-manager]** Make authn webhook CA optional. [#3538](https://github.com/deckhouse/deckhouse/pull/3538)
  - **[deckhouse]** Temporarily removed the requirement for a minimal Ubuntu node version. [#3714](https://github.com/deckhouse/deckhouse/pull/3714)
  - **[deckhouse-config]** Support integer numbers for settings constrained with the float number in `multipleOf`. [#3612](https://github.com/deckhouse/deckhouse/pull/3612)
- - **[delivery]** Add tmp dir for werf in `argocd-repo-server` sidecar. [#3779](https://github.com/deckhouse/deckhouse/pull/3779)
+ - **[delivery]** Fix rendering werf bundles in `argocd-repo-server` sidecar. [#3779](https://github.com/deckhouse/deckhouse/pull/3779)
  - **[helm]** Change deprecated resources check parameters. Make the load more uniform. [#3590](https://github.com/deckhouse/deckhouse/pull/3590)
  - **[istio]** iptables-wrapper fix for istio sidecar. [#3746](https://github.com/deckhouse/deckhouse/pull/3746)
  - **[istio]** Using the `iptables-wrapper-installer.sh` script in proxy images. [#3614](https://github.com/deckhouse/deckhouse/pull/3614)
@@ -124,7 +124,9 @@
  - **[prometheus]** Fix Alertmanager CA file (caused Unauthorized error). [#3726](https://github.com/deckhouse/deckhouse/pull/3726)
  - **[prometheus]** Make each Grafana dashboard unique by UID. [#3255](https://github.com/deckhouse/deckhouse/pull/3255)
  - **[registrypackages]** Allow downgrading RPMs from registrypackages in any RPM-distro. [#3358](https://github.com/deckhouse/deckhouse/pull/3358)
+ - **[upmeter]** Fixed rendering error when nodes are named as numbers. [#3795](https://github.com/deckhouse/deckhouse/pull/3795)
  - **[user-authz]** Enabled TLS certificate rotation for the authn webhook. [#3319](https://github.com/deckhouse/deckhouse/pull/3319)
+ - **[virtualization]** Introduce stateless `vmi-router`. [#3801](https://github.com/deckhouse/deckhouse/pull/3801)
  - **[virtualization]** Bump versions, enable HA and configure placement. [#3650](https://github.com/deckhouse/deckhouse/pull/3650)
 
 ## Chore
