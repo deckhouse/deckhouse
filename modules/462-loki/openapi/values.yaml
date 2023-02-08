@@ -10,3 +10,7 @@ properties:
         type: boolean
         default: false
         x-examples: [false, true]
+      effectiveStorageClass:
+        oneOf:
+          - type: string
+          - type: boolean

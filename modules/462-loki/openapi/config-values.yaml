@@ -1,8 +1,12 @@
 type: object
 properties:
   storageClass:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    x-examples: [false, "default"]
     type: string
-    x-examples: ["ceph-ssd", "false"]
     description: |
       The name of the StorageClass to use.
 
