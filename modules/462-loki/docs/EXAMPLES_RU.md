@@ -13,7 +13,7 @@ metadata:
   name: loki
 spec:
   settings:
-    effectiveStorageClass: ceph-csi-rbd
+    storageClass: ceph-csi-rbd
     diskSizeGigabytes: 30
     retentionPeriodHours: 168
   enabled: true
