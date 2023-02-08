@@ -280,6 +280,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
+			Name:  "MODULES_DIR",
+			Value: "/deckhouse/modules:/deckhouse/external-modules/modules",
+		},
+		{
 			Name:  "EXTERNAL_MODULES_DIR",
 			Value: "/deckhouse/external-modules/",
 		},

@@ -142,6 +142,8 @@ spec:
               value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
+            - name: MODULES_DIR
+              value: "/deckhouse/modules:/deckhouse/external-modules/modules"
             - name: EXTERNAL_MODULES_DIR
               value: "/deckhouse/external-modules/"
             - name: DEBUG_UNIX_SOCKET
