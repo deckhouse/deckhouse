@@ -5,11 +5,4 @@ properties:
   internal:
     type: object
     default: {}
-    x-required-for-helm:
-    - routeLocal
-    properties:
-      routeLocal:
-        type: boolean
-        x-examples: [true, false]
-        description: |
-          Route all CIDRs via local interface (for tunneling mode)
+    properties: {}

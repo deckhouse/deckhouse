@@ -44,8 +44,6 @@ const (
 `
 	moduleValues = `
   vmCIDRs: [10.10.10.0/24]
-  internal:
-    routeLocal: true
 `
 )
 
