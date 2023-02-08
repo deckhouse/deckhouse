@@ -1,0 +1,9 @@
+upmeter:
+  fixes:
+    - summary: Fixed rendering error when nodes are named as numbers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3795
+virtualization:
+  fixes:
+    - summary: Introduce stateless `vmi-router`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3801
+
