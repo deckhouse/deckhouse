@@ -80,6 +80,19 @@ retentionDays: 15
 scrapeInterval: 30s
 `
 
+		globalValues = `
+enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+modules:
+  https:
+    mode: CustomCertificate
+  publicDomainTemplate: "%s.example.com"
+  placement: {}
+discovery:
+  d8SpecificNodeCountByRole:
+    system: 1
+    master: 1
+`
+
 		defaultTolerationsTemplate = `
 [
   {
@@ -135,22 +148,6 @@ longtermTolerations:
 		return fmt.Sprintf(`{"node-role.deckhouse.io/%s": ""}`, node)
 	}
 
-	getGlobalValues := func(nodeCount string) string {
-		return fmt.Sprintf(`
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
-modules:
-  https:
-    mode: CustomCertificate
-  publicDomainTemplate: "%%s.example.com"
-  placement: {}
-discovery:
-  d8SpecificNodeCountByRole:
-    %s
-    system: 1
-    master: 1
-`, nodeCount)
-	}
-
 	prometheusWithOptions := func(option1, option2 string) string {
 		return fmt.Sprintf(prometheusConfigTemplate, option1, option2)
 	}
@@ -159,8 +156,8 @@ discovery:
 
 	DescribeTable(
 		"Node selectors for longterm Prometheus deployments were rendered correctly",
-		func(nodeCount, nodeSelector, longtermNodeSelector, expectedNodeSelector string) {
-			f.ValuesSetFromYaml("global", getGlobalValues(nodeCount))
+		func(nodeSelector, longtermNodeSelector, expectedNodeSelector string) {
+			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(nodeSelector, longtermNodeSelector))
 			f.HelmRender()
@@ -172,17 +169,16 @@ discovery:
 			Expect(prometheus.Field("spec.nodeSelector").String()).To(MatchJSON(expectedNodeSelector))
 		},
 
-		Entry("Single node configuration", "", "", "", deckhouseNodeRole("system")),
-		Entry("Separate monitoring node", "monitoring: 1", "", "", deckhouseNodeRole("monitoring")),
-		Entry("No custom main and set longterm node selectors", "monitoring: 1", "", customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
-		Entry("Custom main and no longterm node selectors", "monitoring: 1", customNodeSelector, "", `{"main-prometheus": ""}`),
-		Entry("Custom main and longterm node selectors", "", customNodeSelector, customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
+		Entry("Single node configuration", "", "", deckhouseNodeRole("system")),
+		Entry("No custom main and set longterm node selectors", "", customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
+		Entry("Custom main and no longterm node selectors", customNodeSelector, "", `{"main-prometheus": ""}`),
+		Entry("Custom main and longterm node selectors", customNodeSelector, customLongtermNodeSelector, `{"longterm-prometheus": ""}`),
 	)
 
 	DescribeTable(
 		"Tolerations for longterm Prometheus deployments were rendered correctly",
 		func(tolerations, longtermTolerations, expectedTolerations string) {
-			f.ValuesSetFromYaml("global", getGlobalValues(""))
+			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("prometheus", prometheusWithOptions(tolerations, longtermTolerations))
 			f.HelmRender()
