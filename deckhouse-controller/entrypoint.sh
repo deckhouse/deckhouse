@@ -57,7 +57,8 @@ cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
+coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
+cat ${coreModulesDir}/values-${bundles_map[$bundle]}.yaml >> ${coreModulesDir}/values.yaml
 
 set +o pipefail
 set +e
