@@ -19,21 +19,31 @@ import sys
 from deckhouse import hook
 from dotmap import DotMap
 
+# Refer to Shell Operator doc
+# https://github.com/flant/shell-operator/blob/main/HOOKS.md
 config = """
 configVersion: v1
-beforeHelm: 1
+beforeHelm: 10
 kubernetes:
-- name: "python_versions"
+- name: python_versions
   apiVersion: "deckhouse.io/v1"
   kind: "Python"
-  jqFilter: ".spec.version"
+  jqFilter: |
+    .spec.version
+
+  # We don't want to keep full custom resources in memory.
+  keepFullObjectsInMemory: false
+
+  # We need only snapshots, not to react to particular events.
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
 """
 
 
 def main(ctx: hook.Context):
     # Since we subscribed to deckhouse.io/v1 ApiVersion, we get .spec.version as an object with
     # fields 'major' and 'minor'.
-    versions = ctx.snapshots["python_versions"]
+    versions = ctx.snapshots.get("python_versions", [])
 
     # DotMap simplifies access to nested fields, especially to inexisting ones.
     v = DotMap(ctx.values)
