@@ -3,8 +3,10 @@ docs
 enabled
 hooks
 images
-template_tests
-public_deploy
-values_public.yaml
-README.md
+lib
+Makefile
 openapi
+public_deploy
+README.md
+template_tests
+webhooks
