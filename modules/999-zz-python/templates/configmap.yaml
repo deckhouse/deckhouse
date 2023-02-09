@@ -8,5 +8,5 @@ metadata:
 data:
   valuesStatement: {{ .Values.zzPython.internal.statement | quote }}
   configStatement: {{ .Values.zzPython.statement | quote }}
-  array: {{ .Values.zzPython.array | quote }}
-  pythonVersions: {{ .Values.zzPython.internal.pythonVersions  }}
+  array: {{ .Values.zzPython.array | toJson | quote }}
+  pythonVersions: {{ .Values.zzPython.internal.pythonVersions | toJson | quote }}

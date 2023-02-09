@@ -41,16 +41,21 @@ kubernetes:
 
 
 def main(ctx: hook.Context):
+
+    # DotMap simplifies access to nested fields, especially to inexisting ones. Since we need values
+    # to be JSON serializable, so we convert DotMap back to dict.
+    versions = ctx.snapshots.get("python_versions", [])
+    v = DotMap(ctx.values)
+    v.zzPython.internal.pythonVersions = [parse_snap_version(v) for v in versions]
+    ctx.values = v.toDict()
+
+
+def parse_snap_version(snap):
     # Since we subscribed to deckhouse.io/v1 ApiVersion, we get .spec.version as an object with
     # fields 'major' and 'minor'.
-    versions = ctx.snapshots.get("python_versions", [])
-
-    # DotMap simplifies access to nested fields, especially to inexisting ones.
-    v = DotMap(ctx.values)
-    v.zzPython.internal.pythonVersions = [f"{v.major}.{v.minor}" for v in versions]
-
-    # We need values to be JSON serializable, so we convert DotMap back to dict.
-    ctx.values = v.toDict()
+    v = snap["filterResult"]
+    major, minor = v["major"], v["minor"]
+    return f"{major}.{minor}"
 
 
 if __name__ == "__main__":
