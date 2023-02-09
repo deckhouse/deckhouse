@@ -191,6 +191,16 @@ spec:
     name: foo
   storageClassName: linstor-thindata-r2
   size: 12Gi
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineDisk
+metadata:
+  name: mydata5
+  namespace: ns1
+spec:
+  storageClassName: linstor-thindata-r2
+  size: 10Gi
+
 `),
 			)
 			f.RunHook()
@@ -216,6 +226,11 @@ spec:
 			By("Should not create DataVolume with missing ClusterVirtualMachineImage")
 			dataVolume = f.KubernetesResource("DataVolume", "ns1", "disk-mydata4")
 			Expect(dataVolume).To(BeEmpty())
+
+			By("Should create DataVolume with empty source")
+			dataVolume = f.KubernetesResource("DataVolume", "ns1", "disk-mydata5")
+			Expect(dataVolume).To(Not(BeEmpty()))
+			Expect(dataVolume.Field(`spec.source.blank`).String()).To(Equal("{}"))
 		})
 	})
 
