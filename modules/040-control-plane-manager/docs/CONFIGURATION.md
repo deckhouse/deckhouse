@@ -2,6 +2,6 @@
 title: "Managing control plane: configuration"
 ---
 
-Some cluster parameters that affect control plane management are derived from the [ClusterConfiguration](installing/configuration.html#clusterconfiguration), which is created during the Deckhouse installation.
+Some cluster parameters that affect control plane management are derived from the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) resource.
 
 <!-- SCHEMA -->
