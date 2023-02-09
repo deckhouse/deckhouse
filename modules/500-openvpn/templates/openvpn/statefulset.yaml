@@ -78,6 +78,8 @@ metadata:
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
+  updateStrategy:
+    type: RollingUpdate
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   serviceName: openvpn
   selector:
