@@ -94,6 +94,9 @@ spec:
           - name: webhook-certs
             mountPath: /etc/webhook/certs
             readOnly: true
+          - mountPath: /deckhouse/external-modules
+            name: external-modules
+            readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -104,3 +107,7 @@ spec:
       - name: webhook-certs
         secret:
           secretName: deckhouse-config-webhook-tls
+      - name: external-modules
+        hostPath:
+          path: /var/lib/deckhouse/external-modules
+          type: Directory
