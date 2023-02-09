@@ -11,6 +11,7 @@ properties:
         default: false
         x-examples: [false, true]
       effectiveStorageClass:
+        default: false
         oneOf:
           - type: string
           - type: boolean
