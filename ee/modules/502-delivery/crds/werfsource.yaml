@@ -51,14 +51,14 @@ spec:
                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                   description: |
                     Name of the secret of type `kubernetes.io/dockerconfigjson` with credentials for the registry.
-                    
+
                     The secret must be in namespace `d8-delivery`.
                 argocdRepoEnabled:
                   type: boolean
                   default: true
                   description: |
                     Whether to create Argo CD repository for this source.
-                    
+
                     If `true`, then the OCI-enabled repository
                     will be created in Argo CD with name `name`. Turn it off if you want to create the repository manually,
                     e.g. based on git or Helm Chart Museum.

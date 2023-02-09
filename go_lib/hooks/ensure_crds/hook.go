@@ -155,8 +155,6 @@ func putCRDToCluster(input *go_hook.HookInput, dc dependency.Container, crdYAML 
 }
 
 func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResourceDefinition, error) {
-	crd := &v1.CustomResourceDefinition{}
-
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return nil, err
@@ -171,6 +169,7 @@ func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResou
 		return nil, err
 	}
 
+	crd := &v1.CustomResourceDefinition{}
 	err = sdk.FromUnstructured(o, &crd)
 	if err != nil {
 		return nil, err
