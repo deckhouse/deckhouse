@@ -237,16 +237,21 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 		}
 
 		// DataVolume not found, needs to create a new one
-
-		source := &v1alpha1.TypedObjectReference{}
-		source.APIGroup = disk.Source.APIGroup
-		source.Kind = disk.Source.Kind
-		source.Name = disk.Source.Name
+		var source *v1alpha1.TypedObjectReference
+		if disk.Source != nil {
+			source = &v1alpha1.TypedObjectReference{
+				TypedLocalObjectReference: corev1.TypedLocalObjectReference{
+					APIGroup: disk.Source.APIGroup,
+					Kind:     disk.Source.Kind,
+					Name:     disk.Source.Name,
+				},
+			}
+		}
 
 		dataVolumeSource, err := resolveDataVolumeSource(&diskSnap, &clusterImageSnap, source)
 		if err != nil {
 			input.LogEntry.Warnf("%s. Skip", err)
-			return nil
+			continue
 		}
 
 		storage := &cdiv1.StorageSpec{
