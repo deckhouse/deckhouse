@@ -190,7 +190,7 @@ spec:
 
 Prometheus-operator поддерживает прямую отправку алертов в Telegram с помощью настроек Alertmanager.
 
-Создайте секрет в пространстве имен `d8-monitoring` с токеном Telegram бота.
+Создайте Secret в пространстве имен `d8-monitoring` с токеном Telegram бота.
 
 ```yaml
 apiVersion: v1
