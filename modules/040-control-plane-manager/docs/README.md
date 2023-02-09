@@ -66,7 +66,6 @@ If the target version (set in the [kubernetesVersion](../../installing/configura
 - When upgrading:
   - Upgrades are carried out sequentially, one minor version at a time: 1.22 -> 1.23, 1.23 -> 1.24, 1.24 -> 1.25.
   - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes. 
-  - On top of that, the maximum version increment is one at a time; that is, the new minor version can differ from the lowest kubelet version on the nodes by 1 at max.
 - When downgrading:
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
   - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
