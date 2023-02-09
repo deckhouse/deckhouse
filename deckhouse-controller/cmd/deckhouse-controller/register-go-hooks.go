@@ -20,6 +20,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/madison"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/pricing"
+	_ "github.com/deckhouse/deckhouse/ee/modules/650-runtime-audit-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/deckhouse-config"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"

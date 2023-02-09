@@ -1,0 +1,1 @@
+FROM falcosecurity/falco-driver-loader:0.33.1@sha256:1fe583eee4afe81f168b85aeeb428bc4268707c4370995952f2539defd6b9b2f

@@ -463,6 +463,12 @@ var DefaultImagesTags = map[string]interface{}{
 		"tomlMerge01":                         "imageHash-registrypackages-tomlMerge01",
 		"virtWhatDebian1151Deb9u1":            "imageHash-registrypackages-virtWhatDebian1151Deb9u1",
 	},
+	"runtimeAuditEngine": map[string]interface{}{
+		"falco":             "imageHash-runtimeAuditEngine-falco",
+		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
+		"falcosidekick":     "imageHash-runtimeAuditEngine-falcosidekick",
+		"rulesLoader":       "imageHash-runtimeAuditEngine-rulesLoader",
+	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",

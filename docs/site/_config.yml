@@ -137,6 +137,11 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/650-runtime-audit-engine"
+      type: "pages"
+    values:
+      d8Revision: ee
+  - scope:
       path: "*/500-okmeter"
       type: "pages"
     values:
