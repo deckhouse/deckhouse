@@ -340,8 +340,8 @@ spec:
 ## Log filters
 
 Users can filter logs by applying two filters:
-* `labelFilter` - applies to the top level metadata, e.g., container, namespace, or pod name.
-* `logFilter` - applies to fields of a message if in JSON format.
+* `labelFilter` — applies to the top-level metadata, e.g., container, namespace, or Pod name.
+* `logFilter` — applies to fields of a message if it is in JSON format.
 
 ### Collect only logs of the `nginx` container
 
