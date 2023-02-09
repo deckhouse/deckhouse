@@ -90,6 +90,11 @@ def __handle(ctx: hook.Context, crd_getter: CRDGetter):
         if existing_crd is not None:
             crd["spec"]["conversion"] = existing_crd["spec"]["conversion"]
 
+        from pprint import pprint as pp
+
+        print("CRD:")
+        pp(crd)
+
         ctx.kubernetes.create_or_update(crd)
 
 

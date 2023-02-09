@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -54,9 +54,6 @@ def main(ctx: hook.Context):
     try:
         bctx = ctx.binding_context
 
-        # print("BINDING CONTEXT")
-        # print(json.dumps(bctx, indent=2))  # debug printing
-
         v_from, v_to = bctx["fromVersion"], bctx["toVersion"]
         objects = bctx["review"]["request"]["objects"]
         if not objects:
@@ -65,15 +62,10 @@ def main(ctx: hook.Context):
         for obj in objects:
             converted = conv.convert(v_from, v_to, obj)
 
-            # print(json.dumps(converted, indent=2))  # debug printing
-
             ctx.output.conversions.collect(converted)
     except Exception as e:
         print("conversion error", str(e))  # debug printing
         ctx.output.conversions.error(str(e))
-
-    # print("CONVERSION RESPONSE")
-    # print(json.dumps(ctx.output.conversions.data[0], indent=2))  # debug printing
 
 
 class Converter:
@@ -113,6 +105,7 @@ class ConverterDispatcher:
     def _key_a(self, a: ConverterAdapter):
         return self._keys(a.from_version, a.to_version)[0]
 
+    # TODO add support for automatic conversion chains
     def convert(self, v_from: str, v_to: str, obj: dict) -> dict:
         key_fwd, key_bwd = self._keys(v_from, v_to)
 
