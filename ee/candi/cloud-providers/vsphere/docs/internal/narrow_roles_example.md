@@ -1,81 +1,51 @@
-{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+# RBAC config
 
-## List of required vSphere resources
+## Role-bindings
 
-* **User** with required set of [permissions](#permissions).
-* **Network** with DHCP server and access to the Internet
-* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
-* **ComputeCluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories).
-* **Datastore** with required [tags](#datastore-tags).
-* **Template** — [prepared](#building-a-vm-image) VM image.
+### vSphere
 
-## vSphere configuration
+`Read-only` role without inheritance.
 
-You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) to proceed with the rest of the guide.
+### Datacenter
 
-### govc configuration
+`Read-only` role without inheritance.
 
-{% snippetcut %}
-```shell
-export GOVC_URL=example.com
-export GOVC_USERNAME=<USER_NAME>
-export GOVC_PASSWORD=<USER_PASSWORD>
-export GOVC_INSECURE=1
+### Hosts and Clusters
+
+`Full` on `Cluster` with inheritance.
+
+> There seems to be a potential for narrower Role.
+
+### Networking
+
+Tested only on Distributed vSwitch.
+
+* Distributed switch — `Read-only` without inheritance.
+* Distributed port group — `Full` with inheritance.
+
+### Storage
+
+`Full` role on folder with Volumes with inheritance.
+
+### VMs and Templates
+
+`Full` role on `vmFolderPath` with inheritance.
+
+## Roles
+
+### Read-only
+
+```text
+govc role.create kubernetes-ro \
+  InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateScope \
+  InventoryService.Tagging.CreateTag InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteScope \
+  InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory InventoryService.Tagging.EditTag \
+  InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag Resource.AssignVMToPool \
+  StorageProfile.View StorageViews.View System.Anonymous System.Read System.View
 ```
-{% endsnippetcut %}
 
-### Creating tags and tag categories
+### Full
 
-VMware vSphere doesn't have "regions" and "zones". It has Datacenters and ComputeClusters.
-
-To establish relation between these and "regions"/"zones" we'll use tags that fall into two tag categories. One for "region" tags and another for "zones tags".
-
-For example, if you've got two Datacenters with a similarly named zone in each one:
-
-{% snippetcut %}
-```shell
-govc tags.category.create -d "Kubernetes region" k8s-region
-govc tags.category.create -d "Kubernetes zone" k8s-zone
-govc tags.create -d "Kubernetes Region #1" -c k8s-region test_region_1
-govc tags.create -d "Kubernetes Region #2" -c k8s-region test_region_2
-govc tags.create -d "Kubernetes Zone Test" -c k8s-zone test_zone
-```
-{% endsnippetcut %}
-
-"Region" tags are attached to Datacenters:
-
-{% snippetcut %}
-```shell
-govc tags.attach -c k8s-region test_region_1 /DC1
-govc tags.attach -c k8s-region test_region_2 /DC2
-```
-{% endsnippetcut %}
-
-"Zone" tags are attached to ComputeClusters and Datastores:
-
-{% snippetcut %}
-```shell
-govc tags.attach -c k8s-zone test_zone /DC/host/test_cluster
-govc tags.attach -c k8s-zone test_zone /DC/datastore/test_lun
-```
-{% endsnippetcut %}
-
-#### Datastore tags
-
-You can dynamically provision PVs (via PVCs) if all Datastores are present on **all** ESXis in a selected `zone` (ComputeCluster).
-StorageClasses will be created automatically for each Datastore that is tagged with `region` and `zone` tags.
-
-### Permissions
-
-> We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
->
-> This all-encompassing Role should be enough for all Deckhouse components.
-> If you need a more granular Role, please contact your Deckhouse support.
-
-You have to create a role with a following list of permissions and attach
-it to **vCenter**.
-
-{% snippetcut %}
 ```shell
 govc role.create kubernetes \
   Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
@@ -117,57 +87,4 @@ govc role.create kubernetes \
   VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
   VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot \
   Cns.Searchable StorageProfile.View
-
-govc permissions.set  -principal username -role kubernetes /DC
 ```
-{% endsnippetcut %}
-
-### Building a VM image
-
-1. [Install Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
-1. Clone the Deckhouse repository:
-   {% snippetcut %}
-```bash
-git clone https://github.com/deckhouse/deckhouse/
-```
-   {% endsnippetcut %}
-
-1. `cd` into the `ee/modules/030-cloud-provider-vsphere/packer/` folder of the repository:
-   {% snippetcut %}
-```bash
-cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
-```
-   {% endsnippetcut %}
-
-1. Create a file name `vsphere.auto.pkrvars.hcl` with the following contents:
-   {% snippetcut %}
-```text
-vcenter_server = "<hostname or IP of a vCenter>"
-vcenter_username = "<username>"
-vcenter_password = "<password>"
-vcenter_cluster = "<ComputeCluster name, in which template will be created>"
-vcenter_datacenter = "<Datacenter name>"
-vcenter_resource_pool = <"ResourcePool name">
-vcenter_datastore = "<Datastore name>"
-vcenter_folder = "<Folder name>"
-vm_network = "<VM network in which you will build an image>"
-```
-   {% endsnippetcut %}
-{% raw %}
-1. If your PC (the one you are running Packer from) is not located in the same network as `vm_network` (if you are connected through a tunnel), change `{{ .HTTPIP }}` in the `<UbuntuVersion>.pkrvars.hcl` to your PCs VPN IP:
-
-    ```hcl
-    " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
-    ```
-{% endraw %}
-
-1. Build a version of Ubuntu:
-
-   {% snippetcut %}
-```shell
-# Ubuntu 20.04
-packer build --var-file=20.04.pkrvars.hcl .
-# Ubuntu 18.04
-packer build --var-file=18.04.pkrvars.hcl .
-```
-   {% endsnippetcut %}
