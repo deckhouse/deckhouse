@@ -1,12 +1,5 @@
 type: object
 properties:
-  earlyOomEnabled:
-    type: boolean
-    default: true
-    x-examples:
-    - false
-    description: |
-      Set to 'false' to disable early OOM killer in case it behaves incorrectly.
   instancePrefix:
     type: string
     description: |

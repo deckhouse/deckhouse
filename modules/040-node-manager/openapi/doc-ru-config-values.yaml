@@ -1,7 +1,4 @@
 properties:
-  earlyOomEnabled:
-    description: |
-      Флаг отключения early OOM killer для случаев, когда его работа создаёт проблемы в нормальной работе узлов.
   instancePrefix:
     description: |
       Префикс, который следует использовать при создании инстансов в cloud-провайдере.
