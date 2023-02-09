@@ -1,10 +1,9 @@
-deckhouse-0.4.3.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
-deckhouse-0.4.3.dist-info/LICENSE,sha256=xx0jnfkXJvxRnG63LTGOxlggYnIysveWIZ6H3PNdCrQ,11357
-deckhouse-0.4.3.dist-info/METADATA,sha256=DeRfBjeGh0vz6zsSZJWw4Sj4_mvexo5qEy8Zn3RPdgA,2408
-deckhouse-0.4.3.dist-info/RECORD,,
-deckhouse-0.4.3.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
-deckhouse-0.4.3.dist-info/WHEEL,sha256=vVCvjcmxuUltf8cYhJ0sJMRDLr1XsPuxEId8YDzbyCY,88
-deckhouse-0.4.3.dist-info/direct_url.json,sha256=Po9J03-rqzp_0CDT_rXXlt3EMFcD24Rm45qcgWbnIl8,116
+deckhouse-0.4.4.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+deckhouse-0.4.4.dist-info/LICENSE,sha256=xx0jnfkXJvxRnG63LTGOxlggYnIysveWIZ6H3PNdCrQ,11357
+deckhouse-0.4.4.dist-info/METADATA,sha256=a_-Vu42WZDvsiQcr23rlobyhSxpFTd1fqZlBZA7lzXU,2408
+deckhouse-0.4.4.dist-info/RECORD,,
+deckhouse-0.4.4.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
+deckhouse-0.4.4.dist-info/WHEEL,sha256=vVCvjcmxuUltf8cYhJ0sJMRDLr1XsPuxEId8YDzbyCY,88
 deckhouse/__init__.py,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
 deckhouse/__pycache__/__init__.cpython-310.pyc,,
 deckhouse/__pycache__/conversions.cpython-310.pyc,,
@@ -22,4 +21,4 @@ deckhouse/metrics.py,sha256=cew7PXXtB73LjzVMwo9zbh8cNXh20kqOL4DPDt0MB_E,552
 deckhouse/module.py,sha256=gxyF2R7rWGL-R1OgHsEWUMG9vmEOAnnmqlCnAEQ8oO0,1075
 deckhouse/storage.py,sha256=Q5SOxgrBckthz2vdAdfC4GYo3aUhMMjmAZqbeR7KpvQ,529
 deckhouse/validations.py,sha256=npqp29H6eI0e05qUWPjR4iJDucSuOZ2Ym0ev4rC_XwM,1146
-deckhouse/values.py,sha256=2rc-eSqk-aBDebA07q6Ut9Q6gr2KenEWKPI38vwrXs0,4220
+deckhouse/values.py,sha256=2H73z3aHs9JlzGgfN-gRaE2V16VBMNdFE7HaO5Sc4JQ,4431

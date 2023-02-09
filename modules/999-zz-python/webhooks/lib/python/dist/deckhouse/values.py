@@ -113,6 +113,13 @@ class PatchGenerator:
             # ('remove', ['x', 'y'], [('t', 0)])
 
             key = values[0][0]
+
+            if len(path_segments) > 0 and isinstance(key, int):
+                # array element
+                for p in self.__array_patches(path_segments):
+                    yield p
+                return
+
             path = json_path(path_segments + [key])
             yield {"op": "remove", "path": path}
             return

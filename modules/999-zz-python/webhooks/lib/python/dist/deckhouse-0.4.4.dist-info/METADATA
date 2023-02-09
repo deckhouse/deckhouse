@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: deckhouse
-Version: 0.4.3
+Version: 0.4.4
 Summary: Wrapper for hooks for Deckhouse, Addon Operator, and Shell Operator by Flant
 License: Apache-2.0
 Author: Eugene Shevchenko

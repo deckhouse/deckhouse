@@ -43,6 +43,9 @@ def main(ctx: hook.Context):
     v = DotMap(ctx.values)
     v.zzPython.internal.pythonVersions = [parse_snap_version(v) for v in versions]
     ctx.values = v.toDict()
+    # merge module 'zz-python' values failed: error in remove for path:
+    #    '/zzPython/internal/pythonVersions/1':
+    #       Unable to access invalid index: 1: invalid index referenced
 
 
 def parse_snap_version(snap):
