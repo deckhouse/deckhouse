@@ -5,7 +5,7 @@ properties:
     description: |
       Имя storageClass'а, который использовать.
 
-      Если не указано — используется StorageClass существующей PVC Prometheus, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
+      Если не указано — используется StorageClass существующей PVC Prometheus, а если PVC пока нет — используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
 
       `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть Pod придется руками
 
@@ -14,7 +14,7 @@ properties:
     description: |
       Имя storageClass'а, который использовать для Longterm Prometheus.
 
-      Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
+      Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
 
       **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
   longtermRetentionDays:
