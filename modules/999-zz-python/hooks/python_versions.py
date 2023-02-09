@@ -30,13 +30,8 @@ kubernetes:
   kind: "Python"
   jqFilter: |
     .spec.version
-
   # We don't want to keep full custom resources in memory.
   keepFullObjectsInMemory: false
-
-  # We need only snapshots, not to react to particular events.
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
 """
 
 
