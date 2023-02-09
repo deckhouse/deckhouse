@@ -73,7 +73,9 @@ spec:
         - name: ALLOWED_USERS
           value: "system:serviceaccount:d8-system:deckhouse"
         - name: MODULES_DIR
-          value: "/deckhouse/modules"
+          value: "/deckhouse/modules:/deckhouse/external-modules/modules"
+        - name: EXTERNAL_MODULES_DIR
+          value: "/deckhouse/external-modules/"
         - name: GLOBAL_HOOKS_DIR
           value: "/deckhouse/global-hooks"
         ports:
