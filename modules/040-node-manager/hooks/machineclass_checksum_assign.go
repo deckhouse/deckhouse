@@ -165,10 +165,8 @@ func readChecksumTemplate(cloudType string) ([]byte, error) {
 }
 
 func getChecksumTemplatePath(cloudType string) string {
-	modulesDir, ok := os.LookupEnv("MODULES_DIR")
-	if !ok {
-		modulesDir = "../.."
-	}
-	path := filepath.Join(modulesDir, "040-node-manager", "cloud-providers", cloudType, "machine-class.checksum")
+	// Memorize: we can not use MODULES_DIR env variable anymore
+	// because MODULES_DIR could contain multiple paths, joined with colon (:) in the unpredictable order
+	path := filepath.Join("deckhouse", "modules", "040-node-manager", "cloud-providers", cloudType, "machine-class.checksum")
 	return path
 }

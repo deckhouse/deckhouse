@@ -943,11 +943,7 @@ func newCloudProviderAvailabilityChecker() func(tYpE string) {
 func getAvailableCloudProviderTypes() set.Set {
 	ptypes := set.New()
 
-	modulesDir, ok := os.LookupEnv("MODULES_DIR")
-	if !ok {
-		modulesDir = "../.."
-	}
-	dir := filepath.Join(modulesDir, "040-node-manager", "cloud-providers")
+	dir := filepath.Join("deckhouse", "modules", "040-node-manager", "cloud-providers")
 
 	files, err := os.ReadDir(dir)
 	if err != nil {
