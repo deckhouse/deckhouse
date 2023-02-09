@@ -22,10 +22,6 @@ apiVersions:
         global:
           modules:
             publicDomainTemplate: "%s.kube.company.my"
-            proxy:
-              httpProxy: http://proxy.company.my
-              httpsProxy: https://proxy.company.my
-              noProxy: ["192.168.0.0/24", "company.my", ".company.my"]
         cniFlannelEnabled: true
         cniFlannel:
           podNetworkMode: VXLAN
