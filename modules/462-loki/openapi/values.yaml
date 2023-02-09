@@ -14,3 +14,4 @@ properties:
         oneOf:
           - type: string
           - type: boolean
+            enum: [false]
