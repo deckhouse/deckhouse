@@ -54,7 +54,7 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 
 ## Version control
 
-**Patch versions** of control plane components (i.e. within the minor version, for example, from 1.19.3 to 1.19.8) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.23.3` to `1.23.5`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
 
 Upgrading **minor versions** of control plane components (e.g. from `1.23.*` to `1.25.*`) can be managed using the [`kubernetesVersion`](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](../../supported_versions.html#kubernetes).
 
