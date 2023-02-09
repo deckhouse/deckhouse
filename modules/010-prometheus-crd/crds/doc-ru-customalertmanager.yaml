@@ -536,14 +536,15 @@ spec:
                               properties:
                                 apiURL:
                                   description: |
-                                    Адрес Telegram API, например https://api.telegram.org.
+                                    Адрес Telegram API, например `https://api.telegram.org`.
+                                    
                                     Если не указано, будет использоваться адрес API по умолчанию.
                                   type: string
                                 botToken:
                                   description: |
-                                    Ключ секрета, содержащий токен Telegram бота.
+                                    Ключ Secret'а, содержащий токен Telegram-бота.
 
-                                    Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
                                   properties: *data-in-secret-properties
                                   required:
                                     - key
@@ -566,9 +567,9 @@ spec:
                                       properties:
                                         credentials:
                                           description: |
-                                            Секрет, содержащий полномочия для выполнения запроса.
+                                            Secret, содержащий полномочия для выполнения запроса.
 
-                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -589,9 +590,9 @@ spec:
                                       properties:
                                         password:
                                           description: |
-                                            Секрет, который содержит пароль для аутентификации.
+                                            Secret, который содержит пароль для аутентификации.
 
-                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -599,9 +600,9 @@ spec:
                                           x-kubernetes-map-type: atomic
                                         username:
                                           description: |
-                                            Секрет, который содержит имя пользователя для аутентификации.
+                                            Secret, который содержит имя пользователя для аутентификации.
 
-                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -610,9 +611,9 @@ spec:
                                       type: object
                                     bearerTokenSecret:
                                       description: |
-                                        Секрет содержащий токен носителя, который будет использоваться клиентом для аутентификации.
+                                        Secret, содержащий токен носителя который будет использоваться клиентом для аутентификации.
 
-                                        Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                        Secret должен находиться в пространстве имен `d8-monitoring`.
                                       properties: *data-in-secret-properties
                                       required:
                                         - key
@@ -624,7 +625,7 @@ spec:
                                       description: Учетные данные клиента OAuth2, используемые для получения токена target'а.
                                       properties:
                                         clientId:
-                                          description: Секрет или ConfigMap, содержащие идентификатор клиента OAuth2.
+                                          description: Secret или ConfigMap, содержащие идентификатор клиента OAuth2.
                                           properties:
                                             configMap:
                                               description: |
@@ -638,9 +639,9 @@ spec:
                                               x-kubernetes-map-type: atomic
                                             secret:
                                               description: |
-                                                Секрет, который содержит данные, используемые в target'е.
+                                                Secret, который содержит данные, используемые в target'е.
 
-                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -649,9 +650,9 @@ spec:
                                           type: object
                                         clientSecret:
                                           description: |
-                                            Секрет, который содержит клиентские данные OAuth2.
+                                            Secret, который содержит клиентские данные OAuth2.
 
-                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -697,9 +698,9 @@ spec:
                                               x-kubernetes-map-type: atomic
                                             secret:
                                               description: |
-                                                Секрет, который содержит данные для использования в target'е.
+                                                Secret, который содержит данные для использования в target'е.
 
-                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -721,9 +722,9 @@ spec:
                                               x-kubernetes-map-type: atomic
                                             secret:
                                               description: |
-                                                Секрет, который содержит данные для использования в target'е.
+                                                Secret, который содержит данные для использования в target'е.
 
-                                                Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
                                               properties: *data-in-secret-properties
                                               required:
                                                 - key
@@ -735,9 +736,9 @@ spec:
                                           type: boolean
                                         keySecret:
                                           description: |
-                                            Секрет, который содержит файл клиентского ключа target'а.
+                                            Secret, который содержит файл клиентского ключа target'а.
 
-                                            Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key

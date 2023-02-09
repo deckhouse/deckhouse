@@ -847,11 +847,13 @@ spec:
                                 Read more in the [Prometheus documentation](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config).
                               properties:
                                 apiURL:
-                                  description: The Telegram API URL i.e. https://api.telegram.org.
-                                    If not specified, default API URL will be used.
+                                  description: |
+                                    The Telegram API URL i.e. `https://api.telegram.org`.
+                                    
+                                    If not specified, the default API URL will be used.
                                   type: string
                                 botToken:
-                                  description: The secret in the `d8-monitoring` namespace that contains Telegram bot token.
+                                  description: The Secret in the `d8-monitoring` namespace that contains Telegram bot token.
                                   properties: *data-in-secret-properties
                                   required:
                                     - key
@@ -873,7 +875,7 @@ spec:
                                         v0.22+.
                                       properties:
                                         credentials:
-                                          description: The secret in the `d8-monitoring` namespace that contains the credentials of the request.
+                                          description: The Secret in the `d8-monitoring` namespace that contains the credentials of the request.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -890,14 +892,14 @@ spec:
                                         BasicAuth takes precedence.
                                       properties:
                                         password:
-                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
+                                          description: The Secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         username:
-                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
+                                          description: The Secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                             - key
@@ -905,7 +907,7 @@ spec:
                                           x-kubernetes-map-type: atomic
                                       type: object
                                     bearerTokenSecret:
-                                      description: The secret in the `d8-monitoring` namespace that contains the bearer token to be used by the client for authentication.
+                                      description: The Secret in the `d8-monitoring` namespace that contains the bearer token to be used by the client for authentication.
                                       properties: *data-in-secret-properties
                                       required:
                                         - key
@@ -919,7 +921,7 @@ spec:
                                         a token for the targets.
                                       properties:
                                         clientId:
-                                          description: The secret or configmap containing
+                                          description: The Secret or configMap containing
                                             the OAuth2 client id
                                           properties:
                                             configMap:
