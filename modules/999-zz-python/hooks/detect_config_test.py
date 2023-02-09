@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import detect_array
+import detect_config
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -34,7 +34,7 @@ def run_hook(initial_values: dict = None):
     config and by defaults in openapi/config-values.yaml.
     """
     return hook.testrun(
-        func=detect_array.main,
+        func=detect_config.main,
         initial_values=initial_values,
     )
 

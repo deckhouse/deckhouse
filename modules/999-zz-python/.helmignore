@@ -6,7 +6,6 @@ images
 lib
 Makefile
 openapi
-public_deploy
 README.md
 template_tests
 webhooks

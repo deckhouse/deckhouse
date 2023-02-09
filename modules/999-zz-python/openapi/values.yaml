@@ -12,3 +12,9 @@ properties:
       count:
         type: integer
         default: 0
+      pythonVersions:
+        type: array
+        default: []
+        items:
+          type: string
+          pattern: "^[0-9]+\.[0-9]+$"
