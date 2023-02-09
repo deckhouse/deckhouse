@@ -66,6 +66,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/3 * * * *",
 		},
 	},
+	Settings: &go_hook.HookConfigSettings{
+		EnableSchedulesOnStartup: true,
+	},
 }, dependency.WithExternalDependencies(handleSource))
 
 func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
