@@ -49,6 +49,7 @@ shell:
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - export VERSION={{ $value.ccm.openstack }}
+  - export GIT_VERSION={{ $value.ccm.openstack }}
   - make openstack-cloud-controller-manager
   {{- end }}
 {{- end }}
