@@ -36,21 +36,17 @@ kubernetes:
 
 
 def main(ctx: hook.Context):
-
     # DotMap simplifies access to nested fields, especially to inexisting ones. Since we need values
     # to be JSON serializable, so we convert DotMap back to dict.
     versions = ctx.snapshots.get("python_versions", [])
     v = DotMap(ctx.values)
     v.zzPython.internal.pythonVersions = [parse_snap_version(v) for v in versions]
     ctx.values = v.toDict()
-    # merge module 'zz-python' values failed: error in remove for path:
-    #    '/zzPython/internal/pythonVersions/1':
-    #       Unable to access invalid index: 1: invalid index referenced
 
 
 def parse_snap_version(snap):
-    # Since we subscribed to deckhouse.io/v1 ApiVersion, we get .spec.version as an object with
-    # fields 'major' and 'minor'.
+    # Since we subscribed to deckhouse.io/v1 ApiVersion, we get .spec.version (see jqFilter) as an
+    # object with fields 'major' and 'minor'.
     v = snap["filterResult"]
     major, minor = v["major"], v["minor"]
     return f"{major}.{minor}"
