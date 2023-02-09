@@ -8,7 +8,6 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta1
   clientConfig:
     caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
     service:
