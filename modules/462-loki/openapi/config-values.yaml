@@ -6,7 +6,6 @@ properties:
       - type: boolean
         enum: [false]
     x-examples: [false, "default"]
-    type: string
     description: |
       The name of the StorageClass to use.
 
