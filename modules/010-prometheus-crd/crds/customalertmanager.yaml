@@ -841,8 +841,10 @@ spec:
                           telegramConfigs:
                             description: List of Telegram configurations.
                             items:
-                              description: TelegramConfig configures notifications via Telegram.
-                                See https://prometheus.io/docs/alerting/latest/configuration/#telegram_config
+                              description: |
+                                Configures notifications via Telegram. 
+                                
+                                Read more in the [Prometheus documentation](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config).
                               properties:
                                 apiURL:
                                   description: The Telegram API URL i.e. https://api.telegram.org.
