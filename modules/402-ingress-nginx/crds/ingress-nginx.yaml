@@ -57,7 +57,7 @@ spec:
                   description: |
                     One of the supported NGINX Ingress Controller versions.
 
-                    **By default**: the version in the [module settings](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/configuration.html) is used.
+                    **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ['1.1']
                 enableIstioSidecar:
                   type: boolean
