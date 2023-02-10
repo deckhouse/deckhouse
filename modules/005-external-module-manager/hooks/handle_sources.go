@@ -286,7 +286,7 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha
 
 	valuesFile := path.Join(moduleVersionPath, "values.yaml")
 
-	f, err := os.OpenFile(valuesFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 666)
+	f, err := os.OpenFile(valuesFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
