@@ -1104,7 +1104,6 @@ entries:
               url: /modules/450-network-gateway/configuration.html
         - title: virtualization
           featureStatus: experimental
-          d8Revision: ce
           folders:
             - title:
                 en: Description
