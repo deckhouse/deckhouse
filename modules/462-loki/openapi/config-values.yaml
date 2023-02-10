@@ -20,13 +20,11 @@ properties:
       Disk size for storing logs or the size of the PVC when specifying the [storageClass](#parameters-storageclass) parameters.
 
       You should manually specify the required disk size for storing logs for the period specified in the `retentionPeriodHours` parameter.
-      Loki does not have the ability to automatically delete old data when the disk is full.
+      Loki cannot automatically delete old data when the disk is full.
 
       The occupied disk space is automatically monitored by [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects) module.
 
-      **CAUTION!**
-      If the Loki data disk becomes full, the application will stop working. You should choose the necessary balance between the values of
-      `retentionPeriodHours` and `diskSizeGigabytes`.
+      **CAUTION!** If the Loki data disk becomes full, the application will stop working. You should choose the necessary balance between the values of `retentionPeriodHours` and `diskSizeGigabytes`.
     x-doc-default: 2
     default: 2
   retentionPeriodHours:
