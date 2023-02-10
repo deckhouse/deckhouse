@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_module_image" (list . "<container-name>") }} */ -}}
 {{- /* returns image name */ -}}
 {{- define "helm_lib_module_image" }}
-  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
   {{- $moduleName := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
   {{- $imageHash := index $context.Values.global.modulesImages.tags $moduleName $containerName }}
@@ -23,7 +23,7 @@
 {{- /* Usage: {{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} */ -}}
 {{- /* returns image name if found */ -}}
 {{- define "helm_lib_module_image_no_fail" }}
-  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
   {{- $moduleName := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
   {{- $imageHash := index $context.Values.global.modulesImages.tags $moduleName $containerName }}
@@ -43,7 +43,7 @@
 {{- /* Usage: {{ include "helm_lib_module_common_image" (list . "<container-name>") }} */ -}}
 {{- /* returns image name from common module */ -}}
 {{- define "helm_lib_module_common_image" }}
-  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
   {{- $imageHash := index $context.Values.global.modulesImages.tags "common" $containerName }}
   {{- if not $imageHash }}
@@ -56,7 +56,7 @@
 {{- /* Usage: {{ include "helm_lib_module_common_image_no_fail" (list . "<container-name>") }} */ -}}
 {{- /* returns image name from common module if found */ -}}
 {{- define "helm_lib_module_common_image_no_fail" }}
-  {{- $context := index . 0 }} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
   {{- $imageHash := index $context.Values.global.modulesImages.tags "common" $containerName }}
   {{- if $imageHash }}

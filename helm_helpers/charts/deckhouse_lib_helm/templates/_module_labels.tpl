@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_module_labels" (list . (dict "app" "test" "component" "testing")) }} */ -}}
 {{- /* returns deckhouse labels */ -}}
 {{- define "helm_lib_module_labels" }}
-  {{- $context := index . 0 -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- /* Additional labels dict */ -}}
 labels:
   heritage: deckhouse

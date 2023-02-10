@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) }} */ -}}
 {{- /* return module StorageClass annotations */ -}}
 {{- define "helm_lib_module_storage_class_annotations" -}}
-  {{- $context := index . 0 -}}   {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := index . 0 -}}   {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $sc_index := index . 1  -}} {{- /* Storage class index */ -}}
   {{- $sc_name := index . 2  -}}  {{- /* Storage class name */ -}}
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}

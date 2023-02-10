@@ -1,4 +1,4 @@
-# Helm utils template definitions for Deckhouse modules
+# Helm library for Deckhouse modules
 
 ## Table of contents
 
@@ -91,22 +91,22 @@
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## High Availability
 
 ### helm_lib_is_ha_to_value
 
- returns value <yes> if cluster is highly available, else — returns <no> 
+ returns value "yes" if cluster is highly available, else — returns "no" 
 
 #### Usage
 
-`{{ include "helm_lib_is_ha_to_value" (list . <yes> <no>) }} `
+`{{ include "helm_lib_is_ha_to_value" (list . yes no) }} `
 
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Yes value 
 -  No value 
 
@@ -121,7 +121,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## Kube Rbac Proxy
 
@@ -136,7 +136,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Namespace where CA configmap will be created  
 
 ## Module Ephemeral Storage
@@ -166,7 +166,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## Module Https
 
@@ -180,7 +180,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_https_mode
@@ -193,7 +193,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_https_cert_manager_cluster_issuer_name
@@ -206,7 +206,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_https_ingress_tls_enabled
@@ -219,7 +219,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_https_copy_custom_certificate
@@ -234,7 +234,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Namespace 
 -  Secret name prefix 
 
@@ -250,7 +250,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Secret name prefix 
 
 ## Module Image
@@ -266,7 +266,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Container name 
 
 
@@ -281,7 +281,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Container name 
 
 
@@ -296,7 +296,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Container name 
 
 
@@ -311,7 +311,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Container name 
 
 ## Module Ingress Class
@@ -326,7 +326,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## Module Init Container
 
@@ -352,7 +352,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Semver constraint 
 
 ## Module Labels
@@ -368,7 +368,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Additional labels dict 
 
 ## Module Public Domain
@@ -384,7 +384,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Name portion 
 
 ## Module Security Context
@@ -400,7 +400,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  User id 
 -  Group id 
 
@@ -415,7 +415,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs
@@ -428,7 +428,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_pod_security_context_run_as_user_root
@@ -441,7 +441,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_container_security_context_not_allow_privilege_escalation
@@ -464,7 +464,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_container_security_context_privileged
@@ -487,7 +487,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all
@@ -500,7 +500,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add
@@ -514,7 +514,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  List of capabilities 
 
 
@@ -529,7 +529,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  List of capabilities 
 
 
@@ -544,7 +544,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  User id 
 -  Group id 
 
@@ -561,7 +561,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Storage class index 
 -  Storage class name 
 
@@ -579,7 +579,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Dashboards root dir 
 -  Dashboards current dir 
 
@@ -594,7 +594,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_single_dashboard
@@ -608,7 +608,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Dashboard name 
 -  Folder 
 -  Dashboard definition 
@@ -627,7 +627,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Namespace for creating rules 
 -  Rules root dir 
 -  Current dir (optional) 
@@ -644,7 +644,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Namespace for creating rules 
 
 
@@ -659,7 +659,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Target timeout in seconds 
 
 ## Node Affinity
@@ -671,7 +671,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
 
 
@@ -682,7 +682,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
 
 ## Pod Disruption Budget
@@ -697,7 +697,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## Priority Class
 
@@ -708,7 +708,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Priority class name 
 
 ## Resources Management
@@ -789,7 +789,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_container_kube_rbac_proxy_resources
@@ -802,7 +802,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 ## Spec For High Availability
 
@@ -817,7 +817,7 @@ list:
 #### Arguments
 
 list:
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 -  Match labels for podAntiAffinity label selector 
 
 
@@ -831,7 +831,7 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 
 
 
 ### helm_lib_deployment_strategy_and_replicas_for_ha
@@ -844,4 +844,4 @@ list:
 
 #### Arguments
 
--  Dot object (.) with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc 

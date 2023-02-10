@@ -10,6 +10,6 @@ ephemeral-storage: {{ add . 50 }}Mi
 {{- /* 50Mi for container logs `log-opts.max-file * log-opts.max-size` would be requested */ -}}
 {{- /* returns ephemeral-storage size for only logs */ -}}
 {{- define "helm_lib_module_ephemeral_storage_only_logs" -}}
-{{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
 ephemeral-storage: 50Mi
 {{- end }}

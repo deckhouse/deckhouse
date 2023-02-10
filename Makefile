@@ -248,4 +248,4 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 ##@ Lib helm
 .PHONY: update-lib-helm
 update-lib-helm:
-	cd helm_helpers/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && git add Chart.yaml Chart.lock charts/*
+	cd helm_helpers/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
