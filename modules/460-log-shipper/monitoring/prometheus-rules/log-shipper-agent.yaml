@@ -64,9 +64,8 @@
     for: 10m
     expr: |
       sum by (error_type, stage, component_id, component_type, node) (
-        vector_component_errors_total{component_kind="source"})
-      ) * on (node) (abs(kube_node_spec_unschedulable - 1))
-      > 0
+        vector_component_errors_total{component_kind="source"}
+      ) > 0
     labels:
       severity_level: "4"
       d8_module: log-shipper
@@ -88,7 +87,7 @@
     for: 10m
     expr: |
       sum by (node, component_id) (
-        vector_events_discarded_total > 0
+        vector_events_discarded_total
       ) * on (node) (abs(kube_node_spec_unschedulable - 1))
       > 0
     labels:
@@ -98,7 +97,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Pods of log-shipper-agent drop logs to the {{ $labels.component_id }} on the {{ $labels. }} node.
+      summary: Pods of log-shipper-agent drop logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
       plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
