@@ -37,3 +37,7 @@ spec:
           type: date
           format: date-time
           description: 'Время последней синхронизации с container registry.'
+        - name: msg
+          jsonPath: .status.message
+          type: string
+          description: 'Сообщение об ошибке.'

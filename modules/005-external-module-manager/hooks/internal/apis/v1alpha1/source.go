@@ -44,10 +44,10 @@ type ExternalModuleSourceSpec struct {
 }
 
 type ExternalModuleSourceStatus struct {
-	SyncTime         time.Time     `json:"syncTime,omitempty"`
-	AvailableModules []string      `json:"availableModules,omitempty"`
-	Msg              string        `json:"message,omitempty"`
-	ModuleErrors     []ModuleError `json:"moduleErrors,omitempty"`
+	SyncTime         time.Time     `json:"syncTime"`
+	AvailableModules []string      `json:"availableModules"`
+	Msg              string        `json:"message"`
+	ModuleErrors     []ModuleError `json:"moduleErrors"`
 }
 
 type ModuleError struct {

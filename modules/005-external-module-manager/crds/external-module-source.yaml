@@ -72,3 +72,7 @@ spec:
           type: date
           format: date-time
           description: 'When the repository was synchronized.'
+        - name: msg
+          jsonPath: .status.message
+          type: string
+          description: 'Error message if exists.'
