@@ -57,6 +57,7 @@ cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
+mkdir -p /deckhouse/external-modules/modules
 coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
 cat ${coreModulesDir}/values-${bundles_map[$bundle]}.yaml >> ${coreModulesDir}/values.yaml
 
