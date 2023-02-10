@@ -135,6 +135,7 @@ ansible:
         - busybox-extras
         - vim
         - tini
+        - python3
 
 {{- include "base components" . }}
 
@@ -192,6 +193,7 @@ git:
   - deckhouse-controller/entrypoint.sh
   - jq_lib
   - helm_lib
+  - python_lib
   excludePaths:
   - docs
   - modules/*/docs
@@ -273,6 +275,7 @@ docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+    PYTHONPATH: /deckhouse/python_lib
 ---
 image: tests-prebuild
 fromImage: base-for-go
