@@ -100,10 +100,10 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: {{ .Values.loki.diskSizeGigabytes | default '2' }}Gi
+          storage: {{ .Values.loki.diskSizeGigabytes }}Gi
       storageClassName: {{ $storageClass }}
 {{- else }}
       - name: storage
         emptyDir:
-          sizeLimit: {{ .Values.loki.diskSizeGigabytes | default '2' }}Gi
+          sizeLimit: {{ .Values.loki.diskSizeGigabytes }}Gi
 {{- end }}
