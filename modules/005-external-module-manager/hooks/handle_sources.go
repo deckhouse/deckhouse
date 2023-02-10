@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -262,6 +263,40 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 		return fmt.Errorf("copy module error: %v", err)
 	}
 
+	// inject registry to values
+	err = injectRegistryToModuleValues(moduleVersionPath, moduleSource)
+	if err != nil {
+		return fmt.Errorf("inject registry error: %v", err)
+	}
+
+	return nil
+}
+
+func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
+	reg := registryValues{
+		Base:      moduleSource.Spec.Registry.Repo,
+		Dockercfg: moduleSource.Spec.Registry.DockerCFG,
+	}
+
+	inj := injectValues{
+		Registry: reg,
+	}
+
+	data, _ := yaml.Marshal(inj)
+
+	valuesFile := path.Join(moduleVersionPath, "values.yaml")
+
+	f, err := os.OpenFile(valuesFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 666)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -429,3 +464,12 @@ func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.Exter
 type moduleChecksum map[string]string
 
 type sourceChecksum map[string]moduleChecksum
+
+type injectValues struct {
+	Registry registryValues `json:"registry"`
+}
+
+type registryValues struct {
+	Base      string `json:"base"`
+	Dockercfg string `json:"dockercfg"`
+}
