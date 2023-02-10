@@ -196,7 +196,3 @@ spec:
         hostPath:
           path: /var/lib/deckhouse/external-modules
           type: DirectoryOrCreate
-      - name: module-links
-        hostPath:
-          path: /var/lib/deckhouse/external-modules/modules
-          type: DirectoryOrCreate
