@@ -34,6 +34,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -264,7 +265,7 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 	}
 
 	// inject registry to values
-	err = injectRegistryToModuleValues(moduleVersionPath, moduleSource)
+	err = injectRegistryToModuleValues(moduleName, moduleVersionPath, moduleSource)
 	if err != nil {
 		return fmt.Errorf("inject registry error: %v", err)
 	}
@@ -272,7 +273,7 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 	return nil
 }
 
-func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
+func injectRegistryToModuleValues(moduleName, moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
 	reg := registryValues{
 		Base:      moduleSource.Spec.Registry.Repo,
 		Dockercfg: moduleSource.Spec.Registry.DockerCFG,
@@ -282,7 +283,9 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha
 		Registry: reg,
 	}
 
-	data, _ := yaml.Marshal(inj)
+	data, _ := yaml.Marshal(
+		map[string]injectValues{strcase.ToLowerCamel(moduleName): inj},
+	)
 
 	valuesFile := path.Join(moduleVersionPath, "values.yaml")
 
