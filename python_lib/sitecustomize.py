@@ -33,6 +33,10 @@ def find_module_root(path):
         (str): hook 'module' root
     """
     while True:
+        # We are in the module root if we found Chart.yaml file.
+        if os.path.exists(os.path.join(path, "Chart.yaml")):
+            return path
+
         parent, _ = os.path.split(path)
         # Discover module root for deckhouse, or module webhooks root for webhook handler.
         if os.path.split(parent)[1] == "modules" or path == "/":
