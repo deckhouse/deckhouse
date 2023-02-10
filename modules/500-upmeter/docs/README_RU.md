@@ -122,13 +122,13 @@ u — Unknown = 0
 
 ```promql
 # Пример для пробы
-status_time{group="synthectic", probe="dns", status="up"}        # ≤ 300000
+status_time{group="synthetic", probe="dns", status="up"}        # ≤ 300000
 
 # Пример для группы
-status_time{group="synthectic", probe="__total__", status="up"}  # ≤ 300000
+status_time{group="synthetic", probe="__total__", status="up"}  # ≤ 300000
 
 # Сумма статусов в точке всегда равна 5 минутам
-sum by (status) (status_time{group="synthectic", probe="dns"})   # = 300000
+sum by (status) (status_time{group="synthetic", probe="dns"})   # = 300000
 ```
 
 ## Вычисление доступности
