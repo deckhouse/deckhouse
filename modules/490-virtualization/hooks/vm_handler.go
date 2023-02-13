@@ -250,8 +250,10 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 				NetworkSource: virtv1.NetworkSource{
 					Pod: &virtv1.PodNetwork{},
 				}}},
-			NodeSelector: d8vm.Spec.NodeSelector,
-			Tolerations:  d8vm.Spec.Tolerations,
+			NodeSelector:              d8vm.Spec.NodeSelector,
+			Tolerations:               d8vm.Spec.Tolerations,
+			Affinity:                  d8vm.Spec.Affinity,
+			TopologySpreadConstraints: d8vm.Spec.TopologySpreadConstraints,
 		},
 	}
 
