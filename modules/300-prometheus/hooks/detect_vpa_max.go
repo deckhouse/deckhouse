@@ -84,13 +84,26 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 	totalPodsMemory := totalPodsCapacity * memoryPerPod
 	totalPodsCPU := totalPodsCapacity * milliCPUPerPod
 
-	// calculate prometheus usage
-	maxMem := resource.NewQuantity(totalPodsMemory/1, resource.BinarySI)
-	maxCPU := resource.NewMilliQuantity(totalPodsCPU/1, resource.DecimalSI)
+	// calculate prometheus usage by MustParse method
+	minMem := resource.MustParse("1000Mi")
+	maxMem := resource.MustParse(fmt.Sprintf("%dMi", totalPodsMemory/1))
+	minCPU := resource.MustParse("200m")
+	maxCPU := resource.MustParse(fmt.Sprintf("%dm", totalPodsCPU/1))
+
+	if maxMem.Cmp(minMem) == -1 {
+		maxMem = minMem
+	}
+
+	if maxCPU.Cmp(minCPU) == -1 {
+		maxCPU = minCPU
+	}
 
 	// calculate longterm prometheus
 	maxLongtermMem := resource.NewQuantity(totalPodsMemory/3, resource.BinarySI)
 	maxLongtermCPU := resource.NewMilliQuantity(totalPodsCPU/3, resource.DecimalSI)
+
+	input.Values.Set("prometheus.internal.vpa.minMemory", minMem.String())
+	input.Values.Set("prometheus.internal.vpa.minCPU", minCPU.String())
 
 	input.Values.Set("prometheus.internal.vpa.maxMemory", maxMem.String())
 	input.Values.Set("prometheus.internal.vpa.maxCPU", maxCPU.String())
