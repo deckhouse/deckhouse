@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -87,22 +88,35 @@ func discoverDexCA(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var dexCA string
+	var (
+		dexCA     string
+		secretKey string
+	)
 
 	dexCAModeFromConfig := input.Values.Get(dexCAModePath).String()
+
+	switch module.GetHTTPSMode("userAuthn", input) {
+	case "CertManager":
+		secretKey = "ingress-tls"
+	case "CustomCertificate":
+		secretKey = "ingress-tls-customcertificate"
+	}
 
 	switch dexCAModeFromConfig {
 	case doNotNeedCAMode:
 		input.Values.Remove(dexCAPath)
 	case fromIngressSecretCAMode:
 		dexCASnapshots := input.Snapshots["secret"]
-		if len(dexCASnapshots) > 0 {
-			dexCAFromSnapshot, ok := dexCASnapshots[0].(DexCA)
+		for _, d := range dexCASnapshots {
+			dexCAFromSnapshot, ok := d.(DexCA)
 			if !ok {
 				return fmt.Errorf("cannot convert dex ca certificate from snaphots")
 			}
 
-			dexCA = string(dexCAFromSnapshot.Data)
+			if dexCAFromSnapshot.Name == secretKey {
+				dexCA = string(dexCAFromSnapshot.Data)
+				break
+			}
 		}
 
 		if dexCA == "" {
