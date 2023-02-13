@@ -6,9 +6,9 @@ title: "Cloud provider — Yandex.Cloud: схемы размещения"
 
 ## Standard
 
-В данной схеме размещения узлы не будут иметь публичных IP-адресов, а будут выходить в интернет через Yandex Cloud NAT-шлюз.
+В данной схеме размещения узлы не будут иметь публичных IP-адресов, а будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTSpvzjcEBpD1qad9u_UgvsOrYT_Xtnxwg6Pzb64HQHLqQWcZi6hhCNRPKVUdYKX32nXEVJeCzACVRG/pub?w=812&h=655)
+![Схема размещения Standard в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Пример конфигурации схемы размещения:
@@ -21,7 +21,13 @@ provider:
   cloudID: <CLOUD_ID>
   folderID: <FOLDER_ID>
   serviceAccountJSON: |
-    {"test": "test"}
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }
 masterNodeGroup:
   replicas: 1
   zones:
@@ -38,7 +44,7 @@ masterNodeGroup:
     additionalLabels:
       takes: priority
 nodeGroups:
-- name: khm
+- name: worker
   replicas: 1
   zones:
   - ru-central1-a
@@ -71,7 +77,7 @@ dhcpOptions:
 
 > **Внимание!** В модуле cloud-provider-yandex пока нет поддержки Security Groups, поэтому все узлы кластера будут смотреть наружу.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTgwXWsNX6CKCRaMf5t6rl3kpKQQFHK6T8Dsg1jAwAwYaN1MRbxKFsSFQHeo1N3Qec4etPpeA0guB6-/pub?w=812&h=655)
+![Схема размещения WithoutNAT в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Пример конфигурации схемы размещения:
@@ -84,7 +90,13 @@ provider:
   cloudID: <CLOUD_ID>
   folderID: <FOLDER_ID>
   serviceAccountJSON: |
-    {"test": "test"}
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }    
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -99,7 +111,7 @@ masterNodeGroup:
     - ru-central1-a
     - ru-central1-b
 nodeGroups:
-- name: khm
+- name: worker
   replicas: 1
   instanceClass:
     cores: 4
@@ -109,7 +121,7 @@ nodeGroups:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
 sshPublicKey: "<SSH_PUBLIC_KEY>"
@@ -130,9 +142,9 @@ dhcpOptions:
 
 Если `withNATInstance.externalSubnetID` не задан, а `withNATInstance.internalSubnetID` задан — NAT-инстанс будет создан в зоне этого subnet.
 
-Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT-инстанс создастся в зоне `ru-central1-c`.
+Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT-инстанс создастся в зоне `ru-central1-a`.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSnNqebgRdwGP8lhKMJfrn5c0QXDpe9YdmIlK4eDberysLLgYiKNuwaPLHcyQhJigvQ21SANH89uipE/pub?w=812&h=655)
+![Схема размещения WithNATInstance в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Пример конфигурации схемы размещения:
@@ -149,7 +161,13 @@ provider:
   cloudID: <CLOUD_ID>
   folderID: <FOLDER_ID>
   serviceAccountJSON: |
-    {"test": "test"}
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }    
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -164,7 +182,7 @@ masterNodeGroup:
     - ru-central1-a
     - ru-central1-b
 nodeGroups:
-- name: khm
+- name: worker
   replicas: 1
   instanceClass:
     cores: 4
