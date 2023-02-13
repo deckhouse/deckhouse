@@ -478,7 +478,8 @@ type sourceChecksum map[string]moduleChecksum
 
 // part of openapi schema for injecting registry values
 type registrySchemaForValues struct {
-	Type       string `yaml:"type"`
+	Type       string   `yaml:"type"`
+	Default    struct{} `yaml:"default"`
 	Properties struct {
 		Base struct {
 			Type    string `yaml:"type"`

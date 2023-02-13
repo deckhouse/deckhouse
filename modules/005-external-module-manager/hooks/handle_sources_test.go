@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,6 +53,8 @@ properties:
 	data, err := mutateOpenapiSchema([]byte(source), sourceModule)
 	require.NoError(t, err)
 
+	fmt.Println(string(data))
+
 	assert.YAMLEq(t, `
 type: object
 x-extend:
@@ -59,6 +62,7 @@ x-extend:
 properties:
   registry:
     type: object
+    default: {}
     properties:
       base:
         type: string
