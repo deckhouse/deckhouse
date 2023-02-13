@@ -34,12 +34,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -265,7 +264,7 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 	}
 
 	// inject registry to values
-	err = injectRegistryToModuleValues(moduleName, moduleVersionPath, moduleSource)
+	err = injectRegistryToModuleValues(moduleVersionPath, moduleSource)
 	if err != nil {
 		return fmt.Errorf("inject registry error: %v", err)
 	}
@@ -273,34 +272,33 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 	return nil
 }
 
-func injectRegistryToModuleValues(moduleName, moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
-	reg := registryValues{
-		Base:      moduleSource.Spec.Registry.Repo,
-		Dockercfg: moduleSource.Spec.Registry.DockerCFG,
-	}
+func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
+	reg := new(registrySchemaForValues)
+	reg.SetBase(moduleSource.Spec.Registry.Repo)
+	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
 
-	inj := injectValues{
-		Registry: reg,
-	}
+	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 
-	data, _ := yaml.Marshal(
-		map[string]injectValues{strcase.ToLowerCamel(moduleName): inj},
-	)
-
-	valuesFile := path.Join(moduleVersionPath, "values.yaml")
-
-	f, err := os.OpenFile(valuesFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(data)
+	valuesData, err := os.ReadFile(valuesFile)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	var yamlData injectedValues
+
+	err = yaml.Unmarshal(valuesData, &yamlData)
+	if err != nil {
+		return err
+	}
+
+	yamlData.Registry = reg
+
+	valuesData, err = yaml.Marshal(yamlData)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(valuesFile, valuesData, 0666)
 }
 
 func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
@@ -468,11 +466,42 @@ type moduleChecksum map[string]string
 
 type sourceChecksum map[string]moduleChecksum
 
-type injectValues struct {
-	Registry registryValues `json:"registry"`
+// part of openapi schema for injecting registry values
+type registrySchemaForValues struct {
+	Type       string `yaml:"type"`
+	Properties struct {
+		Base struct {
+			Type    string `yaml:"type"`
+			Default string `yaml:"default"`
+		} `yaml:"base"`
+		Dockercfg struct {
+			Type    string `yaml:"type"`
+			Default string `yaml:"default,omitempty"`
+		} `yaml:"dockercfg"`
+	} `yaml:"properties"`
 }
 
-type registryValues struct {
-	Base      string `json:"base"`
-	Dockercfg string `json:"dockercfg"`
+func (rsv *registrySchemaForValues) fillTypes() {
+	rsv.Properties.Base.Type = "string"
+	rsv.Properties.Dockercfg.Type = "string"
+	rsv.Type = "object"
+}
+
+func (rsv *registrySchemaForValues) SetBase(registryBase string) {
+	rsv.fillTypes()
+
+	rsv.Properties.Base.Default = registryBase
+}
+
+func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
+	if len(dockercfg) == 0 {
+		return
+	}
+
+	rsv.Properties.Dockercfg.Default = dockercfg
+}
+
+type injectedValues struct {
+	XXX      map[string]interface{}   `json:",inline" yaml:",inline"`
+	Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
 }
