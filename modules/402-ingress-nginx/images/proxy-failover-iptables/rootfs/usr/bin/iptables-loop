@@ -24,11 +24,21 @@ MARK_HTTPS_RULE="-p tcp --dport 443 -j CONNMARK --set-mark 3"
 SAVE_MARK_RULE="-j CONNMARK --save-mark"
 RESTORE_HTTP_MARK_RULE="-p tcp --dport 80 -j CONNMARK --restore-mark"
 RESTORE_HTTPS_MARK_RULE="-p tcp --dport 443 -j CONNMARK --restore-mark"
-DNAT_HTTP_RULE="-p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:81"
-DNAT_HTTPS_RULE="-p tcp --dport 443 -j DNAT --to-destination 127.0.0.1:444"
-INPUT_ACCEPT_RULE="-p tcp -m multiport --dport 81,444 -d 127.0.0.1 -m comment --comment ingress-failover -j ACCEPT"
-
+DNAT_HTTP_RULE="-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81"
+DNAT_HTTPS_RULE="-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444"
+INPUT_ACCEPT_RULE="-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT"
+DEV_NAME=ingressfailover
 # Initialization
+
+# check if interface exists
+if ! $(ip addr show "$DEV_NAME" >/dev/null 2>&1); then
+  ip link add "$DEV_NAME" type dummy
+fi
+# check if address set
+if ! $(ip addr show "$DEV_NAME" | grep -q "169.254.20.11/32"); then
+  ip addr add 169.254.20.11/32 dev "$DEV_NAME"
+fi
+
 
 # during the failover rollout remove failover-jump-rule setting all traffic to primary
 iptables -w -t nat -C PREROUTING $JUMP_RULE >/dev/null 2>&1 && iptables -w -t nat -D PREROUTING $JUMP_RULE >/dev/null 2>&1
