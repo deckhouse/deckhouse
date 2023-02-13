@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
