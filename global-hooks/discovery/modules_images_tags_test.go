@@ -50,8 +50,19 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 
 			It("Should set tags files content as object into 'global.modulesImages.tags'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				tag := f.ValuesGet("global.modulesImages.tags.basicAuth.nginx").String()
-				Expect(tag).To(Equal(`valid-tag`))
+				tag := f.ValuesGet("global.modulesImages.tags").String()
+				Expect(tag).To(MatchJSON(`
+{
+	"basicAuth": {
+	  "nginx": "valid-tag"
+	},
+	"testLocal": {
+	  "test": "valid-tag"
+	},
+	"testTest": {
+	  "test": "valid-tag"
+	}
+}`))
 			})
 		})
 

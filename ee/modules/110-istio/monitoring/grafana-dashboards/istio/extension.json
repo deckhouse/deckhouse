@@ -97,12 +97,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "avg(envoy_wasm_vm_null_active)",
+          "expr": "avg(envoy_wasm_envoy_wasm_runtime_null_active)",
           "legendFormat": "native",
           "refId": "A"
         },
         {
-          "expr": "avg(envoy_wasm_vm_v8_active)",
+          "expr": "avg(envoy_wasm_envoy_wasm_runtime_v8_active)",
           "legendFormat": "v8",
           "refId": "B"
         }
@@ -199,12 +199,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "avg(envoy_wasm_vm_null_created)",
+          "expr": "avg(envoy_wasm_envoy_wasm_runtime_null_created)",
           "legendFormat": "native",
           "refId": "A"
         },
         {
-          "expr": "avg(envoy_wasm_vm_v8_created)",
+          "expr": "avg(envoy_wasm_envoy_wasm_runtime_v8_created)",
           "legendFormat": "v8",
           "refId": "B"
         }
@@ -638,7 +638,7 @@
           "expr": "sum(container_memory_working_set_bytes{container=\"istio-proxy\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -736,10 +736,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -794,11 +794,31 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
-    "from": "2020-10-22T23:11:45.783Z",
-    "to": "2020-10-23T00:04:19.481Z"
+    "from": "now-5m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [

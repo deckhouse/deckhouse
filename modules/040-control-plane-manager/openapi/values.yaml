@@ -10,6 +10,14 @@ properties:
     - pkiChecksum
     - rolloutEpoch
     properties:
+      audit:
+        type: object
+        default: {}
+        properties:
+          webhookURL:
+            type: string
+          webhookCA:
+            type: string
       etcdQuotaBackendBytes:
         type: string
         x-examples: [ "123456789" ]

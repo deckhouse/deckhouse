@@ -61,6 +61,12 @@ memory: 10Mi
     {{- if .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
       {{ $_ := set $tpl_context.apiserver "authnWebhookCacheTTL" .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
     {{- end }}
+    {{- if .Values.controlPlaneManager.internal.audit.webhookURL }}
+      {{ $_ := set $tpl_context.apiserver "auditWebhookURL" .Values.controlPlaneManager.internal.audit.webhookURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.internal.audit.webhookCA }}
+      {{ $_ := set $tpl_context.apiserver "auditWebhookCA" .Values.controlPlaneManager.internal.audit.webhookCA }}
+    {{- end }}
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "authz" }}
     {{- if .Values.controlPlaneManager.apiserver.authz.webhookURL }}
@@ -109,6 +115,10 @@ extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
   {{- if $tpl_context.apiserver.webhookCA }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- end }}
+
+  {{- if $tpl_context.apiserver.auditWebhookURL }}
+extra-file-audit-webhook-config.yaml: {{ include "auditWebhookTemplate" (dict "webhookCA" $tpl_context.apiserver.auditWebhookCA "webhookURL" $tpl_context.apiserver.auditWebhookURL) | b64enc }}
   {{- end }}
 
   {{- if $tpl_context.apiserver.authnWebhookURL }}

@@ -27,6 +27,10 @@ import (
 func NewFromSnapshot(snapshot []go_hook.FilterResult) Set {
 	s := Set{}
 	for _, v := range snapshot {
+		if v == nil {
+			continue
+		}
+
 		s.Add(v.(string))
 	}
 	return s

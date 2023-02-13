@@ -22,9 +22,9 @@ rules:
     - list
     - watch
   - apiGroups:
-    - ""
+    - "cilium.io"
     resources:
-    - nodes
+    - ciliumnodes
     verbs:
     - list
     - get

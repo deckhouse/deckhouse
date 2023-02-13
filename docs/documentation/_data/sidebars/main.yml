@@ -896,6 +896,27 @@ entries:
                     url: /modules/015-admission-policy-engine/cr.html
               - title: FAQ
                 url: /modules/015-admission-policy-engine/faq.html
+          - title: runtime-audit-engine
+            d8Revision: ee
+            folders:
+              - title:
+                  en: Description
+                  ru: Описание
+                url: /modules/650-runtime-audit-engine/
+              - title:
+                  ru: Справка
+                  en: Reference
+                folders:
+                  - title:
+                      ru: Настройки
+                      en: Configuration
+                    url: /modules/650-runtime-audit-engine/configuration.html
+                  - title: Custom Resources
+                    url: /modules/650-runtime-audit-engine/cr.html
+              - title: FAQ
+                url: /modules/650-runtime-audit-engine/faq.html
+              - title: Examples
+                url: /modules/650-runtime-audit-engine/examples.html
           - title: network-policy-engine
             folders:
               - title:
@@ -1104,7 +1125,6 @@ entries:
               url: /modules/450-network-gateway/configuration.html
         - title: virtualization
           featureStatus: experimental
-          d8Revision: ce
           folders:
             - title:
                 en: Description

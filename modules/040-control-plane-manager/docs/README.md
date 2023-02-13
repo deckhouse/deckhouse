@@ -54,20 +54,21 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 
 ## Version control
 
-The **patch version** of any control plane component (i.e. within the minor version, for example, from 1.19.3 to 1.19.8) is upgraded automatically along with the Deckhouse version.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.23.3` to `1.23.5`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
 
-The upgrade of a **minor version** of any control plane component is performed in a safe way. You just need to specify the desired minor version in the `control plane` settings. Deckhouse implements a smart strategy for changing the versions of `control plane` components if the desired version does not match the current one:
+Upgrading **minor versions** of control plane components (e.g. from `1.23.*` to `1.25.*`) can be managed using the [`kubernetesVersion`](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](../../supported_versions.html#kubernetes).
+
+The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
+
+If the target version (set in the [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+- General remarks
+  - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:
-  - The upgrades are performed **sequentially**, one minor version at a time: 1.22 -> 1.23, 1.23 -> 1.24, 1.24 -> 1.25.
-  - You cannot proceed to the next version until all the `control plane` components have been successfully upgraded to the current one.
-  - The version to upgrade to can only be one minor version ahead of the kubelet versions on the nodes.
+  - Upgrades are carried out sequentially, one minor version at a time: 1.22 -> 1.23, 1.23 -> 1.24, 1.24 -> 1.25.
+  - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes. 
 - When downgrading:
-  - The downgrade is performed **sequentially**, one minor version at a time: 1.25 -> 1.24, 1.24 -> 1.23, 1.23 -> 1.22.
-  - Master nodes cannot have a lower version than workers: the downgrade isn't possible if the kubelet versions on the nodes aren't downgraded yet.
-  - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components:
-    - Suppose, `maxUsedControlPlaneVersion = 1.20`. In this case, the lowest possible version of the control plane components is `1.19`.
-
-[List of supported Kubernetes versions...](../../supported_versions.html#kubernetes)
+  - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
+  - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
 
 ## Auditing
 

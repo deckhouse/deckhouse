@@ -8,7 +8,8 @@ title: "Модуль log-shipper"
 Предназначение этих агентов — с минимальными изменениями отправить логи дальше из кластера.
 Каждый агент - это отдельный [vector](https://vector.dev/), конфигурацию для которого сгенерировал Deckhouse.
 
-![log-shipper architecture](../../images/460-log-shipper/log_shipper_architecture.png)
+![log-shipper architecture](../../images/460-log-shipper/log_shipper_architecture.svg)
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
 1. Deckhouse следит за ресурсами `ClusterLoggingConfig`, `ClusterLogsDestination` и `PodLoggingConfig`.
    Комбинация конфигурации для сбора логов и направления для отправки называется `pipeline`.
@@ -23,7 +24,8 @@ title: "Модуль log-shipper"
 
 Агенты шлют логи напрямую в хранилище, например в Loki или Elasticsearch.
 
-![log-shipper distributed](../../images/460-log-shipper/log_shipper_distributed.png)
+![log-shipper distributed](../../images/460-log-shipper/log_shipper_distributed.svg)
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1FFuPgpDHUGRdkMgpVWXxUXvfZTsasUhEh8XNz7JuCTQ/edit -->
 
 * Менее сложная схема для использования.
 * Доступна из коробки без лишних зависимостей, кроме хранилища.
@@ -35,17 +37,29 @@ title: "Модуль log-shipper"
 Агенты на узлах стараются отправить логи с узла максимально быстро с минимальным потреблением ресурсов.
 Сложные преобразования применяются на стороне агрегатора.
 
-![log-shipper centralized](../../images/460-log-shipper/log_shipper_centralized.png)
+![log-shipper centralized](../../images/460-log-shipper/log_shipper_centralized.svg)
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1TL-YUBk0CKSJuKtRVV44M9bnYMq6G8FpNRjxGxfeAhQ/edit -->
 
 * Меньше потребление ресурсов для приложений на узлах.
 * Пользователи могут настроить в агрегаторе любые трансформации и слать логи в гораздо большее количество хранилищ.
 * Количество выделенных узлов под агрегаторы может увеличиваться вверх и вниз в зависимости от нагрузки.
 
+#### Потоковая
+
+Главной задачей данной архитектуры является как можно быстрее отправить логи в очередь сообщений, из которой они в служебном порядке будут переданы в долгосрочное хранилище для дальнейшего анализа.
+
+![log-shipper stream](../../images/460-log-shipper/log_shipper_stream.svg)
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
+
+* Те же плюсы и минусы что у централизованной архитектуры, но добавляется еще одно промежуточное хранилище.
+* Повешенная надежность, подходит для всех кому доставка логов является наиболее критичной.
+
 ### Фильтры сообщений
 
 Существуют два фильтра, чтобы снизить количество отправляемых сообщений в хранилище - `log filter` и `label filter`.
 
-![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.png)
+![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
+<!-- Исходник картинок: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 
 Они запускаются сразу после объединения строк при помощи multiline parser.
 

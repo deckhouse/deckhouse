@@ -44,6 +44,7 @@ const labels = {
   'e2e/use/k8s/1.23': { type: 'e2e-use', ver: '1.23' },
   'e2e/use/k8s/1.24': { type: 'e2e-use', ver: '1.24' },
   'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },
+  'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },

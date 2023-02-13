@@ -135,6 +135,7 @@ ansible:
         - busybox-extras
         - vim
         - tini
+        - python3
 
 {{- include "base components" . }}
 
@@ -192,6 +193,7 @@ git:
   - deckhouse-controller/entrypoint.sh
   - jq_lib
   - helm_lib
+  - python_lib
   excludePaths:
   - docs
   - modules/*/docs
@@ -204,6 +206,7 @@ git:
   - global-hooks/**/*.go
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
+  - '**/testdata'
 - url: https://github.com/flant/shell-operator
   tag: v1.1.3
   add: /frameworks/shell
@@ -272,6 +275,7 @@ docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+    PYTHONPATH: /deckhouse/python_lib
 ---
 image: tests-prebuild
 fromImage: base-for-go

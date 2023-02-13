@@ -31,6 +31,6 @@ properties:
     description: |
       Имя storageClass'а, который использовать для хранения DHCP lease.
 
-      Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+      Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или глобальный [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
 
       Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.

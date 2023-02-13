@@ -17,7 +17,8 @@ webhooks:
           - CREATE
           - UPDATE
           - DELETE
-    admissionReviewVersions: ["v1", "v1beta1"]
+    admissionReviewVersions:
+    - v1
     matchPolicy: Equivalent
     failurePolicy: Fail
     sideEffects: None
@@ -45,7 +46,8 @@ webhooks:
           - CREATE
           - UPDATE
           - DELETE
-    admissionReviewVersions: ["v1", "v1beta1"]
+    admissionReviewVersions:
+    - v1
     matchPolicy: Equivalent
     failurePolicy: Fail
     sideEffects: None

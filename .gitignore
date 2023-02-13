@@ -49,4 +49,5 @@ bin/
 
 # Python dev environment
 __pycache__/
+*.py[cod]
 .pytest_cache/

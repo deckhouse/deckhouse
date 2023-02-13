@@ -2,6 +2,11 @@
 title: "The istio module"
 ---
 
+Currently supported istio versions:
+* 1.12 (will be deprecated soon)
+* 1.13 (will be deprecated soon)
+* 1.16
+
 ## What issues does Istio help to resolve?
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.

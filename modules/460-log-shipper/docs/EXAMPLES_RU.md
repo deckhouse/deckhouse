@@ -14,7 +14,7 @@ metadata:
 spec:
   type: KubernetesPods
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -45,8 +45,8 @@ spec:
       matchLabels:
         app: booking
   destinationRefs:
-    - loki-storage
-    - es-storage
+  - loki-storage
+  - es-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -179,7 +179,7 @@ spec:
   url: http://loki.loki:3100
 ```
 
-## Поддержка elasticsearch < 6.X
+## Поддержка Elasticsearch < 6.X
 
 Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
 Сделать это можно следующим образом:
@@ -199,6 +199,43 @@ spec:
       user: elastic
       password: c2VjcmV0IC1uCg==
 ```
+
+## Шаблон индекса для Elasticsearch
+
+Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ namespace }}-%F"
+```
+
+В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
+
+Эта функция так же хорошо работает в комбинации с `extraLabels`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ service }}-{{ namespace }}-%F"
+  extraLabels:
+    service: "{{ service_name }}"
+```
+
+1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
+2. Новое поле метаданных `service` используется в шаблоне индекса.
 
 ## Пример интеграции со Splunk
 
@@ -262,9 +299,51 @@ spec:
     endpoint: logstash.default:12345
 ```
 
+## Сбор событий Kubernetes
+
+События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
+
+Включите events-exporter изменив параметры модуля `extended-monitoring`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+spec:
+  version: 1
+  settings:
+    events:
+      exporterEnabled: true
+```
+
+Выложите в кластер следующий `ClusterLoggingConfig` чтобы собирать сообщения с Pod'а `events-exporter`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubernetes-events
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: events-exporter
+    namespaceSelector:
+      matchNames:
+      - d8-monitoring
+  destinationRefs:
+  - loki-storage
+```
+
 ## Фильтрация логов
 
-Только логи контейнера Nginx:
+Пользователи могут фильтровать логи используя следующие фильтры:
+* `labelFilter` — применяется к метаданным, например, имени контейнера (`container`), пространству имен (`namespace`), или имени Pod'а (`pod_name`).
+* `logFilter` — применяется к полям самого сообщения, если оно в JSON-формате.
+
+### Сборка логов только для контейнера `nginx`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -281,39 +360,48 @@ spec:
   - loki-storage
 ```
 
-Не debug и не JSON-логи:
+### Аудит событий kubelet'а
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: non-debug-logs
+  name: kubelet-audit-logs
 spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
   logFilter:
-  - operator: NotRegex
-    values: ["DEBUG.*"]
+  - field: userAgent  
+    operator: Regex
+    values: ["kubelet.*"]
   destinationRefs:
   - loki-storage
 ```
 
-Только ошибки микросервисов бекэнда:
+### Системные логи Deckhouse
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: backend-logs
+  name: system-logs
 spec:
-  type: KubernetesPods
+  type: File
+  file:
+    include:
+    - /var/log/syslog
   labelFilter:
-    - field: pod_labels.app
-      operator: In
-      values: [web-server, queue-worker]
-  logFilter:
-    - field: error
-      operator: Exists
+  - field: message
+    operator: Regex
+    values:
+    - .*d8-kubelet-forker.*
+    - .*containerd.*
+    - .*bashible.*
+    - .*kernel.*
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ```
 
 > NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.

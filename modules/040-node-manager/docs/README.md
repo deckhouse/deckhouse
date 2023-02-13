@@ -13,7 +13,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
     * Support for `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, configuring iptables, etc.).
     * Configuring nginx (and the system for automatically updating the lsit of upstreams) to balance node (kubelet) requests over API servers.
-    * Installing and configuring Docker and Kubernetes, adding the node to the cluster.
+    * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.
     * Managing node updates and their downtime (disruptions):
         * Automatic determination of a valid minor Kubernetes version for a node group based on its settings (the kubernetesVersion parameter specified for a group), the default version for the whole cluster, and the current control-plane version (no nodes can be updated ahead of the control-plane update).
         * Only one node of a group can be updated at a time, and only if all the nodes in the group are available.
@@ -39,6 +39,14 @@ The module supports platforms for which there is a corresponding cloud provider 
 The following Managed Kubernetes services are also supported (not all service functionality may be available):
 - Google Kubernetes Engine(GKE).
 
+## Node types
+
+The following node types are supported:
+- `CloudEphemeral` — such nodes are automatically ordered, created, and deleted in the configured cloud provider.
+- `CloudPermanent` — they differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../030-cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
+- `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the node even if one of the cloud providers is enabled.
+
 ## Node grouping and group management
 
 Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) custom resource.
@@ -59,17 +67,17 @@ The supported Kubernetes version is specified in parameters right down to the mi
 ### Deploying Kubernetes nodes
 
 Deckhouse automatically deploys cluster nodes by performing the following **idempotent** operations:
-- Configuring the OS and optimizing it for Docker and Kubernetes:
+- Configuring the OS and optimizing it for containerd and Kubernetes:
   - Installing the needed packages from the distribution's repository.
   - Configuring kernel parameters, iptables, logging, log rotation, and other system parameters.
-- Installing the appropriate versions of Docker and kubelet; adding the node to the Kubernetes cluster.
+- Installing the appropriate versions of containerd and kubelet; adding the node to the Kubernetes cluster.
 - Configuring Nginx and updating the list of upstream resources for balancing node requests to the Kubernetes API.
 
 ### Keeping nodes up-to-date
 
 The node-manager module keeps cluster nodes up-to-date according to the minor Kubernetes version [specified](configuration.html). The automatic update system supports two types of updates:
 - **Regular**. These updates are performed automatically and do not cause node stops or restarts.
-- **Disruption-related** (e.g., a kernel update, switching Docker version, a major change of the kubelet version, etc.). For this type of updates, you can choose manual or automatic mode. In automatic mode, the node is first drained, and then the update is performed.
+- **Disruption-related** (e.g., a kernel update, switching containerd version, a major change of the kubelet version, etc.). For this type of updates, you can choose manual or automatic mode. In automatic mode, the node is first drained, and then the update is performed.
 
 > Only one node of the group is updated at a time, and only if all the nodes in the group are available.
 
