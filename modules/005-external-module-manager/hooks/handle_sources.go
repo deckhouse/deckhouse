@@ -291,7 +291,7 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha
 		return err
 	}
 
-	yamlData.Registry = reg
+	yamlData.Properties.Registry = reg
 
 	valuesData, err = yaml.Marshal(yamlData)
 	if err != nil {
@@ -502,6 +502,9 @@ func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
 }
 
 type injectedValues struct {
-	XXX      map[string]interface{}   `json:",inline" yaml:",inline"`
-	Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
+	XXX        map[string]interface{} `json:",inline" yaml:",inline"`
+	Properties struct {
+		YYY      map[string]interface{}   `json:",inline" yaml:",inline"`
+		Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
+	} `json:"properties" yaml:"properties"`
 }
