@@ -2,7 +2,9 @@
 title: "The network-policy-engine module"
 ---
 
-## Module Description
+<div class="docs__information warning active">
+Do not use the module if the <a href="../021-cni-cilium/">cilium</a> module is enabled because it already has network policy management. 
+</div>
 
 This module manages network policies.
 
