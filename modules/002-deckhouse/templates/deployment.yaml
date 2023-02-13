@@ -93,7 +93,7 @@ spec:
       initContainers:
         - name: init-external-modules
           image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command: ['sh', '-c', 'mkdir -p /deckhouse/external-modules/modules && chmod -R 0777 /deckhouse/external-modules']
           securityContext:
             runAsUser: 0
