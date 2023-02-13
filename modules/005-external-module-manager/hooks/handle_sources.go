@@ -273,10 +273,6 @@ func fetchAndCopyModuleVersion(dc dependency.Container, externalModulesDir strin
 }
 
 func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha1.ExternalModuleSource) error {
-	reg := new(registrySchemaForValues)
-	reg.SetBase(moduleSource.Spec.Registry.Repo)
-	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
-
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 
 	valuesData, err := os.ReadFile(valuesFile)
@@ -284,21 +280,35 @@ func injectRegistryToModuleValues(moduleVersionPath string, moduleSource v1alpha
 		return err
 	}
 
-	var yamlData injectedValues
-
-	err = yaml.Unmarshal(valuesData, &yamlData)
-	if err != nil {
-		return err
-	}
-
-	yamlData.Properties.Registry = reg
-
-	valuesData, err = yaml.Marshal(yamlData)
+	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
 	if err != nil {
 		return err
 	}
 
 	return os.WriteFile(valuesFile, valuesData, 0666)
+}
+
+func mutateOpenapiSchema(sourceValuesData []byte, moduleSource v1alpha1.ExternalModuleSource) ([]byte, error) {
+	reg := new(registrySchemaForValues)
+	reg.SetBase(moduleSource.Spec.Registry.Repo)
+	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
+
+	var yamlData injectedValues
+
+	err := yaml.Unmarshal(sourceValuesData, &yamlData)
+	if err != nil {
+		return nil, err
+	}
+
+	yamlData.Properties.Registry = reg
+
+	buf := bytes.NewBuffer(nil)
+
+	yamlEncoder := yaml.NewEncoder(buf)
+	yamlEncoder.SetIndent(2)
+	err = yamlEncoder.Encode(yamlData)
+
+	return buf.Bytes(), err
 }
 
 func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
@@ -502,9 +512,11 @@ func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
 }
 
 type injectedValues struct {
-	XXX        map[string]interface{} `json:",inline" yaml:",inline"`
+	Type       string                 `json:"type" yaml:"type"`
+	Xextend    map[string]interface{} `json:"x-extend" yaml:"x-extend"`
 	Properties struct {
 		YYY      map[string]interface{}   `json:",inline" yaml:",inline"`
 		Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
 	} `json:"properties" yaml:"properties"`
+	XXX map[string]interface{} `json:",inline" yaml:",inline"`
 }
