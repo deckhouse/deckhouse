@@ -98,7 +98,7 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 		maxCPU = minCPU
 	}
 
-	// calculate longterm prometheus
+	// calculate longterm prometheus usage by MustParse method
 	maxLongtermMem := resource.MustParse(fmt.Sprintf("%dMi", totalPodsMemory/3))
 	maxLongtermCPU := resource.MustParse(fmt.Sprintf("%dm", totalPodsCPU/3))
 
