@@ -2,6 +2,8 @@
 title: "The runtime-audit-engine module: usage"
 ---
 
+{% raw %}
+
 ## How to collect events
 
 Pods of `runtime-audit-engine` output all events to stdout.
@@ -100,3 +102,5 @@ spec:
         - process
         - mitre_privilege_escalation
 ```
+
+{% endraw %}
