@@ -174,12 +174,12 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 
 {% raw %}
 * The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
-  * Deckhouse examines nodes to determine a nodeSelector in the following order:
+  * Deckhouse examines nodes to determine a [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector) in the following order:
     * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster.
     * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`
 
       E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>.
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>.

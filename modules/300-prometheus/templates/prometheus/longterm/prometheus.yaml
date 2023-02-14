@@ -133,8 +133,19 @@ spec:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   secrets:
   - prometheus-api-client-tls
-  {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- if .Values.prometheus.longtermNodeSelector }}
+  nodeSelector:
+    {{ .Values.prometheus.longtermNodeSelector | toYaml }}
+  {{- else }}
+    {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2}}
+  {{- end }}
+  {{- if .Values.prometheus.longtermTolerations }}
+  tolerations:
+    {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
+  {{- else }}
+    {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- end }}
+
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
   {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
   {{- if $storageClass }}
