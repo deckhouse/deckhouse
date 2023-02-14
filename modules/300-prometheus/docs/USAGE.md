@@ -188,9 +188,9 @@ The `job` must complete successfully.
 
 ## Sending alerts to Telegram
 
-Prometheus-operator supports sending alerts to Telegram directly using Alertmanager.
+Alertmanager supports sending alerts to Telegram directly.
 
-Create the Secret in the `d8-monitoring` namespace with Telegram bot token.
+Create the Secret in the `d8-monitoring` namespace:
 
 ```yaml
 apiVersion: v1

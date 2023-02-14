@@ -188,9 +188,9 @@ spec:
 
 ## Отправка алертов в Telegram
 
-Prometheus-operator поддерживает прямую отправку алертов в Telegram с помощью настроек Alertmanager.
+Alertmanager поддерживает прямую отправку алертов в Telegram.
 
-Создайте Secret в пространстве имен `d8-monitoring` с токеном Telegram бота.
+Создайте Secret в пространстве имен `d8-monitoring`:
 
 ```yaml
 apiVersion: v1
@@ -202,7 +202,7 @@ stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-Задеплойте CR CustomAlertManager:
+Задеплойте CR `CustomAlertManager`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
