@@ -83,12 +83,10 @@ FROM cilium_builder as builder
 
 WORKDIR /tmp/cilium-repo/cilium-1.11.13
 
-COPY patches/001-netfilter-compatibility-mode.patch /
-COPY patches/002-customer-annotations.patch /
-COPY patches/003-mtu.patch /
-RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
-    patch -p1 < /002-customer-annotations.patch && \
-    patch -p1 < /003-mtu.patch
+COPY patches/001-customer-annotations.patch /
+COPY patches/002-mtu.patch /
+RUN patch -p1 < /001-customer-annotations.patch && \
+    patch -p1 < /002-mtu.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
