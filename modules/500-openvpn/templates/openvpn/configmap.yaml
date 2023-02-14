@@ -64,7 +64,7 @@ data:
     iptables_once "OUTPUT -t mangle -j CONNMARK --restore-mark"
     ip rule add fwmark ${route_table} lookup ${route_table} pref ${route_table} || true
 
-    sh -c "while [ ! -d  /sys/class/net/tun-${proto} ] ; do echo \"Wait for tun-${proto} init\"; sleep 1; done; ip route add {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} dev tun-${proto} table ${route_table}" &
+    sh -c "while [ ! -d  /sys/class/net/tun-${proto} ] ; do echo \"Wait for tun-${proto} init\"; sleep 1; done; ip route add {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }} dev tun-${proto} table ${route_table}" &
 
     mkdir -p /dev/net
     if [ ! -c /dev/net/tun ]; then
