@@ -78,7 +78,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 				release := releases[i]
 
 				modulePath := path.Join(externalModulesDir, release.Module, "v"+release.Version.String())
-				err := deleteFromFS(modulePath)
+				err := os.RemoveAll(modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("unable to remove module: %v", err)
 					continue
@@ -90,10 +90,6 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	}
 
 	return nil
-}
-
-func deleteFromFS(dir string) error {
-	return os.RemoveAll(dir)
 }
 
 func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
