@@ -1,0 +1,118 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operator-trivy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: operator-trivy
+      automountServiceAccountToken: true
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      containers:
+      - name: "operator"
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "operator") }}
+        env:
+          - name: OPERATOR_NAMESPACE
+            value: d8-operator-trivy
+          - name: OPERATOR_TARGET_NAMESPACES
+            value: ""
+          - name: OPERATOR_EXCLUDE_NAMESPACES
+            value: ""
+          - name: OPERATOR_TARGET_WORKLOADS
+            value: "pod,replicaset,replicationcontroller,statefulset,daemonset,cronjob,job"
+          - name: OPERATOR_SERVICE_ACCOUNT
+            value: "operator"
+          - name: OPERATOR_LOG_DEV_MODE
+            value: "false"
+          - name: OPERATOR_SCAN_JOB_TIMEOUT
+            value: "5m"
+          - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
+            value: "10"
+          - name: OPERATOR_SCAN_JOB_RETRY_AFTER
+            value: "30s"
+          - name: OPERATOR_BATCH_DELETE_LIMIT
+            value: "10"
+          - name: OPERATOR_BATCH_DELETE_DELAY
+            value: "10s"
+          - name: OPERATOR_METRICS_BIND_ADDRESS
+            value: ":8080"
+          - name: OPERATOR_METRICS_FINDINGS_ENABLED
+            value: "true"
+          - name: OPERATOR_METRICS_VULN_ID_ENABLED
+            value: "false"
+          - name: OPERATOR_HEALTH_PROBE_BIND_ADDRESS
+            value: ":9090"
+          - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
+            value: "true"
+          - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
+            value: "true"
+          - name: OPERATOR_SCANNER_REPORT_TTL
+            value: "24h"
+          - name: OPERATOR_CONFIG_AUDIT_SCANNER_ENABLED
+            value: "true"
+          - name: OPERATOR_RBAC_ASSESSMENT_SCANNER_ENABLED
+            value: "true"
+          - name: OPERATOR_INFRA_ASSESSMENT_SCANNER_ENABLED
+            value: "true"
+          - name: OPERATOR_CONFIG_AUDIT_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
+            value: "true"
+          - name: OPERATOR_EXPOSED_SECRET_SCANNER_ENABLED
+            value: "true"
+          - name: OPERATOR_WEBHOOK_BROADCAST_URL
+            value: ""
+          - name: OPERATOR_WEBHOOK_BROADCAST_TIMEOUT
+            value: "30s"
+          - name: OPERATOR_PRIVATE_REGISTRY_SCAN_SECRETS_NAMES
+            value: "{}"
+          - name: OPERATOR_ACCESS_GLOBAL_SECRETS_SERVICE_ACCOUNTS
+            value: "true"
+          - name: OPERATOR_BUILT_IN_TRIVY_SERVER
+            value: "false"
+          - name: TRIVY_SERVER_HEALTH_CHECK_CACHE_EXPIRATION
+            value: "10h"
+          - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
+            value: "false"
+        # TODO: kube-rbac-proxy
+        ports:
+          - name: metrics
+            containerPort: 8080
+          - name: probes
+            containerPort: 9090
+        readinessProbe:
+          httpGet:
+            path: /readyz/
+            port: probes
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz/
+            port: probes
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 10
+        # TODO: VPA and resources
+        resources:
+          {}

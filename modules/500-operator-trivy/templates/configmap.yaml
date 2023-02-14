@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-operator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  scanJob.podTemplateContainerSecurityContext: '{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true}'
+  scanJob.compressLogs: "true"
+  vulnerabilityReports.scanner: "Trivy"
+  configAuditReports.scanner: "Trivy"
+  report.recordFailedChecksOnly: "true"
+  node.collector.imageRef: "ghcr.io/aquasecurity/node-collector:0.0.5"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-operator-trivy-config
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  trivy.repository: "ghcr.io/aquasecurity/trivy"
+  trivy.tag: "0.37.2"
+  trivy.additionalVulnerabilityReportFields: ""
+  trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  trivy.slow: "true"
+  trivy.dbRepository: "ghcr.io/aquasecurity/trivy-db"
+  trivy.command: "image"
+  trivy.dbRepositoryInsecure: "false"
+  trivy.useBuiltinRegoPolicies: "true"
+  trivy.supportedConfigAuditKinds: "Workload,Service,Role,ClusterRole,NetworkPolicy,Ingress,LimitRange,ResourceQuota"
+  trivy.timeout: "5m0s"
+  trivy.mode: "Standalone"
+  trivy.resources.requests.cpu: 100m
+  trivy.resources.requests.memory: 100M
+  trivy.resources.limits.cpu: 500m
+  trivy.resources.limits.memory: 500M

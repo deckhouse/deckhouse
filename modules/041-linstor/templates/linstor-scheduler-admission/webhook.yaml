@@ -52,6 +52,7 @@ webhooks:
       - d8-cdi
       - d8-okmeter
       - d8-openvpn
+      - d8-operator-trivy
   rules:
   - apiGroups:   [""]
     apiVersions: ["v1"]

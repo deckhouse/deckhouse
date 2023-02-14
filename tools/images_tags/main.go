@@ -73,7 +73,7 @@ func main() {
 	tags := make(map[string]map[string]string)
 
 	// Run werf config render to get config file from which  we calculate images names
-	cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
+	cmd := exec.Command("bin/werf", "config", "render", "--dev", "--log-quiet")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "CI_COMMIT_REF_NAME=", "CI_COMMIT_TAG=", "WERF_ENV=FE")
 	cmd.Dir = path.Join("..")

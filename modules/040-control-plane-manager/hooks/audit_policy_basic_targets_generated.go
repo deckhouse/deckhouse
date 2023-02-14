@@ -32,6 +32,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-okmeter",
 	"d8-openvpn",
 	"d8-operator-prometheus",
+	"d8-operator-trivy",
 	"d8-pod-reloader",
 	"d8-runtime-audit-engine",
 	"d8-snapshot-controller",
