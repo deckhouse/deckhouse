@@ -89,33 +89,6 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return newex, err
 }
 
-func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
-	var sourcesChecksum sourceChecksum
-
-	if _, err := os.Stat(checksumFilePath); err == nil {
-		checksumFile, err := os.Open(checksumFilePath)
-		if err != nil {
-			return nil, err
-		}
-		defer checksumFile.Close()
-
-		err = json.NewDecoder(checksumFile).Decode(&sourcesChecksum)
-		if err != nil {
-			return nil, err
-		}
-
-		return sourcesChecksum, nil
-	}
-
-	return make(sourceChecksum), nil
-}
-
-func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) error {
-	data, _ := json.Marshal(checksums)
-
-	return os.WriteFile(checksumFilePath, data, 0666)
-}
-
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	externalModulesDir := os.Getenv("EXTERNAL_MODULES_DIR")
 	checksumFilePath := path.Join(externalModulesDir, "checksum.json")
@@ -209,6 +182,33 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
+	var sourcesChecksum sourceChecksum
+
+	if _, err := os.Stat(checksumFilePath); err == nil {
+		checksumFile, err := os.Open(checksumFilePath)
+		if err != nil {
+			return nil, err
+		}
+		defer checksumFile.Close()
+
+		err = json.NewDecoder(checksumFile).Decode(&sourcesChecksum)
+		if err != nil {
+			return nil, err
+		}
+
+		return sourcesChecksum, nil
+	}
+
+	return make(sourceChecksum), nil
+}
+
+func saveSourceChecksums(checksumFilePath string, checksums sourceChecksum) error {
+	data, _ := json.Marshal(checksums)
+
+	return os.WriteFile(checksumFilePath, data, 0666)
 }
 
 func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSource v1alpha1.ExternalModuleSource, moduleName string, modulesChecksum map[string]string, registryOptions []cr.Option) ( /* moduleVersion */ string, error) {
@@ -309,26 +309,6 @@ func mutateOpenapiSchema(sourceValuesData []byte, moduleSource v1alpha1.External
 	err = yamlEncoder.Encode(yamlData)
 
 	return buf.Bytes(), err
-}
-
-func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
-	rl := &v1alpha1.ExternalModuleRelease{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ExternalModuleRelease",
-			APIVersion: "deckhouse.io/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%s", moduleName, moduleVersion),
-			Annotations: make(map[string]string),
-			Labels:      map[string]string{"module": moduleName, "source": sourceName},
-		},
-		Spec: v1alpha1.ExternalModuleReleaseSpec{
-			ModuleName: moduleName,
-			Version:    semver.MustParse(moduleVersion),
-		},
-	}
-
-	input.PatchCollector.Create(rl, object_patch.UpdateIfExists())
 }
 
 func copyModuleToFS(rootPath string, img v1.Image) error {
@@ -460,8 +440,24 @@ func fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
 	return meta, err
 }
 
-type moduleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
+func createRelease(input *go_hook.HookInput, sourceName, moduleName, moduleVersion string) {
+	rl := &v1alpha1.ExternalModuleRelease{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ExternalModuleRelease",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s-%s", moduleName, moduleVersion),
+			Annotations: make(map[string]string),
+			Labels:      map[string]string{"module": moduleName, "source": sourceName},
+		},
+		Spec: v1alpha1.ExternalModuleReleaseSpec{
+			ModuleName: moduleName,
+			Version:    semver.MustParse(moduleVersion),
+		},
+	}
+
+	input.PatchCollector.Create(rl, object_patch.UpdateIfExists())
 }
 
 func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.ExternalModuleSourceStatus) {
@@ -470,6 +466,10 @@ func updateSourceStatus(input *go_hook.HookInput, name string, sc v1alpha1.Exter
 	}
 
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "ExternalModuleSource", "", name, object_patch.WithSubresource("/status"))
+}
+
+type moduleReleaseMetadata struct {
+	Version *semver.Version `json:"version"`
 }
 
 type moduleChecksum map[string]string
