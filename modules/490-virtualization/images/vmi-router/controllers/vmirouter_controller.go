@@ -207,15 +207,21 @@ func (c VMIRouterController) updateRoute(vmi *virtv1.VirtualMachineInstance) {
 		log.Error(err, "failed to get route for node")
 	}
 	route := routes[0]
+
+	// If table is `local`
+	if route.Table == 255 {
+		iface, err := netlink.LinkByName("cilium_host")
+		if err != nil {
+			log.Error(err, "failed to get interface")
+			os.Exit(1)
+		}
+		// Overwrite `lo` interface with `cilium_host`
+		route.LinkIndex = iface.Attrs().Index
+	}
+
 	route.Dst = vmiNet
 	route.Table = table
 	route.Type = 1
-	iface, err := netlink.LinkByName("cilium_host")
-	if err != nil {
-		log.Error(err, "failed to get interface")
-		os.Exit(1)
-	}
-	route.LinkIndex = iface.Attrs().Index
 
 	log.Info(fmt.Sprintf("updating route for %s %s", vmiKey, route))
 	if err := c.RouteReplace(&route); err != nil {
