@@ -19,4 +19,4 @@ Upstream <https://github.com/cilium/cilium/pull/19789>
 
 Set correct MTU value for veth interfaces
 
-Upstream issue <https://github.com/deckhouse/deckhouse/pull/3836>
+Upstream issue <https://github.com/cilium/cilium/issues/23711>
