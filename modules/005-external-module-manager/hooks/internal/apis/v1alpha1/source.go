@@ -45,6 +45,7 @@ type ExternalModuleSourceSpec struct {
 
 type ExternalModuleSourceStatus struct {
 	SyncTime         time.Time     `json:"syncTime"`
+	ModulesCount     int           `json:"modulesCount"`
 	AvailableModules []string      `json:"availableModules"`
 	Msg              string        `json:"message"`
 	ModuleErrors     []ModuleError `json:"moduleErrors"`

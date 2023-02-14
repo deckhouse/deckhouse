@@ -131,6 +131,7 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 
 		sc.Msg = ""
 		sc.AvailableModules = tags
+		sc.ModulesCount = len(tags)
 		moduleErrors := make([]v1alpha1.ModuleError, 0)
 
 		mChecksum := make(moduleChecksum)

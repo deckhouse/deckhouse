@@ -37,6 +37,10 @@ spec:
           type: date
           format: date-time
           description: 'Время последней синхронизации с container registry.'
+        - name: count
+          type: integer
+          jsonPath: .status.modulesCount
+          description: "Количество доступных модулей в данном репозитории."
         - name: msg
           jsonPath: .status.message
           type: string
