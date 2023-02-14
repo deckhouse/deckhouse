@@ -20,7 +20,7 @@
           2. Check the LINSTOR error reports: `kubectl exec -n d8-linstor deploy/linstor-controller -- linstor err list | grep 'C|linstor-controller'`
 
     - alert: D8LinstorControllerTargetDown
-      expr: max by (job) (up{job="linstor-controller"} == 0)
+      expr: max by (job) (up{job="linstor-controller"}) == 0
       for: 1m
       labels:
         severity_level: "6"
