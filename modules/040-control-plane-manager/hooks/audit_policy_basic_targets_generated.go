@@ -100,6 +100,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"openvpn",
 	"operator",
 	"operator-prometheus",
+	"operator-trivy",
 	"piraeus-operator",
 	"pod-reloader",
 	"pricing",
