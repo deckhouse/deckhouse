@@ -10,6 +10,259 @@ spec:
             spec:
               description: Определяет желаемое состояние `VirtualMachine`.
               properties:
+                affinity:
+                  description: |
+                    Как в `spec.affinity` у Pod'ов.
+
+                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity). Pod'ы инстанса унаследуют это поле как есть.
+                  properties:
+                    nodeAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              preference:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          properties:
+                            nodeSelectorTerms:
+                              description: ""
+                              items:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                    podAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              podAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                      matchLabels:
+                                        description: ""
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                      matchLabels:
+                                        description: ""
+                                  namespaces:
+                                    description: ""
+                                  topologyKey:
+                                    description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchLabels:
+                                    description: ""
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchLabels:
+                                    description: ""
+                              namespaces:
+                                description: ""
+                              topologyKey:
+                                description: ""
+                    podAntiAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              podAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                      matchLabels:
+                                        description: ""
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                      matchLabels:
+                                        description: ""
+                                  namespaces:
+                                    description: ""
+                                  topologyKey:
+                                    description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchLabels:
+                                    description: ""
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                  matchLabels:
+                                    description: ""
+                              namespaces:
+                                description: ""
+                              topologyKey:
+                                description: ""
                 bootDisk:
                   description: Параметры загрузочного диска виртуальной машины.
                   properties:
@@ -89,7 +342,7 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
 
-                    Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                 resources:
@@ -105,7 +358,7 @@ spec:
                   description: |
                     Как в `spec.tolerations` у Pod'ов.
 
-                    Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
                   items:
@@ -120,6 +373,46 @@ spec:
                       tolerationSeconds:
                         description: ""
                       value:
+                        description: ""
+                topologySpreadConstraints:
+                  description: |
+                    Как в `spec.topologySpreadConstraints` у Pod'ов.
+
+                    Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). Pod'ы инстанса унаследуют это поле как есть.
+                  items:
+                    description: ""
+                    properties:
+                      labelSelector:
+                        description: ""
+                        properties:
+                          matchExpressions:
+                            description: ""
+                            items:
+                              description: ""
+                              properties:
+                                key:
+                                  description: ""
+                                operator:
+                                  description: ""
+                                values:
+                                  description: ""
+                          matchLabels:
+                            description: ""
+                      matchLabelKeys:
+                        description: ""
+                      maxSkew:
+                        description: ""
+                      minDomains:
+                        description: ""
+                      nodeAffinityPolicy:
+                        description: ""
+                      nodeTaintsPolicy:
+                        description: ""
+                      topologyKey:
+                        description: ""
+                      whenUnsatisfiable:
                         description: ""
                 userName:
                   description: |
