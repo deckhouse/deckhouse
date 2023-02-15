@@ -23,6 +23,8 @@ virtualization:
     - summary: Allow to specify `affinity` and `topologySpreadConstraints`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3852
   fixes:
+    - summary: Fix routes in host-gw mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3862
     - summary: Some fixes regarding queue and panic when creating empty disks.
       pull_request: https://github.com/deckhouse/deckhouse/pull/3822
 
