@@ -7,7 +7,6 @@ RUN wget https://github.com/aquasecurity/k8s-node-collector/archive/refs/tags/v0
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 
 FROM $BASE_ALPINE
-COPY --from=build /src/node-collector /
-WORKDIR /
-ENTRYPOINT [ "node-collector" ]
+COPY --from=build /src/node-collector /usr/local/bin/
+ENTRYPOINT [ "/usr/local/bin/node-collector" ]
 ENV LANG=C.UTF-8

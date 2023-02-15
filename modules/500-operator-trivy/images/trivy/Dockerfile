@@ -7,7 +7,6 @@ RUN wget https://github.com/aquasecurity/trivy/archive/refs/tags/v0.37.3.tar.gz 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go
 
 FROM $BASE_ALPINE
-COPY --from=build /src/trivy /
-WORKDIR /
-ENTRYPOINT [ "trivy" ]
+COPY --from=build /src/trivy /usr/local/bin/
+ENTRYPOINT [ "/usr/local/bin/trivy" ]
 ENV LANG=C.UTF-8
