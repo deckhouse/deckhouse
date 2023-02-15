@@ -9,7 +9,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:operator-trivy:kube-rbac-proxy
+  name: d8:{{ .Chart.Name }}:kube-rbac-proxy
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -23,12 +23,12 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:operator-trivy:operator-trivy
+  name: d8:{{ .Chart.Name }}:operator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: dd8:{{ .Chart.Name }}:operator-trivy
+  name: d8:{{ .Chart.Name }}:operator
 subjects:
 - kind: ServiceAccount
   name: operator-trivy
@@ -37,13 +37,13 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: operator-trivy
+  name: operator
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: trivy-operator
+  name: operator
 subjects:
 - kind: ServiceAccount
   name: operator-trivy
@@ -52,7 +52,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: trivy-operator
+  name: operator
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "operator")) | nindent 2 }}
 rules:
@@ -77,7 +77,7 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:{{ .Chart.Name }}:operator-trivy
+  name: d8:{{ .Chart.Name }}:operator
   {{- include "helm_lib_module_labels" (list . (dict "app" "operator")) | nindent 2 }}
 rules:
 - apiGroups:
