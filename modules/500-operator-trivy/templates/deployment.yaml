@@ -70,7 +70,7 @@ spec:
           - name: OPERATOR_TARGET_WORKLOADS
             value: "pod,replicaset,replicationcontroller,statefulset,daemonset,cronjob,job"
           - name: OPERATOR_SERVICE_ACCOUNT
-            value: "operator"
+            value: "operator-trivy"
           - name: OPERATOR_LOG_DEV_MODE
             value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
@@ -124,9 +124,9 @@ spec:
         # TODO: kube-rbac-proxy
         ports:
           - name: metrics
-            containerPort: 8080
+            containerPort: 8081
           - name: probes
-            containerPort: 9090
+            containerPort: 8081
         readinessProbe:
           httpGet:
             path: /readyz/
