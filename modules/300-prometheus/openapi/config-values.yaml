@@ -176,7 +176,7 @@ properties:
         description: |
           The minimum CPU requests set by the VPA controller for the main Prometheus Pods.
 
-          The default value is chosen automatically based on the minimum number of resources for prometheus work. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the minimum number of resources for prometheus work.
       minMemory:
         oneOf:
           - type: string
@@ -186,7 +186,7 @@ properties:
         description: |
           The minimum Memory requests set by the VPA controller for the main Prometheus Pods.
 
-          The default value is chosen automatically based on the minimum number of resources for prometheus work. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the minimum number of resources for prometheus work.
       maxCPU:
         oneOf:
           - type: string
