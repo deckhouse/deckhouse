@@ -14,20 +14,3 @@ spec:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: system
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-hardened-kernel.sh
-spec:
-  weight: 95
-  bundles:
-  - "*"
-  nodeGroups:
-  - "*"
-  content: |
-    bb-event-on 'bb-package-installed' 'post-install'
-    post-install() {
-      bb-flag-set bb-flag-set reboot
-    }
-    bb-apt-install linux-image-hardened

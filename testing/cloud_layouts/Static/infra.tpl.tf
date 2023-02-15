@@ -113,6 +113,16 @@ resource "openstack_blockstorage_volume_v3" "master" {
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
+  user_data = << EOF
+    #!/bin/bash
+
+    if ! uname -a | grep -q hardened; then
+      apt update                        && \
+      apt install -f linux-latest-hardened && \
+      reboot
+    fi
+  EOF
+
   lifecycle {
     ignore_changes = [image_id]
   }
