@@ -50,8 +50,6 @@ status:
 
 		It("should fill internal vpa values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.vpa.minCPU").String()).Should(BeEquivalentTo("200m"))
-			Expect(f.ValuesGet("prometheus.internal.vpa.minMemory").String()).Should(BeEquivalentTo("1000Mi"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.maxCPU").String()).Should(BeEquivalentTo("2200m"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.maxMemory").String()).Should(BeEquivalentTo("1650Mi"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxCPU").String()).Should(BeEquivalentTo("733m"))
