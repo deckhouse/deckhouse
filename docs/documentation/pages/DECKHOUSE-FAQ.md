@@ -31,11 +31,17 @@ Change (set) the `releaseChannel` parameter in the `deckhouse` module [configura
 
 It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
-Here is an example of the module configuration:
+Here is an example of the `deckhouse` module configuration with the `Stable` release channel:
 
 ```yaml
-deckhouse: |
-  releaseChannel: Stable
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
 ```
 
 ## How do I disable automatic updates?
@@ -80,9 +86,15 @@ You should also avoid using **CloudEphemeral** nodes. Otherwise, a situation may
 Here is an example of the module configuration:
 
 ```yaml
-deckhouse: |
-  nodeSelector:
-    node-role.deckhouse.io/deckhouse: ""
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
 ```
 
 ## How do I configure Deckhouse to use a third-party registry?

@@ -98,9 +98,16 @@ To configure Prometheus to use LINSTOR for storing data:
   Example:
 
   ```yaml
-  prometheus: |
-    longtermStorageClass: linstor-data-r2
-    storageClass: linstor-data-r2
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: prometheus
+  spec:
+    version: 2
+    enabled: true
+    settings:
+      longtermStorageClass: linstor-data-r2
+      storageClass: linstor-data-r2
   ```
 
 - Wait for the restart of Prometheus Pods.
