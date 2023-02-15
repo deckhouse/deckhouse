@@ -54,7 +54,7 @@ spec:
                   enum:
                     - Pending
                     - Deployed
-                    - Outdated
+                    - Superseded
                     - Suspended
                   description: Current status of the release.
                 message:

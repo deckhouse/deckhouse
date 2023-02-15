@@ -103,7 +103,7 @@ spec:
   moduleName: %[1]s
   version: %[2]s
 status:
-  phase: Outdated
+  phase: Superseded
 `
 
 func generateOutdated(moduleName, moduleVersion string) string {

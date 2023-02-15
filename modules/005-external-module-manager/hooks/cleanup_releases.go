@@ -100,7 +100,7 @@ func filterDeprecatedRelease(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
-	if !(release.Status.Phase == v1alpha1.PhaseOutdated || release.Status.Phase == v1alpha1.PhaseSuspended) {
+	if !(release.Status.Phase == v1alpha1.PhaseSuperseded || release.Status.Phase == v1alpha1.PhaseSuspended) {
 		return nil, err
 	}
 

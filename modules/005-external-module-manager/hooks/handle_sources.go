@@ -34,6 +34,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/iancoleman/strcase"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,11 +44,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks/internal/apis/v1alpha1"
-)
-
-const (
-	// TODO: get release channel from somewhere
-	releaseChannel = "alpha"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -84,6 +80,10 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 			Name: ex.Name,
 		},
 		Spec: ex.Spec,
+	}
+
+	if newex.Spec.ReleaseChannel == "" {
+		newex.Spec.ReleaseChannel = "alpha"
 	}
 
 	return newex, err
@@ -218,7 +218,7 @@ func fetchModuleVersion(logger *logrus.Entry, dc dependency.Container, moduleSou
 		return "", fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	img, err := regCli.Image(releaseChannel)
+	img, err := regCli.Image(strcase.ToKebab(moduleSource.Spec.ReleaseChannel))
 	if err != nil {
 		return "", fmt.Errorf("fetch image error: %v", err)
 	}

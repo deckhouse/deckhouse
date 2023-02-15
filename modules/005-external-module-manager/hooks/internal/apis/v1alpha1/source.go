@@ -41,6 +41,7 @@ type ExternalModuleSourceSpec struct {
 		Repo      string `json:"repo"`
 		DockerCFG string `json:"dockerCfg"`
 	} `json:"registry"`
+	ReleaseChannel string `json:"releaseChannel"`
 }
 
 type ExternalModuleSourceStatus struct {

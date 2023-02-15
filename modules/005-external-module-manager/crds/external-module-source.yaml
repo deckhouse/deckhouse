@@ -30,6 +30,10 @@ spec:
               required:
                 - registry
               properties:
+                releaseChannel:
+                  type: string
+                  description: Desirable release channel for the current modules source.
+                  default: "alpha"
                 registry:
                   type: object
                   required:

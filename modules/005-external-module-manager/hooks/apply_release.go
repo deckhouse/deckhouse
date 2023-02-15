@@ -113,7 +113,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 				release := pred.releases[index]
 				status := map[string]v1alpha1.ExternalModuleReleaseStatus{
 					"status": {
-						Phase:          v1alpha1.PhaseOutdated,
+						Phase:          v1alpha1.PhaseSuperseded,
 						TransitionTime: pred.ts,
 						Message:        "",
 					},
@@ -126,7 +126,7 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			release := pred.releases[pred.currentReleaseIndex]
 			status := map[string]v1alpha1.ExternalModuleReleaseStatus{
 				"status": {
-					Phase:          v1alpha1.PhaseOutdated,
+					Phase:          v1alpha1.PhaseSuperseded,
 					TransitionTime: pred.ts,
 					Message:        "",
 				},

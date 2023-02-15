@@ -31,10 +31,10 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 const (
-	PhasePending   = "Pending"
-	PhaseDeployed  = "Deployed"
-	PhaseOutdated  = "Outdated"
-	PhaseSuspended = "Suspended"
+	PhasePending    = "Pending"
+	PhaseDeployed   = "Deployed"
+	PhaseSuperseded = "Superseded"
+	PhaseSuspended  = "Suspended"
 )
 
 // ExternalModuleRelease is a ExternalModule release object.
