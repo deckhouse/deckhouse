@@ -33,11 +33,17 @@ kubectl get mc global -o yaml
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
 
-Пример конфигурации модуля:
+Пример конфигурации модуля `deckhouse` с установленным каналом обновлений `Stable`:
 
 ```yaml
-deckhouse: |
-  releaseChannel: Stable
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
 ```
 
 ## Как отключить автоматическое обновление?
@@ -82,9 +88,15 @@ kubectl get deckhousereleases
 Пример конфигурации модуля:
 
 ```yaml
-deckhouse: |
-  nodeSelector:
-    node-role.deckhouse.io/deckhouse: ""
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.deckhouse.io/deckhouse: ""
 ```
 
 ## Как установить Deckhouse из стороннего registry?

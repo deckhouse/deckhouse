@@ -8,17 +8,24 @@ search: prometheus remote write, как подключится к Prometheus, п
 ## Пример конфигурации модуля
 
 ```yaml
-prometheus: |
-  auth:
-    password: xxxxxx
-  retentionDays: 7
-  storageClass: rbd
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  settings:
+    auth:
+      password: xxxxxx
+    retentionDays: 7
+    storageClass: rbd
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
 ## Запись данных Prometheus в longterm storage

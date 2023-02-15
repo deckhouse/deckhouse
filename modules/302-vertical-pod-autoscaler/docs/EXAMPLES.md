@@ -5,13 +5,20 @@ title: "The vertical-pod-autoscaler module: examples"
 ## The module configuration
 
 ```yaml
-verticalPodAutoscaler: |
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  version: 1
+  enabled: true
+  settings:
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
 ## The basic `VerticalPodAutoscaler` CR example

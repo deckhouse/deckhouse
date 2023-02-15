@@ -98,9 +98,16 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
   Пример:
 
   ```yaml
-  prometheus: |
-    longtermStorageClass: linstor-data-r2
-    storageClass: linstor-data-r2
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: prometheus
+  spec:
+    version: 2
+    enabled: true
+    settings:
+      longtermStorageClass: linstor-data-r2
+      storageClass: linstor-data-r2
   ```
 
 - Дождаться перезапуска Pod'ов Prometheus.
