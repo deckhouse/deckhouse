@@ -55,22 +55,30 @@ demo-worker-0     Ready    worker     61d   v1.21.14
 
 Модуль `metallb` отключен по умолчанию, поэтому его необходимо включить явно. Также необходимо задать корректные `nodeSelector` и `tolerations` для Metallb speaker'ов.
 
+Пример конфигурации модуля:
+
 ```yaml
-metallb: |
-  addressPools:
-  - addresses:
-    - 192.168.199.100-192.168.199.102
-    name: frontend-pool
-    protocol: layer2
-  speaker:
-    nodeSelector:
-      node-role/metallb: ""
-    tolerations:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      operator: Equal
-      value: frontend
-metallbEnabled: "true"
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  version: 1
+  enabled: true
+  settings:
+    addressPools:
+    - addresses:
+      - 192.168.199.100-192.168.199.102
+      name: frontend-pool
+      protocol: layer2
+    speaker:
+      nodeSelector:
+        node-role/metallb: ""
+      tolerations:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        operator: Equal
+        value: frontend
 ```
 
 Создайте `IngressNginxController`.

@@ -8,17 +8,24 @@ search: prometheus remote write, how to connect to Prometheus, custom Grafana, p
 ## An example of the module configuration
 
 ```yaml
-prometheus: |
-  auth:
-    password: xxxxxx
-  retentionDays: 7
-  storageClass: rbd
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  settings:
+    auth:
+      password: xxxxxx
+    retentionDays: 7
+    storageClass: rbd
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
 ## Writing Prometheus data to the longterm storage

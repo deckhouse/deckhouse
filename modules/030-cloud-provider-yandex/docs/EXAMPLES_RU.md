@@ -7,10 +7,16 @@ title: "Cloud provider — Yandex Cloud: примеры"
 ## Пример конфигурации модуля
 
 ```yaml
-cloudProviderYandexEnabled: "true"
-cloudProviderYandex: |
-  additionalExternalNetworkIDs:
-  - enp6t4snovl2ko4p15em
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  enabled: true
+  settings:
+    additionalExternalNetworkIDs:
+    - enp6t4snovl2ko4p15em
 ```
 
 ## Пример custom resource `YandexInstanceClass`
