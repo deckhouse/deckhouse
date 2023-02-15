@@ -11,7 +11,7 @@ data:
   vulnerabilityReports.scanner: "Trivy"
   configAuditReports.scanner: "Trivy"
   report.recordFailedChecksOnly: "true"
-  node.collector.imageRef: "ghcr.io/aquasecurity/node-collector:0.0.5"
+  node.collector.imageRef: {{ include "helm_lib_module_image" (list . "nodeCollector") }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -20,8 +20,10 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
-  trivy.repository: "ghcr.io/aquasecurity/trivy"
-  trivy.tag: "0.37.2"
+  {{- $imageStringSlice := include "helm_lib_module_image" (list . "trivy") | split ":" }}
+  {{- $imageRepository := $imageStringSlice._0 }}
+  trivy.repository: {{ $imageStringSlice._0 }}
+  trivy.tag: {{ $imageStringSlice._1 }}
   trivy.additionalVulnerabilityReportFields: ""
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   trivy.slow: "true"

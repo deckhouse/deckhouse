@@ -4,7 +4,7 @@ ARG BASE_GOLANG_19_ALPINE
 FROM $BASE_GOLANG_19_ALPINE AS build
 WORKDIR /src
 RUN wget https://github.com/aquasecurity/trivy-operator/archive/refs/tags/v0.11.1.tar.gz -O - | tar -xz --strip-components=1
-RUN CGO_ENABLED=0 GOOS=linux go build -o operator-trivy ./cmd/trivy-operator/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
 FROM $BASE_ALPINE
 COPY --from=build /src/operator-trivy /

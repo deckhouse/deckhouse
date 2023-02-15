@@ -64,7 +64,7 @@ spec:
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           - name: OPERATOR_TARGET_NAMESPACES
-            value: ""
+            value: {{ .Values.operatorTrivy.internal.enabledNamespaces | join "," | quote }}
           - name: OPERATOR_EXCLUDE_NAMESPACES
             value: ""
           - name: OPERATOR_TARGET_WORKLOADS
@@ -121,7 +121,6 @@ spec:
             value: "10h"
           - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
             value: "false"
-        # TODO: kube-rbac-proxy
         ports:
           - name: metrics
             containerPort: 8080

@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: operator
+  name: operator-trivy
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
 spec:
