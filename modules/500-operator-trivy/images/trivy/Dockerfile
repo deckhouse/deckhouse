@@ -8,5 +8,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o 
 
 FROM $BASE_ALPINE
 COPY --from=build /src/trivy /
-ENTRYPOINT [ "/trivy" ]
+WORKDIR /
+ENTRYPOINT [ "trivy" ]
 ENV LANG=C.UTF-8

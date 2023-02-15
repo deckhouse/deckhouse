@@ -64,7 +64,7 @@ spec:
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           - name: OPERATOR_TARGET_NAMESPACES
-            value: {{ .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) | join "," | quote }}
+            value: {{ .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list "default") | join "," | quote }}
           - name: OPERATOR_EXCLUDE_NAMESPACES
             value: ""
           - name: OPERATOR_TARGET_WORKLOADS

@@ -8,5 +8,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o 
 
 FROM $BASE_ALPINE
 COPY --from=build /src/node-collector /
-ENTRYPOINT [ "/node-collector" ]
+WORKDIR /
+ENTRYPOINT [ "node-collector" ]
 ENV LANG=C.UTF-8
