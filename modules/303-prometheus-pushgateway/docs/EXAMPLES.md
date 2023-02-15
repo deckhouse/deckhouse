@@ -5,12 +5,18 @@ title: "THe Prometheus Pushgateway module: examples"
 ## Example of the module configuration
 
 ```yaml
-prometheusPushgatewayEnabled: "true"
-prometheusPushgateway: |
-  instances:
-  - first
-  - second
-  - another
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-pushgateway
+spec:
+  version: 1
+  enabled: true
+  settings:
+    instances:
+    - first
+    - second
+    - another
 ```
 
 {% raw %}
