@@ -61,10 +61,6 @@ var constraints = []nodeConstraint{
 		KernelVersionConstraint: ">= 5.7",
 		ModulesListInUse:        []string{"cni-cilium", "openvpn"},
 	},
-	{
-		KernelVersionConstraint: ">= 5.7",
-		ModulesListInUse:        []string{"cni-cilium", "node-local-dns"},
-	},
 }
 
 const (
