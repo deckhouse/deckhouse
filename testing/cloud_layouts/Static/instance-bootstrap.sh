@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo "UNAMNE"
 if ! uname -a | grep -q hardened; then
   apt update && \
   apt install --allow-change-held-packages --allow-downgrades -y linux-latest-hardened && \
   reboot
 fi
 
+echo TOUCHCHC
 touch /tmp/instance_bootstrapped
