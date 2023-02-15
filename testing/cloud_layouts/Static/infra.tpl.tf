@@ -117,7 +117,7 @@ resource "openstack_blockstorage_volume_v3" "master" {
     #!/bin/bash
 
     if ! uname -a | grep -q hardened; then
-      apt update                        && \
+      apt update                           && \
       apt install -f linux-latest-hardened && \
       reboot
     fi
@@ -196,6 +196,15 @@ resource "openstack_compute_instance_v2" "system" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
+  user_data = << EOF
+    #!/bin/bash
+
+    if ! uname -a | grep -q hardened; then
+      apt update                           && \
+      apt install -f linux-latest-hardened && \
+      reboot
+    fi
+  EOF
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
