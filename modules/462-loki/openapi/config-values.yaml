@@ -22,7 +22,7 @@ properties:
       You should manually specify the required disk size for storing logs for the period defined by the `retentionPeriodHours` parameter.
       Loki cannot automatically delete old data when the disk is full.
 
-      The occupied disk space is automatically monitored by [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects) module.
+      The [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects) module automatically monitors the percentage of used disk space.
 
       **CAUTION!** If the Loki data disk becomes full, the application will stop working. You must find the right balance between `retentionPeriodHours` and `diskSizeGigabytes` values.
     x-doc-default: 2
