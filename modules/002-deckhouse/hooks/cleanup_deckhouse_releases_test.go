@@ -40,20 +40,20 @@ var _ = Describe("Modules :: deckhouse :: hooks :: cleanup deckhouse releases ::
 			f.BindingContexts.Set(bc)
 			f.RunHook()
 		})
-		It("Wrong deployed releases should be Outdated", func() {
+		It("Wrong deployed releases should be Superseded", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			rl1 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-0")
-			Expect(rl1.Field("status.phase").String()).Should(Equal("Outdated"))
+			Expect(rl1.Field("status.phase").String()).Should(Equal("Superseded"))
 			rl2 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-1")
-			Expect(rl2.Field("status.phase").String()).Should(Equal("Outdated"))
+			Expect(rl2.Field("status.phase").String()).Should(Equal("Superseded"))
 			rl3 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-2")
-			Expect(rl3.Field("status.phase").String()).Should(Equal("Outdated"))
+			Expect(rl3.Field("status.phase").String()).Should(Equal("Superseded"))
 			rl4 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-28-3")
 			Expect(rl4.Field("status.phase").String()).Should(Equal("Deployed"))
 		})
 	})
 
-	Context("Have 15 Outdated Releases", func() {
+	Context("Have 15 Superseded Releases", func() {
 		BeforeEach(func() {
 			state := generateReleases(0, 15)
 			bc := f.KubeStateSetAndWaitForBindingContexts(state, 1)
@@ -99,7 +99,7 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Outdated
+  phase: Superseded
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -156,7 +156,7 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Outdated
+  phase: Superseded
 `
 		BeforeEach(func() {
 			bc := f.KubeStateSetAndWaitForBindingContexts(rl, 1)
@@ -170,7 +170,7 @@ status:
 			rl17 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-17")
 			Expect(rl19.Field("status.phase").String()).Should(Equal("Pending"))
 			Expect(rl18.Field("status.phase").String()).Should(Equal("Deployed"))
-			Expect(rl17.Field("status.phase").String()).Should(Equal("Outdated"))
+			Expect(rl17.Field("status.phase").String()).Should(Equal("Superseded"))
 		})
 	})
 })
@@ -203,7 +203,7 @@ metadata:
 spec:
   version: "v1.27.%d"
 status:
-  phase: Outdated
+  phase: Superseded
 `, i, i)
 		s.WriteString(rl)
 	}

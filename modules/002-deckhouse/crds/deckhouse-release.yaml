@@ -69,8 +69,10 @@ spec:
                   enum:
                     - Pending
                     - Deployed
-                    - Outdated
+                    - Outdated # deprecated
                     - Suspended
+                    - Superseded
+                    - Skipped
                   description: Current status of the release.
                 message:
                   type: string

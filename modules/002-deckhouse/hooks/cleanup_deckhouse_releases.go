@@ -31,7 +31,7 @@ import (
 
 /*
   This hook handle invalid situation when more then 1 Deployed release exists at the moment:
-    Hook move all releases except the latest one to the Outdated state
+    Hook move all releases except the latest one to the Skipped state
 
   The hook will keep only 10 Outdated releases, removing others
 */
@@ -43,8 +43,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "DeckhouseRelease",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
 			FilterFunc:                   filterDeckhouseRelease,
 		},
 	},
@@ -68,7 +68,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	var (
 		pendingReleasesIndexes  []int
 		deployedReleasesIndexes []int
-		outdatedReleasesIndexes []int
+		outdatedReleasesIndexes []int // outdated: skipped, superseded and suspended releases
 	)
 
 	for i, release := range releases {
@@ -79,7 +79,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		case v1alpha1.PhaseDeployed:
 			deployedReleasesIndexes = append(deployedReleasesIndexes, i)
 
-		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
+		case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSkipped, v1alpha1.PhaseSuspended:
 			outdatedReleasesIndexes = append(outdatedReleasesIndexes, i)
 		}
 	}
@@ -87,7 +87,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
 		sp := updater.StatusPatch{
-			Phase:          v1alpha1.PhaseOutdated,
+			Phase:          v1alpha1.PhaseSuperseded,
 			TransitionTime: now,
 		}
 		// everything except the last Deployed release
@@ -106,12 +106,12 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	}
 
 	// some old releases, for example - when downgrade the release channel
-	// mark them as Outdated
+	// mark them as Skipped
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
 		sp := updater.StatusPatch{
-			Phase:          v1alpha1.PhaseOutdated,
-			Message:        "Outdated by cleanup hook",
+			Phase:          v1alpha1.PhaseSkipped,
+			Message:        "Skipped by cleanup hook",
 			TransitionTime: now,
 		}
 
