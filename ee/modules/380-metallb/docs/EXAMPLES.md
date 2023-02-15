@@ -54,22 +54,30 @@ demo-worker-0     Ready    worker     61d   v1.21.14
 
 Module `metallb` is disabled by default, so you have to explicitly enable it. You also have to set the correct `nodeSelector` and `tolerations` for Metallb speakers.
 
+An example of the module configuration:
+
 ```yaml
-metallb: |
-  addressPools:
-  - addresses:
-    - 192.168.199.100-192.168.199.102
-    name: frontend-pool
-    protocol: layer2
-  speaker:
-    nodeSelector:
-      node-role/metallb: ""
-    tolerations:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      operator: Equal
-      value: frontend
-metallbEnabled: "true"
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  version: 1
+  enabled: true
+  settings:
+    addressPools:
+    - addresses:
+      - 192.168.199.100-192.168.199.102
+      name: frontend-pool
+      protocol: layer2
+    speaker:
+      nodeSelector:
+        node-role/metallb: ""
+      tolerations:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        operator: Equal
+        value: frontend
 ```
 
 Create `IngressNginxController`.
