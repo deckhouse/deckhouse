@@ -32,7 +32,7 @@ spec:
               properties:
                 releaseChannel:
                   type: string
-                  description: Desirable release channel for the current modules source.
+                  description: Desirable default release channel for modules in the current source.
                   default: "alpha"
                 registry:
                   type: object

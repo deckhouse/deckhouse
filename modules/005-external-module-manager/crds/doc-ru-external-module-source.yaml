@@ -10,7 +10,7 @@ spec:
             spec:
               properties:
                 releaseChannel:
-                  description: Желаемый канал обновлений для модулей данного container registry.
+                  description: Желаемый канал обновлений по-умолчанию для модулей данного container registry.
                 registry:
                   properties:
                     repo:
