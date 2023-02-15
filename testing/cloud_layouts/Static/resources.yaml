@@ -18,7 +18,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: sysctl-tune.sh
+  name: install-hardened-kernel.sh
 spec:
   weight: 95
   bundles:
