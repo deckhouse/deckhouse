@@ -1,8 +1,3 @@
-{{- define "prometheus_resources" }}
-cpu: 200m
-memory: 1000Mi
-{{- end }}
-
 {{- define "config_reloader_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -27,7 +22,8 @@ spec:
     containerPolicies:
     - containerName: "prometheus"
       minAllowed:
-        {{- include "prometheus_resources" . | nindent 8 }}
+        cpu: { { .Values.prometheus.vpa.minCPU | default .Values.prometheus.internal.vpa.minCPU | quote } }
+        memory: { { .Values.prometheus.vpa.minMemory | default .Values.prometheus.internal.vpa.minMemory | quote } }
       maxAllowed:
         cpu: {{ .Values.prometheus.vpa.maxCPU | default .Values.prometheus.internal.vpa.maxCPU | quote }}
         memory: {{ .Values.prometheus.vpa.maxMemory | default .Values.prometheus.internal.vpa.maxMemory | quote }}

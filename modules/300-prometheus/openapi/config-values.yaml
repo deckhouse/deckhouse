@@ -167,6 +167,26 @@ properties:
       - {updateMode: "Off"}
     default: {updateMode: "Initial"}
     properties:
+      minCPU:
+        oneOf:
+          - type: string
+            pattern: "^[0-9]+m?$"
+          - type: number
+        x-examples: [ "3" ]
+        description: |
+          The minimum CPU requests set by the VPA controller for the main Prometheus Pods.
+
+          The default value is chosen automatically based on the minimum number of resources for prometheus work. For more information, see the `detect_vpa_max` hook of the module.
+      minMemory:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          - type: number
+        x-examples: [ "3Mi" ]
+        description: |
+          The minimum Memory requests set by the VPA controller for the main Prometheus Pods.
+
+          The default value is chosen automatically based on the minimum number of resources for prometheus work. For more information, see the `detect_vpa_max` hook of the module.
       maxCPU:
         oneOf:
           - type: string

@@ -101,6 +101,16 @@ properties:
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   vpa:
     properties:
+      minCPU:
+        description: |
+          Минимальная граница CPU requests, выставляемая VPA контроллером для Pod'ов основного Prometheus.
+
+          Значение по умолчанию подбирается автоматически, исходя из минимального количества ресурсов CPU, которое необходимо для работы Prometheus.
+      minMemory:
+        description: |
+          Минимальная граница Memory requests, выставляемая VPA контроллером для Pod'ов основного Prometheus.
+
+          Значение по умолчанию подбирается автоматически, исходя из минимального количества ресурсов Memory, которое необходимо для работы Prometheus.
       maxCPU:
         description: |
           Максимальная граница CPU requests, выставляемая VPA контроллером для Pod'ов основного Prometheus.
