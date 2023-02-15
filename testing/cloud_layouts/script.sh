@@ -400,6 +400,29 @@ function bootstrap_static() {
   ssh-add "$ssh_private_key_path"
   ssh_bastion="-J $ssh_user@$bastion_ip"
 
+  waitForInstancesAreBootstrappedAttempts=20
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" test -e /tmp/instance_bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: master instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: master instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$system_ip" test -e /tmp/instance_bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: system instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
   testRunAttempts=20
 
   for ((i=1; i<=$testRunAttempts; i++)); do
