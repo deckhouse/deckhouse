@@ -295,7 +295,9 @@ var DefaultImagesTags = map[string]interface{}{
 		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
 	},
 	"operatorTrivy": map[string]interface{}{
-		"operator": "imageHash-operatorTrivy-operator",
+		"nodeCollector": "imageHash-operatorTrivy-nodeCollector",
+		"operator":      "imageHash-operatorTrivy-operator",
+		"trivy":         "imageHash-operatorTrivy-trivy",
 	},
 	"podReloader": map[string]interface{}{
 		"podReloader": "imageHash-podReloader-podReloader",

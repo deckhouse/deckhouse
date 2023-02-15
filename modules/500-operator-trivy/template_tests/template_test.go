@@ -55,7 +55,6 @@ var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", fun
 		It("Everything must render properly for default cluster", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
-
 	})
 
 })
