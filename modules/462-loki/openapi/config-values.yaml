@@ -13,24 +13,24 @@ properties:
 
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Loki volume reprovisioning and data loss.
+      **CAUTION!** Setting a value other than the current one (in the existing PVC) will cause the Loki volume to be re-provisioned and the data to be lost.
   diskSizeGigabytes:
     type: integer
     description: |
-      Disk size for storing logs or the size of the PVC when specifying the [storageClass](#parameters-storageclass) parameters.
+      Disk size for log storage or PVC size when specifying the [storageClass](#parameters-storageclass) parameters.
 
-      You should manually specify the required disk size for storing logs for the period specified in the `retentionPeriodHours` parameter.
+      You should manually specify the required disk size for storing logs for the period defined by the `retentionPeriodHours` parameter.
       Loki cannot automatically delete old data when the disk is full.
 
       The occupied disk space is automatically monitored by [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects) module.
 
-      **CAUTION!** If the Loki data disk becomes full, the application will stop working. You should choose the necessary balance between the values of `retentionPeriodHours` and `diskSizeGigabytes`.
+      **CAUTION!** If the Loki data disk becomes full, the application will stop working. You must find the right balance between `retentionPeriodHours` and `diskSizeGigabytes` values.
     x-doc-default: 2
     default: 2
   retentionPeriodHours:
     type: integer
     description: |
-      How many hours logs will be kept before they are deleted.
+      How many hours to keep logs before deleting.
     x-doc-default: 168
     default: 168
   storeSystemLogs:
@@ -38,7 +38,7 @@ properties:
     default: true
     x-doc-default: 'true'
     description: |
-      Store logs from `d8-*` namespaces into loki.
+      Save logs from the `d8-*` namespaces to loki.
 
       The [log-shipper](../460-log-shipper) module must be enabled.
   nodeSelector:
@@ -46,13 +46,13 @@ properties:
     additionalProperties:
       type: string
     description: |
-      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+      The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
+      The same as the Pods' `spec.tolerations` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
     items:
@@ -73,7 +73,7 @@ properties:
     required: ["mode"]
     type: object
     description: |
-      Max amounts of CPU and memory resources that the Pod can request when selecting a node.
+      The max amounts of CPU and memory resources the Pod can request when being scheduled on a node.
 
       If the [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) module is disabled, then these values become the default ones.
     default: {}
@@ -144,7 +144,7 @@ properties:
                     pattern: "^[0-9]+m?$"
                   - type: number
                 description: |
-                  Maximum allowed CPU requests.
+                  The max amount of CPU requests the VPA can set.
                 default: "500m"
               min:
                 oneOf:
@@ -152,7 +152,7 @@ properties:
                     pattern: "^[0-9]+m?$"
                   - type: number
                 description: |
-                  Minimum allowed CPU requests.
+                  The min amount of CPU requests the VPA can set.
                 default: "50m"
           memory:
             type: object
@@ -166,7 +166,7 @@ properties:
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Maximum allowed memory requests.
+                  The max amount of memory requests the VPA can set.
                 default: "2048Mi"
               min:
                 oneOf:
@@ -174,7 +174,7 @@ properties:
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
                 description: |
-                  Minimum allowed memory requests.
+                  The min amount of memory requests the VPA can set.
                 default: "64Mi"
       static:
         type: object

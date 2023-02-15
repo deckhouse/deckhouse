@@ -2,7 +2,7 @@
 title: "The loki module"
 ---
 
-The module organizes log storage.
+The module implements log storage.
 
 The module uses the [Grafana Loki](https://grafana.com/oss/loki/) project.
 
