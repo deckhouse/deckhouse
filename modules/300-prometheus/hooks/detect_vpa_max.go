@@ -105,9 +105,6 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 	maxLongtermMem := resource.NewQuantity(totalPodsMemory/3, resource.BinarySI)
 	maxLongtermCPU := resource.NewMilliQuantity(totalPodsCPU/3, resource.DecimalSI)
 
-	input.Values.Set("prometheus.internal.vpa.minMemory", minMem.String())
-	input.Values.Set("prometheus.internal.vpa.minCPU", minCPU.String())
-
 	input.Values.Set("prometheus.internal.vpa.maxMemory", maxMem.String())
 	input.Values.Set("prometheus.internal.vpa.maxCPU", maxCPU.String())
 
