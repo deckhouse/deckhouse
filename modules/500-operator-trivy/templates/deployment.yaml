@@ -90,7 +90,7 @@ spec:
           - name: OPERATOR_METRICS_VULN_ID_ENABLED
             value: "false"
           - name: OPERATOR_HEALTH_PROBE_BIND_ADDRESS
-            value: "127.0.0.1:9090"
+            value: ":9090"
           - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
             value: "true"
           - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
@@ -124,13 +124,13 @@ spec:
         # TODO: kube-rbac-proxy
         ports:
           - name: metrics
-            containerPort: 8081
+            containerPort: 8080
           - name: probes
-            containerPort: 8081
+            containerPort: 9090
         readinessProbe:
           httpGet:
             path: /readyz/
-            port: probes
+            port: 9090
           initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
@@ -138,7 +138,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz/
-            port: probes
+            port: 9090
           initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
@@ -165,21 +165,8 @@ spec:
           value: "0.0.0.0"
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
-            - /healthz
-            - /readyz
             upstreams:
             - upstream: http://127.0.0.1:8080/
-              path: /
-              authorization:
-                resourceAttributes:
-                  namespace: d8-{{ .Chart.Name }}
-                  apiGroup: apps
-                  apiVersion: v1
-                  resource: deployments
-                  subresource: prometheus-metrics
-                  name: operator
-            - upstream: http://127.0.0.1:9090/
               path: /
               authorization:
                 resourceAttributes:
