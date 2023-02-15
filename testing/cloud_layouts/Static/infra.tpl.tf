@@ -124,6 +124,7 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
+  user_data            = "${file("static-node-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
