@@ -14,11 +14,29 @@ function add_rule() {
   if ! iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
     iptables -w 60 -W 100000 -t raw -A PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
   fi
+
+  if [[ ${CNI_CILIUM} == "yes" ]]; then
+    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -A PREROUTING -p tcp -m tcp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    fi
+    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -A PREROUTING -p udp -m udp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    fi
+  fi
 }
 
 function delete_rule() {
   if iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
     iptables -w 60 -W 100000 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
+  fi
+
+  if [[ ${CNI_CILIUM} == "yes" ]]; then
+    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -D PREROUTING -p tcp -m tcp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    fi
+    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -D PREROUTING -p udp -m udp --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    fi
   fi
 }
 

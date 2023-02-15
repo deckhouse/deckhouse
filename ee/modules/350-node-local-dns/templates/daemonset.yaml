@@ -112,6 +112,10 @@ spec:
         env:
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+        - name: CNI_CILIUM
+          value: yes
+{{- end }}
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
