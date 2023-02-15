@@ -31,7 +31,7 @@ spec:
                   description: |
                     Версия Ingress NGINX-контроллера.
 
-                    **По умолчанию:** версия из настроек модуля.
+                    **По умолчанию:** версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
                 enableIstioSidecar:
                   description: |
                     Добавить к Pod'ам контроллера аннотации для автоматического инжекта istio-сайдкаров.
