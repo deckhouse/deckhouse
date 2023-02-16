@@ -1,6 +1,6 @@
 # Restoring ETCD functionality
 
-Caution! Back up your etcd files on the node before any recovery attempts.
+**Caution!** Back up your etcd files on the node before any recovery attempts.
 Before doing this, make sure that etcd is not running. To stop etcd, remove the etcd static Pod manifest from the manifest directory.
 
 ## Single-master

@@ -164,5 +164,5 @@ properties:
         description: |
           This feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected.
 
-          > **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+          > **Note!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
         default: true

@@ -136,7 +136,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 ### Tips for configuring the third-party registry
 
-**Note** that Deckhouse only supports Bearer authentication for registries.
+> **Note!** Deckhouse only supports Bearer authentication for registries.
 
 #### Nexus
 

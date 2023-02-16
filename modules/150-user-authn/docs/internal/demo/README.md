@@ -17,7 +17,7 @@
 ## Deploy simple echo server
 
 * Apply [**echo-service**](./echo-service.yaml) manifest to the cluster.
-  > **NOTE**: Do not forget to use your cluster public domain instead of `{{ __cluster__domain__ }}` in the manifest.
+  > **Note!** Do not forget to use your cluster public domain instead of `{{ __cluster__domain__ }}` in the manifest.
 * Show how you can access this service without authorization.
 
 ## Deploy DexAuthenticator

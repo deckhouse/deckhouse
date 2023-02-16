@@ -11,7 +11,7 @@ That is, Kubernetes will first evict all the `priorityClassName: develop` Pods, 
 
 When setting the priority class, it is crucial to understand what kind of application we have and what environment this application works in. Any `priorityClassName` set to a Pod cannot lower its priority because the scheduler considers Pods without `priority-class` as having the lowest (`develop`) priority. It is essential to set the `priorityClassName` correctly.
 
-> **Caution!** Note that you cannot use the following PriorityClasses: `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`.
+> **Caution!** You cannot use the following PriorityClasses: `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`.
 
 Below is the list of priority classes set by the module (sorted by the priority, starting with the higher one):
 

@@ -24,7 +24,7 @@ stringData:
   MASTER_PASSPHRASE: *!passphrase* # Master passphrase for LINSTOR
 ```
 
-> **Warning**: Choose strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
+> **Caution!** Choose a strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
 
 ## LINSTOR storage configuration
 
@@ -70,7 +70,7 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
      lvcreate -l 100%FREE -T vg0/thindata --add-tag linstor-thindata
      ```
 
-     > Note, that the group itself should not have this tag configured.
+     > **Note!** The group itself should not have this tag configured.
 
 1. Check the creation of StorageClass.
 

@@ -54,7 +54,7 @@ The server supplies the data in the JSON format. This data is used by the upmete
 
 #### Downtime
 
-Note that this functionality is not fully implemented yet.
+> **Note!** This functionality is not fully implemented yet.
 
 Information about the activities that took place in the cluster or on the infrastructure and caused downtime can be documented using the `downtime.deckhouse.io` CRD object. In it, you can specify the expected type of downtime, the time interval, and the accessibility groups or probes affected. The server will treat this time as `uncertain` for the specified groups and probes.
 

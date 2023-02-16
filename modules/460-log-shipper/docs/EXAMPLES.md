@@ -261,7 +261,7 @@ spec:
       verifyHostname: false
 ```
 
-> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
+> **Note!** Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
 
 ```yaml
 extraLabels:
@@ -404,7 +404,7 @@ spec:
   - loki-storage
 ```
 
-> NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
+> **Note!** If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
 
 ## Collect logs from production namespaces using the namespace label selector option
 
