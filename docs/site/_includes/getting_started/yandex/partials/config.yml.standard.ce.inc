@@ -11,7 +11,7 @@ cloud:
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
   # [<ru>] Возможно, захотите изменить.
-  prefix: cloud-demo
+  prefix: "cloud-demo"
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
@@ -53,7 +53,7 @@ deckhouse:
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-yandex/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
-layout: WithoutNAT
+layout: Standard
 # [<en>] Yandex Cloud account parameters.
 # [<ru>] Параметры доступа к облаку Yandex Cloud.
 provider:
@@ -77,7 +77,6 @@ provider:
   #      "private_key": "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n"
   #    }
   serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
-masterNodeGroup:
   replicas: 1
   instanceClass:
     cores: 4
