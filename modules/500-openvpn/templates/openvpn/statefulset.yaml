@@ -90,6 +90,15 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/openvpn/configmap.yaml") . | sha256sum }}
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values: {{ .Chart.Name }}
+            topologyKey: kubernetes.io/hostname
       imagePullSecrets:
       - name: deckhouse-registry
       terminationGracePeriodSeconds: 5
