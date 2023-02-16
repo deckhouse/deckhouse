@@ -108,7 +108,7 @@ properties:
               max:
                 description: |
                   Maximum allowed CPU requests.
-                default: 2
+                default: 4
                 oneOf:
                 - type: string
                   pattern: "^[0-9]+m?$"
