@@ -90,15 +90,6 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/openvpn/configmap.yaml") . | sha256sum }}
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values: {{ .Chart.Name }}
-            topologyKey: kubernetes.io/hostname
       imagePullSecrets:
       - name: deckhouse-registry
       terminationGracePeriodSeconds: 5
@@ -321,6 +312,16 @@ spec:
         volumeMounts:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - openvpn
+            topologyKey: kubernetes.io/hostname
       volumes:
       - name: kube-rbac-proxy-ca
         configMap:
