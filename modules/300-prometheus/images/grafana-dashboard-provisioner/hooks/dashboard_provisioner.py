@@ -20,7 +20,7 @@ import json
 import shutil
 import glob
 import re
-from deckhouse import hook
+from shell_operator import hook
 
 for f in glob.glob("/frameworks/shell/*.sh"):
     with open(f, "r") as script:
@@ -32,41 +32,39 @@ def slugify(value):
     value = re.sub(r"[-\s]+", "-", value)
     return value
 
-def main():
+def main(ctx: hook.Context):
     tmp_dir = tempfile.mkdtemp(prefix="dashboard.")
     existing_uids_file = tempfile.mktemp(prefix="uids.")
-
     malformed_dashboards = ""
-    for i in context.get("snapshots.dashboard_resources"):
-        dashboard = context.get(f"snapshots.dashboard_resources.{i}.filterResult")
-        title = json.loads(dashboard)["definition"]["title"]
+
+    for i in hook.Context.get("snapshots.dashboard_resources"):
+        dashboard = json.loads(hook.Context.get(f"snapshots.dashboard_resources.{i}.filterResult"))
+        definition = dashboard.get("definition", {})
+        title = definition.get("title")
         if not title:
-            malformed_dashboards += f" {json.loads(dashboard)['name']}"
+            malformed_dashboards += f" {dashboard.get('name', '')}"
             continue
 
         title = slugify(title)
 
-        if not "definition" in json.loads(dashboard) or not "uid" in json.loads(dashboard)["definition"]:
+        if not definition.get("uid"):
             print(f"ERROR: definition.uid is mandatory field")
             continue
 
-        dashboard_uid = json.loads(dashboard)["definition"]["uid"]
+        dashboard_uid = definition["uid"]
         if dashboard_uid in open(existing_uids_file).read():
             print(f"ERROR: a dashboard with the same uid is already exist: {dashboard_uid}")
             continue
         else:
             with open(existing_uids_file, "a") as f:
-                f.write(dashboard_uid+'\n')
+                f.write(dashboard_uid + '\n')
 
-        folder = json.loads(dashboard)["folder"]
+        folder = dashboard.get("folder", "General")
         file = f"{folder}/{title}.json"
-
-        if folder == "General":
-            file = f"{title}.json"
 
         os.makedirs(f"{tmp_dir}/{folder}", exist_ok=True)
         with open(f"{tmp_dir}/{file}", "w") as f:
-            json.dump(json.loads(dashboard)["definition"], f)
+            json.dump(definition, f)
 
     if malformed_dashboards:
         print(f"Skipping malformed dashboards: {malformed_dashboards}")
