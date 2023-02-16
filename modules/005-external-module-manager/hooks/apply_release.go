@@ -19,6 +19,7 @@ package hooks
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"syscall"
 	"time"
@@ -96,15 +97,15 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 			deckhouse_config.Service().AddExternalModuleName(deployedRelease.ModuleName, deployedRelease.ModuleSource)
 
 			// check symlink exists on FS
-			if !isModuleExistsOnFS(symlinkName) {
-				modulePath := path.Join(externalModulesDir, module, "v"+deployedRelease.Version.String())
+			modulePath := path.Join(externalModulesDir, module, "v"+deployedRelease.Version.String())
+			if !isModuleExistsOnFS(symlinkName, modulePath) {
 				err := enableModule(symlinkName, modulePath)
 				if err != nil {
 					input.LogEntry.Errorf("Module restore failed: %v", err)
 					continue
 				}
+				modulesChanged = true
 			}
-
 			continue
 		}
 
@@ -168,12 +169,13 @@ func applyModuleRelease(input *go_hook.HookInput) error {
 	return nil
 }
 
-func isModuleExistsOnFS(symlinkPath string) bool {
-	if _, err := os.Lstat(symlinkPath); err == nil {
-		return true
+func isModuleExistsOnFS(symlinkPath, modulePath string) bool {
+	targetPath, err := filepath.EvalSymlinks(symlinkPath)
+	if err != nil {
+		return false
 	}
 
-	return false
+	return targetPath == modulePath
 }
 
 func enableModule(symlinkPath, modulePath string) error {
