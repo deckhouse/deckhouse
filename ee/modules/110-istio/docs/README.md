@@ -181,7 +181,7 @@ It is also possible to add the sidecar to an individual pod in namespace without
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 
-**Note that** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
+**Note!** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
 * Each request is DNAT'ed to envoy that processes it and creates another one. The same thing happens on the receiving side.
 * Each envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
 

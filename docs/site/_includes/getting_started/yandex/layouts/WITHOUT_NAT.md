@@ -3,4 +3,4 @@
 
 This deployment scheme does not use NAT and gives each node a public IP.
 
-**Warning!** Deckhouse does not yet support Yandex Security Groups, so all nodes in the cluster will be publicly accessible.
+> **Caution!** Deckhouse does not yet support Yandex Security Groups, so all nodes in the cluster will be publicly accessible.

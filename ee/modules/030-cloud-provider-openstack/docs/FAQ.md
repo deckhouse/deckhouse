@@ -4,7 +4,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## How do I set up LoadBalancer?
 
-> **Note** that Load Balancer must support Proxy Protocol to determine the client IP correctly.
+> **Note!** Load Balancer must support Proxy Protocol to determine the client IP correctly.
 
 ### An example of IngressNginxController
 

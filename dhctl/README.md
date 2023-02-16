@@ -112,11 +112,11 @@ For example, use a docker image from the Flant docker registry:
 
 1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
 
-    ```bash
-    docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
-    ```
+   ```bash
+   docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
+   ```
 
-    **NOTE!** It is required to have Deckhouse license key to download FE images.
+   > **Note!** It is required to have Deckhouse license key to download FE images.
 
 2. Run docker container and connect the terminal session to it:
 
@@ -194,7 +194,7 @@ We have to wait for a cluster to become bootstrapped (create one non-master node
 
 In this case, Deckhouse-candi creates `OpenStackInstanceClass` and `NodeGroup` resources, then waits for the possibility to create `IngressNginxController`, and then deploy it.
 
-> NOTE: You can run separate resources creating process by executing `bootstrap-phase create-resources`.
+> **Note!** You can run separate resources creating process by executing `bootstrap-phase create-resources`.
 
 ## Converge infrastructure
 

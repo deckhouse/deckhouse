@@ -10,7 +10,8 @@ search: prometheus monitoring, prometheus custom alert, prometheus custom alerti
 
 1. Configure a Service similar to the one that [collects metrics from your application](../../modules/340-monitoring-custom/#an-example-service) (but do not set the `spec.selector` parameter).
 1. Create Endpoints for this Service and explicitly specify the `IP:PORT` pairs that your applications use to expose metrics.
-> Note that port names in Endpoints must match those in the Service.
+
+   > Port names in Endpoints must match those in the Service.
 
 ### An example
 
@@ -70,7 +71,7 @@ spec:
 ...
 ```
 
-**Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+> **Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
 
 ## How do I add alerts and/or recording rules?
 
@@ -243,7 +244,7 @@ To avoid situations when VPA requests more resources for Prometheus or Longterm 
 
 ## How do I get access to Prometheus metrics from Lens?
 
-> ⛔ **_Attention!!!_** Using this configuration creates a service in which Prometheus metrics are available without authorization.
+> **Caution!** Using this configuration creates a service in which Prometheus metrics are available without authorization.
 
 To provide Lens access to Prometheus metrics, you need to create some resources in a cluster.
 

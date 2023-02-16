@@ -4,7 +4,7 @@ title: "The virtualization module: configuration"
 
 {% include module-bundle.liquid %}
 
-> **Important:**  Module depends on the [cni-cilium](../021-cni-cilium/) module. Make sure your cluster is deployed with Cilium as the main CNI plugin.
+> **Note!** Module depends on the [cni-cilium](../021-cni-cilium/) module. Make sure your cluster is deployed with Cilium as the main CNI plugin.
 
 You will also need to specify one or more desired subnets from which IP addresses will be allocated to virtual machines:
 
