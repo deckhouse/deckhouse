@@ -1,13 +1,18 @@
 # Patches
 
-## 001-customer-annotations.patch
+## 001-request-ip.patch
 
-Add the oportunity to request specific MAC- and IP-address using annotations:
+Add the oportunity to request specific IP-address using annotation:
 
     cni.cilium.io/ipAddress: 10.10.10.10
-    cni.cilium.io/macAddress: f6:e1:74:94:b8:1d
 
-Upstream <https://github.com/cilium/cilium/pull/19789>
+Upstream <https://github.com/cilium/cilium/pull/24098>
+
+## 002-stable-mac.patch
+
+Use predicted MAC-address generation mechanism to make live-migration working.
+
+Upstream <https://github.com/cilium/cilium/pull/24100>
 
 ## 002-mtu.patch
 
