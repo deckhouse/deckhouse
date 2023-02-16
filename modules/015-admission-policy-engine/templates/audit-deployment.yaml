@@ -200,3 +200,17 @@ spec:
           secretName: gatekeeper-webhook-server-cert
       - emptyDir: {}
         name: tmp-volume
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gatekeeper-controller-audit
+  namespace: d8-admission-policy-engine
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: 'gatekeeper'
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit
