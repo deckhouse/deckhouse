@@ -5,7 +5,7 @@
 
 set -Eeo pipefail
 
-function setup_iptables() {
+function setup_interface() {
   # Setup interface
   dev_name="nodelocaldns"
   if ! ip link show "$dev_name" >/dev/null 2>&1 ; then
@@ -17,7 +17,9 @@ function setup_iptables() {
   if ! ip -json addr show "$dev_name" | jq -re "any(.[].addr_info[]?.local; . == \"${KUBE_DNS_SVC_IP}\")" >/dev/null 2>&1 ; then
     ip addr add "${KUBE_DNS_SVC_IP}"/32 dev "$dev_name"
   fi
+}
 
+function setup_iptables() {
   # Setup iptables
   if ! iptables -w 60 -t raw -C OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
     iptables -w 60 -t raw -A OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK
@@ -32,6 +34,8 @@ function setup_iptables() {
 
   echo -n "not-ready" > /tmp/coredns-readiness
 }
+
+setup_interface
 
 if [[ "$SHOULD_SETUP_IPTABLES" == "yes" ]]; then
   setup_iptables
