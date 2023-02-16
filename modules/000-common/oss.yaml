@@ -3,7 +3,7 @@
 - name: Alpine Linux
   description: A Linux distribution built around musl libc and BusyBox.
   link: https://alpinelinux.org/
-  logo: https://wiki.alpinelinux.org/images/alogo.png
+  logo: https://alpinelinux.org/alpinelinux-logo-icon.svg
   licence: Apache License 2.0
 
 - name: Kubernetes CSI
