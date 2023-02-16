@@ -180,7 +180,7 @@ docker:
 ---
 image: dev-prebuild
 fromImage: common-base
-fromCacheVersion: "2023-02-03.2"
+fromCacheVersion: "2023-02-16.0"
 git:
 - add: /
   to: /deckhouse
@@ -192,7 +192,7 @@ git:
   - shell_lib
   - deckhouse-controller/entrypoint.sh
   - jq_lib
-  - helm_helpers
+  - helm_lib
   - python_lib
   excludePaths:
   - docs
@@ -297,7 +297,7 @@ git:
   - shell_lib.sh
   - shell_lib
   - jq_lib
-  - helm_helpers
+  - helm_lib
   - testing
   - go.mod
   - go.sum
