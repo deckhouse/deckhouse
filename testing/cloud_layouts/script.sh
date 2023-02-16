@@ -32,19 +32,19 @@ Required environment variables:
 
 Name                  Description
 ---------------------+---------------------------------------------------------
-$PROVIDER             An infrastructure provider: AWS, GCP, Azure, OpenStack,
+\$PROVIDER             An infrastructure provider: AWS, GCP, Azure, OpenStack,
                       Static, vSphere or Yandex.Cloud.
                       See them in the cloud_layout directory.
-$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
+\$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
                       See available layouts inside the provider directory.
-$PREFIX               A unique prefix to run several tests simultaneously.
-$KUBERNETES_VERSION   A version of Kubernetes to install.
-$CRI                  Docker or Containerd.
-$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
-$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
+\$PREFIX               A unique prefix to run several tests simultaneously.
+\$KUBERNETES_VERSION   A version of Kubernetes to install.
+\$CRI                  Docker or Containerd.
+\$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
+\$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug
                       to test changes in pull requests.
-$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
+\$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
                       install first and then switching to DECKHOUSE_IMAGE_TAG.
                       Also, run test suite for these 2 versions.
 
@@ -52,37 +52,37 @@ Provider specific environment variables:
 
   Yandex.Cloud:
 
-$LAYOUT_YANDEX_CLOUD_ID
-$LAYOUT_YANDEX_FOLDER_ID
-$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
+\$LAYOUT_YANDEX_CLOUD_ID
+\$LAYOUT_YANDEX_FOLDER_ID
+\$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
 
   GCP:
 
-$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
+\$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
 
   AWS:
 
-$LAYOUT_AWS_ACCESS_KEY
-$LAYOUT_AWS_SECRET_ACCESS_KEY
+\$LAYOUT_AWS_ACCESS_KEY
+\$LAYOUT_AWS_SECRET_ACCESS_KEY
 
   Azure:
 
-$LAYOUT_AZURE_SUBSCRIPTION_ID
-$LAYOUT_AZURE_TENANT_ID
-$LAYOUT_AZURE_CLIENT_ID
-$LAYOUT_AZURE_CLIENT_SECRET
+\$LAYOUT_AZURE_SUBSCRIPTION_ID
+\$LAYOUT_AZURE_TENANT_ID
+\$LAYOUT_AZURE_CLIENT_ID
+\$LAYOUT_AZURE_CLIENT_SECRET
 
   Openstack:
 
-$LAYOUT_OS_PASSWORD
+\$LAYOUT_OS_PASSWORD
 
   vSphere:
 
-$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_PASSWORD
 
   Static:
 
-$LAYOUT_OS_PASSWORD
+\$LAYOUT_OS_PASSWORD
 
 EOF
 )
@@ -268,8 +268,8 @@ function prepare_environment() {
       IMAGE_ID="fd8q0kjl4l1iovds9f29"
     else
       ssh_user="ubuntu"
-      # Ubuntu 20.04
-      IMAGE_ID="fd8kdq6d0p8sij7h5qe3"
+      # Ubuntu 22.04 LTS
+      IMAGE_ID="fd8emvfmfoaordspe1jr"
     fi
 
     # shellcheck disable=SC2016
@@ -362,14 +362,16 @@ function run-test() {
   else
     bootstrap || return $?
   fi
-
+  #master_ip="$(parse_master_ip_from_log)"
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
+  istio_e2e_test || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
+    istio_e2e_test || return $?
   fi
 }
 
@@ -754,18 +756,18 @@ EOF
   if [[ -n "$ingress_inlet" ]]; then
     if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
       if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
-        if ingress_lb="$(jq -re '.status.loadBalancer.ingress[0].hostname' <<< "$ingress_service")"; then
-          if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb")"; then
+        if ingress_lb_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$ingress_service")"; then
+          if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_ip")"; then
             if [[ "$ingress_lb_code" == "404" ]]; then
               ingress="ok"
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt #${i} of ${attempts})."
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_ip, waiting for 404 (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt #${i} of ${attempts})."
+            >&2 echo "Failed curl request to the LB ip address: $ingress_lb_ip (attempt #${i} of ${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt #${i} of ${attempts})."
+          >&2 echo "Can't get svc/nginx-load-balancer LB ip address (attempt #${i} of ${attempts})."
         fi
       else
         >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
@@ -790,6 +792,9 @@ exit 1
 END_SCRIPT
 )
 
+  # upload istio e2e sample application to cluster
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/istio-e2e.yaml" < "$(pwd)/testing/manifests/istio-e2e.yaml"
+
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
@@ -811,6 +816,91 @@ ENDSSH
     return 1
   fi
 }
+
+# istio_e2e_test constantly checks if istio test application become ready.
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+function istio_e2e_test() {
+
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+
+>&2 echo "Running istio tests ..."
+
+if ! is_istio_enabled=$( kubectl get mc istio -o json | jq -re '.spec.enabled' | grep "true" -q); then
+  istio="ok"
+else
+  istio=""
+fi
+
+# deploy istio test application
+kubectl apply -f /tmp/istio-e2e.yaml > /dev/null
+
+attempts=5
+
+for i in $(seq $attempts); do
+  sleep 5
+  if [[ -n "is_istio_enabled" ]]; then
+    if echo_ingress="$(kubectl -n istio-e2e-test get ingress echo -o json 2>/dev/null)"; then
+      if echo_ingress_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$echo_ingress")"; then
+        echo_v1="$(curl -sq http://istio.e2e.test -H "x-version: v1" --resolve "istio.e2e.test:80:${echo_ingress_ip}" | jq .msg -r)"
+        echo_v2="$(curl -sq http://istio.e2e.test -H "x-version: v2" --resolve "istio.e2e.test:80:${echo_ingress_ip}" | jq .msg -r)"
+        if [[ "$echo_v1:$echo_v2" == "v1:v2" ]]; then
+          >&2 echo "Got versions $echo_v1 and $echo_v2 from echo ingress (url: istio.e2e.test)."
+          istio="ok"
+        else
+          >&2 echo "Got versions $echo_v1 and $echo_v2 from echo ingress (url: istio.e2e.test), waiting for v1 and v2 (attempt #${i} of ${attempts})."
+        fi
+      else
+        >&2 echo "Can't get ingress/echo ip address for url istio.e2e.test (attempt #${i} of ${attempts})."
+      fi
+    else
+      >&2 echo "Can't get ingress/echo for url istio.e2e.test (attempt #${i} of ${attempts})."
+    fi
+
+    cat <<EOF
+Istio check: $([ "$istio" == "ok" ] && echo "success" || echo "failure")
+EOF
+  fi
+
+  if [[ "$istio" == "ok" ]]; then
+    exit 0
+  fi
+done
+
+# remove istio test application
+kubectl delete -f /tmp/istio-e2e.yaml --force --grace-period=0
+
+>&2 echo 'Timeout waiting for checks to succeed'
+exit 1
+END_SCRIPT
+)
+
+  # upload istio e2e sample application to cluster
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/istio-e2e.yaml" < "$(pwd)/testing/manifests/istio-e2e.yaml"
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+}
+
 
 # run_linstor_tests executes helm test for linstor module
 #

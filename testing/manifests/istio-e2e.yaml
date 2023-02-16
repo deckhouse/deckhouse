@@ -1,0 +1,288 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app: echo
+    istio-injection: enabled
+  name: istio-e2e-test
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: echo
+    version: v1
+  name: echo-v1
+  namespace: istio-e2e-test
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: echo
+    version: v2
+  name: echo-v2
+  namespace: istio-e2e-test
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: echo
+  name: echo-pod-viewer
+  namespace: istio-e2e-test
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: echo
+    version: v1
+  name: echo-role-binding-v1
+  namespace: istio-e2e-test
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: echo-pod-viewer
+subjects:
+  - kind: ServiceAccount
+    name: echo-v1
+    namespace: istio-e2e-test
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: echo
+    version: v2
+  name: echo-role-binding-v2
+  namespace: istio-e2e-test
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: echo-pod-viewer
+subjects:
+  - kind: ServiceAccount
+    name: echo-v2
+    namespace: istio-e2e-test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+    service: echo
+    version: v1
+  name: echo-v1
+  namespace: istio-e2e-test
+spec:
+  ports:
+    - name: http
+      port: 63636
+      targetPort: http
+  selector:
+    app: echo
+    version: v1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+  name: echo-v12
+  namespace: istio-e2e-test
+spec:
+  ports:
+    - name: http
+      port: 63636
+      targetPort: http
+  selector:
+    app: echo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+    service: echo
+    version: v2
+  name: echo-v2
+  namespace: istio-e2e-test
+spec:
+  ports:
+    - name: http
+      port: 63636
+      targetPort: http
+  selector:
+    app: echo
+    version: v2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: echo
+    istio.deckhouse.io/auto-upgrade: "true"
+    version: v1
+  name: echo-v1
+  namespace: istio-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+      version: v1
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/proxyCPU: 0m
+        sidecar.istio.io/proxyCPULimit: 0m
+        sidecar.istio.io/proxyMemory: "0"
+        sidecar.istio.io/proxyMemoryLimit: "0"
+        status: "200"
+      labels:
+        app: echo
+        version: v1
+    spec:
+      containers:
+        - env:
+            - name: VERSION
+              value: v1
+            - name: MESSAGE
+              value: $VERSION
+          image: docker.io/fl64/echo:0.5.2
+          imagePullPolicy: Always
+          name: echo
+          ports:
+            - containerPort: 8000
+              name: http
+      serviceAccountName: echo-v1
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - key: dedicated.deckhouse.io
+          operator: Exists
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: echo
+    istio.deckhouse.io/auto-upgrade: "true"
+    version: v2
+  name: echo-v2
+  namespace: istio-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+      version: v2
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/proxyCPU: 0m
+        sidecar.istio.io/proxyCPULimit: 0m
+        sidecar.istio.io/proxyMemory: "0"
+        sidecar.istio.io/proxyMemoryLimit: "0"
+        status: "200"
+      labels:
+        app: echo
+        version: v2
+    spec:
+      containers:
+        - env:
+            - name: VERSION
+              value: v2
+            - name: MESSAGE
+              value: $VERSION
+          image: docker.io/fl64/echo:0.5.2
+          imagePullPolicy: Always
+          name: echo
+          ports:
+            - containerPort: 8000
+              name: http
+      serviceAccountName: echo-v2
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - key: dedicated.deckhouse.io
+          operator: Exists
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  labels:
+    app: echo
+  name: echo-v12
+  namespace: istio-e2e-test
+spec:
+  host: echo-v12
+  subsets:
+    - labels:
+        version: v1
+      name: version-v1
+    - labels:
+        version: v2
+      name: version-v2
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  labels:
+    app: echo
+  name: echo-v12
+  namespace: istio-e2e-test
+spec:
+  hosts:
+    - echo-v12
+  http:
+    - headers:
+        request:
+          set:
+            name: added-by-istio-vs
+      match:
+        - headers:
+            x-version:
+              exact: v2
+      route:
+        - destination:
+            host: echo-v12
+            subset: version-v2
+    - route:
+        - destination:
+            host: echo-v12
+            subset: version-v1
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: echo-v12.istio-e2e-test.svc.cluster.local
+  labels:
+    app: echo
+  name: echo
+  namespace: istio-e2e-test
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: istio.e2e.test
+      http:
+        paths:
+          - backend:
+              service:
+                name: echo-v12
+                port:
+                  number: 63636
+            path: /
+            pathType: ImplementationSpecific

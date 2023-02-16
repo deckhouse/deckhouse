@@ -10,19 +10,7 @@ spec:
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
-      node-role.deckhouse.io/frontend: ""
     taints:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: system
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
----
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: HostWithFailover

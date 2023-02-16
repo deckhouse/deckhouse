@@ -42,3 +42,9 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  enableIstioSidecar: true
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
