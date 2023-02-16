@@ -18,13 +18,8 @@ import os
 import tempfile
 import json
 import shutil
-import glob
 import re
 from shell_operator import hook
-
-for f in glob.glob("/frameworks/shell/*.sh"):
-    with open(f, "r") as script:
-        exec(script.read())
 
 def slugify(value):
     value = value.lower()
@@ -34,12 +29,13 @@ def slugify(value):
 
 def main(ctx: hook.Context):
     tmp_dir = tempfile.mkdtemp(prefix="dashboard.")
-    existing_uids_file = tempfile.mktemp(prefix="uids.")
+    known_uids = set()
     malformed_dashboards = ""
 
-    for i in hook.Context.get("snapshots.dashboard_resources"):
-        dashboard = json.loads(hook.Context.get(f"snapshots.dashboard_resources.{i}.filterResult"))
-        definition = dashboard.get("definition", {})
+    for i in ctx.snapshots.get("dashboard_resources", []):
+        dashboard = i["filterResult"]
+        definition_str = dashboard["definition"]
+        definition = json.loads(definition_str)
         title = definition.get("title")
         if not title:
             malformed_dashboards += f" {dashboard.get('name', '')}"
@@ -51,13 +47,11 @@ def main(ctx: hook.Context):
             print(f"ERROR: definition.uid is mandatory field")
             continue
 
-        dashboard_uid = definition["uid"]
-        if dashboard_uid in open(existing_uids_file).read():
-            print(f"ERROR: a dashboard with the same uid is already exist: {dashboard_uid}")
+        uid = definition["uid"]
+        if uid in known_uids:
+            print(f"ERROR: a dashboard with the same uid is already exist: {uid}")
             continue
-        else:
-            with open(existing_uids_file, "a") as f:
-                f.write(dashboard_uid + '\n')
+        known_uids.add(uid)
 
         folder = dashboard.get("folder", "General")
         file = f"{folder}/{title}.json"
@@ -72,7 +66,6 @@ def main(ctx: hook.Context):
     shutil.rmtree("/etc/grafana/dashboards/", ignore_errors=True)
     shutil.copytree(tmp_dir, "/etc/grafana/dashboards/")
     shutil.rmtree(tmp_dir)
-    os.remove(existing_uids_file)
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")

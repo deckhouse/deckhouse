@@ -5,7 +5,8 @@ kubernetes:
   - name: dashboard_resources
     apiVersion: deckhouse.io/v1
     kind: GrafanaDashboardDefinition
-    includeSnapshotsFrom: dashboard_resources
+    includeSnapshotsFrom:
+    - dashboard_resources
     jqFilter: |
       {
           "name": .metadata.name,
