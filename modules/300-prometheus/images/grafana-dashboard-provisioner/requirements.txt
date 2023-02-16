@@ -1,1 +1,1 @@
-deckhouse==0.4.3
+shell-operator==0.0.8
