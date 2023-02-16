@@ -44,8 +44,10 @@ func filterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 var (
 	onEventExec    = true
-	memoryPerPod   = int64(15) * 1024 * 1024 // in Megabytes
-	milliCPUPerPod = int64(20)               // in milli cpu
+	memoryPerPod   = int64(15) * 1024 * 1024                            // in Megabytes
+	milliCPUPerPod = int64(20)                                          // in milli cpu
+	minMem         = resource.NewQuantity(1000, resource.BinarySI)      // for reference see modules/300-prometheus/templates/prometheus/prometheus.yaml
+	minCPU         = resource.NewMilliQuantity(200, resource.DecimalSI) // for reference see modules/300-prometheus/templates/prometheus/prometheus.yaml
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -87,11 +89,6 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 	// calculate prometheus usage
 	maxMem := resource.NewQuantity(totalPodsMemory/1, resource.BinarySI)
 	maxCPU := resource.NewMilliQuantity(totalPodsCPU/1, resource.DecimalSI)
-
-	var (
-		minMem = resource.NewQuantity(1000, resource.BinarySI)
-		minCPU = resource.NewMilliQuantity(200, resource.DecimalSI)
-	)
 
 	if maxMem.Cmp(*minMem) == -1 {
 		maxMem = minMem

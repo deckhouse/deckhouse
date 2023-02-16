@@ -1,4 +1,4 @@
-{{- define "prometheus_resources" }}
+{{- define "prometheus_resources" }} # for reference see modules/300-prometheus/hooks/detect_vpa_max.go
 cpu: 200m
 memory: 1000Mi
 {{- end }}
