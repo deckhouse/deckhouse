@@ -53,6 +53,9 @@ function check_readiness() {
     fi
   else
     echo "Unknown state in file \"$readiness_file_path\": \"$(< "$readiness_file_path")\""
+    if [[ ${CNI_CILIUM} == "yes" ]]; then
+      delete_rule
+    fi
     exit 1
   fi
 }
