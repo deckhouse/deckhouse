@@ -71,8 +71,10 @@ spec:
           value: {{ .Values.global.discovery.clusterDomain | quote }}
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
         - name: SHOULD_SETUP_IPTABLES
           value: "yes"
+{{- end }}
         ports:
         - containerPort: 53
           name: dns
