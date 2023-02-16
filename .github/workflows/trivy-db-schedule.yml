@@ -1,0 +1,28 @@
+name: Trivy DB Download
+on:
+  schedule:
+  - cron: '0 */6 * * *'
+
+jobs:
+  download-and-repush-images:
+    name: Download and repush images
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check rw registry credentials
+      id: check_rw_registry
+      env:
+        HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+      run: |
+        if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+    - name: Login to rw registry
+      uses: docker/login-action@v1.10.0
+      if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+      with:
+        registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+        username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+        password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+        logout: false
+    - name: Do nothing
+      run: |
+        curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.13.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - && chmod +x crane
+        ./crane copy ghcr.io/aquasecurity/trivy-db:latest ${{secrets.DECKHOUSE_REGISTRY_HOST}}/security/trivy-db:latest
