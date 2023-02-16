@@ -57,9 +57,9 @@ deckhouse:
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-yandex/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
-layout: WithoutNAT
-# [<en>] Yandex Cloud account parameters.
-# [<ru>] Параметры доступа к облаку Yandex Cloud.
+layout: Standard
+# [<en>] Yandex account parameters
+# [<ru>] параметры доступа к облаку Yandex
 provider:
   # [<en>] The cloud ID.
   # [<ru>] ID облака.
