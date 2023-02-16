@@ -753,28 +753,45 @@ Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pen
 EOF
 
   if [[ -n "$ingress_inlet" ]]; then
-    if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
-      if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
-        if ingress_lb_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$ingress_service")"; then
-          if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_ip")"; then
-            if [[ "$ingress_lb_code" == "404" ]]; then
-              ingress="ok"
+    case "$ingress_inlet" in
+      LoadBalancer)
+        if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
+          if ingress_lb_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$ingress_service")"; then
+            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_ip")"; then
+              if [[ "$ingress_lb_code" == "404" ]]; then
+                ingress="ok"
+              else
+                >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_ip, waiting for 404 (attempt #${i} of ${attempts})."
+              fi
             else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_ip, waiting for 404 (attempt #${i} of ${attempts})."
+              >&2 echo "Failed curl request to the LB ip address: $ingress_lb_ip (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Failed curl request to the LB ip address: $ingress_lb_ip (attempt #${i} of ${attempts})."
+            >&2 echo "Can't get svc/nginx-load-balancer LB ip address (attempt #${i} of ${attempts})."
           fi
         else
-          >&2 echo "Can't get svc/nginx-load-balancer LB ip address (attempt #${i} of ${attempts})."
+          >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
         fi
-      else
-        >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
-      exit 1
-    fi
+        ;;
+      HostPort | HostWithFailover)
+        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
+          if ingress_hp_code="$(curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
+            if [[ "ingress_hp_code" == "404" ]]; then
+              ingress="ok"
+            else
+              >&2 echo "Got code $ingress_hp_code from LB $master_ip, waiting for 404 (attempt #${i} of ${attempts})."
+            fi
+          else
+            >&2 echo "Failed curl request to the master ip address: $master_ip (attempt #${i} of ${attempts})."
+          fi
+        else
+          >&2 echo "Can't get master ip address (attempt #${i} of ${attempts})."
+        fi
+      *)
+        >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
+        exit 1
+        ;;
+      esac
 
     cat <<EOF
 Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo "failure")
