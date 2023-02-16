@@ -362,7 +362,6 @@ function run-test() {
   else
     bootstrap || return $?
   fi
-  #master_ip="$(parse_master_ip_from_log)"
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
   istio_e2e_test || return $?
@@ -841,7 +840,7 @@ fi
 # deploy istio test application
 kubectl apply -f /tmp/istio-e2e.yaml > /dev/null
 
-attempts=5
+attempts=15
 
 for i in $(seq $attempts); do
   sleep 5

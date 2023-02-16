@@ -29,7 +29,13 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
- name: nginx
+  name: nginx
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  enableIstioSidecar: true
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
