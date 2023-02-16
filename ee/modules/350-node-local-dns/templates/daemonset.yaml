@@ -112,10 +112,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
 {{- if (.Values.global.enabledModules | has "cni-cilium") }}
