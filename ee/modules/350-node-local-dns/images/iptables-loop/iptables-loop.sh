@@ -12,11 +12,11 @@ latest_state=""
 
 function add_rule() {
   if [[ ${CNI_CILIUM} == "yes" ]]; then
-    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t nat -A PREROUTING -p tcp -m tcp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -A PREROUTING -p tcp -m tcp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
-    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t nat -A PREROUTING -p udp -m udp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    if ! iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -A PREROUTING -p udp -m udp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
   else
     if ! iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
@@ -27,11 +27,11 @@ function add_rule() {
 
 function delete_rule() {
   if [[ ${CNI_CILIUM} == "yes" ]]; then
-    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t nat -D PREROUTING -p tcp -m tcp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p tcp -m tcp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -D PREROUTING -p tcp -m tcp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
-    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t nat -D PREROUTING -p udp -m udp -s !${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
+    if iptables -w 60 -W 100000 -t nat -C PREROUTING -p udp -m udp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
+      iptables -w 60 -W 100000 -t nat -D PREROUTING -p udp -m udp ! -s ${POD_IP}/32 --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
   else
     if iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
