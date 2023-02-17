@@ -31,7 +31,7 @@ import (
 
 /*
   This hook handles invalid situation when more then 1 Deployed release exists at the moment:
-    Hook move all releases except the latest one to the Skipped state
+    Hook moves all releases except the latest one to the Skipped state
 
   The hook will keep only 10 Outdated releases, removing others
 */
