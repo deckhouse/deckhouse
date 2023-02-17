@@ -64,11 +64,13 @@ trap delete_rule INT TERM ERR
 
 until [ -f "$readiness_file_path" ]; do
   echo "File \"$readiness_file_path\" does not exist yet. It should be created by a readinessProbe in the \"coredns\" container."
+  delete_rule
   sleep 1
 done
 
 until [[ $(< "$readiness_file_path") == "$ready_state" ]]; do
   echo "\"coredns\" container is not ready yet"
+  delete_rule
   sleep 1
 done
 
