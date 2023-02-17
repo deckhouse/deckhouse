@@ -107,18 +107,18 @@ EOF
     case "$ingress_inlet" in
       LoadBalancer)
         if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
-          if ingress_lb_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$ingress_service")"; then
-            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_ip")"; then
+          if ingress_lb_addr="$(jq -re '.status.loadBalancer.ingress | if .[0].hostname then .[0].hostname else .[0].ip end' <<< "$ingress_service")"; then
+            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
               if [[ "$ingress_lb_code" == "404" ]]; then
                 ingress="ok"
               else
-                >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_ip, waiting for 404 (attempt #${i} of ${attempts})."
+                >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_addr, waiting for 404 (attempt #${i} of ${attempts})."
               fi
             else
-              >&2 echo "Failed curl request to the LB ip address: $ingress_lb_ip (attempt #${i} of ${attempts})."
+              >&2 echo "Failed curl request to the LB address: $ingress_lb_addr (attempt #${i} of ${attempts})."
             fi
           else
-            >&2 echo "Can't get svc/nginx-load-balancer LB ip address (attempt #${i} of ${attempts})."
+            >&2 echo "Can't get svc/nginx-load-balancer LB address (attempt #${i} of ${attempts})."
           fi
         else
           >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
