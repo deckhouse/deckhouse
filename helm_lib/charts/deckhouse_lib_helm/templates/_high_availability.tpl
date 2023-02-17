@@ -1,9 +1,9 @@
-{{- /* Usage: {{ include "helm_lib_is_ha_to_value" (list . <yes> <no>) }} */ -}}
-{{- /* returns value <yes> if cluster is highly available, else — returns <no> */ -}}
+{{- /* Usage: {{ include "helm_lib_is_ha_to_value" (list . yes no) }} */ -}}
+{{- /* returns value "yes" if cluster is highly available, else — returns "no" */ -}}
 {{- define "helm_lib_is_ha_to_value" }}
-  {{- $context := index . 0 -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
-  {{- $yes := index . 1 -}} {{- /* argv1 */ -}}
-  {{- $no  := index . 2 -}} {{- /* argv2 */ -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $yes := index . 1 -}} {{- /* Yes value */ -}}
+  {{- $no  := index . 2 -}} {{- /* No value */ -}}
 
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
 
@@ -16,10 +16,10 @@
   {{- end -}}
 {{- end }}
 
-{{- /* Usage: {{- if (include "helm_lib_ha_enabled" .) }} /* -}}
+{{- /* Usage: {{- if (include "helm_lib_ha_enabled" .) }} */ -}}
 {{- /* returns empty value, which is treated by go template as false */ -}}
 {{- define "helm_lib_ha_enabled" }}
-  {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
+  {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
 
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
 

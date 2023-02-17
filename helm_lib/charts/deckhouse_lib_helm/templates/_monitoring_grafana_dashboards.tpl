@@ -2,8 +2,9 @@
 {{- /* returns all the dashboard-definintions from <root dir>/ */ -}}
 {{- /* current dir is optional — used for recursion but you can use it for partially generating dashboards */ -}}
 {{- define "helm_lib_grafana_dashboard_definitions_recursion" -}}
-  {{- $context := index . 0 }}
-  {{- $rootDir := index . 1 }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $rootDir := index . 1 }} {{- /* Dashboards root dir */ -}}
+  {{- /* Dashboards current dir */ -}}
 
   {{- $currentDir := "" }}
   {{- if gt (len .) 2 }} {{- $currentDir = index . 2 }} {{- else }} {{- $currentDir = $rootDir }} {{- end }}
@@ -40,7 +41,7 @@
 {{- /* Usage: {{ include "helm_lib_grafana_dashboard_definitions" . }} */ -}}
 {{- /* returns dashboard-definintions from monitoring/grafana-dashboards/ */ -}}
 {{- define "helm_lib_grafana_dashboard_definitions" -}}
-  {{- $context := . }}
+  {{- $context := . }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- if ( $context.Values.global.enabledModules | has "prometheus-crd" ) }}
 {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards") }}
   {{- end }}
@@ -50,10 +51,10 @@
 {{- /* Usage: {{ include "helm_lib_single_dashboard" (list . "dashboard-name" "folder" $dashboard) }} */ -}}
 {{- /* renders a single dashboard */ -}}
 {{- define "helm_lib_single_dashboard" -}}
-  {{- $context := index . 0 }}
-  {{- $resourceName := index . 1 }}
-  {{- $folder := index . 2 }}
-  {{- $definition := index . 3 }}
+  {{- $context := index . 0 }}       {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $resourceName := index . 1 }}  {{- /* Dashboard name */ -}}
+  {{- $folder := index . 2 }}        {{- /* Folder */ -}}
+  {{- $definition := index . 3 }}    {{/* Dashboard definition */}}
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
