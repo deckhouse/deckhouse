@@ -1,4 +1,6 @@
-# Based on https://github.com/istio/istio/blob/1.12.6/pilot/docker/Dockerfile.proxyv2
+# Based on https://github.com/istio/istio/blob/1.16.2/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.12.6/pilot/docker/Dockerfile.proxyv2
+
 ARG BASE_UBUNTU
 FROM docker.io/istio/proxyv2:1.12.6@sha256:4b796185f4eecb8bc408bcb3c0f74f1e2065d06992d6430a32e12e6b9767aad8 as artifact
 
@@ -11,13 +13,26 @@ ARG istio_version=1.12.6
 ARG SIDECAR=envoy
 
 RUN apt-get update && \
-   apt-get install --no-install-recommends -y \
-   ca-certificates curl iptables iproute2 iputils-ping \
-   knot-dnsutils netcat tcpdump conntrack bsdmainutils net-tools lsof sudo && \
-   update-ca-certificates && \
-   apt-get upgrade -y && \
-   apt-get clean && \
-   rm -rf /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  apt-get install --no-install-recommends -y \
+  ca-certificates \
+  curl \
+  iptables \
+  iproute2 \
+  iputils-ping \
+  knot-dnsutils \
+  netcat \
+  tcpdump \
+  conntrack \
+  bsdmainutils \
+  net-tools \
+  lsof \
+  sudo \
+  && update-ca-certificates \
+  && apt-get upgrade -y \
+  && apt-get clean \
+  && rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old \
+  && update-alternatives --set iptables /usr/sbin/iptables-legacy \
+  && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
 RUN useradd -m --uid 1337 istio-proxy && echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
 
@@ -39,9 +54,6 @@ COPY --from=artifact /etc/istio/extensions/stats-filter.wasm /etc/istio/extensio
 COPY --from=artifact /etc/istio/extensions/stats-filter.compiled.wasm /etc/istio/extensions/stats-filter.compiled.wasm
 COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.wasm /etc/istio/extensions/metadata-exchange-filter.wasm
 COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.compiled.wasm /etc/istio/extensions/metadata-exchange-filter.compiled.wasm
-
-COPY iptables-wrapper-installer.sh /
-RUN /iptables-wrapper-installer.sh
 
 # The pilot-agent will bootstrap Envoy.
 ENTRYPOINT ["/usr/local/bin/pilot-agent"]
