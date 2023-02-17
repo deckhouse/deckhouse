@@ -85,8 +85,10 @@ WORKDIR /tmp/cilium-repo/cilium-1.11.14
 
 COPY patches/001-customer-annotations.patch /
 COPY patches/002-mtu.patch /
+COPY patches/003-vms-cidr.patch /
 RUN patch -p1 < /001-customer-annotations.patch && \
-    patch -p1 < /002-mtu.patch
+    patch -p1 < /002-mtu.patch && \
+    patch -p1 < /003-vms-cidr.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary

@@ -1,0 +1,202 @@
+diff --git a/bpf/lib/nat.h b/bpf/lib/nat.h
+index 92726b04d6..db45539195 100644
+--- a/bpf/lib/nat.h
++++ b/bpf/lib/nat.h
+@@ -705,6 +705,21 @@ skip_egress_gateway:
+ 		return false;
+ #endif
+ 
++
++#ifdef ENABLE_VM_MASQUERADE /* SNAT local vm to world packets */
++# ifdef IPV4_SNAT_EXCLUSION_DST_VM_CIDR
++	/* Do not MASQ if a dst IP belongs to a vms CIDR
++	 * (ipv4-native-routing-vm-cidr if specified).
++	 * The check is performed before we determine that a packet is
++	 * sent from a local pod, as this check is cheaper than
++	 * the map lookup done in the latter check.
++	 */
++	if (ipv4_is_in_subnet(ip4->daddr, IPV4_SNAT_EXCLUSION_DST_VM_CIDR,
++			      IPV4_SNAT_EXCLUSION_DST_VM_CIDR_LEN))
++		return false;
++# endif
++#endif /*ENABLE_VM_MASQUERADE */
++
+ 	/* if this is a localhost endpoint, no SNAT is needed */
+ 	if (local_ep && (local_ep->flags & ENDPOINT_F_HOST))
+ 		return false;
+diff --git a/bpf/node_config.h b/bpf/node_config.h
+index 65042148b8..b8f314484e 100644
+--- a/bpf/node_config.h
++++ b/bpf/node_config.h
+@@ -78,6 +78,10 @@ DEFINE_IPV6(HOST_IP, 0xbe, 0xef, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0xa, 0x
+ # ifdef ENABLE_MASQUERADE
+ #  define IPV4_SNAT_EXCLUSION_DST_CIDR 0xffff0000
+ #  define IPV4_SNAT_EXCLUSION_DST_CIDR_LEN 16
++#  ifdef ENABLE_VM_MASQUERADE
++#   define IPV4_SNAT_EXCLUSION_DST_VM_CIDR 0xffff0000
++#   define IPV4_SNAT_EXCLUSION_DST_VM_CIDR_LEN 16
++#  endif /* ENABLE_VM_MASQUERADE */
+ # endif /* ENABLE_MASQUERADE */
+ #ifdef ENABLE_NODEPORT
+ #define SNAT_MAPPING_IPV4 test_cilium_snat_v4_external
+diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
+index 84fda249f6..a5ee98af3d 100644
+--- a/daemon/cmd/daemon_main.go
++++ b/daemon/cmd/daemon_main.go
+@@ -621,6 +621,12 @@ func initializeFlags() {
+ 		"To offer a concrete example, if Cilium is configured to use direct routing and the Kubernetes CIDR is included in the native routing CIDR, the user must configure the routes to reach pods, either manually or by setting the auto-direct-node-routes flag.")
+ 	option.BindEnv(Vp, option.IPv4NativeRoutingCIDR)
+ 
++	flags.String(option.IPv4NativeRoutingVMCIDR, "", "Allows to explicitly specify the IPv4 CIDR for native routing. "+
++		"When specified, Cilium assumes networking for this CIDR is preconfigured and hands traffic destined for that range to the Linux network stack without applying any SNAT. "+
++		"Generally speaking, specifying a native routing CIDR implies that Cilium can depend on the underlying networking stack to route packets to their destination. "+
++		"To offer a concrete example, if Cilium is configured to use direct routing and the Kubernetes CIDR is included in the native routing CIDR, the user must configure the routes to reach vmss, either manually or by setting the auto-direct-node-routes flag.")
++	option.BindEnv(Vp, option.IPv4NativeRoutingVMCIDR)
++
+ 	flags.String(option.IPv6NativeRoutingCIDR, "", "Allows to explicitly specify the IPv6 CIDR for native routing. "+
+ 		"When specified, Cilium assumes networking for this CIDR is preconfigured and hands traffic destined for that range to the Linux network stack without applying any SNAT. "+
+ 		"Generally speaking, specifying a native routing CIDR implies that Cilium can depend on the underlying networking stack to route packets to their destination. "+
+diff --git a/pkg/datapath/config.go b/pkg/datapath/config.go
+index 08a7696d9c..2a5bc430be 100644
+--- a/pkg/datapath/config.go
++++ b/pkg/datapath/config.go
+@@ -127,6 +127,13 @@ func RemoteSNATDstAddrExclusionCIDRv4() *cidr.CIDR {
+ 	return node.GetIPv4AllocRange()
+ }
+ 
++// RemoteSNATDstAddrExclusionVMCIDRv4 returns a CIDR for SNAT exclusion. Any
++// packet sent from a local endpoint to an IP address belonging to the CIDR
++// should not be SNAT'd.
++func RemoteSNATDstAddrExclusionVMCIDRv4() *cidr.CIDR {
++	return option.Config.GetIPv4NativeRoutingVMCIDR()
++}
++
+ // RemoteSNATDstAddrExclusionCIDRv6 returns a IPv6 CIDR for SNAT exclusion. Any
+ // packet sent from a local endpoint to an IP address belonging to the CIDR
+ // should not be SNAT'd.
+diff --git a/pkg/datapath/iptables/iptables.go b/pkg/datapath/iptables/iptables.go
+index 79dff98c54..7df208a566 100644
+--- a/pkg/datapath/iptables/iptables.go
++++ b/pkg/datapath/iptables/iptables.go
+@@ -1478,6 +1478,12 @@ func (m *IptablesManager) installRules(ifName string) error {
+ 		if err := m.addNoTrackPodTrafficRules(ip4tables, podsCIDR); err != nil {
+ 			return fmt.Errorf("cannot install pod traffic no CT rules: %w", err)
+ 		}
++		if vmsCIDR := option.Config.GetIPv4NativeRoutingVMCIDR(); vmsCIDR != nil {
++			if err := m.addNoTrackPodTrafficRules(ip4tables, vmsCIDR.String()); err != nil {
++				return fmt.Errorf("cannot install vm traffic no CT rules: %w", err)
++			}
++		}
++
+ 	}
+ 
+ 	for _, c := range ciliumChains {
+@@ -1595,6 +1601,30 @@ func (m *IptablesManager) addNoTrackPodTrafficRules(prog iptablesInterface, pods
+ 	return nil
+ }
+ 
++func (m *IptablesManager) addNoTrackVMTrafficRules(prog iptablesInterface, vmsCIDR string) error {
++	for _, chain := range []string{ciliumPreRawChain, ciliumOutputRawChain} {
++		if err := prog.runProg([]string{
++			"-t", "raw",
++			"-I", chain,
++			"-s", vmsCIDR,
++			"-m", "comment", "--comment", "cilium: NOTRACK for vm traffic",
++			"-j", "CT", "--notrack"}); err != nil {
++			return err
++		}
++
++		if err := prog.runProg([]string{
++			"-t", "raw",
++			"-I", chain,
++			"-d", vmsCIDR,
++			"-m", "comment", "--comment", "cilium: NOTRACK for vm traffic",
++			"-j", "CT", "--notrack"}); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
+ func (m *IptablesManager) addCiliumENIRules() error {
+ 	if !option.Config.EnableIPv4 {
+ 		return nil
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index 6a074211fb..30e4590bdd 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -571,6 +571,14 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			ones, _ := cidr.Mask.Size()
+ 			cDefinesMap["IPV4_SNAT_EXCLUSION_DST_CIDR_LEN"] = fmt.Sprintf("%d", ones)
+ 
++			if cidr = datapath.RemoteSNATDstAddrExclusionVMCIDRv4(); cidr != nil {
++				cDefinesMap["ENABLE_VM_MASQUERADE"] = "1"
++				cDefinesMap["IPV4_SNAT_EXCLUSION_DST_VM_CIDR"] =
++					fmt.Sprintf("%#x", byteorder.NetIPv4ToHost32(cidr.IP))
++				ones, _ = cidr.Mask.Size()
++				cDefinesMap["IPV4_SNAT_EXCLUSION_DST_VM_CIDR_LEN"] = fmt.Sprintf("%d", ones)
++			}
++
+ 			// ip-masq-agent depends on bpf-masq
+ 			if option.Config.EnableIPMasqAgent {
+ 				cDefinesMap["ENABLE_IP_MASQ_AGENT"] = "1"
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index c76338d746..249fdd615d 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -866,6 +866,9 @@ const (
+ 	// IPv4NativeRoutingCIDR describes a v4 CIDR in which pod IPs are routable
+ 	IPv4NativeRoutingCIDR = "ipv4-native-routing-cidr"
+ 
++	// IPv4NativeRoutingVMCIDR describes a v4 CIDR in which pod IPs are routable
++	IPv4NativeRoutingVMCIDR = "ipv4-native-routing-vm-cidr"
++
+ 	// IPv6NativeRoutingCIDR describes a v6 CIDR in which pod IPs are routable
+ 	IPv6NativeRoutingCIDR = "ipv6-native-routing-cidr"
+ 
+@@ -2039,6 +2042,9 @@ type DaemonConfig struct {
+ 	// IPv4NativeRoutingCIDR describes a CIDR in which pod IPs are routable
+ 	IPv4NativeRoutingCIDR *cidr.CIDR
+ 
++	// IPv4NativeRoutingVMCIDR describes a CIDR in which vm IPs are routable
++	IPv4NativeRoutingVMCIDR *cidr.CIDR
++
+ 	// IPv6NativeRoutingCIDR describes a CIDR in which pod IPs are routable
+ 	IPv6NativeRoutingCIDR *cidr.CIDR
+ 
+@@ -2379,6 +2385,14 @@ func (c *DaemonConfig) GetIPv4NativeRoutingCIDR() (cidr *cidr.CIDR) {
+ 	return
+ }
+ 
++// GetIPv4NativeRoutingVMCIDR returns the native routing VM CIDR if configured
++func (c *DaemonConfig) GetIPv4NativeRoutingVMCIDR() (cidr *cidr.CIDR) {
++	c.ConfigPatchMutex.RLock()
++	cidr = c.IPv4NativeRoutingVMCIDR
++	c.ConfigPatchMutex.RUnlock()
++	return
++}
++
+ // SetIPv4NativeRoutingCIDR sets the native routing CIDR
+ func (c *DaemonConfig) SetIPv4NativeRoutingCIDR(cidr *cidr.CIDR) {
+ 	c.ConfigPatchMutex.Lock()
+@@ -3101,6 +3115,19 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 		}
+ 	}
+ 
++	ipv4NativeRoutingVMCIDR := vp.GetString(IPv4NativeRoutingVMCIDR)
++
++	if ipv4NativeRoutingVMCIDR != "" {
++		c.IPv4NativeRoutingVMCIDR, err = cidr.ParseCIDR(ipv4NativeRoutingVMCIDR)
++		if err != nil {
++			log.WithError(err).Fatalf("Unable to parse VM CIDR '%s'", ipv4NativeRoutingVMCIDR)
++		}
++
++		if len(c.IPv4NativeRoutingVMCIDR.IP) != net.IPv4len {
++			log.Fatalf("%s must be an IPv4 CIDR", IPv4NativeRoutingVMCIDR)
++		}
++	}
++
+ 	if c.EnableIPv4 && ipv4NativeRoutingCIDR == "" && c.EnableAutoDirectRouting {
+ 		log.Warnf("If %s is enabled, then you are recommended to also configure %s. If %s is not configured, this may lead to pod to pod traffic being masqueraded, "+
+ 			"which can cause problems with performance, observability and policy", EnableAutoDirectRoutingName, IPv4NativeRoutingCIDR, IPv4NativeRoutingCIDR)
