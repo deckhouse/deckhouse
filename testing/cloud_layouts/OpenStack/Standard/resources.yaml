@@ -36,7 +36,7 @@ metadata:
   name: main
 spec:
   ingressClass: nginx
-  inlet: HostPort
+  inlet: HostWithFailover
   hostPort:
     httpPort: 80
     httpsPort: 443

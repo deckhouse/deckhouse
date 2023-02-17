@@ -19,7 +19,6 @@ deckhouse:
   devBranch: '${DEV_BRANCH}'
   configOverrides:
     flantIntegrationEnabled: false
-    istioEnabled: true
     global:
       modules:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"

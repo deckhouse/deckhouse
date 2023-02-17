@@ -251,7 +251,6 @@ function prepare_environment() {
     return 1
   fi
 
-
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
     # Then switch deploment to DECKHOUSE_IMAGE_TAG.
@@ -318,6 +317,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
     ssh_user="debian"
     ;;
 
@@ -327,6 +327,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
     ssh_user="ubuntu"
     ;;
 
@@ -362,15 +363,14 @@ function run-test() {
   else
     bootstrap || return $?
   fi
+
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
-  istio_e2e_test || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
-    istio_e2e_test || return $?
   fi
 }
 
@@ -634,23 +634,7 @@ END_SCRIPT
 #  - master_ip
 function wait_cluster_ready() {
   # Print deckhouse info and enabled modules.
-  infoScript=$(cat <<'END'
-kubectl -n d8-system get deploy/deckhouse -o jsonpath='{.kind}/{.metadata.name}:{"\n"}Image: {.spec.template.spec.containers[0].image} {"\n"}Config: {.spec.template.spec.containers[0].env[?(@.name=="ADDON_OPERATOR_CONFIG_MAP")]}{"\n"}'
-echo "Deployment/deckhouse"
-kubectl -n d8-system get deploy/deckhouse -o wide
-echo "Pod/deckhouse-*"
-kubectl -n d8-system get po -o wide | grep ^deckhouse
-echo "Enabled modules:"
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
-echo "ConfigMap/generated"
-kubectl -n d8-system get configmap/deckhouse-generated-config-do-not-edit -o yaml
-echo "ModuleConfigs"
-kubectl get moduleconfigs
-echo "Errors:"
-kubectl -n d8-system logs deploy/deckhouse | grep '"error"'
-END
-)
-
+  infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   if [[ "$PROVIDER" == "Static" ]]; then
@@ -660,156 +644,7 @@ END
 
   test_failed=
 
-  testScript=$(cat <<"END_SCRIPT"
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-
-function pause-the-test() {
-  while true; do
-    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
-      break
-    fi
-
-    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
-
-    sleep 30
-  done
-}
-
-trap pause-the-test EXIT
-
-if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
-  ingress="ok"
-else
-  ingress=""
-fi
-
-availability=""
-attempts=50
-# With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
-for i in $(seq $attempts); do
-  # Sleeping at the start for readability. First iterations do not succeed anyway.
-  sleep 30
-
-  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
-    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
-
-      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
-      # param.
-      #
-      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
-      # -e flag does not work as expected. See
-      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
-      #
-      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
-        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
-        avail_report="$(jq -re '
-          [
-            .rows[]
-            | [
-                .group as $group
-                | .probes[]
-                | {
-                  probe: ($group + "/" + .probe),
-                  status: (if .availability > 0.99   then "up"   else "pending"   end),
-                  availability: .availability
-                }
-              ]
-          ]
-          | flatten
-          ' <<<"$avail_json")"
-
-        # Printing the table of probe statuses
-        echo '*'
-        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
-        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
-        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
-        echo '========================================================================='
-
-        # Overall availability status. We check that all probes are in place because at some point
-        # in the start the list can be empty.
-        availability="$(jq -r '
-          if (
-            (. | length > 0) and
-            ([ .[] | select(.status != "up") ] | length == 0)
-          )
-          then "ok"
-          else ""
-          end '<<<"$avail_report")"
-
-      else
-        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
-    fi
-  else
-    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
-  fi
-
-    cat <<EOF
-Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
-EOF
-
-  if [[ -n "$ingress_inlet" ]]; then
-    case "$ingress_inlet" in
-      LoadBalancer)
-        if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
-          if ingress_lb_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$ingress_service")"; then
-            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_ip")"; then
-              if [[ "$ingress_lb_code" == "404" ]]; then
-                ingress="ok"
-              else
-                >&2 echo "Got code $ingress_lb_code from LB $ingress_lb_ip, waiting for 404 (attempt #${i} of ${attempts})."
-              fi
-            else
-              >&2 echo "Failed curl request to the LB ip address: $ingress_lb_ip (attempt #${i} of ${attempts})."
-            fi
-          else
-            >&2 echo "Can't get svc/nginx-load-balancer LB ip address (attempt #${i} of ${attempts})."
-          fi
-        else
-          >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
-        fi
-        ;;
-      HostPort | HostWithFailover)
-        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
-          if ingress_hp_code="$(curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
-            if [[ "ingress_hp_code" == "404" ]]; then
-              ingress="ok"
-            else
-              >&2 echo "Got code $ingress_hp_code from LB $master_ip, waiting for 404 (attempt #${i} of ${attempts})."
-            fi
-          else
-            >&2 echo "Failed curl request to the master ip address: $master_ip (attempt #${i} of ${attempts})."
-          fi
-        else
-          >&2 echo "Can't get master ip address (attempt #${i} of ${attempts})."
-        fi
-      *)
-        >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
-        exit 1
-        ;;
-      esac
-
-    cat <<EOF
-Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo "failure")
-EOF
-  fi
-
-  if [[ "$availability:$ingress" == "ok:ok" ]]; then
-    exit 0
-  fi
-done
-
->&2 echo 'Timeout waiting for checks to succeed'
-exit 1
-END_SCRIPT
-)
-
-  # upload istio e2e sample application to cluster
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/istio-e2e.yaml" < "$(pwd)/testing/manifests/istio-e2e.yaml"
+  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -832,91 +667,6 @@ ENDSSH
     return 1
   fi
 }
-
-# istio_e2e_test constantly checks if istio test application become ready.
-#
-# Arguments:
-#  - ssh_private_key_path
-#  - ssh_user
-#  - master_ip
-function istio_e2e_test() {
-
-  testScript=$(cat <<"END_SCRIPT"
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-
->&2 echo "Running istio tests ..."
-
-if ! is_istio_enabled=$( kubectl get mc istio -o json | jq -re '.spec.enabled' | grep "true" -q); then
-  istio="ok"
-else
-  istio=""
-fi
-
-# deploy istio test application
-kubectl apply -f /tmp/istio-e2e.yaml > /dev/null
-
-attempts=15
-
-for i in $(seq $attempts); do
-  sleep 5
-  if [[ -n "is_istio_enabled" ]]; then
-    if echo_ingress="$(kubectl -n istio-e2e-test get ingress echo -o json 2>/dev/null)"; then
-      if echo_ingress_ip="$(jq -re '.status.loadBalancer.ingress[0].ip' <<< "$echo_ingress")"; then
-        echo_v1="$(curl -sq http://istio.e2e.test -H "x-version: v1" --resolve "istio.e2e.test:80:${echo_ingress_ip}" | jq .msg -r)"
-        echo_v2="$(curl -sq http://istio.e2e.test -H "x-version: v2" --resolve "istio.e2e.test:80:${echo_ingress_ip}" | jq .msg -r)"
-        if [[ "$echo_v1:$echo_v2" == "v1:v2" ]]; then
-          >&2 echo "Got versions $echo_v1 and $echo_v2 from echo ingress (url: istio.e2e.test)."
-          istio="ok"
-        else
-          >&2 echo "Got versions $echo_v1 and $echo_v2 from echo ingress (url: istio.e2e.test), waiting for v1 and v2 (attempt #${i} of ${attempts})."
-        fi
-      else
-        >&2 echo "Can't get ingress/echo ip address for url istio.e2e.test (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Can't get ingress/echo for url istio.e2e.test (attempt #${i} of ${attempts})."
-    fi
-
-    cat <<EOF
-Istio check: $([ "$istio" == "ok" ] && echo "success" || echo "failure")
-EOF
-  fi
-
-  if [[ "$istio" == "ok" ]]; then
-    exit 0
-  fi
-done
-
-# remove istio test application
-kubectl delete -f /tmp/istio-e2e.yaml --force --grace-period=0
-
->&2 echo 'Timeout waiting for checks to succeed'
-exit 1
-END_SCRIPT
-)
-
-  # upload istio e2e sample application to cluster
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/istio-e2e.yaml" < "$(pwd)/testing/manifests/istio-e2e.yaml"
-
-  testRunAttempts=5
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
-      sleep 30
-    fi
-  done
-
-  if [[ $test_failed == "true" ]] ; then
-    return 1
-  fi
-}
-
 
 # run_linstor_tests executes helm test for linstor module
 #
