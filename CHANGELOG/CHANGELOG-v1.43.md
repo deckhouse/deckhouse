@@ -71,6 +71,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix PDBs for controllers. [#3886](https://github.com/deckhouse/deckhouse/pull/3886)
  - **[candi]** Bump `shell-operator` to `1.1.3`. Update base images to mitigate found CVEs. [#3335](https://github.com/deckhouse/deckhouse/pull/3335)
     Components will be restarted in the following modules:
     * every module using `csi-external-attacher`, `csi-external-provisioner`, `csi-external-resizer`, `csi-external-snapshotter`, `csi-livenessprobe`, `csi-node-registrar`, `kube-rbac-proxy`
@@ -113,6 +114,9 @@
  - **[cloud-provider-yandex]** Changes to CCM:
     - Introduced locking to Route Table operations, so that only one operation on a route table can run simultaneously.
     - Disabled useless Route Table updates on ListRoutes(). [#3575](https://github.com/deckhouse/deckhouse/pull/3575)
+ - **[cni-cilium]** fix vpa resource for cni-cilium agent. [#3890](https://github.com/deckhouse/deckhouse/pull/3890)
+ - **[cni-cilium]** Preserve default tunnel port `8472` for virtualization workloads. [#3887](https://github.com/deckhouse/deckhouse/pull/3887)
+    Short network downtime for virtualization enabled clusters.
  - **[cni-cilium]** Set correct MTU values in tunnel mode. [#3836](https://github.com/deckhouse/deckhouse/pull/3836)
  - **[control-plane-manager]** Make authn webhook CA optional. [#3538](https://github.com/deckhouse/deckhouse/pull/3538)
  - **[deckhouse]** Temporarily removed the requirement for a minimal Ubuntu node version. [#3714](https://github.com/deckhouse/deckhouse/pull/3714)
