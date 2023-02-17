@@ -174,7 +174,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
-	hostPathDirectory := apiv1.HostPathDirectory
+	hostPathDirectory := apiv1.HostPathDirectoryOrCreate
 
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -251,6 +251,23 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Ports: []apiv1.ContainerPort{
 			{Name: "self", ContainerPort: 9650},
 			{Name: "custom", ContainerPort: 9651},
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/tmp",
+			},
+			{
+				Name:      "kube",
+				ReadOnly:  false,
+				MountPath: "/.kube",
+			},
+			{
+				Name:      "external-modules",
+				ReadOnly:  false,
+				MountPath: "/deckhouse/external-modules",
+			},
 		},
 	}
 
