@@ -74,15 +74,19 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: syncTime
-          type: date
-          jsonPath: .status.syncTime
-          format: date-time
-          description: 'When the repository was synchronized.'
+        - name: "release channel"
+          type: string
+          jsonPath: .spec.releaseChannel
+          description: "Default release channel for modules inside this source."
         - name: count
           type: integer
           jsonPath: .status.modulesCount
           description: "Number of modules available."
+        - name: sync
+          type: date
+          jsonPath: .status.syncTime
+          format: date-time
+          description: 'When the repository was synchronized.'
         - name: msg
           type: string
           jsonPath: .status.message

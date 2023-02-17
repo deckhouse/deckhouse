@@ -83,7 +83,7 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	}
 
 	if newex.Spec.ReleaseChannel == "" {
-		newex.Spec.ReleaseChannel = "alpha"
+		newex.Spec.ReleaseChannel = "stable"
 	}
 
 	return newex, err

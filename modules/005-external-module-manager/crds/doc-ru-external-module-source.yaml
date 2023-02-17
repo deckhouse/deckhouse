@@ -34,15 +34,19 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: syncTime
-          jsonPath: .status.syncTime
-          type: date
-          format: date-time
-          description: 'Время последней синхронизации с container registry.'
+        - name: "release channel"
+          type: string
+          jsonPath: .spec.releaseChannel
+          description: "Канал обновлений по-умолчанию для модулей в данном репоизтории."
         - name: count
           type: integer
           jsonPath: .status.modulesCount
           description: "Количество доступных модулей в данном репозитории."
+        - name: sync
+          jsonPath: .status.syncTime
+          type: date
+          format: date-time
+          description: 'Время последней синхронизации с container registry.'
         - name: msg
           jsonPath: .status.message
           type: string
