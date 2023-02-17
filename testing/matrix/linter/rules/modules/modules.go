@@ -153,7 +153,7 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []uti
 			"/deckhouse/ee/fe/modules",
 		}
 	} else {
-		possibleModulesPaths = []string{modulesDir}
+		possibleModulesPaths = strings.Split(modulesDir, ":")
 	}
 
 	var modulesPaths []string
