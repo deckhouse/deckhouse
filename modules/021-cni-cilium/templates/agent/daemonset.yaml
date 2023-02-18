@@ -1,3 +1,4 @@
+{{- $ipMasqAgentEnabled := and (has "virtualization" .Values.global.enabledModules) (has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes")) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -135,6 +136,11 @@ spec:
         - name: cilium-config-path
           mountPath: /tmp/cilium/config-map
           readOnly: true
+        {{- if $ipMasqAgentEnabled }}
+        - mountPath: /etc/config
+          name: ip-masq-agent
+          readOnly: true
+        {{- end }}
           # Needed to be able to load kernel modules
         - name: lib-modules
           mountPath: /lib/modules
@@ -281,6 +287,15 @@ spec:
       - name: cilium-config-path
         configMap:
           name: cilium-config
+      {{- if $ipMasqAgentEnabled }}
+      - name: ip-masq-agent
+        configMap:
+          name: ip-masq-agent
+          optional: true
+          items:
+          - key: config
+            path: ip-masq-agent
+      {{- end }}
       - name: hubble-tls
         projected:
           defaultMode: 0400
