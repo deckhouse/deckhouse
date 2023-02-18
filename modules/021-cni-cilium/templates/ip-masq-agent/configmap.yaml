@@ -1,4 +1,4 @@
-{{- if and (has "virtualization" .Values.global.enabledModules) (has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes")) }}
+{{- if has "virtualization" .Values.global.enabledModules }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -10,7 +10,7 @@ data:
   config: |
     nonMasqueradeCIDRs:
     {{- with .Values.cniCilium.internal.vmCIDRs }}
-    {{ range . }}
+    {{- range . }}
     - {{ . }}
     {{- end }}
     {{- end }}

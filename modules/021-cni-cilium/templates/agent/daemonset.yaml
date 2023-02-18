@@ -1,4 +1,3 @@
-{{- $ipMasqAgentEnabled := and (has "virtualization" .Values.global.enabledModules) (has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes")) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -136,7 +135,7 @@ spec:
         - name: cilium-config-path
           mountPath: /tmp/cilium/config-map
           readOnly: true
-        {{- if $ipMasqAgentEnabled }}
+        {{- if has "virtualization" .Values.global.enabledModules }}
         - mountPath: /etc/config
           name: ip-masq-agent
           readOnly: true
@@ -287,7 +286,7 @@ spec:
       - name: cilium-config-path
         configMap:
           name: cilium-config
-      {{- if $ipMasqAgentEnabled }}
+      {{- if has "virtualization" .Values.global.enabledModules }}
       - name: ip-masq-agent
         configMap:
           name: ip-masq-agent
