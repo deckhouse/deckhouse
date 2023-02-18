@@ -645,6 +645,6 @@ kubectl get pods -A -o json | jq --arg revision "v1x13" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
-### Auto upgrade istio data-plane
+### Auto upgrading istio data-plane
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
