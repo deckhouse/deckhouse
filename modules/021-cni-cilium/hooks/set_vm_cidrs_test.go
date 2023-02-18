@@ -29,8 +29,8 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_vm_cidrs ::", func() {
 
 	Context("Set VM CIDRs :: ModuleConfig is missing", func() {
 		BeforeEach(func() {
+			f.KubeStateSet(``)
 			f.BindingContexts.Set(
-				f.KubeStateSet(``),
 				f.GenerateBeforeHelmContext(),
 			)
 			f.RunHook()
@@ -44,14 +44,15 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_vm_cidrs ::", func() {
 
 	Context("Set VM CIDRs :: ModuleConfig does not contain data", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(
-				f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: virtualization
-			`), f.GenerateBeforeHelmContext())
+ name: virtualization
+`)
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -63,9 +64,7 @@ metadata:
 
 	Context("Set VM CIDRs :: vmCIDRs are set in ModuleConfig", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(
-				f.KubeStateSet(`
----
+			f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -77,7 +76,8 @@ spec:
     - 10.10.10.0/24
     - 10.9.8.0/24
   version: 1
-			`), f.GenerateBeforeHelmContext())
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

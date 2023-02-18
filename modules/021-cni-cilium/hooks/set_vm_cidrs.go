@@ -16,20 +16,16 @@ limitations under the License.
 
 package hooks
 
-/*
-Some features as backup shipping and luks encryption requires master passphrase set
-This hook reads secret d8-system/linstor-passphrase and specifies it for LINSTOR.
-*/
-
 import (
 	"fmt"
 
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+
+	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -52,19 +48,15 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	mc := &d8cfg_v1alpha1.ModuleConfig{}
 	err := sdk.FromUnstructured(obj, mc)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert cilium configmap: %v", err)
+		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
 	}
 	return mc.Spec.Settings["vmCIDRs"], nil
 }
 
 func applyVMCIDRs(input *go_hook.HookInput) error {
 	snaps := input.Snapshots["vm-cidrs"]
-
-	for _, snap := range snaps {
-		if snap != nil {
-			input.Values.Set("cniCilium.internal.vmCIDRs", snap)
-			break
-		}
+	if len(snaps) == 1 && snaps[0] != nil {
+		input.Values.Set("cniCilium.internal.vmCIDRs", snaps[0])
 	}
 	return nil
 }
