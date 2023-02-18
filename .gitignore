@@ -49,4 +49,8 @@ bin/
 
 # Python dev environment
 __pycache__/
+*.py[cod]
 .pytest_cache/
+
+# Helm lib
+deckhouse_lib_helm-*.tgz

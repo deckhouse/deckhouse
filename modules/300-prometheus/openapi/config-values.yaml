@@ -11,7 +11,7 @@ properties:
     description: |
       The name of the StorageClass to use.
 
-      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
@@ -22,7 +22,7 @@ properties:
     description: |
       The name of the storageClass to use for Longterm Prometheus.
 
-      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
+      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
 
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Longterm Prometheus volume reprovisioning and data loss.
   longtermRetentionDays:
@@ -246,7 +246,44 @@ properties:
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  longtermNodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      -
+        - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  longtermTolerations:
     type: array
     items:
       type: object

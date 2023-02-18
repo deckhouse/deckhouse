@@ -24,7 +24,7 @@ stringData:
   MASTER_PASSPHRASE: *!passphrase* # Master passphrase for LINSTOR
 ```
 
-> **Warning**: Choose strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
+> **Caution!** Choose a strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
 
 ## LINSTOR storage configuration
 
@@ -37,8 +37,10 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
    Execute the following commands to get list volume groups and pools:
 
    ```shell
-   vgs -o name,tags
-   lvs -o name,vg_name,tags
+   # LVM pools
+   vgs -o name,tags | awk 'NR==1;$2~/linstor-/'
+   # LVMThin pools
+   lvs -o name,vg_name,tags | awk 'NR==1;$3~/linstor-/'
    ```
 
 1. Add pools.
@@ -47,28 +49,28 @@ LINSTOR in Deckhouse can be configured by assigning special tag `linstor-<pool_n
 
    - To add an **LVM** pool, create a volume group with the `linstor-<pool_name>` tag, or the `linstor-<pool_name>` tag to an existing volume group.
 
-     Example of command to create a volume group `data_project` with the `linstor-data` tag :
+     Example of command to create a volume group `vg0` with the `linstor-data` tag :
 
      ```shell
-     vgcreate data_project /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
      ```
 
-     Example of command to add the `linstor-data` tag to an existing volume group `data_project`:
+     Example of command to add the `linstor-data` tag to an existing volume group `vg0`:
 
      ```shell
-     vgchange data_project --add-tag linstor-data
+     vgchange vg0 --add-tag linstor-data
      ```
 
    - To add an **LVMThin** pool, create a LVM thin pool with the `linstor-<pool_name>` tag.
 
-     Example of command to create the LVMThin pool `data_project/thindata` with the `linstor-data` tag:
+     Example of command to create the LVMThin pool `vg0/thindata` with the `linstor-data` tag:
 
      ```shell
-     vgcreate data_project /dev/nvme0n1 /dev/nvme1n1
-     lvcreate -l 100%FREE -T data_project/thindata --add-tag linstor-thindata
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1
+     lvcreate -l 100%FREE -T vg0/thindata --add-tag linstor-thindata
      ```
 
-     > Note, that the group itself should not have this tag configured.
+     > **Note!** The group itself should not have this tag configured.
 
 1. Check the creation of StorageClass.
 

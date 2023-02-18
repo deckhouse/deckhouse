@@ -39,6 +39,7 @@ import (
 type Client interface {
 	Image(tag string) (v1.Image, error)
 	Digest(tag string) (string, error)
+	ListTags() ([]string, error)
 }
 
 type client struct {
@@ -97,6 +98,28 @@ func (r *client) Image(tag string) (v1.Image, error) {
 		ref,
 		imageOptions...,
 	)
+}
+
+func (r *client) ListTags() ([]string, error) {
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	imageOptions := make([]remote.Option, 0)
+	if !r.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+	if r.options.ca != "" {
+		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	repo, err := name.NewRepository(r.registryURL, nameOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("parsing repo %q: %w", r.registryURL, err)
+	}
+
+	return remote.List(repo, imageOptions...)
 }
 
 func (r *client) Digest(tag string) (string, error) {
@@ -172,9 +195,9 @@ func GetHTTPTransport(ca string) (transport http.RoundTripper) {
 
 type registryOptions struct {
 	ca          string
-	dockerCfg   string
 	useHTTP     bool
 	withoutAuth bool
+	dockerCfg   string
 }
 
 type Option func(options *registryOptions)

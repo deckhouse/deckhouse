@@ -6,7 +6,7 @@ title: "Cloud provider — AWS: FAQ"
 
 Let's, for example, create a peering connection between two VPCs, vpc-a and vpc-b.
 
->**Caution!** IPv4 CIDR must be unique for each VPC.
+> **Caution!** IPv4 CIDR must be unique for each VPC.
 
 To configure, follow these steps:
 

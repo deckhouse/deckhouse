@@ -18,7 +18,8 @@ webhooks:
       path: "/volumesnapshot"
       port: 4443
     caBundle: {{ .Values.snapshotController.internal.webhookCert.ca | b64enc }}
-  admissionReviewVersions: ["v1", "v1beta1"]
+  admissionReviewVersions:
+  - v1
   sideEffects: None
   failurePolicy: Fail
   timeoutSeconds: 10

@@ -376,7 +376,7 @@ Depending on the `Policy` settings and the number of requests to the **apiserver
 
 ### Cautionary note
 
-> **Note** that the current implementation of this feature isn't safe and may lead to a temporary failure of the control plane.
+> ***Note!** The current implementation of this feature isn't safe and may lead to a temporary failure of the control plane.
 >
 > The apiserver will not be able to start if there are unsupported options or a typo in the Secret.
 

@@ -4,7 +4,8 @@
   {{- $versionInfo := get $context.Values.istio.internal.versionMap $context.Values.istio.internal.globalVersion }}
   {{- $revision := get $versionInfo "revision" }}
 - name: {{ $prefix }}sidecar-injector.istio.io
-  admissionReviewVersions: ["v1beta1", "v1"]
+  admissionReviewVersions:
+  - v1
   clientConfig:
     caBundle: {{ $context.Values.istio.internal.ca.cert | b64enc }}
     service:

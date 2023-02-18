@@ -1,3 +1,19 @@
+# Even log-shipper metrics are counters because the metrics expiration logic in agents using the rate function is impossible.
+# Metrics in log-shipper are expired if not collected.
+# For example, if there are no errors, the value of the vector_component_errors_total metric will not be changed,
+# which means the next scrape this metric will be deleted.
+#
+# Example:
+#   vector_component_errors_total 7 - 7 errors occurred between scrapes
+#   vector_component_errors_total 7
+#   vector_component_errors_total 7
+#   -                               - expiration was triggered
+#   -
+#   -
+#   vector_component_errors_total 3 - 3 errors occurred between scrapes
+#
+# This behavior makes the result of the rate function equal to zero.
+
 - name: log-shipper-agent
   rules:
   - alert: D8LogShipperAgentNotScheduledInCluster
@@ -20,3 +36,72 @@
 
         Consider checking state of the d8-log-shipper/log-shipper-agent DaemonSet.
         `kubectl -n d8-log-shipper get daemonset,pod --selector=app=log-shipper-agent`
+
+  - alert: D8LogShipperDestinationErrors
+    for: 10m
+    expr: |
+      sum by (error_type, stage, component_id, component_type, node) (
+        vector_component_errors_total{component_kind="sink"}
+      ) > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Pods of log-shipper-agent cannot send logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        Logs do not reach their destination, log-shipper agent on the {{ $labels.node }} node cannot send logs for more than 10 minutes.
+        The reason is '{{ $labels.error_type }}' errors occurred during the '{{ $labels.stage }}' stage while sending logs to '{{ $labels.component_type }}'..
+
+        Consider checking logs of the pod or follow advanced debug instructions.
+        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+
+  - alert: D8LogShipperCollectLogErrors
+    for: 10m
+    expr: |
+      sum by (error_type, stage, component_id, component_type, node) (
+        vector_component_errors_total{component_kind="source"}
+      ) > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Pods of log-shipper-agent cannot collect logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        One of log-shipper agents on the {{ $labels.node }} node failed to collect metrics for more than 10 minutes.
+        The reason is '{{ $labels.error_type }}' errors occurred during the '{{ $labels.stage }}' stage while reading '{{ $labels.component_type }}'.
+
+        Consider checking logs of the pod or follow advanced debug instructions.
+        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+
+  - alert: D8LogShipperLogsDroppedByRateLimit
+    for: 10m
+    expr: |
+      sum by (node, component_id) (
+        vector_events_discarded_total
+      ) * on (node) (abs(kube_node_spec_unschedulable - 1))
+      > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Pods of log-shipper-agent drop logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        Rate limit rules are applied, log-shipper agent on the {{ $labels.node }} node is dropping logs for more than 10 minutes.
+
+        Consider checking logs of the pod or follow advanced debug instructions.
+        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`

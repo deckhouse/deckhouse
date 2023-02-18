@@ -12,8 +12,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 webhooks:
   - admissionReviewVersions:
-      - v1beta1
-      - v1
+    - v1
     clientConfig:
       caBundle: {{ .Values.istio.internal.ca.cert | b64enc }}
       service:

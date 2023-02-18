@@ -6,7 +6,7 @@ title: "The openvpn module: configuration"
 
 ## Notes
 
-**Caution!** The admin panel always uses a subnet defined in the `tunnelNetwork` parameter. Static user addresses must be issued from this subnet. If the UDP protocol is used, these addresses will be converted for use in `udpTunnelNetwork` subnet. In this case, the networks in the `tunnelNetwork` and `udpTunnelNetwork` parameters must be the same size.
+**Note!** The admin panel always uses a subnet defined in the `tunnelNetwork` parameter. Static user addresses must be issued from this subnet. If the UDP protocol is used, these addresses will be converted for use in `udpTunnelNetwork` subnet. In this case, the networks in the `tunnelNetwork` and `udpTunnelNetwork` parameters must be the same size.
 
 Example:
 * `tunnelNetwork`: `10.5.5.0/24`

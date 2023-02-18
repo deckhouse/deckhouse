@@ -32,4 +32,4 @@ make crds
 
 to generate dependent resources.
 
-> **Note**: you can edit `doc-ru-*` files manually. After editing run `make crds` again to format the changes.
+> You can edit `doc-ru-*` files manually. After editing run `make crds` again to format the changes.

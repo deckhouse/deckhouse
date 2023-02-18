@@ -177,7 +177,7 @@ metadata:
   namespace: d8-admission-policy-engine
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/operation" "webhook" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 spec:
-  minAvailable: 1
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: 'gatekeeper'

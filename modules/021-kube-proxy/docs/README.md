@@ -20,4 +20,4 @@ spec:
 ...
 ```
 
-> **Note** that following the addition, deletion, or changing the annotation, you have to restart kube-proxy Pods manually.
+> **Note!** Following the addition, deletion, or changing the annotation, you have to restart kube-proxy Pods manually.

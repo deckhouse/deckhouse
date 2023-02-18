@@ -65,11 +65,13 @@
  - **[log-shipper]** Add type field for telemetry metrics. [#3582](https://github.com/deckhouse/deckhouse/pull/3582)
  - **[log-shipper]** Add indexes fields for Splunk destination. [#3566](https://github.com/deckhouse/deckhouse/pull/3566)
  - **[node-manager]** Added `quickShutdown` option to the NodeGroup CR. It will result in Machines draining in 5 minutes, insted of 2 hours, regardless of PDB or other obstacles. [#3429](https://github.com/deckhouse/deckhouse/pull/3429)
+ - **[virtualization]** Allow to specify `affinity` and `topologySpreadConstraints`. [#3852](https://github.com/deckhouse/deckhouse/pull/3852)
  - **[virtualization]** A new module that allows you to run virtual machines. [#1357](https://github.com/deckhouse/deckhouse/pull/1357)
 
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix PDBs for controllers. [#3886](https://github.com/deckhouse/deckhouse/pull/3886)
  - **[candi]** Bump `shell-operator` to `1.1.3`. Update base images to mitigate found CVEs. [#3335](https://github.com/deckhouse/deckhouse/pull/3335)
     Components will be restarted in the following modules:
     * every module using `csi-external-attacher`, `csi-external-provisioner`, `csi-external-resizer`, `csi-external-snapshotter`, `csi-livenessprobe`, `csi-node-registrar`, `kube-rbac-proxy`
@@ -112,6 +114,10 @@
  - **[cloud-provider-yandex]** Changes to CCM:
     - Introduced locking to Route Table operations, so that only one operation on a route table can run simultaneously.
     - Disabled useless Route Table updates on ListRoutes(). [#3575](https://github.com/deckhouse/deckhouse/pull/3575)
+ - **[cni-cilium]** fix vpa resource for cni-cilium agent. [#3890](https://github.com/deckhouse/deckhouse/pull/3890)
+ - **[cni-cilium]** Preserve default tunnel port `8472` for virtualization workloads. [#3887](https://github.com/deckhouse/deckhouse/pull/3887)
+    Short network downtime for virtualization enabled clusters.
+ - **[cni-cilium]** Set correct MTU values in tunnel mode. [#3836](https://github.com/deckhouse/deckhouse/pull/3836)
  - **[control-plane-manager]** Make authn webhook CA optional. [#3538](https://github.com/deckhouse/deckhouse/pull/3538)
  - **[deckhouse]** Temporarily removed the requirement for a minimal Ubuntu node version. [#3714](https://github.com/deckhouse/deckhouse/pull/3714)
  - **[deckhouse-config]** Support integer numbers for settings constrained with the float number in `multipleOf`. [#3612](https://github.com/deckhouse/deckhouse/pull/3612)
@@ -119,6 +125,8 @@
  - **[helm]** Change deprecated resources check parameters. Make the load more uniform. [#3590](https://github.com/deckhouse/deckhouse/pull/3590)
  - **[istio]** iptables-wrapper fix for istio sidecar. [#3746](https://github.com/deckhouse/deckhouse/pull/3746)
  - **[istio]** Using the `iptables-wrapper-installer.sh` script in proxy images. [#3614](https://github.com/deckhouse/deckhouse/pull/3614)
+ - **[log-shipper]** Make log-shipper-agents sending whole JSON message with metadata to Kafka destination. [#3692](https://github.com/deckhouse/deckhouse/pull/3692)
+ - **[monitoring-deckhouse]** Remove confusing alert `ModuleConfigHasObsoleteVersion`. [#3798](https://github.com/deckhouse/deckhouse/pull/3798)
  - **[node-local-dns]** Switched stale cache behavior from `immediate` to `verified`. [#3428](https://github.com/deckhouse/deckhouse/pull/3428)
  - **[node-manager]** fix bashible service checking [#3648](https://github.com/deckhouse/deckhouse/pull/3648)
  - **[prometheus]** Fix Alertmanager CA file (caused Unauthorized error). [#3726](https://github.com/deckhouse/deckhouse/pull/3726)
@@ -126,6 +134,7 @@
  - **[registrypackages]** Allow downgrading RPMs from registrypackages in any RPM-distro. [#3358](https://github.com/deckhouse/deckhouse/pull/3358)
  - **[upmeter]** Fixed rendering error when nodes are named as numbers. [#3795](https://github.com/deckhouse/deckhouse/pull/3795)
  - **[user-authz]** Enabled TLS certificate rotation for the authn webhook. [#3319](https://github.com/deckhouse/deckhouse/pull/3319)
+ - **[virtualization]** Some fixes regarding queue and panic when creating empty disks. [#3822](https://github.com/deckhouse/deckhouse/pull/3822)
  - **[virtualization]** Introduce stateless `vmi-router`. [#3801](https://github.com/deckhouse/deckhouse/pull/3801)
  - **[virtualization]** Bump versions, enable HA and configure placement. [#3650](https://github.com/deckhouse/deckhouse/pull/3650)
 

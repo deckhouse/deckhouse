@@ -7,7 +7,14 @@ title: "The user-authn module: usage"
 {% raw %}
 
 ```yaml
-  userAuthn: |
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 1
+  enabled: true
+  settings:
     kubeconfigGenerator:
     - id: direct
       masterURI: https://159.89.5.247:6443

@@ -76,4 +76,4 @@ Both filters have the same structured configuration:
 
 You can find examples in the [Examples](examples.html) section of the documentation.
 
-> NOTE: Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
+> **Note!** Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.

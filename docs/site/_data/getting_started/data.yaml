@@ -226,8 +226,8 @@ installTypes:
   yandex:
     iconPath: images/icons/platforms/yandex_cloud.png
     layout:
-      code: without_nat
-      name: WithoutNAT
+      code: standard
+      name: Standard
     pages_title:
       en: "Deckhouse Platform in Yandex Cloud"
       ru: "Deckhouse Platform в Yandex Cloud"
