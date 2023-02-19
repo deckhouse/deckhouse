@@ -45,7 +45,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -67,7 +67,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -95,7 +95,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -117,7 +117,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       {{- range $cr.spec.policies.requiredLabels.watchKinds }}
@@ -141,7 +141,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -163,7 +163,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: ["apps"]
@@ -185,7 +185,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -206,7 +206,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -228,7 +228,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -246,7 +246,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.operationPolicies.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
