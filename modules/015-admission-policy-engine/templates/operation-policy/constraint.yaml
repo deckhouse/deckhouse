@@ -1,5 +1,7 @@
 {{- $context := . }}
 
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+
 {{- range $cr := .Values.admissionPolicyEngine.internal.operationPolicies }}
   {{- if hasKey $cr.spec.policies "allowedRepos" }}
     {{- include "allowed_repos_policy" (list $context $cr) }}
@@ -33,7 +35,7 @@
   {{- end }}
 {{- end }}
 
-
+{{- end }} # end if bootstrapped
 
 {{- define "allowed_repos_policy" }}
   {{- $context := index . 0 }}
