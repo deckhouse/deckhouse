@@ -1,14 +1,5 @@
 type: object
 properties:
-  operationPolicies:
-    description: "Настройки Operation Policies."
-    properties:
-      enforcementAction:
-        description: |
-          Действие, которое будет выполнено по результатам проверки ограничений.
-          - Deny — Запрет.
-          - Dryrun — Отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или в консоли с помощью kubectl.
-          - Warn — Аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
   podSecurityStandards:
     description: "Настройки политик Pod Security Standards."
     properties:
