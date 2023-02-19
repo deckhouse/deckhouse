@@ -618,7 +618,9 @@ By default, during termination, all containers in a Pod, including istio-proxy o
 The annotation below adds the preStop hook to istio-proxy container in application's Pod:
 `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
 
-## Upgrading Istio control-plane
+## Upgrading Istio
+
+### Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
@@ -642,3 +644,7 @@ kubectl get pods -A -o json | jq --arg revision "v1x13" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
+### Auto upgrading istio data-plane
+
+To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.

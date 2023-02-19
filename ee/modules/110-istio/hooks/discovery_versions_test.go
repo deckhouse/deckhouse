@@ -53,10 +53,12 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.fullVersion").String()).To(Equal("1.22.3"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.revision").String()).To(Equal("v1x22"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.imageSuffix").String()).To(Equal("V1x22x3"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.isReady").Bool()).To(BeFalse())
 			// 1.55
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.fullVersion").String()).To(Equal("1.55.6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.revision").String()).To(Equal("v1x55"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.imageSuffix").String()).To(Equal("V1x55x6"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.isReady").Bool()).To(BeFalse())
 		})
 	})
 

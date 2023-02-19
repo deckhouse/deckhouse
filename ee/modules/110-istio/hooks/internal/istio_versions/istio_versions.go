@@ -13,6 +13,7 @@ type IstioVersionInfo struct {
 	FullVersion string `json:"fullVersion"`
 	Revision    string `json:"revision"`
 	ImageSuffix string `json:"imageSuffix"`
+	IsReady     bool   `json:"isReady"`
 }
 
 func (vm IstioVersionsMap) GetVersionByRevision(rev string) string {
@@ -33,6 +34,15 @@ func (vm IstioVersionsMap) GetVersionByFullVersion(fullVer string) string {
 	return ""
 }
 
+func (vm IstioVersionsMap) IsFullVersionReady(fullVer string) bool {
+	for _, istioVerInfo := range vm {
+		if istioVerInfo.FullVersion == fullVer {
+			return istioVerInfo.IsReady
+		}
+	}
+	return false
+}
+
 func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {
@@ -40,6 +50,15 @@ func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
 		}
 	}
 	return false
+}
+
+func (vm IstioVersionsMap) SetRevisionStatus(rev string, isReady bool) {
+	for ver, istioVerInfo := range vm {
+		if istioVerInfo.Revision == rev {
+			istioVerInfo.IsReady = isReady
+			vm[ver] = istioVerInfo
+		}
+	}
 }
 
 func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
