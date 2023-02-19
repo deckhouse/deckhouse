@@ -268,10 +268,10 @@ spec:
       {{- $cr.spec.match.namespaceSelector.excludeNames | toYaml | nindent 6 }}
       {{- end }}
       {{- if hasKey $cr.spec.match.namespaceSelector "labelSelector" }}
-    namespaceSelector: {{ $cr.spec.match.namespaceSelector.labelSelector }}
+    namespaceSelector: {{ $cr.spec.match.namespaceSelector.labelSelector | toYaml }}
       {{- end }}
     {{- end }}
     {{- if hasKey $cr.spec.match "labelSelector" }}
-    labelSelector: {{ $cr.spec.match.labelSelector }}
+    labelSelector: {{ $cr.spec.match.labelSelector | toYaml }}
     {{- end }}
 {{- end }}
