@@ -812,6 +812,18 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/400-descheduler/configuration.html
+            - title: flow-schema
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/011-flow-schema/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/011-flow-schema/configuration.html
+                - title: FAQ
+                  url: /modules/011-flow-schema/faq.html
             - title: pod-reloader
               folders:
                 - title:
