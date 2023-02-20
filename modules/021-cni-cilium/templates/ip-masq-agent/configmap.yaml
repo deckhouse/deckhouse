@@ -1,0 +1,18 @@
+{{- if has "virtualization" .Values.global.enabledModules }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ip-masq-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  config: |
+    nonMasqueradeCIDRs:
+    {{- with .Values.cniCilium.internal.vmCIDRs }}
+    {{- range . }}
+    - {{ . }}
+    {{- end }}
+    {{- end }}
+    masqLinkLocal: true
+{{- end }}
