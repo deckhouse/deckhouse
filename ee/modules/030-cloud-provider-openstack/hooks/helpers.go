@@ -6,10 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/gophercloud/gophercloud/openstack/blockstorage/apiversions"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
@@ -39,42 +40,79 @@ func getVolumeTypesArray() ([]string, error) {
 	return volumeTypesList, nil
 }
 
-var onlineResizeMinVersion = semver.MustParse("3.42")
-
-// isSupportsOnlineDiskResize checks if openstack supports online resize, used as go lib
-func isSupportsOnlineDiskResize() (bool, error) {
-	client, err := clientconfig.NewServiceClient("volume", nil)
+func initOpenstackEnvs(input *go_hook.HookInput) error {
+	osAuthURL, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.authURL")
+	if !ok {
+		return errors.New("cloudProviderOpenstack.internal.connection.authURL required")
+	}
+	err := os.Setenv("OS_AUTH_URL", osAuthURL.String())
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	allPages, err := apiversions.List(client).AllPages()
+	osUsername, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.username")
+	if !ok {
+		return errors.New("cloudProviderOpenstack.internal.connection.username required")
+	}
+	err = os.Setenv("OS_USERNAME", osUsername.String())
 	if err != nil {
-		return false, fmt.Errorf("unable to get API versions: %s", err)
+		return err
 	}
 
-	allVersions, err := apiversions.ExtractAPIVersions(allPages)
+	osPassword, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.password")
+	if !ok {
+		return errors.New("cloudProviderOpenstack.internal.connection.password required")
+	}
+	err = os.Setenv("OS_PASSWORD", osPassword.String())
 	if err != nil {
-		return false, fmt.Errorf("unable to extract API versions: %s", err)
+		return err
 	}
 
-	var currentVersion string
-	for _, version := range allVersions {
-		if version.ID == "v3.0" {
-			currentVersion = version.Version
-			break
+	osDomainName, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.domainName")
+	if !ok {
+		return errors.New("cloudProviderOpenstack.internal.connection.domainName required")
+	}
+	err = os.Setenv("OS_DOMAIN_NAME", osDomainName.String())
+	if err != nil {
+		return err
+	}
+
+	osProjectName, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.tenantName")
+	if ok && osProjectName.String() != "" {
+		err = os.Setenv("OS_PROJECT_NAME", osProjectName.String())
+		if err != nil {
+			return err
 		}
 	}
 
-	if currentVersion == "" {
-		return false, fmt.Errorf("cannot determine current API version for 3.0 block-storage")
+	osProjectID, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.tenantID")
+	if ok && osProjectID.String() != "" {
+		err = os.Setenv("OS_PROJECT_ID", osProjectID.String())
+		if err != nil {
+			return err
+		}
 	}
 
-	currentVersionSemVer := semver.MustParse(currentVersion)
-
-	if currentVersionSemVer.GreaterThan(onlineResizeMinVersion) || currentVersionSemVer.Equal(onlineResizeMinVersion) {
-		return true, nil
+	osRegionName, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.region")
+	if !ok {
+		return errors.New("cloudProviderOpenstack.internal.connection.region required")
+	}
+	err = os.Setenv("OS_REGION_NAME", osRegionName.String())
+	if err != nil {
+		return err
 	}
 
-	return false, nil
+	caCert, ok := input.Values.GetOk("cloudProviderOpenstack.internal.connection.caCert")
+	if ok && caCert.String() != "" {
+		err = os.WriteFile("/tmp/openstack_ca.crt", []byte(caCert.String()), 0644)
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("OS_CACERT", "/tmp/openstack_ca.crt")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
