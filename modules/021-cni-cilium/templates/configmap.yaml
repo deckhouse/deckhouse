@@ -45,10 +45,15 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
+  {{- if has "virtualization" .Values.global.enabledModules }}
+  enable-ip-masq-agent: "true"
+  ip-masq-agent-config-path: /etc/config/ip-masq-agent
+  {{- end }}
+
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
-    {{- if or (eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes") (eq .Values.cniCilium.internal.mode "Direct") }}
+    {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}
   # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
   install-no-conntrack-iptables-rules: "true"
     {{- end }}
