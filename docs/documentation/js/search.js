@@ -223,6 +223,7 @@
       this.use(lunr.multiLanguage('en', 'ru'))
       this.ref('url')
       this.field('title', {boost: 10})
+      this.field('keywords', {boost: 20})
       this.field('content')
 
       documents.forEach(function (doc) {
