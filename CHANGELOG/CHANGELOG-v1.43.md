@@ -114,6 +114,7 @@
  - **[cloud-provider-yandex]** Changes to CCM:
     - Introduced locking to Route Table operations, so that only one operation on a route table can run simultaneously.
     - Disabled useless Route Table updates on ListRoutes(). [#3575](https://github.com/deckhouse/deckhouse/pull/3575)
+ - **[cni-cilium]** Exclude vmCIDRs from SNAT. [#3899](https://github.com/deckhouse/deckhouse/pull/3899)
  - **[cni-cilium]** fix vpa resource for cni-cilium agent. [#3890](https://github.com/deckhouse/deckhouse/pull/3890)
  - **[cni-cilium]** Preserve default tunnel port `8472` for virtualization workloads. [#3887](https://github.com/deckhouse/deckhouse/pull/3887)
     Short network downtime for virtualization enabled clusters.
@@ -123,6 +124,7 @@
  - **[deckhouse-config]** Support integer numbers for settings constrained with the float number in `multipleOf`. [#3612](https://github.com/deckhouse/deckhouse/pull/3612)
  - **[delivery]** Fix rendering werf bundles in `argocd-repo-server` sidecar. [#3779](https://github.com/deckhouse/deckhouse/pull/3779)
  - **[helm]** Change deprecated resources check parameters. Make the load more uniform. [#3590](https://github.com/deckhouse/deckhouse/pull/3590)
+ - **[istio]** Yet another iptables fix — the upstream way. Got rid of iptables-wrapper in favor of hardcoded iptables-legacy. [#3897](https://github.com/deckhouse/deckhouse/pull/3897)
  - **[istio]** iptables-wrapper fix for istio sidecar. [#3746](https://github.com/deckhouse/deckhouse/pull/3746)
  - **[istio]** Using the `iptables-wrapper-installer.sh` script in proxy images. [#3614](https://github.com/deckhouse/deckhouse/pull/3614)
  - **[log-shipper]** Make log-shipper-agents sending whole JSON message with metadata to Kafka destination. [#3692](https://github.com/deckhouse/deckhouse/pull/3692)
