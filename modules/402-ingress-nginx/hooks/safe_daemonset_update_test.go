@@ -131,6 +131,10 @@ metadata:
     app: controller
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 
 	pod2ControllerMainInitialYAML := `
@@ -144,6 +148,10 @@ metadata:
     app: controller
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod1ProxyMainFailoverInitialYAML := `
 ---
@@ -156,6 +164,10 @@ metadata:
     app: proxy-failover
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod2ProxyMainFailoverInitialYAML := `
 ---
@@ -168,6 +180,10 @@ metadata:
     app: proxy-failover
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod1ControllerMainFailoverInitialYAML := `
 ---
@@ -180,6 +196,10 @@ metadata:
     app: controller
     name: main-failover
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod2ControllerMainFailoverInitialYAML := `
 ---
@@ -192,6 +212,10 @@ metadata:
     app: controller
     name: main-failover
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	var dsControllerMain *v1.DaemonSet
 	var dsProxyMainFailover *v1.DaemonSet

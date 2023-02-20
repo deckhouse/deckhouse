@@ -130,7 +130,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 		for _, f := range failovers {
 			failover := f.(IngressFilterResult)
 			if (controller.Name+"-failover" == failover.Name) && (controller.Checksum == failover.Checksum) {
-				if (failover.Status.NumberReady == failover.Status.CurrentNumberScheduled) &&
+				if (failover.Status.NumberAvailable == failover.Status.CurrentNumberScheduled) &&
 					(failover.Status.UpdatedNumberScheduled >= failover.Status.DesiredNumberScheduled) {
 					failoverReady = true
 					break
@@ -161,7 +161,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 		for _, p := range proxys {
 			proxy := p.(IngressFilterResult)
 			if (controller.Name == proxy.Name) && (controller.Checksum == proxy.Checksum) {
-				if proxy.Status.NumberReady == proxy.Status.CurrentNumberScheduled {
+				if proxy.Status.NumberAvailable == proxy.Status.CurrentNumberScheduled {
 					proxyReady = true
 				}
 				if proxy.Status.UpdatedNumberScheduled < proxy.Status.DesiredNumberScheduled {
@@ -199,6 +199,22 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 	return nil
 }
 
+func podIsReady(pod v1.Pod) bool {
+	var conditionReady bool
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			conditionReady = true
+			break
+		}
+	}
+
+	if conditionReady && pod.DeletionTimestamp == nil {
+		return true
+	}
+
+	return false
+}
+
 func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
@@ -212,6 +228,13 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 
 	if len(podList.Items) == 0 {
 		return nil
+	}
+
+	for _, pod := range podList.Items {
+		// if at least one pod is not ready or has Terminating state - abort mission
+		if !podIsReady(pod) {
+			return nil
+		}
 	}
 
 	podNameToKill := podList.Items[0].Name
