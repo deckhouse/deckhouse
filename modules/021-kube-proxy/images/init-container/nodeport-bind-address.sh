@@ -26,7 +26,7 @@ if [ -z "$internalip" ]; then
   exit 1
 fi
 
-if [ "$nodeport_bind_internal_ip" == "false" ]; then
+if [[ ("$nodeport_bind_internal_ip" == "false") || ("$CLOUD_PROVIDER" == "gcp") ]]; then
   internalip="0.0.0.0/0"
 fi
 
