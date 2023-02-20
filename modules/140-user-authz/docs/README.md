@@ -2,7 +2,7 @@
 title: "The user-authz module" 
 ---
 
-This module generates RBAC for users and implements the basic multi-tenancy mode with namespace-based access.
+The module generates RBAC for users and implements the basic multi-tenancy mode with namespace-based access.
 
 Also, it implements the role-based subsystem for end-to-end authorization, thereby extending the functionality of the standard RBAC mechanism.
 
