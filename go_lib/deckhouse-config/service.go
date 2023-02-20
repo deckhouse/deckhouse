@@ -43,6 +43,7 @@ func InitService(mm ModuleManager) {
 		transformer:     NewTransformer(possibleNames),
 		configValidator: NewConfigValidator(mm.GetValuesValidator()),
 		statusReporter:  NewModuleInfo(mm, possibleNames),
+		externalNames:   make(map[string]string),
 	}
 }
 
@@ -59,6 +60,9 @@ type ConfigService struct {
 	transformer     *Transformer
 	configValidator *ConfigValidator
 	statusReporter  *StatusReporter
+
+	externalNamesLock sync.RWMutex
+	externalNames     map[string]string
 }
 
 func (srv *ConfigService) PossibleNames() set.Set {
@@ -75,4 +79,30 @@ func (srv *ConfigService) ConfigValidator() *ConfigValidator {
 
 func (srv *ConfigService) StatusReporter() *StatusReporter {
 	return srv.statusReporter
+}
+
+func (srv *ConfigService) SetExternalNames(allExternalNamesToRepos map[string]string) {
+	srv.externalNamesLock.Lock()
+	defer srv.externalNamesLock.Unlock()
+
+	srv.externalNames = allExternalNamesToRepos
+}
+
+func (srv *ConfigService) AddExternalModuleName(moduleName, moduleSource string) {
+	srv.externalNamesLock.Lock()
+	defer srv.externalNamesLock.Unlock()
+
+	srv.externalNames[moduleName] = moduleSource
+}
+
+func (srv *ConfigService) ExternalNames() map[string]string {
+	srv.externalNamesLock.RLock()
+	defer srv.externalNamesLock.RUnlock()
+
+	res := make(map[string]string)
+	for module, repo := range srv.externalNames {
+		res[module] = repo
+	}
+
+	return res
 }

@@ -39,7 +39,7 @@ spec:
         memory: 1Gi
 {{- end }}
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: argocd-repo-server
@@ -92,6 +92,8 @@ spec:
             name: plugins
           - mountPath: /tmp
             name: tmp
+          - mountPath: /nonexistent
+            name: werf-tmp
         - command:
             - sh
             - -c
@@ -307,3 +309,5 @@ spec:
           name: var-files
         - emptyDir: {}
           name: plugins
+        - emptyDir: {}
+          name: werf-tmp

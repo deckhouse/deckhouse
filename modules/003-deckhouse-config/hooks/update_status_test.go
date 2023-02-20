@@ -76,6 +76,13 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
 			Expect(promCfg.Field("status.state").String()).To(Equal("Enabled"), "should update status")
 		})
+
+		It("Should be embedded", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.type").String()).To(Equal("Embedded"), "should update status")
+		})
 	})
 
 	Context("Enabled by bundle, disabled by enabled script", func() {
@@ -100,5 +107,40 @@ var _ = Describe("Module :: deckhouse-config :: hooks :: update ModuleConfig sta
 			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
 			Expect(promCfg.Field("status.state").String()).To(ContainSubstring("Disabled"), "should be disabled by script, got %s", promCfg.Field("status").String())
 		})
+
+		It("Should be embedded", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.type").String()).To(Equal("Embedded"), "should update status")
+		})
 	})
+
+	Context("External module", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(moduleConfigYaml)
+
+			mm := mock.NewModuleManager(
+				mock.NewModule("module-one", nil, mock.EnabledByScript),
+			)
+			err := mm.AddOpenAPISchemas("module-one", "testdata/update-status/modules/001-module-one")
+			Expect(err).ShouldNot(HaveOccurred())
+			d8config.InitService(mm)
+
+			d8config.Service().SetExternalNames(map[string]string{
+				"module-one": "repo.one/modules",
+			})
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should be external with repo", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			promCfg := f.KubernetesGlobalResource("ModuleConfig", "module-one")
+			Expect(promCfg.Field("status.type").String()).To(Equal("External: repo.one/modules"), "should update status")
+		})
+	})
+
 })

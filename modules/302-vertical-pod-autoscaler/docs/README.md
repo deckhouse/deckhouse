@@ -21,7 +21,7 @@ VPA limitations:
 - Using multiple VPAs for the same Pod can lead to undefined behavior.
 - If VPA is deleted or "turned off" (the `Off` mode), the changes made by VPA earlier are not reset (the most recent value set is kept). It may lead to confusion due to the difference between resource values in Helm/controller and the actual resources of Pods (it may be perceived as if they "came from out of nowhere").
 
-> **CAUTION!**: We highly recommend using [Pod Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) with VPA.
+> **Caution!** We highly recommend using [Pod Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) with VPA.
 
 ## Grafana dashboard
 

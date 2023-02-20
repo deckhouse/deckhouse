@@ -10,7 +10,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x7" } } # must be real
+          - {"1.13": { "fullVersion": "1.13.33", "revision": "1x13", "imageSuffix": "V1x13x7", "isReady": false } } # must be real
         additionalProperties:
           type: object
           properties:
@@ -23,6 +23,9 @@ properties:
             imageSuffix:
               type: string
               x-examples: ["V1x13x7"]
+            isReady:
+              type: boolean
+              x-examples: [false]
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
@@ -115,8 +118,10 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.10.1"
+          - version: "1.12"
             alertSeverity: 4
+          - version: "1.13"
+            alertSeverity: 6
         x-examples:
           - [{version: "1.12", alertSeverity: 7}, {version: "1.13", alertSeverity: 9}]
       globalVersion:

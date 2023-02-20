@@ -50,7 +50,7 @@ apiVersions:
       cloud:
         type: object
         description: |
-          Cloud provider-related settings (if the `Cloud` [clusterType](#parameters-clustertype) is used).
+          Cloud provider-related settings (if the `Cloud` [clusterType](#clusterconfiguration-clustertype) is used).
         required: [provider]
         additionalProperties: false
         properties:
@@ -123,7 +123,7 @@ apiVersions:
         description: |
           Global proxy setup (especially for working in air-gapped environments).
 
-          > Caution! To avoid interference with internal requests it is important to fill `noProxy` parameter with host subnets.
+          > **Caution!** To avoid interference with internal requests it is important to fill `noProxy` parameter with host subnets.
         additionalProperties: false
         properties:
           httpProxy:

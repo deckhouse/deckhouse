@@ -19,14 +19,17 @@
 402-ingress-nginx/          @nabokihms @yalosev
 460-log-shipper/            @nabokihms
 470-chrony/                 @RomanenkoDenys
+490-virtualization          @kvaps
+491-containerized-data-importer @kvaps
 500-openvpn/                @vitaliy-sn
 500-upmeter/                @shvgn
 502-delivery/               @shvgn
 600-flant-integration/      @shvgn
+650-runtime-audit-engine/   @nabokihms
 bashible-apiserver/         @yalosev
 candi/                      @RomanenkoDenys
 cloud-controller-manager/   @zuzzas
-csi/                        @zuzzas
+csi/                        @zuzzas @kvaps
 deckhouse-controller/       @diafour
 dhctl/                      @name212
 docs/                       @z9r5

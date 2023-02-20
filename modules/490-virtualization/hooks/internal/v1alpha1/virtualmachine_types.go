@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +43,16 @@ type VirtualMachineSpec struct {
 	CloudInit *virtv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
 	// Represents a lits of additional disks that should be attached to the virtual machine.
 	DiskAttachments *[]DiskSource `json:"diskAttachments,omitempty"`
+	// A selector which must be true for the vm to fit on a node.
+	// Selector which must match a node's labels for the vmi to be scheduled on that node.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// If toleration is specified, obey all the toleration rules.
+	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
+	// Affinity is a group of affinity scheduling rules.
+	Affinity *v1.Affinity `json:"affinity,omitempty"`
+	// TopologySpreadConstraints specifies how to spread matching pods among the given topology.
+	TopologySpreadConstraints []v1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 }
 
 // The observed state of `VirtualMachine`.
@@ -61,7 +70,7 @@ type BootDisk struct {
 	Name string `json:"name,omitempty"`
 	// The source of a boot disk.
 	// If specified, the new disk will be created.
-	Source *corev1.TypedLocalObjectReference `json:"source,omitempty"`
+	Source *v1.TypedLocalObjectReference `json:"source,omitempty"`
 	// The storage class for newly created disk.
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// The size for newly created disk.

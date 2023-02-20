@@ -4,6 +4,14 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 ---
 {% raw %}
 
+## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+
+## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+
 ## How do I add a static node to a cluster?
 
 To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
@@ -372,7 +380,7 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> **Note** that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+> **Note!** You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
 
 There are two ways to solve this problem:
 
@@ -799,8 +807,6 @@ Test PASSED
 Done
 ```
 
-{% endraw %}
-
 ## How to deploy custom containerd configuration ?
 
 Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
@@ -894,3 +900,5 @@ If, after 30 minutes, another node needs to be deployed in the cluster, `cluster
 Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example above), the nodes will be provisioned from the `worker` NodeGroup.
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
+
+{% endraw %}

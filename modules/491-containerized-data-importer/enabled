@@ -24,7 +24,7 @@ function __main__() {
   fi
   if [ "$enabled" = "false" ]; then
     # workaround: allow explicit enabling of the module
-    case "$(kubectl get moduleconfig containerized-data-importer -o jsonpath={.spec.enabled} 2>/dev/null)" in
+    case "$(kubectl get moduleconfig containerized-data-importer -o jsonpath={.spec.enabled} 2>/dev/null || true)" in
       # match all cases of true|y|yes|1
       [Tt][Rr][Uu][Ee]|[Yy]|[Yy][Ee][Ss]|1)
         enabled=true

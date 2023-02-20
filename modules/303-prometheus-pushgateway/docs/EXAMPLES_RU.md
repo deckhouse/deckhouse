@@ -5,12 +5,18 @@ title: "Модуль Prometheus Pushgateway: примеры"
 ## Пример настройки модуля
 
 ```yaml
-prometheusPushgatewayEnabled: "true"
-prometheusPushgateway: |
-  instances:
-  - first
-  - second
-  - another
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-pushgateway
+spec:
+  version: 1
+  enabled: true
+  settings:
+    instances:
+    - first
+    - second
+    - another
 ```
 
 {% raw %}
@@ -29,7 +35,7 @@ prometheusPushgateway: |
 test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 ```
 
-**Важно!** Значение job должно быть уникальным в Prometheus, чтобы не поломать существующие графики и алерты. Получить список всех занятых job можно следующим запросом: `count({__name__=~".+"}) by (job)`.
+> **Важно!** Значение job должно быть уникальным в Prometheus, чтобы не поломать существующие графики и алерты. Получить список всех занятых job можно следующим запросом: `count({__name__=~".+"}) by (job)`.
 
 ## Удаление всех метрик группы `{instance="10.244.1.155:9091",job="app"}` через curl
 

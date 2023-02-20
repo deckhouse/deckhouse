@@ -40,6 +40,483 @@ spec:
             spec:
               description: The desired state of `VirtualMachine`.
               properties:
+                affinity:
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) as in the pods `spec.affinity` parameter in Kubernetes;
+
+                    If the parameter is omitted, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) rules. Instance pods inherit this field as is.
+                  properties:
+                    nodeAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              preference:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              weight:
+                                description: ""
+                                format: int32
+                                type: integer
+                            required:
+                              - preference
+                              - weight
+                            type: object
+                          type: array
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          properties:
+                            nodeSelectorTerms:
+                              description: ""
+                              items:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              type: array
+                          required:
+                            - nodeSelectorTerms
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    podAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              podAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                              type: string
+                                            operator:
+                                              description: ""
+                                              type: string
+                                            values:
+                                              description: ""
+                                              items:
+                                                type: string
+                                              type: array
+                                          required:
+                                            - key
+                                            - operator
+                                          type: object
+                                        type: array
+                                      matchLabels:
+                                        additionalProperties:
+                                          type: string
+                                        description: ""
+                                        type: object
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                              type: string
+                                            operator:
+                                              description: ""
+                                              type: string
+                                            values:
+                                              description: ""
+                                              items:
+                                                type: string
+                                              type: array
+                                          required:
+                                            - key
+                                            - operator
+                                          type: object
+                                        type: array
+                                      matchLabels:
+                                        additionalProperties:
+                                          type: string
+                                        description: ""
+                                        type: object
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  namespaces:
+                                    description: ""
+                                    items:
+                                      type: string
+                                    type: array
+                                  topologyKey:
+                                    description: ""
+                                    type: string
+                                required:
+                                  - topologyKey
+                                type: object
+                              weight:
+                                description: ""
+                                format: int32
+                                type: integer
+                            required:
+                              - podAffinityTerm
+                              - weight
+                            type: object
+                          type: array
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: ""
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: ""
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              namespaces:
+                                description: ""
+                                items:
+                                  type: string
+                                type: array
+                              topologyKey:
+                                description: ""
+                                type: string
+                            required:
+                              - topologyKey
+                            type: object
+                          type: array
+                      type: object
+                    podAntiAffinity:
+                      description: ""
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              podAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                              type: string
+                                            operator:
+                                              description: ""
+                                              type: string
+                                            values:
+                                              description: ""
+                                              items:
+                                                type: string
+                                              type: array
+                                          required:
+                                            - key
+                                            - operator
+                                          type: object
+                                        type: array
+                                      matchLabels:
+                                        additionalProperties:
+                                          type: string
+                                        description: ""
+                                        type: object
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                              type: string
+                                            operator:
+                                              description: ""
+                                              type: string
+                                            values:
+                                              description: ""
+                                              items:
+                                                type: string
+                                              type: array
+                                          required:
+                                            - key
+                                            - operator
+                                          type: object
+                                        type: array
+                                      matchLabels:
+                                        additionalProperties:
+                                          type: string
+                                        description: ""
+                                        type: object
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                  namespaces:
+                                    description: ""
+                                    items:
+                                      type: string
+                                    type: array
+                                  topologyKey:
+                                    description: ""
+                                    type: string
+                                required:
+                                  - topologyKey
+                                type: object
+                              weight:
+                                description: ""
+                                format: int32
+                                type: integer
+                            required:
+                              - podAffinityTerm
+                              - weight
+                            type: object
+                          type: array
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: ""
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                          type: string
+                                        operator:
+                                          description: ""
+                                          type: string
+                                        values:
+                                          description: ""
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                        - key
+                                        - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: ""
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              namespaces:
+                                description: ""
+                                items:
+                                  type: string
+                                type: array
+                              topologyKey:
+                                description: ""
+                                type: string
+                            required:
+                              - topologyKey
+                            type: object
+                          type: array
+                      type: object
+                  type: object
                 bootDisk:
                   description: The boot disk for virtual machine.
                   properties:
@@ -152,6 +629,16 @@ spec:
 
                     If not specified, defaults to `{vm name}`.
                   type: string
+                nodeSelector:
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as in the pods `spec.nodeSelector` parameter in Kubernetes.
+
+                    If the parameter is omitted, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                  type: object
                 resources:
                   additionalProperties:
                     anyOf:
@@ -170,6 +657,107 @@ spec:
 
                     This option requires `cloud-init` in the virtual machine.
                   type: string
+                tolerations:
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods `spec.tolerations` parameter in Kubernetes;
+
+                    If the parameter is omitted, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                  items:
+                    description: ""
+                    properties:
+                      effect:
+                        description: ""
+                        type: string
+                      key:
+                        description: ""
+                        type: string
+                      operator:
+                        description: ""
+                        type: string
+                      tolerationSeconds:
+                        description: ""
+                        format: int64
+                        type: integer
+                      value:
+                        description: ""
+                        type: string
+                    type: object
+                  type: array
+                topologySpreadConstraints:
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) as in the pods `spec.topologySpreadConstraints` parameter in Kubernetes;
+
+                    If the parameter is omitted, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard [topologySpreadConstraint](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) list. Instance pods inherit this field as is.
+                  items:
+                    description: ""
+                    properties:
+                      labelSelector:
+                        description: ""
+                        properties:
+                          matchExpressions:
+                            description: ""
+                            items:
+                              description: ""
+                              properties:
+                                key:
+                                  description: ""
+                                  type: string
+                                operator:
+                                  description: ""
+                                  type: string
+                                values:
+                                  description: ""
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                                - key
+                                - operator
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: ""
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      matchLabelKeys:
+                        description: ""
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      maxSkew:
+                        description: ""
+                        format: int32
+                        type: integer
+                      minDomains:
+                        description: ""
+                        format: int32
+                        type: integer
+                      nodeAffinityPolicy:
+                        description: ""
+                        type: string
+                      nodeTaintsPolicy:
+                        description: ""
+                        type: string
+                      topologyKey:
+                        description: ""
+                        type: string
+                      whenUnsatisfiable:
+                        description: ""
+                        type: string
+                    required:
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
+                    type: object
+                  type: array
                 userName:
                   description: |
                     The username that should be automatically created inside the VM.

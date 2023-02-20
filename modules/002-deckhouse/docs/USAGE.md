@@ -7,10 +7,16 @@ title: "The deckhouse module: usage"
 Below is a simple example of the module configuration:
 
 ```yaml
-deckhouse: |
-  logLevel: Debug
-  bundle: Minimal
-  releaseChannel: RockSolid
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    logLevel: Debug
+    bundle: Minimal
+    releaseChannel: EarlyAccess
 ```
 
 You can also configure additional parameters.
@@ -25,35 +31,45 @@ Patch versions (e.g. updates from `1.26.1` to `1.26.2`) are installed without co
 
 ### Update windows configuration
 
-You can configure the time when Deckhouse will install updates by specifying the following parameters in the module configuration:
+You can configure the time when Deckhouse will install updates by using the [update.windows](configuration.html#parameters-update-windows) module configuration parameter.
+
+An example of setting up two daily update windows — from 8 a.m. to 10 a.m. and from 8 p.m. to 10 p.m. (UTC):
 
 ```yaml
-deckhouse: |
-  ...
-  releaseChannel: Stable
-  update:
-    windows: 
-      - from: "8:00"
-        to: "15:00"
-      - from: "20:00"
-        to: "23:00"
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: EarlyAccess
+    update:
+      windows: 
+        - from: "8:00"
+          to: "10:00"
+        - from: "20:00"
+          to: "22:00"
 ```
 
-Here updates will be installed every day from 8:00 to 15:00 and from 20:00 to 23:00.
-
-You can also set up updates on certain days, for example, on Tuesdays and Saturdays from 13:00 to 18:30:
+You can also set up updates on certain days, for example, on Tuesdays and Saturdays from 18:00 to 19:30 (UTC):
 
 ```yaml
-deckhouse: |
-  ...
-  releaseChannel: Stable
-  update:
-    windows: 
-      - from: "8:00"
-        to: "15:00"
-        days:
-          - Tue
-          - Sat
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      windows: 
+        - from: "18:00"
+          to: "19:30"
+          days:
+            - Tue
+            - Sat
 ```
 
 ### Manual update confirmation
@@ -61,19 +77,24 @@ deckhouse: |
 If necessary, it is possible to enable manual confirmation of updates. This can be done as follows:
 
 ```yaml
-deckhouse: |
-  ...
-  releaseChannel: Stable
-  update:
-    mode: Manual
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Manual
 ```
 
 In this mode, it will be necessary to confirm each minor Deckhouse updates (excluding patch versions).
 
-Manual confirmation of the update to the version `v1.26.0`:
+Manual confirmation of the update to the version `v1.43.2`:
 
 ```shell
-kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
+kubectl patch DeckhouseRelease v1-43-2 --type=merge -p='{"approved": true}'
 ```
 
 ### Manual disruption update confirmation
@@ -81,48 +102,67 @@ kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 If necessary, it is possible to enable manual confirmation of disruptive updates (updates that change the default values or behavior). This can be done as follows:
 
 ```yaml
-deckhouse: |
-  ...
-  releaseChannel: Stable
-  update:
-    disruptionApprovalMode: Manual
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    releaseChannel: Stable
+    update:
+      disruptionApprovalMode: Manual
 ```
 
-In this mode, it will be necessary to confirm each minor disruptive update with an annotation:
+In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the `DeckhouseRelease` resource.
+
+An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
 
 ```shell
-kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
+kubectl annotate DeckhouseRelease v1-36-4 release.deckhouse.io/disruption-approved=true
 ```
 
 ### Deckhouse update notification
 
 In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update.
 
-Example:
+An example:
 
 ```yaml
-deckhouse: |
-  ...
-  update:
-    mode: Auto
-    notification:
-      webhook: https://release-webhook.mydomain.com
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    update:
+      releaseChannel: Stable
+      mode: Auto
+      notification:
+        webhook: https://release-webhook.mydomain.com
 ```
 
 After a new Deckhouse minor version appears on the update channel, a [POST request](configuration.html#parameters-update-notification-webhook) will be executed to the webhook's URL before it is applied in the cluster.
 
 Set the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter to have enough time to react to a Deckhouse update notification. In this case, the update will happen after the specified time, considering the update windows.
 
-Example:
+An example:
 
 ```yaml
-deckhouse: |
-  ...
-  update:
-    mode: Auto
-    notification:
-      webhook: https://release-webhook.mydomain.com
-      minimalNotificationTime: 8h
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  settings:
+    update:
+      releaseChannel: Stable
+      mode: Auto
+      notification:
+        webhook: https://release-webhook.mydomain.com
+        minimalNotificationTime: 8h
 ```
 
 ## Collect debug info

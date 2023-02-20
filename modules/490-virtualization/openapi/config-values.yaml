@@ -10,9 +10,9 @@ properties:
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   vmCIDRs:
     type: array
+    description: |
+      List of CIDRs used to allocate static IP addresses for Virtual Machines.
     x-examples:
-    - ["10.10.10.0/24"]
+    - ["10.10.10.0/24", "10.10.20.0/24"]
     items:
       type: string
-      description: |
-        List of CIDRs used to allocate static IP addresses for Virtual Machines.

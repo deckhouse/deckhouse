@@ -2,6 +2,8 @@
 title: "Module log-shipper: examples"
 ---
 
+{% raw %}
+
 ## Getting logs from all cluster Pods and sending them to Loki
 
 ```yaml
@@ -12,7 +14,7 @@ metadata:
 spec:
   type: KubernetesPods
   destinationRefs:
-    - loki-storage
+  - loki-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -43,8 +45,8 @@ spec:
       matchLabels:
         app: booking
   destinationRefs:
-    - loki-storage
-    - es-storage
+  - loki-storage
+  - es-storage
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -198,6 +200,43 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Index template for Elasticsearch
+
+It is possible to route logs to particular indexes based on metadata using index templating:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ namespace }}-%F"
+```
+
+For the above example for each Kubernetes namespace a dedicated index in Elasticsearch will be created.
+
+This feature works well combining with `extraLabels`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    index: "k8s-{{ service }}-{{ namespace }}-%F"
+  extraLabels:
+    service: "{{ service_name }}"
+```
+
+1. If a log message is in JSON format, the `service_name` field of this JSON document is moved to the metadata level.
+2. The new metadata field `service` is used for the index template.
+
 ## Splunk integration
 
 It is possible to send logs from Deckhouse to Splunk.
@@ -222,7 +261,7 @@ spec:
       verifyHostname: false
 ```
 
-> NOTE: Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
+> **Note!** Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
 
 ```yaml
 extraLabels:
@@ -260,9 +299,51 @@ spec:
     endpoint: logstash.default:12345
 ```
 
-## Logs filters
+## Collect Kubernetes Events
 
-Only Nginx container logs:
+Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../340-extended-monitoring/) module configuration.
+
+Enable `events-exporter` by adjusting `extended-monitoring` settings:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+spec:
+  version: 1
+  settings:
+    events:
+      exporterEnabled: true
+```
+
+Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` Pod:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubernetes-events
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: events-exporter
+    namespaceSelector:
+      matchNames:
+      - d8-monitoring
+  destinationRefs:
+  - loki-storage
+```
+
+## Log filters
+
+Users can filter logs by applying two filters:
+* `labelFilter` — applies to the top-level metadata, e.g., container, namespace, or Pod name.
+* `logFilter` — applies to fields of a message if it is in JSON format.
+
+### Collect only logs of the `nginx` container
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -279,43 +360,51 @@ spec:
   - loki-storage
 ```
 
-Non-debug non-JSON logs:
+### Audit of kubelet actions
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: non-debug-logs
+  name: kubelet-audit-logs
 spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
   logFilter:
-  - operator: NotRegex
-    values: ["DEBUG.*"]
+  - field: userAgent  
+    operator: Regex
+    values: ["kubelet.*"]
   destinationRefs:
   - loki-storage
 ```
 
-Only error logs of backend microservices:
+### Deckhouse system logs
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: backend-logs
+  name: system-logs
 spec:
-  type: KubernetesPods
+  type: File
+  file:
+    include:
+    - /var/log/syslog
   labelFilter:
-  - field: pod_labels.app
-    operator: In
-    values: [web-server, queue-worker]
-  logFilter:
-  - field: error
-    operator: Exists
+  - field: message
+    operator: Regex
+    values:
+    - .*d8-kubelet-forker.*
+    - .*containerd.*
+    - .*bashible.*
+    - .*kernel.*
   destinationRefs:
   - loki-storage
 ```
 
-> NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
+> **Note!** If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
 
 ## Collect logs from production namespaces using the namespace label selector option
 
@@ -329,7 +418,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       labelSelector:
-        matchNames:
+        matchLabels:
           environment: production
   destinationRefs:
   - loki-storage
@@ -360,3 +449,5 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
+{% endraw %}

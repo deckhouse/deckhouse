@@ -4,6 +4,10 @@ properties:
       Ключ для доступа к API Okmeter.
 
       Можно взять на странице документации по установке `okmeter` (`OKMETER_API_TOKEN`).
+  disableAutoDiscovery:
+    description: |
+      Отключает автоматическое обнаружение сервисов, которые способен мониторить okmeter. Установка опции в `true` оставит лишь базовый мониторинг хоста, прочие плагины (postgresql/mysql/redis/etc.) будут отключены.
+      По-умолчанию `false`
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` в Kubernetes Pod.

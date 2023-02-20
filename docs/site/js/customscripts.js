@@ -160,6 +160,25 @@ $(document).ready(function(){
     })
 });
 
+const openDiagram = function () {
+  const button = $('[data-open-scheme]');
+  const wrap = $('.functionality-block__diagram-wrap')
+  const wrapHeight = wrap.height()
+  const imageHeight = $('.functionality-block__diagram-wrap img').height();
+
+  $(button).click(() => {
+    if (wrap.hasClass('open')) {
+      wrap.removeClass('open');
+      wrap.height(wrapHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Подробнее') : button.text('Show');
+    } else {
+      wrap.addClass('open');
+      wrap.height(imageHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Скрыть') : button.text('Hide');
+    }
+  })
+}
+
 //Fixed sidebar
 window.onload = function() {
   const headerHeight = $('.header').height();
@@ -196,6 +215,8 @@ window.onload = function() {
 
     setFooterOffset(scrolled, bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight)
   });
+
+  openDiagram();
 };
 
 function setTopOffset(scrolled, offsetTop, sidebarWrapper, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight) {

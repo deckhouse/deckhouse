@@ -82,7 +82,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.46.2
+GOLANGCI_VERSION = 1.48.0
 TRIVY_VERSION= 0.28.1
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -244,3 +244,8 @@ bin/werf: bin bin/trdl ## Install werf for images-tags generator.
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
 	cd candi/tools; bash update_kubernetes_patchversions.sh
+
+##@ Lib helm
+.PHONY: update-lib-helm
+update-lib-helm:
+	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*

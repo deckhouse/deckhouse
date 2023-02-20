@@ -3,6 +3,46 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in AWS.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: AWSClusterConfiguration
+        layout: WithoutNAT
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        nodeNetworkCIDR: "172.16.0.0/22"
+        vpcNetworkCIDR: "172.16.0.0/16"
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            instanceType: m5.xlarge
+            ami: ami-08b6d44b4f6f7b279
+            diskType: gp3
+        nodeGroups:
+          - name: worker
+            nodeTemplate:
+              labels:
+                node-role.kubernetes.io/worker: ""
+            replicas: 2
+            instanceClass:
+              instanceType: t2.medium
+              ami: ami-0caef02b518350c8b
+            additionalTags:
+              backup: srv1
+        provider:
+          providerAccessKeyId: '<AWS_ACCESS_KEY>'
+          providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
+          region: eu-central-1
+        tags:
+          team: rangers
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, masterNodeGroup, sshPublicKey]
     properties:

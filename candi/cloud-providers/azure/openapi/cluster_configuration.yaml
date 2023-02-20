@@ -3,11 +3,21 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in Azure.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
     x-examples:
-      - layout: Standard
-        apiVersion: deckhouse.io/v1
+      - apiVersion: deckhouse.io/v1
         kind: AzureClusterConfiguration
-        sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+        layout: Standard
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
         vNetCIDR: 10.0.0.0/16
         subnetCIDR: 10.0.0.0/24
         masterNodeGroup:
@@ -15,9 +25,10 @@ apiVersions:
           instanceClass:
             machineSize: Standard_D4ds_v4
             urn: Canonical:UbuntuServer:18.04-LTS:18.04.202207120
+            enableExternalIP: false
         provider:
-          location: "westeurope"
           subscriptionId: "<SUBSCRIPTION_ID>"
+          location: "westeurope"
           clientId: "<CLIENT_ID>"
           clientSecret: "<CLIENT_SECRET>"
           tenantId: "<TENANT_ID>"

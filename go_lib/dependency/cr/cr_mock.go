@@ -28,6 +28,12 @@ type ClientMock struct {
 	afterImageCounter  uint64
 	beforeImageCounter uint64
 	ImageMock          mClientMockImage
+
+	funcListTags          func() (sa1 []string, err error)
+	inspectFuncListTags   func()
+	afterListTagsCounter  uint64
+	beforeListTagsCounter uint64
+	ListTagsMock          mClientMockListTags
 }
 
 // NewClientMock returns a mock for Client
@@ -42,6 +48,8 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.ImageMock = mClientMockImage{mock: m}
 	m.ImageMock.callArgs = []*ClientMockImageParams{}
+
+	m.ListTagsMock = mClientMockListTags{mock: m}
 
 	return m
 }
@@ -478,12 +486,158 @@ func (m *ClientMock) MinimockImageInspect() {
 	}
 }
 
+type mClientMockListTags struct {
+	mock               *ClientMock
+	defaultExpectation *ClientMockListTagsExpectation
+	expectations       []*ClientMockListTagsExpectation
+}
+
+// ClientMockListTagsExpectation specifies expectation struct of the Client.ListTags
+type ClientMockListTagsExpectation struct {
+	mock *ClientMock
+
+	results *ClientMockListTagsResults
+	Counter uint64
+}
+
+// ClientMockListTagsResults contains results of the Client.ListTags
+type ClientMockListTagsResults struct {
+	sa1 []string
+	err error
+}
+
+// Expect sets up expected params for Client.ListTags
+func (mmListTags *mClientMockListTags) Expect() *mClientMockListTags {
+	if mmListTags.mock.funcListTags != nil {
+		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
+	}
+
+	if mmListTags.defaultExpectation == nil {
+		mmListTags.defaultExpectation = &ClientMockListTagsExpectation{}
+	}
+
+	return mmListTags
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.ListTags
+func (mmListTags *mClientMockListTags) Inspect(f func()) *mClientMockListTags {
+	if mmListTags.mock.inspectFuncListTags != nil {
+		mmListTags.mock.t.Fatalf("Inspect function is already set for ClientMock.ListTags")
+	}
+
+	mmListTags.mock.inspectFuncListTags = f
+
+	return mmListTags
+}
+
+// Return sets up results that will be returned by Client.ListTags
+func (mmListTags *mClientMockListTags) Return(sa1 []string, err error) *ClientMock {
+	if mmListTags.mock.funcListTags != nil {
+		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
+	}
+
+	if mmListTags.defaultExpectation == nil {
+		mmListTags.defaultExpectation = &ClientMockListTagsExpectation{mock: mmListTags.mock}
+	}
+	mmListTags.defaultExpectation.results = &ClientMockListTagsResults{sa1, err}
+	return mmListTags.mock
+}
+
+// Set uses given function f to mock the Client.ListTags method
+func (mmListTags *mClientMockListTags) Set(f func() (sa1 []string, err error)) *ClientMock {
+	if mmListTags.defaultExpectation != nil {
+		mmListTags.mock.t.Fatalf("Default expectation is already set for the Client.ListTags method")
+	}
+
+	if len(mmListTags.expectations) > 0 {
+		mmListTags.mock.t.Fatalf("Some expectations are already set for the Client.ListTags method")
+	}
+
+	mmListTags.mock.funcListTags = f
+	return mmListTags.mock
+}
+
+// ListTags implements Client
+func (mmListTags *ClientMock) ListTags() (sa1 []string, err error) {
+	mm_atomic.AddUint64(&mmListTags.beforeListTagsCounter, 1)
+	defer mm_atomic.AddUint64(&mmListTags.afterListTagsCounter, 1)
+
+	if mmListTags.inspectFuncListTags != nil {
+		mmListTags.inspectFuncListTags()
+	}
+
+	if mmListTags.ListTagsMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmListTags.ListTagsMock.defaultExpectation.Counter, 1)
+
+		mm_results := mmListTags.ListTagsMock.defaultExpectation.results
+		if mm_results == nil {
+			mmListTags.t.Fatal("No results are set for the ClientMock.ListTags")
+		}
+		return (*mm_results).sa1, (*mm_results).err
+	}
+	if mmListTags.funcListTags != nil {
+		return mmListTags.funcListTags()
+	}
+	mmListTags.t.Fatalf("Unexpected call to ClientMock.ListTags.")
+	return
+}
+
+// ListTagsAfterCounter returns a count of finished ClientMock.ListTags invocations
+func (mmListTags *ClientMock) ListTagsAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmListTags.afterListTagsCounter)
+}
+
+// ListTagsBeforeCounter returns a count of ClientMock.ListTags invocations
+func (mmListTags *ClientMock) ListTagsBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmListTags.beforeListTagsCounter)
+}
+
+// MinimockListTagsDone returns true if the count of the ListTags invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockListTagsDone() bool {
+	for _, e := range m.ListTagsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ListTagsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterListTagsCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcListTags != nil && mm_atomic.LoadUint64(&m.afterListTagsCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockListTagsInspect logs each unmet expectation
+func (m *ClientMock) MinimockListTagsInspect() {
+	for _, e := range m.ListTagsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to ClientMock.ListTags")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ListTagsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterListTagsCounter) < 1 {
+		m.t.Error("Expected call to ClientMock.ListTags")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcListTags != nil && mm_atomic.LoadUint64(&m.afterListTagsCounter) < 1 {
+		m.t.Error("Expected call to ClientMock.ListTags")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ClientMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockDigestInspect()
 
 		m.MinimockImageInspect()
+
+		m.MinimockListTagsInspect()
 		m.t.FailNow()
 	}
 }
@@ -508,5 +662,6 @@ func (m *ClientMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockDigestDone() &&
-		m.MinimockImageDone()
+		m.MinimockImageDone() &&
+		m.MinimockListTagsDone()
 }

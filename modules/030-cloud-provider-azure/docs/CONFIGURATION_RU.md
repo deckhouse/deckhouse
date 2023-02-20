@@ -20,18 +20,23 @@ title: "Cloud provider — Azure: настройки"
 Пример конфигурации StorageClass:
 
 ```yaml
-cloudProviderAzure: |
-  storageClass:
-    provision:
-    - name: managed-ultra-ssd
-      type: UltraSSD_LRS
-      cachingMode: None
-      diskIOPSReadWrite: 600
-      diskMBpsReadWrite: 150
-    exclude:
-    - managed-standard.*
-    - managed-premium
-    default: managed-ultra-ssd
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-azure
+spec:
+  version: 1
+  enabled: true
+  settings:
+    storageClass:
+      provision:
+      - name: managed-ultra-ssd
+        diskIOPSReadWrite: 600
+        diskMBpsReadWrite: 150
+      exclude:
+      - managed-standard.*
+      - managed-premium
+      default: managed-ultra-ssd
 ```
 
 {% include module-settings.liquid %}

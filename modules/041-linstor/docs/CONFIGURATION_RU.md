@@ -1,5 +1,6 @@
 ---
 title: "Модуль linstor: настройки"
+force_searchable: true
 ---
 
 {% include module-bundle.liquid %}
@@ -23,7 +24,7 @@ stringData:
   MASTER_PASSPHRASE: *!пароль* # Мастер-пароль для LINSTOR
 ```
 
-> **Внимание**: подойдите ответственно к выбору мастер-пароля для LINSTOR. При его потере зашифрованные данные окажутся недоступными.
+> **Внимание!** Подойдите ответственно к выбору мастер-пароля для LINSTOR. При его потере зашифрованные данные окажутся недоступными.
 
 ## Конфигурация хранилища LINSTOR
 
@@ -36,8 +37,10 @@ stringData:
    Выполните следующие команды, чтобы вывести список групп томов и пулов:
 
    ```shell
-   vgs -o name,tags
-   lvs -o name,vg_name,tags
+   # LVM пулы
+   vgs -o name,tags | awk 'NR==1;$2~/linstor-/'
+   # LVMThin пулы
+   lvs -o name,vg_name,tags | awk 'NR==1;$3~/linstor-/'
    ```
 
 1. Добавьте пулы.
@@ -46,25 +49,25 @@ stringData:
 
    - Чтобы добавить пул **LVM** создайте группу томов с тегом `linstor-<имя_пула>`, либо добавьте тег `linstor-<имя_пула>` существующей группе.
 
-     Пример команды создания группы томов `data_project` с тегом `linstor-data`:
+     Пример команды создания группы томов `vg0` с тегом `linstor-data`:
 
      ```shell
-     vgcreate data_project /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1 --add-tag linstor-data
      ```
 
-     Пример команды добавления тега `linstor-data` существующей группе томов `data_project`:
+     Пример команды добавления тега `linstor-data` существующей группе томов `vg0`:
 
      ```shell
-     vgchange data_project --add-tag linstor-data
+     vgchange vg0 --add-tag linstor-data
      ```
 
    - Чтобы добавить пул **LVMThin** создайте LVMThin-пул с тегом `linstor-<имя_пула>`.
 
-     Пример команды создания LVMThin-пула `data_project/thindata` с тегом `linstor-data`:
+     Пример команды создания LVMThin-пула `vg0/thindata` с тегом `linstor-data`:
 
      ```shell
-     vgcreate data_project /dev/nvme0n1 /dev/nvme1n1
-     lvcreate -l 100%FREE -T data_project/thindata --add-tag linstor-thindata
+     vgcreate vg0 /dev/nvme0n1 /dev/nvme1n1
+     lvcreate -l 100%FREE -T vg0/thindata --add-tag linstor-thindata
      ```
 
      > Обратите внимание, что сама группа томов не обязана содержать какой-либо тег.

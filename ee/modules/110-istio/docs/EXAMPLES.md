@@ -63,7 +63,7 @@ Istio allows you to configure a priority-based locality (geographic location) fa
 
 This comes in handy for inter-cluster failover when used together with a [multicluster](#setting-up-multicluster-for-two-clusters-using-the-istiomulticluster-cr).
 
-**Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
+> **Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
 
 Example:
 
@@ -88,7 +88,7 @@ spec:
 
 You can use the [VirtualService](istio-cr.html#virtualservice) resource to configure Retry for requests.
 
-**Caution!** All requests (including POST ones) are retried three times by default.
+> **Caution!** All requests (including POST ones) are retried three times by default.
 
 Example:
 
@@ -112,7 +112,7 @@ spec:
 
 ## Canary
 
-**Caution!** Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
+> **Caution!** Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
 
 The idea is that two Deployments with different versions of the application are deployed in the same namespace. The Pods of different versions have different labels (`version: v1` and `version: v2`).
 
@@ -336,7 +336,7 @@ spec:
 
 ### Decision-making algorithm
 
-**Caution!** The following algorithm for deciding the fate of a request becomes active after AuthorizationPolicy is created for the application:
+The following algorithm for deciding the fate of a request becomes active after `AuthorizationPolicy` is created for the application:
 * The request is denied if it falls under the DENY policy;
 * The request is allowed if there are no ALLOW policies for the application;
 * The request is allowed if it falls under the ALLOW policy.
@@ -344,7 +344,7 @@ spec:
 
 In other words, if you explicitly deny something, then only this restrictive rule will work. If you explicitly allow something, only explicitly authorized requests will be allowed (however, restrictions will stay in force and have precedence).
 
-**Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
+> **Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
 
 Examples:
 * Let's deny POST requests for the myapp application. Since a policy is defined, only POST requests to the application are denied (as per the algorithm above).
@@ -529,7 +529,7 @@ spec:
 
 ### Allow from any cluster (via mtls)
 
-**Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+> **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
 
 Example:
 
@@ -618,27 +618,33 @@ By default, during termination, all containers in a Pod, including istio-proxy o
 The annotation below adds the preStop hook to istio-proxy container in application's Pod:
 `inject.istio.io/templates: sidecar,d8-hold-istio-proxy-termination-until-application-stops`.
 
-## Upgrading Istio control-plane
+## Upgrading Istio
+
+### Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x13` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x16` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Upgrade algorithm (i.e. to `1.13`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.13"]`).
-  * Wait for the corresponding pod `istiod-v1x13-xxx-yyy` to appear in `d8-istiod` namespace.
+* Upgrade algorithm (i.e. to `1.16`):
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.16"]`).
+  * Wait for the corresponding pod `istiod-v1x16-xxx-yyy` to appear in `d8-istiod` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x13`.
+    * Change `istio-injection: enabled` lable to `istio.io/rev: v1x16`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application workability.
-  * Reconfigure `globalVersion` to `1.13` and remove the `additionalVersions` configuration.
+  * Reconfigure `globalVersion` to `1.16` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision, execute the following command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x12" \
+kubectl get pods -A -o json | jq --arg revision "v1x13" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
+### Auto upgrading istio data-plane
+
+To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.

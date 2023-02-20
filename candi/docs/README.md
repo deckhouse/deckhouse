@@ -74,9 +74,9 @@ There are three variants of terraforming:
 
 * `static-node` — creates a static node.
 
-> Terraform state will be saved in the secret in d8-system namespace after each terraform pipeline execution.
+Terraform state will be saved in the secret in d8-system namespace after each terraform pipeline execution.
 
-**Attention!!** dhctl do not use terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
+> **Note!** dhctl do not use terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
 
 #### Static-cluster
 
@@ -100,7 +100,7 @@ If every node in cluster has only one network interface `StaticClusterConfigurat
 * **Detect bashible bundle**: execute `/candi/bashible/detect_bundle.sh` to get a bashible bundle name from the host.
 * **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network.
 
-**Attention!!** dhctl will check the ssh connection first.
+> **Note!** dhctl will check the ssh connection first.
 
 #### Bashible Bundle
 

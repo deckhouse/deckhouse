@@ -12,8 +12,7 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 3
   admissionReviewVersions:
-    - v1
-    - v1beta1
+  - v1
   clientConfig:
     service:
       name: d8-kube-dns-sts-pods-hosts-appender-webhook
