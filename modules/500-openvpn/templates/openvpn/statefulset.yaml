@@ -78,7 +78,7 @@ metadata:
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   serviceName: openvpn
   selector:
     matchLabels:
@@ -312,6 +312,16 @@ spec:
         volumeMounts:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - openvpn
+            topologyKey: kubernetes.io/hostname
       volumes:
       - name: kube-rbac-proxy-ca
         configMap:
