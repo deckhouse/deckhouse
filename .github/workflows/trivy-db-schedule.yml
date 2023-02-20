@@ -23,7 +23,8 @@ jobs:
         username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
         password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
         logout: false
-    - name: Do nothing
+    - name: Download crane and copy image
+      if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
       run: |
         curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.13.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - && chmod +x crane
-        ./crane copy ghcr.io/aquasecurity/trivy-db:latest ${{secrets.DECKHOUSE_REGISTRY_HOST}}/security/trivy-db:latest
+        ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/security/trivy-db:2

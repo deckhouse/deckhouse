@@ -23,6 +23,8 @@ spec:
       action: labeldrop
     - sourceLabels: ["pod"]
       targetLabel: pod
+    - targetLabel: job
+      replacement: operator-trivy
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep

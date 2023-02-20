@@ -197,5 +197,8 @@ if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
   pull_image "rock-solid" "release-channel"
 fi
 
+#pull trivy CVE database
+pull_image "rock-solid" "release-channel"
+
 echo ""
 echo "Operation is complete."
