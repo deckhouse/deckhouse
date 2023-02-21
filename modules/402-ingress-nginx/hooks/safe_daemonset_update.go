@@ -232,6 +232,8 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 		return nil
 	}
 
+	// it's a reinsurance, to have pods list always in the same order
+	// we don't trust api-server here
 	sort.SliceStable(podList.Items, func(i, j int) bool {
 		return podList.Items[i].Name < podList.Items[j].Name
 	})
