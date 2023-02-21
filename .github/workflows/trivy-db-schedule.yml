@@ -27,6 +27,12 @@ jobs:
     name: Download and repush images
     runs-on: ubuntu-latest
     steps:
+    - name: Check dev registry credentials
+      id: check_dev_registry
+      env:
+        HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+      run: |
+        if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
     - name: Check rw registry credentials
       id: check_rw_registry
       env:
@@ -41,8 +47,17 @@ jobs:
         username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
         password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
         logout: false
+    - name: Login to dev registry
+      uses: docker/login-action@v1.10.0
+      if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+      with:
+        registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+        username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+        password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+        logout: false
     - name: Download crane and copy image
       if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
       run: |
         curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.13.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - && chmod +x crane
         ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/security/trivy-db:2
+        ./crane copy ghcr.io/aquasecurity/trivy-db:2 ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/security/trivy-db:2
