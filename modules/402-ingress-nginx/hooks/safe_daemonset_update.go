@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -230,6 +231,10 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 	if len(podList.Items) == 0 {
 		return nil
 	}
+
+	sort.SliceStable(podList.Items, func(i, j int) bool {
+		return podList.Items[i].Name < podList.Items[j].Name
+	})
 
 	for _, pod := range podList.Items {
 		// if at least one pod is not ready or has Terminating state - abort mission to avoid parallel pod deletion
