@@ -244,7 +244,7 @@ func containerStorageEphemeral(object storage.StoreObject, containers []v1.Conta
 				"CONTAINER006",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Container StorageEphemeral is not defined in Resources.Requests",
+				"Ephemeral storage for container is not defined in Resources.Requests",
 			)
 		}
 	}
