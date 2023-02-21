@@ -29,6 +29,9 @@ rules:
 - apiGroups: ["authorization.k8s.io"]
   resources: ["subjectaccessreviews"]
   verbs: ["create"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create","get","update"]
 ---
 apiVersion: v1
 kind: ServiceAccount
