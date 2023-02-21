@@ -133,6 +133,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 				if (failover.Status.NumberAvailable == failover.Status.CurrentNumberScheduled) &&
 					(failover.Status.UpdatedNumberScheduled >= failover.Status.DesiredNumberScheduled) {
 					failoverReady = true
+					input.LogEntry.Infof("Failover daemonset %q is ready: available: %d, currentScheduled: %d, updatedScheduled: %d, desiredScheduler: %d", failover.Name, failover.Status.NumberAvailable, failover.Status.CurrentNumberScheduled, failover.Status.UpdatedNumberScheduled, failover.Status.DesiredNumberScheduled)
 					break
 				}
 			}
@@ -231,8 +232,9 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 	}
 
 	for _, pod := range podList.Items {
-		// if at least one pod is not ready or has Terminating state - abort mission
+		// if at least one pod is not ready or has Terminating state - abort mission to avoid parallel pod deletion
 		if !podIsReady(pod) {
+			input.LogEntry.Infof("Pod %q for ds %q is not ready. Skipping other pod deleting", pod.Name, dsName)
 			return nil
 		}
 	}
