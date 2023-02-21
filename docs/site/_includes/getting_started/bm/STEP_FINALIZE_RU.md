@@ -10,7 +10,7 @@
 <p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
 {% snippetcut %}
 ```bash
-kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
 </blockquote>
@@ -24,7 +24,7 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f ingress-nginx-controller.yml
+sudo kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -36,7 +36,7 @@ kubectl create -f ingress-nginx-controller.yml
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f user.yml
+sudo kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
