@@ -87,7 +87,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   ipAddressClaimName: mysql
   bootDisk:
     source:
@@ -120,7 +120,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     source:
       kind: ClusterVirtualMachineImage
@@ -194,7 +194,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     source:
       kind: ClusterVirtualMachineImage
@@ -237,7 +237,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     source:
       kind: ClusterVirtualMachineImage
@@ -308,7 +308,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     name: foo
 ---
@@ -338,7 +338,7 @@ spec:
     memory: 512M
     cpu: "1"
   userName: admin
-  sshPublicKey: "ssh-rsa asdasdkflkasddf..."
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
   bootDisk:
     name: foo
 ---
