@@ -58,8 +58,8 @@ deckhouse:
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
-# [<en>] Yandex account parameters
-# [<ru>] параметры доступа к облаку Yandex
+# [<en>] Yandex Cloud account parameters.
+# [<ru>] Параметры доступа к облаку Yandex Cloud.
 provider:
   # [<en>] The cloud ID.
   # [<ru>] ID облака.

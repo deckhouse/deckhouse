@@ -11,7 +11,7 @@ cloud:
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
   # [<ru>] Возможно, захотите изменить.
-  prefix: "cloud-demo"
+  prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
 podSubnetCIDR: 10.111.0.0/16
@@ -77,6 +77,7 @@ provider:
   #      "private_key": "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n"
   #    }
   serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
+masterNodeGroup:
   replicas: 1
   instanceClass:
     cores: 4
