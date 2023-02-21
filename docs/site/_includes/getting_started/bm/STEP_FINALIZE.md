@@ -10,7 +10,7 @@ For real-world conditions (production and test environments), you need to add ad
 <p>If you install Deckhouse for <strong>evaluation purposes</strong> and one node in  the cluster is enough for you, allow Deckhouse components to work on the master node. To do this, remove the taint from the master node by running the following command:</p>
 {% snippetcut %}
 ```bash
-kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
 </blockquote>
@@ -24,7 +24,7 @@ After that, there will be three more actions.
   <p>Apply it using the following command on the <strong>master node</strong>>:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f ingress-nginx-controller.yml
+sudo kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -36,7 +36,7 @@ kubectl create -f ingress-nginx-controller.yml
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f user.yml
+sudo kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
