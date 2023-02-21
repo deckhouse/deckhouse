@@ -348,9 +348,7 @@ func DeckhouseNamespace(name string) *apiv1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
-			},
-			Annotations: map[string]string{
-				"extended-monitoring.flant.com/enabled": "",
+				"extended-monitoring.deckhouse.io/enabled": "",
 			},
 		},
 		Spec: apiv1.NamespaceSpec{

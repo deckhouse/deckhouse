@@ -39,8 +39,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: test2
-  annotations:
-    extended-monitoring.flant.com/enabled: "true"
+  labels:
+    extended-monitoring.deckhouse.io/enabled: "true"
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -48,9 +48,9 @@ metadata:
 
 		It("Expected patch", func() {
 			ns := f.KubernetesResource("Namespace", "", "test1")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeFalse())
 			ns = f.KubernetesResource("Namespace", "", "test2")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 		})
 
 		Context("Adding new config", func() {
@@ -58,8 +58,8 @@ metadata:
 				f.ValuesSetFromYaml("namespaceConfigurator", []byte(`
 ---
 configurations:
-  - annotations:
-      extended-monitoring.flant.com/enabled: "true"
+  - labels:
+      extended-monitoring.deckhouse.io/enabled: "true"
     includeNames: ["test1"]
 `))
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -67,9 +67,9 @@ configurations:
 			})
 			It("Expected patch", func() {
 				ns := f.KubernetesResource("Namespace", "", "test1")
-				Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+				Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 				ns = f.KubernetesResource("Namespace", "", "test2")
-				Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+				Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 			})
 
 		})
@@ -191,8 +191,8 @@ metadata:
 			f.ValuesSetFromYaml("namespaceConfigurator", []byte(`
 ---
 configurations:
-  - annotations:
-      extended-monitoring.flant.com/enabled: "true"
+  - labels:
+      extended-monitoring.deckhouse.io/enabled: "true"
     includeNames: ["prod-.*","infra-.*"]
     excludeNames: ["infra-test"]
 `))
@@ -222,8 +222,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: infra-test2
-  annotations:
-    extended-monitoring.flant.com/enabled: "true"
+  labels:
+    extended-monitoring.deckhouse.io/enabled: "true"
 ---
 apiVersion: v1
 kind: Namespace
@@ -236,28 +236,28 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: prod-ns2
-  annotations:
-    extended-monitoring.flant.com/enabled: "true"
+  labels:
+    extended-monitoring.deckhouse.io/enabled: "true"
 `))
 			f.RunHook()
 		})
 
 		It("Expected patch", func() {
 			ns := f.KubernetesResource("Namespace", "", "prod-ns1")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 			ns = f.KubernetesResource("Namespace", "", "infra-ns1")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 
 			ns = f.KubernetesResource("Namespace", "", "foo")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeFalse())
 			ns = f.KubernetesResource("Namespace", "", "infra-test")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeFalse())
 			ns = f.KubernetesResource("Namespace", "", "infra-test2")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 			ns = f.KubernetesResource("Namespace", "", "prod-ns2")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
 			ns = f.KubernetesResource("Namespace", "", "infra-test3")
-			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeFalse())
 		})
 	})
 })

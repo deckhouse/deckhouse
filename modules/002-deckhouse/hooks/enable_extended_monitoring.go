@@ -26,17 +26,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, enableExtendedMonitoring)
 
 func enableExtendedMonitoring(input *go_hook.HookInput) error {
-	annotationsPatch := map[string]interface{}{
+	labelsPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"extended-monitoring.flant.com/enabled": "",
+			"labels": map[string]string{
+				"extended-monitoring.deckhouse.io/enabled": "",
 			},
 		},
 	}
 
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "d8-system")
 
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Namespace", "", "kube-system")
+	input.PatchCollector.MergePatch(labelsPatch, "v1", "Namespace", "", "kube-system")
 
 	return nil
 }

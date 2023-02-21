@@ -53,12 +53,12 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 
 			annotation := f.KubernetesGlobalResource("Namespace", "d8-system").
-				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`)
+				Field(`metadata.labels.extended-monitoring\.flant\.com/enabled`)
 			Expect(annotation.Exists()).To(BeTrue())
 			Expect(annotation.String()).To(Equal(""))
 
 			annotation = f.KubernetesGlobalResource("Namespace", "kube-system").
-				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`)
+				Field(`metadata.labels.extended-monitoring\.flant\.com/enabled`)
 			Expect(annotation.Exists()).To(BeTrue())
 			Expect(annotation.String()).To(Equal(""))
 		})
