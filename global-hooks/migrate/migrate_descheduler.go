@@ -80,15 +80,14 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
-	var deschedulerConfigJSON []byte
-	if !exists || len(deschedulerSettings) == 0 {
-		input.LogEntry.Info("Config for descheduler is empty, but module is enabled, migrating without config")
-		deschedulerConfigJSON = []byte("{}")
-	} else {
+	deschedulerConfigJSON := []byte("{}")
+	if exists && len(deschedulerSettings) > 0 {
 		deschedulerConfigJSON, err = json.Marshal(deschedulerSettings)
 		if err != nil {
 			return err
 		}
+	} else {
+		input.LogEntry.Info("Config for descheduler is empty, but module is enabled, migrating without config")
 	}
 
 	_, err = kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), &corev1.ConfigMap{
@@ -104,7 +103,8 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 	}, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
 		input.LogEntry.Infof("CM already existis, skipping migration: %s", err)
-	} else if err != nil {
+	}
+	if err != nil {
 		return err
 	}
 

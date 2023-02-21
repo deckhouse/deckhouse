@@ -46,7 +46,8 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 	if errors.IsNotFound(err) {
 		input.LogEntry.Infof("nothing to migrate: %s", err)
 		return nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return err
 	}
 

@@ -57,7 +57,7 @@ status:
 `
 )
 
-var _ = Describe("Modules :: descheduler :: hooks :: generate_descheduler_deployments ::", func() {
+var _ = Describe("Modules :: descheduler :: hooks :: populate_values_and_set_cr_status ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
 

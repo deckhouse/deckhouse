@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"d8-descheduler"}}},
 		},
 	},
-}, generateValues)
+}, populateValues)
 
 type DeschedulerDeploymentInfo struct {
 	Name  string
@@ -84,7 +84,7 @@ func deschedulerDeploymentReadiness(obj *unstructured.Unstructured) (go_hook.Fil
 	return deschedulerDeploymentInfo, nil
 }
 
-func generateValues(input *go_hook.HookInput) error {
+func populateValues(input *go_hook.HookInput) error {
 	var (
 		deschedulers = input.Snapshots["deschedulers"]
 		deployments  = input.Snapshots["deployments"]
