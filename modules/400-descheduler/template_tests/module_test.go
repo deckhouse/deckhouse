@@ -92,7 +92,7 @@ internal:
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy-test")
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy-a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
 			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
 apiVersion: descheduler/v1alpha1
 evictFailedBarePods: true
@@ -145,7 +145,7 @@ strategies:
         enabled: true
         params: null
 `))
-			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-test").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-a94a8fe5ccb19ba61c4c0873d391e987982fbbd3").Exists()).To(BeTrue())
 		})
 	})
 })
