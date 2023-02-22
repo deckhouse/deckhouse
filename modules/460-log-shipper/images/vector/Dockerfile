@@ -21,7 +21,7 @@ RUN apt-get update \
     && make install
 
 WORKDIR /vector
-RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.git \
+RUN git clone --depth 1 --branch v0.27.1 https://github.com/vectordotdev/vector.git \
     && cd vector
 
 # Download and cache dependencies
