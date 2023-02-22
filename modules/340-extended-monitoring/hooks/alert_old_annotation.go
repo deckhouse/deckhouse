@@ -17,74 +17,57 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const extendedMonitoringAnnotationKey = "extended-monitoring.deckhouse.io/enabled"
+const extendedMonitoringAnnotationKey = "extended-monitoring.flant.com/enabled"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "namespaces",
-			ApiVersion:                   "v1",
-			Kind:                         "Namespace",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "namespaces",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "deployments",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "Deployment",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "deployments",
+			ApiVersion: "apps/v1",
+			Kind:       "Deployment",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "statefulsets",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "StatefulSet",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "statefulsets",
+			ApiVersion: "apps/v1",
+			Kind:       "StatefulSet",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "daemonsets",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "daemonsets",
+			ApiVersion: "apps/v1",
+			Kind:       "DaemonSet",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "cronjobs",
-			ApiVersion:                   "batch/v1beta1",
-			Kind:                         "CronJob",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "cronjobs",
+			ApiVersion: "batch/v1beta1",
+			Kind:       "CronJob",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "ingresses",
-			ApiVersion:                   "networking.k8s.io/v1",
-			Kind:                         "Ingress",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "ingresses",
+			ApiVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 		{
-			Name:                         "nodes",
-			ApiVersion:                   "v1",
-			Kind:                         "Node",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   applyNameNamespaceFilter,
+			Name:       "nodes",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			FilterFunc: applyNameNamespaceFilter,
 		},
 	},
 }, handleLegacyAnnotatedIngress)
@@ -110,16 +93,25 @@ func applyNameNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 func handleLegacyAnnotatedIngress(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_legacy_annotation")
 
-	for _, obj := range append(input.Snapshots["namespaces"], input.Snapshots["deployments"], input.Snapshots["statefulsets"],
-		input.Snapshots["daemonsets"], input.Snapshots["cronjobs"], input.Snapshots["ingresses"], input.Snapshots["nodes"]) {
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["nodes"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["namespaces"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["deployments"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["statefulsets"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["daemonsets"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["cronjobs"])
+	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["ingresses"])
+
+	return nil
+}
+
+func iterateOverSnapshotsAndSetMetric(collector go_hook.MetricsCollector, filterResults []go_hook.FilterResult) {
+	for _, obj := range filterResults {
 		if obj == nil {
 			continue
 		}
 
 		objMeta := obj.(*ObjectNameNamespaceKind)
 
-		input.MetricsCollector.Set("d8_deprecated_legacy_annotation", 1, map[string]string{"kind": objMeta.Kind, "namespace": objMeta.Namespace, "name": objMeta.Name}, metrics.WithGroup("d8_deprecated_legacy_annotation"))
+		collector.Set("d8_deprecated_legacy_annotation", 1, map[string]string{"kind": objMeta.Kind, "namespace": objMeta.Namespace, "name": objMeta.Name}, metrics.WithGroup("d8_deprecated_legacy_annotation"))
 	}
-
-	return nil
 }
