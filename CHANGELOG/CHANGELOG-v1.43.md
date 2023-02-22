@@ -40,6 +40,7 @@
     * `upmeter`
     * `user-authn`
     * `user-authz`
+ - Fix restarts containerd services on nodes.
 
 ## Features
 
@@ -72,6 +73,8 @@
 
 
  - **[admission-policy-engine]** Fix PDBs for controllers. [#3886](https://github.com/deckhouse/deckhouse/pull/3886)
+ - **[candi]** Update of containerd to `1.6.18`. [#3929](https://github.com/deckhouse/deckhouse/pull/3929)
+    Fix restarts containerd services on nodes.
  - **[candi]** Bump `shell-operator` to `1.1.3`. Update base images to mitigate found CVEs. [#3335](https://github.com/deckhouse/deckhouse/pull/3335)
     Components will be restarted in the following modules:
     * every module using `csi-external-attacher`, `csi-external-provisioner`, `csi-external-resizer`, `csi-external-snapshotter`, `csi-livenessprobe`, `csi-node-registrar`, `kube-rbac-proxy`
