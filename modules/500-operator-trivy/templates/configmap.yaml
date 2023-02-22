@@ -20,6 +20,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
+  {{- $registryBase := .Values.global.modulesImages.registry.base | split "/" }}
   {{- $imageStringSlice := include "helm_lib_module_image" (list . "trivy") | split ":" }}
   {{- $imageRepository := $imageStringSlice._0 }}
   trivy.repository: {{ $imageStringSlice._0 }}
@@ -27,7 +28,7 @@ data:
   trivy.additionalVulnerabilityReportFields: ""
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   trivy.slow: "true"
-  trivy.dbRepository: "{{ .registry.base | split "/" | ._0 }}/security/trivy-db"
+  trivy.dbRepository: "{{ $registryBase._0 }}/security/trivy-db"
   trivy.command: "image"
   trivy.dbRepositoryInsecure: "false"
   trivy.useBuiltinRegoPolicies: "true"

@@ -32,6 +32,9 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "operator-trivy"]
+modulesImages:
+  registry:
+    base: registry.deckhouse.io/deckhouse/fe
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}

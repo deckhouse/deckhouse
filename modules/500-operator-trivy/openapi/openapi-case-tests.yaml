@@ -1,4 +1,9 @@
 positive:
+  values:
+  - global:
+      modulesImages:
+        registry:
+          base: test/test/test
   configValues:
     - {}
 negative:
