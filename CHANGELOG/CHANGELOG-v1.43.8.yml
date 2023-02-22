@@ -1,0 +1,6 @@
+candi:
+  fixes:
+    - summary: Update of containerd to `1.6.18`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3929
+      impact: Fix restarts containerd services on nodes.
+
