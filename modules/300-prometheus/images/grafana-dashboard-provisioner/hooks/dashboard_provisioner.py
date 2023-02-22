@@ -64,7 +64,7 @@ def main(ctx: hook.Context):
         print(f"Skipping malformed dashboards: {malformed_dashboards}")
 
     shutil.rmtree("/etc/grafana/dashboards/", ignore_errors=True)
-    shutil.copytree(tmp_dir, "/etc/grafana/dashboards/")
+    shutil.copytree(tmp_dir, "/etc/grafana/dashboards/", dirs_exist_ok=True)
     shutil.rmtree(tmp_dir)
 
     with open("/tmp/ready", "w") as f:
