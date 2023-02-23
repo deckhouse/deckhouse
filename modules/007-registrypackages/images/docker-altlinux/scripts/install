@@ -1,4 +1,4 @@
-{{- if ne .nodeGroup.nodeType "Static" }}
+#!/bin/bash
 # Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,5 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-apt-rpm-install cloud-utils
-{{- end }}
+set -Eeo pipefail
+apt-get install -y ./docker-engine_x86_64.rpm ./docker-cli_x86_64.rpm
+echo 'RPM::Hold { docker-engine; };' >> /etc/apt/apt.conf.d/90-docker-engine-hold.conf
+echo 'RPM::Hold { docker-cli; };' >> /etc/apt/apt.conf.d/90-docker-cli-hold.conf

@@ -26,7 +26,7 @@ docker:
   LABEL:
     distro: altlinux
     version: all
-    containerd: {{ $image_version }}
+    containerd: {{ $version | replace "containerd=" "" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
@@ -40,5 +40,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sfL http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/containerd-1.6.9-alt1.x86_64.rpm --output /containerd_amd64.rpm #TODO123
+  - curl -sfL http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/containerd-{{ $version | replace "containerd=" "" }}.rpm --output /containerd_amd64.rpm
 {{- end }}

@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-cp {bandwidth,bridge,dhcp,firewall,host-device,host-local,ipvlan,loopback,macvlan,portmap,ptp,sbr,static,tuning,vlan,vrf} /usr/local/bin
+cp {bandwidth,bridge,dhcp,firewall,host-device,host-local,ipvlan,loopback,macvlan,portmap,ptp,sbr,static,tuning,vlan,vrf,flannel} /usr/local/bin
