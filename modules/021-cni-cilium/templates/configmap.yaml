@@ -32,10 +32,6 @@ data:
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel: "vxlan"
-  {{- if has "virtualization" .Values.global.enabledModules }}
-  # Preserve default tunnel port 8472 for virtualization workloads
-  tunnel-port: "8469"
-  {{- end }}
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   tunnel: "disabled"
   auto-direct-node-routes: "true"
@@ -46,6 +42,8 @@ data:
   {{- end }}
 
   {{- if has "virtualization" .Values.global.enabledModules }}
+  # Preserve default tunnel port 8472 for virtualization workloads
+  tunnel-port: "8469"
   enable-ip-masq-agent: "true"
   ip-masq-agent-config-path: /etc/config/ip-masq-agent
   {{- end }}
