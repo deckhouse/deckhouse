@@ -350,6 +350,7 @@ var DefaultImagesTags = map[string]interface{}{
 		"crictl126":                           "imageHash-registrypackages-crictl126",
 		"d8Curl7800":                          "imageHash-registrypackages-d8Curl7800",
 		"dockerAlteros1903153El7X866473":      "imageHash-registrypackages-dockerAlteros1903153El7X866473",
+		"dockerAltlinux201021Alt1X8664":       "imageHash-registrypackages-dockerAltlinux201021Alt1X8664",
 		"dockerAstra520101230DebianBuster":    "imageHash-registrypackages-dockerAstra520101230DebianBuster",
 		"dockerCentos1903153El7X86647":        "imageHash-registrypackages-dockerCentos1903153El7X86647",
 		"dockerCentos1903153El8X86648":        "imageHash-registrypackages-dockerCentos1903153El8X86648",
