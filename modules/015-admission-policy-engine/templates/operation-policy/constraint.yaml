@@ -213,7 +213,7 @@ spec:
         kinds: ["Pod"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    priorityClassName:
+    priorityClassNames:
       {{- $cr.spec.policies.priorityClassNames | toYaml | nindent 6 }}
 {{- end }}
 
