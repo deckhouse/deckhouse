@@ -1,64 +1,27 @@
-<div class="searchV2">
-  <div class="searchV2__blocks searchV2__documents">
-    <h4 class="searchV2__results-counter">
-       <span>{{ site.data.i18n.common.documents_found[page.lang] }}: </span>
-       <span class="searchV2__results-counter-data"></span>
-    </h4>
-    <div class="searchV2__results-list">
-        <h4 class="searchV2__results-absent-block">{{ site.data.i18n.common.empty_search_documents_result[page.lang] }}</h4>
-        <ul class="searchV2__results"></ul>
-    </div>
-  </div>
-  <div class="searchV2__blocks searchV2__parameters">
-    <h4 class="searchV2__results-counter">
-        <span>{{ site.data.i18n.common.parameters_and_resources_found[page.lang] }}: </span>
-        <span class="searchV2__results-counter-data"></span>
-    </h4>
-    <div class="searchV2__results-list">
-        <h4 class="searchV2__results-absent-block">{{ site.data.i18n.common.empty_search_parameters_resources_result[page.lang] }}</h4>
-        <ul class="searchV2__results"></ul>
-    </div>
-  </div>
-</div>
-<script>
-var documents=[
-{%- assign searchedpages = site.pages | where: "searchable", true | where: "lang", page.lang %}
-{%- for page in searchedpages %}
-{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | relative_url %}
-{
-"title": "{{ page.title | escape }}",
-"url": "{{ page_canonical_url }}",
-{%- if page['module-name'] %}
-"keywords": {{ page['module-name'] | jsonify }},
-{%- endif %}
-"content": {{ page.content | normalizeSearchContent | jsonify }}
-}
-{%- unless forloop.last %},{% endunless %}
-{%- endfor -%}
-];
-var parameters=[
-{%- for item in site.data.search.searchItems[page.lang] %}
-{%- assign page_canonical_url = item.url | relative_url %}
-{
-"name": "{{ item.name }}",
-"url": "{{ page_canonical_url }}",
-"resName": "{{ item.resourceName | escape }}",
-{%- if item.isResource %}
-"isResource": "true",
-{%- endif %}
-{%- if item.deprecated %}
-"deprecated": "true",
-{%- endif %}
-"path": "{{ item.pathString | escape }}",
-"content": {{ item.content | default: '' | normalizeSearchContent | jsonify }}
-}
-{%- unless forloop.last %},{% endunless %}
-{%- endfor -%}
-];
-</script>
+    <div class="ais-InstantSearch">
+      <div class="left-panel">
+        <div id="clear-refinements"></div>
+      </div>
 
-<script type="text/javascript" src='{{ assets["lunr.js"].digest_path | true_relative_url }}'></script>
-<script type="text/javascript" src='{{ assets["lunr.stemmer.support.js"].digest_path | true_relative_url }}'></script>
-<script type="text/javascript" src='{{ assets["lunr.multi.js"].digest_path | true_relative_url }}'></script>
-<script type="text/javascript" src='{{ assets["lunr.ru.js"].digest_path | true_relative_url }}'></script>
-<script type="text/javascript" src='{{ assets["search.js"].digest_path | true_relative_url }}'></script>
+      <div class="right-panel">
+        <div id="searchbox" class="ais-SearchBox"></div>
+        <div id="hits"></div>
+        <div id="pagination"></div>
+      </div>
+    </div>
+
+<!-- <script type="text/javascript" src='{{ assets["lunr.js"].digest_path | true_relative_url }}'></script> -->
+<!-- <script type="text/javascript" src='{{ assets["lunr.stemmer.support.js"].digest_path | true_relative_url }}'></script> -->
+<!-- <script type="text/javascript" src='{{ assets["lunr.multi.js"].digest_path | true_relative_url }}'></script> -->
+<!-- <script type="text/javascript" src='{{ assets["lunr.ru.js"].digest_path | true_relative_url }}'></script> -->
+<!-- <script type="text/javascript" src='{{ assets["search.js"].digest_path | true_relative_url }}'></script> -->
+
+
+<script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js" integrity="sha256-dyJcbGuYfdzNfifkHxYVd/rzeR6SLLcDFYEidcybldM=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/instantsearch.js@4.51.1/dist/instantsearch.production.min.js" integrity="sha256-y6I4MY/blLHk4a7G33zp97DcnBFRY2iMId4FObo8toI=" crossorigin="anonymous"></script>
+
+<!-- Include only the reset -->
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.css@8.0.0/themes/reset-min.css" integrity="sha256-2AeJLzExpZvqLUxMfcs+4DWcMwNfpnjUeAAvEtPr0wU=" crossorigin="anonymous"> -->
+<!-- or include the full Satellite theme -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.css@8.0.0/themes/satellite-min.css" integrity="sha256-p/rGN4RGy6EDumyxF9t7LKxWGg6/MZfGhJM/asKkqvA=" crossorigin="anonymous">
+<script type="text/javascript" src='{{ assets["search-algolia.js"].digest_path | true_relative_url }}'></script>
