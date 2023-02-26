@@ -1,12 +1,9 @@
 /*
 Copyright 2021 Flant JSC
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +33,7 @@ var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		Context("Adding secret", func() {
+		Context("Adding ingress-tls secret", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
@@ -56,7 +53,7 @@ data:
 			})
 		})
 
-		Context("Adding secret with empty ca.crt", func() {
+		Context("Adding ingress-tls secret with empty ca.crt", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
@@ -97,9 +94,50 @@ data:
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCustomCA", "testca")
 			f.RunHook()
 		})
-		It("Should add no ca for OIDC provide from config", func() {
+		It("Should add no ca for OIDC provider from config", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
+		})
+
+		Context("Adding ingress-tls-customcertificate secret", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls-customcertificate
+  namespace: d8-user-authn
+data:
+  tls.crt: dGVzdGNh
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should add tls.crt for OIDC provider", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
+			})
+		})
+
+		Context("Adding ingress-tls-customcertificate secret with empty ca.crt", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls-customcertificate
+  namespace: d8-user-authn
+data:
+  ca.crt: ""
+  tls.crt: dGVzdGNh
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should add tls.crt for OIDC provider", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
+			})
 		})
 	})
 })
