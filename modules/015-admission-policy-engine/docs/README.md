@@ -50,7 +50,8 @@ spec:
       - readinessProbe
     maxRevisionHistoryLimit: 3
     imagePullPolicy: Always
-    priorityClassName: production-low
+    priorityClassNames:
+    - production-low
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
   match:
