@@ -53,6 +53,7 @@ spec:
     maxRevisionHistoryLimit: 3
     imagePullPolicy: Always
     priorityClassNames:
+    - production-high
     - production-low
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
