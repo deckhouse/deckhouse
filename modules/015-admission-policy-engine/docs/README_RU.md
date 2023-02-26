@@ -51,7 +51,7 @@ spec:
       - livenessProbe
       - readinessProbe
     maxRevisionHistoryLimit: 3
-    imagePullPolicy: IfNotPresent
+    imagePullPolicy: Always
     priorityClassName: production-low
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
