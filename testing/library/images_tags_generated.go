@@ -321,7 +321,7 @@ var DefaultImagesTags = map[string]interface{}{
 		"conntrackDebian1462":                 "imageHash-registrypackages-conntrackDebian1462",
 		"containerdAlteros14631El7X8664":      "imageHash-registrypackages-containerdAlteros14631El7X8664",
 		"containerdAlteros161431El7X8664":     "imageHash-registrypackages-containerdAlteros161431El7X8664",
-		"containerdAltlinux169Alt1":           "imageHash-registrypackages-containerdAltlinux169Alt1",
+		"containerdAltlinux169Alt1X8664":      "imageHash-registrypackages-containerdAltlinux169Alt1X8664",
 		"containerdAstra1461Buster":           "imageHash-registrypackages-containerdAstra1461Buster",
 		"containerdAstra16181Buster":          "imageHash-registrypackages-containerdAstra16181Buster",
 		"containerdCentos14631El7X8664":       "imageHash-registrypackages-containerdCentos14631El7X8664",
