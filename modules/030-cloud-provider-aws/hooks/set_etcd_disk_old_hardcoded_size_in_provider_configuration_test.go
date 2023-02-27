@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,19 +29,40 @@ import (
 var _ = Describe("Modules :: cloud-provider-aws :: hooks :: set_etcd_disk_old_hardcoded_size_in_provider_configuration ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	Context("With d8-provider-cluster-configuration secret", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+	const clusterConfigurationBefore = `
+masterNodeGroup:
+  instanceClass:
+    flavorName: test
+apiVersion: deckhouse.io/v1
+kind: AWSClusterConfiguration
+sshPublicKey: test
+`
+	secretBefore := fmt.Sprintf(`
 ---
 apiVersion: v1
 data:
-  cloud-provider-cluster-configuration.yaml: YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IEFXU0NsdXN0ZXJDb25maWd1cmF0aW9uCm1hc3Rlck5vZGVHcm91cDoKICBpbnN0YW5jZUNsYXNzOgogICAgZmxhdm9yTmFtZTogdGVzdApzc2hQdWJsaWNLZXk6IHRlc3QK
+  cloud-provider-cluster-configuration.yaml: %s
 kind: Secret
 metadata:
   name: d8-provider-cluster-configuration
   namespace: kube-system
 type: Opaque
-`, 1))
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigurationBefore)))
+
+	const clusterConfigurationAfter = `masterNodeGroup:
+  instanceClass:
+    etcdDisk:
+      sizeGb: 150
+      type: gp2
+    flavorName: test
+apiVersion: deckhouse.io/v1
+kind: AWSClusterConfiguration
+sshPublicKey: test
+`
+
+	Context("With d8-provider-cluster-configuration secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretBefore, 1))
 			f.RunHook()
 		})
 
@@ -46,7 +70,10 @@ type: Opaque
 			Expect(f).To(ExecuteSuccessfully())
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
 			Expect(secret.Exists()).To(BeTrue())
-			Expect(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String()).To(Equal("YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IEFXU0NsdXN0ZXJDb25maWd1cmF0aW9uCm1hc3Rlck5vZGVHcm91cDoKICBpbnN0YW5jZUNsYXNzOgogICAgZXRjZERpc2s6CiAgICAgIHNpemVHYjogMTUwCiAgICAgIHR5cGU6IGdwMgogICAgZmxhdm9yTmFtZTogdGVzdApzc2hQdWJsaWNLZXk6IHRlc3QK"))
+			//Expect(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(clusterConfigurationAfter))))
+			var b64 = base64.StdEncoding
+			clusterConfuguration, _ := b64.DecodeString(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String())
+			Expect(string(clusterConfuguration)).To(Equal(clusterConfigurationAfter))
 		})
 
 	})

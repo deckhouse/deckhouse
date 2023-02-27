@@ -17,14 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -42,7 +44,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-provider-cluster-configuration"},
 			},
-			FilterFunc: applyProviderClusterConfigurationSecretFilter,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          applyProviderClusterConfigurationSecretFilter,
 		},
 	},
 }, patchClusterConfiguration)
@@ -54,36 +57,50 @@ func patchClusterConfiguration(input *go_hook.HookInput) error {
 
 	secret := input.Snapshots["provider_cluster_configuration"][0].(*v1.Secret)
 
-	clusterConfiguration := string(secret.Data["cloud-provider-cluster-configuration.yaml"])
+	data := secret.Data["cloud-provider-cluster-configuration.yaml"]
 
-	if len(clusterConfiguration) == 0 {
-		return fmt.Errorf("%s", "Something went wrong, cloud-provider-cluster-configuration.yaml has zero size")
+	var clusterConfiguration conf
+
+	err := yaml.Unmarshal(data, &clusterConfiguration)
+	if err != nil {
+		return err
 	}
 
-	// If "etcdDisk" is present in the config, then the hook has already worked.
-	if strings.Contains(clusterConfiguration, "etcdDisk") {
+	// skip if values are set
+	if clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.Type != "" {
 		return nil
 	}
 
-	insert := `    etcdDisk:
-      sizeGb: 150
-      type: gp2
-`
+	clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.SizeGb = 150
+	clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.Type = "gp2"
 
-	// "masterNodeGroup:\n" - 17 characters
-	// "  instanceClass:\n" - 17 characters
-	beforeInsert := clusterConfiguration[:strings.Index(clusterConfiguration, "masterNodeGroup:")+17+17]
-	afterInsert := clusterConfiguration[strings.Index(clusterConfiguration, "masterNodeGroup:")+17+17:]
+	buf := bytes.NewBuffer(nil)
 
-	newClusterConfiguration := beforeInsert + insert + afterInsert
+	yamlEncoder := yaml.NewEncoder(buf)
+	yamlEncoder.SetIndent(2)
+	err = yamlEncoder.Encode(clusterConfiguration)
 
 	patch := map[string]interface{}{
 		"data": map[string]string{
-			"cloud-provider-cluster-configuration.yaml": base64.StdEncoding.EncodeToString([]byte(newClusterConfiguration)),
+			"cloud-provider-cluster-configuration.yaml": base64.StdEncoding.EncodeToString(buf.Bytes()),
 		},
 	}
 
 	input.PatchCollector.MergePatch(patch, "v1", "Secret", secret.Namespace, secret.Name)
 
 	return nil
+}
+
+type conf struct {
+	MasterNodeGroup struct {
+		InstanceClass struct {
+			ZZZ      map[string]interface{} `json:",inline" yaml:",inline"`
+			EtcdDisk struct {
+				SizeGb int64  `json:"sizeGb" yaml:"sizeGb"`
+				Type   string `json:"type" yaml:"type"`
+			} `json:"etcdDisk,omitempty" yaml:"etcdDisk,omitempty"`
+		} `json:"instanceClass" yaml:"instanceClass"`
+		YYY map[string]interface{} `json:",inline" yaml:",inline"`
+	} `json:"masterNodeGroup" yaml:"masterNodeGroup"`
+	XXX map[string]interface{} `json:",inline" yaml:",inline"`
 }
