@@ -174,6 +174,6 @@ func getChecksumTemplatePath(cloudType string) string {
 		}
 	}
 
-	//Fallback to generated path
+	// Fallback to generated path
 	return filepath.Join("/deckhouse", "modules", "040-node-manager", "cloud-providers", cloudType, "machine-class.checksum")
 }
