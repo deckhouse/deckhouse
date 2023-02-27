@@ -4,7 +4,6 @@ memory: 25Mi
 {{- end }}
 
 {{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
-{{- $cloudProvider := .Values.global.clusterConfiguration.cloud.provider | lower -}}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -79,7 +78,7 @@ spec:
         command: ["/nodeport-bind-address.sh"]
         env:
         - name: CLOUD_PROVIDER
-          value: {{ $cloudProvider }}
+          value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config
