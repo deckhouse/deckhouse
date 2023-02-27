@@ -18,10 +18,11 @@ function add_rule() {
     if ! iptables -t nat -C PREROUTING -p udp -m udp -i lxc+ --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
       iptables -t nat -A PREROUTING -p udp -m udp -i lxc+ --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
-  else
-    if ! iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t raw -A PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
-    fi
+    return 0
+  fi
+
+  if ! iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
+    iptables -w 60 -W 100000 -t raw -A PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
   fi
 }
 
@@ -33,31 +34,36 @@ function delete_rule() {
     if iptables -t nat -C PREROUTING -p udp -m udp -i lxc+ --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53 >/dev/null 2>&1 ; then
       iptables -t nat -D PREROUTING -p udp -m udp -i lxc+ --dport 5353 -j DNAT --to-destination ${KUBE_DNS_SVC_IP}:53
     fi
-  else
-    if iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
-      iptables -w 60 -W 100000 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
-    fi
+    return 0
+  fi
+
+  if iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
+    iptables -w 60 -W 100000 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
   fi
 }
 
 function check_readiness() {
-  if [[ $(< "$readiness_file_path") == "$ready_state" ]]; then
-    if [[ "$latest_state" != "$ready_state" ]]; then
-      add_rule
-      latest_state="$ready_state"
-    fi
-  elif [[ $(< "$readiness_file_path") == "$not_ready_state" ]]; then
-    if [[ "$latest_state" != "$not_ready_state" ]]; then
-      delete_rule
-      latest_state="$not_ready_state"
-    fi
-  else
-    echo "Unknown state in file \"$readiness_file_path\": \"$(< "$readiness_file_path")\""
-    if [[ ${CNI_CILIUM} == "yes" ]]; then
-      delete_rule
-    fi
-    exit 1
-  fi
+  readiness_file_state="$(< "$readiness_file_path")"
+  case $readiness_file_state in
+    "$ready_state")
+      if [[ "$latest_state" != "$ready_state" ]]; then
+        add_rule
+        latest_state="$ready_state"
+      fi
+      ;;
+    "$not_ready_state")
+      if [[ "$latest_state" != "$not_ready_state" ]]; then
+        delete_rule
+        latest_state="$not_ready_state"
+      fi
+      ;;
+    *)
+      echo "Unknown state in file \"$readiness_file_path\": \"$readiness_file_state\""
+      if [[ ${CNI_CILIUM} == "yes" ]]; then
+        delete_rule
+      fi
+      exit 1
+  esac
 }
 
 trap delete_rule INT TERM ERR
