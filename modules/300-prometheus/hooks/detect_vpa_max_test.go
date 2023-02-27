@@ -17,11 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/resource"
-
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Prometheus hooks :: detect max vpa ::", func() {
@@ -33,8 +31,6 @@ prometheus:
 
 	Context("1 node cluster", func() {
 		BeforeEach(func() {
-			minMem := resource.NewQuantity(1000*1024*1024, resource.BinarySI)
-			minCPU := resource.NewMilliQuantity(200, resource.DecimalSI)
 
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
@@ -48,8 +44,6 @@ status:
     pods: "110"
 `, 1))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
-			f.ValuesSet("minMemory", minMem.String())
-			f.ValuesSet("minCPU", minCPU.String())
 			f.RunHook()
 		})
 
@@ -59,6 +53,33 @@ status:
 			Expect(f.ValuesGet("prometheus.internal.vpa.maxMemory").String()).Should(BeEquivalentTo("1650Mi"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxCPU").String()).Should(BeEquivalentTo("733m"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxMemory").String()).Should(BeEquivalentTo("550Mi"))
+		})
+	})
+
+	Context("Minimal resources for Prometheus and longterm", func() {
+		BeforeEach(func() {
+
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Node
+metadata:
+  name: test-master-0
+spec:
+  podCIDR: 10.111.0.0/24
+status:
+  capacity:
+    pods: "3"
+`, 1))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
+			f.RunHook()
+		})
+
+		It("should fill minimal internal vpa values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.vpa.maxCPU").String()).Should(BeEquivalentTo("200m"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.maxMemory").String()).Should(BeEquivalentTo("1000Mi"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxCPU").String()).Should(BeEquivalentTo("50m"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxMemory").String()).Should(BeEquivalentTo("500Mi"))
 		})
 	})
 })
