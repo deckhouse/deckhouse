@@ -33,7 +33,7 @@ prometheus:
 
 	Context("1 node cluster", func() {
 		BeforeEach(func() {
-			minMem := resource.NewQuantity(1000, resource.BinarySI)
+			minMem := resource.NewQuantity(1000*1024*1024, resource.BinarySI)
 			minCPU := resource.NewMilliQuantity(200, resource.DecimalSI)
 
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
@@ -48,8 +48,8 @@ status:
     pods: "110"
 `, 1))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
-			f.ValuesSet("prometheus.internal.vpa.minMemory", minMem.String())
-			f.ValuesSet("prometheus.internal.vpa.minCPU", minCPU.String())
+			f.ValuesSet("minMemory", minMem.String())
+			f.ValuesSet("minCPU", minCPU.String())
 			f.RunHook()
 		})
 
