@@ -12,3 +12,5 @@ title: "Cloud provider — Azure"
 - Заказывает диски в Azure с помощью компонента `CSI storage`.
 - Включает необходимый CNI (использует [simple bridge](../../modules/035-cni-simple-bridge/)).
 - Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [AzureInstanceClass'ы](cr.html#azureinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
+
+**Внимание!** При использовании балансировщиков нагрузки исходящий трафик также идет через него. Если ни у одного балансировщика нет правил для UDP, то весь исходящий UDP трафик блокируется. В следстыии чего не работают такие утилиты как ntpdate и chrony. Для решения проблемы необходимо самостоятельно добавить load balancing rule с люым UDP-портом к уже существующему балансировщику, либо в кластере создать сервис с типом LoadBalancer с любым UDP-портом.
