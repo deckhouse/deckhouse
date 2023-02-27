@@ -28,7 +28,6 @@ namespaceConfiguratorEnabled: true
 nodeManagerEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
-operatorTrivyEnabled: true
 podReloaderEnabled: true
 priorityClassEnabled: true
 prometheusCrdEnabled: true

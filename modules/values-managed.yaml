@@ -21,7 +21,6 @@ monitoringPingEnabled: true
 namespaceConfiguratorEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
-operatorTrivyEnabled: true
 podReloaderEnabled: true
 prometheusCrdEnabled: true
 prometheusEnabled: true
