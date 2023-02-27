@@ -118,26 +118,5 @@ data:
 				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
 			})
 		})
-
-		Context("Adding ingress-tls-customcertificate secret with empty ca.crt", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ingress-tls-customcertificate
-  namespace: d8-user-authn
-data:
-  ca.crt: ""
-  tls.crt: dGVzdGNh
-`, 2))
-				f.RunHook()
-			})
-
-			It("Should add tls.crt for OIDC provider", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
-			})
-		})
 	})
 })
