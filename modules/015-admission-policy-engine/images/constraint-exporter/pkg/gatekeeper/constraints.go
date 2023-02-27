@@ -32,6 +32,8 @@ import (
 type ConstraintMeta struct {
 	Kind string
 	Name string
+	// D8 source type for constaint. for example: PSS (pod security standard), OperationPolicy
+	SourceType string
 }
 
 // Violation represents each constraintViolation under status
@@ -133,6 +135,17 @@ func GetConstraints(config *rest.Config, client *kubernetes.Clientset) ([]Constr
 
 				constraint.Meta.Kind = item.GetKind()
 				constraint.Meta.Name = item.GetName()
+
+				labels := item.GetLabels()
+				f := func(key string) bool { _, ok := labels[key]; return ok }
+
+				switch {
+				case f("security.deckhouse.io/pod-standard"):
+					constraint.Meta.SourceType = "PSS"
+
+				case f("security.deckhouse.io/operation-policy"):
+					constraint.Meta.SourceType = "OperationPolicy"
+				}
 
 				constraints = append(constraints, constraint)
 			}
