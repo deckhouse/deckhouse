@@ -30,7 +30,6 @@ import:
   - static
   - tuning
   - vlan
-  - vrf
   - flannel
   before: setup
 docker:
@@ -41,7 +40,6 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
-fromCacheVersion: "2023-02-27.0"
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
