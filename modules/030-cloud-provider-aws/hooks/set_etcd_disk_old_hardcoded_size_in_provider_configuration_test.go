@@ -70,7 +70,6 @@ sshPublicKey: test
 			Expect(f).To(ExecuteSuccessfully())
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
 			Expect(secret.Exists()).To(BeTrue())
-			//Expect(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(clusterConfigurationAfter))))
 			var b64 = base64.StdEncoding
 			clusterConfuguration, _ := b64.DecodeString(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String())
 			Expect(string(clusterConfuguration)).To(Equal(clusterConfigurationAfter))
