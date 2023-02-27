@@ -53,5 +53,5 @@ shell:
   setup:
   - curl -sfL "https://github.com/containernetworking/plugins/releases/download/v{{ $version }}/cni-plugins-linux-amd64-v{{ $version }}.tgz" | tar -C / -xz
   - curl -sfL "https://github.com/flannel-io/cni-plugin/releases/download/v1.1.2/flannel-amd64" --output /flannel
-  - chod +x /flannel
+  - chmod +x /flannel
 {{- end }}
