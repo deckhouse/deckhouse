@@ -54,17 +54,28 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {podSecurityStandards: {}, internal: {"operationPolicies": [
     {
       "metadata": {
         "name": "foo"
       },
       "spec": {
+        "enforcementAction": "Deny",
         "match": {
-          "labelSelector": {},
+          "labelSelector": {
+            "matchLabels": {
+              "operation-policy.deckhouse.io/enabled": "true"
+            }
+          },
           "namespaceSelector": {
-            "excludeNames": [],
-            "labelSelector": {},
+            "excludeNames": [
+              "some-ns"
+            ],
+            "labelSelector": {
+              "matchLabels": {
+                "operation-policy.deckhouse.io/enabled": "true"
+              }
+            },
             "matchNames": [
               "default"
             ]

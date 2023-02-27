@@ -35,7 +35,8 @@ type OperationPolicy struct {
 }
 
 type OperationPolicySpec struct {
-	Policies struct {
+	EnforcementAction string `json:"enforcementAction"`
+	Policies          struct {
 		AllowedRepos      []string `json:"allowedRepos,omitempty"`
 		RequiredResources struct {
 			Limits   []string `json:"limits,omitempty"`
