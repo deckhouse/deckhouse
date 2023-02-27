@@ -258,7 +258,7 @@ apiVersions:
                   type: integer
                   example: 20
                   x-doc-default: 100
-                  enum: [ 0,5,20,50,100 ]
+                  enum: [ 5,20,50,100 ]
       existingNetworkID:
         type: string
         description: |
