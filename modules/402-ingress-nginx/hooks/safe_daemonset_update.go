@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -131,6 +130,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 		for _, f := range failovers {
 			failover := f.(IngressFilterResult)
 			if (controller.Name+"-failover" == failover.Name) && (controller.Checksum == failover.Checksum) {
+				// NumberAvailable respects minReady seconds in contrast to NumberReady
 				if (failover.Status.NumberAvailable == failover.Status.CurrentNumberScheduled) &&
 					(failover.Status.UpdatedNumberScheduled >= failover.Status.DesiredNumberScheduled) {
 					failoverReady = true
@@ -156,7 +156,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 			controllerNeedUpdate = true
 		}
 
-		if controller.Status.NumberReady == controller.Status.CurrentNumberScheduled {
+		if controller.Status.NumberAvailable == controller.Status.CurrentNumberScheduled {
 			controllerReady = true
 		}
 
@@ -232,12 +232,7 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 		return nil
 	}
 
-	// it's a reinsurance, to have pods list always in the same order
-	// we don't trust api-server here
-	sort.SliceStable(podList.Items, func(i, j int) bool {
-		return podList.Items[i].Name < podList.Items[j].Name
-	})
-
+	// podList should be always sorted by apiserver/etcd
 	for _, pod := range podList.Items {
 		// if at least one pod is not ready or has Terminating state - abort mission to avoid parallel pod deletion
 		if !podIsReady(pod) {
