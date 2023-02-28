@@ -131,6 +131,10 @@ metadata:
     app: controller
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 
 	pod2ControllerMainInitialYAML := `
@@ -144,6 +148,10 @@ metadata:
     app: controller
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod1ProxyMainFailoverInitialYAML := `
 ---
@@ -156,6 +164,10 @@ metadata:
     app: proxy-failover
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod2ProxyMainFailoverInitialYAML := `
 ---
@@ -168,6 +180,10 @@ metadata:
     app: proxy-failover
     name: main
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod1ControllerMainFailoverInitialYAML := `
 ---
@@ -180,6 +196,10 @@ metadata:
     app: controller
     name: main-failover
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	pod2ControllerMainFailoverInitialYAML := `
 ---
@@ -192,6 +212,28 @@ metadata:
     app: controller
     name: main-failover
     pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+`
+
+	pod2TerminatingControllerMainInitialYAML := `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  deletionTimestamp: "2023-02-19T11:28:08Z"
+  name: controller-main-2
+  namespace: d8-ingress-nginx
+  labels:
+    app: controller
+    name: main
+    pod-template-generation: "1"
+status:
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	var dsControllerMain *v1.DaemonSet
 	var dsProxyMainFailover *v1.DaemonSet
@@ -202,6 +244,7 @@ metadata:
 	var pod2ProxyMainFailover *corev1.Pod
 	var pod1ControllerMainFailover *corev1.Pod
 	var pod2ControllerMainFailover *corev1.Pod
+	var pod2TerminatingControllerMain *corev1.Pod
 
 	BeforeEach(func() {
 		_ = yaml.Unmarshal([]byte(dsControllerMainInitialYAML), &dsControllerMain)
@@ -213,6 +256,7 @@ metadata:
 		_ = yaml.Unmarshal([]byte(pod2ProxyMainFailoverInitialYAML), &pod2ProxyMainFailover)
 		_ = yaml.Unmarshal([]byte(pod1ControllerMainFailoverInitialYAML), &pod1ControllerMainFailover)
 		_ = yaml.Unmarshal([]byte(pod2ControllerMainFailoverInitialYAML), &pod2ControllerMainFailover)
+		_ = yaml.Unmarshal([]byte(pod2TerminatingControllerMainInitialYAML), &pod2TerminatingControllerMain)
 	})
 
 	Context("all daemonsets updated", func() {
@@ -256,6 +300,58 @@ metadata:
 
 			Expect(pod1ControllerMainAfterRunHook).To(Equal(pod1ControllerMain))
 			Expect(pod2ControllerMainAfterRunHook).To(Equal(pod2ControllerMain))
+			Expect(pod1ProxyMainFailoverAfterRunHook).To(Equal(pod1ProxyMainFailover))
+			Expect(pod2ProxyMainFailoverAfterRunHook).To(Equal(pod2ProxyMainFailover))
+			Expect(pod1ControllerMainFailoverAfterRunHook).To(Equal(pod1ControllerMainFailover))
+			Expect(pod2ControllerMainFailoverAfterRunHook).To(Equal(pod2ControllerMainFailover))
+		})
+	})
+
+	Context("daemonset controller-main with terminating pod update scheduled", func() {
+		BeforeEach(func() {
+			dsControllerMain.Generation = 2
+			dsControllerMain.Status.UpdatedNumberScheduled = 1
+			pod2ControllerMain.Labels["pod-template-generation"] = "2"
+
+			dsControllerMainYAML, _ := yaml.Marshal(&dsControllerMain)
+			dsProxyMainFailoverYAML, _ := yaml.Marshal(&dsProxyMainFailover)
+			dsControllerMainFailoverYAML, _ := yaml.Marshal(&dsControllerMainFailover)
+			pod1ControllerMainYAML, _ := yaml.Marshal(&pod1ControllerMain)
+			pod2TerminatingControllerMainYAML, _ := yaml.Marshal(&pod2TerminatingControllerMain)
+			pod1ProxyMainFailoverYAML, _ := yaml.Marshal(&pod1ProxyMainFailover)
+			pod2ProxyMainFailoverYAML, _ := yaml.Marshal(&pod2ProxyMainFailover)
+			pod1ControllerMainFailoverYAML, _ := yaml.Marshal(&pod1ControllerMainFailover)
+			pod2ControllerMainFailoverYAML, _ := yaml.Marshal(&pod2ControllerMainFailover)
+
+			clusterState := strings.Join([]string{string(dsControllerMainYAML), string(dsProxyMainFailoverYAML), string(dsControllerMainFailoverYAML), string(pod1ControllerMainYAML), string(pod2TerminatingControllerMainYAML), string(pod1ProxyMainFailoverYAML), string(pod2ProxyMainFailoverYAML), string(pod1ControllerMainFailoverYAML), string(pod2ControllerMainFailoverYAML)}, "---\n")
+
+			f.BindingContexts.Set(f.KubeStateSet(clusterState))
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			_, _ = f.KubeClient().AppsV1().DaemonSets("d8-ingress-nginx").Create(context.TODO(), dsControllerMain, metav1.CreateOptions{})
+			_, _ = f.KubeClient().AppsV1().DaemonSets("d8-ingress-nginx").Create(context.TODO(), dsProxyMainFailover, metav1.CreateOptions{})
+			_, _ = f.KubeClient().AppsV1().DaemonSets("d8-ingress-nginx").Create(context.TODO(), dsControllerMainFailover, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod1ControllerMain, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod2TerminatingControllerMain, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod1ProxyMainFailover, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod2ProxyMainFailover, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod1ControllerMainFailover, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Create(context.TODO(), pod2ControllerMainFailover, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("pod controller-main-1 must not be deleted", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			pod1ControllerMainAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod1ControllerMain.Name, metav1.GetOptions{})
+			pod2ControllerMainAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod2ControllerMain.Name, metav1.GetOptions{})
+			pod1ProxyMainFailoverAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod1ProxyMainFailover.Name, metav1.GetOptions{})
+			pod2ProxyMainFailoverAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod2ProxyMainFailover.Name, metav1.GetOptions{})
+			pod1ControllerMainFailoverAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod1ControllerMainFailover.Name, metav1.GetOptions{})
+			pod2ControllerMainFailoverAfterRunHook, _ := f.KubeClient().CoreV1().Pods("d8-ingress-nginx").Get(context.TODO(), pod2ControllerMainFailover.Name, metav1.GetOptions{})
+
+			Expect(pod1ControllerMainAfterRunHook).To(Equal(pod1ControllerMain))
+			Expect(pod2ControllerMainAfterRunHook).To(Equal(pod2TerminatingControllerMain))
 			Expect(pod1ProxyMainFailoverAfterRunHook).To(Equal(pod1ProxyMainFailover))
 			Expect(pod2ProxyMainFailoverAfterRunHook).To(Equal(pod2ProxyMainFailover))
 			Expect(pod1ControllerMainFailoverAfterRunHook).To(Equal(pod1ControllerMainFailover))
