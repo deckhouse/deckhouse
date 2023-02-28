@@ -4,7 +4,7 @@ Deckhouse is an Open Source project, and third-party contributions are warmly we
 
 ## Guidelines
 
-Please read our [development guidelines](https://github.com/deckhouse/deckhouse/blob/main/docs/documentation/pages/internal/DEVELOPMENT.md) to learn about building, testing, releasing, and troubleshooting Deckhouse, as well as our naming convention for code itself, modules names, Helm values, etc.
+Please read [the Deckhouse wiki](https://github.com/deckhouse/deckhouse/wiki) to learn about building, testing, releasing, and troubleshooting Deckhouse, as well as our naming convention for code itself, modules names, Helm values, etc.
 
 ## What to do
 
@@ -17,5 +17,4 @@ P.S. The [maintainers list](https://github.com/deckhouse/deckhouse/blob/main/MAI
 ## Making a PR
 
 When creating a PR, please fill in the template that you meet in the text body including the changes
-block. This will make your work mentioned in the release message. Please refer to a [change block
-explanation](https://github.com/deckhouse/deckhouse/wiki/How-to-add-to-changelog).
+block. This will make your work mentioned in the release message. Please refer to a [Guidelines for working with PRs](https://github.com/deckhouse/deckhouse/wiki/Guidelines-for-working-with-PRs).

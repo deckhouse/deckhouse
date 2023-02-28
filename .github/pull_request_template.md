@@ -33,8 +33,7 @@
 <!---
   Describe the changes so they will be included in a release changelog.
 
-  Find examples and documentation below, or visit the instruction page on the repo wiki
-  https://github.com/deckhouse/deckhouse/wiki/How-to-add-to-changelog
+  Find examples and documentation below, or visit the [Guidelines for working with PRs](https://github.com/deckhouse/deckhouse/wiki/Guidelines-for-working-with-PRs).
 -->
 
 ```changes
