@@ -47,5 +47,5 @@ shell:
   - apk add --no-cache curl
   setup:
   - curl -sfL http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/containerd-{{ $version | replace "containerd=" "" }}.rpm --output /containerd_amd64.rpm
-  - curl -sfL https://github.com/containerd/containerd/releases/download/v1.6.19/containerd-1.6.19-linux-amd64.tar.gz | tar --strip-components=1 -xvzf
+  - curl -sfL https://github.com/containerd/containerd/releases/download/v1.6.19/containerd-1.6.19-linux-amd64.tar.gz | tar --strip-components=1 -xvzf -
 {{- end }}
