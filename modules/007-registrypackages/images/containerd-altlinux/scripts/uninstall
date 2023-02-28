@@ -16,3 +16,4 @@
 set -Eeo pipefail
 rm -f /etc/apt/apt.conf.d/90-containerd-hold.conf
 apt-get remove containerd
+rm -f /usr/bin/{containerd,containerd-shim,containerd-shim-runc-v1,containerd-shim-runc-v2,containerd-stress,ctr}

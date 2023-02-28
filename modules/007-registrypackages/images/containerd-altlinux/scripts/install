@@ -16,3 +16,4 @@
 set -Eeo pipefail
 apt-get install -y ./containerd_amd64.rpm
 echo 'RPM::Hold { containerd; };' >> /etc/apt/apt.conf.d/90-containerd-hold.conf
+cp {containerd,containerd-shim,containerd-shim-runc-v1,containerd-shim-runc-v2,containerd-stress,ctr} /usr/bin
