@@ -13,7 +13,7 @@
 # limitations under the License.
 # policycoreutils-python libseccomp - containerd.io dependencies
 SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils nfs-utils tar xz device-mapper-persistent-data net-tools libseccomp checkpolicy"
-KUBERNETES_DEPENDENCIES="conntrack ebtables ethtool iproute iptables socat util-linux"
+KUBERNETES_DEPENDENCIES="conntrack-tools ebtables ethtool iproute iptables socat util-linux"
 if bb-is-centos-version? 7; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python"
 fi
