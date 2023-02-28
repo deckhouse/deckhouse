@@ -1,0 +1,34 @@
+run:
+  timeout: 10m
+  skip-dirs: []
+issues:
+  exclude:
+    - ST1005.*
+    - "should not use dot imports"
+    - "don't use an underscore in package name"
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(deckhouse.io/deckhouse)
+  goimports:
+    local-prefixes: fox.flant.com
+  revive:
+    min-confidence: 0
+  errcheck:
+    ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gci
+    - gocritic
+    - goimports
+    - gofumpt
+    - revive
+    - gosimple
+    - govet
+    - misspell
