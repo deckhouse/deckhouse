@@ -178,7 +178,7 @@ spec:
       tolerations:
 {{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
   {{- else }}
-      {{- include "helm_lib_tolerations" (tuple $ "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
   {{- end }}
     telemetry:
       enabled: true
