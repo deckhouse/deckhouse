@@ -67,10 +67,10 @@ nodeSelector:
   {{- if gt (len .) 2 }}
     {{- range $as := slice . 2 (len .) }}
       {{- if hasPrefix "with" $as }}
-        $additionalStrategies = append $additionalStrategies (trimPrefix "with-" $as)
+        {{- $additionalStrategies = mustAppend $additionalStrategies (trimPrefix "with-" $as) }}
       {{- end }}
       {{- if hasPrefix "without" $as }}
-        $additionalStrategies = mustWithout $additionalStrategies (trimPrefix "without-" $as)
+        {{- $additionalStrategies = mustWithout $additionalStrategies (trimPrefix "without-" $as) }}
       {{- end }}
     {{- end }}
   {{- end }}
