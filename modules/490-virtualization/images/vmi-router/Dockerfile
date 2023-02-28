@@ -1,7 +1,7 @@
 ARG BASE_UBUNTU
-ARG BASE_GOLANG_18_BULLSEYE
+ARG BASE_GOLANG_19_BULLSEYE
 # Build the manager binary
-FROM $BASE_GOLANG_18_BULLSEYE as builder
+FROM $BASE_GOLANG_19_BULLSEYE as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests

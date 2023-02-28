@@ -532,6 +532,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"updater":             "imageHash-verticalPodAutoscaler-updater",
 	},
 	"virtualization": map[string]interface{}{
+		"imageAlpineBionic": "imageHash-virtualization-imageAlpineBionic",
+		"imageAlpineFocal":  "imageHash-virtualization-imageAlpineFocal",
+		"imageAlpineJammy":  "imageHash-virtualization-imageAlpineJammy",
 		"imageUbuntuBionic": "imageHash-virtualization-imageUbuntuBionic",
 		"imageUbuntuFocal":  "imageHash-virtualization-imageUbuntuFocal",
 		"imageUbuntuJammy":  "imageHash-virtualization-imageUbuntuJammy",
