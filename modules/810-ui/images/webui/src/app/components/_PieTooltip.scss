@@ -1,0 +1,49 @@
+.tooltip-up {
+  color: $up-color;
+}
+
+.tooltip-down {
+  color: $down-color;
+}
+
+.tooltip-muted {
+  color: $muted-color;
+}
+
+.tooltip-unknown {
+  color: $unknown-color;
+}
+
+.tooltip-nodata {
+  color: $nodata-color;
+}
+
+.tooltip-head {
+  border-bottom: 1px solid #fff;
+}
+
+.tooltip-pie-time {
+  padding: 0;
+  list-style: none;
+}
+
+.tooltip-pie-time li {
+}
+.tooltip-pie-data {
+  padding: 0;
+  list-style: none;
+}
+
+.tooltip-downtimes {
+  margin: 0;
+  padding: 0;
+}
+
+.tooltip-list {
+  list-style-type: none;
+  margin: 10px 0;
+  padding: 0;
+  li {
+    margin: 10px 0;
+  }
+}

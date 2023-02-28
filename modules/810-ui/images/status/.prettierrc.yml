@@ -1,0 +1,6 @@
+tabWidth: 2
+useTabs: true
+trailingComma: all
+arrowParens: always
+printWidth: 110
+semi: true

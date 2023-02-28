@@ -95,8 +95,8 @@
 
 ### helm_lib_envs_for_proxy
 
- Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container
+ depends on [proxy settings](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy)
 
 #### Usage
 
@@ -104,13 +104,13 @@
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## High Availability
 
 ### helm_lib_is_ha_to_value
 
- returns value "yes" if cluster is highly available, else — returns "no" 
+ returns value "yes" if cluster is highly available, else — returns "no"
 
 #### Usage
 
@@ -119,14 +119,14 @@
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Yes value 
--  No value 
+-  Template context with .Values, .Chart, etc
+-  Yes value
+-  No value
 
 
 ### helm_lib_ha_enabled
 
- returns empty value, which is treated by go template as false 
+ returns empty value, which is treated by go template as false
 
 #### Usage
 
@@ -134,13 +134,13 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## Kube Rbac Proxy
 
 ### helm_lib_kube_rbac_proxy_ca_certificate
 
- Renders configmap with kube-rbac-proxy CA certificate which uses to verify the kube-rbac-proxy clients. 
+ Renders configmap with kube-rbac-proxy CA certificate which uses to verify the kube-rbac-proxy clients.
 
 #### Usage
 
@@ -149,15 +149,15 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Namespace where CA configmap will be created  
+-  Template context with .Values, .Chart, etc
+-  Namespace where CA configmap will be created
 
 ## Module Ephemeral Storage
 
 ### helm_lib_module_ephemeral_storage_logs_with_extra
 
- 50Mi for container logs `log-opts.max-file * log-opts.max-size` would be added to passed value 
- returns ephemeral-storage size for logs with extra space 
+ 50Mi for container logs `log-opts.max-file * log-opts.max-size` would be added to passed value
+ returns ephemeral-storage size for logs with extra space
 
 #### Usage
 
@@ -165,13 +165,13 @@ list:
 
 #### Arguments
 
--  Extra space in mebibytes 
+-  Extra space in mebibytes
 
 
 ### helm_lib_module_ephemeral_storage_only_logs
 
- 50Mi for container logs `log-opts.max-file * log-opts.max-size` would be requested 
- returns ephemeral-storage size for only logs 
+ 50Mi for container logs `log-opts.max-file * log-opts.max-size` would be requested
+ returns ephemeral-storage size for only logs
 
 #### Usage
 
@@ -179,13 +179,13 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## Module Https
 
 ### helm_lib_module_uri_scheme
 
- return module uri scheme "http" or "https" 
+ return module uri scheme "http" or "https"
 
 #### Usage
 
@@ -193,12 +193,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_https_mode
 
- returns https mode for module 
+ returns https mode for module
 
 #### Usage
 
@@ -206,12 +206,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_https_cert_manager_cluster_issuer_name
 
- returns cluster issuer name  
+ returns cluster issuer name
 
 #### Usage
 
@@ -219,12 +219,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_https_ingress_tls_enabled
 
- returns not empty string if tls should enable for ingress  
+ returns not empty string if tls should enable for ingress
 
 #### Usage
 
@@ -232,7 +232,7 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_https_copy_custom_certificate
@@ -247,14 +247,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Namespace 
--  Secret name prefix 
+-  Template context with .Values, .Chart, etc
+-  Namespace
+-  Secret name prefix
 
 
 ### helm_lib_module_https_secret_name
 
- returns custom certificate name 
+ returns custom certificate name
 
 #### Usage
 
@@ -263,14 +263,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Secret name prefix 
+-  Template context with .Values, .Chart, etc
+-  Secret name prefix
 
 ## Module Image
 
 ### helm_lib_module_image
 
- returns image name 
+ returns image name
 
 #### Usage
 
@@ -279,13 +279,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Container name 
+-  Template context with .Values, .Chart, etc
+-  Container name
 
 
 ### helm_lib_module_image_no_fail
 
- returns image name if found 
+ returns image name if found
 
 #### Usage
 
@@ -294,13 +294,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Container name 
+-  Template context with .Values, .Chart, etc
+-  Container name
 
 
 ### helm_lib_module_common_image
 
- returns image name from common module 
+ returns image name from common module
 
 #### Usage
 
@@ -309,13 +309,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Container name 
+-  Template context with .Values, .Chart, etc
+-  Container name
 
 
 ### helm_lib_module_common_image_no_fail
 
- returns image name from common module if found 
+ returns image name from common module if found
 
 #### Usage
 
@@ -324,14 +324,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Container name 
+-  Template context with .Values, .Chart, etc
+-  Container name
 
 ## Module Ingress Class
 
 ### helm_lib_module_ingress_class
 
- returns ingress class from module settings or if not exists from global config 
+ returns ingress class from module settings or if not exists from global config
 
 #### Usage
 
@@ -339,14 +339,14 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## Module Init Container
 
 ### helm_lib_module_init_container_chown_nobody_volume
 
- ### Migration 11.12.2020: Remove this helper with all its usages after this commit reached RockSolid 
- returns initContainer which chowns recursively all files and directories in passed volume 
+ ### Migration 11.12.2023: Remove this helper with all its usages after this commit reached RockSolid
+ returns initContainer which chowns recursively all files and directories in passed volume
 
 #### Usage
 
@@ -356,7 +356,7 @@ list:
 
 ### helm_lib_module_init_container_check_linux_kernel
 
- returns initContainer which checks the kernel version on the node for compliance to semver constraint 
+ returns initContainer which checks the kernel version on the node for compliance to semver constraint
 
 #### Usage
 
@@ -365,14 +365,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Semver constraint 
+-  Template context with .Values, .Chart, etc
+-  Semver constraint
 
 ## Module Labels
 
 ### helm_lib_module_labels
 
- returns deckhouse labels 
+ returns deckhouse labels
 
 #### Usage
 
@@ -381,14 +381,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Additional labels dict 
+-  Template context with .Values, .Chart, etc
+-  Additional labels dict
 
 ## Module Public Domain
 
 ### helm_lib_module_public_domain
 
- returns rendered publicDomainTemplate to service fqdn 
+ returns rendered publicDomainTemplate to service fqdn
 
 #### Usage
 
@@ -397,14 +397,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Name portion 
+-  Template context with .Values, .Chart, etc
+-  Name portion
 
 ## Module Security Context
 
 ### helm_lib_module_pod_security_context_run_as_user_custom
 
- returns PodSecurityContext parameters for Pod with custom user and group 
+ returns PodSecurityContext parameters for Pod with custom user and group
 
 #### Usage
 
@@ -413,14 +413,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  User id 
--  Group id 
+-  Template context with .Values, .Chart, etc
+-  User id
+-  Group id
 
 
 ### helm_lib_module_pod_security_context_run_as_user_nobody
 
- returns PodSecurityContext parameters for Pod with user and group nobody 
+ returns PodSecurityContext parameters for Pod with user and group nobody
 
 #### Usage
 
@@ -428,12 +428,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs
 
- returns PodSecurityContext parameters for Pod with user and group nobody with write access to mounted volumes 
+ returns PodSecurityContext parameters for Pod with user and group nobody with write access to mounted volumes
 
 #### Usage
 
@@ -441,12 +441,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_pod_security_context_run_as_user_root
 
- returns PodSecurityContext parameters for Pod with user and group 0 
+ returns PodSecurityContext parameters for Pod with user and group 0
 
 #### Usage
 
@@ -454,12 +454,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_container_security_context_not_allow_privilege_escalation
 
- returns SecurityContext parameters for Container with allowPrivilegeEscalation false 
+ returns SecurityContext parameters for Container with allowPrivilegeEscalation false
 
 #### Usage
 
@@ -469,7 +469,7 @@ list:
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem
 
- returns SecurityContext parameters for Container with read only root filesystem 
+ returns SecurityContext parameters for Container with read only root filesystem
 
 #### Usage
 
@@ -477,12 +477,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_container_security_context_privileged
 
- returns SecurityContext parameters for Container running privileged 
+ returns SecurityContext parameters for Container running privileged
 
 #### Usage
 
@@ -492,7 +492,7 @@ list:
 
 ### helm_lib_module_container_security_context_privileged_read_only_root_filesystem
 
- returns SecurityContext parameters for Container running privileged with read only root filesystem 
+ returns SecurityContext parameters for Container running privileged with read only root filesystem
 
 #### Usage
 
@@ -500,12 +500,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all
 
- returns SecurityContext for Container with read only root filesystem and all capabilities dropped  
+ returns SecurityContext for Container with read only root filesystem and all capabilities dropped
 
 #### Usage
 
@@ -513,12 +513,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add
 
- returns SecurityContext parameters for Container with read only root filesystem, all dropped and some added capabilities 
+ returns SecurityContext parameters for Container with read only root filesystem, all dropped and some added capabilities
 
 #### Usage
 
@@ -527,13 +527,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  List of capabilities 
+-  Template context with .Values, .Chart, etc
+-  List of capabilities
 
 
 ### helm_lib_module_container_security_context_capabilities_drop_all_and_add
 
- returns SecurityContext parameters for Container with all dropped and some added capabilities 
+ returns SecurityContext parameters for Container with all dropped and some added capabilities
 
 #### Usage
 
@@ -542,13 +542,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  List of capabilities 
+-  Template context with .Values, .Chart, etc
+-  List of capabilities
 
 
 ### helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom
 
- returns SecurityContext parameters for Container with read only root filesystem, all dropped, and custom user ID 
+ returns SecurityContext parameters for Container with read only root filesystem, all dropped, and custom user ID
 
 #### Usage
 
@@ -557,15 +557,15 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  User id 
--  Group id 
+-  Template context with .Values, .Chart, etc
+-  User id
+-  Group id
 
 ## Module Storage Class
 
 ### helm_lib_module_storage_class_annotations
 
- return module StorageClass annotations 
+ return module StorageClass annotations
 
 #### Usage
 
@@ -574,16 +574,16 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Storage class index 
--  Storage class name 
+-  Template context with .Values, .Chart, etc
+-  Storage class index
+-  Storage class name
 
 ## Monitoring Grafana Dashboards
 
 ### helm_lib_grafana_dashboard_definitions_recursion
 
- returns all the dashboard-definintions from <root dir>/ 
- current dir is optional — used for recursion but you can use it for partially generating dashboards 
+ returns all the dashboard-definintions from <root dir>/
+ current dir is optional — used for recursion but you can use it for partially generating dashboards
 
 #### Usage
 
@@ -592,14 +592,14 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Dashboards root dir 
--  Dashboards current dir 
+-  Template context with .Values, .Chart, etc
+-  Dashboards root dir
+-  Dashboards current dir
 
 
 ### helm_lib_grafana_dashboard_definitions
 
- returns dashboard-definintions from monitoring/grafana-dashboards/ 
+ returns dashboard-definintions from monitoring/grafana-dashboards/
 
 #### Usage
 
@@ -607,12 +607,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_single_dashboard
 
- renders a single dashboard 
+ renders a single dashboard
 
 #### Usage
 
@@ -621,17 +621,17 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Dashboard name 
--  Folder 
--  Dashboard definition 
+-  Template context with .Values, .Chart, etc
+-  Dashboard name
+-  Folder
+-  Dashboard definition
 
 ## Monitoring Prometheus Rules
 
 ### helm_lib_prometheus_rules_recursion
 
- returns all the prometheus rules from <root dir>/ 
- current dir is optional — used for recursion but you can use it for partially generating rules 
+ returns all the prometheus rules from <root dir>/
+ current dir is optional — used for recursion but you can use it for partially generating rules
 
 #### Usage
 
@@ -640,15 +640,15 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Namespace for creating rules 
--  Rules root dir 
--  Current dir (optional) 
+-  Template context with .Values, .Chart, etc
+-  Namespace for creating rules
+-  Rules root dir
+-  Current dir (optional)
 
 
 ### helm_lib_prometheus_rules
 
- returns all the prometheus rules from monitoring/prometheus-rules/ 
+ returns all the prometheus rules from monitoring/prometheus-rules/
 
 #### Usage
 
@@ -657,13 +657,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Namespace for creating rules 
+-  Template context with .Values, .Chart, etc
+-  Namespace for creating rules
 
 
 ### helm_lib_prometheus_target_scrape_timeout_seconds
 
- returns adjust timeout value to scrape interval / 
+ returns adjust timeout value to scrape interval /
 
 #### Usage
 
@@ -672,8 +672,8 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Target timeout in seconds 
+-  Template context with .Values, .Chart, etc
+-  Target timeout in seconds
 
 ## Node Affinity
 
@@ -827,7 +827,7 @@ list:
 
 ### helm_lib_pdb_daemonset
 
- Returns PDB max unavailable 
+ Returns PDB max unavailable
 
 #### Usage
 
@@ -835,25 +835,25 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## Priority Class
 
 ### helm_lib_priority_class
 
- returns priority class if priority-class module enabled, otherwise returns nothing 
+ returns priority class if priority-class module enabled, otherwise returns nothing
 
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Priority class name 
+-  Template context with .Values, .Chart, etc
+-  Priority class name
 
 ## Resources Management
 
 ### helm_lib_resources_management_pod_resources
 
- returns rendered resources section based on configuration if it is 
+ returns rendered resources section based on configuration if it is
 
 #### Usage
 
@@ -862,13 +862,13 @@ list:
 #### Arguments
 
 list:
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
--  Ephemeral storage requests 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement)
+-  Ephemeral storage requests
 
 
 ### helm_lib_resources_management_original_pod_resources
 
- returns rendered resources section based on configuration if it is present 
+ returns rendered resources section based on configuration if it is present
 
 #### Usage
 
@@ -876,12 +876,12 @@ list:
 
 #### Arguments
 
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement)
 
 
 ### helm_lib_resources_management_vpa_spec
 
- returns rendered vpa spec based on configuration and target reference 
+ returns rendered vpa spec based on configuration and target reference
 
 #### Usage
 
@@ -890,16 +890,16 @@ list:
 #### Arguments
 
 list:
--  Target API version 
--  Target Kind 
--  Target Name 
--  Target container name 
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  Target API version
+-  Target Kind
+-  Target Name
+-  Target container name
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement)
 
 
 ### helm_lib_resources_management_cpu_units_to_millicores
 
- helper for converting cpu units to millicores 
+ helper for converting cpu units to millicores
 
 #### Usage
 
@@ -909,7 +909,7 @@ list:
 
 ### helm_lib_resources_management_memory_units_to_bytes
 
- helper for converting memory units to bytes 
+ helper for converting memory units to bytes
 
 #### Usage
 
@@ -919,7 +919,7 @@ list:
 
 ### helm_lib_vpa_kube_rbac_proxy_resources
 
- helper for VPA resources for kube_rbac_proxy 
+ helper for VPA resources for kube_rbac_proxy
 
 #### Usage
 
@@ -927,12 +927,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_container_kube_rbac_proxy_resources
 
- helper for container resources for kube_rbac_proxy 
+ helper for container resources for kube_rbac_proxy
 
 #### Usage
 
@@ -940,13 +940,13 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 ## Spec For High Availability
 
 ### helm_lib_pod_anti_affinity_for_ha
 
- returns pod affinity spec 
+ returns pod affinity spec
 
 #### Usage
 
@@ -955,13 +955,13 @@ list:
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc 
--  Match labels for podAntiAffinity label selector 
+-  Template context with .Values, .Chart, etc
+-  Match labels for podAntiAffinity label selector
 
 
 ### helm_lib_deployment_on_master_strategy_and_replicas_for_ha
 
- returns deployment strategy and replicas for ha components running on master nodes 
+ returns deployment strategy and replicas for ha components running on master nodes
 
 #### Usage
 
@@ -969,12 +969,12 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc
 
 
 ### helm_lib_deployment_strategy_and_replicas_for_ha
 
- returns deployment strategy and replicas for ha components running not on master nodes 
+ returns deployment strategy and replicas for ha components running not on master nodes
 
 #### Usage
 
@@ -982,4 +982,4 @@ list:
 
 #### Arguments
 
--  Template context with .Values, .Chart, etc 
+-  Template context with .Values, .Chart, etc

@@ -1,0 +1,67 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: frontend
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "frontend")) | nindent 2 }}
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid       /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+      multi_accept on;
+    }
+
+    http {
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+
+      access_log off;
+      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+      sendfile        on;
+
+      client_body_temp_path /tmp/client_temp;
+      proxy_temp_path       /tmp/proxy_temp;
+      fastcgi_temp_path     /tmp/fastcgi_temp;
+      uwsgi_temp_path       /tmp/uwsgi_temp;
+      scgi_temp_path        /tmp/scgi_temp;
+
+      server {
+        server_name _;
+        listen 10253;
+        location /healthz {
+          return 200;
+        }
+      }
+
+      server {
+        server_name  _;
+        listen       8080;
+
+        client_body_in_single_buffer on;
+        client_body_buffer_size 1m;
+        client_max_body_size 1m;
+
+        access_log /dev/stdout main;
+
+        location / {
+            if ($http_user_agent ~* "(kube-probe)" ) {
+              access_log off;
+            }
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /usr/share/nginx/html;
+        }
+      }
+    }
