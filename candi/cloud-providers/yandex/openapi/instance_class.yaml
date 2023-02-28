@@ -38,7 +38,7 @@ spec:
                     Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
                   example: 20
                   x-doc-default: 100
-                  enum: [ 0,5,20,50,100 ]
+                  enum: [ 5,20,50,100 ]
                   type: integer
                 gpus:
                   description: |
@@ -153,7 +153,7 @@ spec:
                     Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
                   example: 20
                   x-doc-default: 100
-                  enum: [ 0,5,20,50,100 ]
+                  enum: [ 5,20,50,100 ]
                   type: integer
                 gpus:
                   description: |
