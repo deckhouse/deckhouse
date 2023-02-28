@@ -58,6 +58,7 @@ const globalValues = `
 const moduleValues = `
   storageClass:
     topologyEnabled: true
+  ignoreVolumeMicroversion: false
   internal:
     storageClasses:
       - name: fastssd
@@ -79,7 +80,6 @@ const moduleValues = `
       - myextnetname
       - myextnetname2
     podNetworkMode: "VXLAN"
-    ignoreVolumeMicroversion: false
     instances:
       imageName: ubuntu
       mainNetwork: kube
@@ -277,11 +277,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Openstack", func() {
+	Context("Openstack with k8s 1.21", func() {
 		openstackCheck(f, "1.21")
 	})
 
-	Context("Openstack", func() {
+	Context("Openstack with k8s 1.23", func() {
 		openstackCheck(f, "1.23")
 	})
 
@@ -355,6 +355,88 @@ storageclass.kubernetes.io/is-default-class: "true"
 			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
 			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
 			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=false`))
+		})
+	})
+
+	Context("Openstack ignoreVolumeMicroversion", func() {
+		assertConfigSecretIgnoreMicroVer := func(f *Config, s string) {
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
+			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			if s == "" {
+				Expect(ccmConfig).ToNot(ContainSubstring("ignore-volume-microversion = "))
+				return
+			}
+			sExp := fmt.Sprintf("ignore-volume-microversion = %s", s)
+			Expect(ccmConfig).To(ContainSubstring(sExp))
+		}
+
+		Context("with 1.23 or 1.24 kube version", func() {
+			Context("ignoreVolumeMicroversion disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.24", "1.24"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
+					f.HelmRender()
+				})
+
+				It("Should render 'ignore-volume-microversion = false' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "false")
+				})
+			})
+
+			Context("ignoreVolumeMicroversion enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.23", "1.23"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
+					f.HelmRender()
+				})
+
+				It("Should render 'ignore-volume-microversion = true' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "true")
+				})
+			})
+		})
+
+		Context("another kube version", func() {
+			Context("ignoreVolumeMicroversion disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.25", "1.25"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
+					f.HelmRender()
+				})
+
+				It("Should not render 'ignore-volume-microversion' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "")
+				})
+			})
+
+			Context("ignoreVolumeMicroversion enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.25", "1.25"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
+					f.HelmRender()
+				})
+
+				It("Should render 'ignore-volume-microversion = true' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "")
+				})
+			})
 		})
 	})
 })
