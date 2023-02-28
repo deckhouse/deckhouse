@@ -66,10 +66,10 @@ nodeSelector:
   {{- $additionalStrategies := tuple "storage-problems" }}
   {{- if gt (len .) 2 }}
     {{- range $as := slice . 2 (len .) }}
-      {{- if hasPrefix "with" $as }}
+      {{- if hasPrefix "with-" $as }}
         {{- $additionalStrategies = mustAppend $additionalStrategies (trimPrefix "with-" $as) }}
       {{- end }}
-      {{- if hasPrefix "without" $as }}
+      {{- if hasPrefix "without-" $as }}
         {{- $additionalStrategies = mustWithout $additionalStrategies (trimPrefix "without-" $as) }}
       {{- end }}
     {{- end }}
