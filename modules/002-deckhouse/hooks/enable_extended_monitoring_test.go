@@ -49,18 +49,18 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Annotation should be present on both namespaces", func() {
+		It("Label should be present on both namespaces", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			annotation := f.KubernetesGlobalResource("Namespace", "d8-system").
+			label := f.KubernetesGlobalResource("Namespace", "d8-system").
 				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
-			Expect(annotation.Exists()).To(BeTrue())
-			Expect(annotation.String()).To(Equal(""))
+			Expect(label.Exists()).To(BeTrue())
+			Expect(label.String()).To(Equal(""))
 
-			annotation = f.KubernetesGlobalResource("Namespace", "kube-system").
+			label = f.KubernetesGlobalResource("Namespace", "kube-system").
 				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
-			Expect(annotation.Exists()).To(BeTrue())
-			Expect(annotation.String()).To(Equal(""))
+			Expect(label.Exists()).To(BeTrue())
+			Expect(label.String()).To(Equal(""))
 		})
 	})
 })
