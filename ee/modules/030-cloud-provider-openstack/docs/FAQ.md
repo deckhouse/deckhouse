@@ -256,7 +256,7 @@ openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=V
 
 ## OFFLINE disk resize
 
-Some cloud providers (for example, VK Cloud) may not support ONLINE disk resize.
+Some cloud providers may not support ONLINE disk resizing.
 If you get an error:
 
 ```text
@@ -268,5 +268,5 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
-then you need to reduce the number of StatefulSet replicas to 0, wait for disk resizing
+, then you need to reduce the number of StatefulSet replicas to 0, wait for disk resizing
 and return the number of replicas that was before the start of the operation.

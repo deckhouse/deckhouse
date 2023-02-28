@@ -276,5 +276,5 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
-то необходимо уменьшить количество реплик StatefulSet до 0, подождать изменение размера дисков
+, то необходимо уменьшить количество реплик StatefulSet до 0, подождать изменение размера дисков
 и вернуть обратно количество реплик, которое было до начала операции.
