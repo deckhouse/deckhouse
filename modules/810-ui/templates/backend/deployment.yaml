@@ -161,4 +161,3 @@ spec:
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
-{{- end }}
