@@ -113,6 +113,17 @@ apiVersions:
                 description: Instance disk size in gigabytes.
                 example: 20
                 type: integer
+              etcdDisk:
+                type: object
+                # Before changing the defaults, remove hook modules/030-cloud-provider-aws/hooks/set_etcd_disk_old_hardcoded_size_in_provider_configuration.go
+                default: {sizeGb: 150, type: "gp2"}
+                properties:
+                  sizeGb:
+                    description: Etcd disk size in gigabytes.
+                    type: integer
+                  type:
+                    description: Etcd disk type.
+                    type: string
           zones:
             type: array
             items:
