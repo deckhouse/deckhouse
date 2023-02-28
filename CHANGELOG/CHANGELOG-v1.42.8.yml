@@ -1,0 +1,5 @@
+linstor:
+  fixes:
+    - summary: Fix D8LinstorControllerTargetDown alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3796
+
