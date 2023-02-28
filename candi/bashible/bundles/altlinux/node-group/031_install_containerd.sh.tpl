@@ -41,7 +41,7 @@ if [[ -z $desired_version ]]; then
 fi
 
 should_install_containerd=true
-version_in_use="$(rpm -q containerd | head -1 || true)"
+version_in_use="$(containerd --version 2>/dev/null | awk '{print "containerd-"$3}' | sed 's/v//' || true)"
 if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
   should_install_containerd=false
 fi
