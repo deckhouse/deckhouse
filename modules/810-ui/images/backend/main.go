@@ -250,7 +250,7 @@ func getConfig() *appConfig {
 	flagSet := flag.NewFlagSet("dashboard", flag.ExitOnError)
 	klog.InitFlags(flagSet)
 
-	port := flagSet.String("port", "8080", "port to listen on")
+	port := flagSet.String("port", "8999", "port to listen on")
 	resyncPeriod := flagSet.Duration("resyncPeriod-period", 10*time.Minute, "informers resyncPeriod period")
 	// create the in-cluster config
 	config, err := rest.InClusterConfig()
