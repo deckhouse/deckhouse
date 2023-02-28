@@ -85,7 +85,7 @@ tolerations:
 
   {{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
   {{- else if $module_values.tolerations }}
-    {{- $module_values.tolerations | toYaml }}
+    {{- $module_values.tolerations | toYaml | nindent 0 }}
 
   {{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
   {{- else if eq $strategy "monitoring" }}
