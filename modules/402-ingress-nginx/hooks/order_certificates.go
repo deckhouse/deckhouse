@@ -17,24 +17,21 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sort"
 	"time"
 
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
-
-const namespace = "d8-ingress-nginx"
 
 type CertificateInfo struct {
 	ControllerName string                  `json:"controllerName,omitempty"`
@@ -42,35 +39,47 @@ type CertificateInfo struct {
 	Data           certificate.Certificate `json:"data,omitempty"`
 }
 
+type CertificateData struct {
+	CertificateData *certificate.Certificate `json:"certificateData,omitempty"`
+	SecretName      string                   `json:"name,omitempty"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// this hook should be run after get_ingress_controllers hook, which has order: 10
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 15},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:                         "certificates_data",
+			ApiVersion:                   "v1",
+			Kind:                         "Secret",
+			FilterFunc:                   applyIngressSecretFilter,
+			NamespaceSelector:            internal.NsSelector(),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+		},
+	},
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "42 4 * * *"},
 	},
-}, dependency.WithExternalDependencies(orderCertificate))
+}, orderCertificate)
 
-func getSecret(namespace, name string, dc dependency.Container) (*certificate.Certificate, error) {
-	k8, err := dc.GetK8sClient()
+func applyIngressSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot convert tls secret to Secret: %v", err)
 	}
 
-	secret, err := k8.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &certificate.Certificate{
-		Cert: string(secret.Data["client.crt"]),
-		Key:  string(secret.Data["client.key"]),
+	return &CertificateData{
+		SecretName: secret.Name,
+		CertificateData: &certificate.Certificate{
+			Cert: string(secret.Data["client.crt"]),
+			Key:  string(secret.Data["client.key"]),
+		},
 	}, nil
 }
 
-func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
+func orderCertificate(input *go_hook.HookInput) error {
 	if !input.Values.Exists("ingressNginx.internal.ingressControllers") {
 		return nil
 	}
@@ -82,6 +91,12 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 
 	certificates := make([]CertificateInfo, 0)
 	controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
+
+	certificatesSecretMap := make(map[string]*certificate.Certificate)
+	for _, v := range input.Snapshots["certificates_data"] {
+		certificateData := v.(*CertificateData)
+		certificatesSecretMap[certificateData.SecretName] = certificateData.CertificateData
+	}
 
 	for _, c := range controllersValues {
 		var controller Controller
@@ -96,21 +111,21 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		secretName := fmt.Sprintf("ingress-nginx-%s-auth-tls", controller.Name)
-		secret, err := getSecret(namespace, secretName, dc)
-		if err != nil {
-			return fmt.Errorf("can't get Secret %s: %v", secretName, err)
+		certData, f := certificatesSecretMap[secretName]
+		if !f {
+			return fmt.Errorf("there is no Secret with name '%s' in namespace '%s'", secretName, internal.Namespace)
 		}
 
 		// If existing Certificate expires in more than 365 days — use it.
-		if secret != nil && len(secret.Cert) > 0 && len(secret.Key) > 0 {
-			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(secret.Cert), time.Hour*24*365) // 1 year
+		if certData != nil && len(certData.Cert) > 0 && len(certData.Key) > 0 {
+			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(certData.Cert), time.Hour*24*365) // 1 year
 			if err != nil {
 				return err
 			}
 
 			// migration 1.42: this branch could be deleted after 1.42 release
 			if !shouldGenerateNewCert {
-				shouldGenerateNewCert, err = shouldMigrateOldCertificate([]byte(secret.Cert))
+				shouldGenerateNewCert, err = shouldMigrateOldCertificate([]byte(certData.Cert))
 				if err != nil {
 					return err
 				}
@@ -121,10 +136,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 				certificates = append(certificates, CertificateInfo{
 					ControllerName: controller.Name,
 					IngressClass:   ingressClass,
-					Data: certificate.Certificate{
-						Cert: secret.Cert,
-						Key:  secret.Key,
-					},
+					Data:           *certData,
 				})
 
 				continue

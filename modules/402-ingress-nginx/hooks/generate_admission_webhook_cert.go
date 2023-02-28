@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -41,13 +42,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"ingress-admission-certificate"},
 			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			NamespaceSelector:            internal.NsSelector(),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterAdmissionSecret,
 		},
 	},
