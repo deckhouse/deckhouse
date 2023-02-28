@@ -42,7 +42,7 @@ spec:
       app: backend
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: backend
   namespace: d8-{{ .Chart.Name }}
@@ -73,6 +73,9 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "backend") }}
         command:
           - /backend
+          - -v=5
+          - -port
+          - "8999"
         env:
           - name: LISTEN_HOST
             value: 127.0.0.1
