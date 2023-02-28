@@ -1,4 +1,4 @@
-{{- /* ### Migration 11.12.2020: Remove this helper with all its usages after this commit reached RockSolid */ -}}
+{{- /* ### Migration 11.12.2023: Remove this helper with all its usages after this commit reached RockSolid */ -}}
 {{- /* Usage: {{ include "helm_lib_module_init_container_chown_nobody_volume" (list . "volume-name") }} */ -}}
 {{- /* returns initContainer which chowns recursively all files and directories in passed volume */ -}}
 {{- define "helm_lib_module_init_container_chown_nobody_volume"  }}

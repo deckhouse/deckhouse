@@ -1,0 +1,104 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "frontend")) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "frontend"
+    web.deckhouse.io/export-icon: "/public/img/frontend.png"
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.frontend.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.frontend.externalAuthentication.authSignInURL }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.frontend.externalAuthentication.authURL }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-frontend
+{{- end }}
+{{- if .Values.ui.auth.frontend.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.frontend.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-frontend") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "backend")) | nindent 2 }}
+  annotations:
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.backend.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.backend.externalAuthentication.authSignInURL }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.backend.externalAuthentication.authURL }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-frontend
+{{- end }}
+{{- if .Values.ui.auth.backend.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.backend.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-frontend") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    http:
+      paths:
+      - path: /api
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: backend
+            port:
+              name: https
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: frontend
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: ingress-tls-frontend
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}

@@ -1,0 +1,20 @@
+{
+	"name": "my-app",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"fmt": "prettier --write src"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^1.0.1",
+		"prettier": "^2.7.1",
+		"prettier-plugin-svelte": "^2.7.0",
+		"svelte": "^3.49.0",
+		"sveltestrap": "^5.9.0",
+		"vite": "^3.0.7"
+	}
+}

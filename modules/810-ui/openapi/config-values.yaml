@@ -1,0 +1,337 @@
+x-config-version: 2
+type: object
+required:
+  - auth
+properties:
+  storageClass:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    x-examples: [false, "default"]
+    description: |
+      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss.
+
+      Setting it to `false` forces the use of an emptyDir volume.
+  auth:
+    type: object
+    default: {}
+    description: |
+      Configuration of authentication for Upmeter frontends.
+    required:
+      - status
+      - webui
+    properties:
+      status:
+        type: object
+        description: |
+          Authentication configuration.
+        default: {}
+        properties:
+          externalAuthentication:
+            type: object
+            description: |
+              Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+            properties:
+              authURL:
+                type: string
+                description: |
+                  URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+              authSignInURL:
+                type: string
+                description: |
+                  URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          allowedUserGroups:
+            type: array
+            items:
+              type: string
+            description: |
+              An array of user groups that can access Grafana & Prometheus.
+
+              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+          whitelistSourceRanges:
+            type: array
+            items:
+              type: string
+            x-examples:
+              - ["1.1.1.1/32"]
+            description: An array if CIDRs that are allowed to authenticate.
+      webui:
+        type: object
+        description: |
+          Authentication configuration.
+        default: {}
+        properties:
+          externalAuthentication:
+            type: object
+            description: |
+              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+            properties:
+              authURL:
+                type: string
+                description: |
+                  URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+              authSignInURL:
+                type: string
+                description: |
+                  URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          password:
+            type: string
+            description: |
+              Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
+
+              This parameter is used if the `externalAuthentication` is not enabled.
+          allowedUserGroups:
+            type: array
+            items:
+              type: string
+            description: |
+              An array of user groups that can access Grafana & Prometheus.
+
+              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+          whitelistSourceRanges:
+            type: array
+            items:
+              type: string
+            x-examples:
+              - ["1.1.1.1/32"]
+            description: An array if CIDRs that are allowed to authenticate.
+  smokeMini:
+    type: object
+    description: |
+      Configuration of authentication for smoke-mini.
+    default: {}
+    required:
+      - auth
+    properties:
+      auth:
+        type: object
+        description: |
+          Authentication configuration.
+        default: {}
+        properties:
+          externalAuthentication:
+            type: object
+            description: |
+              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+            properties:
+              authURL:
+                type: string
+                description: |
+                  URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+              authSignInURL:
+                type: string
+                description: |
+                  URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          password:
+            type: string
+            description: |
+              Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
+
+              This parameter is used if the `externalAuthentication` is not enabled.
+          allowedUserGroups:
+            type: array
+            items:
+              type: string
+            description: |
+              An array of user groups that can access Grafana & Prometheus.
+
+              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+          whitelistSourceRanges:
+            type: array
+            items:
+              type: string
+            x-examples:
+              - ["1.1.1.1/32"]
+            description: An array if CIDRs that are allowed to authenticate.
+      storageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
+            enum: [false]
+        x-examples: [false, "default"]
+        description: |
+          A storageClass to use when checking the health of disks.
+
+          If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+          Setting it to `false` forces the use of an emptyDir volume.
+      ingressClass:
+        type: string
+        description: |
+          The class of the Ingress controller used for the smoke-mini.
+
+          Optional. By default, the `modules.ingressClass` global value is used
+      https:
+        type: object
+        x-examples:
+          - mode: CustomCertificate
+            customCertificate:
+              secretName: "foobar"
+          - mode: CertManager
+            certManager:
+              clusterIssuerName: letsencrypt
+        description: |
+          What certificate type to use with smoke-mini.
+
+          This parameter completely overrides the `global.modules.https` settings.
+        properties:
+          mode:
+            type: string
+            default: "Disabled"
+            description: |
+              The HTTPS usage mode:
+              - `Disabled` — smoke-mini will work over HTTP only;
+              - `CertManager` — smoke-mini will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+              - `CustomCertificate` — smoke-mini will use HTTPS using the certificate from the `d8-system` namespace.
+              - `OnlyInURI` — smoke-mini will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+            enum:
+              - "Disabled"
+              - "CertManager"
+              - "CustomCertificate"
+              - "OnlyInURI"
+          certManager:
+            type: object
+            properties:
+              clusterIssuerName:
+                type: string
+                default: "letsencrypt"
+                description: |
+                  What ClusterIssuer to use for smoke-mini.
+
+                  Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+          customCertificate:
+            type: object
+            default: {}
+            properties:
+              secretName:
+                type: string
+                description: |
+                  The name of the secret in the `d8-system` namespace to use with smoke-mini.
+
+                  This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                default: "false"
+  disabledProbes:
+    type: array
+    default: []
+    items:
+      type: string
+    description: |
+      Group names or specific probes from a group. You can view the names in the web UI.
+
+      For example:
+
+      ```yaml
+      disabledProbes:
+        - "synthetic/api" # disable a specific probe
+        - "synthetic/"    # disable a group of probes
+        - control-plane   # / can be omitted
+      ```
+  statusPageAuthDisabled:
+    type: boolean
+    default: false
+    description: |
+      Disables authorization for the status domain.
+  smokeMiniDisabled:
+    type: boolean
+    default: false
+    description: |
+      Disables smokeMini.
+
+      Disables "synthetic" probe group in Upmeter as well.
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with webui and status apps.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        description: |
+          The HTTPS usage mode:
+          - `Disabled` — webui/status will work over HTTP only;
+          - `CertManager` — webui/status will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — webui/status will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — webui/status will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for webui/status.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with webui/status.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      Node selector for Upmeter server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      - - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      Node tolerations for Upmeter server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
