@@ -29,7 +29,7 @@ import (
 var _ = Describe("Modules :: cloud-provider-aws :: hooks :: set_etcd_disk_old_hardcoded_size_in_provider_configuration ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	const clusterConfigurationBefore = `
+	const clusterConfigurationBeforeMigration = `
 masterNodeGroup:
   instanceClass:
     flavorName: test
@@ -37,7 +37,18 @@ apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 sshPublicKey: test
 `
-	secretBefore := fmt.Sprintf(`
+	const clusterConfigurationAfterMigration = `
+apiVersion: deckhouse.io/v1
+kind: AWSClusterConfiguration
+sshPublicKey: test
+masterNodeGroup:
+  instanceClass:
+    etcdDisk:
+      sizeGb: 150
+      type: gp2
+    flavorName: test
+`
+	secretBeforeMigration := fmt.Sprintf(`
 ---
 apiVersion: v1
 data:
@@ -47,22 +58,23 @@ metadata:
   name: d8-provider-cluster-configuration
   namespace: kube-system
 type: Opaque
-`, base64.StdEncoding.EncodeToString([]byte(clusterConfigurationBefore)))
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigurationBeforeMigration)))
 
-	const clusterConfigurationAfter = `masterNodeGroup:
-  instanceClass:
-    etcdDisk:
-      sizeGb: 150
-      type: gp2
-    flavorName: test
-apiVersion: deckhouse.io/v1
-kind: AWSClusterConfiguration
-sshPublicKey: test
-`
+	secretAfterMigration := fmt.Sprintf(`
+---
+apiVersion: v1
+data:
+  cloud-provider-cluster-configuration.yaml: %s
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+type: Opaque
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigurationAfterMigration)))
 
-	Context("With d8-provider-cluster-configuration secret", func() {
+	Context("With d8-provider-cluster-configuration secret: before migration", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretBefore, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretBeforeMigration, 1))
 			f.RunHook()
 		})
 
@@ -72,9 +84,24 @@ sshPublicKey: test
 			Expect(secret.Exists()).To(BeTrue())
 			var b64 = base64.StdEncoding
 			clusterConfuguration, _ := b64.DecodeString(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String())
-			Expect(string(clusterConfuguration)).To(Equal(clusterConfigurationAfter))
+			Expect(string(clusterConfuguration)).To(MatchYAML(clusterConfigurationAfterMigration))
+		})
+	})
+
+	Context("already migrated", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretAfterMigration, 1))
+			f.RunHook()
 		})
 
+		It("Should not change the configuration", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-provider-cluster-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			var b64 = base64.StdEncoding
+			clusterConfuguration, _ := b64.DecodeString(secret.Field(`data.cloud-provider-cluster-configuration\.yaml`).String())
+			Expect(string(clusterConfuguration)).To(MatchYAML(clusterConfigurationAfterMigration))
+		})
 	})
 
 })

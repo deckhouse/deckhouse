@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// TODO: can be removed after release
+// TODO: can be removed after release 1.45
 
 package hooks
 
@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -61,26 +63,40 @@ func patchClusterConfiguration(input *go_hook.HookInput) error {
 
 	data := secret.Data["cloud-provider-cluster-configuration.yaml"]
 
-	var clusterConfiguration conf
+	var clusterConfiguration map[string]interface{}
 
 	err := yaml.Unmarshal(data, &clusterConfiguration)
 	if err != nil {
 		return err
 	}
 
+	value, _, err := unstructured.NestedString(clusterConfiguration, "masterNodeGroup", "instanceClass", "etcdDisk", "type")
+	if err != nil {
+		return err
+	}
+
 	// skip if values are set
-	if clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.Type != "" {
+	if value != "" {
 		return nil
 	}
 
-	clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.SizeGb = 150
-	clusterConfiguration.MasterNodeGroup.InstanceClass.EtcdDisk.Type = "gp2"
+	etcdDiskValues := map[string]interface{}{
+		"sizeGb": int64(150),
+		"type":   "gp2",
+	}
+
+	err = unstructured.SetNestedField(clusterConfiguration, etcdDiskValues, "masterNodeGroup", "instanceClass", "etcdDisk")
+	if err != nil {
+		return err
+	}
 
 	buf := bytes.NewBuffer(nil)
-
-	yamlEncoder := yaml.NewEncoder(buf)
-	yamlEncoder.SetIndent(2)
-	err = yamlEncoder.Encode(clusterConfiguration)
+	enc := yaml.NewEncoder(buf)
+	enc.SetIndent(2)
+	err = enc.Encode(clusterConfiguration)
+	if err != nil {
+		return err
+	}
 
 	patch := map[string]interface{}{
 		"data": map[string]string{
@@ -91,18 +107,4 @@ func patchClusterConfiguration(input *go_hook.HookInput) error {
 	input.PatchCollector.MergePatch(patch, "v1", "Secret", secret.Namespace, secret.Name)
 
 	return nil
-}
-
-type conf struct {
-	MasterNodeGroup struct {
-		InstanceClass struct {
-			ZZZ      map[string]interface{} `json:",inline" yaml:",inline"`
-			EtcdDisk struct {
-				SizeGb int64  `json:"sizeGb" yaml:"sizeGb"`
-				Type   string `json:"type" yaml:"type"`
-			} `json:"etcdDisk,omitempty" yaml:"etcdDisk,omitempty"`
-		} `json:"instanceClass" yaml:"instanceClass"`
-		YYY map[string]interface{} `json:",inline" yaml:",inline"`
-	} `json:"masterNodeGroup" yaml:"masterNodeGroup"`
-	XXX map[string]interface{} `json:",inline" yaml:",inline"`
 }
