@@ -205,6 +205,9 @@ tolerations:
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 {{- end }}
 
 {{- /* with-storage-problems - used for shedule critical components on nodes with storage problems */ -}}
