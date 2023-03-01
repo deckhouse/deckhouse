@@ -80,6 +80,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/500-operator-trivy/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/dynamic_probe"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/https"

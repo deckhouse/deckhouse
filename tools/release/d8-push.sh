@@ -125,4 +125,6 @@ for i in "$SOURCE_DIR"/*; do
   fi
 done
 
+crane push "$SOURCE_DIR/trivy-db" "$REGISTRY_PATH/security/trivy-db:2"
+
 echo "Operation is complete."

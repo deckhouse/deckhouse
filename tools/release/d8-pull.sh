@@ -163,6 +163,11 @@ pull_image() {
   crane pull "$registry_full_path:$1" --format tarball "$IMAGE"
 }
 
+pull_trivy_db() {
+  IMAGE="$OUTPUT_DIR/trivy-db"
+  crane pull "$REGISTRY_PATH/security/trivy-db:2" --format tarball "$IMAGE"
+}
+
 function pull_image_clean_up {
   rm -rf "$IMAGE"
 }
@@ -196,6 +201,9 @@ if [[ "$PULL_RELEASE_METADATA_IMAGES" == "yes" ]]; then
   pull_image "stable" "release-channel"
   pull_image "rock-solid" "release-channel"
 fi
+
+#pull trivy CVE database
+pull_trivy_db
 
 echo ""
 echo "Operation is complete."
