@@ -75,35 +75,37 @@ nodeSelector:
     {{- end }}
   {{- end }}
 tolerations:
-  {{- /* Any node: any node in the cluster with any known taints */ -}}
-  {{- if eq $strategy "any-node" }}
-    {{- include "_helm_lib_any_node_tolerations" $context }}
-
   {{- /* Wildcard: gives permissions to schedule on any node with any taints (use with caution) */ -}}
-  {{- else if eq $strategy "wildcard" }}
+  {{- if eq $strategy "wildcard" }}
     {{- include "_helm_lib_wildcard_tolerations" $context }}
 
-  {{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
-  {{- else if $module_values.tolerations }}
-    {{- $module_values.tolerations | toYaml | nindent 0 }}
+  {{- else }}
+    {{- /* Any node: any node in the cluster with any known taints */ -}}
+    {{- if eq $strategy "any-node" }}
+      {{- include "_helm_lib_any_node_tolerations" $context }}
 
-  {{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
-  {{- else if eq $strategy "monitoring" }}
-    {{- include "_helm_lib_monitoring_tolerations" $context }}
+    {{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
+    {{- else if $module_values.tolerations }}
+      {{- $module_values.tolerations | toYaml | nindent 0 }}
 
-  {{- /* Frontend: Nodes for ingress-controllers */ -}}
-  {{- else if eq $strategy "frontend" }}
-    {{- include "_helm_lib_frontend_tolerations" $context }}
+    {{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
+    {{- else if eq $strategy "monitoring" }}
+      {{- include "_helm_lib_monitoring_tolerations" $context }}
 
-  {{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
-   {{- else if eq $strategy "system" }}
-    {{- include "_helm_lib_system_tolerations" $context }}
+    {{- /* Frontend: Nodes for ingress-controllers */ -}}
+    {{- else if eq $strategy "frontend" }}
+      {{- include "_helm_lib_frontend_tolerations" $context }}
+
+    {{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
+     {{- else if eq $strategy "system" }}
+      {{- include "_helm_lib_system_tolerations" $context }}
+    {{- end }}
+
+    {{- /* Additional strategies */ -}}
+    {{- range $additionalStrategies -}}
+      {{- include (printf "_helm_lib_additional_tolerations_%s" (. | replace "-" "_")) $context }}
+    {{- end }}
   {{- end }}
-
- {{- /* Additional strategies */ -}}
- {{- range $additionalStrategies -}}
-   {{- include (printf "_helm_lib_additional_tolerations_%s" (. | replace "-" "_")) $context }}
- {{- end }}
 {{- end }}
 
 {{- /* Check cluster type */ -}}
