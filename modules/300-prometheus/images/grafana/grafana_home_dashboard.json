@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "https://${__data.fields.docs_url}/modules/${__data.fields.module_name}"
+              "url": "http://${__data.fields.docs_url}/modules/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
@@ -1089,7 +1089,7 @@
                   {
                     "targetBlank": true,
                     "title": "",
-                    "url": "https://${__data.fields.url}"
+                    "url": "http://${__data.fields.url}"
                   }
                 ]
               }
