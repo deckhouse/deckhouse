@@ -988,11 +988,11 @@ entries:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/099-ceph-csi/
+              url: /modules/031-ceph-csi/
             - title:
                 ru: Примеры
                 en: Examples
-              url: /modules/099-ceph-csi/examples.html
+              url: /modules/031-ceph-csi/examples.html
             - title:
                 ru: Справка
                 en: Reference
@@ -1000,9 +1000,23 @@ entries:
                 - title:
                     ru: Настройки
                     en: Configuration
-                  url: /modules/099-ceph-csi/configuration.html
+                  url: /modules/031-ceph-csi/configuration.html
                 - title: Custom Resources
-                  url: /modules/099-ceph-csi/cr.html
+                  url: /modules/031-ceph-csi/cr.html
+            - title: snapshot-controller
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/045-snapshot-controller/
+                - title:
+                    en: Usage
+                    ru: Примеры
+                  url: /modules/045-snapshot-controller/usage.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/045-snapshot-controller/configuration.html
         - title: linstor
           featureStatus: experimental
           folders:
@@ -1084,20 +1098,6 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
-        - title: snapshot-controller
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/045-snapshot-controller/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/045-snapshot-controller/usage.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/045-snapshot-controller/configuration.html
     - title:
         en: Bare Metal
         ru: Bare Metal

@@ -12,5 +12,5 @@
       plk_protocol_version: "1"
       summary: Storage class {{ $labels.storageclass }} uses the deprecated rbd provisioner. It is necessary to migrate the volumes to the Ceph CSI driver.
       description: |
-        To migrate volumes use this script https://github.com/deckhouse/deckhouse/blob/main/modules/099-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh
-        A description of how the migration is performed can be found here https://github.com/deckhouse/deckhouse/blob/main/modules/099-ceph-csi/docs/internal/INTREE_MIGRATION.md
+        To migrate volumes use this script https://github.com/deckhouse/deckhouse/blob/main/modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh
+        A description of how the migration is performed can be found here https://github.com/deckhouse/deckhouse/blob/main/modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md
