@@ -149,6 +149,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -213,6 +216,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -300,6 +306,9 @@ podAntiAffinity:
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -364,6 +373,9 @@ podAntiAffinity:
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
