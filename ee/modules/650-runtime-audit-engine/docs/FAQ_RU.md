@@ -9,7 +9,7 @@ title: "Модуль runtime-audit-engine: примеры конфигураци
 Pod'ы `runtime-audit-engine` выводят все события в стандартный вывод.
 Далее [агенты log-shipper](../460-log-shipper/) могут собирать их и отправлять в хранилище логов.
 
-Пример конфигурации [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
+Пример конфигурации [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

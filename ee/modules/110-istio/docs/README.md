@@ -262,5 +262,5 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 
 ## Estimating overhead
 
-A rough estimate of overhead when using Istio is available [here](https://istio.io/latest/docs/ops/deployment/performance-and-scalability/).
+A rough estimate of overhead when using Istio is available [here](https://istio.io/v1.16/docs/ops/deployment/performance-and-scalability/).
 You can use the [Sidecar](istio-cr.html#sidecar) resource to limit resource consumption by limiting the field of view of a sidecar.

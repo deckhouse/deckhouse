@@ -9,7 +9,7 @@ title: "The runtime-audit-engine module: usage"
 Pods of `runtime-audit-engine` output all events to stdout.
 Those events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
 
-Below is an example [ClusterLoggingConfig](/460-log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
+Below is an example [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
