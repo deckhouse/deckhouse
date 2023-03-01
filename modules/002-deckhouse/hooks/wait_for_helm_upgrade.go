@@ -85,9 +85,9 @@ func isReleaseDeployed(input *go_hook.HookInput, dc dependency.Container) (bool,
 
 	latestRelease := releases.Items[0]
 
-	if latestRelease.Labels["status"] == "deployed" {
-		return true, nil
+	if latestRelease.Labels["status"] == "pending-upgrade" {
+		return false, nil
 	}
 
-	return false, nil
+	return true, nil
 }
