@@ -86,7 +86,7 @@ metadata:
 type: Opaque
 `, base64.StdEncoding.EncodeToString([]byte(cert.Cert)), base64.StdEncoding.EncodeToString([]byte(cert.Key)))
 
-			f.BindingContexts.Set(f.KubeStateSet(tlsAuthSecret))
+			f.KubeStateSet(tlsAuthSecret)
 
 			var secret *v1.Secret
 			err := yaml.Unmarshal([]byte(tlsAuthSecret), &secret)
@@ -95,6 +95,8 @@ type: Opaque
 			}
 
 			_, _ = f.KubeClient().CoreV1().Secrets("d8-ingress-nginx").Create(context.TODO(), secret, metav1.CreateOptions{})
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
 
 			f.RunHook()
 		})
@@ -174,6 +176,8 @@ type: Opaque
 			}
 
 			_, _ = f.KubeClient().CoreV1().Secrets("d8-ingress-nginx").Create(context.TODO(), secret, metav1.CreateOptions{})
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
 
 			f.RunHook()
 		})

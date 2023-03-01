@@ -71,7 +71,7 @@ func applyIngressSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}
 
 	return &CertificateData{
-		SecretName: secret.Name,
+		SecretName: secret.GetName(),
 		CertificateData: &certificate.Certificate{
 			Cert: string(secret.Data["client.crt"]),
 			Key:  string(secret.Data["client.key"]),
