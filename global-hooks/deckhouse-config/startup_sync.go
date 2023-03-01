@@ -190,6 +190,7 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 			for i, envVar := range container.Env {
 				if envVar.Name == "ADDON_OPERATOR_CONFIG_MAP" {
 					cmEnvIdx = i
+					break
 				}
 			}
 
