@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

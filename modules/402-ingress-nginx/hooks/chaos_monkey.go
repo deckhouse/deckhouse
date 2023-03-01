@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -31,6 +30,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type ingressDaemonSetFilterResult struct {

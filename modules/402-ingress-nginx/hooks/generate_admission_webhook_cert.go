@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

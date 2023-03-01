@@ -19,7 +19,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 	"sort"
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type CertificateInfo struct {
@@ -111,8 +111,8 @@ func orderCertificate(input *go_hook.HookInput) error {
 		}
 
 		secretName := fmt.Sprintf("ingress-nginx-%s-auth-tls", controller.Name)
-		certData, f := certificatesSecretMap[secretName]
-		if !f {
+		certData, ok := certificatesSecretMap[secretName]
+		if !ok {
 			return fmt.Errorf("there is no Secret with name '%s' in namespace '%s'", secretName, internal.Namespace)
 		}
 
