@@ -292,15 +292,16 @@ func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, er
 }
 
 const rebootExitCode = 255
+const alternativeRebootExitCode = 1
 
 func RebootMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
-			ee, ok := err.(*exec.ExitError);
+			ee, ok := err.(*exec.ExitError)
 			if ok {
-				if ee.ExitCode() == rebootExitCode {
+				if ee.ExitCode() == rebootExitCode || ee.ExitCode() == alternativeRebootExitCode {
 					return nil
 				}
 			}
