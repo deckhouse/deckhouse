@@ -44,6 +44,7 @@ spec:
     metadata:
       labels:
         name: monitoring-ping
+        app: monitoring-ping
     spec:
       terminationGracePeriodSeconds: 0
       hostNetwork: true
