@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Deckhouse hooks :: enable_extended_monitoring ::", func() {
+var _ = Describe("Deckhouse hooks :: enable_extended_monitoring ::", func() {
 	const (
 		kubeSystemNS = `
 ---
