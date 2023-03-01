@@ -70,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyNameNamespaceFilter,
 		},
 	},
-}, handleLegacyAnnotatedIngress)
+}, handleLegacyAnnotatedResource)
 
 type ObjectNameNamespaceKind struct {
 	Name      string

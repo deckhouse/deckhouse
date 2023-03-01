@@ -86,7 +86,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 			f.RunHook()
 		})
 
-		It("Cert data must be created and stored in values", func() {
+		It("Should have no metrics regarding deprecated annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			m := f.MetricsCollector.CollectedMetrics()
