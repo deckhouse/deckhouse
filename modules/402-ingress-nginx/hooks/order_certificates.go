@@ -22,7 +22,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -39,7 +38,7 @@ type CertificateInfo struct {
 	Data           certificate.Certificate `json:"data,omitempty"`
 }
 
-type CertificateData struct {
+type certificateData struct {
 	CertificateData *certificate.Certificate `json:"certificateData,omitempty"`
 	SecretName      string                   `json:"name,omitempty"`
 }
@@ -70,7 +69,7 @@ func applyIngressSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, fmt.Errorf("cannot convert tls secret to Secret: %v", err)
 	}
 
-	return &CertificateData{
+	return &certificateData{
 		SecretName: secret.GetName(),
 		CertificateData: &certificate.Certificate{
 			Cert: string(secret.Data["client.crt"]),
@@ -94,7 +93,7 @@ func orderCertificate(input *go_hook.HookInput) error {
 
 	certificatesSecretMap := make(map[string]*certificate.Certificate)
 	for _, v := range input.Snapshots["certificates_data"] {
-		certificateData := v.(*CertificateData)
+		certificateData := v.(*certificateData)
 		certificatesSecretMap[certificateData.SecretName] = certificateData.CertificateData
 	}
 
@@ -122,15 +121,6 @@ func orderCertificate(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
-
-			// migration 1.42: this branch could be deleted after 1.42 release
-			if !shouldGenerateNewCert {
-				shouldGenerateNewCert, err = shouldMigrateOldCertificate([]byte(certData.Cert))
-				if err != nil {
-					return err
-				}
-			}
-			// end migration
 
 			if !shouldGenerateNewCert {
 				certificates = append(certificates, CertificateInfo{
@@ -174,12 +164,4 @@ func orderCertificate(input *go_hook.HookInput) error {
 	input.Values.Set("ingressNginx.internal.nginxAuthTLS", certificates)
 
 	return nil
-}
-
-func shouldMigrateOldCertificate(cert []byte) (bool, error) {
-	c, err := helpers.ParseCertificatePEM(cert)
-	if err != nil {
-		return false, err
-	}
-	return c.Issuer.CommonName == "kubernetes", nil
 }
