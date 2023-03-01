@@ -298,7 +298,8 @@ func RebootMaster(sshClient *ssh.Client) error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
+			ee, ok := err.(*exec.ExitError);
+			if ok {
 				if ee.ExitCode() == rebootExitCode {
 					return nil
 				}
