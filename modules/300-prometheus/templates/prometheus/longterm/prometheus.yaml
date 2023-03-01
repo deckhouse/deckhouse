@@ -1,4 +1,4 @@
-{{- define "longterm_prometheus_resources" }}
+{{- define "longterm_prometheus_resources" }} # for reference see modules/300-prometheus/hooks/detect_vpa_max.go
 cpu: 50m
 memory: 500Mi
 {{- end }}
@@ -58,6 +58,9 @@ spec:
   listenLocal: true
   query:
     maxSamples: 100000000
+  additionalArgs:
+    - name: scrape.timestamp-tolerance
+      value: 10ms
   containers:
   - name: prometheus
     startupProbe:
@@ -133,8 +136,19 @@ spec:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   secrets:
   - prometheus-api-client-tls
-  {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- if .Values.prometheus.longtermNodeSelector }}
+  nodeSelector:
+    {{ .Values.prometheus.longtermNodeSelector | toYaml }}
+  {{- else }}
+    {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2}}
+  {{- end }}
+  {{- if .Values.prometheus.longtermTolerations }}
+  tolerations:
+    {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
+  {{- else }}
+    {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- end }}
+
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
   {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
   {{- if $storageClass }}

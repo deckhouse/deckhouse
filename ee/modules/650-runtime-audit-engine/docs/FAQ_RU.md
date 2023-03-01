@@ -2,6 +2,8 @@
 title: "Модуль runtime-audit-engine: примеры конфигурации"
 ---
 
+{% raw %}
+
 ## Как собирать события?
 
 Pod'ы `runtime-audit-engine` выводят все события в стандартный вывод.
@@ -101,3 +103,5 @@ spec:
         - process
         - mitre_privilege_escalation
 ```
+
+{% endraw %}

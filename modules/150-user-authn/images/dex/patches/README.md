@@ -30,3 +30,9 @@ Upstream PR - https://github.com/dexidp/dex/pull/2729.
 Allows OIDC connector to work with providers using self-signed certificates.
 
 Upstream PR that should fix the problem in general - https://github.com/dexidp/dex/pull/1632.
+
+### Robots.txt
+
+Add robots.txt to avoid indexing by bots.
+
+Upstream PR  - https://github.com/dexidp/dex/pull/2834

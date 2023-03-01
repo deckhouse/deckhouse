@@ -13,5 +13,6 @@ if ! rpm --quiet -q "${rpm_name}-${rpm_version}"; then
 else
   echo "RPM ${package_file} already installed."
 fi
+[[ -e flannel ]] && cp -f flannel /opt/cni/bin/flannel
 
 yum versionlock add ${package}

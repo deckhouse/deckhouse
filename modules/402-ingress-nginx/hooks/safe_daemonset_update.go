@@ -130,9 +130,11 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 		for _, f := range failovers {
 			failover := f.(IngressFilterResult)
 			if (controller.Name+"-failover" == failover.Name) && (controller.Checksum == failover.Checksum) {
-				if (failover.Status.NumberReady == failover.Status.CurrentNumberScheduled) &&
+				// NumberAvailable respects minReady seconds in contrast to NumberReady
+				if (failover.Status.NumberAvailable == failover.Status.CurrentNumberScheduled) &&
 					(failover.Status.UpdatedNumberScheduled >= failover.Status.DesiredNumberScheduled) {
 					failoverReady = true
+					input.LogEntry.Infof("Failover daemonset %q is ready: available: %d, currentScheduled: %d, updatedScheduled: %d, desiredScheduler: %d", failover.Name, failover.Status.NumberAvailable, failover.Status.CurrentNumberScheduled, failover.Status.UpdatedNumberScheduled, failover.Status.DesiredNumberScheduled)
 					break
 				}
 			}
@@ -154,14 +156,14 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 			controllerNeedUpdate = true
 		}
 
-		if controller.Status.NumberReady == controller.Status.CurrentNumberScheduled {
+		if controller.Status.NumberAvailable == controller.Status.CurrentNumberScheduled {
 			controllerReady = true
 		}
 
 		for _, p := range proxys {
 			proxy := p.(IngressFilterResult)
 			if (controller.Name == proxy.Name) && (controller.Checksum == proxy.Checksum) {
-				if proxy.Status.NumberReady == proxy.Status.CurrentNumberScheduled {
+				if proxy.Status.NumberAvailable == proxy.Status.CurrentNumberScheduled {
 					proxyReady = true
 				}
 				if proxy.Status.UpdatedNumberScheduled < proxy.Status.DesiredNumberScheduled {
@@ -199,6 +201,22 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 	return nil
 }
 
+func podIsReady(pod v1.Pod) bool {
+	var conditionReady bool
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			conditionReady = true
+			break
+		}
+	}
+
+	if conditionReady && pod.DeletionTimestamp == nil {
+		return true
+	}
+
+	return false
+}
+
 func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
@@ -212,6 +230,15 @@ func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, 
 
 	if len(podList.Items) == 0 {
 		return nil
+	}
+
+	// podList should be always sorted by apiserver/etcd
+	for _, pod := range podList.Items {
+		// if at least one pod is not ready or has Terminating state - abort mission to avoid parallel pod deletion
+		if !podIsReady(pod) {
+			input.LogEntry.Infof("Pod %q for ds %q is not ready. Skipping other pod deleting", pod.Name, dsName)
+			return nil
+		}
 	}
 
 	podNameToKill := podList.Items[0].Name

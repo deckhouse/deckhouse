@@ -76,6 +76,9 @@ spec:
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         command: ["/nodeport-bind-address.sh"]
+        env:
+        - name: CLOUD_PROVIDER
+          value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config

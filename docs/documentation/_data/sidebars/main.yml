@@ -812,6 +812,18 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/400-descheduler/configuration.html
+            - title: flow-schema
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/011-flow-schema/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/011-flow-schema/configuration.html
+                - title: FAQ
+                  url: /modules/011-flow-schema/faq.html
             - title: pod-reloader
               folders:
                 - title:
@@ -875,48 +887,52 @@ entries:
             - title: FAQ
               url: /modules/140-user-authz/faq.html
         - title:
+            en: Admission Policy
+            ru: Политики контроля доступа
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/015-admission-policy-engine/
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/015-admission-policy-engine/configuration.html
+                - title: Custom Resources
+                  url: /modules/015-admission-policy-engine/cr.html
+            - title: FAQ
+              url: /modules/015-admission-policy-engine/faq.html
+        - title:
+            en: Audit
+            ru: Аудит
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/650-runtime-audit-engine/
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/650-runtime-audit-engine/configuration.html
+                - title: Custom Resources
+                  url: /modules/650-runtime-audit-engine/cr.html
+            - title: FAQ
+              url: /modules/650-runtime-audit-engine/faq.html
+            - title: Examples
+              url: /modules/650-runtime-audit-engine/examples.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
-          - title: admission-policy-engine
-            folders:
-              - title:
-                  en: Description
-                  ru: Описание
-                url: /modules/015-admission-policy-engine/
-              - title:
-                  ru: Справка
-                  en: Reference
-                folders:
-                  - title:
-                      ru: Настройки
-                      en: Configuration
-                    url: /modules/015-admission-policy-engine/configuration.html
-                  - title: Custom Resources
-                    url: /modules/015-admission-policy-engine/cr.html
-              - title: FAQ
-                url: /modules/015-admission-policy-engine/faq.html
-          - title: runtime-audit-engine
-            d8Revision: ee
-            folders:
-              - title:
-                  en: Description
-                  ru: Описание
-                url: /modules/650-runtime-audit-engine/
-              - title:
-                  ru: Справка
-                  en: Reference
-                folders:
-                  - title:
-                      ru: Настройки
-                      en: Configuration
-                    url: /modules/650-runtime-audit-engine/configuration.html
-                  - title: Custom Resources
-                    url: /modules/650-runtime-audit-engine/cr.html
-              - title: FAQ
-                url: /modules/650-runtime-audit-engine/faq.html
-              - title: Examples
-                url: /modules/650-runtime-audit-engine/examples.html
           - title: network-policy-engine
             folders:
               - title:

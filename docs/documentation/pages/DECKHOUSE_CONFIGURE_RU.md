@@ -175,7 +175,7 @@ user-authn          Disabled   1                    12h
 
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
-  * Порядок поиска узлов (для определения `nodeSelector`):
+  * Порядок поиска узлов (для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector)):
     * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
     * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
     * Наличие узла с лейблом `node-role.deckhouse.io/system`.

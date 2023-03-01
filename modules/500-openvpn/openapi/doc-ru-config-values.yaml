@@ -38,10 +38,7 @@ properties:
       Порт, который вывешивается наружу на `externalIP` или балансировщике.
   tunnelNetwork:
     description: |
-      Подсеть используемая для TCP-туннеля OpenVPN сервера.
-  udpTunnelNetwork:
-    description: |
-      Подсеть используемая для UDP-туннеля OpenVPN сервера.
+      Подсеть используемая для туннеля OpenVPN сервера.
   pushDefaultGatewayToClient:
     description: |
       Направить весь трафик клиентов через VPN. У клиентов при подключении будет добавлен маршрут по умолчанию через VPN-туннель.
@@ -121,6 +118,11 @@ properties:
           secretName:
             description: |
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора OpenVPN (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.

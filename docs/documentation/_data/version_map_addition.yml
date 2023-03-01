@@ -6,6 +6,9 @@
     '1.7.2':
       ru_support: 'true'
       en_support: 'false'
+    '1.7.3':
+      ru_support: 'true'
+      en_support: 'false'
   rocky:
     '8':
     '9':

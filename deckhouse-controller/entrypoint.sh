@@ -28,6 +28,11 @@ signal_handler() {
     wait "${PID}"
     run_deckhouse
     ;;
+  "SIGTERM")
+    # always sleep 10 seconds on modules converge to avoid Deckhouse self-upgrade helm race (release is stuck into pending-upgrade)
+    /usr/bin/deckhouse-controller queue main | grep ConvergeModules && echo "{\"level\":\"info\", \"msg\": \"Deckhouse is restarting during the modules converge. Sleeping 10 seconds.\"}" && sleep 10
+    kill -"${1}" "${PID}"
+    ;;
   *)
     kill -"${1}" "${PID}"
     ;;
@@ -57,7 +62,8 @@ cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
+coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
+cat ${coreModulesDir}/values-${bundles_map[$bundle]}.yaml >> ${coreModulesDir}/values.yaml
 
 set +o pipefail
 set +e

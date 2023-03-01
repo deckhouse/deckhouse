@@ -7,7 +7,7 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "agent" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "agent" .Values.cniCilium.resourcesManagement ) | nindent 2}}
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "cilium-agent" .Values.cniCilium.resourcesManagement ) | nindent 2}}
   {{- if .Values.cniCilium.resourcesManagement.vpa }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
@@ -135,6 +135,11 @@ spec:
         - name: cilium-config-path
           mountPath: /tmp/cilium/config-map
           readOnly: true
+        {{- if has "virtualization" .Values.global.enabledModules }}
+        - mountPath: /etc/config
+          name: ip-masq-agent
+          readOnly: true
+        {{- end }}
           # Needed to be able to load kernel modules
         - name: lib-modules
           mountPath: /lib/modules
@@ -281,6 +286,15 @@ spec:
       - name: cilium-config-path
         configMap:
           name: cilium-config
+      {{- if has "virtualization" .Values.global.enabledModules }}
+      - name: ip-masq-agent
+        configMap:
+          name: ip-masq-agent
+          optional: true
+          items:
+          - key: config
+            path: ip-masq-agent
+      {{- end }}
       - name: hubble-tls
         projected:
           defaultMode: 0400

@@ -62,7 +62,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
      +----------------------------------------------------------------+
      ```
 
-     > **Note:** you'll be able to see only empty devices without created partitions here.
+     > Note that you'll be able to see only empty devices without created partitions here.
      > However, creating storage pools on partitions and other block devices is also supported.
      >
      > You can also [add an existing LVM pool](faq.html#how-to-add-existing-lvm-or-lvmthin-pool) to your cluster.

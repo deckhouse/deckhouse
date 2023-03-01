@@ -30,7 +30,7 @@ prometheus:
     vpa: {}
 `, ``)
 
-	Context("1 node clustaer", func() {
+	Context("1 node cluster", func() {
 		BeforeEach(func() {
 
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
@@ -54,6 +54,33 @@ status:
 			Expect(f.ValuesGet("prometheus.internal.vpa.maxMemory").String()).Should(BeEquivalentTo("1650Mi"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxCPU").String()).Should(BeEquivalentTo("733m"))
 			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxMemory").String()).Should(BeEquivalentTo("550Mi"))
+		})
+	})
+
+	Context("Minimal resources for Prometheus and longterm", func() {
+		BeforeEach(func() {
+
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Node
+metadata:
+  name: test-master-0
+spec:
+  podCIDR: 10.111.0.0/24
+status:
+  capacity:
+    pods: "3"
+`, 1))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
+			f.RunHook()
+		})
+
+		It("should fill minimal internal vpa values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("prometheus.internal.vpa.maxCPU").String()).Should(BeEquivalentTo("200m"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.maxMemory").String()).Should(BeEquivalentTo("1000Mi"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxCPU").String()).Should(BeEquivalentTo("50m"))
+			Expect(f.ValuesGet("prometheus.internal.vpa.longtermMaxMemory").String()).Should(BeEquivalentTo("500Mi"))
 		})
 	})
 })

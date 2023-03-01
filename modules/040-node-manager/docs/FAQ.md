@@ -380,7 +380,7 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> **Note** that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+> **Note!** You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
 
 There are two ways to solve this problem:
 

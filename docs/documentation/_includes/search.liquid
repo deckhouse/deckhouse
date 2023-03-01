@@ -28,6 +28,9 @@ var documents=[
 {
 "title": "{{ page.title | escape }}",
 "url": "{{ page_canonical_url }}",
+{%- if page['module-name'] %}
+"keywords": {{ page['module-name'] | jsonify }},
+{%- endif %}
 "content": {{ page.content | normalizeSearchContent | jsonify }}
 }
 {%- unless forloop.last %},{% endunless %}

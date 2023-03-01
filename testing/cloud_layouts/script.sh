@@ -32,19 +32,19 @@ Required environment variables:
 
 Name                  Description
 ---------------------+---------------------------------------------------------
-$PROVIDER             An infrastructure provider: AWS, GCP, Azure, OpenStack,
+\$PROVIDER             An infrastructure provider: AWS, GCP, Azure, OpenStack,
                       Static, vSphere or Yandex.Cloud.
                       See them in the cloud_layout directory.
-$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
+\$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
                       See available layouts inside the provider directory.
-$PREFIX               A unique prefix to run several tests simultaneously.
-$KUBERNETES_VERSION   A version of Kubernetes to install.
-$CRI                  Docker or Containerd.
-$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
-$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
+\$PREFIX               A unique prefix to run several tests simultaneously.
+\$KUBERNETES_VERSION   A version of Kubernetes to install.
+\$CRI                  Docker or Containerd.
+\$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
+\$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug
                       to test changes in pull requests.
-$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
+\$INITIAL_IMAGE_TAG    An image tag for Deckhouse deployment to
                       install first and then switching to DECKHOUSE_IMAGE_TAG.
                       Also, run test suite for these 2 versions.
 
@@ -52,37 +52,37 @@ Provider specific environment variables:
 
   Yandex.Cloud:
 
-$LAYOUT_YANDEX_CLOUD_ID
-$LAYOUT_YANDEX_FOLDER_ID
-$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
+\$LAYOUT_YANDEX_CLOUD_ID
+\$LAYOUT_YANDEX_FOLDER_ID
+\$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
 
   GCP:
 
-$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
+\$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
 
   AWS:
 
-$LAYOUT_AWS_ACCESS_KEY
-$LAYOUT_AWS_SECRET_ACCESS_KEY
+\$LAYOUT_AWS_ACCESS_KEY
+\$LAYOUT_AWS_SECRET_ACCESS_KEY
 
   Azure:
 
-$LAYOUT_AZURE_SUBSCRIPTION_ID
-$LAYOUT_AZURE_TENANT_ID
-$LAYOUT_AZURE_CLIENT_ID
-$LAYOUT_AZURE_CLIENT_SECRET
+\$LAYOUT_AZURE_SUBSCRIPTION_ID
+\$LAYOUT_AZURE_TENANT_ID
+\$LAYOUT_AZURE_CLIENT_ID
+\$LAYOUT_AZURE_CLIENT_SECRET
 
   Openstack:
 
-$LAYOUT_OS_PASSWORD
+\$LAYOUT_OS_PASSWORD
 
   vSphere:
 
-$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_PASSWORD
 
   Static:
 
-$LAYOUT_OS_PASSWORD
+\$LAYOUT_OS_PASSWORD
 
 EOF
 )
@@ -251,7 +251,6 @@ function prepare_environment() {
     return 1
   fi
 
-
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
     # Then switch deploment to DECKHOUSE_IMAGE_TAG.
@@ -268,8 +267,8 @@ function prepare_environment() {
       IMAGE_ID="fd8q0kjl4l1iovds9f29"
     else
       ssh_user="ubuntu"
-      # Ubuntu 20.04
-      IMAGE_ID="fd8kdq6d0p8sij7h5qe3"
+      # Ubuntu 22.04 LTS
+      IMAGE_ID="fd8emvfmfoaordspe1jr"
     fi
 
     # shellcheck disable=SC2016
@@ -318,6 +317,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
     ssh_user="debian"
     ;;
 
@@ -327,6 +327,7 @@ function prepare_environment() {
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
     ssh_user="ubuntu"
     ;;
 
@@ -399,6 +400,29 @@ function bootstrap_static() {
   eval "$(ssh-agent -s)"
   ssh-add "$ssh_private_key_path"
   ssh_bastion="-J $ssh_user@$bastion_ip"
+
+  waitForInstancesAreBootstrappedAttempts=20
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: master instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: master instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: system instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
 
   testRunAttempts=20
 
@@ -633,23 +657,7 @@ END_SCRIPT
 #  - master_ip
 function wait_cluster_ready() {
   # Print deckhouse info and enabled modules.
-  infoScript=$(cat <<'END'
-kubectl -n d8-system get deploy/deckhouse -o jsonpath='{.kind}/{.metadata.name}:{"\n"}Image: {.spec.template.spec.containers[0].image} {"\n"}Config: {.spec.template.spec.containers[0].env[?(@.name=="ADDON_OPERATOR_CONFIG_MAP")]}{"\n"}'
-echo "Deployment/deckhouse"
-kubectl -n d8-system get deploy/deckhouse -o wide
-echo "Pod/deckhouse-*"
-kubectl -n d8-system get po -o wide | grep ^deckhouse
-echo "Enabled modules:"
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
-echo "ConfigMap/generated"
-kubectl -n d8-system get configmap/deckhouse-generated-config-do-not-edit -o yaml
-echo "ModuleConfigs"
-kubectl get moduleconfigs
-echo "Errors:"
-kubectl -n d8-system logs deploy/deckhouse | grep '"error"'
-END
-)
-
+  infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   if [[ "$PROVIDER" == "Static" ]]; then
@@ -659,136 +667,7 @@ END
 
   test_failed=
 
-  testScript=$(cat <<"END_SCRIPT"
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-
-function pause-the-test() {
-  while true; do
-    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
-      break
-    fi
-
-    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
-
-    sleep 30
-  done
-}
-
-trap pause-the-test EXIT
-
-if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
-  ingress="ok"
-else
-  ingress=""
-fi
-
-availability=""
-attempts=50
-# With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
-for i in $(seq $attempts); do
-  # Sleeping at the start for readability. First iterations do not succeed anyway.
-  sleep 30
-
-  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
-    if upmeter_auth_token="$(kubectl -n d8-upmeter exec ds/upmeter-agent -c agent -- cat /run/secrets/kubernetes.io/serviceaccount/token)" 2>/dev/null; then
-
-      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
-      # param.
-      #
-      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
-      # -e flag does not work as expected. See
-      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
-      #
-      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
-        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
-        avail_report="$(jq -re '
-          [
-            .rows[]
-            | [
-                .group as $group
-                | .probes[]
-                | {
-                  probe: ($group + "/" + .probe),
-                  status: (if .availability > 0.99   then "up"   else "pending"   end),
-                  availability: .availability
-                }
-              ]
-          ]
-          | flatten
-          ' <<<"$avail_json")"
-
-        # Printing the table of probe statuses
-        echo '*'
-        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
-        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
-        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
-        echo '========================================================================='
-
-        # Overall availability status. We check that all probes are in place because at some point
-        # in the start the list can be empty.
-        availability="$(jq -r '
-          if (
-            (. | length > 0) and
-            ([ .[] | select(.status != "up") ] | length == 0)
-          )
-          then "ok"
-          else ""
-          end '<<<"$avail_report")"
-
-      else
-        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
-    fi
-  else
-    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
-  fi
-
-    cat <<EOF
-Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
-EOF
-
-  if [[ -n "$ingress_inlet" ]]; then
-    if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
-      if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
-        if ingress_lb="$(jq -re '.status.loadBalancer.ingress[0].hostname' <<< "$ingress_service")"; then
-          if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb")"; then
-            if [[ "$ingress_lb_code" == "404" ]]; then
-              ingress="ok"
-            else
-              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404 (attempt #${i} of ${attempts})."
-            fi
-          else
-            >&2 echo "Failed curl request to the LB hostname: $ingress_lb (attempt #${i} of ${attempts})."
-          fi
-        else
-          >&2 echo "Can't get svc/nginx-load-balancer LB hostname (attempt #${i} of ${attempts})."
-        fi
-      else
-        >&2 echo "Can't get svc/nginx-load-balancer (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
-      exit 1
-    fi
-
-    cat <<EOF
-Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo "failure")
-EOF
-  fi
-
-  if [[ "$availability:$ingress" == "ok:ok" ]]; then
-    exit 0
-  fi
-done
-
->&2 echo 'Timeout waiting for checks to succeed'
-exit 1
-END_SCRIPT
-)
+  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do

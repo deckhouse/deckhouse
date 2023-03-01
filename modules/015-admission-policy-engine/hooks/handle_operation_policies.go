@@ -40,11 +40,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleOP(input *go_hook.HookInput) error {
 	result := make([]*operationPolicy, 0)
 
-	bootstrapped := input.Values.Get("admissionPolicyEngine.internal.bootstrapped").Bool()
-	if !bootstrapped {
-		return nil
-	}
-
 	snap := input.Snapshots["operation-policies"]
 
 	for _, sn := range snap {

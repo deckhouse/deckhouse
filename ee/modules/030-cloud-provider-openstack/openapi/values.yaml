@@ -35,9 +35,6 @@ properties:
             type: string
           region:
             type: string
-      ignoreVolumeMicroversion:
-        type: boolean
-        default: false
       internalNetworkNames:
         type: array
         default: []
@@ -104,7 +101,5 @@ properties:
               type: string
       defaultStorageClass:
         type: string
-      supportsOnlineDiskResize:
-        type: boolean
       cniSecretData:
         type: string

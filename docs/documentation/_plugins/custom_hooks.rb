@@ -56,6 +56,9 @@ Jekyll::Hooks.register :site, :post_read do |site|
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
   site.pages.each do |page|
+    if ( page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) ) then
+      page.data['module-name'] = page.url.sub(%r{(.*)?/modules/[0-9]+-([^/]+)/$},'\2')
+    end
     next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false

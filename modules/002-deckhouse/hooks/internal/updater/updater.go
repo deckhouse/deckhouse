@@ -364,14 +364,14 @@ func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 
 	if currentRelease != nil {
 		// skip last deployed release
-		du.updateStatus(currentRelease, "", v1alpha1.PhaseOutdated)
+		du.updateStatus(currentRelease, "", v1alpha1.PhaseSuperseded)
 	}
 
 	if len(du.skippedPatchesIndexes) > 0 {
 		for _, index := range du.skippedPatchesIndexes {
 			release := du.releases[index]
 			// skip not-deployed patches
-			du.updateStatus(&release, "", v1alpha1.PhaseOutdated)
+			du.updateStatus(&release, "", v1alpha1.PhaseSkipped)
 		}
 	}
 }
@@ -381,7 +381,7 @@ func (du *DeckhouseUpdater) runReleaseDeploy(predictedRelease, currentRelease *D
 func (du *DeckhouseUpdater) PredictNextRelease() {
 	for i, release := range du.releases {
 		switch release.Status.Phase {
-		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
+		case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseOutdated:
 			// pass
 
 		case v1alpha1.PhasePending:
@@ -436,7 +436,7 @@ func (du *DeckhouseUpdater) ApplyForcedRelease() {
 
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
-			du.updateStatus(&release, "", v1alpha1.PhaseOutdated)
+			du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
 		}
 	}
 }
@@ -504,6 +504,16 @@ func (du *DeckhouseUpdater) patchInitialStatus(release DeckhouseRelease) Deckhou
 	return release
 }
 
+func (du *DeckhouseUpdater) migrateOutdatedStatus(release DeckhouseRelease) DeckhouseRelease {
+	if release.Status.Phase != v1alpha1.PhaseOutdated {
+		return release
+	}
+
+	du.updateStatus(&release, "", v1alpha1.PhaseSuperseded)
+
+	return release
+}
+
 func (du *DeckhouseUpdater) patchSuspendedStatus(release DeckhouseRelease) DeckhouseRelease {
 	if !release.AnnotationFlags.Suspend {
 		return release
@@ -560,6 +570,9 @@ func (du *DeckhouseUpdater) FetchAndPrepareReleases(snap []go_hook.FilterResult)
 		release := rl.(DeckhouseRelease)
 
 		release = du.patchInitialStatus(release)
+
+		// TODO: remove migration after release 1.46
+		release = du.migrateOutdatedStatus(release)
 
 		release = du.patchSuspendedStatus(release)
 

@@ -1,0 +1,11 @@
+cni-cilium:
+  fixes:
+    - summary: Exclude vmCIDRs from SNAT.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3899
+istio:
+  fixes:
+    - summary: >-
+        Yet another iptables fix — the upstream way. Got rid of iptables-wrapper in favor of
+        hardcoded iptables-legacy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3897
+

@@ -59,17 +59,10 @@ properties:
   tunnelNetwork:
     type: string
     description: |
-      Tunnel network for TCP OpenVPN server.
+      Tunnel network for OpenVPN server.
     x-doc-default: '172.25.175.0/24'
     default: '172.25.175.0/24'
     x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
-  udpTunnelNetwork:
-    type: string
-    description: |
-      Tunnel network for UDP OpenVPN server.
-    x-doc-default: '172.25.176.0/24'
-    default: '172.25.176.0/24'
-    x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
   pushDefaultGatewayToClient:
     type: boolean
     default: false
@@ -189,6 +182,13 @@ properties:
               The name of the Secret in the `d8-system` namespace to use with the OpenVPN admin panel (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
 
             x-doc-default: 'false'
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     description: |

@@ -143,7 +143,7 @@ properties:
               min:
                 description: |
                   Minimum allowed memory requests.
-                default: '512Mi'
+                default: '128Mi'
                 oneOf:
                 - type: string
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'

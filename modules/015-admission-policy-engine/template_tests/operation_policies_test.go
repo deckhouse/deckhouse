@@ -32,7 +32,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"operationPolicies": [
+	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{

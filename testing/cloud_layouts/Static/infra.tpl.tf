@@ -113,6 +113,7 @@ resource "openstack_blockstorage_volume_v3" "master" {
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
+
   lifecycle {
     ignore_changes = [image_id]
   }
@@ -123,6 +124,7 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
+  user_data            = "${file("instance-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
@@ -186,6 +188,7 @@ resource "openstack_compute_instance_v2" "system" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
+  user_data            = "${file("instance-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id

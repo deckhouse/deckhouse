@@ -1,5 +1,7 @@
 {{- $context := . }}
 
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+
 {{- range $cr := .Values.admissionPolicyEngine.internal.operationPolicies }}
   {{- if hasKey $cr.spec.policies "allowedRepos" }}
     {{- include "allowed_repos_policy" (list $context $cr) }}
@@ -33,7 +35,7 @@
   {{- end }}
 {{- end }}
 
-
+{{- end }} # end if bootstrapped
 
 {{- define "allowed_repos_policy" }}
   {{- $context := index . 0 }}
@@ -45,7 +47,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -67,7 +69,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -95,7 +97,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -117,7 +119,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       {{- range $cr.spec.policies.requiredLabels.watchKinds }}
@@ -141,7 +143,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -163,7 +165,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: ["apps"]
@@ -185,7 +187,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -206,14 +208,14 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    priorityClassName:
+    priorityClassNames:
       {{- $cr.spec.policies.priorityClassNames | toYaml | nindent 6 }}
 {{- end }}
 
@@ -228,7 +230,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -246,7 +248,7 @@ metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: "deny"
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
@@ -268,10 +270,12 @@ spec:
       {{- $cr.spec.match.namespaceSelector.excludeNames | toYaml | nindent 6 }}
       {{- end }}
       {{- if hasKey $cr.spec.match.namespaceSelector "labelSelector" }}
-    namespaceSelector: {{ $cr.spec.match.namespaceSelector.labelSelector }}
+    namespaceSelector:
+      {{- $cr.spec.match.namespaceSelector.labelSelector | toYaml | nindent 6 }}
       {{- end }}
     {{- end }}
     {{- if hasKey $cr.spec.match "labelSelector" }}
-    labelSelector: {{ $cr.spec.match.labelSelector }}
+    labelSelector:
+      {{- $cr.spec.match.labelSelector | toYaml | nindent 6 }}
     {{- end }}
 {{- end }}

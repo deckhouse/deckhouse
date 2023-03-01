@@ -5,3 +5,4 @@
 set -Eeo pipefail
 yum versionlock delete kubernetes-cni
 rpm -e kubernetes-cni
+rm -f /opt/cni/bin/flannel

@@ -106,5 +106,5 @@ You can manually configure the webhook for Kubernetes clusters with a control pl
    ```
 2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
 
-> NOTE: Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default.
+> **Note!** Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default.
 > An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.

@@ -4,6 +4,7 @@ certManagerEnabled: true
 containerizedDataImporterEnabled: true
 dashboardEnabled: true
 deckhouseConfigEnabled: true
+externalModuleManagerEnabled: true
 deckhouseEnabled: true
 deckhouseWebEnabled: true
 deschedulerEnabled: true
