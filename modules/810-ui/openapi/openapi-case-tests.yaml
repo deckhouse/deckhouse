@@ -1,52 +1,18 @@
 positive:
   values:
     - auth:
-        webui:
+        frontend:
           password: "dworpass"
-        status:
+    - auth:
+        frontend:
           externalAuthentication:
             authURL: "https://api.example.com/auth"
             authSignInURL: "https://www.example.com/login"
-      smokeMini:
-        auth: {}
-      disabledProbes: ["monitoring-and-autoscaling"]
-      statusPageAuthDisabled: false
-      smokeMiniDisabled: false
     - auth:
         status: {}
-        webui: {}
+        frontend: {}
       disabledProbes: []
       internal:
-        disabledProbes:
-          - load-balancing/metallb
-        effectiveStorageClass: default
-        smokeMini:
-          sts:
-            a:
-              effectiveStorageClass: default
-              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: dev2-worker-small-391f2ede-79fcd-qpn7j
-              zone: nova
-            b:
-              effectiveStorageClass: default
-              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: dev2-master-0
-              zone: nova
-            c:
-              effectiveStorageClass: default
-              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: dev2-worker-medium-391f2ede-78c84-sql6k
-              zone: nova
-            d:
-              effectiveStorageClass: default
-              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: "12345" # number, intentionally
-              zone: nova
-            e:
-              effectiveStorageClass: default
-              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: dev2-worker-small-391f2ede-79fcd-f64bd
-              zone: nova
         upmeter:
           certificate: |
             -----BEGIN CERTIFICATE-----
@@ -71,5 +37,3 @@ positive:
             AwEHoUQDQgAEUtCDaAbiuwOvalpUTCBBgG0vyu81gqDb1dn0trI4c0fuLVjFdooK
             2eHNDLoh6Jo1EdXhBpbsIQctTA5oHs0l1g==
             -----END EC PRIVATE KEY-----
-      smokeMiniDisabled: false
-      statusPageAuthDisabled: false
