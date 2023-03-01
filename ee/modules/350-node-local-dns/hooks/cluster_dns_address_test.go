@@ -31,8 +31,7 @@ var _ = Describe("Global hooks :: discovery :: cluster_dns_address ::", func() {
 apiVersion: v1
 kind: Service
 metadata:
-  name:
-d8-kube-dns-redirect
+  name: d8-kube-dns-redirect
   namespace: kube-system
   labels:
     app: coredns-redirect
