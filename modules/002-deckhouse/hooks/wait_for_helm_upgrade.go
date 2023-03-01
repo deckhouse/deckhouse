@@ -80,7 +80,7 @@ func isReleaseDeployed(input *go_hook.HookInput, dc dependency.Container) (bool,
 	})
 
 	if len(releases.Items) == 0 {
-		return false, nil
+		return true, nil
 	}
 
 	latestRelease := releases.Items[0]
