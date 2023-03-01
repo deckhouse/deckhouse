@@ -18,3 +18,4 @@ cp kubelet /usr/bin
 cp kubelet.service /lib/systemd/system
 systemctl daemon-reload
 systemctl enable kubelet.service
+systemctl start kubelet.service || true
