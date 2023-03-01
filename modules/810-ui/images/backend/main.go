@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+
 	"github.com/julienschmidt/httprouter"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -173,12 +175,12 @@ func initHandlers(
 
 	var wrapper http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		// CORS
-		// w.Header().Set("Access-Control-Allow-Origin", "*")
-		// w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		// w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		// if r.Method == "OPTIONS" {
-		// 	return
-		// }
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if r.Method == "OPTIONS" {
+			return
+		}
 
 		klog.V(5).Infof("Request: %s %s", r.Method, r.URL.Path)
 		router.ServeHTTP(w, r)
