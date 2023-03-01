@@ -89,4 +89,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/810-ui/hooks/https"
 )
