@@ -186,7 +186,7 @@ tolerations:
 
 
 {{- /* Additional strategies */ -}}
-{{- /* with-uninitialized - used for CNI's and kube-proxy to allow cni components */ -}}
+{{- /* uninitialized - used for CNI's and kube-proxy to allow cni components */ -}}
 {{- /* scheduled on node after CCM initialization. */ -}}
 {{- define "_helm_lib_additional_tolerations_uninitialized" }}
 - key: node.deckhouse.io/uninitialized
@@ -198,7 +198,7 @@ tolerations:
   {{- include "_helm_lib_additional_tolerations_node_problems" . }}
 {{- end }}
 
-{{- /* with-node-problems - used for shedule critical components on non-ready nodes */ -}}
+{{- /* node-problems - used for shedule critical components on non-ready nodes */ -}}
 {{- /* or to nodes under pressure */ -}}
 {{- define "_helm_lib_additional_tolerations_node_problems" }}
 - key: node.kubernetes.io/not-ready
@@ -210,21 +210,21 @@ tolerations:
 - key: node.kubernetes.io/network-unavailable
 {{- end }}
 
-{{- /* with-storage-problems - used for shedule critical components on nodes with storage problems */ -}}
+{{- /* storage-problems - used for shedule critical components on nodes with storage problems */ -}}
 {{- define "_helm_lib_additional_tolerations_storage_problems" }}
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 {{- end }}
 
-{{- /* with-no-csi - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it */ -}}
+{{- /* no-csi - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it */ -}}
 {{- define "_helm_lib_additional_tolerations_no_csi" }}
 - key: node.deckhouse.io/csi-not-bootstrapped
   operator: "Exists"
   effect: "NoSchedule"
 {{- end }}
 
-{{- /* with-cloud-provider-uninitialized - used for any node which is not initialized by CCM */ -}}
+{{- /* cloud-provider-uninitialized - used for any node which is not initialized by CCM */ -}}
 {{- define "_helm_lib_additional_tolerations_cloud_provider_uninitialized" }}
   {{- if not .Values.global.clusterIsBootstrapped }}
 - key: node.cloudprovider.kubernetes.io/uninitialized
