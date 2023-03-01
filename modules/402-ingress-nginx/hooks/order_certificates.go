@@ -19,15 +19,15 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	"sort"
 	"time"
 
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
