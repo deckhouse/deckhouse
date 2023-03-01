@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Deckhouse hooks :: enable_extended_monitoring ::", func() {
+var _ = FDescribe("Deckhouse hooks :: enable_extended_monitoring ::", func() {
 	const (
 		kubeSystemNS = `
 ---
@@ -31,6 +31,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kube-system
+  annotations:
+    extended-monitoring.flant.com/enabled: ""
 `
 		d8SystemNS = `
 ---
@@ -38,6 +40,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-system
+  annotations:
+    extended-monitoring.flant.com/enabled: ""
 `
 	)
 
@@ -56,11 +60,15 @@ metadata:
 				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
 			Expect(label.Exists()).To(BeTrue())
 			Expect(label.String()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-system").
+				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
 
 			label = f.KubernetesGlobalResource("Namespace", "kube-system").
 				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
 			Expect(label.Exists()).To(BeTrue())
 			Expect(label.String()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("Namespace", "kube-system").
+				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
 		})
 	})
 })
