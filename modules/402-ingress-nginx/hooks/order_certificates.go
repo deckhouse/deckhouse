@@ -69,7 +69,7 @@ func applyIngressSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, fmt.Errorf("cannot convert tls secret to Secret: %v", err)
 	}
 
-	return &certificateData{
+	return certificateData{
 		SecretName: secret.GetName(),
 		CertificateData: &certificate.Certificate{
 			Cert: string(secret.Data["client.crt"]),
@@ -93,7 +93,7 @@ func orderCertificate(input *go_hook.HookInput) error {
 
 	certificatesSecretMap := make(map[string]*certificate.Certificate)
 	for _, v := range input.Snapshots["certificates_data"] {
-		certificateData := v.(*certificateData)
+		certificateData := v.(certificateData)
 		certificatesSecretMap[certificateData.SecretName] = certificateData.CertificateData
 	}
 
