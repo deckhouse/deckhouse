@@ -304,7 +304,7 @@ func RebootMaster(sshClient *ssh.Client) error {
 				}
 			}
 			return fmt.Errorf("shutdown error: exit_code: %v stdout: %s stderr: %s %v",
-				ee.ExitCode()
+				ee.ExitCode(),
 				rebootCmd.StdoutBuffer.String(),
 				rebootCmd.StderrBuffer.String(),
 				err,
