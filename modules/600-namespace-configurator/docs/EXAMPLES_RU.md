@@ -19,7 +19,7 @@ spec:
     - annotations:
         foo: bar
       labels:
-        extended-monitoring.flant.com/enabled: "true"
+        extended-monitoring.deckhouse.io/enabled: "true"
       includeNames:
       - "prod-.*"
       - "infra-.*"
