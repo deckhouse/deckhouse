@@ -90,7 +90,7 @@ func applyNameNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func handleLegacyAnnotatedIngress(input *go_hook.HookInput) error {
+func handleLegacyAnnotatedResource(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_legacy_annotation")
 
 	iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots["nodes"])
