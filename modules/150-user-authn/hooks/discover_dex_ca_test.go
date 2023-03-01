@@ -29,6 +29,7 @@ var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
 			f.RunHook()
 		})
+
 		It("Should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
@@ -81,6 +82,7 @@ data:
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "DoNotNeed")
 			f.RunHook()
 		})
+
 		It("Should add no ca for OIDC provider", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal(""))
@@ -94,13 +96,53 @@ data:
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCustomCA", "testca")
 			f.RunHook()
 		})
+
 		It("Should add no ca for OIDC provider from config", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
 		})
+	})
 
-		Context("Adding ingress-tls-customcertificate secret", func() {
+	Context("Checking for CertManager and CustomcCertificate cases with secrets", func() {
+		BeforeEach(func() {
+			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "FromIngressSecret")
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
+			f.RunHook()
+		})
+
+		It("Should run", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		Context("Matching with CertManager and ingress-tls", func() {
 			BeforeEach(func() {
+				f.ValuesSet("userAuthn.https.mode", "CertManager")
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls
+  namespace: d8-user-authn
+data:
+  tls.crt: dGVzdA==
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should add tls.crt for OIDC provider", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
+			})
+
+			It("Should check non-existing ingress-tls-customcertificate secret", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls-customcertificate").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("Matching with CustomCertificate and ingress-tls-customcertificate", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthn.https.mode", "CustomCertificate")
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
 kind: Secret
@@ -116,6 +158,11 @@ data:
 			It("Should add tls.crt for OIDC provider", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
+			})
+
+			It("Should check non-existing ingress-tls secret", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls").Exists()).To(BeFalse())
 			})
 		})
 	})
