@@ -28,11 +28,6 @@ signal_handler() {
     wait "${PID}"
     run_deckhouse
     ;;
-  "SIGTERM")
-    # always sleep 10 seconds on modules converge to avoid Deckhouse self-upgrade helm race (release is stuck into pending-upgrade)
-    /usr/bin/deckhouse-controller queue main | grep ConvergeModules && echo "{\"level\":\"info\", \"msg\": \"Deckhouse is restarting during the modules converge. Sleeping 10 seconds.\"}" && sleep 10
-    kill -"${1}" "${PID}"
-    ;;
   *)
     kill -"${1}" "${PID}"
     ;;
