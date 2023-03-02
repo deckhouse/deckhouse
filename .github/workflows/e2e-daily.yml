@@ -472,6 +472,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -902,6 +904,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1320,6 +1324,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1746,6 +1752,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2164,6 +2172,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2586,6 +2596,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3004,6 +3016,8 @@ jobs:
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
