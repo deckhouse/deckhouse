@@ -1,8 +1,8 @@
 diff --git a/cmd/kube-controller-manager/app/policy.go b/cmd/kube-controller-manager/app/policy.go
-index 51512830ad8..4dc4c25c34f 100644
+index 08bb2dcb741..52398cb06df 100644
 --- a/cmd/kube-controller-manager/app/policy.go
 +++ b/cmd/kube-controller-manager/app/policy.go
-@@ -54,6 +54,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
+@@ -53,6 +53,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
  		controllerContext.InformerFactory.Apps().V1().ReplicaSets(),
  		controllerContext.InformerFactory.Apps().V1().Deployments(),
  		controllerContext.InformerFactory.Apps().V1().StatefulSets(),
@@ -17,7 +17,7 @@ index 3c8fcbab770..5c3f9597328 100644
 @@ -95,6 +95,9 @@ type DisruptionController struct {
  	ssLister       appsv1listers.StatefulSetLister
  	ssListerSynced cache.InformerSynced
-
+ 
 +	dsLister       appsv1listers.DaemonSetLister
 +	dsListerSynced cache.InformerSynced
 +
@@ -35,7 +35,7 @@ index 3c8fcbab770..5c3f9597328 100644
 @@ -168,6 +172,9 @@ func NewDisruptionController(
  	dc.ssLister = ssInformer.Lister()
  	dc.ssListerSynced = ssInformer.Informer().HasSynced
-
+ 
 +	dc.dsLister = dsInformer.Lister()
 +	dc.dsListerSynced = dsInformer.Informer().HasSynced
 +
@@ -49,7 +49,7 @@ index 3c8fcbab770..5c3f9597328 100644
 -		dc.getPodStatefulSet, dc.getScaleController}
 +		dc.getPodStatefulSet, dc.getPodDaemonSet, dc.getScaleController}
  }
-
+ 
  var (
 @@ -189,6 +196,7 @@ var (
  	controllerKindSS  = apps.SchemeGroupVersion.WithKind("StatefulSet")
@@ -57,12 +57,12 @@ index 3c8fcbab770..5c3f9597328 100644
  	controllerKindDep = v1beta1.SchemeGroupVersion.WithKind("Deployment")
 +	controllerKindDS  = apps.SchemeGroupVersion.WithKind("DaemonSet")
  )
-
+ 
  // getPodReplicaSet finds a replicaset which has no matching deployments.
 @@ -213,6 +221,24 @@ func (dc *DisruptionController) getPodReplicaSet(ctx context.Context, controller
  	return &controllerAndScale{rs.UID, *(rs.Spec.Replicas)}, nil
  }
-
+ 
 +// getPodDaemonSet returns the daemonset referenced by the provided controllerRef.
 +func (dc *DisruptionController) getPodDaemonSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
 +	ok, err := verifyGroupKind(controllerRef, controllerKindDS.Kind, []string{"apps"})
@@ -87,14 +87,14 @@ index 3c8fcbab770..5c3f9597328 100644
 @@ -363,7 +389,7 @@ func (dc *DisruptionController) Run(ctx context.Context) {
  	klog.Infof("Starting disruption controller")
  	defer klog.Infof("Shutting down disruption controller")
-
+ 
 -	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced) {
 +	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced, dc.dsListerSynced) {
  		return
  	}
-
+ 
 diff --git a/pkg/controller/disruption/disruption_test.go b/pkg/controller/disruption/disruption_test.go
-index b242b35d761..346dd4f04fc 100644
+index eeac5e798db..c5b77e964fd 100644
 --- a/pkg/controller/disruption/disruption_test.go
 +++ b/pkg/controller/disruption/disruption_test.go
 @@ -134,6 +134,7 @@ type disruptionController struct {
@@ -102,7 +102,7 @@ index b242b35d761..346dd4f04fc 100644
  	dStore   cache.Store
  	ssStore  cache.Store
 +	dsStore  cache.Store
-
+ 
  	coreClient      *fake.Clientset
  	scaleClient     *scalefake.FakeScaleClient
 @@ -166,6 +167,7 @@ func newFakeDisruptionController() (*disruptionController, *pdbStates) {
@@ -132,7 +132,7 @@ index b242b35d761..346dd4f04fc 100644
 @@ -262,6 +266,13 @@ func updatePodOwnerToRc(t *testing.T, pod *v1.Pod, rc *v1.ReplicationController)
  	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
  }
-
+ 
 +func updatePodOwnerToDs(t *testing.T, pod *v1.Pod, ds *apps.DaemonSet) {
 +	var controllerReference metav1.OwnerReference
 +	var trueVar = true
@@ -143,10 +143,11 @@ index b242b35d761..346dd4f04fc 100644
  func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
  	var controllerReference metav1.OwnerReference
  	var trueVar = true
-@@ -269,6 +280,32 @@ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
+@@ -269,7 +280,32 @@ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
  	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
  }
-
+ 
+-// pod, podName := newPod(t, name)
 +func newDaemonSet(t *testing.T, size int32) (*apps.DaemonSet, string) {
 +	ds := &apps.DaemonSet{
 +		TypeMeta: metav1.TypeMeta{APIVersion: "v1"},
@@ -173,13 +174,13 @@ index b242b35d761..346dd4f04fc 100644
 +	return ds, dsName
 +}
 +
- //	pod, podName := newPod(t, name)
  func updatePodOwnerToSs(t *testing.T, pod *v1.Pod, ss *apps.StatefulSet) {
  	var controllerReference metav1.OwnerReference
-@@ -406,6 +443,37 @@ func update(t *testing.T, store cache.Store, obj interface{}) {
+ 	var trueVar = true
+@@ -406,6 +442,37 @@ func update(t *testing.T, store cache.Store, obj interface{}) {
  	}
  }
-
+ 
 +func TestDaemonSetController(t *testing.T) {
 +	labels := map[string]string{
 +		"foo": "bar",
@@ -214,25 +215,25 @@ index b242b35d761..346dd4f04fc 100644
  func add(t *testing.T, store cache.Store, obj interface{}) {
  	if err := store.Add(obj); err != nil {
  		t.Fatalf("Could not add %+v to %+v: %v", obj, store, err)
-@@ -768,7 +836,7 @@ func TestMultipleControllers(t *testing.T) {
-
+@@ -768,7 +835,7 @@ func TestMultipleControllers(t *testing.T) {
+ 
  	// 100%>1% healthy BUT two RCs => no disruption allowed
  	// TODO: Find out if this assert is still needed
 -	//ps.VerifyDisruptionAllowed(t, pdbName, 0)
 +	// ps.VerifyDisruptionAllowed(t, pdbName, 0)
  }
-
+ 
  func TestReplicationController(t *testing.T) {
-@@ -1003,6 +1071,8 @@ func TestBasicFinderFunctions(t *testing.T) {
+@@ -1003,6 +1070,8 @@ func TestBasicFinderFunctions(t *testing.T) {
  	add(t, dc.rcStore, rc)
  	ss, _ := newStatefulSet(t, 14)
  	add(t, dc.ssStore, ss)
 +	ds, _ := newDaemonSet(t, 13)
 +	add(t, dc.dsStore, ds)
-
+ 
  	testCases := map[string]struct {
  		finderFunc    podControllerFinder
-@@ -1064,6 +1134,23 @@ func TestBasicFinderFunctions(t *testing.T) {
+@@ -1064,6 +1133,23 @@ func TestBasicFinderFunctions(t *testing.T) {
  			uid:        ss.UID,
  			findsScale: false,
  		},
@@ -254,5 +255,5 @@ index b242b35d761..346dd4f04fc 100644
 +			findsScale: false,
 +		},
  	}
-
+ 
  	for tn, tc := range testCases {
