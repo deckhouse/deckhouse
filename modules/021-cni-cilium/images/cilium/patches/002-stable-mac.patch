@@ -1,0 +1,59 @@
+diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
+index 7b3e13f44b..a00597f9e7 100644
+--- a/pkg/datapath/connector/veth.go
++++ b/pkg/datapath/connector/veth.go
+@@ -62,11 +62,13 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu int, ep *models.Endpoin
+ 	// explicitly setting MAC addrs for both veth ends. This sets
+ 	// addr_assign_type for NET_ADDR_SET which prevents systemd from changing
+ 	// the addrs.
+-	epHostMAC, err = mac.GenerateRandMAC()
++	epHostMACSeed := "h" + ep.Addressing.IPV4 + ep.Addressing.IPV6
++	epHostMAC, err = mac.GenerateRandMACWithSeed(epHostMACSeed)
+ 	if err != nil {
+ 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
+ 	}
+-	epLXCMAC, err = mac.GenerateRandMAC()
++	epLXCMACSeed := "c" + ep.Addressing.IPV4 + ep.Addressing.IPV6
++	epLXCMAC, err = mac.GenerateRandMACWithSeed(epLXCMACSeed)
+ 	if err != nil {
+ 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
+ 	}
+diff --git a/pkg/mac/mac.go b/pkg/mac/mac.go
+index ce6706dc5a..19bfba465a 100644
+--- a/pkg/mac/mac.go
++++ b/pkg/mac/mac.go
+@@ -5,9 +5,10 @@ package mac
+ 
+ import (
+ 	"bytes"
+-	"crypto/rand"
+ 	"encoding/hex"
+ 	"fmt"
++	"hash/crc64"
++	"math/rand"
+ 	"net"
+ 
+ 	"github.com/vishvananda/netlink"
+@@ -101,6 +102,22 @@ func GenerateRandMAC() (MAC, error) {
+ 	return MAC(buf), nil
+ }
+ 
++// GenerateRandMACWithSeed generates a predictable unicast and locally administered MAC address from seed.
++func GenerateRandMACWithSeed(s string) (MAC, error) {
++	buf := make([]byte, 6)
++	table := crc64.MakeTable(crc64.ISO)
++	seed := crc64.Checksum([]byte(s), table)
++	rand.Seed(int64(seed))
++	if _, err := rand.Read(buf); err != nil {
++		return nil, fmt.Errorf("Unable to retrieve 6 rnd bytes: %s", err)
++	}
++
++	// Set locally administered addresses bit and reset multicast bit
++	buf[0] = (buf[0] | 0x02) & 0xfe
++
++	return MAC(buf), nil
++}
++
+ // HasMacAddr returns true if the given network interface has L2 addr.
+ func HasMacAddr(iface string) bool {
+ 	link, err := netlink.LinkByName(iface)

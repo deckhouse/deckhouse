@@ -222,7 +222,6 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 		annotations = make(map[string]string)
 	}
 	annotations["cni.cilium.io/ipAddress"] = ipAddress
-	annotations["cni.cilium.io/macAddress"] = "f6:e1:74:94:b8:1a"
 
 	vm.Spec.Running = d8vm.Spec.Running
 	vm.Spec.Template = &virtv1.VirtualMachineInstanceTemplateSpec{
