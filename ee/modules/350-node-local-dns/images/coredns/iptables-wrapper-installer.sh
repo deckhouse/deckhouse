@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Copyright 2020 The Kubernetes Authors.
 #
@@ -16,13 +16,13 @@
 
 set -eu
 
-chroot_sbin="/dpkg/usr/sbin"
+chroot_sbin="/apk/usr/sbin"
 sbin="/usr/sbin"
 
 # Start creating the wrapper...
 rm -f "${chroot_sbin}/iptables-wrapper"
 cat > "${chroot_sbin}/iptables-wrapper" <<EOF
-#!/bin/bash
+#!/bin/sh
 
 # Copyright 2020 The Kubernetes Authors.
 #
