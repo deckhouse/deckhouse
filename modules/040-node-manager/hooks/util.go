@@ -26,8 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// DecodeDataFromSecret returns data section from Secret. If possible, top level keys are converted from JSON.
-func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{}, error) {
+// decodeDataFromSecret returns data section from Secret. If possible, top level keys are converted from JSON.
+func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{}, error) {
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
@@ -58,19 +58,20 @@ func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 	return res, nil
 }
 
-// SemverMajMin is a Go implementation of this bash snippet:
+// semverMajMin is a Go implementation of this bash snippet:
 //
 //	function semver::majmin() {
 //	  echo "$(echo $1 | cut -d. -f1,2)"
 //	}
-func SemverMajMin(ver *semver.Version) string {
+func semverMajMin(ver *semver.Version) string {
 	if ver == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d.%d", ver.Major(), ver.Minor())
 }
 
-func SemverMin(versions []*semver.Version) *semver.Version {
+// semverMin is a function that finds the minimum semver in a slice.
+func semverMin(versions []*semver.Version) *semver.Version {
 	if len(versions) == 0 {
 		return nil
 	}

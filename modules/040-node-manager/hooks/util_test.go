@@ -38,7 +38,7 @@ func Test_DecodeDataFromSecret(t *testing.T) {
 		t.Fatalf("secret should be converted to unstructured: %v", err)
 	}
 
-	data, err := DecodeDataFromSecret(obj)
+	data, err := decodeDataFromSecret(obj)
 	if err != nil {
 		t.Fatalf("data should be decoded: %v", err)
 	}
@@ -80,13 +80,13 @@ func Test_Semver_Min(t *testing.T) {
 	var ver *semver.Version
 
 	// Test nil input
-	ver = SemverMin(nil)
+	ver = semverMin(nil)
 	if ver != nil {
 		t.Fatalf("SemverMin should return nil when input is nil. Got: %#v", ver)
 	}
 
 	// Test empty array input
-	ver = SemverMin([]*semver.Version{})
+	ver = semverMin([]*semver.Version{})
 	if ver != nil {
 		t.Fatalf("SemverMin should return nil when input has no items. Got: %#v", ver)
 	}
@@ -94,7 +94,7 @@ func Test_Semver_Min(t *testing.T) {
 	// Test input with single item.
 	v19, _ := semver.NewVersion("1.19.0")
 
-	ver = SemverMin([]*semver.Version{v19})
+	ver = semverMin([]*semver.Version{v19})
 	if ver == nil {
 		t.Fatalf("SemverMin should return non nil when input has single item. Got: %#v", ver)
 	}
@@ -106,7 +106,7 @@ func Test_Semver_Min(t *testing.T) {
 	v18, _ := semver.NewVersion("1.18.1")
 	v17, _ := semver.NewVersion("1.17.2")
 
-	ver = SemverMin([]*semver.Version{v19, v17, v18})
+	ver = semverMin([]*semver.Version{v19, v17, v18})
 	if ver == nil {
 		t.Fatalf("SemverMin should return non nil when input has multiple items. Got: %#v", ver)
 	}
@@ -119,14 +119,14 @@ func Test_Semver_MajMin(t *testing.T) {
 	var ver string
 
 	// Test nil input.
-	ver = SemverMajMin(nil)
+	ver = semverMajMin(nil)
 	if ver != "" {
 		t.Fatalf("SemverMajMin should return empty string when input is nil. Got: %v", ver)
 	}
 
 	// Test non-nil input.
 	v19, _ := semver.NewVersion("1.19.3")
-	ver = SemverMajMin(v19)
+	ver = semverMajMin(v19)
 	if ver != "1.19" {
 		t.Fatalf("SemverMajMin should return major.minor='1.19'. Got: %v", ver)
 	}

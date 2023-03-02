@@ -25,7 +25,7 @@ import (
 
 // applyCloudProviderSecretFilter loads data section from Secret and tries to decode json in all top fields.
 func applyCloudProviderSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return DecodeDataFromSecret(obj)
+	return decodeDataFromSecret(obj)
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

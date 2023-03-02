@@ -27,7 +27,6 @@ import (
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -89,7 +88,7 @@ func applyMachineDeploymentCrdFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secretData, err := DecodeDataFromSecret(obj)
+	secretData, err := decodeDataFromSecret(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +222,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	controlPlaneMinVersion := SemverMin(controlPlaneKubeVersions)
+	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
 	// Default zones. Take them from input.Snapshots["machine_deployments"]
 	// and from input.Snapshots["cloud_provider_secret"].zones
@@ -395,7 +394,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				effectiveKubeVer = controlPlaneMinVersion
 			}
 		}
-		ngForValues["kubernetesVersion"] = SemverMajMin(effectiveKubeVer)
+		effectiveKubeVerMajMin := semverMajMin(effectiveKubeVer)
+		ngForValues["kubernetesVersion"] = effectiveKubeVerMajMin
+
+		setNodeGroupKubeVersionStatus(input.PatchCollector, nodeGroup.Name, effectiveKubeVerMajMin)
 
 		// Detect CRI type. Default CRI type is 'Docker' for Kubernetes version less than 1.19.
 		v1_19_0, _ := semver.NewVersion("1.19.0")
@@ -488,15 +490,6 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	}
 
 	return res
-}
-
-func setNodeGroupErrorStatus(patcher *object_patch.PatchCollector, nodeGroupName, message string) {
-	statusErrorPatch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"error": message,
-		},
-	}
-	patcher.MergePatch(statusErrorPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
 var epochTimestampAccessor = func() int64 {
