@@ -61,9 +61,9 @@ nodeSelector:
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} */ -}}
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
+  {{- $additionalStrategies := tuple "storage-problems" }} {{- /* list of additional strategies. To add strategy list it with prefix with-, to remove strategy list it with prefix without- */ -}}
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
-  {{- $additionalStrategies := tuple "storage-problems" }}
   {{- if gt (len .) 2 }}
     {{- range $as := slice . 2 (len .) }}
       {{- if hasPrefix "with-" $as }}
@@ -109,6 +109,7 @@ tolerations:
 {{- end }}
 
 {{- /* Check cluster type */ -}}
+{{- /* Returns not empty string if this is cloud or hybrid cluster */ -}}
 {{- define "_helm_lib_cloud_or_hybrid_cluster" }}
   {{- if .Values.global.clusterConfiguration }}
     {{- if eq .Values.global.clusterConfiguration.clusterType "Cloud" }}
@@ -124,6 +125,7 @@ tolerations:
 {{- end }}
 
 {{- /* Verify base strategy */ -}}
+{{- /* Fails if strategy not in allowed list */ - }}
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
   {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
