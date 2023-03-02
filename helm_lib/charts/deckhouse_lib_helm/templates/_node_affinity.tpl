@@ -1,3 +1,4 @@
+{{- /* Verify node selector strategy. */ -}}
 {{- define "helm_lib_internal_check_node_selector_strategy" -}}
   {{ if not (has . (list "frontend" "monitoring" "system" "master" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
@@ -5,7 +6,7 @@
   {{- . -}}
 {{- end }}
 
-{{- /* Returns node selector for workloads depend on strategy */ -}}
+{{- /* Returns node selector for workloads depend on strategy. */ -}}
 {{- define "helm_lib_node_selector" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }} {{- /* strategy, one of "frontend" "monitoring" "system" "master" "any-node" "wildcard" */ -}}
@@ -57,12 +58,12 @@ nodeSelector:
 {{- end }}
 
 
-{{- /* Returns tolerations for workloads depend on strategy */ -}}
+{{- /* Returns tolerations for workloads depend on strategy. */ -}}
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} */ -}}
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
-  {{- $additionalStrategies := tuple "storage-problems" }} {{- /* list of additional strategies. To add strategy list it with prefix with-, to remove strategy list it with prefix without- */ -}}
+  {{- $additionalStrategies := tuple "storage-problems" }} {{- /* list of additional strategies. To add strategy list it with prefix "with-", to remove strategy list it with prefix "without-". */ -}}
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
   {{- if gt (len .) 2 }}
     {{- range $as := slice . 2 (len .) }}
@@ -108,7 +109,7 @@ tolerations:
   {{- end }}
 {{- end }}
 
-{{- /* Check cluster type */ -}}
+{{- /* Check cluster type. */ -}}
 {{- /* Returns not empty string if this is cloud or hybrid cluster */ -}}
 {{- define "_helm_lib_cloud_or_hybrid_cluster" }}
   {{- if .Values.global.clusterConfiguration }}
@@ -124,7 +125,7 @@ tolerations:
   {{- end }}
 {{- end }}
 
-{{- /* Verify base strategy */ -}}
+{{- /* Verify base strategy. */ -}}
 {{- /* Fails if strategy not in allowed list */ - }}
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
   {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
@@ -134,7 +135,8 @@ tolerations:
 {{- end }}
 
 
-{{- /* Base strategies */ -}}
+{{- /* Base strategy for any uncordoned node in cluster. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node") }} */ -}}
 {{- define "_helm_lib_any_node_tolerations" }}
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -152,10 +154,14 @@ tolerations:
   {{- end }}
 {{- end }}
 
+{{- /* Base strategy that tolerates all. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "wildcard") }} */ -}}
 {{- define "_helm_lib_wildcard_tolerations" }}
 - operator: "Exists"
 {{- end }}
 
+{{- /* Base strategy that tolerates nodes with "dedicated.deckhouse.io: monitoring" and "dedicated.deckhouse.io: system" taints. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "monitoring") }} */ -}}
 {{- define "_helm_lib_monitoring_tolerations" }}
 - key: dedicated.deckhouse.io
   operator: Equal
@@ -168,6 +174,8 @@ tolerations:
   value: "system"
 {{- end }}
 
+{{- /* Base strategy that tolerates nodes with "dedicated.deckhouse.io: frontend" taints. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "frontend") }} */ -}}
 {{- define "_helm_lib_frontend_tolerations" }}
 - key: dedicated.deckhouse.io
   operator: Equal
@@ -177,6 +185,8 @@ tolerations:
   value: "frontend"
 {{- end }}
 
+{{- /* Base strategy that tolerates nodes with "dedicated.deckhouse.io: system" taints. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "system") }} */ -}}
 {{- define "_helm_lib_system_tolerations" }}
 - key: dedicated.deckhouse.io
   operator: Equal
@@ -187,9 +197,8 @@ tolerations:
 {{- end }}
 
 
-{{- /* Additional strategies */ -}}
-{{- /* uninitialized - used for CNI's and kube-proxy to allow cni components */ -}}
-{{- /* scheduled on node after CCM initialization. */ -}}
+{{- /* Additional strategy "uninitialized" - used for CNI's and kube-proxy to allow cni components scheduled on node after CCM initialization. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_uninitialized" }}
 - key: node.deckhouse.io/uninitialized
   operator: "Exists"
@@ -200,8 +209,8 @@ tolerations:
   {{- include "_helm_lib_additional_tolerations_node_problems" . }}
 {{- end }}
 
-{{- /* node-problems - used for shedule critical components on non-ready nodes */ -}}
-{{- /* or to nodes under pressure */ -}}
+{{- /* Additional strategy "node-problems" - used for shedule critical components on non-ready nodes or nodes under pressure. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-node-problems") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_node_problems" }}
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -212,21 +221,24 @@ tolerations:
 - key: node.kubernetes.io/network-unavailable
 {{- end }}
 
-{{- /* storage-problems - used for shedule critical components on nodes with storage problems */ -}}
+{{- /* Additional strategy "storage-problems" - used for shedule critical components on nodes with drbd problems. This additional strategy enabled by default in any base strategy except "wildcard". */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "without-storage-problems") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_storage_problems" }}
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 {{- end }}
 
-{{- /* no-csi - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it */ -}}
+{{- /* Additional strategy "no-csi" - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_no_csi" }}
 - key: node.deckhouse.io/csi-not-bootstrapped
   operator: "Exists"
   effect: "NoSchedule"
 {{- end }}
 
-{{- /* cloud-provider-uninitialized - used for any node which is not initialized by CCM */ -}}
+{{- /* Additional strategy "cloud-provider-uninitialized" - used for any node which is not initialized by CCM. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-cloud-provider-uninitialized") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_cloud_provider_uninitialized" }}
   {{- if not .Values.global.clusterIsBootstrapped }}
 - key: node.cloudprovider.kubernetes.io/uninitialized
