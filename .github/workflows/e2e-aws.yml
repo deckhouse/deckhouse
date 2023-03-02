@@ -380,6 +380,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -808,6 +813,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -1238,6 +1248,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -1666,6 +1681,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -2096,6 +2116,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -2524,6 +2549,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -2954,6 +2984,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -3382,6 +3417,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -3812,6 +3852,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -4240,6 +4285,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -4670,6 +4720,11 @@ jobs:
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
           fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
@@ -5098,6 +5153,11 @@ jobs:
           if [[ -n ${CI_COMMIT_TAG} ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
           fi
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
