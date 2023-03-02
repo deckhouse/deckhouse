@@ -154,6 +154,8 @@
 
         **Caution!!!** The Node will not be drained automatically since the manual mode is enabled (`disruptions.approvalMode: Manual`).
 
+        **Caution!!!** No need to drain the master node.
+
         * Use the following commands to drain the Node and grant it update approval:
           ```shell
           kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&
