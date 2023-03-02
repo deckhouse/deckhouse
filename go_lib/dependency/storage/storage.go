@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,27 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package requirements
+package storage
 
-type MemoryValuesStore struct {
-	values map[string]interface{}
+type ValuesStorage interface {
+	Set(key string, value interface{}) error
+	Remove(key string) error
+	Get(key string) (interface{}, bool, error)
 }
 
-func newMemoryValuesStore() *MemoryValuesStore {
-	return &MemoryValuesStore{
-		values: make(map[string]interface{}),
+func Init(driverName string) *ValuesStorage {
+	// default driver is in memory
+	var v *ValuesStorage
+	switch driverName {
+	case MemoryValuesStorageDriver:
+	default:
+		v = new(MemoryValuesStorage)
 	}
-}
-
-func (m *MemoryValuesStore) Set(key string, value interface{}) {
-	m.values[key] = value
-}
-
-func (m *MemoryValuesStore) Remove(key string) {
-	delete(m.values, key)
-}
-
-func (m *MemoryValuesStore) Get(key string) (interface{}, bool) {
-	v, ok := m.values[key]
-	return v, ok
+	return v
 }

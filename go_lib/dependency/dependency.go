@@ -201,6 +201,11 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 	}
 }
 
+// WithExternalDependencies decorate function with external dependencies
+func GetDefaultContainer() Container {
+	return defaultDC
+}
+
 // Mocks
 type mockedDependencyContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests

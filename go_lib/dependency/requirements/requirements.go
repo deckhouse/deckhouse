@@ -30,7 +30,7 @@ var (
 
 func init() {
 	defaultRegistry = newRegistry()
-	memoryStorage = newMemoryValuesStore()
+	memoryStorage = storage.NewStorage()
 }
 
 // RegisterCheck add CheckFunc for some component
