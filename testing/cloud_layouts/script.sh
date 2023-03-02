@@ -631,6 +631,10 @@ kubectl -n d8-system get pods -l app=deckhouse
 [[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
 END_SCRIPT
 )
+  testLog=$(cat <<"END_SCRIPT"
+kubectl -n d8-system logs deploy/deckhouse
+END_SCRIPT
+)
 
   testRunAttempts=60
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -646,6 +650,8 @@ END_SCRIPT
       >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
     fi
   done
+  >&2 echo -n "Fetch Deckhouse logs if error test ..."
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<<"${testLog}"
   return 1
 }
 
@@ -656,6 +662,10 @@ END_SCRIPT
 #  - ssh_user
 #  - master_ip
 function wait_cluster_ready() {
+  testLog=$(cat <<"END_SCRIPT"
+kubectl -n d8-system logs deploy/deckhouse
+END_SCRIPT
+)
   # Print deckhouse info and enabled modules.
   infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
@@ -681,10 +691,8 @@ function wait_cluster_ready() {
     fi
   done
 
-  >&2 echo "Fetch Deckhouse logs after test ..."
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
-kubectl -n d8-system logs deploy/deckhouse
-ENDSSH
+  >&2 echo -n "Fetch Deckhouse logs after test ..."
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$cwd/deckhouse.json.log" <<<"${testLog}"
 
   if [[ $test_failed == "true" ]] ; then
     return 1
