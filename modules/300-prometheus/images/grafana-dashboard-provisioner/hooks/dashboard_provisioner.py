@@ -65,7 +65,6 @@ def main(ctx: hook.Context):
 
     shutil.rmtree("/etc/grafana/dashboards/", ignore_errors=True)
     shutil.move(tmp_dir, "/etc/grafana/dashboards/")
-    shutil.rmtree(tmp_dir)
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
