@@ -19,6 +19,7 @@ package hooks
 import (
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
