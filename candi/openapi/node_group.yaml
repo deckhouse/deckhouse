@@ -115,14 +115,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description:
-                    Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
                 kubernetesVersion:
                   type: string
-                  description:
-                    The current version of kubernetes on the nodes, or
-                    the version to which the nodes will be upgraded.
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:
@@ -735,14 +731,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description:
-                    Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
                 kubernetesVersion:
                   type: string
-                  description:
-                    The current version of kubernetes on the nodes, or
-                    the version to which the nodes will be upgraded.
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:
@@ -1349,14 +1341,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description:
-                    Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
                 kubernetesVersion:
                   type: string
-                  description:
-                    The current version of kubernetes on the nodes, or
-                    the version to which the nodes will be upgraded.
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:

@@ -72,6 +72,8 @@ spec:
                   description: "The summary number of overprovisioned Nodes for this NodeGroup in all zones."
                 error:
                   description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   items:
                     properties:
