@@ -225,6 +225,15 @@ properties:
     type: boolean
     default: false
     x-examples: [true, false]
+  pmacctEnabled:
+    description: |
+      Enable logging of user's activity via VPN in JSON format.
+
+      All connections within `tun` interfaces will be collected via `libpcap` and logged
+      as `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`
+    type: boolean
+    default: false
+    x-examples: [true, false]
 oneOf:
   - properties:
       tcpEnabled:

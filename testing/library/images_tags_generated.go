@@ -289,6 +289,7 @@ var DefaultImagesTags = map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
 		"openvpn":         "imageHash-openvpn-openvpn",
 		"ovpnAdmin":       "imageHash-openvpn-ovpnAdmin",
+		"pmacct":          "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",

@@ -1,0 +1,4 @@
+ARG BASE_ALPINE
+FROM $BASE_ALPINE
+RUN apk add --no-cache pmacct
+ENV LANG=C.UTF-8
