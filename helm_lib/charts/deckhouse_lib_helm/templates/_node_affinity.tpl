@@ -126,7 +126,7 @@ tolerations:
 {{- end }}
 
 {{- /* Verify base strategy. */ -}}
-{{- /* Fails if strategy not in allowed list */ - }}
+{{- /* Fails if strategy not in allowed list */ -}}
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
   {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
