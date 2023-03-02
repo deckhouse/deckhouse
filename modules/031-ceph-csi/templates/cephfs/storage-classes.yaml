@@ -21,6 +21,7 @@ mountOptions:
   - {{ $option }}
         {{- end }}
       {{- end }}
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   csi.storage.k8s.io/provisioner-secret-name: csi-{{ $cr.name }}
   csi.storage.k8s.io/provisioner-secret-namespace: d8-{{ $.Chart.Name }}

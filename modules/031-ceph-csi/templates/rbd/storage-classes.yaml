@@ -11,6 +11,7 @@ metadata:
     migration-secret-name-changed: ""
 {{ include "helm_lib_module_labels" (list $ (dict "app" $.Chart.Name)) | indent 2 }}
 provisioner: rbd.csi.ceph.com
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   clusterID: {{ $cr.spec.clusterID }}
   pool: {{ $sc.pool }}
