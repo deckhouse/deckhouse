@@ -92,6 +92,11 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io-1.6.18-3.1.el9.x86_64"
         allowedPattern: ""
+  altlinux:
+    'p10':
+      containerd:
+        desiredVersion: "containerd=1.6.9-alt1"
+        allowedPattern: ""
 k8s:
   '1.22':
     status: available
