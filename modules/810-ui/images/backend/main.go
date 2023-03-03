@@ -120,14 +120,14 @@ func initHandlers(
 		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"},
 	} {
 		namespaced := false
-		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
-		namedPathPrefix := pathPrefix + "/:name"
+		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
+		namedItemPath := collectionPath + "/:name"
 		h := newDynamicHandler(dynFactory, dynClient, gvr)
-		router.GET(pathPrefix, h.HandleList)
-		router.GET(namedPathPrefix, h.HandleGet)
-		router.POST(pathPrefix, h.HandleCreate)
-		router.PUT(pathPrefix, h.HandleUpdate)
-		router.DELETE(namedPathPrefix, h.HandleDelete)
+		router.GET(collectionPath, h.HandleList)
+		router.GET(namedItemPath, h.HandleGet)
+		router.POST(collectionPath, h.HandleCreate)
+		router.PUT(namedItemPath, h.HandleUpdate)
+		router.DELETE(namedItemPath, h.HandleDelete)
 	}
 
 	// CRUD with Cloud Providers, along with that adding the provider to discovery if it is present
@@ -157,14 +157,14 @@ func initHandlers(
 		}
 
 		namespaced := false
-		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
-		namedPathPrefix := pathPrefix + "/:name"
+		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
+		namedItemPath := collectionPath + "/:name"
 		h := newDynamicHandler(dynFactory, dynClient, gvr)
-		router.GET(pathPrefix, h.HandleList)
-		router.GET(namedPathPrefix, h.HandleGet)
-		router.POST(pathPrefix, h.HandleCreate)
-		router.PUT(pathPrefix, h.HandleUpdate)
-		router.DELETE(namedPathPrefix, h.HandleDelete)
+		router.GET(collectionPath, h.HandleList)
+		router.GET(namedItemPath, h.HandleGet)
+		router.POST(collectionPath, h.HandleCreate)
+		router.PUT(collectionPath, h.HandleUpdate)
+		router.DELETE(namedItemPath, h.HandleDelete)
 
 		// addClusterCRUDHandlers(router, dynFactory, dynClient, gvr)
 		discovery["cloudProvider"] = strings.TrimSuffix(gvr.Resource, "instanceclasses")
