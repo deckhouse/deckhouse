@@ -32,25 +32,32 @@ func NewMemoryValuesStorage() *MemoryValuesStorage {
 }
 
 func (m *MemoryValuesStorage) Set(key string, value interface{}) error {
-	defer unlock(m.lock())
+	defer unlock(m.wlock())
 	m.values[key] = value
 	return nil
 }
 
 func (m *MemoryValuesStorage) Remove(key string) error {
-	defer unlock(m.lock())
+	defer unlock(m.wlock())
 	delete(m.values, key)
 	return nil
 }
 
 func (m *MemoryValuesStorage) Get(key string) (interface{}, bool, error) {
+	defer unlock(m.rlock())
 	v, ok := m.values[key]
 	return v, ok, nil
 }
 
-func (m *MemoryValuesStorage) lock() func() {
-	m.lock()
+func (m *MemoryValuesStorage) wlock() func() {
+	m.Lock()
 	return func() { m.Unlock() }
+}
+
+// rlock locks mem for reading
+func (m *MemoryValuesStorage) rlock() func() {
+	m.RLock()
+	return func() { m.RUnlock() }
 }
 
 func unlock(fn func()) { fn() }
