@@ -139,6 +139,8 @@ func (e *Exporter) startScheduled(clientGVR controllerClient.Client, t time.Dura
 					wg.Done()
 				}()
 
+				wg.Wait()
+
 				allMetrics := make([]prometheus.Metric, 0)
 				violationMetrics := gatekeeper.ExportViolations(constraints)
 				allMetrics = append(allMetrics, violationMetrics...)
