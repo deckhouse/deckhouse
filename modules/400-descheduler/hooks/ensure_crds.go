@@ -17,13 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/400-descheduler/crds/*.yaml")

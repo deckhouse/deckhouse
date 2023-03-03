@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package settings_conversion
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
+const moduleName = "descheduler"
+
+var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
+
+func convertV1ToV2(settings *conversion.Settings) error {
+	settings.Clear()
+	return nil
 }

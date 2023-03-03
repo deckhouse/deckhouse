@@ -14,16 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package settings_conversion
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/conversion"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+var _ = Describe("Module :: openvpn :: config values conversions :: version 1", func() {
+	ct := SetupConversionTester()
+
+	Context("giving settings in version 1", func() {
+		table.DescribeTable("should convert from 1 to 2",
+			ct.TestConversionToNextVersion(1, 2),
+			table.Entry("giving literally anything", `"test": "test"`, ``),
+		)
+	})
+
+})

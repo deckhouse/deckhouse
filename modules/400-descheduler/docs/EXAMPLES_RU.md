@@ -2,22 +2,39 @@
 title: "Модуль descheduler: примеры"
 ---
 
+## Пример CR
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
+kind: Descheduler
 metadata:
-  name: descheduler
+  name: example
 spec:
-  version: 1
-  enabled: true
-  settings:
-    removePodsViolatingNodeAffinity: false
-    removeDuplicates: true
-    lowNodeUtilization: true
+  deschedulerPolicy:
+    # укажите параметры, применяющиеся ко всем стратегиям
+    globalParameters:
+      evictFailedBarePods: true
+    strategies:
+      # включите конкретную стратегию, указав её параметры
+      podLifeTime:
+        enabled: true
+
+      # включите стратегию и укажите дополнительные параметры
+      removeDuplicates:
+        enabled: true
+        parameters:
+          nodeFit: true
+```
+
+## Пример CR для NodeGroup (labelSelector ноды)
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Descheduler
+metadata:
+  name: example-specific-ng
+spec:
+  deploymentTemplate:
     nodeSelector:
-      node-role/example: ""
-    tolerations:
-    - key: dedicated
-      operator: Equal
-      value: example
+      node.deckhouse.io/group: worker
 ```
