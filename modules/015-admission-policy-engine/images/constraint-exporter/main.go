@@ -22,8 +22,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
+
+	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 	"github.com/flant/constraint_exporter/pkg/kinds"
@@ -42,9 +45,7 @@ var (
 	metricsPath   string
 	interval      time.Duration
 
-	trackValidationKinds     bool
-	trackValidationResources bool
-	trackObjectsCMName       string
+	trackObjectsCMName string
 )
 
 func init() {
@@ -54,8 +55,6 @@ func init() {
 		"Path under which to expose metrics")
 	flag.DurationVar(&interval, "server.interval", 30*time.Second,
 		"Kubernetes API server polling interval")
-	flag.BoolVar(&trackValidationKinds, "track-validation-match-kinds", false, "Tracked kinds for validation webhook")
-	flag.BoolVar(&trackValidationResources, "track-validation-match-resource", true, "Tracked kinds for validation webhook are converted to the resources")
 	flag.StringVar(&trackObjectsCMName, "track-objects-configmap", "constraint-exporter", "ConfigMap for export tracking resource kinds")
 }
 
@@ -106,7 +105,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (e *Exporter) startScheduled(t time.Duration) {
+func (e *Exporter) startScheduled(clientGVR controllerClient.Client, t time.Duration) {
 	ticker = time.NewTicker(t)
 	go func() {
 		for {
@@ -114,10 +113,32 @@ func (e *Exporter) startScheduled(t time.Duration) {
 			case <-done:
 				return
 			case <-ticker.C:
-				constraints, err := gatekeeper.GetConstraints(e.kubeConfig, e.client)
-				if err != nil {
-					klog.Warningf("Get constraints failed: %+v\n", err)
-				}
+				var (
+					constraints []gatekeeper.Constraint
+					mutations   []gatekeeper.Mutation
+					wg          sync.WaitGroup
+				)
+
+				wg.Add(1)
+				go func() {
+					var err error
+					constraints, err = gatekeeper.GetConstraints(clientGVR, e.client)
+					if err != nil {
+						klog.Warningf("Get constraints failed: %+v\n", err)
+					}
+					wg.Done()
+				}()
+
+				wg.Add(1)
+				go func() {
+					var err error
+					mutations, err = gatekeeper.GetMutations(clientGVR, e.client)
+					if err != nil {
+						klog.Warningf("Get mutations failed: %+v\n", err)
+					}
+					wg.Done()
+				}()
+
 				allMetrics := make([]prometheus.Metric, 0)
 				violationMetrics := gatekeeper.ExportViolations(constraints)
 				allMetrics = append(allMetrics, violationMetrics...)
@@ -128,7 +149,7 @@ func (e *Exporter) startScheduled(t time.Duration) {
 				e.metrics = allMetrics
 
 				if e.kindTracker != nil {
-					go e.kindTracker.UpdateTrackedObjects(constraints)
+					go e.kindTracker.UpdateTrackedObjects(constraints, mutations)
 				}
 			}
 		}
@@ -144,14 +165,17 @@ func main() {
 	}
 
 	exporter := NewExporter()
-	if trackValidationKinds || trackValidationResources {
-		err := exporter.initKindTracker(ns, trackObjectsCMName, trackValidationKinds, trackValidationResources)
-		if err != nil {
-			klog.Fatal(err)
-		}
+	err := exporter.initKindTracker(ns, trackObjectsCMName)
+	if err != nil {
+		klog.Fatal(err)
 	}
 
-	exporter.startScheduled(interval)
+	clientGVR, err := exporter.createKubeClientGroupVersion()
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	exporter.startScheduled(clientGVR, interval)
 	prometheus.Unregister(collectors.NewGoCollector())
 	prometheus.MustRegister(exporter)
 
@@ -187,8 +211,8 @@ func main() {
 	}
 }
 
-func (e *Exporter) initKindTracker(cmNS, cmName string, trackKinds, trackResources bool) error {
-	kt := kinds.NewKindTracker(e.client, cmNS, cmName, trackKinds, trackResources)
+func (e *Exporter) initKindTracker(cmNS, cmName string) error {
+	kt := kinds.NewKindTracker(e.client, cmNS, cmName)
 	err := kt.FindInitialChecksum()
 	if err != nil {
 		return err
@@ -197,4 +221,13 @@ func (e *Exporter) initKindTracker(cmNS, cmName string, trackKinds, trackResourc
 	e.kindTracker = kt
 
 	return nil
+}
+
+func (e *Exporter) createKubeClientGroupVersion() (controllerClient.Client, error) {
+	client, err := controllerClient.New(e.kubeConfig, controllerClient.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }

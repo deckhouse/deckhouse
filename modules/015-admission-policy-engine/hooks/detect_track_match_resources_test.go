@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validation_resources", func() {
+var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_track_match_resources", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true} } }`,
 		`{"admissionPolicyEngine":{}}`,
@@ -35,8 +35,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validati
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").Array()).NotTo(BeEmpty())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"]}, {"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}]`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").Array()).NotTo(BeEmpty())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").Array()).NotTo(BeEmpty())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"]}, {"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}]`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").String()).To(MatchJSON(`[{"apiGroups":["apps"],"resources":["deployments"]}]`))
 		})
 	})
 
@@ -47,8 +49,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_validati
 		})
 		It("should have empty array", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").Array()).To(BeEmpty())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedResources").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").Array()).To(BeEmpty())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").Array()).To(BeEmpty())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").String()).To(MatchJSON(`[]`))
 		})
 	})
 
@@ -67,6 +71,11 @@ data:
       - networking.k8s.io
       resources:
       - ingresses
+  mutate-resources.yaml: |
+    - apiGroups:
+      - apps
+      resources:
+      - deployments
 kind: ConfigMap
 metadata:
   annotations:

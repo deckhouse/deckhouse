@@ -53,7 +53,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"priorityClassNames":["foo","bar"],
 			"checkHostNetworkDNSPolicy":true
 		},
-		"match":{"namespaceSelector":{"matchNames":["default"]}}}}], trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
+		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
 	Context("Cluster with operation policies", func() {
 		BeforeEach(func() {

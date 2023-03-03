@@ -88,7 +88,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
         }
       }
     }
-  ], trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+  ],
+	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+	trackedMutateResources: [{"apiGroups":[""],"resources":["pods"]}],
+	webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
 	Context("Cluster with deckhouse on master node", func() {
 		BeforeEach(func() {

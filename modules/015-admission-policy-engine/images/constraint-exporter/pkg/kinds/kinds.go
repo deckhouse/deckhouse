@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sort"
 	"strings"
 
@@ -36,7 +37,8 @@ import (
 )
 
 const (
-	checksumAnnotation = "security.deckhouse.io/constraints-checksum"
+	constraintChecksumAnnotation = "security.deckhouse.io/constraints-checksum"
+	mutationChecksumAnnotation   = "security.deckhouse.io/mutations-checksum"
 )
 
 type KindTracker struct {
@@ -44,24 +46,24 @@ type KindTracker struct {
 	cmNamespace string
 	cmName      string
 
-	trackKinds     bool
-	trackResources bool
-
-	latestChecksum string
+	latestConstraintsChecksum string
+	latestMutationsChecksum   string
 }
 
-func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string, trackKinds, trackResources bool) *KindTracker {
+func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string) *KindTracker {
 	return &KindTracker{
-		client:         client,
-		cmNamespace:    cmNS,
-		cmName:         cmName,
-		trackKinds:     trackKinds,
-		trackResources: trackResources,
+		client:      client,
+		cmNamespace: cmNS,
+		cmName:      cmName,
 	}
 }
 
-func deduplicateKinds(constraints []gatekeeper.Constraint) (map[string]gatekeeper.MatchKind /*kinds checksum*/, string) {
-	if len(constraints) == 0 {
+type resourceWithMatch interface {
+	GetMatchKinds() []gatekeeper.MatchKind
+}
+
+func deduplicateKinds[T resourceWithMatch](matchResources []T) (map[string]gatekeeper.MatchKind /*kinds checksum*/, string) {
+	if len(matchResources) == 0 {
 		return nil, ""
 	}
 
@@ -69,8 +71,8 @@ func deduplicateKinds(constraints []gatekeeper.Constraint) (map[string]gatekeepe
 	m := make(map[string]gatekeeper.MatchKind, 0)
 	hasher := sha256.New()
 
-	for _, con := range constraints {
-		for _, k := range con.Spec.Match.Kinds {
+	for _, resource := range matchResources {
+		for _, k := range resource.GetMatchKinds() {
 			sort.Strings(k.APIGroups)
 			sort.Strings(k.Kinds)
 			key := fmt.Sprintf("%s:%s", strings.Join(k.APIGroups, ","), strings.Join(k.Kinds, ","))
@@ -85,22 +87,16 @@ func deduplicateKinds(constraints []gatekeeper.Constraint) (map[string]gatekeepe
 	return m, fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
-func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint) {
-	if len(constraints) == 0 {
+func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint, mutations []gatekeeper.Mutation) {
+	deduplicatedConstraintKinds, cchecksum := deduplicateKinds(constraints)
+
+	deduplicatedMutateKinds, mchecksum := deduplicateKinds(mutations)
+
+	if cchecksum == kt.latestConstraintsChecksum && mchecksum == kt.latestMutationsChecksum {
 		return
 	}
 
-	deduplicated, checksum := deduplicateKinds(constraints)
-
-	if len(deduplicated) == 0 {
-		return
-	}
-
-	if checksum == kt.latestChecksum {
-		return
-	}
-
-	klog.Info("Checksum is not equal. Updating")
+	klog.Info("Checksums are not equal. Updating")
 
 	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
 	if err != nil {
@@ -115,52 +111,66 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint)
 			return
 		}
 	}
-
-	kinds := make([]gatekeeper.MatchKind, 0, len(deduplicated))
-	for _, k := range deduplicated {
-		kinds = append(kinds, k)
-	}
-
 	if len(cm.Annotations) == 0 {
 		cm.Annotations = make(map[string]string, 0)
 	}
-
-	cm.Annotations[checksumAnnotation] = checksum
 	if len(cm.Data) == 0 {
 		cm.Data = make(map[string]string)
 	}
 
-	if kt.trackKinds {
-		data, _ := yaml.Marshal(kinds)
-		cm.Data["validate-kinds.yaml"] = string(data)
+	constraintKinds := make([]gatekeeper.MatchKind, 0, len(deduplicatedConstraintKinds))
+	for _, k := range deduplicatedConstraintKinds {
+		constraintKinds = append(constraintKinds, k)
 	}
 
-	if kt.trackResources {
-		// convert kinds to the resources
-		resourceData, err := kt.convertToResources(kinds)
-		if err != nil {
-			klog.Errorf("Convert kinds to resources failed. Try later")
-			return
-		}
-		cm.Data["validate-resources.yaml"] = string(resourceData)
+	mutationKinds := make([]gatekeeper.MatchKind, 0, len(deduplicatedMutateKinds))
+	for _, m := range deduplicatedMutateKinds {
+		mutationKinds = append(mutationKinds, m)
 	}
+
+	cm.Annotations[constraintChecksumAnnotation] = cchecksum
+	cm.Annotations[mutationChecksumAnnotation] = mchecksum
+
+	// convert kinds to the resources
+	resourceConstraintsData, resourceMutationsData, err := kt.convertKinds(constraintKinds, mutationKinds)
+	if err != nil {
+		klog.Errorf("Convert kinds to resources failed. Try later")
+		return
+	}
+	cm.Data["validate-resources.yaml"] = string(resourceConstraintsData)
+	cm.Data["mutate-resources.yaml"] = string(resourceMutationsData)
 
 	_, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Update(context.TODO(), cm, v1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Update tracked objects failed: %s", err)
 		return
 	}
-	kt.latestChecksum = checksum
+	kt.latestConstraintsChecksum = cchecksum
+	kt.latestMutationsChecksum = mchecksum
 }
 
-func (kt *KindTracker) convertToResources(kinds []gatekeeper.MatchKind) ([]byte, error) {
+func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.MatchKind) ( /*constraintData*/ []byte /*mutateData*/, []byte, error) {
 	apiRes, err := restmapper.GetAPIGroupResources(kt.client.Discovery())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
 
+	constraintData, err := kt.convertToResources(rmapper, constraintKinds)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mutateData, err := kt.convertToResources(rmapper, mutateKinds)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return constraintData, mutateData, nil
+}
+
+func (kt *KindTracker) convertToResources(rmapper meta.RESTMapper, kinds []gatekeeper.MatchKind) ([]byte, error) {
 	res := make([]matchResource, 0, len(kinds))
 
 	for _, mk := range kinds {
@@ -218,12 +228,9 @@ func (kt *KindTracker) FindInitialChecksum() error {
 		}
 	}
 
-	v, ok := cm.Annotations[checksumAnnotation]
-	if !ok {
-		return nil
-	}
+	kt.latestConstraintsChecksum = cm.Annotations[constraintChecksumAnnotation]
+	kt.latestMutationsChecksum = cm.Annotations[mutationChecksumAnnotation]
 
-	kt.latestChecksum = v
 	return nil
 }
 
