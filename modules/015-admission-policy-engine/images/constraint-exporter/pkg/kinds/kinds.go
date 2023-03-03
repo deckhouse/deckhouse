@@ -187,6 +187,10 @@ func (kt *KindTracker) convertToResources(rmapper meta.RESTMapper, kinds []gatek
 						Group: apiGroup,
 						Kind:  kind,
 					}, "*"))
+					fmt.Println(rmapper.RESTMapping(schema.GroupKind{
+						Group: apiGroup,
+						Kind:  kind,
+					}, "*"))
 				}
 				rm, err := rmapper.RESTMapping(schema.GroupKind{
 					Group: apiGroup,
