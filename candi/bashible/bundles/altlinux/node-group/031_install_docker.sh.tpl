@@ -37,23 +37,6 @@ post-install() {
  fi
 }
 
-if bb-apt-rpm-package? containerd; then
-  bb-deckhouse-get-disruptive-update-approval
-  systemctl stop kubelet.service
-  systemctl stop containerd.service
-  # Kill running containerd-shim processes
-  kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
-  # Remove mounts
-  umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-rp-remove containerd-io crictl containerd-flant-edition
-  rm -rf /var/lib/containerd/ /var/run/containerd /etc/containerd/config.toml /etc/systemd/system/containerd.service.d
-  # Pod kubelet-eviction-thresholds-exporter in cri=Containerd mode mounts /var/run/docker.sock, /var/run/docker.sock will be a directory and newly installed docker won't run.
-  rm -rf /var/run/docker.sock
-  systemctl daemon-reload
-  bb-log-info "Setting reboot flag due to cri being updated"
-  bb-flag-set reboot
-fi
-
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
   {{- $altlinuxVersion := toString $key }}
   {{- if or $value.docker.desiredVersion $value.docker.allowedPattern }}
@@ -91,11 +74,10 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-{{- $altlinuxName := dict "18.04" "Bionic" "20.04" "Focal" "22.04" "Jammy"}}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
   {{- $altlinuxVersion := toString $key }}
   if bb-is-altlinux-version? {{ $altlinuxVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdAltlinux%s%s" ($value.docker.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $altlinuxName $altlinuxVersion)) }}"
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdAltlinux%s" ($value.containerd.desiredVersion | replace "containerd-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
   fi
 {{- end }}
 
@@ -103,7 +85,7 @@ if [[ "$should_install_containerd" == true ]]; then
 fi
 
 should_install_docker=true
-version_in_use="$(dpkg -l docker-ce 2>/dev/null | grep -E "(hi|ii)\s+(docker-ce)" | awk '{print $2"="$3}' || true)"
+version_in_use="$(rpm -q docker-engine | head -1 || true)"
 if test -n "$allowed_versions_docker_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_docker_pattern" <<< "$version_in_use"; then
   should_install_docker=false
 fi
@@ -113,7 +95,7 @@ if [[ "$version_in_use" == "$desired_version_docker" ]]; then
 fi
 
 if [[ "$should_install_docker" == true ]]; then
-  if bb-apt-package? "$(echo $desired_version_docker | cut -f1 -d"=")"; then
+  if bb-apt-rpm-package? "$(echo $desired_version_docker | cut -f1 -d"=")"; then
     bb-flag-set there-was-docker-installed
   fi
 
@@ -124,11 +106,11 @@ if [[ "$should_install_docker" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "altlinux" }}
   {{- $altlinuxVersion := toString $key }}
   if bb-is-altlinux-version? {{ $altlinuxVersion }} ; then
-    docker_tag="{{- index $.images.registrypackages (printf "dockerAltlinux%s" ($value.docker.desiredVersion | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
+    docker_tag="{{- index $.images.registrypackages (printf "dockerAltlinux%s" ($value.docker.desiredVersion | replace "docker-engine=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
   fi
 {{- end }}
 
-  bb-rp-install "docker-ce:${docker_tag}"
+  bb-rp-install "docker:${docker_tag}"
 fi
 
 {{- end }}
