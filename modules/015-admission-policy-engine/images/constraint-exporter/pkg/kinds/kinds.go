@@ -229,16 +229,21 @@ func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupVersionK
 	matchGVKs := make([]schema.GroupVersionKind, 0)
 
 	for _, apiGroupRes := range rm.apiGroupResources {
+	versionLoop:
 		for version, apiResources := range apiGroupRes.VersionedResources {
 			for _, apiRes := range apiResources {
 				if apiRes.Kind == kind {
+					fmt.Println("FIND KIND", apiRes)
+					fmt.Println("FIND KIND group", apiRes.Group)
+					fmt.Println("FIND KIND kind", apiRes.Kind)
+					fmt.Println("FIND KIND version", version)
 					gvk := schema.GroupVersionKind{
 						Group:   apiRes.Group,
 						Kind:    apiRes.Kind,
 						Version: version,
 					}
 					matchGVKs = append(matchGVKs, gvk)
-					break
+					break versionLoop
 				}
 			}
 		}
