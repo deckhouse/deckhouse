@@ -239,7 +239,7 @@ func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupVersionK
 					fmt.Println("FIND KIND kind", apiRes.Kind)
 					fmt.Println("FIND KIND version", version)
 					gvk := schema.GroupVersionKind{
-						Group:   apiGroupRes.Group,
+						Group:   apiGroupRes.Group.Name,
 						Kind:    apiRes.Kind,
 						Version: version,
 					}
