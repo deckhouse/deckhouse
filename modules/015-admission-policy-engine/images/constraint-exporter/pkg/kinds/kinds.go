@@ -225,16 +225,17 @@ type resourceMatcher struct {
 	mapper            meta.RESTMapper
 }
 
-func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupKind {
-	matchGVKs := make([]schema.GroupKind, 0)
+func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupVersionKind {
+	matchGVKs := make([]schema.GroupVersionKind, 0)
 
 	for _, apiGroupRes := range rm.apiGroupResources {
-		for group, apiResources := range apiGroupRes.VersionedResources {
+		for version, apiResources := range apiGroupRes.VersionedResources {
 			for _, apiRes := range apiResources {
 				if apiRes.Kind == kind {
-					gvk := schema.GroupKind{
-						Group: group,
-						Kind:  kind,
+					gvk := schema.GroupVersionKind{
+						Group:   apiRes.Group,
+						Kind:    apiRes.Kind,
+						Version: version,
 					}
 					matchGVKs = append(matchGVKs, gvk)
 					break
@@ -258,10 +259,10 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 				if apiGroup == "*" {
 					gvks := rm.findGVKForWildcard(kind)
 					for _, gvk := range gvks {
-						restMapping, err := rm.mapper.RESTMapping(gvk)
+						restMapping, err := rm.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 						if err != nil {
 							// skip outdated resources, like extensions/Ingress
-							klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", gvk.Group, gvk.Kind, err)
+							klog.Warningf("Skip resource mapping. Group: %q, Kind: %q, Version: %q. Error: %q", gvk.Group, gvk.Kind, gvk.Version, err)
 							continue
 						}
 

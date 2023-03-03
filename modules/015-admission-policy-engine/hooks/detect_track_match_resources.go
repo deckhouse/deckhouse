@@ -86,7 +86,6 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		ValidateData: cm.Data["validate-resources.yaml"],
 		MutateData:   cm.Data["mutate-resources.yaml"],
 	}, nil
-
 }
 
 type matchResource struct {
