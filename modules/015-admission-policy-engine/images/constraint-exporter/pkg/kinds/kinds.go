@@ -156,6 +156,12 @@ func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.Ma
 		return nil, nil, err
 	}
 
+	for _, aaa := range apiRes {
+		fmt.Println(aaa.Group.Kind)
+		fmt.Println(aaa.Group.GroupVersionKind())
+		fmt.Println(aaa.VersionedResources)
+	}
+
 	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
 	fmt.Println("MAPPER", reflect.TypeOf(rmapper))
 
