@@ -512,9 +512,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
 	By("Validating initial values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating initial config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 
 	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -595,9 +595,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
 		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
@@ -741,9 +741,9 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.GoHookBindingActions = bindingActions
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr)).To(Succeed())
+	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 }
 
 var _ = BeforeSuite(func() {

@@ -96,7 +96,7 @@ func ValidateHelmValues(validator *validation.ValuesValidator, moduleName, value
 	return nil
 }
 
-func ValidateJSONValues(validator *validation.ValuesValidator, moduleName string, values []byte) error {
+func ValidateJSONValues(validator *validation.ValuesValidator, moduleName string, values []byte, configValues bool) error {
 	obj := map[string]interface{}{}
 	err := json.Unmarshal(values, &obj)
 	if err != nil {
@@ -109,7 +109,13 @@ func ValidateJSONValues(validator *validation.ValuesValidator, moduleName string
 	}
 
 	valuesKey := utils.ModuleNameToValuesKey(moduleName)
-	err = validator.ValidateModuleValues(valuesKey, obj)
+
+	if configValues {
+		err = validator.ValidateModuleConfigValues("config", obj)
+	} else {
+		err = validator.ValidateModuleValues(valuesKey, obj)
+	}
+
 	if err != nil {
 		return err
 	}
