@@ -44,6 +44,12 @@ type Violation struct {
 	EnforcementAction string `json:"enforcementAction"`
 }
 
+// ConstraintSpec collect general information about the overall constraints applied to the cluster
+type ConstraintSpec struct {
+	EnforcementAction string `json:"enforcementAction"`
+	Match             Match  `json:"match"`
+}
+
 type ConstraintStatus struct {
 	TotalViolations float64 `json:"totalViolations"`
 	Violations      []*Violation
@@ -57,12 +63,6 @@ type Constraint struct {
 
 func (c Constraint) GetMatchKinds() []MatchKind {
 	return c.Spec.Match.Kinds
-}
-
-// ConstraintSpec collect general information about the overall constraints applied to the cluster
-type ConstraintSpec struct {
-	EnforcementAction string `json:"enforcementAction"`
-	Match             Match  `json:"match"`
 }
 
 type Match struct {
