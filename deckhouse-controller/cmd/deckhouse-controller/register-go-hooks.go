@@ -73,6 +73,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/490-virtualization/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/491-containerized-data-importer/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/491-containerized-data-importer/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/hooks"
