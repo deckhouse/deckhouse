@@ -22,13 +22,13 @@ type ValuesStorage interface {
 	Get(key string) (interface{}, bool, error)
 }
 
-func Init(driverName string) *ValuesStorage {
+func NewStorage(driverName string) ValuesStorage {
 	// default driver is in memory
-	var v *ValuesStorage
+	var v ValuesStorage
 	switch driverName {
 	case MemoryValuesStorageDriver:
 	default:
-		v = new(MemoryValuesStorage)
+		v = NewMemoryValuesStorage()
 	}
 	return v
 }

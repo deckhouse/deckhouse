@@ -20,17 +20,19 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/storage"
 )
 
 var (
 	defaultRegistry  requirementsResolver
-	memoryStorage    *MemoryValuesStore
+	valuesStorage    storage.ValuesStorage
 	ErrNotRegistered = errors.New("Not registered")
 )
 
 func init() {
 	defaultRegistry = newRegistry()
-	memoryStorage = storage.NewStorage()
+	valuesStorage = storage.NewStorage(storage.MemoryValuesStorageDriver)
 }
 
 // RegisterCheck add CheckFunc for some component
@@ -54,7 +56,7 @@ func CheckRequirement(key, value string) (bool, error) {
 		return false, err
 	}
 
-	return f(value, memoryStorage)
+	return f(value, valuesStorage)
 }
 
 // HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
@@ -68,23 +70,23 @@ func HasDisruption(key string) (bool, string) {
 		return false, ""
 	}
 
-	return f(memoryStorage)
+	return f(valuesStorage)
 }
 
 // SaveValue could be used in the modules, to store their internal values for updater
 // One module does not have access to the other's module values, so we can do it through this interface
 func SaveValue(key string, value interface{}) {
-	memoryStorage.Set(key, value)
+	valuesStorage.Set(key, value)
 }
 
 // RemoveValue remove previously stored value
 func RemoveValue(key string) {
-	memoryStorage.Remove(key)
+	valuesStorage.Remove(key)
 }
 
 // GetValue returns saved value. !Attention: Please don't use it in hooks, only for tests
-func GetValue(key string) (interface{}, bool) {
-	return memoryStorage.Get(key)
+func GetValue(key string) (interface{}, bool, error) {
+	return valuesStorage.Get(key)
 }
 
 // CheckFunc check come precondition, comparing desired value (requirementValue) with current value (getter)
@@ -94,7 +96,7 @@ type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
 type DisruptionFunc func(getter ValueGetter) (bool, string)
 
 type ValueGetter interface {
-	Get(path string) (interface{}, bool)
+	Get(path string) (interface{}, bool, error)
 }
 
 type requirementsResolver interface {

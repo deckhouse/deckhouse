@@ -25,7 +25,7 @@ type MemoryValuesStorage struct {
 	values map[string]interface{}
 }
 
-func newMemoryValuesStorage() *MemoryValuesStorage {
+func NewMemoryValuesStorage() *MemoryValuesStorage {
 	return &MemoryValuesStorage{
 		values: make(map[string]interface{}),
 	}

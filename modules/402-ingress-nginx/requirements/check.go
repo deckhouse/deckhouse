@@ -31,7 +31,7 @@ const (
 
 func init() {
 	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		hasIncompatibleCtrlsRaw, exists := getter.Get(incompatibleVersionsKey)
+		hasIncompatibleCtrlsRaw, exists, _ := getter.Get(incompatibleVersionsKey)
 		if exists {
 			hasIncompatibleCtrls := hasIncompatibleCtrlsRaw.(bool)
 			if hasIncompatibleCtrls {
@@ -43,7 +43,7 @@ func init() {
 		if err != nil {
 			return false, err
 		}
-		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
+		currentVersionRaw, exists, _ := getter.Get(minVersionValuesKey)
 		if !exists {
 			// no IngressNginxController CRs exist
 			return true, nil
