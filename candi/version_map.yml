@@ -97,6 +97,9 @@ bashible: &bashible
       docker:
         desiredVersion: "docker-engine=20.10.21-alt1.x86_64"
         allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd-1.6.19"
+          allowedPattern: ""
       containerd:
         desiredVersion: "containerd-1.6.19"
         allowedPattern: ""
