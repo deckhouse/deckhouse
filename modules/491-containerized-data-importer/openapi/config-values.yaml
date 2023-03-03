@@ -7,3 +7,57 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+  https:
+    type: object
+    x-examples:
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter;
+          - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace;
+          - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP;
+          - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        description: |
+          Parameters for certmanager.
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            x-examples: ["letsencrypt", "letsencrypt-staging", "selfsigned"]
+            description: |
+              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+      customCertificate:
+        type: object
+        default: {}
+        description: |
+          Parameters for custom certificate usage.
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with CDI upload proxy.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+

@@ -5,3 +5,41 @@ properties:
       Ручное управление режимом отказоустойчивости.
 
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      Этот параметр задаёт особые настройки https для модуля, переопределяя глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+      certManager:
+        description: "Настройки для certmanager."
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса загрузки модуля CDI.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — `tolerations` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
