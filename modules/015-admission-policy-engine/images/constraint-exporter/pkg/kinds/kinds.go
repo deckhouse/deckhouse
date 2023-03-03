@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -89,7 +90,6 @@ func deduplicateKinds[T resourceWithMatch](matchResources []T) (map[string]gatek
 
 func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint, mutations []gatekeeper.Mutation) {
 	deduplicatedConstraintKinds, cchecksum := deduplicateKinds(constraints)
-
 	deduplicatedMutateKinds, mchecksum := deduplicateKinds(mutations)
 
 	if cchecksum == kt.latestConstraintsChecksum && mchecksum == kt.latestMutationsChecksum {
@@ -145,6 +145,7 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint,
 		klog.Errorf("Update tracked objects failed: %s", err)
 		return
 	}
+
 	kt.latestConstraintsChecksum = cchecksum
 	kt.latestMutationsChecksum = mchecksum
 }
@@ -156,6 +157,7 @@ func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.Ma
 	}
 
 	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
+	fmt.Println("MAPPER", reflect.TypeOf(rmapper))
 
 	constraintData, err := kt.convertToResources(rmapper, constraintKinds)
 	if err != nil {
@@ -179,6 +181,13 @@ func (kt *KindTracker) convertToResources(rmapper meta.RESTMapper, kinds []gatek
 
 		for _, apiGroup := range mk.APIGroups {
 			for _, kind := range mk.Kinds {
+				if apiGroup == "*" {
+					klog.Infof("Wildcard group for kind %q", kind)
+					fmt.Println(rmapper.RESTMappings(schema.GroupKind{
+						Group: apiGroup,
+						Kind:  kind,
+					}))
+				}
 				rm, err := rmapper.RESTMapping(schema.GroupKind{
 					Group: apiGroup,
 					Kind:  kind,
