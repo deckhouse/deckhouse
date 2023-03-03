@@ -21,7 +21,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -156,81 +155,22 @@ func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.Ma
 		return nil, nil, err
 	}
 
-	for _, aaa := range apiRes {
-		fmt.Println(aaa.Group.Kind)
-		fmt.Println(aaa.Group.GroupVersionKind())
-		fmt.Println(aaa.VersionedResources)
+	rmatch := resourceMatcher{
+		apiGroupResources: apiRes,
+		mapper:            restmapper.NewDiscoveryRESTMapper(apiRes),
 	}
 
-	rmapper := restmapper.NewDiscoveryRESTMapper(apiRes)
-	fmt.Println("MAPPER", reflect.TypeOf(rmapper))
-
-	constraintData, err := kt.convertToResources(rmapper, constraintKinds)
+	constraintData, err := rmatch.convertKindsToResource(constraintKinds)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	mutateData, err := kt.convertToResources(rmapper, mutateKinds)
+	mutateData, err := rmatch.convertKindsToResource(mutateKinds)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return constraintData, mutateData, nil
-}
-
-func (kt *KindTracker) convertToResources(rmapper meta.RESTMapper, kinds []gatekeeper.MatchKind) ([]byte, error) {
-	res := make([]matchResource, 0, len(kinds))
-
-	for _, mk := range kinds {
-		uniqGroups := make(map[string]struct{})
-		uniqResources := make(map[string]struct{})
-
-		for _, apiGroup := range mk.APIGroups {
-			for _, kind := range mk.Kinds {
-				if apiGroup == "*" {
-					klog.Infof("Wildcard group for kind %q", kind)
-					fmt.Println(rmapper.RESTMappings(schema.GroupKind{
-						Group: apiGroup,
-						Kind:  kind,
-					}, "*"))
-					fmt.Println(rmapper.RESTMapping(schema.GroupKind{
-						Group: apiGroup,
-						Kind:  kind,
-					}, "*"))
-				}
-				rm, err := rmapper.RESTMapping(schema.GroupKind{
-					Group: apiGroup,
-					Kind:  kind,
-				})
-				if err != nil {
-					// skip outdated resources, like extensions/Ingress
-					klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
-					continue
-				}
-
-				uniqGroups[rm.Resource.Group] = struct{}{}
-				uniqResources[rm.Resource.Resource] = struct{}{}
-			}
-		}
-
-		groups := make([]string, 0, len(mk.APIGroups))
-		resources := make([]string, 0, len(mk.Kinds))
-
-		for k := range uniqGroups {
-			groups = append(groups, k)
-		}
-
-		for k := range uniqResources {
-			resources = append(resources, k)
-		}
-
-		res = append(res, matchResource{
-			APIGroups: groups,
-			Resources: resources,
-		})
-	}
-
-	return yaml.Marshal(res)
 }
 
 func (kt *KindTracker) FindInitialChecksum() error {
@@ -278,4 +218,90 @@ func (kt *KindTracker) createCM() error {
 type matchResource struct {
 	APIGroups []string `json:"apiGroups"`
 	Resources []string `json:"resources"`
+}
+
+type resourceMatcher struct {
+	apiGroupResources []*restmapper.APIGroupResources
+	mapper            meta.RESTMapper
+}
+
+func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupKind {
+	matchGVKs := make([]schema.GroupKind, 0)
+
+	for _, apiGroupRes := range rm.apiGroupResources {
+		for group, apiResources := range apiGroupRes.VersionedResources {
+			for _, apiRes := range apiResources {
+				if apiRes.Kind == kind {
+					gvk := schema.GroupKind{
+						Group: group,
+						Kind:  kind,
+					}
+					matchGVKs = append(matchGVKs, gvk)
+					break
+				}
+			}
+		}
+	}
+
+	return matchGVKs
+}
+
+func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) ([]byte, error) {
+	res := make([]matchResource, 0, len(kinds))
+
+	for _, mk := range kinds {
+		uniqGroups := make(map[string]struct{})
+		uniqResources := make(map[string]struct{})
+
+		for _, apiGroup := range mk.APIGroups {
+			for _, kind := range mk.Kinds {
+				if apiGroup == "*" {
+					gvks := rm.findGVKForWildcard(kind)
+					for _, gvk := range gvks {
+						restMapping, err := rm.mapper.RESTMapping(gvk)
+						if err != nil {
+							// skip outdated resources, like extensions/Ingress
+							klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", gvk.Group, gvk.Kind, err)
+							continue
+						}
+
+						uniqGroups[restMapping.Resource.Group] = struct{}{}
+						uniqResources[restMapping.Resource.Resource] = struct{}{}
+					}
+				} else {
+					restMapping, err := rm.mapper.RESTMapping(schema.GroupKind{
+						Group: apiGroup,
+						Kind:  kind,
+					})
+					if err != nil {
+						// skip outdated resources, like extensions/Ingress
+						klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
+						continue
+					}
+
+					uniqGroups[restMapping.Resource.Group] = struct{}{}
+					uniqResources[restMapping.Resource.Resource] = struct{}{}
+				}
+
+			}
+		}
+
+		groups := make([]string, 0, len(mk.APIGroups))
+		resources := make([]string, 0, len(mk.Kinds))
+
+		for k := range uniqGroups {
+			groups = append(groups, k)
+		}
+
+		for k := range uniqResources {
+			resources = append(resources, k)
+		}
+
+		res = append(res, matchResource{
+			APIGroups: groups,
+			Resources: resources,
+		})
+	}
+
+	return yaml.Marshal(res)
 }
