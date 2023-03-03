@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -89,6 +90,16 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
 
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		err := os.Symlink("/deckhouse/ee/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		// TODO: move to some common function???

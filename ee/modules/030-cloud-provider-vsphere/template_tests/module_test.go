@@ -16,6 +16,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -218,6 +219,20 @@ const moduleValuesD = `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
