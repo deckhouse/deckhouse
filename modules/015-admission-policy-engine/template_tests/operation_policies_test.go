@@ -85,7 +85,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 		})
 
 		It("Should pass tests", func() {
-			gatorCLI := exec.Command("gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples/...")
+			gatorCLI := exec.Command("/deckhouse/bin/gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples/...")
 			res, err := gatorCLI.CombinedOutput()
 			if err != nil {
 				output := strings.ReplaceAll(string(res), "deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples", "")

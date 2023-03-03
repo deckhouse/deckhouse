@@ -731,6 +731,10 @@ import:
   add: /images_tags.json
   to: /deckhouse/modules/images_tags.json
   after: setup
+- image: images-tags
+  add: /images_tags.json
+  to: /deckhouse/modules/040-node-manager/images_tags.json
+  after: setup
 ---
 image: tests
 fromImage: tests-prebuild
@@ -738,6 +742,10 @@ import:
 - image: images-tags
   add: /images_tags.json
   to: /deckhouse/modules/images_tags.json
+  after: setup
+- image: images-tags
+  add: /images_tags.json
+  to: /deckhouse/modules/040-node-manager/images_tags.json
   after: setup
 ---
 artifact: version-map-artifact

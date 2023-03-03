@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -504,8 +505,27 @@ internal:
       type: "Containerd"
 `
 
+const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
+const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
+const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		err := os.Symlink(openstackCIMPath, openstackCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove(openstackCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
