@@ -287,6 +287,37 @@ func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
 }
 
+type NodeGroupConditionType string
+
+const (
+	NodeGroupConditionTypeReady                        = "Ready"
+	NodeGroupConditionTypeUpdating                     = "Updating"
+	NodeGroupConditionTypeWaitingForDisruptiveApproval = "WaitingForDisruptiveApproval"
+	NodeGroupConditionTypeScaling                      = "Scaling"
+	NodeGroupConditionTypeError                        = "Error"
+)
+
+type ConditionStatus string
+
+const (
+	ConditionTrue  ConditionStatus = "True"
+	ConditionFalse ConditionStatus = "False"
+)
+
+type NodeGroupCondition struct {
+	// Type is the type of the condition.
+	Type NodeGroupConditionType `json:"type"`
+	// Status is the status of the condition.
+	// Can be True, False
+	Status ConditionStatus `json:"status"`
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// Human-readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
 type NodeGroupStatus struct {
 	// Number of ready Kubernetes nodes in the group.
 	Ready int32 `json:"ready,omitempty"`
@@ -323,6 +354,9 @@ type NodeGroupStatus struct {
 
 	// The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded.
 	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
+	// Current nodegroup conditions
+	Conditions []NodeGroupCondition `json:"conditions,omitempty"`
 }
 
 type MachineFailure struct {

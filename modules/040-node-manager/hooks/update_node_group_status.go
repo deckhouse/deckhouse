@@ -33,6 +33,7 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -62,12 +63,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             updStatusFilterNodeGroup,
 		},
 		{
 			Name:                   "zones_count",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -82,7 +83,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "mds",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "MachineDeployment",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -94,7 +95,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "instances",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -106,7 +107,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -161,6 +162,7 @@ func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		CloudInstanceGroup: cloudInstanceGroup,
 		IsReady:            isReady,
 		Checksum:           configurationChecksum,
+		NodeForConditions:  conditions.NodeToConditionsNode(&node),
 	}, nil
 }
 
@@ -193,6 +195,7 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 		UID:             ng.UID,
 		ResourceVersion: ng.ResourceVersion,
+		Conditions:      ng.Status.Conditions,
 	}, nil
 }
 
@@ -299,8 +302,11 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		// calculate nodes and their status
 		var nodesNum, readyNodesNum, uptodateNodesCount int32
+		nodesForCalcConditions := make([]*conditions.Node, 0, len(nodes))
+
 		for _, node := range nodes {
 			if node.CloudInstanceGroup == ngName {
+				nodesForCalcConditions = append(nodesForCalcConditions, node.NodeForConditions)
 				nodesNum++
 				if node.IsReady {
 					readyNodesNum++
@@ -369,11 +375,26 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		instancesCount := instances[ngName]
 
+		ngForConditions := conditions.NodeGroup{
+			Type:      nodeGroup.NodeType,
+			Desired:   desiredMax,
+			Instances: instancesCount,
+		}
+		errors := make([]string, 0, 2)
+		if len(nodeGroup.Error) > 0 {
+			errors = append(errors, nodeGroup.Error)
+		}
+		if len(failureReason) > 0 {
+			errors = append(errors, failureReason)
+		}
+		newConditions := conditions.CalculateNodeGroupConditions(ngForConditions, nodesForCalcConditions, nodeGroup.Conditions, errors)
+
 		patch := buildUpdateStatusPatch(
 			nodesNum, readyNodesNum, uptodateNodesCount,
-			minPerZone, maxPerZone, desiredMax, instancesCount,
+			minPerZone, maxPerZone,
+			desiredMax, instancesCount,
 			nodeGroup.NodeType, statusMsg,
-			lastMachineFailures,
+			lastMachineFailures, newConditions,
 		)
 
 		patchNodeGroupStatus(input.PatchCollector, ngName, patch)
@@ -436,12 +457,15 @@ type statusNodeGroup struct {
 	ZonesNum   int32
 	Error      string
 
+	Conditions []ngv1.NodeGroupCondition
+
 	// for event generation
 	UID             apimtypes.UID
 	ResourceVersion string
 }
 
 type statusNode struct {
+	NodeForConditions  *conditions.Node
 	Name               string
 	CloudInstanceGroup string
 	IsReady            bool
