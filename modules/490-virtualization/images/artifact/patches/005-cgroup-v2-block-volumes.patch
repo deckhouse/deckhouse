@@ -139,18 +139,20 @@ index 36e35fafc..dd86d192f 100644
  	rulesToSet, err := addCurrentRules(rulesPerPid[v.dirPath], resourcesToSet.Devices)
  	if err != nil {
 diff --git a/pkg/virt-handler/cgroup/util.go b/pkg/virt-handler/cgroup/util.go
-index 8901b4742..823d20fd7 100644
+index f088dc4ce..a2d37bb98 100644
 --- a/pkg/virt-handler/cgroup/util.go
 +++ b/pkg/virt-handler/cgroup/util.go
-@@ -3,17 +3,26 @@ package cgroup
- import (
+@@ -4,21 +4,28 @@ import (
+ 	"bufio"
  	"encoding/base64"
  	"encoding/json"
 +	"errors"
  	"fmt"
-+	"os"
+ 	"os"
  	"os/exec"
-+	"path/filepath"
+ 	"path/filepath"
+ 	"strconv"
+ 	"strings"
 +	"syscall"
  
  	"github.com/opencontainers/runc/libcontainer/cgroups"
