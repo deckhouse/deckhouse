@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
+	"nhooyr.io/websocket"
 )
 
 type appConfig struct {
@@ -96,6 +97,8 @@ func initHandlers(
 	dynClient *dynamic.DynamicClient,
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
+	reh := newResourceEventHandler()
+
 	{
 		// Nodes
 		gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
@@ -104,7 +107,7 @@ func initHandlers(
 			return nil, err
 		}
 		h := newReadHandler(informer, gvr)
-		// informer.Informer().AddEventHandler()
+		informer.Informer().AddEventHandler(reh.Handle())
 
 		namespaced := false
 		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
@@ -126,7 +129,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		// informer.Informer().AddEventHandler()
+		informer.Informer().AddEventHandler(reh.Handle())
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -167,7 +170,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		// informer.Informer().AddEventHandler()
+		informer.Informer().AddEventHandler(reh.Handle())
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -178,6 +181,9 @@ func initHandlers(
 		// addClusterCRUDHandlers(router, dynFactory, dynClient, gvr)
 		discovery["cloudProvider"] = strings.TrimSuffix(gvr.Resource, "instanceclasses")
 	}
+
+	// Websocket endpoint
+	router.GET("/subscribe", handleSubscribe(reh))
 
 	// Discovery endpoint
 	router.GET("/discovery", handleDiscovery(clientset, discovery))
@@ -198,6 +204,30 @@ func initHandlers(
 	}
 
 	return wrapper, nil
+}
+
+func handleSubscribe(reh *resourceEventHandler) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			klog.V(5).ErrorS(err, "failed to accept websocket connection")
+			return
+		}
+		defer c.Close(websocket.StatusInternalError, "")
+
+		err = reh.subscribe(r.Context(), c)
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		if websocket.CloseStatus(err) == websocket.StatusNormalClosure ||
+			websocket.CloseStatus(err) == websocket.StatusGoingAway {
+			return
+		}
+		if err != nil {
+			klog.V(5).ErrorS(err, "websocket connection closed with error")
+			return
+		}
+	}
 }
 
 func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]string) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
