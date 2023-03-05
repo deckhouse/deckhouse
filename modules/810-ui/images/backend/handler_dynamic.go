@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,29 +11,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/klog/v2"
 )
 
+type RHandler interface {
+	List(context.Context) ([]runtime.Object, error)
+	Get(context.Context, string) (runtime.Object, error)
+}
+type CRUDHandler interface {
+	List(context.Context) ([]runtime.Object, error)
+	Get(context.Context, string) (runtime.Object, error)
+	Update(context.Context, runtime.Object) (runtime.Object, error)
+	Create(context.Context, runtime.Object) (runtime.Object, error)
+	Delete(context.Context, string) error
+}
+
 type dynamicHandler struct {
 	gvr               schema.GroupVersionResource
 	client            *dynamic.DynamicClient
-	factory           dynamicinformer.DynamicSharedInformerFactory
 	informer          informers.GenericInformer
 	resourceInterface dynamic.NamespaceableResourceInterface
 }
 
-func newDynamicHandler(factory dynamicinformer.DynamicSharedInformerFactory, client *dynamic.DynamicClient, gvr schema.GroupVersionResource) *dynamicHandler {
-	informer := factory.ForResource(gvr)
+func newDynamicHandler(informer informers.GenericInformer, client *dynamic.DynamicClient, gvr schema.GroupVersionResource) *dynamicHandler {
 	resourceInterface := client.Resource(gvr)
 
 	return &dynamicHandler{
 		gvr,
 		client,
-		factory,
 		informer,
 		resourceInterface,
 	}
