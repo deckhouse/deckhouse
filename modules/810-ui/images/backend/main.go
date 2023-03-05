@@ -107,7 +107,7 @@ func initHandlers(
 			return nil, err
 		}
 		h := newReadHandler(informer, gvr)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		namespaced := false
 		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
@@ -129,7 +129,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -170,7 +170,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -208,7 +208,10 @@ func initHandlers(
 
 func handleSubscribe(reh *resourceEventHandler) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		c, err := websocket.Accept(w, r, nil)
+		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			InsecureSkipVerify: true,
+			// CompressionMode:    websocket.CompressionContextTakeover,
+		})
 		if err != nil {
 			klog.V(5).ErrorS(err, "failed to accept websocket connection")
 			return
