@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-
 	"github.com/julienschmidt/httprouter"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +21,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -100,15 +99,17 @@ func initHandlers(
 	{
 		// Nodes
 		gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-		namespaced := false
-		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
-		namedPathPrefix := pathPrefix + "/:name"
 		informer, err := factory.ForResource(gvr)
 		if err != nil {
 			return nil, err
 		}
-
 		h := newReadHandler(informer, gvr)
+		// informer.Informer().AddEventHandler()
+
+		namespaced := false
+		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
+		namedPathPrefix := pathPrefix + "/:name"
+
 		router.GET(pathPrefix, h.HandleList)
 		router.GET(namedPathPrefix, h.HandleGet)
 	}
@@ -122,7 +123,11 @@ func initHandlers(
 		namespaced := false
 		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
 		namedItemPath := collectionPath + "/:name"
-		h := newDynamicHandler(dynFactory, dynClient, gvr)
+
+		informer := dynFactory.ForResource(gvr)
+		h := newDynamicHandler(informer, dynClient, gvr)
+		// informer.Informer().AddEventHandler()
+
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
 		router.POST(collectionPath, h.HandleCreate)
@@ -159,7 +164,11 @@ func initHandlers(
 		namespaced := false
 		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
 		namedItemPath := collectionPath + "/:name"
-		h := newDynamicHandler(dynFactory, dynClient, gvr)
+
+		informer := dynFactory.ForResource(gvr)
+		h := newDynamicHandler(informer, dynClient, gvr)
+		// informer.Informer().AddEventHandler()
+
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
 		router.POST(collectionPath, h.HandleCreate)
@@ -364,3 +373,20 @@ func getConfig() *appConfig {
 // }); err != nil {
 // 	klog.Fatal(fmt.Errorf("adding indexer: %v", err.Error()))
 // }
+
+/*
+Там примерно такая логика:
+
+	Клиент подключается.
+
+	Клиент ожидает пинги { type: "ping" } . Если их не будет, он будет считать коннекшн stale и переконнекчиваться.
+
+	Клиент делает запрос { command: "subscribe", identifier: "{\"channel\": \"MyChannel\"}"}
+
+	Клиент ожидает ответ { type: "confirm_subscription", identifier: "{\"channel\": \"MyChannel\"}"}
+
+	Клиент ожидает сообщения в канал { identifier: "{\"channel\": \"MyChannel\"}", message: "SOME JSON"}
+
+	Клиент может слать в канал  { identifier: "{\"channel\": \"MyChannel\"}", command: "message", data: "SOME JSON"}
+
+*/
