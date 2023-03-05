@@ -80,10 +80,10 @@ spec:
                   type: string
                   pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
                   maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
-                    # the same time, kubernetes labels keys and values can't be longer than 63 characters.
-                    # Length of hashes is 21 characters, so we leave 63-21=42 characters.
-                    # Further, validation webhook will check that length of <cluster prefix>-<group node name>
-                    # fits the 42 characters limitation.
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
             status:
               type: object
               required: []
@@ -695,10 +695,10 @@ spec:
                   type: string
                   pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
                   maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
-                    # the same time, kubernetes labels keys and values can't be longer than 63 characters.
-                    # Length of hashes is 21 characters, so we leave 63-21=42 characters.
-                    # Further, validation webhook will check that length of <cluster prefix>-<group node name>
-                    # fits the 42 characters limitation.
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
             status:
               type: object
               required: []
@@ -1304,10 +1304,10 @@ spec:
                   type: string
                   pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
                   maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
-                    # the same time, kubernetes labels keys and values can't be longer than 63 characters.
-                    # Length of hashes is 21 characters, so we leave 63-21=42 characters.
-                    # Further, validation webhook will check that length of <cluster prefix>-<group node name>
-                    # fits the 42 characters limitation.
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
             status:
               type: object
               required: []
