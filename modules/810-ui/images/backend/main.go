@@ -107,7 +107,7 @@ func initHandlers(
 			return nil, err
 		}
 		h := newReadHandler(informer, gvr)
-		informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle())
 
 		namespaced := false
 		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
@@ -129,7 +129,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle())
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -170,7 +170,7 @@ func initHandlers(
 
 		informer := dynFactory.ForResource(gvr)
 		h := newDynamicHandler(informer, dynClient, gvr)
-		informer.Informer().AddEventHandler(reh.Handle())
+		_, _ = informer.Informer().AddEventHandler(reh.Handle())
 
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
