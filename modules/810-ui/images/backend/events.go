@@ -51,22 +51,41 @@ type resourceEventHandler struct {
 	subscriberMessageBuffer int
 }
 
-func (reh *resourceEventHandler) subscribe(ctx context.Context, c *websocket.Conn) error {
-	ctx = c.CloseRead(ctx)
+/*
+Там примерно такая логика:
+Клиент подключается.
+Клиент ожидает пинги { type: "ping" } . Если их не будет, он будет считать коннекшн stale и переконнекчиваться.
+Клиент делает запрос { command: "subscribe", identifier: "{\"channel\": \"MyChannel\"}"}
+Клиент ожидает ответ { type: "confirm_subscription", identifier: "{\"channel\": \"MyChannel\"}"}
+Клиент ожидает сообщения в канал { identifier: "{\"channel\": \"MyChannel\"}", message: "SOME JSON"}
+Клиент может слать в канал  { identifier: "{\"channel\": \"MyChannel\"}", command: "message", data: "SOME JSON"}
+*/
+func (reh *resourceEventHandler) subscribe(ctx context.Context, conn *websocket.Conn) error {
+	ctx = conn.CloseRead(ctx)
 
 	s := &subscriber{
 		msgs: make(chan []byte, reh.subscriberMessageBuffer),
 		closeSlow: func() {
-			c.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
+			conn.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
 		},
 	}
 	reh.addSubscriber(s)
 	defer reh.deleteSubscriber(s)
 
+	// Sending pings to keep the connection alive.
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	writeTimeout := 5 * time.Second
 	for {
 		select {
+		case <-ticker.C:
+			err := writeWithTimeout(ctx, writeTimeout, conn, []byte(`{"type":"ping"}`))
+			if err != nil {
+				return err
+			}
 		case msg := <-s.msgs:
-			err := writeTimeout(ctx, time.Second*5, c, msg)
+			err := writeWithTimeout(ctx, writeTimeout, conn, msg)
 			if err != nil {
 				return err
 			}
@@ -76,7 +95,7 @@ func (reh *resourceEventHandler) subscribe(ctx context.Context, c *websocket.Con
 	}
 }
 
-func writeTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
+func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
