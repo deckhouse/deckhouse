@@ -207,7 +207,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		ng := node.(StandbyNodeGroupInfo)
 
 		if !ng.NeedStandby {
-			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
+			setNodeGroupStatus(input.PatchCollector, ng.Name, "standby", nil)
 			continue
 		}
 
@@ -218,7 +218,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 				actualStandby++
 			}
 		}
-		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
+		setNodeGroupStatus(input.PatchCollector, ng.Name, "standby", &actualStandby)
 
 		readyNodesCount := 0
 		var (

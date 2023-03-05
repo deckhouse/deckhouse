@@ -297,7 +297,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "error", errorMsg)
 				continue
 			}
 
@@ -325,7 +325,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "error", errorMsg)
 				continue
 			}
 
@@ -337,7 +337,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
 					if err != nil {
 						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "error", fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
 
@@ -362,7 +362,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
 					input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 
-					setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "error", errorMsg)
 					continue
 				}
 			}
@@ -397,7 +397,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		effectiveKubeVerMajMin := semverMajMin(effectiveKubeVer)
 		ngForValues["kubernetesVersion"] = effectiveKubeVerMajMin
 
-		setNodeGroupKubeVersionStatus(input.PatchCollector, nodeGroup.Name, effectiveKubeVerMajMin)
+		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "kubernetesVersion", effectiveKubeVerMajMin)
 
 		// Detect CRI type. Default CRI type is 'Docker' for Kubernetes version less than 1.19.
 		v1_19_0, _ := semver.NewVersion("1.19.0")
@@ -445,7 +445,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["updateEpoch"] = updateEpoch
 
 		// Reset status error for current NodeGroup.
-		setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, "")
+		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "error", "")
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))
