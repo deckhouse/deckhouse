@@ -3,7 +3,9 @@ FROM alpine:3.17.2 as apk_extractor
 WORKDIR /workdir
 
 RUN apk update
-RUN apk fetch -R -o . busybox bash curl iptables iproute2 bind-tools jq alpine-baselayout-data
+RUN apk fetch -R -o . bash curl iptables iproute2 bind-tools jq alpine-baselayout-data
+# /etc: -terminfo, logrotate.d, -network, -apk
+# /lib: krb5
 
 RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
 
