@@ -14,10 +14,10 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
@@ -163,6 +163,58 @@ data:
 			It("Should check non-existing ingress-tls secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("Incorrect matching between mode and secret", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthn.https.mode", "CustomCertificate")
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls
+  namespace: d8-user-authn
+data:
+  tls.crt: dGVzdA==
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should generate an error", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(fmt.Errorf("cannot convert dex ca certificate from snaphots"))
+			})
+		})
+
+		Context("Proper matching between mode and one of existing secrets", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthn.https.mode", "CustomCertificate")
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls-customcertificate
+  namespace: d8-user-authn
+data:
+  tls.crt: dGVzdGNh
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls
+  namespace: d8-user-authn
+data:
+  tls.crt: dGVzdA==
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should use only ingress-tls-customcertificate secret", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("userAuthn.https.mode").String()).Should(BeEquivalentTo("CustomCertificate"))
+				Expect(f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls-customcertificate").Exists()).To(BeTrue())
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("testca"))
 			})
 		})
 	})
