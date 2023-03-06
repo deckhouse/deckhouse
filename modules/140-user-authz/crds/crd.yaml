@@ -64,7 +64,7 @@ spec:
                   description: |
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
-                    Option available **only** if `enableMultiTenancy` option is enabled.
+                    Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
                   x-doc-d8Revision: ee
                   x-doc-default: false
                 limitNamespaces:
@@ -76,7 +76,7 @@ spec:
                     * If the list is defined, then only its constituents are accessible.
                     * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
 
-                    Option available only if `enableMultiTenancy` option is enabled.
+                    Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
                   x-doc-d8Revision: ee
                   example: ['production-.*']
                   items:
