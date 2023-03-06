@@ -23,7 +23,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -44,12 +44,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "controller",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-safe-update": "",
@@ -62,12 +58,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "proxy",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-safe-update": "",
@@ -80,12 +72,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "failover",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-failover": "",
@@ -290,7 +278,7 @@ func daemonSetDeleteCrashLoopBackPods(input *go_hook.HookInput, namespace, dsNam
 }
 
 func getDaemonSetPodList(client k8s.Client, dsName string) (*v1.PodList, error) {
-	daemonset, err := client.AppsV1().DaemonSets(namespace).Get(context.TODO(), dsName, metav1.GetOptions{})
+	daemonset, err := client.AppsV1().DaemonSets(internal.Namespace).Get(context.TODO(), dsName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -307,5 +295,5 @@ func getDaemonSetPodList(client k8s.Client, dsName string) (*v1.PodList, error) 
 	}
 	selector = selector.Add(*podTemplateGenerationReq)
 
-	return client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.String()})
+	return client.CoreV1().Pods(internal.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.String()})
 }
