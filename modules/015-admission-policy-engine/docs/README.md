@@ -65,12 +65,12 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
-### Modifying kubernetes resources
+### Modifying Kubernetes resources
 
-The module also allows you to use the Gatekeeper's CustomResources, to easily modify objects in the cluster, such as
-- `AssignMetadata` - defines changes to the metadata section of a resource
-- `Assign` - any change outside the metadata section
-- `ModifySet` - adds or removes entries from a list, such as the arguments to a container
+The module also allows you to use the Gatekeeper's Custom Resources to easily modify objects in the cluster, such as
+- `AssignMetadata` — defines changes to the metadata section of a resource.
+- `Assign` —  any change outside the metadata section.
+- `ModifySet` —  adds or removes entries from a list, such as the arguments to a container.
 
 Example:
 
