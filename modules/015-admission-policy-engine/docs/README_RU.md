@@ -65,3 +65,31 @@ spec:
 ```
 
 Для применения приведенной политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый namespace. Политика, приведенная в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
+
+### Изменение ресурсов kubernetes
+
+Модуль также позволяет использовать CRD Gatekeeper, для легкой модификации объектов в кластере, такие как:
+- `AssignMetadata` - для изменения секции metadata в ресурсе
+- `Assign` - изменения других полей, кроме metadata
+- `ModifySet` - добавление или удаление значений из списка, например аргументы для контейнера
+
+Пример:
+```yaml
+apiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+  name: demo-annotation-owner
+spec:
+  match:
+    scope: Namespaced
+    namespaces: ["default"]
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+  location: "metadata.annotations.foo"
+  parameters:
+    assign:
+      value:  "bar"
+```
+
+Подробнее про доступные варианты можно прочитать в документации [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/)
