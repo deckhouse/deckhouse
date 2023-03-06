@@ -17,7 +17,7 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 
 ## Strategies
 
-You can enable, disable, and configure a strategy in the [`Descheduler` CR](CR_RU.md).
+You can enable, disable, and configure a strategy in the [`Descheduler` CR](cr.html).
 
 ### HighNodeUtilization
 
