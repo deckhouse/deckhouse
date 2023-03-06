@@ -927,7 +927,9 @@ entries:
                   url: /modules/650-runtime-audit-engine/cr.html
             - title: FAQ
               url: /modules/650-runtime-audit-engine/faq.html
-            - title: Examples
+            - title:
+                en: Examples
+                ru: Примеры
               url: /modules/650-runtime-audit-engine/examples.html
         - title:
             en: Other modules
