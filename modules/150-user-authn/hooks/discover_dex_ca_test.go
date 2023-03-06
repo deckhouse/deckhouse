@@ -15,9 +15,10 @@ package hooks
 
 import (
 	"fmt"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
