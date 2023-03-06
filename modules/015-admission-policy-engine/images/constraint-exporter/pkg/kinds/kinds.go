@@ -20,14 +20,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sort"
 	"strings"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
@@ -225,7 +224,7 @@ type resourceMatcher struct {
 	mapper            meta.RESTMapper
 }
 
-func (rm resourceMatcher) findGVKForWildcard(kind string) []schema.GroupVersionKind {
+func (rm resourceMatcher) findGVKsForWildcard(kind string) []schema.GroupVersionKind {
 	matchGVKs := make([]schema.GroupVersionKind, 0)
 
 	for _, apiGroupRes := range rm.apiGroupResources {
@@ -258,7 +257,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 		for _, apiGroup := range mk.APIGroups {
 			for _, kind := range mk.Kinds {
 				if apiGroup == "*" {
-					gvks := rm.findGVKForWildcard(kind)
+					gvks := rm.findGVKsForWildcard(kind)
 					for _, gvk := range gvks {
 						restMapping, err := rm.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 						if err != nil {
@@ -284,7 +283,6 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 					uniqGroups[restMapping.Resource.Group] = struct{}{}
 					uniqResources[restMapping.Resource.Resource] = struct{}{}
 				}
-
 			}
 		}
 
