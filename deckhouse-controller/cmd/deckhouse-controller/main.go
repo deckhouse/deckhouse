@@ -51,7 +51,8 @@ func version() string {
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
 const (
-	AppName        = "deckhouse"
+	AppFullName    = "deckhouse-controller"
+	AppShortName   = "deckhouse"
 	AppDescription = "controller for Kubernetes platform from Flant"
 
 	DefaultLogType         = "json"
@@ -65,10 +66,10 @@ func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
 
-	kpApp := kingpin.New(AppName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
+	kpApp := kingpin.New(AppFullName, fmt.Sprintf("%s %s: %s", AppShortName, DeckhouseVersion, AppDescription))
 
 	// override usage template to reveal additional commands with information about start command
-	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(AppName))
+	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(AppFullName))
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
