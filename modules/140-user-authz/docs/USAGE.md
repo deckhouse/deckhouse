@@ -233,7 +233,7 @@ spec:
 
 ## Configuring kube-apiserver for multi-tenancy mode
 
-The multi-tenancy mode, which allows you to restrict access to namespaces, is enabled by the `enableMultiTenancy` module's parameter.
+The multi-tenancy mode, which allows you to restrict access to namespaces, is enabled by the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) module's parameter.
 
 Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](../../modules/040-control-plane-manager/) module; no additional steps are required.
 
