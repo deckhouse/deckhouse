@@ -24,6 +24,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -87,22 +89,35 @@ func discoverDexCA(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var dexCA string
+	var (
+		dexCA     string
+		secretKey string
+	)
 
 	dexCAModeFromConfig := input.Values.Get(dexCAModePath).String()
+
+	switch module.GetHTTPSMode("userAuthn", input) {
+	case "CertManager":
+		secretKey = "ingress-tls"
+	case "CustomCertificate":
+		secretKey = "ingress-tls-customcertificate"
+	}
 
 	switch dexCAModeFromConfig {
 	case doNotNeedCAMode:
 		input.Values.Remove(dexCAPath)
 	case fromIngressSecretCAMode:
 		dexCASnapshots := input.Snapshots["secret"]
-		if len(dexCASnapshots) > 0 {
-			dexCAFromSnapshot, ok := dexCASnapshots[0].(DexCA)
+		for _, d := range dexCASnapshots {
+			dexCAFromSnapshot, ok := d.(DexCA)
 			if !ok {
 				return fmt.Errorf("cannot convert dex ca certificate from snaphots")
 			}
 
-			dexCA = string(dexCAFromSnapshot.Data)
+			if dexCAFromSnapshot.Name == secretKey {
+				dexCA = string(dexCAFromSnapshot.Data)
+				break
+			}
 		}
 
 		if dexCA == "" {
