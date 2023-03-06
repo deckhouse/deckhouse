@@ -74,6 +74,7 @@ spec:
 - `ModifySet` - добавление или удаление значений из списка, например аргументы для контейнера
 
 Пример:
+
 ```yaml
 apiVersion: mutations.gatekeeper.sh/v1
 kind: AssignMetadata
