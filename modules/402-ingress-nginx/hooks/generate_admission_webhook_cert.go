@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -41,13 +42,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"ingress-admission-certificate"},
 			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			NamespaceSelector:            internal.NsSelector(),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterAdmissionSecret,
 		},
 	},
