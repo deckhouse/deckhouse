@@ -30,7 +30,7 @@ def slugify(value):
 def main(ctx: hook.Context):
     tmp_dir = tempfile.mkdtemp(prefix="dashboard.")
     known_uids = set()
-    malformed_dashboards = ""
+    malformed_dashboards = []
 
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
@@ -60,8 +60,8 @@ def main(ctx: hook.Context):
         with open(f"{tmp_dir}/{file}", "w") as f:
             json.dump(definition, f)
 
-    if malformed_dashboards:
-        print(f"Skipping malformed dashboards: {malformed_dashboards}")
+    if len(malformed_dashboards) > 0:
+        print(f'Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
     shutil.rmtree("/etc/grafana/dashboards/", ignore_errors=True)
     shutil.move(tmp_dir, "/etc/grafana/dashboards/")
