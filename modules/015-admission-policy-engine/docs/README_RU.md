@@ -93,4 +93,4 @@ spec:
       value:  "bar"
 ```
 
-Подробнее про доступные варианты можно прочитать в документации [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/)
+Подробнее про доступные варианты можно прочитать в документации [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).
