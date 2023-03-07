@@ -193,6 +193,7 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 	// defer sc.deleteSubscriber(s)
 
 	in := make(chan cableCommandPayload)
+	readerr := make(chan error)
 	go func() {
 		for {
 			select {
@@ -201,8 +202,8 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 			default:
 				var msg cableCommandPayload
 				if err := wsjson.Read(ctx, conn, &msg); err != nil {
-					klog.V(5).ErrorS(err, "reading JSON from websocket")
-					continue
+					readerr <- err
+					return
 				}
 				in <- msg
 			}
@@ -229,13 +230,15 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 				return err
 			}
 		case command := <-in:
-			fmt.Println("ws received", command)
+			klog.V(5).InfoS("received command", "command", command.Command, "identifier", command.Identifier)
 			resp := sc.dispatchCommand(s, command)
 			msg, _ := json.Marshal(resp)
 			err := writeWithTimeout(ctx, writeTimeout, conn, msg)
 			if err != nil {
 				return err
 			}
+		case err := <-readerr:
+			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		}
