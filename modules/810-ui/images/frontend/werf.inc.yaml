@@ -1,0 +1,11 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_NODE_16_ALPINE }}
+docker:
+  # WORKDIR: /app
+  EXPOSE: '8080'
+  # USER: app
+git:
+- add: ./nginx.conf
+  to: /etc/nginx/nginx.conf
+- add: ./dist
+  to: /app/dist
