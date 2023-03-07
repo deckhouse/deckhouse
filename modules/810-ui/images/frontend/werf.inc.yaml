@@ -5,7 +5,7 @@ docker:
   EXPOSE: '8080'
   # USER: app
 git:
-- add: ./nginx.conf
+- add: /nginx.conf
   to: /etc/nginx/nginx.conf
-- add: ./dist
+- add: /dist
   to: /app/dist
