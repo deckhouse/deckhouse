@@ -15,33 +15,6 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-/*
-Там примерно такая логика:
-Клиент подключается.
-Клиент ожидает пинги. Если их не будет, он будет считать коннекшн stale и переконнекчиваться.
-
-	{ type: "ping" }
-
-Клиент делает запрос
-
-	{ command: "subscribe",         identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}"}
-
-Клиент ожидает ответ
-
-	{ type: "confirm_subscription", identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}"}
-
-Клиент ожидает сообщения в канал
-
-	{ identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}",
-	  message: {
-		message_type: create|update|delete
-		message: OBJECT
-	  }
-	}
-*/
-
-// Message represents incoming client message
-// https://github.com/anycable/anycable-go/blob/master/common/common.go#LL185-L190C2
 type cableCommandPayload struct {
 	Command    string `json:"command"`
 	Identifier string `json:"identifier"`
@@ -67,11 +40,12 @@ type groupResourceIdentifier struct {
 //	e.g. deckhouse.io/openstackinstanceslasses
 func parseIdentifierGroupResource(s string) (gr schema.GroupResource, err error) {
 	parts := strings.Split(s, "/")
-	if len(parts) == 1 {
+	switch len(parts) {
+	case 1:
 		gr.Resource = s
-	} else if len(parts) == 2 {
+	case 2:
 		gr.Group, gr.Resource = parts[0], parts[1]
-	} else {
+	default:
 		err = fmt.Errorf("cannot parse GroupResource: %q", s)
 	}
 	return
@@ -269,12 +243,10 @@ func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCo
 		}
 	}
 
-	// DiscoveryChannel
-	// NamedResourceChannel, e.g. ModuleConfig/deckhouse
+	// TODO DiscoveryChannel 🐒🐒🐒
+	// TODO NamedResourceChannel, e.g. ModuleConfig/deckhouse
 
-	return map[string]string{
-		"type": "rejected",
-	}
+	return rejectMessage(fmt.Errorf("invalid subscription parameters"))
 }
 
 type resourceEventMessage struct {
@@ -326,15 +298,15 @@ func (reh *resourceEventHandler) deleteResourceSubscription(s *subscriber, gr sc
 }
 
 func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
-
 	key := gvr.GroupResource().String()
 
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(o interface{}) {
 			reh.subscribersMu.Lock()
+			defer reh.subscribersMu.Unlock()
+
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
-
 					reh.data <- resourceEventMessage{
 						gvr:        gvr,
 						subscriber: s,
@@ -343,13 +315,13 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 							Message:     o,
 						},
 					}
-
 				}
 			}
-			reh.subscribersMu.Unlock()
 		},
 		UpdateFunc: func(old, updated interface{}) {
 			reh.subscribersMu.Lock()
+			defer reh.subscribersMu.Unlock()
+
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
 					reh.data <- resourceEventMessage{
@@ -360,13 +332,13 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 							Message:     updated,
 						},
 					}
-
 				}
 			}
-			reh.subscribersMu.Unlock()
 		},
 		DeleteFunc: func(old interface{}) {
 			reh.subscribersMu.Lock()
+			defer reh.subscribersMu.Unlock()
+
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
 					reh.data <- resourceEventMessage{
@@ -377,10 +349,8 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 							Message:     old,
 						},
 					}
-
 				}
 			}
-			reh.subscribersMu.Unlock()
 		},
 	}
 }
