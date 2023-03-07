@@ -1,0 +1,22 @@
+apiVersion: deckhouse.io/v1
+kind: UpmeterRemoteWrite
+metadata:
+  annotations:
+    meta.helm.sh/release-name: flant-integration
+    meta.helm.sh/release-namespace: d8-system
+  creationTimestamp: "2022-04-21T11:30:41Z"
+  generation: 1
+  labels:
+    app: flant-integration
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: flant-integration
+  name: flant-integration-promscale
+  resourceVersion: "360245407"
+  uid: 99e76106-6523-453f-886f-6d6e4328932f
+spec:
+  additionalLabels:
+    cluster_uuid: a9838732-9c2a-4b16-8d5c-ba4dc6472bc5
+  config:
+    bearerToken: 2j21FtdwCS9E5sL7LfMxXkexuBKoCtR3
+    url: https://connect.test.flant.com/v1/remote_write

@@ -98,6 +98,8 @@ func initHandlers(
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
 	reh := newResourceEventHandler()
+	sc := newSubscriptionController(reh)
+	sc.Start(ctx)
 
 	{
 		// Nodes
@@ -183,7 +185,7 @@ func initHandlers(
 	}
 
 	// Websocket endpoint
-	router.GET("/subscribe", handleSubscribe(reh))
+	router.GET("/subscribe", handleSubscribe(sc))
 
 	// Discovery endpoint
 	router.GET("/discovery", handleDiscovery(clientset, discovery))
@@ -206,7 +208,7 @@ func initHandlers(
 	return wrapper, nil
 }
 
-func handleSubscribe(reh *resourceEventHandler) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handleSubscribe(sc *subscriptionController) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			InsecureSkipVerify: true,
@@ -218,7 +220,7 @@ func handleSubscribe(reh *resourceEventHandler) func(w http.ResponseWriter, r *h
 		}
 		defer c.Close(websocket.StatusInternalError, "")
 
-		err = reh.subscribe(r.Context(), c)
+		err = sc.subscribe(r.Context(), c)
 		if errors.Is(err, context.Canceled) {
 			return
 		}
