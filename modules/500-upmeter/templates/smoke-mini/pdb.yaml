@@ -5,9 +5,6 @@ kind: PodDisruptionBudget
 metadata:
   name: smoke-mini
   namespace: d8-{{ .Chart.Name }}
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   {{- include "helm_lib_module_labels" (list . (dict "app" "smoke-mini")) | nindent 2 }}
 spec:
   minAvailable: {{ sub (keys .Values.upmeter.internal.smokeMini.sts | len) 1 }}
