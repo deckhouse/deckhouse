@@ -222,10 +222,12 @@ func handleSubscribe(sc *subscriptionController) func(w http.ResponseWriter, r *
 
 		err = sc.subscribe(r.Context(), c)
 		if errors.Is(err, context.Canceled) {
+			klog.V(5).InfoS("websocket connection closed", "context", "cancelled")
 			return
 		}
 		if websocket.CloseStatus(err) == websocket.StatusNormalClosure ||
 			websocket.CloseStatus(err) == websocket.StatusGoingAway {
+			klog.V(5).InfoS("websocket connection closed", "status", websocket.CloseStatus(err))
 			return
 		}
 		if err != nil {
