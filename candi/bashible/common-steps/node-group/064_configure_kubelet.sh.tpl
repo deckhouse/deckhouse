@@ -187,7 +187,7 @@ function dynamic_memory_sizing {
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
     fi
     recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory | awk '{printf("%d\n",$1 + 0.5)}') # Round off so we avoid float conversions
-    echo -n "SYSTEM_RESERVED_MEMORY=${recommended_systemreserved_memory}Gi"
+    echo -n "${recommended_systemreserved_memory}Gi"
 }
 
 function dynamic_cpu_sizing {
@@ -217,7 +217,7 @@ function dynamic_cpu_sizing {
     if (($total_cpu >= 0)); then # 0.25% of any cores above 4 cores
         recommended_systemreserved_cpu=$(echo $recommended_systemreserved_cpu $(echo $total_cpu 0.0025 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
     fi
-    echo -n "SYSTEM_RESERVED_CPU=${recommended_systemreserved_cpu}"
+    echo -n "${recommended_systemreserved_cpu}"
 }
 
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
