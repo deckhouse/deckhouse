@@ -4,8 +4,15 @@ docker:
   # WORKDIR: /app
   EXPOSE: '8080'
   # USER: app
+# ansible:
+#   setup:
+#   - name: "Copy nginx.conf"
+#     copy:
+#       content: |
+#         {{- .Files.Get "/modules/810-ui/images/frontend/nginx.conf" | nindent 8 }}
+#       dest: /etc/nginx/nginx.conf
 git:
-- add: /nginx.conf
+- add: /modules/810-ui/images/frontend/nginx.conf
   to: /etc/nginx/nginx.conf
-- add: /dist
+- add: /modules/810-ui/images/frontend/dist
   to: /app/dist
