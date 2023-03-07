@@ -51,17 +51,10 @@ data:
 
         access_log /dev/stdout main;
 
-        location / {
-            if ($http_user_agent ~* "(kube-probe)" ) {
-              access_log off;
-            }
-            root   /usr/share/nginx/html;
-            index  index.html index.htm;
-        }
+        autoindex off;
+        server_tokens off;
 
-        error_page   500 502 503 504  /50x.html;
-        location = /50x.html {
-            root   /usr/share/nginx/html;
-        }
+        root /app/dist;
+        gzip_static on;
       }
     }
