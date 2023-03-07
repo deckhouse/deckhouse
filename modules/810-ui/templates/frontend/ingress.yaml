@@ -59,6 +59,8 @@ metadata:
 # {{- if .Values.ui.auth.frontend.whitelistSourceRanges }}
 #     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.frontend.whitelistSourceRanges | join "," }}
 # {{- end }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
@@ -77,7 +79,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
     http:
       paths:
-      - path: /api
+      - path: /api(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
