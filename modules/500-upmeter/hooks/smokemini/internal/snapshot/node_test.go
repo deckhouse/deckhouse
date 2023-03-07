@@ -152,7 +152,7 @@ func newNodeObject(args testNodeObjectArgs) *unstructured.Unstructured {
 
 	if args.zone != "" {
 		node.ObjectMeta.Labels = map[string]string{
-			"failure-domain.beta.kubernetes.io/zone": args.zone,
+			"topology.kubernetes.io/zone": args.zone,
 		}
 	}
 
