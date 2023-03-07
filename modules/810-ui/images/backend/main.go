@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,6 +75,7 @@ func main() {
 		w.WriteHeader(500)
 	})
 
+	errc := make(chan error, 1)
 	go func() {
 		// Start informers all at once after we have inited them in initHandlers func
 		factory.Start(ctx.Done()) // Start processing these informers.
@@ -83,7 +85,7 @@ func main() {
 		synced := factory.WaitForCacheSync(ctx.Done())
 		for v, ok := range synced {
 			if !ok {
-				klog.Fatalf("caches failed to sync: %v", v)
+				errc <- fmt.Errorf("caches failed to sync: %v", v)
 			}
 		}
 
@@ -95,14 +97,37 @@ func main() {
 		dynSynced := dynFactory.WaitForCacheSync(ctx.Done())
 		for v, ok := range dynSynced {
 			if !ok {
-				klog.Fatalf("dynamic caches failed to sync: %v", v)
+				errc <- fmt.Errorf("dynamic caches failed to sync: %v", v)
 			}
 		}
+
 		inSync.Store(true)
 	}()
 
 	klog.Info("Listening :" + appConfig.listenPort)
-	klog.Error(http.ListenAndServe(":"+appConfig.listenPort, handler))
+
+	srv := &http.Server{
+		Handler: handler,
+		Addr:    ":" + appConfig.listenPort,
+	}
+
+	go func() {
+		errc <- srv.ListenAndServe()
+	}()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+	select {
+	case err := <-errc:
+		klog.Errorf("failed: %v", err)
+	case sig := <-sigs:
+		klog.Infof("terminating: %v", sig)
+	}
+
+	shutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	srv.Shutdown(shutCtx)
 }
 
 func initHandlers(
