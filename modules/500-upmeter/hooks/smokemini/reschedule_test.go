@@ -50,7 +50,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -64,7 +64,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -139,7 +139,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -151,7 +151,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-2
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-2
 status:
   conditions:
@@ -226,7 +226,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -308,7 +308,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:

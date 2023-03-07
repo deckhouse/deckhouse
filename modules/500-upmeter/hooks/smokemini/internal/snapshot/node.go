@@ -31,7 +31,7 @@ type Node struct {
 	Schedulable bool
 }
 
-const zoneLabelKey = "failure-domain.beta.kubernetes.io/zone"
+const zoneLabelKey = "topology.kubernetes.io/zone"
 
 func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := new(v1.Node)
