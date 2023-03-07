@@ -293,7 +293,6 @@ fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
 imageGCLowThresholdPercent: 65
-kernelMemcgNotification: true
 kubeAPIBurst: 50
 kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
