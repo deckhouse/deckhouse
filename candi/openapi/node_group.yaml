@@ -250,6 +250,8 @@ spec:
                         The maximum number of instances for the group in each zone.
 
                         This value is used as the upper bound in cluster-autoscaler.
+
+                        With a value of 0. For some `Instancelass`, you need to set capacity. More details in the description of the necessary `Instancelass`.
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:
