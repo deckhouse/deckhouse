@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -56,36 +57,51 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	handler, err := initHandlers(ctx, httprouter.New(), clientset, factory, dynClient, dynFactory)
+	router := httprouter.New()
+	handler, err := initHandlers(ctx, router, clientset, factory, dynClient, dynFactory)
 	if err != nil {
 		klog.Fatal(fmt.Errorf("initializing handlers: %v", err.Error()))
 	}
 
-	// Start informers all at once
-	factory.Start(ctx.Done()) // Start processing these informers.
-	klog.Info("Started informers.")
-	// Wait for cache sync
-	klog.Info("Waiting for initial sync of informers.")
-	synced := factory.WaitForCacheSync(ctx.Done())
-	for v, ok := range synced {
-		if !ok {
-			klog.Fatalf("caches failed to sync: %v", v)
-		}
-	}
+	router.GET("/healthz", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) { w.WriteHeader(200) })
 
-	// Start dynamic informers all at once
-	dynFactory.Start(ctx.Done())
-	klog.Info("Started dynamic informers.")
-	// Wait for cache sync for dynamic informers
-	klog.Info("Waiting for initial sync of dynamic informers.")
-	dynSynced := dynFactory.WaitForCacheSync(ctx.Done())
-	for v, ok := range dynSynced {
-		if !ok {
-			klog.Fatalf("dynamic caches failed to sync: %v", v)
+	var inSync atomic.Bool
+	router.GET("/readyz", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		if inSync.Load() {
+			w.WriteHeader(200)
+			return
 		}
-	}
+		w.WriteHeader(500)
+	})
+
+	go func() {
+		// Start informers all at once after we have inited them in initHandlers func
+		factory.Start(ctx.Done()) // Start processing these informers.
+		klog.Info("Started informers.")
+		// Wait for cache sync
+		klog.Info("Waiting for initial sync of informers.")
+		synced := factory.WaitForCacheSync(ctx.Done())
+		for v, ok := range synced {
+			if !ok {
+				klog.Fatalf("caches failed to sync: %v", v)
+			}
+		}
+
+		// Start dynamic informers all at once after we have inited them in initHandlers func
+		dynFactory.Start(ctx.Done())
+		klog.Info("Started dynamic informers.")
+		// Wait for cache sync for dynamic informers
+		klog.Info("Waiting for initial sync of dynamic informers.")
+		dynSynced := dynFactory.WaitForCacheSync(ctx.Done())
+		for v, ok := range dynSynced {
+			if !ok {
+				klog.Fatalf("dynamic caches failed to sync: %v", v)
+			}
+		}
+		inSync.Store(true)
+	}()
+
 	klog.Info("Listening :" + appConfig.listenPort)
-
 	klog.Error(http.ListenAndServe(":"+appConfig.listenPort, handler))
 }
 
