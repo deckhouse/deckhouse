@@ -308,6 +308,9 @@ func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.C
 func (reh *resourceEventHandler) addResourceSubscription(s *subscriber, gr schema.GroupResource) {
 	reh.subscribersMu.Lock()
 	key := gr.String()
+	if _, ok := reh.subscribers[s]; !ok {
+		reh.subscribers[s] = make(map[string]struct{})
+	}
 	reh.subscribers[s][key] = struct{}{}
 	reh.subscribersMu.Unlock()
 }
