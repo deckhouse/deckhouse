@@ -158,8 +158,8 @@ func initHandlers(
 		defer cancel()
 		_, err := dynClient.Resource(gvr).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			if apierrors.IsForbidden(err) {
-				// 403 is expected if the CRD is not present
+			if apierrors.IsForbidden(err) || apierrors.IsNotFound(err) {
+				// 403 is expected if the CRD is not present locally, 404 is expected when run in a Pod
 				klog.V(5).Infof("CRD %s is not available: %v", gvr.String(), err)
 				continue
 			}
@@ -303,6 +303,7 @@ func getConfig() *appConfig {
 	// create the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		klog.V(10).Info("error getting in-cluster config, falling back to local config")
 		// create local config
 		if !errors.Is(err, rest.ErrNotInCluster) {
 			// the only recognized error
