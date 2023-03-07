@@ -15,59 +15,6 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-type eventMessage struct {
-	MessageType string      `json:"message_type"`
-	Message     interface{} `json:"message"`
-}
-
-type subscriber struct {
-	msgs      chan []byte
-	closeSlow func()
-}
-
-func (s *subscriber) send(msg eventMessage) {
-	b, _ := json.Marshal(msg)
-
-	select {
-	case s.msgs <- b:
-	default:
-		go s.closeSlow()
-	}
-}
-
-func newResourceEventHandler() *resourceEventHandler {
-	return &resourceEventHandler{
-		subscribers:             make(map[*subscriber]map[string]struct{}),
-		subscriberMessageBuffer: 16,
-	}
-}
-
-type resourceEventHandler struct {
-	subscribers   map[*subscriber]map[string]struct{}
-	subscribersMu sync.Mutex
-
-	// subscriberMessageBuffer controls the max number
-	// of messages that can be queued for a subscriber
-	// before it is kicked.
-	//
-	// Defaults to 16.
-	subscriberMessageBuffer int
-}
-
-// type cableMessage struct {
-// 	Type       string `json:"type"`
-// 	Message    string `json:"message"`
-// 	Identifier string `json:"identifier"`
-// }
-
-// Message represents incoming client message
-// https://github.com/anycable/anycable-go/blob/master/common/common.go#LL185-L190C2
-type cableMessage struct {
-	Command    string      `json:"command"`
-	Identifier string      `json:"identifier"`
-	Data       interface{} `json:"data,omitempty"`
-}
-
 /*
 Там примерно такая логика:
 Клиент подключается.
@@ -77,59 +24,182 @@ type cableMessage struct {
 
 Клиент делает запрос
 
-	{ command: "subscribe",         identifier: "{\"channel\": \"MyChannel\"}"}
+	{ command: "subscribe",         identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}"}
 
 Клиент ожидает ответ
 
-	{ type: "confirm_subscription", identifier: "{\"channel\": \"MyChannel\"}"}
+	{ type: "confirm_subscription", identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}"}
 
 Клиент ожидает сообщения в канал
 
-	{ identifier: "{\"channel\": \"MyChannel\"}", message: "SOME JSON"}
-
-Клиент может слать в канал  (зочем?)
-
-	{ identifier: "{\"channel\": \"MyChannel\"}", command: "message", data: "SOME JSON"}
+	{ identifier: "{\"channel\": \"GroupResourceChannel\", "groupResource": "deckhouse.io/openstackinstanceclasses"}",
+	  message: {
+		message_type: create|update|delete
+		message: OBJECT
+	  }
+	}
 */
-func (reh *resourceEventHandler) subscribe(ctx context.Context, conn *websocket.Conn) error {
-	// ctx = conn.CloseRead(ctx)
+
+// Message represents incoming client message
+// https://github.com/anycable/anycable-go/blob/master/common/common.go#LL185-L190C2
+type cableCommandPayload struct {
+	Command    string `json:"command"`
+	Identifier string `json:"identifier"`
+	// Data       interface{} `json:"data,omitempty"`
+}
+
+type cableMessagePayload struct {
+	Identifier string       `json:"identifier"`
+	Message    eventMessage `json:"message"`
+}
+type eventMessage struct {
+	MessageType string      `json:"message_type"`
+	Message     interface{} `json:"message"`
+}
+
+type groupResourceIdentifier struct {
+	Channel       string `json:"channel"`
+	GroupResource string `json:"groupResource"`
+}
+
+// parseIdentifierGroupResource expects GROUP/RESOURCE notation to parse into schema.GroupResource,
+//
+//	e.g. deckhouse.io/openstackinstanceslasses
+func parseIdentifierGroupResource(s string) (gr schema.GroupResource, err error) {
+	parts := strings.Split(s, "/")
+	if len(parts) == 1 {
+		gr.Resource = s
+	} else if len(parts) == 2 {
+		gr.Group, gr.Resource = parts[0], parts[1]
+	} else {
+		err = fmt.Errorf("cannot parse GroupResource: %q", s)
+	}
+	return
+}
+
+func rejectMessage(err error) interface{} {
+	return map[string]string{
+		"type":   "rejected",
+		"reason": err.Error(),
+	}
+}
+
+func confirmSubMessage(identifier string) interface{} {
+	return map[string]string{
+		"type":       "confirm_subscription",
+		"identifier": identifier,
+	}
+}
+
+func confirmUnsubMessage(identifier string) interface{} {
+	return map[string]string{
+		"type":       "confirm_unsubscription",
+		"identifier": identifier,
+	}
+}
+
+type subscriber struct {
+	msgs      chan []byte
+	closeSlow func()
+}
+
+func (s *subscriber) send(msg cableMessagePayload) {
+	b, _ := json.Marshal(msg)
+
+	select {
+	case s.msgs <- b:
+	default:
+		go s.closeSlow()
+	}
+}
+
+func gvrIdentifier(gvr schema.GroupVersionResource) string {
+	b, _ := json.Marshal(map[string]string{
+		"channel":       "GroupResourceChannel",
+		"groupResource": gvr.GroupResource().String(),
+	})
+	return string(b)
+}
+
+func newSubscriptionController(resourceEventHandler *resourceEventHandler) *subscriptionController {
+	return &subscriptionController{
+		// subscribers:             make(map[*subscriber]struct{}),
+		subscriberMessageBuffer: 16,
+		resourceEventHandler:    resourceEventHandler,
+	}
+}
+
+type subscriptionController struct {
+	// subscribers   map[*subscriber]struct{}
+	// subscribersMu sync.Mutex
+
+	// subscriberMessageBuffer controls the max number
+	// of messages that can be queued for a subscriber
+	// before it is kicked.
+	//
+	// Defaults to 16.
+	subscriberMessageBuffer int
+
+	resourceEventHandler *resourceEventHandler
+}
+
+func (sc *subscriptionController) Start(ctx context.Context) {
+	go func() {
+		for {
+			select {
+			case evMessage := <-sc.resourceEventHandler.Data():
+				evMessage.subscriber.send(cableMessagePayload{
+					Identifier: gvrIdentifier(evMessage.gvr),
+					Message:    evMessage.message,
+				})
+			// case data := <-sc.discoveryHandler:
+			// 	data.subscriber.send(cableMessagePayload{
+			// 		Identifier: `{"channel": "DiscoveryChannel"}`,
+			// 		Message:    data.message,
+			// 	})
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// // addSubscriber registers a subscriber.
+// func (sc *subscriptionController) addSubscriber(s *subscriber) {
+// 	sc.subscribersMu.Lock()
+// 	sc.subscribers[s] = struct{}{}
+// 	sc.subscribersMu.Unlock()
+// }
+
+// // deleteSubscriber deletes the given subscriber.
+// func (sc *subscriptionController) deleteSubscriber(s *subscriber) {
+// 	sc.subscribersMu.Lock()
+// 	delete(sc.subscribers, s)
+// 	sc.subscribersMu.Unlock()
+// }
+
+// subscribe handles the user subscription
+func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket.Conn) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	s := &subscriber{
-		msgs: make(chan []byte, reh.subscriberMessageBuffer),
+		msgs: make(chan []byte, sc.subscriberMessageBuffer),
 		closeSlow: func() {
 			conn.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
 		},
 	}
-	reh.addSubscriber(s)
-	defer reh.deleteSubscriber(s)
+	// sc.addSubscriber(s)
+	// defer sc.deleteSubscriber(s)
 
-	// Sending pings to keep the connection alive.
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	in := make(chan cableMessage)
+	in := make(chan cableCommandPayload)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				// msgType, msg, err := conn.Read(ctx)
-				// if err != nil {
-				// 	defer cancel()
-				// 	klog.V(5).ErrorS(err, "reading from websocket")
-				// 	conn.Close(websocket.StatusNormalClosure, "")
-				// 	return
-				// }
-				// if msgType != websocket.MessageText {
-				// 	klog.V(5).ErrorS(err, "got binary data from websocket")
-				// 	continue
-				// }
-				// klog.V(5).Info("message", msg)
-
-				var msg cableMessage
+				var msg cableCommandPayload
 				if err := wsjson.Read(ctx, conn, &msg); err != nil {
 					klog.V(5).ErrorS(err, "reading JSON from websocket")
 					continue
@@ -139,7 +209,12 @@ func (reh *resourceEventHandler) subscribe(ctx context.Context, conn *websocket.
 		}
 	}()
 
-	writeTimeout := 5 * time.Second
+	// Sending pings to keep the connection alive, frontend considers the connection stale after 6s
+	// of silence.
+	ticker := time.NewTicker(time.Second * 3)
+	defer ticker.Stop()
+
+	writeTimeout := 5 * time.Second // TODO: move to config
 	for {
 		select {
 		case <-ticker.C:
@@ -148,32 +223,79 @@ func (reh *resourceEventHandler) subscribe(ctx context.Context, conn *websocket.
 				return err
 			}
 		case msg := <-s.msgs:
+			//
 			err := writeWithTimeout(ctx, writeTimeout, conn, msg)
 			if err != nil {
 				return err
 			}
 		case command := <-in:
 			fmt.Println("ws received", command)
-			switch command.Command {
-			case "subscribe":
-				var cid struct{ Channel string }
-				_ = json.Unmarshal([]byte(command.Identifier), &cid)
-				gvr := schema.GroupVersionResource{Resource: strings.ToLower(strings.TrimSuffix(cid.Channel, "Channel"))}
-				reh.addResourceSubscription(s, gvr)
-				err := writeWithTimeout(ctx, writeTimeout, conn, []byte(`{"type": "confirm_subscription", "identifier": "`+command.Identifier+`"}`))
-				if err != nil {
-					return err
-				}
-			case "unsubscribe":
-				var cid struct{ Channel string }
-				_ = json.Unmarshal([]byte(command.Identifier), &cid)
-				gvr := schema.GroupVersionResource{Resource: strings.ToLower(strings.TrimSuffix(cid.Channel, "Channel"))}
-				reh.deleteResourceSubscription(s, gvr)
+			resp := sc.dispatchCommand(s, command)
+			msg, _ := json.Marshal(resp)
+			err := writeWithTimeout(ctx, writeTimeout, conn, msg)
+			if err != nil {
+				return err
 			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
+}
+
+func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCommandPayload) interface{} {
+	var grID groupResourceIdentifier
+	if err := json.Unmarshal([]byte(command.Identifier), &grID); err == nil {
+		if grID.Channel == "GroupResourceChannel" {
+			switch command.Command {
+			case "subscribe":
+				gr, err := parseIdentifierGroupResource(grID.GroupResource)
+				if err != nil {
+					return rejectMessage(err)
+				}
+				sc.resourceEventHandler.addResourceSubscription(s, gr)
+				return confirmSubMessage(command.Identifier)
+
+			case "unsubscribe":
+				gr, err := parseIdentifierGroupResource(grID.GroupResource)
+				if err != nil {
+					return rejectMessage(err)
+				}
+				sc.resourceEventHandler.deleteResourceSubscription(s, gr)
+				return confirmUnsubMessage(command.Identifier)
+			}
+		}
+	}
+
+	// DiscoveryChannel
+	// NamedResourceChannel, e.g. ModuleConfig/deckhouse
+
+	return map[string]string{
+		"type": "rejected",
+	}
+}
+
+type resourceEventMessage struct {
+	gvr        schema.GroupVersionResource
+	subscriber *subscriber
+	message    eventMessage
+}
+
+func newResourceEventHandler() *resourceEventHandler {
+	return &resourceEventHandler{
+		subscribers: make(map[*subscriber]map[string]struct{}),
+		data:        make(chan resourceEventMessage),
+	}
+}
+
+func (reh *resourceEventHandler) Data() <-chan resourceEventMessage {
+	return reh.data
+}
+
+type resourceEventHandler struct {
+	subscribers   map[*subscriber]map[string]struct{}
+	subscribersMu sync.Mutex
+
+	data chan resourceEventMessage
 }
 
 func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
@@ -183,28 +305,16 @@ func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.C
 	return c.Write(ctx, websocket.MessageText, msg)
 }
 
-func (reh *resourceEventHandler) addSubscriber(s *subscriber) {
+func (reh *resourceEventHandler) addResourceSubscription(s *subscriber, gr schema.GroupResource) {
 	reh.subscribersMu.Lock()
-	reh.subscribers[s] = make(map[string]struct{}) // TODO: should we check for duplicating subscribers?
-	reh.subscribersMu.Unlock()
-}
-
-func (reh *resourceEventHandler) deleteSubscriber(s *subscriber) {
-	reh.subscribersMu.Lock()
-	delete(reh.subscribers, s)
-	reh.subscribersMu.Unlock()
-}
-
-func (reh *resourceEventHandler) addResourceSubscription(s *subscriber, gvr schema.GroupVersionResource) {
-	reh.subscribersMu.Lock()
-	key := gvr.GroupResource().String()
+	key := gr.String()
 	reh.subscribers[s][key] = struct{}{}
 	reh.subscribersMu.Unlock()
 }
 
-func (reh *resourceEventHandler) deleteResourceSubscription(s *subscriber, gvr schema.GroupVersionResource) {
+func (reh *resourceEventHandler) deleteResourceSubscription(s *subscriber, gr schema.GroupResource) {
 	reh.subscribersMu.Lock()
-	key := gvr.GroupResource().String()
+	key := gr.String()
 	delete(reh.subscribers[s], key)
 	reh.subscribersMu.Unlock()
 }
@@ -218,7 +328,16 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			reh.subscribersMu.Lock()
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
-					s.send(eventMessage{MessageType: "create", Message: o})
+
+					reh.data <- resourceEventMessage{
+						gvr:        gvr,
+						subscriber: s,
+						message: eventMessage{
+							MessageType: "create",
+							Message:     o,
+						},
+					}
+
 				}
 			}
 			reh.subscribersMu.Unlock()
@@ -227,7 +346,15 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			reh.subscribersMu.Lock()
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
-					s.send(eventMessage{MessageType: "update", Message: updated})
+					reh.data <- resourceEventMessage{
+						gvr:        gvr,
+						subscriber: s,
+						message: eventMessage{
+							MessageType: "update",
+							Message:     updated,
+						},
+					}
+
 				}
 			}
 			reh.subscribersMu.Unlock()
@@ -236,7 +363,15 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			reh.subscribersMu.Lock()
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
-					s.send(eventMessage{MessageType: "delete", Message: old})
+					reh.data <- resourceEventMessage{
+						gvr:        gvr,
+						subscriber: s,
+						message: eventMessage{
+							MessageType: "delete",
+							Message:     old,
+						},
+					}
+
 				}
 			}
 			reh.subscribersMu.Unlock()
