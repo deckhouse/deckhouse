@@ -153,7 +153,6 @@ fi
 
 function dynamic_memory_sizing {
     total_memory=$(free -g|awk '/^Mem:/{print $2}')
-    # total_memory=8 test the recommended values by modifying this value
     recommended_systemreserved_memory=0
     if (($total_memory <= 4)); then # 25% of the first 4GB of memory
         recommended_systemreserved_memory=$(echo $total_memory 0.25 | awk '{print $1 * $2}')
@@ -317,8 +316,8 @@ runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
 systemReserved:
-  cpu: $(dynamic_cpu_sizing)
-  memory: $(dynamic_memory_sizing)
+  cpu: "$(dynamic_cpu_sizing)"
+  memory: "$(dynamic_memory_sizing)"
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
