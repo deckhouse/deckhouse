@@ -110,26 +110,25 @@ func orderCertificate(input *go_hook.HookInput) error {
 		}
 
 		secretName := fmt.Sprintf("ingress-nginx-%s-auth-tls", controller.Name)
-		certData, ok := certificatesSecretMap[secretName]
-		if !ok {
-			return fmt.Errorf("there is no Secret with name '%s' in namespace '%s'", secretName, internal.Namespace)
-		}
 
 		// If existing Certificate expires in more than 365 days — use it.
-		if certData != nil && len(certData.Cert) > 0 && len(certData.Key) > 0 {
-			shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(certData.Cert), time.Hour*24*365) // 1 year
-			if err != nil {
-				return err
-			}
+		if certData, ok := certificatesSecretMap[secretName]; ok {
 
-			if !shouldGenerateNewCert {
-				certificates = append(certificates, CertificateInfo{
-					ControllerName: controller.Name,
-					IngressClass:   ingressClass,
-					Data:           *certData,
-				})
+			if certData != nil && len(certData.Cert) > 0 && len(certData.Key) > 0 {
+				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(certData.Cert), time.Hour*24*365) // 1 year
+				if err != nil {
+					return err
+				}
 
-				continue
+				if !shouldGenerateNewCert {
+					certificates = append(certificates, CertificateInfo{
+						ControllerName: controller.Name,
+						IngressClass:   ingressClass,
+						Data:           *certData,
+					})
+
+					continue
+				}
 			}
 		}
 
