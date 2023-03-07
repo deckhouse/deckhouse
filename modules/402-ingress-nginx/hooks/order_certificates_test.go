@@ -46,13 +46,8 @@ var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kube-rbac-proxy-ca-key-pair")
 	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA, certificate.WithSigningDefaultExpiry(10*365*24*time.Hour))
 
-	selfSignedCAKey, selfSignedCACert := "", ""
-	for _, line := range strings.Split(selfSignedCA.Key, "\n") {
-		selfSignedCAKey = fmt.Sprintf("%s    %s\n", selfSignedCAKey, line)
-	}
-	for _, line := range strings.Split(selfSignedCA.Cert, "\n") {
-		selfSignedCACert = fmt.Sprintf("%s    %s\n", selfSignedCACert, line)
-	}
+	selfSignedCAKey := addIndentsToMultilineString(selfSignedCA.Key, 4)
+	selfSignedCACert := addIndentsToMultilineString(selfSignedCA.Cert, 4)
 
 	Context(":: empty_cluster", func() {
 		BeforeEach(func() {
@@ -248,3 +243,12 @@ type: Opaque
 	})
 
 })
+
+func addIndentsToMultilineString(s string, indentsCount int) string {
+	var newString string
+	indent := strings.Repeat(" ", indentsCount)
+	for _, line := range strings.Split(s, "\n") {
+		newString = fmt.Sprintf("%s%s%s\n", newString, indent, line)
+	}
+	return newString
+}
