@@ -87,8 +87,8 @@
     for: 10m
     expr: |
       sum by (node, component_id) (
-        vector_events_discarded_total
-      ) * on (node) (abs(kube_node_spec_unschedulable - 1))
+        vector_events_discarded_total * on (node) group_left() (abs(kube_node_spec_unschedulable - 1))
+      )
       > 0
     labels:
       severity_level: "4"
