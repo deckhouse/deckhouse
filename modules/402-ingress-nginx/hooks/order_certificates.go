@@ -113,7 +113,6 @@ func orderCertificate(input *go_hook.HookInput) error {
 
 		// If existing Certificate expires in more than 365 days — use it.
 		if certData, ok := certificatesSecretMap[secretName]; ok {
-
 			if certData != nil && len(certData.Cert) > 0 && len(certData.Key) > 0 {
 				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(certData.Cert), time.Hour*24*365) // 1 year
 				if err != nil {
