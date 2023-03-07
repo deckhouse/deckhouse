@@ -101,7 +101,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /ready
+            path: /readyz
             port: 8443
             scheme: HTTPS
           periodSeconds: 10
@@ -132,7 +132,7 @@ spec:
           value: |
             excludePaths:
             - /healthz
-            - /ready
+            - /readyz
             upstreams:
             - upstream: http://127.0.0.1:8999/
               path: /
