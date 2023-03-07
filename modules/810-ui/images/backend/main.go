@@ -127,7 +127,9 @@ func main() {
 	shutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	srv.Shutdown(shutCtx)
+	if err := srv.Shutdown(shutCtx); err != nil {
+		klog.Errorf("shutdown: %v", err)
+	}
 }
 
 func initHandlers(
