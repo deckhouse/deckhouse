@@ -216,16 +216,16 @@ k8s:
     cniVersion: 1.2.0
     bashible: *bashible_k8s_ge_1_22
     ccm:
-      openstack: v1.26.0
+      openstack: v1.26.1
       yandex: v0.26.0
       aws: v1.26.0
-      vsphere: v1.25.0 # TODO update
-      azure: v1.26.4
-      gcp: ccm/v26.0.2
+      vsphere: v1.26.0
+      azure: v1.26.5
+      gcp: ccm/v26.0.4
     csi:
-      openstack: v1.26.0
+      openstack: v1.26.1
       provisioner: v3.4.0@sha256:e468dddcd275163a042ab297b2d8c2aca50d5e148d2d22f3b6ba119e2f31fa79
-      attacher: v4.1.0@sha256:08721106b949e4f5c7ba34b059e17300d73c8e9495201954edc90eeb3e6d8461 # TODO: update to v4.2.0 - some problems with registry
+      attacher: v4.2.0@sha256:34cf9b32736c6624fc9787fb149ea6e0fbeb45415707ac2f6440ac960f1116e6
       resizer: v1.7.0@sha256:3a7bdf5d105783d05d0962fa06ca53032b01694556e633f27366201c2881e01d
       registrar: v2.7.0@sha256:4a4cae5118c4404e35d66059346b7fa0835d7e6319ff45ed73f4bba335cf5183
       snapshotter: v6.2.1@sha256:714aa06ccdd3781f1a76487e2dc7592ece9a12ae9e0b726e4f93d1639129b771
