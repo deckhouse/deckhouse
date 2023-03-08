@@ -10,11 +10,11 @@ Before going any deeper, look for possible [issues](https://github.com/deckhouse
 
 ## Packets are not properly forwarded
 
-1. `exec` into cilium-agent Pod
-2. Switch the debug on: `cilium config Debug=enable DebugLB=enable`
-3. Collect the output of `exec cilium monitor -vv -D &> cilium.log`
-4. Generate packets. Consider specifying an unusual source port to make it easier to identify the test traffic in `cilium.log`
-5. Watch the log and make conclusions
+1. `exec` into cilium-agent Pod.
+2. Switch the debug on: `cilium config Debug=enable DebugLB=enable`.
+3. Collect the output of `exec cilium monitor -vv -D &> cilium.log`.
+4. Generate packets. Consider specifying an unusual source port to make it easier to identify the test traffic in `cilium.log`.
+5. Watch the log and make conclusions.
 
 ## Accidentally applied a bad policy and everything stopped working
 
