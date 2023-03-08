@@ -251,7 +251,7 @@ spec:
 
                         This value is used as the upper bound in cluster-autoscaler.
 
-                        With a value of 0. For some `Instancelass`, you need to set capacity. More details in the description of the necessary `Instancelass`.
+                        With a value of 0, you need to set capacity for some `InstanceClass`. Get more details in the description of the necessary `InstanceClass`.
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:

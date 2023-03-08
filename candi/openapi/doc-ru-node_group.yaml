@@ -149,7 +149,7 @@ spec:
 
                         Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
 
-                        При значении 0. Для некоторых `InstanceClass` нужно задавать capacity. Более подробно в описании нужных `InstanceClass`.
+                        При значении 0, для некоторых `InstanceClass` нужно задавать capacity. Более подробно можно узнать в описании нужных `InstanceClass`.
                     maxPerZone:
                       description: |
                         Максимальное количество инстансов в зоне.
