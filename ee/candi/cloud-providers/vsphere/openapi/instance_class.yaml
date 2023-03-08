@@ -50,7 +50,8 @@ spec:
                 template:
                   description: |
                     Path to the template to be cloned. Relative to the datacenter.
-                    By default, template from `master` InstanceClass is used.
+
+                    By default, a template from the `master` InstanceClass is used.
                   example: dev/golden_image
                   type: string
                 mainNetwork:
@@ -70,7 +71,8 @@ spec:
                 datastore:
                   description: |
                     Path to a Datastore in which VirtualMachines will be cloned. Relative to the datacenter.
-                    By default, datastore from `master` InstanceClass is used.
+
+                    By default, a datastore from the `master` InstanceClass is used.
                   example: lun-1201
                   type: string
                 disableTimesync:
@@ -83,6 +85,7 @@ spec:
                 resourcePool:
                   description: |
                     Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
+
                     By default, the value from `VsphereCloudDiscoveryData` is used.
                   example: rp-2012
                   type: string

@@ -41,7 +41,8 @@ spec:
                 datastore:
                   description: |
                     Путь до Datastore, на котором будут созданы склонированные виртуальные машины.
-                    По умолчанию используется `datastore` из инстанс-класса `master`.
+
+                    По умолчанию используется `datastore` из InstanceClass'а `master`.
                 disableTimesync:
                   description: >
                     Отключение синхронизации времени в гостевой ВМ.
