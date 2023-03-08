@@ -144,6 +144,8 @@ dhcpOptions:
 
 Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT-инстанс создастся в зоне `ru-central1-a`.
 
+Если IP-адрес NAT-инстанса не имеет значения, можно передать пустой объект `withNATInstance: {}`, тогда необходимые сети и динамический IP-адрес будут созданы автоматически.
+
 ![Схема размещения WithNATInstance в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
