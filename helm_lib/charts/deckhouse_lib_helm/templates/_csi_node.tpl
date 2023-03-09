@@ -92,7 +92,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $context "any-node-with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
