@@ -74,3 +74,4 @@ data:
               add_header Cache-Control "public";
           }
       }
+    }
