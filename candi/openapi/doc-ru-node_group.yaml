@@ -1,102 +1,11 @@
 spec:
   versions:
     - name: v1alpha1
-      additionalPrinterColumns: &additionalPrinterColumns
-        - name: Type
-          type: string
-          description: "Type of nodes in group"
-          jsonPath: .spec.nodeType
-        - name: Ready
-          type: integer
-          description: "Number of ready Kubernetes nodes in the group."
-          jsonPath: .status.ready
-        - name: Nodes
-          type: integer
-          description: "Number of Kubernetes nodes (in any state) in the group."
-          jsonPath: .status.nodes
-        - name: UpToDate
-          type: integer
-          description: "Number of up-to-date nodes in the group."
-          jsonPath: .status.upToDate
-        - name: Instances
-          type: integer
-          description: "Number of instances (in any state) in the group."
-          jsonPath: .status.instances
-        - name: Desired
-          type: integer
-          description: "Number of desired instances in the group."
-          jsonPath: .status.desired
-        - name: Min
-          type: integer
-          description: "Minimal amount of instances in the group."
-          jsonPath: .status.min
-        - name: Max
-          type: integer
-          description: "Maximum amount of instances in the group."
-          jsonPath: .status.max
-        - name: Standby
-          type: integer
-          description: "Number of overprovisioned instances in the group."
-          jsonPath: .status.standby
-        - name: Status
-          type: string
-          description: "Status message about group handling."
-          jsonPath: .status.conditionSummary.statusMessage
-        - name: Age
-          type: date
-          jsonPath: .metadata.creationTimestamp
-      subresources:
-        status: {}
       schema:
         openAPIV3Schema:
           description: |
             Описывает runtime-параметры группы узлов.
           properties:
-            status: &status
-              properties:
-                ready:
-                  description: "Number of ready Kubernetes nodes in the group."
-                nodes:
-                  description: "Number of Kubernetes nodes (in any state) in the group."
-                instances:
-                  description: "Number of instances (in any state) in the group."
-                desired:
-                  description: "Number of desired machines in the group."
-                min:
-                  description: "Minimal amount of instances in the group."
-                max:
-                  description: "Maximum amount of instances in the group."
-                upToDate:
-                  description: "Number of up-to-date nodes in the group."
-                standby:
-                  description: "The summary number of overprovisioned Nodes for this NodeGroup in all zones."
-                error:
-                  description: "Error message about possible problems with the group handling."
-                lastMachineFailures:
-                  items:
-                    properties:
-                      name:
-                        description: "Machine's name."
-                      providerID:
-                        description: "Machine's ProviderID."
-                      ownerRef:
-                        description: "Machine owner's name."
-                      lastOperation:
-                        properties:
-                          description:
-                            description: "Last operation's description."
-                          lastUpdateTime:
-                            description: "Timestamp of last status update for operation."
-                          state:
-                            description: "Machine's operation state."
-                          type:
-                            description: "Type of operation."
-                conditionSummary:
-                  properties:
-                    statusMessage:
-                      description: "Status message about group handling."
-                    ready:
-                      description: "Status of the condition summary."
             spec:
               properties:
                 nodeType: &nodeType
@@ -312,13 +221,11 @@ spec:
 
                         > **Внимание!** Параметр не влияет на работу, если тип CRI — `Docker`.
     - name: v1alpha2
-      additionalPrinterColumns: *additionalPrinterColumns
       schema:
         openAPIV3Schema:
           description: |
             Описывает runtime-параметры группы узлов.
           properties:
-            status: *status
             spec:
               properties:
                 nodeType: *nodeType
@@ -353,13 +260,11 @@ spec:
                 disruptions: *disruptions
                 kubelet: *kubelet
     - name: v1
-      additionalPrinterColumns: *additionalPrinterColumns
       schema:
         openAPIV3Schema:
           description: |
             Описывает runtime-параметры группы узлов.
           properties:
-            status: *status
             spec:
               properties:
                 nodeType:

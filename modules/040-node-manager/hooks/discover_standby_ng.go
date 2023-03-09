@@ -23,7 +23,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,6 +31,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+)
+
+const (
+	standbyStatusField = "standby"
 )
 
 type StandbyNodeGroupInfo struct {
@@ -208,7 +211,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		ng := node.(StandbyNodeGroupInfo)
 
 		if !ng.NeedStandby {
-			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
+			setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, nil)
 			continue
 		}
 
@@ -219,7 +222,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 				actualStandby++
 			}
 		}
-		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
+		setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, &actualStandby)
 
 		readyNodesCount := 0
 		var (
@@ -286,15 +289,6 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 
 	input.Values.Set("nodeManager.internal.standbyNodeGroups", standbyNodeGroups)
 	return nil
-}
-
-func setNodeGroupStandbyStatus(patcher *object_patch.PatchCollector, nodeGroupName string, standby *int) {
-	statusStandbyPatch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"standby": standby,
-		},
-	}
-	patcher.MergePatch(statusStandbyPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
 var NumPercentRegex = regexp.MustCompile(`^([0-9]+)%$`)

@@ -320,6 +320,9 @@ type NodeGroupStatus struct {
 
 	// Status' summary.
 	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
+
+	// The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded.
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
 }
 
 type MachineFailure struct {

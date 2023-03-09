@@ -114,8 +114,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description: Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:
@@ -154,8 +156,8 @@ spec:
                     ready:
                       description: Status of the condition summary.
                       enum:
-                        - 'True'
-                        - 'False'
+                        - "True"
+                        - "False"
                       type: string
             spec:
               type: object
@@ -184,13 +186,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  example: '1.21'
+                  example: "1.21"
                   enum:
-                    - '1.21'
-                    - '1.22'
-                    - '1.23'
-                    - '1.24'
-                    - '1.25'
+                    - "1.21"
+                    - "1.22"
+                    - "1.23"
+                    - "1.24"
+                    - "1.25"
                 cri:
                   type: object
                   description: |
@@ -273,7 +275,7 @@ spec:
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
                         The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: '^[0-9]+%?$'
+                      pattern: "^[0-9]+%?$"
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
@@ -292,7 +294,7 @@ spec:
                                 Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: '^[0-9]+m?$'
+                              pattern: "^[0-9]+m?$"
                               x-kubernetes-int-or-string: true
                             memory:
                               description: |
@@ -423,7 +425,7 @@ spec:
                       type: string
                       description: |
                         The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: '^[0-9]+[mh]{1}$'
+                      pattern: "^[0-9]+[mh]{1}$"
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
@@ -493,13 +495,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -536,13 +538,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -731,8 +733,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description: Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:
@@ -771,8 +775,8 @@ spec:
                     ready:
                       description: Status of the condition summary.
                       enum:
-                        - 'True'
-                        - 'False'
+                        - "True"
+                        - "False"
                       type: string
             spec:
               type: object
@@ -911,7 +915,7 @@ spec:
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
                         The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1alpha2-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: '^[0-9]+%?$'
+                      pattern: "^[0-9]+%?$"
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
@@ -930,7 +934,7 @@ spec:
                                 Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: '^[0-9]+m?$'
+                              pattern: "^[0-9]+m?$"
                               x-kubernetes-int-or-string: true
                             memory:
                               description: |
@@ -1051,7 +1055,7 @@ spec:
                       type: string
                       description: |
                         The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: '^[0-9]+[mh]{1}$'
+                      pattern: "^[0-9]+[mh]{1}$"
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
@@ -1119,13 +1123,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -1162,13 +1166,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -1340,8 +1344,10 @@ spec:
                   description: Number of overprovisioned instances in the group.
                 error:
                   type: string
-                  description: Error message about possible problems with the group
-                    handling.
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
                 lastMachineFailures:
                   type: array
                   items:
@@ -1380,8 +1386,8 @@ spec:
                     ready:
                       description: Status of the condition summary.
                       enum:
-                        - 'True'
-                        - 'False'
+                        - "True"
+                        - "False"
                       type: string
             spec:
               type: object
@@ -1533,7 +1539,7 @@ spec:
                         An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
 
                         The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: '^[0-9]+%?$'
+                      pattern: "^[0-9]+%?$"
                       x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
@@ -1563,7 +1569,7 @@ spec:
                                 Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
 
                                 The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: '^[0-9]+m?$'
+                              pattern: "^[0-9]+m?$"
                               x-kubernetes-int-or-string: true
                             memory:
                               description: |
@@ -1684,7 +1690,7 @@ spec:
                       type: string
                       description: |
                         The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: '^[0-9]+[mh]{1}$'
+                      pattern: "^[0-9]+[mh]{1}$"
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
@@ -1752,13 +1758,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -1795,13 +1801,13 @@ spec:
                               from:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '13:00'
+                                example: "13:00"
                                 description: |
                                   Start time of disruptive update window (UTC timezone).
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                example: '18:30'
+                                example: "18:30"
                                 description: |
                                   End time of disruptive update window (UTC timezone).
                               days:
@@ -1884,7 +1890,7 @@ spec:
                         - type: integer
                         - type: string
                       default: 1
-                      pattern: '^[1-9][0-9]*%?$'
+                      pattern: "^[1-9][0-9]*%?$"
                       description: |
                         Maximum number of concurrently updating nodes. Can be set as absolute count or as a percent of total nodes.
               oneOf:
