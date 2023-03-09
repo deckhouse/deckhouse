@@ -7,8 +7,9 @@ This module is responsible for providing a network between multiple nodes in a c
 ## Limitations
 
 1. This module currently supports only direct-routing mode.
-2. Service types `NodePort` and `LoadBalancer` do not work with hostNetwork endpoints in the `DSR` LB mode.
-3. OS versions support. `cni-cilium` module will properly work only on Linux kernel >= 5.3
+2. Service types `NodePort` and `LoadBalancer` do not work with hostNetwork endpoints in the `DSR` LB mode. Switch to `SNAT` if it is required.
+3. `HostPort` Pods will bind only to [one interface IP](https://github.com/deckhouse/deckhouse/issues/3035). If there are multiple interfaces/IPs present, Cilium will select only one of them, preferring private IP space.
+4. OS versions support. `cni-cilium` module will properly work only on Linux kernel >= `5.3`.
    * Ubuntu
      * 18.04
      * 20.04

@@ -233,7 +233,7 @@ spec:
 
 ### Настройка `kube-apiserver` для работы в режиме multi-tenancy
 
-Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается [параметром](configuration.html) `enableMultiTenancy` модуля.
+Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
 Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/040-control-plane-manager/), никаких ручных действий не требуется.
 

@@ -348,7 +348,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 
 ## How to switch Deckhouse CE to EE?
 
-You will need a valid license key (you can [request a trial license key](https://deckhouse.ru/products/enterprise_edition.html) if necessary).
+You will need a valid license key (you can [request a trial license key](https://deckhouse.io/products/enterprise_edition.html) if necessary).
 
 > The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
 

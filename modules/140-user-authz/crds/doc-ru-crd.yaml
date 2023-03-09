@@ -34,7 +34,7 @@ spec:
                   description: |
                     Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
-                    **Доступно только** с включённым параметром `enableMultiTenancy`.
+                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                 limitNamespaces:
                   description: |
                     Список разрешённых namespace в формате регулярных выражений.
@@ -43,7 +43,7 @@ spec:
                     * Если список указан, то разрешаем доступ только по нему.
                     * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
-                    **Доступно только** с включённым параметром `enableMultiTenancy`.
+                    **Доступно только** с включённым параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                 subjects:
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.

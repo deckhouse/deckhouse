@@ -144,6 +144,8 @@ IF the `withNATInstance.externalSubnetID` parameter is not set and `withNATInsta
 
 If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubnetID` is set, the NAT instance will be created in the  `ru-central1-a` zone.
 
+If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
+
 ![Yandex Cloud WithNATInstance Layout scheme](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
