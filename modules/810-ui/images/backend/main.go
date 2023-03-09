@@ -1,5 +1,9 @@
 package main
 
+// To use in docker with OIDC, add import
+//
+//	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+
 import (
 	"context"
 	"encoding/json"
