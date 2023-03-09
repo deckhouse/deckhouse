@@ -17,13 +17,24 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: set_instance_class_usage ::", func() {
+	// inject Kind, we don't have dynamic reload in tests
+	setInstanceClassNGUsageConfig.Kubernetes[0] = go_hook.KubernetesConfig{
+		Name:                "ics",
+		ApiVersion:          "deckhouse.io/v1",
+		Kind:                "OpenStackInstanceClass",
+		ExecuteHookOnEvents: pointer.Bool(false),
+		FilterFunc:          applyUsedInstanceClassFilter,
+	}
+
 	f := HookExecutionConfigInit(`
 global: {}
 nodeManager:
@@ -32,7 +43,7 @@ nodeManager:
 	f.RegisterCRD("deckhouse.io", "v1", "OpenStackInstanceClass", false)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
-	FContext("AAA", func() {
+	Context("NodeGroups have InstanceClass linked", func() {
 		BeforeEach(func() {
 			state := `
 apiVersion: deckhouse.io/v1
@@ -74,7 +85,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail and nodeManager.internal.instancePrefix is 'global'", func() {
+		It("NodeGroupConsumers should be not empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			worker := f.KubernetesGlobalResource("OpenStackInstanceClass", "worker")
 			Expect(worker.Field("status.nodeGroupConsumers").Array()).To(HaveLen(2))
@@ -82,9 +93,10 @@ spec:
 		})
 	})
 
-	FContext("BBB", func() {
+	Context("NodeGroup has another InstanceClass", func() {
 		BeforeEach(func() {
 			state := `
+---
 apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass
 metadata:
@@ -114,16 +126,14 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail and nodeManager.internal.instancePrefix is 'global'", func() {
+		It("NodeGroupConsumers should be absent", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			worker := f.KubernetesGlobalResource("OpenStackInstanceClass", "worker")
 			Expect(worker.Field("status.nodeGroupConsumers").Array()).To(HaveLen(0))
-			Expect(worker.Field("status.nodeGroupConsumers").Array()).ToNot(ContainElements(ContainSubstring("old-worker")))
-			//Expect(worker.Field("status.nodeGroupConsumers").Array()).To(ContainElements(ContainSubstring("worker"), ContainSubstring("another-worker")))
 		})
 	})
 
-	FContext("CCC", func() {
+	Context("NodeGroup InstanceClass was changed", func() {
 		BeforeEach(func() {
 			state := `
 apiVersion: deckhouse.io/v1
@@ -155,7 +165,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail and nodeManager.internal.instancePrefix is 'global'", func() {
+		It("NodeGroupConsumers should change the value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			worker := f.KubernetesGlobalResource("OpenStackInstanceClass", "worker")
 			Expect(worker.Field("status.nodeGroupConsumers").Array()).To(HaveLen(1))
