@@ -100,11 +100,19 @@ func setNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName stri
 	}
 	patchNodeGroupStatus(patcher, nodeGroupName, statusPatch)
 }
+func conditionsToPatch(c []ngv1.NodeGroupCondition) []map[string]interface{} {
+	b, _ := json.Marshal(c)
+	var r []map[string]interface{}
+	_ = json.Unmarshal(b, &r)
+
+	return r
+}
 
 func buildUpdateStatusPatch(
 	nodesNum, readyNodesNum, uptodateNodesCount, minPerZone, maxPerZone, desiredMax, instancesNum int32,
 	nodeType ngv1.NodeType, statusMsg string,
 	lastMachineFailures []*v1alpha1.MachineSummary,
+	newConditions []ngv1.NodeGroupCondition,
 ) interface{} {
 	ready := "True"
 	if len(statusMsg) > 0 {
@@ -132,6 +140,8 @@ func buildUpdateStatusPatch(
 		"ready":         ready,
 		"statusMessage": statusMsg,
 	}
+
+	patch["conditions"] = conditionsToPatch(newConditions)
 
 	statusPatch := map[string]interface{}{
 		"status": patch,
