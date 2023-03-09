@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"deckhouse.io/uibackend/cloudprovider"
 	"github.com/julienschmidt/httprouter"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -193,7 +194,7 @@ func initHandlers(
 
 	// CRUD with Cloud Providers, along with that adding the provider to discovery if it is present
 	// TODO in cloud provider, add known instance classes, known router paths
-	discovery := map[string]string{
+	discovery := map[string]interface{}{
 		"cloudProvider":     "none",
 		"kubernetesVersion": "unknown",
 	}
@@ -231,8 +232,17 @@ func initHandlers(
 		router.PUT(collectionPath, h.HandleUpdate)
 		router.DELETE(namedItemPath, h.HandleDelete)
 
-		// addClusterCRUDHandlers(router, dynFactory, dynClient, gvr)
-		discovery["cloudProvider"] = strings.TrimSuffix(gvr.Resource, "instanceclasses")
+		cloudProvider := make(map[string]interface{})
+		cloudProviderName := strings.TrimSuffix(gvr.Resource, "instanceclasses")
+		cloudProvider["name"] = cloudProviderName
+		providerData, err := cloudprovider.Discover(cloudProviderName)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range providerData {
+			cloudProvider[k] = v
+		}
+		discovery["cloudProvider"] = cloudProvider
 	}
 
 	// Websocket endpoint
@@ -290,7 +300,7 @@ func handleSubscribe(sc *subscriptionController) func(w http.ResponseWriter, r *
 	}
 }
 
-func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]string) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]interface{}) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	lock := sync.Mutex{}
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		// The version of the Kubernetes API server can change, so we need to check it every time
