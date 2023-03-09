@@ -35,16 +35,20 @@ type groupResourceIdentifier struct {
 	GroupResource string `json:"groupResource"`
 }
 
-// parseIdentifierGroupResource expects GROUP/RESOURCE notation to parse into schema.GroupResource,
+// parseIdentifierGroupResource expects RESOURCE.GROUP notation to parse into schema.GroupResource,
 //
-//	e.g. deckhouse.io/openstackinstanceslasses
+//	e.g. openstackinstanceslasses.deckhouse.io
 func parseIdentifierGroupResource(s string) (gr schema.GroupResource, err error) {
-	parts := strings.Split(s, "/")
+	if s == "" {
+		err = fmt.Errorf("group-resource cannot be empty")
+		return
+	}
+	parts := strings.SplitN(s, ".", 2)
 	switch len(parts) {
 	case 1:
 		gr.Resource = s
 	case 2:
-		gr.Group, gr.Resource = parts[0], parts[1]
+		gr.Resource, gr.Group = parts[0], parts[1]
 	default:
 		err = fmt.Errorf("cannot parse GroupResource: %q", s)
 	}
@@ -138,20 +142,6 @@ func (sc *subscriptionController) Start(ctx context.Context) {
 	}()
 }
 
-// // addSubscriber registers a subscriber.
-// func (sc *subscriptionController) addSubscriber(s *subscriber) {
-// 	sc.subscribersMu.Lock()
-// 	sc.subscribers[s] = struct{}{}
-// 	sc.subscribersMu.Unlock()
-// }
-
-// // deleteSubscriber deletes the given subscriber.
-// func (sc *subscriptionController) deleteSubscriber(s *subscriber) {
-// 	sc.subscribersMu.Lock()
-// 	delete(sc.subscribers, s)
-// 	sc.subscribersMu.Unlock()
-// }
-
 // subscribe handles the user subscription
 func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket.Conn) error {
 	ctx, cancel := context.WithCancel(ctx)
@@ -163,8 +153,6 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 			conn.Close(websocket.StatusPolicyViolation, "connection too slow to keep up with messages")
 		},
 	}
-	// sc.addSubscriber(s)
-	// defer sc.deleteSubscriber(s)
 
 	in := make(chan cableCommandPayload)
 	readerr := make(chan error)
