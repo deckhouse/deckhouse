@@ -18,10 +18,6 @@ limitations under the License.
 
 package cloudprovider
 
-import "errors"
-
-var ErrInstanceTypeNotFound = errors.New("instance type not found")
-
 func Discover(providerName string) (map[string]interface{}, error) {
 	switch providerName {
 	case "aws":
