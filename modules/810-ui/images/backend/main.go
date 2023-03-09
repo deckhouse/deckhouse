@@ -259,7 +259,9 @@ func handleSubscribe(sc *subscriptionController) func(w http.ResponseWriter, r *
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			InsecureSkipVerify: true,
-			// CompressionMode:    websocket.CompressionContextTakeover,
+			// Declating supported protocol for frontend tooling based on ActionCable;
+			// "actioncable-unsupported" is omitted because it seem to be unneeded.
+			Subprotocols: []string{"actioncable-v1-json"},
 		})
 		if err != nil {
 			klog.V(5).ErrorS(err, "failed to accept websocket connection")
