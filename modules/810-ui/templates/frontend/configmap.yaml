@@ -42,19 +42,35 @@ data:
       }
 
       server {
-        server_name  _;
-        listen       8080;
+          listen 8080;
+          listen [::]:8080;
 
-        client_body_in_single_buffer on;
-        client_body_buffer_size 1m;
-        client_max_body_size 1m;
+          resolver 127.0.0.11;
+          autoindex off;
 
-        access_log /dev/stdout main;
+          server_name _;
+          server_tokens off;
 
-        autoindex off;
-        server_tokens off;
+          gzip on;
+          gzip_types text/html application/javascript application/json text/css;
+          gzip_static on;
 
-        root /app/dist;
-        gzip_static on;
+          root /app/dist;
+          index index.html;
+
+          location / {
+              # First attempt to serve request as file, then
+              # as directory, then fall back to redirecting to index.html
+              try_files $uri $uri/ $uri.html /index.html;
+          }
+
+          location ~* \.(?:css|js|jpg|svg)$ {
+              expires 30d;
+              add_header Cache-Control "public";
+          }
+
+          location ~* \.(?:json)$ {
+              expires 1d;
+              add_header Cache-Control "public";
+          }
       }
-    }
