@@ -33,6 +33,10 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
+const (
+	standbyStatusField = "standby"
+)
+
 type StandbyNodeGroupInfo struct {
 	Name                 string
 	NeedStandby          bool
@@ -207,7 +211,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		ng := node.(StandbyNodeGroupInfo)
 
 		if !ng.NeedStandby {
-			setNodeGroupStatus(input.PatchCollector, ng.Name, "standby", nil)
+			setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, nil)
 			continue
 		}
 
@@ -218,7 +222,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 				actualStandby++
 			}
 		}
-		setNodeGroupStatus(input.PatchCollector, ng.Name, "standby", &actualStandby)
+		setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, &actualStandby)
 
 		readyNodesCount := 0
 		var (
