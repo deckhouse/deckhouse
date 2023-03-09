@@ -3,7 +3,7 @@
   - alert: CertificateSecretExpiredSoon
     expr: |
       max by (name, namespace) (
-        cert_exporter_secret_not_after{job="cert-exporter", secretkey!="ca.crt"} - time() < 1209600
+        cert_exporter_secret_not_after{job="cert-exporter", name!~"openvpn-pki-.*", secretkey!="ca.crt"} - time() < 1209600
       ) * on (namespace) group_left() max by (namespace) (extended_monitoring_enabled)
     for: 1h
     labels:
