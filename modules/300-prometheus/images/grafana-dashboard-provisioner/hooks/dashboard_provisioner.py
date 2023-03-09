@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import json
+import os
 from shell_operator import hook
 from slugify import slugify
 
@@ -22,6 +23,7 @@ def main(ctx: hook.Context):
     dashboards = []
     known_uids = set()
     malformed_dashboards = []
+    dashboard_dict = {}
 
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
@@ -45,24 +47,28 @@ def main(ctx: hook.Context):
 
         folder = dashboard.get("folder", "General")
         if folder == "General":
-            file = f"{title}.json"
+            print(f"ERROR: cannot provision dashboards to the 'General' folder")
         else:
             file = f"{folder}/{title}.json"
 
-        dashboards.append((file, json.dumps(definition)))
+        if folder not in dashboard_dict:
+            dashboard_dict[folder] = {}
+
+        dashboard_dict[folder][file] = definition
 
     if len(malformed_dashboards) > 0:
         print(f'Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
-    for file, contents in dashboards:
-        path = f"/etc/grafana/dashboards/{file}"
-        with open(path, "w") as f:
-            f.write(contents)
-        if not file.startswith("General/"):
-            folder = file.split("/")[:-1]
-            folder_path = f"/etc/grafana/dashboards/{'/'.join(folder)}"
-            if not any(file.startswith(folder_path) for file, _ in dashboards):
-                dashboards.append((folder_path, ""))
+    for folder, files in dashboard_dict.items():
+        folder_path = f"/etc/grafana/dashboards/"
+        os.makedirs(folder_path, exist_ok=True)
+
+        for file, definition in files.items():
+            file_path = os.path.join(folder_path, file)
+            with open(file_path, "w") as f:
+                json.dump(definition, f)
+
+            dashboards.append((folder_path, file))
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
