@@ -25,6 +25,7 @@
  - **[snapshot-controller]** Add support for snapshots using `ceph-csi` driver. [#2002](https://github.com/deckhouse/deckhouse/pull/2002)
     `ceph-csi` now enables `snapshot-controller` by default and automatically configures `VolumeSnapshotClasses`.
  - **[user-authn]** Add robots.txt for Dex [#3926](https://github.com/deckhouse/deckhouse/pull/3926)
+ - **[virtualization]** Kubevirt `v0.58.1`. [#3989](https://github.com/deckhouse/deckhouse/pull/3989)
 
 ## Fixes
 
@@ -35,11 +36,14 @@
     `kube-proxy` Pods will be recreated.
  - **[cloud-provider-openstack]** Support for offline resize. Fix no effect after enable `ignoreVolumeMicroversion`. [#3909](https://github.com/deckhouse/deckhouse/pull/3909)
  - **[cloud-provider-vsphere]** Stop depending on CCM to uniquely identify instance ID. Fixes a couple of bugs. [#3721](https://github.com/deckhouse/deckhouse/pull/3721)
+ - **[deckhouse-config]** Place the `deckhouse-config-webhook` on the same node as Deckhouse. [#4014](https://github.com/deckhouse/deckhouse/pull/4014)
  - **[go_lib]** Remove the `go_lib/hooks/delete_not_matching_certificate_secret/hook.go` hook. [#3777](https://github.com/deckhouse/deckhouse/pull/3777)
  - **[ingress-nginx]** Improve rollout hook to avoid concurrent controller pod deletion [#3915](https://github.com/deckhouse/deckhouse/pull/3915)
  - **[ingress-nginx]** Fix `HostWithFailover` inlet to work with cilium CNI. [#3834](https://github.com/deckhouse/deckhouse/pull/3834)
     All `proxy-<ingress-name>-failover` daemonsets will be restarted.
+ - **[istio]** D8IstioDeprecatedIstioVersionInstalled alert description clarification. [#4010](https://github.com/deckhouse/deckhouse/pull/4010)
  - **[istio]** Added check of istiod operation before controller starts upgrading required resources. [#3710](https://github.com/deckhouse/deckhouse/pull/3710)
+ - **[log-shipper]** Fix the exclude clause for unschedulable nodes in the RateLimit alert. [#4018](https://github.com/deckhouse/deckhouse/pull/4018)
  - **[log-shipper]** Bump `librdkafka` to `v2.0.2` to make log-shipper read the full CA certificates chain for Kafka. [#3693](https://github.com/deckhouse/deckhouse/pull/3693)
  - **[monitoring-kubernetes]** Fix regex in the `node_exporter`. [#3799](https://github.com/deckhouse/deckhouse/pull/3799)
     All `node_exporter` Pods will be restarted.
@@ -52,7 +56,7 @@
 
 
  - **[admission-policy-engine]** Change recommended `imagePullPolicy` to `Always`. [#3940](https://github.com/deckhouse/deckhouse/pull/3940)
- - **[cloud-provider-aws]** Added etcdDisk.sizeGb and etcdDisk.type parameters to AWSClusterConfiguration. [#2369](https://github.com/deckhouse/deckhouse/pull/2369)
+ - **[cloud-provider-aws]** Added `etcdDisk.sizeGb` and `etcdDisk.type` parameters to `AWSClusterConfiguration`. [#2369](https://github.com/deckhouse/deckhouse/pull/2369)
  - **[cni-cilium]** Bump cilium to `v1.11.14`. [#3870](https://github.com/deckhouse/deckhouse/pull/3870)
     All `cilium` Pods will be restarted.
  - **[cni-cilium]** Bump cilium to `v1.11.13` [#3837](https://github.com/deckhouse/deckhouse/pull/3837)
