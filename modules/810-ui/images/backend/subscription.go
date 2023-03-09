@@ -30,11 +30,6 @@ type eventMessage struct {
 	Message     interface{} `json:"message"`
 }
 
-type groupResourceIdentifier struct {
-	Channel       string `json:"channel"`
-	GroupResource string `json:"groupResource"`
-}
-
 // parseIdentifierGroupResource expects RESOURCE.GROUP notation to parse into schema.GroupResource,
 //
 //	e.g. openstackinstanceslasses.deckhouse.io
@@ -108,9 +103,6 @@ func newSubscriptionController(resourceEventHandler *resourceEventHandler) *subs
 }
 
 type subscriptionController struct {
-	// subscribers   map[*subscriber]struct{}
-	// subscribersMu sync.Mutex
-
 	// subscriberMessageBuffer controls the max number
 	// of messages that can be queued for a subscriber
 	// before it is kicked.
@@ -207,32 +199,48 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 	}
 }
 
-func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCommandPayload) interface{} {
-	var grID groupResourceIdentifier
-	if err := json.Unmarshal([]byte(command.Identifier), &grID); err == nil {
-		if grID.Channel == "GroupResourceChannel" {
-			switch command.Command {
-			case "subscribe":
-				gr, err := parseIdentifierGroupResource(grID.GroupResource)
-				if err != nil {
-					return rejectMessage(err)
-				}
-				sc.resourceEventHandler.addResourceSubscription(s, gr)
-				return confirmSubMessage(command.Identifier)
+type channelMessage struct {
+	Channel string `json:"channel"`
+}
 
-			case "unsubscribe":
-				gr, err := parseIdentifierGroupResource(grID.GroupResource)
-				if err != nil {
-					return rejectMessage(err)
-				}
-				sc.resourceEventHandler.deleteResourceSubscription(s, gr)
-				return confirmUnsubMessage(command.Identifier)
-			}
-		}
+func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCommandPayload) interface{} {
+	var chm channelMessage
+	if err := json.Unmarshal([]byte(command.Identifier), &chm); err != nil {
+		return rejectMessage(err)
+	}
+
+	if chm.Channel == "GroupResourceChannel" {
+		return sc.handleGroupResourceChannelSubscription(s, command)
 	}
 
 	// TODO DiscoveryChannel 🐒🐒🐒
 	// TODO NamedResourceChannel, e.g. ModuleConfig/deckhouse
+
+	return rejectMessage(fmt.Errorf("invalid subscription parameters"))
+}
+
+type groupResourceMessage struct {
+	GroupResource string `json:"groupResource"`
+}
+
+func (sc *subscriptionController) handleGroupResourceChannelSubscription(s *subscriber, command cableCommandPayload) interface{} {
+	var grm groupResourceMessage
+	if err := json.Unmarshal([]byte(command.Identifier), &grm); err != nil {
+		return rejectMessage(err)
+	}
+	gr, err := parseIdentifierGroupResource(grm.GroupResource)
+	if err != nil {
+		return rejectMessage(err)
+	}
+	switch command.Command {
+	case "subscribe":
+		sc.resourceEventHandler.addResourceSubscription(s, gr)
+		return confirmSubMessage(command.Identifier)
+
+	case "unsubscribe":
+		sc.resourceEventHandler.deleteResourceSubscription(s, gr)
+		return confirmUnsubMessage(command.Identifier)
+	}
 
 	return rejectMessage(fmt.Errorf("invalid subscription parameters"))
 }
