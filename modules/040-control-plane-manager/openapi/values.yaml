@@ -23,7 +23,7 @@ properties:
         x-examples: [ "123456789" ]
       effectiveKubernetesVersion:
         type: string
-        enum: ["1.21", "1.22", "1.23", "1.24", "1.25"]
+        enum: ["1.22", "1.23", "1.24", "1.25", "1.26"]
         x-examples: ["1.23"]
       etcdServers:
         type: array

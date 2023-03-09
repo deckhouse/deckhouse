@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
 {!{- $criNames := slice "Docker" "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.21" "1.22" "1.23" "1.24" "1.25" "1.26" -}!}
+{!{- $kubernetesVersions := slice "1.22" "1.23" "1.24" "1.25" "1.26" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -93,7 +93,7 @@ on:
         description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.21 to 1.26.'
+        description: 'A comma-separated list of versions to test. Available: from 1.22 to 1.26.'
         required: false
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'

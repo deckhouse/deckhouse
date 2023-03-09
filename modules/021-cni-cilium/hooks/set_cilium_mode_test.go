@@ -164,7 +164,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 apiVersion: deckhouse.io/v1
 clusterType: Static
 kind: ClusterConfiguration
-kubernetesVersion: "1.21"
+kubernetesVersion: "Automatic"
 podSubnetCIDR: 10.231.0.0/16
 serviceSubnetCIDR: 10.232.0.0/16
 `))
@@ -191,7 +191,7 @@ cloud:
   provider: Yandex
 clusterDomain: cluster.local
 kind: ClusterConfiguration
-kubernetesVersion: "1.21"
+kubernetesVersion: "Automatic"
 podSubnetCIDR: 10.231.0.0/16
 serviceSubnetCIDR: 10.232.0.0/16
 `))

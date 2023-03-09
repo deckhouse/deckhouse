@@ -28,13 +28,13 @@ func TestExecuteTemplate(t *testing.T) {
 nodeIP: "127.0.0.1"
 runType: "ClusterBootstrap"
 clusterConfiguration:
-  kubernetesVersion: "1.21"
+  kubernetesVersion: "1.23"
   clusterType: "Cloud"
   serviceSubnetCIDR: "127.0.0.1/24"
   podSubnetCIDR: "127.0.0.1/24"
   clusterDomain: "%s.example.com"
 k8s:
-  '1.21':
+  '1.23':
     patch: 7
 extraArgs: {}
 `), &data)

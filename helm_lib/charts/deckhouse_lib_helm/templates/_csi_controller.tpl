@@ -194,10 +194,8 @@ spec:
         - "--default-fstype=ext4"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
-  {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
-  {{- end }}
         - "--worker-threads={{ $provisionerWorkers }}"
         env:
         - name: ADDRESS

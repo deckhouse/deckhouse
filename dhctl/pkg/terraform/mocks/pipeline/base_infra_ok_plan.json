@@ -16,7 +16,7 @@
         "clusterType": "Cloud",
         "defaultCRI": "Docker",
         "kind": "ClusterConfiguration",
-        "kubernetesVersion": "1.21",
+        "kubernetesVersion": "1.23",
         "podSubnetCIDR": "0.0.0.0/16",
         "podSubnetNodeCIDRPrefix": "24",
         "serviceSubnetCIDR": "0.0.0.0/16"

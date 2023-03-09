@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.21
+kubernetesVersion: 1.23
 defaultCRI: "Containerd"
 clusterDomain: cluster.local
 ---

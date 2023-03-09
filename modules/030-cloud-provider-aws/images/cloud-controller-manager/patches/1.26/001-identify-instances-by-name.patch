@@ -1,21 +1,20 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index 4320d88..4a045f7 100644
+index a6e2597..39dab8f 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
-@@ -4545,6 +4545,12 @@ func mapNodeNameToPrivateDNSName(nodeName types.NodeName) string {
- 
- // mapInstanceToNodeName maps a EC2 instance to a k8s NodeName, by extracting the PrivateDNSName
+@@ -5001,6 +5001,11 @@ func mapNodeNameToPrivateDNSName(nodeName types.NodeName) string {
+ // Deprecated: use instanceIDToNodeName instead. See
+ // mapNodeNameToPrivateDNSName for details.
  func mapInstanceToNodeName(i *ec2.Instance) types.NodeName {
 +	for _, tag := range i.Tags {
 +		if aws.StringValue(tag.Key) == "Name" {
 +			return types.NodeName(aws.StringValue(tag.Value))
 +		}
 +	}
-+
  	return types.NodeName(aws.StringValue(i.PrivateDnsName))
  }
  
-@@ -4572,7 +4578,19 @@ func (c *Cloud) findInstanceByNodeName(nodeName types.NodeName) (*ec2.Instance,
+@@ -5028,7 +5033,19 @@ func (c *Cloud) findInstanceByNodeName(nodeName types.NodeName) (*ec2.Instance,
  	}
  
  	if len(instances) == 0 {

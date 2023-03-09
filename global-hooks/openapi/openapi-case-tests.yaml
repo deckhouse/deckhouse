@@ -74,7 +74,7 @@ positive:
         podSubnetNodeCIDRPrefix: "24"
         podSubnetCIDR: 10.244.0.0/16
         serviceSubnetCIDR: 192.168.0.0/16
-        kubernetesVersion: "1.21"
+        kubernetesVersion: "1.23"
         clusterDomain: test
         clusterType: "Cloud"
         cloud:
@@ -100,8 +100,8 @@ positive:
         clusterDomain: cluster.local
         d8SpecificNodeCountByRole:
           system: 2
-        kubernetesVersions: [ "1.21.2", "1.21.3", "1.21.2" ]
-        kubernetesVersion: "1.21.2"
+        kubernetesVersions: [ "1.23.2", "1.23.3", "1.23.2" ]
+        kubernetesVersion: "1.23.2"
         extensionAPIServerAuthenticationRequestheaderClientCA: |
           Extention Api server
           CA
@@ -124,7 +124,7 @@ positive:
         clusterType: Static
         defaultCRI: Containerd
         kind: ClusterConfiguration
-        kubernetesVersion: "1.21"
+        kubernetesVersion: "1.23"
         podSubnetCIDR: 10.111.0.0/16
         podSubnetNodeCIDRPrefix: "24"
         serviceSubnetCIDR: 10.222.0.0/16

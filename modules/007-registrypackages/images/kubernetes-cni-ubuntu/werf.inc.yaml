@@ -38,8 +38,5 @@ shell:
   setup:
   - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubernetes-cni_{{ $version }}-00  | awk '{print $2}')"
   - curl -sfL ${DEB_PACKAGE} --output /kubernetes-cni_amd64.deb
-  {{- /* flannel plugin was removed from kubernetes-cni after v0.9.1 */ -}}
-  {{- if semverCompare ">0.9.1" $version }}
   - curl -sfL https://github.com/flannel-io/cni-plugin/releases/download/v1.1.2/cni-plugin-flannel-linux-amd64-v1.1.2.tgz | tar -xz ./flannel-amd64 && mv flannel-amd64 flannel
-  {{- end }}
 {{- end }}

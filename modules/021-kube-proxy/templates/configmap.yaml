@@ -4,13 +4,11 @@ config.conf: |
   kind: KubeProxyConfiguration
   clusterCIDR: {{ .Values.global.discovery.podSubnet | quote }}
   mode: "iptables"
-  {{- if semverCompare ">= 1.21" .Values.global.discovery.kubernetesVersion }}
   featureGates:
     EndpointSliceTerminatingCondition: true
     ProxyTerminatingEndpoints: true
     DaemonSetUpdateSurge: true
     TopologyAwareHints: true
-  {{- end }}
   nodePortAddresses: ["__node_address__"]
   clientConnection:
     acceptContentTypes: ""

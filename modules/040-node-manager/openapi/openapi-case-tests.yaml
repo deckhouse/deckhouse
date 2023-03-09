@@ -9,7 +9,7 @@ defaults:
 positive:
   configValues:
     - {}
-    - allowedKubernetesVersions: ["1.21"]
+    - allowedKubernetesVersions: ["1.23"]
     - allowedBundles: ["ubuntu-lts", "centos", "debian" ]
   values:
     - { internal: {} }

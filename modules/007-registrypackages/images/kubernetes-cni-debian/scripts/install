@@ -17,3 +17,4 @@ set -Eeo pipefail
 dpkg -i -E kubernetes-cni_amd64.deb
 [[ -e flannel ]] && cp -f flannel /opt/cni/bin/flannel
 apt-mark hold kubernetes-cni
+[[ -e flannel ]] && cp -f flannel /opt/cni/bin/flannel
