@@ -39,7 +39,7 @@ properties:
         default: "none"
       controlPlaneVersion:
         type: [number, string]
-        x-examples: ["1.21"]
+        x-examples: ["1.23"]
       clusterType:
         type: string
         enum: ["Cloud", "Hybrid", "Static"]
@@ -60,7 +60,7 @@ properties:
             x-examples: [5]
           minimalKubeletVersion:
             type: [number, string]
-            x-examples: ["1.21"]
+            x-examples: ["1.23"]
           mastersCount:
             type: integer
             x-examples: [3]

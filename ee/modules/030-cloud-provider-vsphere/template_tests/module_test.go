@@ -41,7 +41,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.25"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -52,7 +52,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.21.11
+    kubernetesVersion: 1.25.1
 `
 
 const moduleValuesA = `
@@ -380,13 +380,10 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    externalNetworkNames:
-      - aaa
-      - bbb
-    internalNetworkNames:
-      - ccc
-      - ddd
-    vmFolderPath: dev/test
+
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
 
 labels:
   region: "myregtagcat"
@@ -467,13 +464,6 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    externalNetworkNames:
-      - aaa
-      - bbb
-    internalNetworkNames:
-      - ccc
-      - ddd
-    vmFolderPath: dev/test
 
 labels:
   region: "myregtagcat"
@@ -490,6 +480,9 @@ nsxt:
   host: 1.2.3.4
   password: password
   user: user
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
 `))
 		})
 	})
@@ -536,18 +529,15 @@ nsxt:
   password: password
   user: user
 
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
+
 vcenter:
   main:
     datacenters:
     - X1
-    externalNetworkNames:
-    - aaa
-    - bbb
-    internalNetworkNames:
-    - ccc
-    - ddd
     server: myhost
-    vmFolderPath: dev/test
 `))
 		})
 	})

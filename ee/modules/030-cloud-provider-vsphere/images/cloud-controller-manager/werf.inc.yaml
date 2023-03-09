@@ -44,6 +44,6 @@ shell:
   - wget https://github.com/kubernetes/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
-  - make build
+  - make build VERSION={{ $value.ccm.vsphere }}
   {{- end }}
 {{- end }}

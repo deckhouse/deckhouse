@@ -86,7 +86,7 @@ clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 cri: "Containerd"
 nodeGroup:
   cloudInstances:
@@ -105,7 +105,7 @@ nodeGroup:
   zones:
   - nova
 k8s:
-  '1.21':
+  '1.23':
     patch: 10
     bashible:
       ubuntu:

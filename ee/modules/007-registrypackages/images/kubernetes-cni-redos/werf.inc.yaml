@@ -38,8 +38,5 @@ shell:
   setup:
   - RPM_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "kubernetes-cni-{{ $version }}-0" | awk -F "\"" '{print $2}')"
   - curl -sfL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubernetes-cni.x86_64.rpm
-  {{- /* flannel plugin was removed from kubernetes-cni after v0.9.1 */ -}}
-  {{- if semverCompare ">0.9.1" $version }}
   - curl -sfL https://github.com/flannel-io/cni-plugin/releases/download/v1.1.2/cni-plugin-flannel-linux-amd64-v1.1.2.tgz | tar -xz ./flannel-amd64 && mv flannel-amd64 flannel
   {{- end }}
-{{- end }}
