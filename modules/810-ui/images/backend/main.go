@@ -10,6 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,6 +34,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
+	"k8s.io/kubectl/pkg/drain"
 	"nhooyr.io/websocket"
 )
 
@@ -164,6 +167,7 @@ func initHandlers(
 
 		router.GET(pathPrefix, h.HandleList)
 		router.GET(namedPathPrefix, h.HandleGet)
+		router.POST(namedPathPrefix+"/drain", handleNodeDrain(clientset, informer))
 	}
 
 	// CRUD with cluster-scoped custom resources that are expected to be present
@@ -307,6 +311,56 @@ func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]strin
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(discovery)
+	}
+}
+
+// k8s.io/kubectl
+func handleNodeDrain(clientset *kubernetes.Clientset, informer informers.GenericInformer) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+		name := params.ByName("name")
+		nodeGeneric, exists, err := informer.Informer().GetIndexer().GetByKey(name)
+		if err != nil {
+			klog.Errorf("error getting node %q: %v", name, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting node"})
+			return
+		}
+		if !exists {
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+			return
+		}
+
+		node := nodeGeneric.(*v1.Node)
+
+		var sb strings.Builder
+		helper := &drain.Helper{
+			Client:              clientset,
+			Force:               true,
+			IgnoreAllDaemonSets: true,
+			DeleteEmptyDirData:  true,
+			GracePeriodSeconds:  -1,
+			// If a pod is not evicted in 5 minutes, delete the pod
+			Timeout: 5 * time.Minute,
+			Out:     ioutil.Discard,
+			ErrOut:  &sb,
+			Ctx:     r.Context(),
+		}
+		if err := drain.RunCordonOrUncordon(helper, node, true); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			klog.ErrorS(err, "cannot cordon node", "name", name, "error", sb.String())
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("cannot cordon node: %v", err)})
+			return
+		}
+		if err := drain.RunNodeDrain(helper, name); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			klog.ErrorS(err, "cannot drain node", "name", name, "error", sb.String())
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("cannot drain node: %v", err)})
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Content-Type", "application/json")
 	}
 }
 
