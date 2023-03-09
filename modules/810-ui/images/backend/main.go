@@ -338,11 +338,6 @@ func getPathSegments(gvr schema.GroupVersionResource, isNamespaced bool, prefixe
 	return segments
 }
 
-// type handler struct{}
-// func (h *handler) OnAdd(obj interface{})               {} // TODO: broadcast meaningful update to websocket
-// func (h *handler) OnUpdate(oldObj, newObj interface{}) {} // TODO: broadcast meaningful update to websocket
-// func (h *handler) OnDelete(obj interface{})            {} // TODO: broadcast meaningful update to websocket
-
 func getConfig() *appConfig {
 	flagSet := flag.NewFlagSet("dashboard", flag.ExitOnError)
 	klog.InitFlags(flagSet)
