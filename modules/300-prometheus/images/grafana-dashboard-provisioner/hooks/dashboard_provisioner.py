@@ -14,31 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import tempfile
 import json
-import shutil
-import re
 from shell_operator import hook
-
-def slugify(value):
-    value = value.lower()
-    value = re.sub(r"[^\w\s-]", "", value).strip()
-    value = re.sub(r"[-\s]+", "-", value)
-    return value
+from slugify import slugify
 
 def main(ctx: hook.Context):
-    tmp_dir = tempfile.mkdtemp(prefix="dashboard.")
+    dashboards = []
     known_uids = set()
     malformed_dashboards = []
 
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
-        definition_str = dashboard["definition"]
-        definition = json.loads(definition_str)
+        definition = json.loads(dashboard["definition"])
         title = definition.get("title")
         if not title:
-            malformed_dashboards += f" {dashboard.get('name', '')}"
+            malformed_dashboards.append(dashboard.get('name', ''))
             continue
 
         title = slugify(title)
@@ -54,17 +44,25 @@ def main(ctx: hook.Context):
         known_uids.add(uid)
 
         folder = dashboard.get("folder", "General")
-        file = f"{folder}/{title}.json"
+        if folder == "General":
+            file = f"{title}.json"
+        else:
+            file = f"{folder}/{title}.json"
 
-        os.makedirs(f"{tmp_dir}/{folder}", exist_ok=True)
-        with open(f"{tmp_dir}/{file}", "w") as f:
-            json.dump(definition, f)
+        dashboards.append((file, json.dumps(definition)))
 
     if len(malformed_dashboards) > 0:
         print(f'Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
-    shutil.rmtree("/etc/grafana/dashboards/", ignore_errors=True)
-    shutil.move(tmp_dir, "/etc/grafana/dashboards/")
+    for file, contents in dashboards:
+        path = f"/etc/grafana/dashboards/{file}"
+        with open(path, "w") as f:
+            f.write(contents)
+        if not file.startswith("General/"):
+            folder = file.split("/")[:-1]
+            folder_path = f"/etc/grafana/dashboards/{'/'.join(folder)}"
+            if not any(file.startswith(folder_path) for file, _ in dashboards):
+                dashboards.append((folder_path, ""))
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
