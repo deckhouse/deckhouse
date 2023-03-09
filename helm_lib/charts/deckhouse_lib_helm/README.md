@@ -237,7 +237,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage
