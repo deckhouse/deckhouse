@@ -19,6 +19,7 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -32,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "ings",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             filterCloudEphemeralNG,
 		},
 	},
@@ -50,9 +51,11 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, nil
 	}
 
-	return usedInstanceClass{
-		Kind:          ng.Spec.CloudInstances.ClassReference.Kind,
-		Name:          ng.Spec.CloudInstances.ClassReference.Name,
+	return instanceClassWithNG{
+		usedInstanceClass: usedInstanceClass{
+			Kind: ng.Spec.CloudInstances.ClassReference.Kind,
+			Name: ng.Spec.CloudInstances.ClassReference.Name,
+		},
 		NodeGroupName: ng.Name,
 	}, nil
 }
@@ -71,9 +74,9 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 			continue
 		}
 
-		usedIC := sn.(usedInstanceClass)
+		usedIC := sn.(instanceClassWithNG)
 
-		m[usedIC] = append(m[usedIC], usedIC.NodeGroupName)
+		m[usedIC.usedInstanceClass] = append(m[usedIC.usedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	for ic, ngNames := range m {
@@ -82,7 +85,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 				"nodeGroupConsumers": ngNames,
 			},
 		}
-		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", ic.Kind, "", ic.Name)
+		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", ic.Kind, "", ic.Name, object_patch.IgnoreMissingObject())
 	}
 
 	return nil
@@ -91,6 +94,9 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 type usedInstanceClass struct {
 	Kind string
 	Name string
+}
 
+type instanceClassWithNG struct {
+	usedInstanceClass
 	NodeGroupName string
 }
