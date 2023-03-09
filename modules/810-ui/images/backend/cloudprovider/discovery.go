@@ -43,7 +43,6 @@ func Discover(providerName string) (map[string]interface{}, error) {
 	default:
 		return map[string]interface{}{}, nil
 	}
-
 }
 
 // InstanceType is the spec of an instance
@@ -53,35 +52,4 @@ type InstanceType struct {
 	MemoryMb     int
 	GPU          int
 	Architecture string
-}
-
-// GetInstanceType resolves known instance type by specified instance class (provider)
-func GetInstanceType(instanceClass, instanceTypeName string) (*InstanceType, error) {
-	var (
-		instanceType *InstanceType
-		found        bool
-	)
-
-	switch instanceClass {
-	case "AWSInstanceClass":
-		instanceType, found = awsInstanceTypes[instanceTypeName]
-
-	case "AzureInstanceClass":
-		instanceType, found = azureInstanceTypes[instanceTypeName]
-
-	case "GCPInstanceClass":
-		instanceType, found = gcpInstanceTypes[instanceTypeName]
-
-	case "OpenStackInstanceClass":
-		instanceType, found = openstackInstanceTypes[instanceTypeName]
-
-	default:
-		return nil, ErrInstanceTypeNotFound
-	}
-
-	if !found {
-		return nil, ErrInstanceTypeNotFound
-	}
-
-	return instanceType, nil
 }
