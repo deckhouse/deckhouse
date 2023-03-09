@@ -59,8 +59,21 @@
 | [helm_lib_prometheus_rules](#helm_lib_prometheus_rules) |
 | [helm_lib_prometheus_target_scrape_timeout_seconds](#helm_lib_prometheus_target_scrape_timeout_seconds) |
 | **Node Affinity** |
+| [helm_lib_internal_check_node_selector_strategy](#helm_lib_internal_check_node_selector_strategy) |
 | [helm_lib_node_selector](#helm_lib_node_selector) |
 | [helm_lib_tolerations](#helm_lib_tolerations) |
+| [_helm_lib_cloud_or_hybrid_cluster](#_helm_lib_cloud_or_hybrid_cluster) |
+| [helm_lib_internal_check_tolerations_strategy](#helm_lib_internal_check_tolerations_strategy) |
+| [_helm_lib_any_node_tolerations](#_helm_lib_any_node_tolerations) |
+| [_helm_lib_wildcard_tolerations](#_helm_lib_wildcard_tolerations) |
+| [_helm_lib_monitoring_tolerations](#_helm_lib_monitoring_tolerations) |
+| [_helm_lib_frontend_tolerations](#_helm_lib_frontend_tolerations) |
+| [_helm_lib_system_tolerations](#_helm_lib_system_tolerations) |
+| [_helm_lib_additional_tolerations_uninitialized](#_helm_lib_additional_tolerations_uninitialized) |
+| [_helm_lib_additional_tolerations_node_problems](#_helm_lib_additional_tolerations_node_problems) |
+| [_helm_lib_additional_tolerations_storage_problems](#_helm_lib_additional_tolerations_storage_problems) |
+| [_helm_lib_additional_tolerations_no_csi](#_helm_lib_additional_tolerations_no_csi) |
+| [_helm_lib_additional_tolerations_cloud_provider_uninitialized](#_helm_lib_additional_tolerations_cloud_provider_uninitialized) |
 | **Pod Disruption Budget** |
 | [helm_lib_pdb_daemonset](#helm_lib_pdb_daemonset) |
 | **Priority Class** |
@@ -664,26 +677,151 @@ list:
 
 ## Node Affinity
 
+### helm_lib_internal_check_node_selector_strategy
+
+ Verify node selector strategy. 
+
+
+
 ### helm_lib_node_selector
 
- Returns node selector for workloads depend on strategy 
+ Returns node selector for workloads depend on strategy. 
 
 #### Arguments
 
 list:
 -  Template context with .Values, .Chart, etc 
--  strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
+-  strategy, one of "frontend" "monitoring" "system" "master" "any-node" "wildcard" 
 
 
 ### helm_lib_tolerations
 
- Returns tolerations for workloads depend on strategy 
+ Returns tolerations for workloads depend on strategy. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} `
 
 #### Arguments
 
 list:
 -  Template context with .Values, .Chart, etc 
--  strategy, one of "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" 
+-  base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" 
+-  list of additional strategies. To add strategy list it with prefix "with-", to remove strategy list it with prefix "without-". 
+
+
+### _helm_lib_cloud_or_hybrid_cluster
+
+ Check cluster type. 
+ Returns not empty string if this is cloud or hybrid cluster 
+
+
+
+### helm_lib_internal_check_tolerations_strategy
+
+ Verify base strategy. 
+ Fails if strategy not in allowed list 
+
+
+
+### _helm_lib_any_node_tolerations
+
+ Base strategy for any uncordoned node in cluster. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node") }} `
+
+
+
+### _helm_lib_wildcard_tolerations
+
+ Base strategy that tolerates all. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "wildcard") }} `
+
+
+
+### _helm_lib_monitoring_tolerations
+
+ Base strategy that tolerates nodes with "dedicated.deckhouse.io: monitoring" and "dedicated.deckhouse.io: system" taints. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "monitoring") }} `
+
+
+
+### _helm_lib_frontend_tolerations
+
+ Base strategy that tolerates nodes with "dedicated.deckhouse.io: frontend" taints. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "frontend") }} `
+
+
+
+### _helm_lib_system_tolerations
+
+ Base strategy that tolerates nodes with "dedicated.deckhouse.io: system" taints. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "system") }} `
+
+
+
+### _helm_lib_additional_tolerations_uninitialized
+
+ Additional strategy "uninitialized" - used for CNI's and kube-proxy to allow cni components scheduled on node after CCM initialization. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} `
+
+
+
+### _helm_lib_additional_tolerations_node_problems
+
+ Additional strategy "node-problems" - used for shedule critical components on non-ready nodes or nodes under pressure. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-node-problems") }} `
+
+
+
+### _helm_lib_additional_tolerations_storage_problems
+
+ Additional strategy "storage-problems" - used for shedule critical components on nodes with drbd problems. This additional strategy enabled by default in any base strategy except "wildcard". 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "without-storage-problems") }} `
+
+
+
+### _helm_lib_additional_tolerations_no_csi
+
+ Additional strategy "no-csi" - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") }} `
+
+
+
+### _helm_lib_additional_tolerations_cloud_provider_uninitialized
+
+ Additional strategy "cloud-provider-uninitialized" - used for any node which is not initialized by CCM. 
+
+#### Usage
+
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-cloud-provider-uninitialized") }} `
+
 
 ## Pod Disruption Budget
 
