@@ -348,14 +348,14 @@ func handleNodeDrain(clientset *kubernetes.Clientset, informer informers.Generic
 		}
 		if err := drain.RunCordonOrUncordon(helper, node, true); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			klog.ErrorS(err, "cannot cordon node", "name", name, "error", sb.String())
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("cannot cordon node: %v", err)})
+			klog.ErrorS(err, "failed cordoning node", "name", name, "error", sb.String())
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("failed cordoning node: %v", err)})
 			return
 		}
 		if err := drain.RunNodeDrain(helper, name); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			klog.ErrorS(err, "cannot drain node", "name", name, "error", sb.String())
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("cannot drain node: %v", err)})
+			klog.ErrorS(err, "failed draining node", "name", name, "error", sb.String())
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("failed draining node: %v", err)})
 			return
 		}
 
