@@ -10,8 +10,12 @@
   {{- fail $error }}
   {{- end }}
   {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
-  {{- if $context.Values | dig  $moduleName "registry" "base" "" }}
-    {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+  {{- if index $context.Values $moduleName }}
+    {{- if index $context.Values $moduleName "registry" }}
+      {{- if index $context.Values $moduleName "registry" "base" }}
+        {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+      {{- end }}
+    {{- end }}
   {{- end }}
   {{- printf "%s:%s" $registryBase $imageHash }}
 {{- end }}
@@ -25,8 +29,12 @@
   {{- $imageHash := index $context.Values.global.modulesImages.tags $moduleName $containerName }}
   {{- if $imageHash }}
     {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
-    {{- if $context.Values | dig  $moduleName "registry" "base" "" }}
-      {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+    {{- if index $context.Values $moduleName }}
+      {{- if index $context.Values $moduleName "registry" }}
+        {{- if index $context.Values $moduleName "registry" "base" }}
+          {{- $registryBase = (printf "%s/%s" (index $context.Values $moduleName "registry" "base") $moduleName) }}
+        {{- end }}
+      {{- end }}
     {{- end }}
     {{- printf "%s:%s" $registryBase $imageHash }}
   {{- end }}
