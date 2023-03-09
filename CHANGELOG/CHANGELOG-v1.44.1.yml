@@ -1,0 +1,32 @@
+control-plane-manager:
+  fixes:
+    - summary: Fix `KubernetesVersionEndOfLife` alert auto redirection.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4004
+deckhouse-config:
+  fixes:
+    - summary: Place the `deckhouse-config-webhook` on the same node as Deckhouse.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4014
+docs:
+  fixes:
+    - summary: Fix instruction about how to add master nodes to a cloud cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3984
+istio:
+  fixes:
+    - summary: D8IstioDeprecatedIstioVersionInstalled alert description clarification.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4010
+log-shipper:
+  fixes:
+    - summary: Fix the exclude clause for unschedulable nodes in the RateLimit alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4018
+node-manager:
+  fixes:
+    - summary: Fixed documentation for the case if minPerZone is 0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4024
+virtualization:
+  features:
+    - summary: Kubevirt `v0.58.1`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3989
+  fixes:
+    - summary: Fix tolerations for virt-operator-strategy-dumper job
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3988
+
