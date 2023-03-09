@@ -25,7 +25,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -372,13 +371,12 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		patch := buildUpdateStatusPatch(
 			nodesNum, readyNodesNum, uptodateNodesCount,
-			minPerZone, maxPerZone,
-			desiredMax, instancesCount,
+			minPerZone, maxPerZone, desiredMax, instancesCount,
 			nodeGroup.NodeType, statusMsg,
 			lastMachineFailures,
 		)
 
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", ngName, object_patch.WithSubresource("/status"))
+		patchNodeGroupStatus(input.PatchCollector, ngName, patch)
 	}
 
 	return nil
@@ -428,47 +426,6 @@ func buildEventV1(nodeGroup statusNodeGroup, eventType, reason, msg string, now 
 		ReportingInstance:   "deckhouse",
 		ReportingController: "deckhouse",
 	}
-}
-
-func buildUpdateStatusPatch(
-	nodesNum, readyNodesNum, uptodateNodesCount,
-	minPerZone, maxPerZone,
-	desiredMax, instancesNum int32,
-	nodeType ngv1.NodeType, statusMsg string,
-	lastMachineFailures []*v1alpha1.MachineSummary,
-) interface{} {
-	ready := "True"
-	if len(statusMsg) > 0 {
-		ready = "False"
-	}
-
-	patch := map[string]interface{}{
-		"nodes":    nodesNum,
-		"ready":    readyNodesNum,
-		"upToDate": uptodateNodesCount,
-	}
-	if nodeType == ngv1.NodeTypeCloudEphemeral {
-		patch["min"] = minPerZone
-		patch["max"] = maxPerZone
-		patch["desired"] = desiredMax
-		patch["instances"] = instancesNum
-		patch["lastMachineFailures"] = lastMachineFailures
-
-		if len(lastMachineFailures) == 0 {
-			patch["lastMachineFailures"] = make([]interface{}, 0) // to make [] array in json result
-		}
-	}
-
-	patch["conditionSummary"] = map[string]interface{}{
-		"ready":         ready,
-		"statusMessage": statusMsg,
-	}
-
-	statusPatch := map[string]interface{}{
-		"status": patch,
-	}
-
-	return statusPatch
 }
 
 type statusNodeGroup struct {
