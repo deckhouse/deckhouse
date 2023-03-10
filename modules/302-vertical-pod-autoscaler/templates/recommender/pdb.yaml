@@ -2,9 +2,6 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   name: vpa-recommender
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | nindent 2 }}

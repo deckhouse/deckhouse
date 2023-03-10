@@ -2,9 +2,6 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   name: prometheus-operator
   namespace: d8-operator-prometheus
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-operator")) | nindent 2 }}
