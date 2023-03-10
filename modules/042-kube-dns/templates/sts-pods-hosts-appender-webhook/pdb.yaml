@@ -3,9 +3,6 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   name: d8-kube-dns-sts-pods-hosts-appender-webhook
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}

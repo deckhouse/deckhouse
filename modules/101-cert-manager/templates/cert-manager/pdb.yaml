@@ -4,9 +4,6 @@ kind: PodDisruptionBudget
 metadata:
   name: cert-manager
   namespace: d8-cert-manager
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
