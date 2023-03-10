@@ -151,6 +151,7 @@ if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   fi
 fi
 
+# https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml
 function dynamic_memory_sizing {
     total_memory=$(free -g|awk '/^Mem:/{print $2}')
     recommended_systemreserved_memory=0
