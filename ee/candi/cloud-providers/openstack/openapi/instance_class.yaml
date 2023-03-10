@@ -133,6 +133,11 @@ spec:
       served: true
       storage: true
       schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
   scope: Cluster
   names:
     plural: openstackinstanceclasses
