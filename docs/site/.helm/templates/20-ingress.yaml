@@ -13,6 +13,7 @@ kind: Ingress
 metadata:
   name: main-{{ .Lang }}
   annotations:
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: '*'
     nginx.ingress.kubernetes.io/configuration-snippet: |
