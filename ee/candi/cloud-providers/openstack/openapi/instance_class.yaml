@@ -138,6 +138,9 @@ spec:
           type: string
           description: NodeGroups which use this instance class.
           jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
   scope: Cluster
   names:
     plural: openstackinstanceclasses
