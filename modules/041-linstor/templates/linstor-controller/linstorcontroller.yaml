@@ -40,7 +40,7 @@ metadata:
     kubectl.kubernetes.io/default-container: linstor-controller
 spec:
   {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "system-with-drbd-problems") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
   affinity:
     {{- with (include "helm_lib_node_selector" (tuple . "system")) }}
     nodeAffinity:

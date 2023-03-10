@@ -146,7 +146,7 @@ spec:
   tolerations:
     {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
   {{- else }}
-    {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+    {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- end }}
 
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}

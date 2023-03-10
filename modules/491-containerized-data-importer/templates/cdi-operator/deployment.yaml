@@ -90,7 +90,7 @@ spec:
         - name: APISERVER_NODESELECTOR
           value: {{ index (include "helm_lib_node_selector" (tuple . "master") | fromYaml) "nodeSelector" | default (dict) | toJson | quote }}
         - name: APISERVER_TOLERATIONS
-          value: {{ index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | default (list) | toJson | quote }}
+          value: {{ index (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) "tolerations" | default (list) | toJson | quote }}
         image: {{ include "helm_lib_module_image" (list . "cdiOperator") }}
         imagePullPolicy: IfNotPresent
         ports:
@@ -103,7 +103,7 @@ spec:
             {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "cdi_operator_resources" . | nindent 12 }}
             {{- end }}
-      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
