@@ -38,7 +38,7 @@ properties:
                 type: string
       trackedMutateResources:
         type: array
-        default: [ ]
+        default: []
         items:
           type: object
           properties:
