@@ -46,9 +46,11 @@ var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
 			FilterFunc:             filterCloudEphemeralNG,
 		},
 		{
-			Name:       "cloud_provider_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
+			Name:                         "cloud_provider_secret",
+			ApiVersion:                   "v1",
+			Kind:                         "Secret",
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
