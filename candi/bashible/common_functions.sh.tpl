@@ -14,8 +14,7 @@
 # limitations under the License.
 */}}
 #!/bin/bash
-function bootstrap_debian_based() {
-  export LANG=C
+function set_proxy() {
   {{- if .proxy }}
     {{- if .proxy.httpProxy }}
   export HTTP_PROXY={{ .proxy.httpProxy | quote }}
@@ -30,8 +29,13 @@ function bootstrap_debian_based() {
   export no_proxy=${NO_PROXY}
     {{- end }}
   {{- else }}
-    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
   {{- end }}
+}
+
+function bootstrap_debian_based() {
+  export LANG=C
+  set_proxy
   apt update
   export DEBIAN_FRONTEND=noninteractive
   until apt install jq netcat-openbsd curl -y; do

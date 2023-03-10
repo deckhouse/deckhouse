@@ -15,6 +15,7 @@
 */}}
 #!/bin/bash
 export LANG=C
+set_proxy
 if ! type jq 2>/dev/null || ! type curl 2>/dev/null || ! type nc 2>/dev/null; then
   apt-get update
   until apt-get install jq netcat curl -y; do
