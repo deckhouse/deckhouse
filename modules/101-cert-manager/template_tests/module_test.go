@@ -139,13 +139,19 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -160,6 +166,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -197,13 +206,19 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -229,6 +244,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
@@ -278,13 +296,19 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
@@ -299,6 +323,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -336,13 +363,19 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
 - key: node.kubernetes.io/disk-pressure
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -368,6 +401,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`

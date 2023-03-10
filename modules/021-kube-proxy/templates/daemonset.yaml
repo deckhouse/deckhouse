@@ -52,12 +52,8 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       priorityClassName: system-node-critical
-      {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | nindent 6 }}
-{{- /* kube-proxy must start before any other components, so we tolerate nodes uninitialized by cloud provider (cloud provider pods requires kube-proxy to work). */ -}}
-{{- if not .Values.global.clusterIsBootstrapped }}
-      - key: node.cloudprovider.kubernetes.io/uninitialized
-        operator: Exists
-{{- end }}
+      {{- /* kube-proxy must start before any other components, so we tolerate nodes uninitialized by cloud provider (cloud provider pods requires kube-proxy to work). */ -}}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       initContainers:
       - name: api-proxy-check

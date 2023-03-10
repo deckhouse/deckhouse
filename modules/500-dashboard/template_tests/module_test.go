@@ -123,6 +123,9 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(metricsScraper.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(metricsScraper.Field("spec.strategy").Exists()).To(BeFalse())
@@ -137,6 +140,9 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(dashboard.Field("spec.strategy").Exists()).To(BeFalse())
@@ -172,6 +178,9 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(metricsScraper.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(metricsScraper.Field("spec.strategy").String()).To(MatchYAML(`
@@ -197,6 +206,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(dashboard.Field("spec.strategy").String()).To(MatchYAML(`
@@ -244,6 +256,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(metricsScraper.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(metricsScraper.Field("spec.strategy").Exists()).To(BeFalse())
@@ -258,6 +273,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(dashboard.Field("spec.strategy").Exists()).To(BeFalse())
@@ -293,6 +311,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(metricsScraper.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(metricsScraper.Field("spec.strategy").String()).To(MatchYAML(`
@@ -318,6 +339,9 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(dashboard.Field("spec.strategy").String()).To(MatchYAML(`

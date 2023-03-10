@@ -77,7 +77,7 @@ spec:
       # hardcoded, because kube-dns is a critical component and system-cluster-critical priority class exists by default
       priorityClassName: system-cluster-critical
       serviceAccountName: d8-kube-dns
-      {{- include "helm_lib_tolerations" (tuple . "any-node-with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
       containers:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}

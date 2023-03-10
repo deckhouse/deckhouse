@@ -253,7 +253,7 @@ spec:
   {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 2 }}
     fsGroup: 2000
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
 {{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}

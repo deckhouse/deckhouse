@@ -1,9 +1,7 @@
 {{- $nodeSelectorSystem := index (include "helm_lib_node_selector" (tuple . "system") | fromYaml) "nodeSelector" | default (dict) | toJson }}
 {{- $nodeSelectorMaster := index (include "helm_lib_node_selector" (tuple . "master") | fromYaml) "nodeSelector" | default (dict) | toJson }}
-{{- $tolerationsSystem := index (include "helm_lib_tolerations" (tuple . "system-with-drbd-problems") | fromYaml) "tolerations" | default (list) | toJson }}
+{{- $tolerationsSystem := index (include "helm_lib_tolerations" (tuple . "system") | fromYaml) "tolerations" | default (list) | toJson }}
 {{- $tolerationsAnyNode := index (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) "tolerations" | default (list) | toJson }}
-{{- $tolerationsMaster := index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | default (list) | toJson }}
-
 ---
 apiVersion: kubevirt.io/v1
 kind: KubeVirt
@@ -41,7 +39,7 @@ spec:
       type: json
     - resourceType: Deployment
       resourceName: virt-api
-      patch: '[{"op":"replace","path":"/spec/template/spec/tolerations","value":{{ $tolerationsMaster }}}]'
+      patch: '[{"op":"replace","path":"/spec/template/spec/tolerations","value":{{ $tolerationsAnyNode }}}]'
       type: json
     - resourceType: Deployment
       resourceName: virt-controller

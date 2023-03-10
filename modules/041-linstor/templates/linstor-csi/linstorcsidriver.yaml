@@ -197,7 +197,7 @@ spec:
     podAntiAffinity: {}
     {{- end }}
   controllerTolerations:
-    {{- index (include "helm_lib_tolerations" (tuple . "system-with-drbd-problems") | fromYaml) "tolerations" | toYaml | nindent 4 }}
+    {{- index (include "helm_lib_tolerations" (tuple . "system") | fromYaml) "tolerations" | toYaml | nindent 4 }}
   enableTopology: true
   resources:
     requests:
