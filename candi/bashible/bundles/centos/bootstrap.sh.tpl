@@ -150,7 +150,7 @@ bb-rp-install() {
 
     pushd "${TMPDIR}" >/dev/null
     ./install
-    # shellcheck disable=SC2164
+    {{- /* # shellcheck disable=SC2164 */}}
     popd >/dev/null
 
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
