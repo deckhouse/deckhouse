@@ -1,5 +1,7 @@
 ---
 title: "The deckhouse-web module"
+webIfaces:
+- name: deckhouse
 ---
 
 The module creates a documentation web UI for the Deckhouse version currently used in a cluster.

@@ -1,5 +1,7 @@
 ---
 title: "Модуль deckhouse-web"
+webIfaces:
+- name: deckhouse
 ---
 
 Этот модуль создает web-интерфейс с документацией, соответствующей запущенной версии Deckhouse.
