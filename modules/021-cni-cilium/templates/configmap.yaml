@@ -46,6 +46,9 @@ data:
   tunnel-port: "8469"
   enable-ip-masq-agent: "true"
   ip-masq-agent-config-path: /etc/config/ip-masq-agent
+  # Use stable MAC addresses for pods
+  endpoint-interface-host-mac: "f6:e1:74:94:b8:1b"
+  endpoint-interface-mac: "f6:e1:74:94:b8:1a"
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
