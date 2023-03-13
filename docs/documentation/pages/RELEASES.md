@@ -8,14 +8,14 @@ toc: false
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 <div class="docs__information warning active">
-For information about which versions of Deckhouse are currently on which update channels and the planned date of changing the version on the update channel, go on the <a href="https://flow.deckhouse.io" target="_blank">flow.deckhouse.io</a> website.
+For information on which versions of Deckhouse are available on which release channels as well as the planned date of the version update for a particular release channel, visit  <a href="https://flow.deckhouse.io" target="_blank">flow.deckhouse.io</a> website.
 </div>  
 
-Clusters, as elements of the infrastructure, usually have different requirements.
+Clusters, as infrastructure elements, usually have to meet various requirements.
 
-A production cluster, unlike a development cluster, has higher reliability requirements. Frequent updates and changes to components are undesirable on a productive cluster. Components should be tested as much as possible.
+A production cluster, unlike a development one, has higher requirements for reliability. In a production cluster, frequent component updates and changes are undesirable. All the cluster components must be thoroughly tested for stable and reliable operation.
 
-Deckhouse uses **five release channels**, between which it can "soft" switch using the [deckhouse](modules/002-deckhouse/) module: it is enough to specify the desired release channel in the module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+Deckhouse uses **five release channels** which you can *soft-switch* between using the [deckhouse](modules/002-deckhouse/) module: just specify the desired release channel in the module [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
 
 <div id="releases__stale__block" class="releases__info releases__stale__warning" >
   <strong>Note!</strong> The cluster does not use any release channel.
