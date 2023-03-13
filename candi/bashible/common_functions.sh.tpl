@@ -47,10 +47,11 @@ function bootstrap_debian_based() {
 }
 
 function bootstrap_centos_based() {
+  export PATH="/usr/local/bin:$PATH"
   export LANG=C
   set_proxy
   yum updateinfo
-  until yum install nc curl wget -y; do
+  until yum install nc curl wget jq -y; do
     echo "Error installing packages"
     yum updateinfo
     sleep 10
