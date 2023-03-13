@@ -1,2 +1,2 @@
 shell-operator==0.0.8
-python-slugify==7.0.0
+python-slugify==8.0.1

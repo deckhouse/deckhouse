@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 # limitations under the License.
 
 import json
-import os
+import os, shutil
 from shell_operator import hook
 from slugify import slugify
 
+
 def main(ctx: hook.Context):
-    dashboards = []
     known_uids = set()
     malformed_dashboards = []
     dashboard_dict = {}
@@ -28,15 +28,18 @@ def main(ctx: hook.Context):
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
         definition = json.loads(dashboard["definition"])
+        dashboard_name = dashboard.get('name', '')
+
         title = definition.get("title")
         if not title:
-            malformed_dashboards.append(dashboard.get('name', ''))
+            malformed_dashboards.append(dashboard_name)
             continue
 
         title = slugify(title)
 
         if not definition.get("uid"):
-            print(f"ERROR: definition.uid is mandatory field")
+            print(f"ERROR: definition.uid is mandatory field missing in the dashboard {dashboard_name}")
+            malformed_dashboards.append(dashboard_name)
             continue
 
         uid = definition["uid"]
@@ -47,7 +50,7 @@ def main(ctx: hook.Context):
 
         folder = dashboard.get("folder", "General")
         if folder == "General":
-            print(f"ERROR: cannot provision dashboards to the 'General' folder")
+            file = f"{title}.json"
         else:
             file = f"{folder}/{title}.json"
 
@@ -57,21 +60,33 @@ def main(ctx: hook.Context):
         dashboard_dict[folder][file] = definition
 
     if len(malformed_dashboards) > 0:
-        print(f'Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
+        print(f'WARN: Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
     for folder, files in dashboard_dict.items():
         folder_path = f"/etc/grafana/dashboards/"
         os.makedirs(folder_path, exist_ok=True)
+        cleanup_folder(folder_path)
 
         for file, definition in files.items():
             file_path = os.path.join(folder_path, file)
             with open(file_path, "w") as f:
                 json.dump(definition, f)
 
-            dashboards.append((folder_path, file))
-
     with open("/tmp/ready", "w") as f:
         f.write("ok")
+
+
+def cleanup_folder(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('WARN: Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 if __name__ == "__main__":
     hook.run(main, configpath="dashboard_provisioner.yaml")

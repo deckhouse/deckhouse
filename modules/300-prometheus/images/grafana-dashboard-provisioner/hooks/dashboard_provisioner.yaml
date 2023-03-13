@@ -1,4 +1,4 @@
-# Copyright 2022 Flant JSC
+# Copyright 2023 Flant JSC
 # This is a config for dashboard_provisioner.py hook.
 configVersion: v1
 kubernetes:
