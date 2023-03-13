@@ -63,6 +63,7 @@ rules:
   - services
   - endpoints
   - namespaces
+  - nodes
   verbs:
   - get
   - list
@@ -96,6 +97,10 @@ rules:
   - ciliumlocalredirectpolicies/status
   - ciliumlocalredirectpolicies/finalizers
   - ciliumendpointslices
+  - ciliumegressgatewaypolicies
+  - ciliumclusterwideenvoyconfigs
+  - ciliumbgppeeringpolicies
+  - ciliumbgploadbalancerippools
   verbs:
   - '*'
 - apiGroups:
