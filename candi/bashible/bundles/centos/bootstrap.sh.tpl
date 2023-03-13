@@ -160,7 +160,7 @@ bb-rp-install() {
 # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
 */}}
 export PATH="/usr/local/bin:$PATH"
-export LANG=C
+. common_functions.sh
 set_proxy
 yum updateinfo
 until yum install nc curl wget -y; do

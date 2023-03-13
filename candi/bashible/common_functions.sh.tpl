@@ -46,6 +46,19 @@ function bootstrap_debian_based() {
   mkdir -p /var/lib/bashible/
 }
 
+function bootstrap_centos_based() {
+  export LANG=C
+  set_proxy
+  yum updateinfo
+  until yum install nc curl wget -y; do
+    echo "Error installing packages"
+    yum updateinfo
+    sleep 10
+  done
+  check_xfs
+  mkdir -p /var/lib/bashible/
+}
+
 function check_xfs() {
   for FS_NAME in $(mount -l -t xfs | awk '{ print $1 }'); do
     if command -v xfs_info >/dev/null && xfs_info $FS_NAME | grep -q ftype=0; then

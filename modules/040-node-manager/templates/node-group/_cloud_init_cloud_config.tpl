@@ -69,6 +69,11 @@ write_files:
   content: |
     {{- include "node_group_bashible_bootstrap_script" $bashible_bootstrap_script_tpl_context | nindent 4 }}
 
+- path: '/var/lib/bashible/common_functions.sh'
+  permissions: '0700'
+  content: |
+    {{- tpl ($context.Files.Get "candi/bashible/common_functions.sh.tpl") $context | nindent 0 }}
+
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
   content: |
