@@ -19,6 +19,8 @@ import os, shutil
 from shell_operator import hook
 from slugify import slugify
 
+root_path = f"/etc/grafana/dashboards/"
+
 
 def main(ctx: hook.Context):
     known_uids = set()
@@ -59,7 +61,6 @@ def main(ctx: hook.Context):
     if len(malformed_dashboards) > 0:
         print(f'WARN: Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
-    root_path = f"/etc/grafana/dashboards/"
     cleanup_folder(root_path)
 
     for folder, files in dashboard_dict.items():
