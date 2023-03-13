@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -16,20 +17,20 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type dynamicHandler struct {
+type namespacedResourceHandler struct {
 	gvr      schema.GroupVersionResource
-	ri       dynamic.ResourceInterface
+	ri       dynamic.NamespaceableResourceInterface
 	informer informers.GenericInformer
 }
 
-func newHandler(informer informers.GenericInformer, ri dynamic.ResourceInterface, gvr schema.GroupVersionResource) *dynamicHandler {
-	return &dynamicHandler{gvr, ri, informer}
+func newNamespacedHandler(informer informers.GenericInformer, ri dynamic.NamespaceableResourceInterface, gvr schema.GroupVersionResource) *namespacedResourceHandler {
+	return &namespacedResourceHandler{gvr, ri, informer}
 }
 
-func (dh *dynamicHandler) HandleList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// List
-	// TODO: accept label selectors
-	list, err := dh.informer.Lister().List(labels.Everything())
+func (dh *namespacedResourceHandler) HandleList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	namespace := params.ByName("namespace")
+
+	list, err := dh.informer.Lister().ByNamespace(namespace).List(labels.Everything())
 	if err != nil {
 		klog.Errorf("error listing %s: %v", dh.gvr.Resource, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -44,26 +45,30 @@ func (dh *dynamicHandler) HandleList(w http.ResponseWriter, r *http.Request, _ h
 }
 
 // Item by name
-func (dh *dynamicHandler) HandleGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (dh *namespacedResourceHandler) HandleGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	name := params.ByName("name")
+	namespace := params.ByName("namespace")
 	// Single object
-	obj, exists, err := dh.informer.Informer().GetIndexer().GetByKey(name)
+	obj, err := dh.informer.Lister().ByNamespace(namespace).Get(name)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"not found"}`))
+			return
+		}
 		klog.Errorf("error listing %s: %v", dh.gvr.Resource, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":"error getting item"}`))
-		return
-	}
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not found"}`))
 		return
 	}
 	data, _ := json.Marshal(obj)
 	w.Write(data)
 }
 
-func (dh *dynamicHandler) HandleCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (dh *namespacedResourceHandler) HandleCreate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+
+	namespace := params.ByName("namespace")
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		klog.Errorf("error reading body: %v", err)
@@ -79,7 +84,8 @@ func (dh *dynamicHandler) HandleCreate(w http.ResponseWriter, r *http.Request, _
 		w.Write([]byte(`{"error":"error unmarshalling body"}`))
 		return
 	}
-	createdObj, err := dh.ri.Create(r.Context(), &obj, metav1.CreateOptions{})
+
+	createdObj, err := dh.ri.Namespace(namespace).Create(r.Context(), &obj, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf("error creating object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +98,9 @@ func (dh *dynamicHandler) HandleCreate(w http.ResponseWriter, r *http.Request, _
 	w.Write(data)
 }
 
-func (dh *dynamicHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (dh *namespacedResourceHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	namespace := params.ByName("namespace")
+
 	// Update
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -109,7 +117,7 @@ func (dh *dynamicHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _
 		w.Write([]byte(`{"error":"error unmarshalling body"}`))
 		return
 	}
-	updatedObj, err := dh.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
+	updatedObj, err := dh.ri.Namespace(namespace).Update(r.Context(), &obj, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("error updating object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -121,10 +129,12 @@ func (dh *dynamicHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _
 	w.Write(data)
 }
 
-func (dh *dynamicHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (dh *namespacedResourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Delete
 	name := params.ByName("name")
-	err := dh.ri.Delete(r.Context(), name, metav1.DeleteOptions{})
+	namespace := params.ByName("namespace")
+
+	err := dh.ri.Namespace(namespace).Delete(r.Context(), name, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Errorf("error deleting object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
