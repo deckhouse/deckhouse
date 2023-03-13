@@ -7,10 +7,10 @@ force_searchable: true
 
 ## Как использовать `extended-monitoring-exporter`
 
-Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на Namespace аннотацию `extended-monitoring.flant.com/enabled` любым удобным способом, например:
+Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на Namespace лейбл `extended-monitoring.deckhouse.io/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый)
 - добавить в описание `.gitlab-ci.yml` (kubectl patch/create)
-- поставить руками (`kubectl annotate namespace my-app-production extended-monitoring.flant.com/enabled=""`).
+- поставить руками (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
 - настроить через [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) модуль.
 
 Сразу же после этого, для всех поддерживаемых Kubernetes объектов в данном Namespace в Prometheus появятся default метрики + любые кастомные с префиксом `threshold.extended-monitoring.flant.com/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes объектов, описанных ниже, мониторинг и стандартные аннотации включаются автоматически.
@@ -18,7 +18,7 @@ force_searchable: true
 К Kubernetes объектам `threshold.extended-monitoring.flant.com/что-то своё` можно добавить любые другие аннотации с указанным значением. Пример: `kubectl annotate pod test threshold.extended-monitoring.flant.com/disk-inodes-warning-threshold=30`.
 В таком случае, значение из аннотации заменит значение по умолчанию.
 
-Слежение за объектом можно отключить индивидуально, поставив на него аннотацию `extended-monitoring.flant.com/enabled=false`. Соответственно, отключатся и аннотации по умолчанию, а также все алерты, привязанные к аннотациям.
+Слежение за объектом можно отключить индивидуально, поставив на него лейбл `extended-monitoring.deckhouse.io/enabled=false`. Соответственно, отключатся и аннотации по умолчанию, а также все алерты, привязанные к аннотациям.
 
 ### Стандартные аннотации и поддерживаемые Kubernetes объекты
 
@@ -26,7 +26,7 @@ force_searchable: true
 
 **Внимание!** Все аннотации:
 1. Начинаются с префикса `threshold.extended-monitoring.flant.com/`;
-2. Имеют целочисленное значение в качестве value, за исключением Namespace-аннотации `extended-monitoring.flant.com/enabled` (в которой value можно опустить). Указанное в value значение устанавливает порог срабатывания алерта.
+2. Имеют целочисленное значение в качестве value. Указанное в value значение устанавливает порог срабатывания алерта.
 
 #### Non-namespaced Kubernetes objects
 
@@ -95,7 +95,7 @@ force_searchable: true
 
 ##### CronJob
 
-Работает только выключение через аннотацию `extended-monitoring.flant.com/enabled=false`.
+Работает только выключение через аннотацию `extended-monitoring.deckhouse.io/enabled=false`.
 
 ### Как работает
 

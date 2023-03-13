@@ -12,7 +12,7 @@ properties:
           description: |
             Список аннотаций в формате `ключ: "значение"`.
           x-examples:
-            extended-monitoring.flant.com/enabled: "true"
+            example: "true"
           additionalProperties:
             type: string
             nullable: true

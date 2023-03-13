@@ -34,7 +34,7 @@ kubernetes.config.load_incluster_config()
 logging.basicConfig(format='[%(asctime)s] - %(message)s', level=logging.INFO)
 
 EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX = "threshold.extended-monitoring.flant.com/"
-EXTENDED_MONITORING_ENABLED_ANNOTATION = "extended-monitoring.flant.com/enabled"
+EXTENDED_MONITORING_ENABLED_LABEL = "extended-monitoring.deckhouse.io/enabled"
 
 DEFAULT_SERVER_ADDRESS = '0.0.0.0'
 DEFAULT_PORT = 8080
@@ -42,6 +42,23 @@ DEFAULT_PORT = 8080
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
+
+def is_monitoring_enabled(labels):
+    if not labels:
+        return False
+    # The absense of the label and "false" value mean the same
+    return labels.get(EXTENDED_MONITORING_ENABLED_LABEL, "false") == ""
+
+def parse_thresholds(annotations, default_thresholds):
+    thresholds = copy.deepcopy(default_thresholds)
+    if not annotations:
+        return thresholds
+    for name, value in annotations.items():
+        if not name.startswith(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
+            continue
+        unprefixed_name = name.replace(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, "")
+        thresholds[unprefixed_name] = value
+    return thresholds
 
 class Annotated(ABC):
     default_thresholds = {}
@@ -54,27 +71,16 @@ class Annotated(ABC):
       "resource_version": 0,
     }
 
-    def __init__(self, namespace, name, kube_annotations):
+    def __init__(self, namespace, name, kube_labels, kube_annotations):
         self.namespace = namespace
         self.name = name
-        self.enabled = True
-
-        if kube_annotations:
-            if not {EXTENDED_MONITORING_ENABLED_ANNOTATION: "false"}.items() <= kube_annotations.items():
-                self.thresholds = copy.deepcopy(self.default_thresholds)
-                for name, value in kube_annotations.items():
-                    if name.startswith(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
-                        self.thresholds.update(
-                            {name.replace(EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX, ""): value})
-            else:
-                self.enabled = False
-        else:
-            self.thresholds = copy.deepcopy(self.default_thresholds)
+        self.enabled = is_monitoring_enabled(kube_labels)
+        self.thresholds = parse_thresholds(kube_annotations, self.default_thresholds)
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
         for kube_object in cls.list(namespace, **cls.default_list_options):
-            yield cls(namespace, kube_object.metadata.name, kube_object.metadata.annotations)
+            yield cls(namespace, kube_object.metadata.name, kube_object.metadata.labels, kube_object.metadata.annotations)
 
     @property
     def formatted(self):
@@ -245,8 +251,8 @@ def _get_metrics():
     # iterate over namespaced objects in explicitly enabled via annotation Namespaces
     ns_list = (
         ns.metadata.name for ns in corev1.list_namespace().items
-        if ns.metadata.annotations
-        and EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()
+        if ns.metadata.labels
+        and EXTENDED_MONITORING_ENABLED_LABEL in ns.metadata.labels
     )
 
     response = """# HELP extended_monitoring_annotations Extended monitoring annotations
