@@ -1,0 +1,46 @@
+{{- $docker_versions := list }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $versions := $value.bashible.altlinux }}
+    {{- if $versions.docker.desiredVersion }}
+      {{- $docker_versions = $versions.docker.desiredVersion | toString | append $docker_versions }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+{{- range $value := $docker_versions | uniq }}
+  {{- $version := $value | toString }}
+  {{- $image_version := $version | replace "docker-engine=" "" | replace "." "-" | replace "_" "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - docker-engine_x86_64.rpm
+  - docker-cli_x86_64.rpm
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: altlinux
+    version: all
+    docker: {{ $version | replace "docker-engine=" "" }}
+    docker-cli: {{ $version | replace "docker-engine=" "" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sfL "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/docker-engine-{{ $version | replace "docker-engine=" "" }}.rpm" --output /docker-engine_x86_64.rpm
+  - curl -sfL "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/docker-cli-{{ $version | replace "docker-engine=" "" }}.rpm" --output /docker-cli_x86_64.rpm
+{{- end }}

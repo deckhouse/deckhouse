@@ -1,0 +1,40 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - kubelet
+  - kubelet.service
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: altlinux
+    version: all
+    kubelet: {{ printf "%s.%s" $version $patch }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_UBUNTU }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y curl
+  setup:
+  - curl -sfL https://dl.k8s.io/release/v{{ $version }}.{{ $patch }}/bin/linux/amd64/kubelet --output /kubelet
+  - chmod +x /kubelet
+  - curl -sfL https://raw.githubusercontent.com/kubernetes/release/v0.14.0/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service > /kubelet.service
+{{- end }}

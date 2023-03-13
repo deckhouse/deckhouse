@@ -1,0 +1,52 @@
+{{- $containerd_versions := list }}
+
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $versions := $value.bashible.altlinux }}
+    {{- if $versions.containerd.desiredVersion }}
+      {{- $containerd_versions = $versions.containerd.desiredVersion | toString | append $containerd_versions }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+{{- range $value := $containerd_versions | uniq }}
+  {{- $version := $value | toString }}
+  {{- $image_version := $version | replace "containerd-" "" | replace "." "-" | replace "_" "-" }}
+  {{- $containerdVersion := $version | replace "containerd-" "" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - containerd_amd64.rpm
+  - containerd
+  - containerd-shim
+  - containerd-shim-runc-v1
+  - containerd-shim-runc-v2
+  - containerd-stress
+  - ctr
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: altlinux
+    version: all
+    containerd: {{ $containerdVersion }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sfL http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch/files/x86_64/RPMS/containerd-1.6.9-alt1.x86_64.rpm --output /containerd_amd64.rpm
+  - curl -sfL https://github.com/containerd/containerd/releases/download/v{{ $containerdVersion }}/containerd-{{ $containerdVersion }}-linux-amd64.tar.gz | tar --strip-components=1 -xvzf -
+{{- end }}

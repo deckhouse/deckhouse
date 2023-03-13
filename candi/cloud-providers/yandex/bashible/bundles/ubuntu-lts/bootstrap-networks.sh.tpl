@@ -1,5 +1,5 @@
 #!/bin/bash
-
+{{- /*
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+*/}}
 shopt -s extglob
 
 function ip_in_subnet(){
@@ -53,7 +53,7 @@ for i in /sys/class/net/!($primary_ifname); do
 ROUTE_EOF
   fi
 
-# Configure the internal interface to route all vpc to all vm
+{{- /* # Configure the internal interface to route all vpc to all vm */}}
   cat > /etc/netplan/999-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
