@@ -508,7 +508,7 @@ var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.Hoo
 		}
 	}
 
-	return getCRDsHookConfig.Kubernetes[0].Kind, fromSecret
+	return config.Kubernetes[0].Kind, fromSecret
 }
 
 const EpochWindowSize int64 = 4 * 60 * 60 // 4 hours
