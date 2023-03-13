@@ -72,6 +72,9 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	var ex v1alpha1.ExternalModuleSource
 
 	err := sdk.FromUnstructured(obj, &ex)
+	if err != nil {
+		return nil, err
+	}
 
 	// remove unused fields
 	newex := v1alpha1.ExternalModuleSource{
@@ -86,7 +89,7 @@ func filterSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		newex.Spec.ReleaseChannel = "stable"
 	}
 
-	return newex, err
+	return newex, nil
 }
 
 func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
@@ -94,12 +97,16 @@ func handleSource(input *go_hook.HookInput, dc dependency.Container) error {
 	checksumFilePath := path.Join(externalModulesDir, "checksum.json")
 	ts := time.Now().UTC()
 
+	snap := input.Snapshots["sources"]
+	if len(snap) == 0 {
+		return nil
+	}
+
 	sourcesChecksum, err := getSourceChecksums(checksumFilePath)
 	if err != nil {
 		return err
 	}
 
-	snap := input.Snapshots["sources"]
 	for _, sn := range snap {
 		ex := sn.(v1alpha1.ExternalModuleSource)
 		sc := v1alpha1.ExternalModuleSourceStatus{
@@ -197,6 +204,9 @@ func getSourceChecksums(checksumFilePath string) (sourceChecksum, error) {
 
 		err = json.NewDecoder(checksumFile).Decode(&sourcesChecksum)
 		if err != nil {
+			if err == io.EOF {
+				return make(sourceChecksum), nil
+			}
 			return nil, err
 		}
 
