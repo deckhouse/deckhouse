@@ -64,3 +64,32 @@ spec:
 
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
+
+### Modifying Kubernetes resources
+
+The module also allows you to use the Gatekeeper's Custom Resources to easily modify objects in the cluster, such as
+- `AssignMetadata` — defines changes to the metadata section of a resource.
+- `Assign` —  any change outside the metadata section.
+- `ModifySet` —  adds or removes entries from a list, such as the arguments to a container.
+
+Example:
+
+```yaml
+ApiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+name: demo-annotation-owner
+spec:
+match:
+scope: Namespaced
+namespaces: ["default"]
+kinds:
+- apiGroups: [""]
+kinds: ["Pod"]
+location: "metadata.annotations.foo"
+parameters:
+assignment:
+value: "bar"
+```
+
+You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.

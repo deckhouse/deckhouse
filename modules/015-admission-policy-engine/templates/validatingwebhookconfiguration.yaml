@@ -1,4 +1,4 @@
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (gt (len .Values.admissionPolicyEngine.internal.trackedResources) 0) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -25,7 +25,7 @@ webhooks:
         - deckhouse
   objectSelector: {}
   rules:
-  {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedResources }}
+  {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedConstraintResources }}
   - apiGroups:
       {{- $trackResource.apiGroups | toYaml | nindent 6 }}
     apiVersions:

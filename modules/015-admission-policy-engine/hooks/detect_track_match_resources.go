@@ -54,15 +54,22 @@ func handleValidationKinds(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	resourcesRaw := snap[0].(string)
-	res := make([]matchResource, 0)
+	resourcesRaw := snap[0].(matchData)
+	validateRes := make([]matchResource, 0)
+	mutateRes := make([]matchResource, 0)
 
-	err := yaml.Unmarshal([]byte(resourcesRaw), &res)
+	err := yaml.Unmarshal([]byte(resourcesRaw.ValidateData), &validateRes)
 	if err != nil {
 		return err
 	}
 
-	input.Values.Set("admissionPolicyEngine.internal.trackedResources", res)
+	err = yaml.Unmarshal([]byte(resourcesRaw.MutateData), &mutateRes)
+	if err != nil {
+		return err
+	}
+
+	input.Values.Set("admissionPolicyEngine.internal.trackedConstraintResources", validateRes)
+	input.Values.Set("admissionPolicyEngine.internal.trackedMutateResources", mutateRes)
 
 	return nil
 }
@@ -75,10 +82,18 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
-	return cm.Data["validate-resources.yaml"], nil
+	return matchData{
+		ValidateData: cm.Data["validate-resources.yaml"],
+		MutateData:   cm.Data["mutate-resources.yaml"],
+	}, nil
 }
 
 type matchResource struct {
 	APIGroups []string `json:"apiGroups"`
 	Resources []string `json:"resources"`
+}
+
+type matchData struct {
+	ValidateData string
+	MutateData   string
 }

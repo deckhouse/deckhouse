@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,6 +44,12 @@ type Violation struct {
 	EnforcementAction string `json:"enforcementAction"`
 }
 
+// ConstraintSpec collect general information about the overall constraints applied to the cluster
+type ConstraintSpec struct {
+	EnforcementAction string `json:"enforcementAction"`
+	Match             Match  `json:"match"`
+}
+
 type ConstraintStatus struct {
 	TotalViolations float64 `json:"totalViolations"`
 	Violations      []*Violation
@@ -56,13 +61,11 @@ type Constraint struct {
 	Status ConstraintStatus
 }
 
-// ConstraintSpec collect general information about the overall constraints applied to the cluster
-type ConstraintSpec struct {
-	EnforcementAction string          `json:"enforcementAction"`
-	Match             ConstraintMatch `json:"match"`
+func (c Constraint) GetMatchKinds() []MatchKind {
+	return c.Spec.Match.Kinds
 }
 
-type ConstraintMatch struct {
+type Match struct {
 	Kinds []MatchKind `json:"kinds"`
 }
 
@@ -72,27 +75,13 @@ type MatchKind struct {
 }
 
 const (
-	constraintsGV           = "constraints.gatekeeper.sh/v1beta1"
 	constraintsGroup        = "constraints.gatekeeper.sh"
 	constraintsGroupVersion = "v1beta1"
+	constraintsGV           = constraintsGroup + "/" + constraintsGroupVersion
 )
 
-func createKubeClientGroupVersion(config *rest.Config) (controllerClient.Client, error) {
-	client, err := controllerClient.New(config, controllerClient.Options{})
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
-}
-
 // GetConstraints returns a list of all OPA constraints
-func GetConstraints(config *rest.Config, client *kubernetes.Clientset) ([]Constraint, error) {
-	cClient, err := createKubeClientGroupVersion(config)
-	if err != nil {
-		return nil, err
-	}
-
+func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientset) ([]Constraint, error) {
 	c, err := client.ServerResourcesForGroupVersion(constraintsGV)
 	if err != nil {
 		return nil, err
