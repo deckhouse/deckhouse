@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -329,8 +331,7 @@ func (c *NodeGroupCondition) ToMap() map[string]interface{} {
 	}
 
 	if !c.LastTransitionTime.IsZero() {
-		t, _ := c.LastTransitionTime.UTC().MarshalText()
-		res["lastTransitionTime"] = string(t)
+		res["lastTransitionTime"] = c.LastTransitionTime.Format(time.RFC3339)
 	}
 
 	return res
