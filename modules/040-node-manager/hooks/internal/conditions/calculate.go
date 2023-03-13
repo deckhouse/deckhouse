@@ -27,6 +27,11 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
+const (
+	// We consider that the node is ready in the first five minutes after the bootstrap
+	nodeNotReadyGracePeriod = 5 * time.Minute
+)
+
 type NodeGroup struct {
 	Type      ngv1.NodeType
 	Instances int32
@@ -72,6 +77,7 @@ func NodeToConditionsNode(node *corev1.Node) *Node {
 		for k := range node.Annotations {
 			if strings.HasPrefix(k, "update.node.deckhouse.io") {
 				res.Updating = true
+				break
 			}
 		}
 	}
@@ -89,7 +95,7 @@ func boolToConditionStatus(b bool) ngv1.ConditionStatus {
 	return ngv1.ConditionFalse
 }
 
-func compareConditions(curCondition *ngv1.NodeGroupCondition, newCondition *ngv1.NodeGroupCondition) bool {
+func conditionsEqual(curCondition *ngv1.NodeGroupCondition, newCondition *ngv1.NodeGroupCondition) bool {
 	if curCondition == nil {
 		return true
 	}
@@ -107,7 +113,7 @@ func fillTransitionTime(currentConditions []ngv1.NodeGroupCondition, newConditio
 	res := make([]ngv1.NodeGroupCondition, 0, len(newConditions))
 	for i := 0; i < len(newConditions); i++ {
 		curCondition := cur[newConditions[i].Type]
-		different := compareConditions(curCondition, &newConditions[i])
+		different := conditionsEqual(curCondition, &newConditions[i])
 
 		t := metav1.NewTime(curTime)
 		if curCondition != nil && !different {
@@ -140,7 +146,7 @@ func CalculateNodeGroupConditions(ng NodeGroup, nodes []*Node, currentConditions
 		if !node.Unschedulable {
 			schedulableNodes++
 
-			inGracePeriod := node.CreationTimestamp.Add(5 * time.Minute).After(curTime)
+			inGracePeriod := node.CreationTimestamp.Add(nodeNotReadyGracePeriod).After(curTime)
 			if node.Ready || inGracePeriod {
 				readySchedulableNodes++
 			}

@@ -100,12 +100,14 @@ func setNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName stri
 	}
 	patchNodeGroupStatus(patcher, nodeGroupName, statusPatch)
 }
-func conditionsToPatch(c []ngv1.NodeGroupCondition) []map[string]interface{} {
-	b, _ := json.Marshal(c)
-	var r []map[string]interface{}
-	_ = json.Unmarshal(b, &r)
+func conditionsToPatch(conditions []ngv1.NodeGroupCondition) []map[string]interface{} {
+	res := make([]map[string]interface{}, 0, len(conditions))
 
-	return r
+	for _, cc := range conditions {
+		res = append(res, cc.ToMap())
+	}
+
+	return res
 }
 
 func buildUpdateStatusPatch(

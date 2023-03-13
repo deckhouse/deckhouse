@@ -318,6 +318,24 @@ type NodeGroupCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
+func (c *NodeGroupCondition) ToMap() map[string]interface{} {
+	res := map[string]interface{}{
+		"type":   c.Type,
+		"status": c.Status,
+	}
+
+	if c.Message != "" {
+		res["message"] = c.Message
+	}
+
+	if !c.LastTransitionTime.IsZero() {
+		t, _ := c.LastTransitionTime.UTC().MarshalText()
+		res["lastTransitionTime"] = string(t)
+	}
+
+	return res
+}
+
 type NodeGroupStatus struct {
 	// Number of ready Kubernetes nodes in the group.
 	Ready int32 `json:"ready,omitempty"`
