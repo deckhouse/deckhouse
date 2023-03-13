@@ -1389,6 +1389,27 @@ spec:
                         - "True"
                         - "False"
                       type: string
+                conditions:
+                  type: array
+                  x-kubernetes-patch-merge-key: "type"
+                  x-kubernetes-patch-strategy: "merge"
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Last time the condition transit from one status to another.
+                      message:
+                        description: Human readable message indicating details about last transition.
+                        type: string
+                      status:
+                        description: Status of the condition, one of True, False.
+                        type: string
+                      type:
+                        description: Type of node group condition.
+                        type: string
             spec:
               type: object
               required:
