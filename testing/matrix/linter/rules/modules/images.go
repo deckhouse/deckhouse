@@ -28,7 +28,13 @@ import (
 )
 
 func skipModuleImageNameIfNeeded(filePath string) bool {
-	return filePath == "/deckhouse/modules/021-cni-cilium/images/cilium/Dockerfile"
+	switch filePath {
+	case
+		"/deckhouse/modules/021-cni-cilium/images/cilium/Dockerfile",
+		"/deckhouse/modules/021-cni-cilium/images/virt-cilium/Dockerfile":
+		return true
+	}
+	return false
 }
 
 var regexPatterns = map[string]string{
