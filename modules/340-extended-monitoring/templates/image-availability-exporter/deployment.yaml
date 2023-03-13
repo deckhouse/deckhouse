@@ -72,6 +72,7 @@ spec:
           {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
         {{- end }}
         - '--ignored-images={{ $ignoredImages | join "~" }}'
+        - --namespace-label=extended-monitoring.deckhouse.io/enabled
         {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         {{- end }}
