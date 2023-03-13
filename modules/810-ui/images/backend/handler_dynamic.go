@@ -59,7 +59,6 @@ func (dh *dynamicHandler) HandleGet(w http.ResponseWriter, r *http.Request, para
 		w.Write([]byte(`{"error":"not found"}`))
 		return
 	}
-
 	data, _ := json.Marshal(obj)
 	w.Write(data)
 }

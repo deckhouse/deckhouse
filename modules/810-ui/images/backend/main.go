@@ -155,10 +155,12 @@ func initHandlers(
 	{
 		// Nodes
 		gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-		informer, err := factory.ForResource(gvr)
-		if err != nil {
-			return nil, err
-		}
+		// informer, err := factory.ForResource(gvr)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// Dynamic informer returns apiVersion and kind, while typed informer does not.
+		informer := dynFactory.ForResource(gvr)
 
 		h := newHandler(informer, dynClient.Resource(gvr), gvr)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
