@@ -64,11 +64,11 @@ def main(ctx: hook.Context):
 
     for folder, files in dashboard_dict.items():
         folder_path = f"/etc/grafana/dashboards/"
-        os.makedirs(folder_path, exist_ok=True)
         cleanup_folder(folder_path)
 
         for file, definition in files.items():
             file_path = os.path.join(folder_path, file)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w") as f:
                 json.dump(definition, f)
 
