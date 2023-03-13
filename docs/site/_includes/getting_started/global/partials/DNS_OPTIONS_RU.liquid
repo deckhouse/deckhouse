@@ -18,6 +18,7 @@
         <ul>
           <li><b title="Например, <em>&quot;api-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
           <li><b title="Например, <em>&quot;argocd-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">argocd</b></li>
+          <li><b title="Например, <em>&quot;cdi-uploadproxy-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">cdi-uploadproxy</b></li>
           <li><b title="Например,  <em>&quot;dashboard-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dashboard</b></li>
           <li><b title="Например, <em>&quot;deckhouse-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">deckhouse</b></li>
           <li><b title="Например,  <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
@@ -67,7 +68,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
 {% snippetcut %}
 ```shell
-for i in api argocd dashboard deckhouse dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api argocd cdi-uploadproxy dashboard deckhouse dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 {% endsnippetcut %}
 </li>

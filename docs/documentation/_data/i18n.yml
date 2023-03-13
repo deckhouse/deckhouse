@@ -59,6 +59,9 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  for_example:
+    en: for example
+    ru: например
   example:
     en: example
     ru: пример
@@ -143,6 +146,13 @@ common:
   linux_distro:
     en: Linux Distribution
     ru: Дистрибутив Linux
+  for_domain_template:
+    en: for the domain template
+    ru: для шаблона доменов
+  module_web_ifaces:
+    en: Web interfaces associated with the module
+    ru: Веб-интерфейсы, связанные с модулем
+
 features:
   experimental:
     en: This feature is actively developed. It might significantly change in the future.

@@ -3,6 +3,8 @@ title: "The Prometheus monitoring module"
 type:
   - instruction
 search: prometheus
+webIfaces:
+- name: grafana
 ---
 
 This module installs and configures the [Prometheus](https://prometheus.io/) monitoring system. Also, it configures metrics scraping for many typical applications and provides the basic set of Prometheus alerts and Grafana dashboards.

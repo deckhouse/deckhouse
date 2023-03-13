@@ -1,5 +1,7 @@
 ---
 title: "Модуль dashboard"
+webIfaces:
+- name: dashboard
 ---
 
 Устанавливает [Web UI](https://github.com/kubernetes/dashboard) Kubernetes Dashboard для ручного управления кластером, который интегрирован с модулями [user-authn](../../modules/150-user-authn/) и [user-authz](../../modules/140-user-authz/) (доступ в кластер осуществляется от имени пользователя и с учетом его прав).
