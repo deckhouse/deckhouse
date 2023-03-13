@@ -1,8 +1,8 @@
 # helm_lib
 ATTENTION! DO NOT CHANGE FILES IN `helm_lib` DIRECTORY DIRECTLY!
 
-Use [next](https://github.com/deckhouse/lib-helm/blob/main/README.md#working-with-repo) instruction to change `lib-helm`.
-For update `lib-helm` in Deckhouse repo use the next command (in repo root):
+Use the [next](https://github.com/deckhouse/lib-helm/blob/main/README.md#working-with-repo) instruction to change `lib-helm`.
+To update `lib-helm` in the Deckhouse repo, use the next command (in the repo root):
 
 ```bash
 make version=DESIRED_VERSION update-lib-helm
