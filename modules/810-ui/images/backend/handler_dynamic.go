@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,41 +10,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/klog/v2"
 )
 
-type RHandler interface {
-	List(context.Context) ([]runtime.Object, error)
-	Get(context.Context, string) (runtime.Object, error)
-}
-type CRUDHandler interface {
-	List(context.Context) ([]runtime.Object, error)
-	Get(context.Context, string) (runtime.Object, error)
-	Update(context.Context, runtime.Object) (runtime.Object, error)
-	Create(context.Context, runtime.Object) (runtime.Object, error)
-	Delete(context.Context, string) error
-}
-
 type dynamicHandler struct {
-	gvr               schema.GroupVersionResource
-	client            *dynamic.DynamicClient
-	informer          informers.GenericInformer
-	resourceInterface dynamic.NamespaceableResourceInterface
+	gvr      schema.GroupVersionResource
+	ri       dynamic.ResourceInterface
+	informer informers.GenericInformer
 }
 
-func newDynamicHandler(informer informers.GenericInformer, client *dynamic.DynamicClient, gvr schema.GroupVersionResource) *dynamicHandler {
-	resourceInterface := client.Resource(gvr)
-
-	return &dynamicHandler{
-		gvr,
-		client,
-		informer,
-		resourceInterface,
-	}
+func newHandler(informer informers.GenericInformer, ri dynamic.ResourceInterface, gvr schema.GroupVersionResource) *dynamicHandler {
+	return &dynamicHandler{gvr, ri, informer}
 }
 
 func (dh *dynamicHandler) HandleList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -102,7 +80,7 @@ func (dh *dynamicHandler) HandleCreate(w http.ResponseWriter, r *http.Request, _
 		w.Write([]byte(`{"error":"error unmarshalling body"}`))
 		return
 	}
-	createdObj, err := dh.resourceInterface.Create(r.Context(), &obj, metav1.CreateOptions{})
+	createdObj, err := dh.ri.Create(r.Context(), &obj, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf("error creating object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -132,7 +110,7 @@ func (dh *dynamicHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _
 		w.Write([]byte(`{"error":"error unmarshalling body"}`))
 		return
 	}
-	updatedObj, err := dh.resourceInterface.Update(r.Context(), &obj, metav1.UpdateOptions{})
+	updatedObj, err := dh.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("error updating object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -147,7 +125,7 @@ func (dh *dynamicHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _
 func (dh *dynamicHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Delete
 	name := params.ByName("name")
-	err := dh.resourceInterface.Delete(r.Context(), name, metav1.DeleteOptions{})
+	err := dh.ri.Delete(r.Context(), name, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Errorf("error deleting object: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)

@@ -159,7 +159,8 @@ func initHandlers(
 		if err != nil {
 			return nil, err
 		}
-		h := newReadHandler(informer, gvr)
+
+		h := newHandler(informer, dynClient.Resource(gvr), gvr)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		namespaced := false
@@ -168,6 +169,7 @@ func initHandlers(
 
 		router.GET(pathPrefix, h.HandleList)
 		router.GET(namedPathPrefix, h.HandleGet)
+		router.PUT(namedPathPrefix, h.HandleUpdate)
 		router.POST(namedPathPrefix+"/drain", handleNodeDrain(clientset, informer))
 	}
 
@@ -182,7 +184,7 @@ func initHandlers(
 		namedItemPath := collectionPath + "/:name"
 
 		informer := dynFactory.ForResource(gvr)
-		h := newDynamicHandler(informer, dynClient, gvr)
+		h := newHandler(informer, dynClient.Resource(gvr), gvr)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)
@@ -223,7 +225,7 @@ func initHandlers(
 		namedItemPath := collectionPath + "/:name"
 
 		informer := dynFactory.ForResource(gvr)
-		h := newDynamicHandler(informer, dynClient, gvr)
+		h := newHandler(informer, dynClient.Resource(gvr), gvr)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)
@@ -273,7 +275,7 @@ func handleSubscribe(sc *subscriptionController) func(w http.ResponseWriter, r *
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 			InsecureSkipVerify: true,
-			// Declating supported protocol for frontend tooling based on ActionCable;
+			// Declaring supported protocol for frontend tooling based on ActionCable;
 			// "actioncable-unsupported" is omitted because it seem to be unneeded.
 			Subprotocols: []string{"actioncable-v1-json"},
 		})
