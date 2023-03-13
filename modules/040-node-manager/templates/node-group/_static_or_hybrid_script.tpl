@@ -77,6 +77,10 @@ cat > /var/lib/bashible/bootstrap.sh <<"END"
 END
 chmod +x /var/lib/bashible/bootstrap.sh
 
+cat > /var/lib/bashible/common_functions.sh <<"EOF"
+{{ tpl ($context.Files.Get "candi/bashible/common_functions.sh.tpl") $bashible_bootstrap_script_tpl_context }}
+EOF
+
 cat > /var/lib/bashible/ca.crt <<"EOF"
 {{ $context.Values.nodeManager.internal.kubernetesCA }}
 EOF
