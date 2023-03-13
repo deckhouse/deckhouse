@@ -2,7 +2,7 @@ ARG BASE_ALPINE
 ARG BASE_GOLANG_19_ALPINE
 
 FROM $BASE_GOLANG_19_ALPINE as artifact
-# RUN apk add --update curl gcc musl-dev
+RUN apk --no-cache add gcc musl-dev libc-dev binutils-gold
 # RUN mkdir -p $(go env GOPATH)/bin && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
 #   | sh -s -- -b $(go env GOPATH)/bin v1.51.1 && ls $(go env GOPATH)/bin
 
@@ -16,8 +16,8 @@ ADD / /app
 # RUN $(go env GOPATH)/bin/golangci-lint run ./...
 
 # build
-# RUN go build -ldflags "-linkmode external -extldflags '-static'" -o /backend .
-RUN go build -o /backend .
+RUN go build -ldflags "-linkmode external -extldflags '-static'" -o /backend .
+# RUN go build -o /backend .
 
 FROM $BASE_ALPINE
 COPY --from=artifact /backend /backend
