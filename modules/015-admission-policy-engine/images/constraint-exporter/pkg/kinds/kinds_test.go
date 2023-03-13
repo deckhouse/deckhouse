@@ -25,7 +25,7 @@ import (
 )
 
 func TestDeduplicate(t *testing.T) {
-	con := gatekeeper.Constraint{Spec: gatekeeper.ConstraintSpec{Match: gatekeeper.ConstraintMatch{
+	con := gatekeeper.Constraint{Spec: gatekeeper.ConstraintSpec{Match: gatekeeper.Match{
 		Kinds: []gatekeeper.MatchKind{
 			{
 				APIGroups: []string{""},
@@ -42,7 +42,7 @@ func TestDeduplicate(t *testing.T) {
 		},
 	}}}
 
-	con2 := gatekeeper.Constraint{Spec: gatekeeper.ConstraintSpec{Match: gatekeeper.ConstraintMatch{
+	con2 := gatekeeper.Constraint{Spec: gatekeeper.ConstraintSpec{Match: gatekeeper.Match{
 		Kinds: []gatekeeper.MatchKind{
 			{
 				APIGroups: []string{""},

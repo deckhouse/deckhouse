@@ -40,7 +40,8 @@ admissionPolicyEngine:
       ca: YjY0ZW5jX3N0cmluZwo=
       crt: YjY0ZW5jX3N0cmluZwo=
       key: YjY0ZW5jX3N0cmluZwo=
-    trackedResources: []
+    trackedConstraintResources: []
+    trackedMutateResources: []
   podSecurityStandards:
     policies:
       hostPorts:
