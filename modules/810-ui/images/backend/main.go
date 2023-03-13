@@ -253,7 +253,7 @@ func initHandlers(
 		cloudProvider := make(map[string]interface{})
 		cloudProviderName := strings.TrimSuffix(gvr.Resource, "instanceclasses")
 		cloudProvider["name"] = cloudProviderName
-		providerData, err := cloudprovider.Discover(cloudProviderName)
+		providerData, err := cloudprovider.Discover(cloudProviderName, clientset)
 		if err != nil {
 			return nil, err
 		}

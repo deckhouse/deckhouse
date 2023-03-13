@@ -18,27 +18,35 @@ limitations under the License.
 
 package cloudprovider
 
-func Discover(providerName string) (map[string]interface{}, error) {
+import (
+	"context"
+
+	"k8s.io/client-go/kubernetes"
+)
+
+func Discover(providerName string, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
+	config, err := GetClusterConfig(context.TODO(), clientset)
+	if err != nil {
+		return nil, err
+	}
+
+	knownTypes := make(map[string]*InstanceType)
+
 	switch providerName {
 	case "aws":
-		return map[string]interface{}{
-			"knownInstanceTypes": awsInstanceTypes,
-		}, nil
+		knownTypes = awsInstanceTypes
 	case "azure":
-		return map[string]interface{}{
-			"knownInstanceTypes": azureInstanceTypes,
-		}, nil
+		knownTypes = azureInstanceTypes
 	case "gcp":
-		return map[string]interface{}{
-			"knownInstanceTypes": gcpInstanceTypes,
-		}, nil
+		knownTypes = gcpInstanceTypes
 	case "openstack":
-		return map[string]interface{}{
-			"knownInstanceTypes": openstackInstanceTypes,
-		}, nil
-	default:
-		return map[string]interface{}{}, nil
+		knownTypes = openstackInstanceTypes
 	}
+
+	return map[string]interface{}{
+		"knownInstanceTypes": knownTypes,
+		"zones":              config.Zones(),
+	}, nil
 }
 
 // InstanceType is the spec of an instance
