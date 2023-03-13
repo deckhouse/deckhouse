@@ -49,10 +49,7 @@ def main(ctx: hook.Context):
         known_uids.add(uid)
 
         folder = dashboard.get("folder", "General")
-        if folder == "General":
-            file = f"{title}.json"
-        else:
-            file = f"{folder}/{title}.json"
+        file = f"{title}.json"
 
         if folder not in dashboard_dict:
             dashboard_dict[folder] = {}
@@ -62,13 +59,20 @@ def main(ctx: hook.Context):
     if len(malformed_dashboards) > 0:
         print(f'WARN: Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
+    root_path = f"/etc/grafana/dashboards/"
+    cleanup_folder(root_path)
+
     for folder, files in dashboard_dict.items():
-        folder_path = f"/etc/grafana/dashboards/"
-        cleanup_folder(folder_path)
+        if folder == "General":
+            # General folder can't be provisioned, see the link for more details
+            # https://github.com/grafana/grafana/blob/3dde8585ff951d5e9a46cfd64d296fdab5acd9a2/docs/sources/http_api/folder.md#a-note-about-the-general-folder
+            folder_path = root_path
+        else:
+            folder_path = os.path.join(root_path, folder)
+            os.makedirs(folder_path, exist_ok=True)
 
         for file, definition in files.items():
             file_path = os.path.join(folder_path, file)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w") as f:
                 json.dump(definition, f)
 
