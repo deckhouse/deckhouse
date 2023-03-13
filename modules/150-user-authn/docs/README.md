@@ -2,9 +2,6 @@
 title: "The user-authn module"
 search: kube config generator
 webIfaces:
-- name: api
-- name: dex
-  urlInfo: faq.html#an-example-of-the-dexauthenticator-cr
 - name: kubeconfig
   urlInfo: faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api
 ---

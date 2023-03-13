@@ -2,7 +2,6 @@
 title: "Модуль istio"
 webIfaces:
 - name: istio
-- name: istio-api-proxy
 ---
 
 На данный момент поддерживаются следующие версии istio:

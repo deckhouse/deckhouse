@@ -5,7 +5,6 @@ type:
 search: prometheus
 webIfaces:
 - name: grafana
-- name: prometheus
 ---
 
 Устанавливает и полностью настраивает [Prometheus](https://prometheus.io/), настраивает сбор метрик со многих распространенных приложений, а также предоставляет необходимый минимальный набор alert'ов для Prometheus и dashboard Grafana.

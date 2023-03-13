@@ -2,7 +2,6 @@
 title: "The istio module"
 webIfaces:
 - name: istio
-- name: istio-api-proxy
 ---
 
 Currently supported istio versions:

@@ -5,7 +5,6 @@ type:
 search: prometheus
 webIfaces:
 - name: grafana
-- name: prometheus
 ---
 
 This module installs and configures the [Prometheus](https://prometheus.io/) monitoring system. Also, it configures metrics scraping for many typical applications and provides the basic set of Prometheus alerts and Grafana dashboards.
