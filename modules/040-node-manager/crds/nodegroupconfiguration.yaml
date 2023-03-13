@@ -54,7 +54,10 @@ spec:
                     - ["ubuntu-lts", "centos-7"]
                     - ["ubuntu-lts"]
                     - ["*"]
-                  description: Bundles for step execution. You can set `'*'` for selecting all bundles.
+                  description: |
+                    Bundles for step execution. You can set `'*'` for selecting all bundles.
+
+                    See the list of possible bundles in the [allowedBundles](configuration.html#parameters-allowedbundles) module parameter.
                   items:
                     type: string
       additionalPrinterColumns:
