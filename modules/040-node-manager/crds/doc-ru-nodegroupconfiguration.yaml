@@ -29,5 +29,8 @@ spec:
                 nodeGroups:
                   description: Список NodeGroup к которым применять шаг конфигурации. Для выбора всех NodeGroups нужно указать '*'.
                 bundles:
-                  description: Список bundles, для которых выполнять скрипт. Для выбора всех bundles нужно указать `'*'`.
+                  description: |
+                    Список bundle'ов, для которых выполнять скрипт. Для выбора всех bundle'ов нужно указать `'*'`.
+
+                    Список возможных bundle'ов такой же, как у параметра [allowedBundles](configuration.html#parameters-allowedbundles) модуля.
 
