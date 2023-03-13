@@ -5,7 +5,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
-  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: deckhouse
   name: ciliumbgploadbalancerippools.cilium.io
 spec:
   group: cilium.io
