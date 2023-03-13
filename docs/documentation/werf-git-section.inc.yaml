@@ -4,7 +4,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  excludePaths: ['*/docs/internal/','040-node-manager/crds/mcm.yaml','490-virtualization/crds/kubevirt.yaml']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/','040-node-manager/crds/mcm.yaml','490-virtualization/crds/kubevirt.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 - add: /modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
@@ -42,7 +42,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/docs/internal/','110-istio/crds/istio','040-node-manager']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/','110-istio/crds/istio']
 - add: /ee/candi/cloud-providers/openstack/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
@@ -87,7 +87,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/docs/internal/']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
 - add: /modules/010-user-authn-crd/crds
