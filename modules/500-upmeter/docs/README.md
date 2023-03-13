@@ -1,5 +1,8 @@
 ---
 title: "The upmeter module"
+webIfaces:
+- name: status
+- name: upmeter
 ---
 
 The module collects statistics by availability type for cluster components and Deckhouse. It enables evaluating the degree of SLA compliance for these components, presents availability data via a web interface, and provides a web page with the operating statuses of the cluster components.

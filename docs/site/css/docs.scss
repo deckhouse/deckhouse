@@ -801,6 +801,23 @@ a.comparison-table__module {
     text-decoration: none;
 }
 
+.webifaces * {
+    text-decoration: none !important;
+    font-style: italic;
+}
+
+.webifaces :not(a) {
+    border-bottom: 1px dashed;
+}
+
+.webifaces a {
+    border-bottom: 1px solid;
+}
+
+.webifaces a:hover {
+    border-bottom: none;
+}
+
 .docs code {
     padding: 2px 4px;
     font-size: 90%;

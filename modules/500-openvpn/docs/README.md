@@ -1,5 +1,7 @@
 ---
 title: "The openvpn module"
+webIfaces:
+- name: openvpn-admin
 ---
 
 The openvpn module allows peers to authenticate each other using certificates and provides a simple web interface.

@@ -1,5 +1,7 @@
 ---
 title: "The istio module"
+webIfaces:
+- name: istio
 ---
 
 Currently supported istio versions:
