@@ -5,18 +5,19 @@ layout: page
 toc: false
 lang: ru
 ---
-{::options parse_block_html="false" /}
-{% asset releases.css %}
+
+<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path | true_relative_url }}' />
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
-<div class="page__container page_releases">
+<div class="docs__information warning active">
+Информацию о том, какие версии Deckhouse находятся в настоящий момент на каких каналах обновлений, а также о планируемой дате смены версии на канале обновлений смотрите на сайте <a href="https://flow.deckhouse.io" target="_blank">flow.deckhouse.io</a>.
+</div>  
 
-<div class="releases__info">
-<p>К кластерам как элементам инфраструктуры обычно предъявляются различные требования.</p>
-<p>Например, production-кластер, в отличие от кластера разработки, имеет более высокие требования к надежности, на нем нежелательно часто обновлять или изменять какие-либо компоненты без особой необходимости, а сами компоненты должны быть максимально протестированы.
-</p>
-Чтобы покрыть самые частые случаи организации окружений, а также с целью повысить качество самого Deckhouse, мы используем <b>пять каналов обновлений</b>.
-</div>
+К кластерам как элементам инфраструктуры обычно предъявляются различные требования.
+
+Например, production-кластер, в отличие от кластера разработки, более требователен к надежности: в нем нежелательно часто обновлять или изменять какие-либо компоненты без особой необходимости, при этом сами компоненты должны быть тщательно протестированы.
+
+Deckhouse использует **пять каналов обновлений**. *Мягко* переключаться между ними можно с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля.
 
 <div id="releases__stale__block" class="releases__info releases__stale__warning" >
   <strong>Внимание!</strong> В этом кластере не используется какой-либо канал обновлений.
@@ -25,6 +26,7 @@ lang: ru
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
 
+<div class="page__container page_releases" markdown="0">
 <div class="releases__menu">
 {%- for channel in channels_sorted_reverse %}
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
@@ -39,8 +41,4 @@ lang: ru
     </div>
 {%- endfor %}
 </div>
-
 </div>
-{::options parse_block_html="true" /}
-
-Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel).
