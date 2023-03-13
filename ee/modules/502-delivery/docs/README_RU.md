@@ -1,5 +1,7 @@
 ---
 title: "Модуль delivery"
+webIfaces:
+- name: argocd
 ---
 
 Модуль предоставляет возможность использовать инструмент для Continuous Deployment — [Argo CD](https://argo-cd.readthedocs.io/en/stable/).

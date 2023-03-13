@@ -1,6 +1,9 @@
 ---
 title: "The user-authn module"
 search: kube config generator
+webIfaces:
+- name: kubeconfig
+  urlInfo: faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api
 ---
 
 The module sets up a unified authentication system integrated with Kubernetes and Web interfaces used in other modules (Grafana, Dashboard, etc.).
