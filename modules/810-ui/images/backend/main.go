@@ -155,10 +155,6 @@ func initHandlers(
 	{
 		// Nodes
 		gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-		// informer, err := factory.ForResource(gvr)
-		// if err != nil {
-		// 	return nil, err
-		// }
 		// Dynamic informer returns apiVersion and kind, while typed informer does not.
 		informer := dynFactory.ForResource(gvr)
 
@@ -173,6 +169,24 @@ func initHandlers(
 		router.GET(namedPathPrefix, h.HandleGet)
 		router.PUT(namedPathPrefix, h.HandleUpdate)
 		router.POST(namedPathPrefix+"/drain", handleNodeDrain(clientset, informer))
+	}
+
+	{
+		// Deployments
+		gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+		// Dynamic informer returns apiVersion and kind, while typed informer does not.
+		informer := dynFactory.ForResource(gvr)
+
+		namespaced := true
+		h := newNamespacedHandler(informer, dynClient.Resource(gvr), gvr)
+		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
+
+		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
+		namedPathPrefix := pathPrefix + "/:name"
+
+		router.GET(pathPrefix, h.HandleList)
+		router.GET(namedPathPrefix, h.HandleGet)
+		router.PUT(namedPathPrefix, h.HandleUpdate)
 	}
 
 	// CRUD with cluster-scoped custom resources that are expected to be present
