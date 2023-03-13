@@ -75,7 +75,7 @@ data:
   kube-proxy-replacement: "strict"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
-  enable-host-reachable-services: "true"
+  bpf-lb-sock: "true"
   bpf-lb-sock-hostns-only: "true"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
