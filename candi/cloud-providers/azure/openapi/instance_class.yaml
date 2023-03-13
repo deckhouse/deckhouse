@@ -11,7 +11,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -101,10 +101,25 @@ spec:
                   description: |
                     Accelerated Networking provides up to 30Gbps in networking throughput.
                   x-doc-default: true
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
   scope: Cluster
   names:
     plural: azureinstanceclasses

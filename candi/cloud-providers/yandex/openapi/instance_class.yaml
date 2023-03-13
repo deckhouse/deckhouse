@@ -11,7 +11,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema:
         openAPIV3Schema:
           type: object
@@ -126,7 +126,7 @@ spec:
                     Network type: STANDARD or SOFTWARE_ACCELERATED
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           type: object
@@ -240,6 +240,21 @@ spec:
                   default: Standard
                   description: |
                     Network type: Standard or SoftwareAccelerated
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
   scope: Cluster
   names:
     plural: yandexinstanceclasses
