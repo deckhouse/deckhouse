@@ -1,5 +1,5 @@
 {{- /*
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,4 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-bootstrap_debian_based
+#!/bin/bash
+export LANG=C
+set_proxy
+if ! type jq 2>/dev/null || ! type curl 2>/dev/null || ! type nc 2>/dev/null; then
+  apt-get update
+  until apt-get install jq netcat curl -y; do
+    echo "Error installing packages"
+    apt-get update
+    sleep 10
+  done
+fi
+
+mkdir -p /var/lib/bashible/

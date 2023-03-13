@@ -129,6 +129,8 @@ function get_bundle() {
   done
 }
 
+{{- tpl ($context.Files.Get "candi/bashible/common_functions.sh.tpl") $context | nindent 0 }}
+
 function detect_bundle() {
   {{- tpl ($context.Files.Get "candi/bashible/detect_bundle.sh") $context | nindent 2 }}
 }

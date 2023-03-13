@@ -1,5 +1,4 @@
-{{- /*
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,5 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
-bootstrap_debian_based
+
+# TODO/RESOLVEME : apt-transport-https
+SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted  sudo nfs-clients nfs-utils nfs-stats"
+KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack-tools vim-console"
+
+bb-apt-rpm-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
+
+bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"

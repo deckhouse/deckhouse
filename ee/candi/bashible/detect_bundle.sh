@@ -55,6 +55,13 @@ case "$ID" in
     >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
     exit 1
   ;;
+  altlinux)
+    case "$VERSION_ID" in p10)
+      echo "altlinux" && exit 0 ;;
+    esac
+    >&2 echo "ERROR: ${PRETTY_NAME} is not supported."
+    exit 1
+  ;;
   "")
     >&2 echo "ERROR: Can't determine OS! No ID in /etc/os-release."
     exit 1
@@ -72,6 +79,10 @@ for ID in $ID_LIKE; do
     debian)
       >&2 echo "WARNING: Trying to use debian bundle as default for: ${PRETTY_NAME}"
       echo "debian" && exit 0
+    ;;
+    altlinux)
+      >&2 echo "WARNING: Trying to use altlinux bundle as default for: ${PRETTY_NAME}"
+      echo "altlinux" && exit 0
     ;;
   esac
 done

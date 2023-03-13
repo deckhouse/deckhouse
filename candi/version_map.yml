@@ -92,6 +92,17 @@ bashible: &bashible
       containerd:
         desiredVersion: "containerd.io-1.6.18-3.1.el9.x86_64"
         allowedPattern: ""
+  altlinux:
+    'p10':
+      docker:
+        desiredVersion: "docker-engine=20.10.21-alt1.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd-1.6.19"
+          allowedPattern: ""
+      containerd:
+        desiredVersion: "containerd-1.6.19"
+        allowedPattern: ""
 k8s:
   '1.22':
     status: available

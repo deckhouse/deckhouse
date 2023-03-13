@@ -291,19 +291,23 @@ func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, er
 	return kubeCl, nil
 }
 
+// Different Linux distributions may have different return codes. In most debian and centos based it is 255, in altlinux and possibly in some others it is 1.
 const rebootExitCode = 255
+const alternativeRebootExitCode = 1
 
 func RebootMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
-				if ee.ExitCode() == rebootExitCode {
+			ee, ok := err.(*exec.ExitError)
+			if ok {
+				if ee.ExitCode() == rebootExitCode || ee.ExitCode() == alternativeRebootExitCode {
 					return nil
 				}
 			}
-			return fmt.Errorf("shutdown error: stdout: %s stderr: %s %v",
+			return fmt.Errorf("shutdown error: exit_code: %v stdout: %s stderr: %s %v",
+				ee.ExitCode(),
 				rebootCmd.StdoutBuffer.String(),
 				rebootCmd.StderrBuffer.String(),
 				err,
