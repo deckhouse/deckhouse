@@ -39,6 +39,7 @@ kubernetesCustomResourceConversion:
 
 
 def main(ctx: hook.Context):
+    # ConverterDispatcher handles forward and backward conversions
     conv = ConverterDispatcher(
         ConverterAdapter(
             from_version="deckhouse.io/v1alpha1",
