@@ -45,18 +45,20 @@ data:
         server_name  _;
         listen       8080;
 
-        client_body_in_single_buffer on;
-        client_body_buffer_size 1m;
-        client_max_body_size 1m;
+        client_body_in_single_buffer  on;
+        client_body_buffer_size       1m;
+        client_max_body_size          1m;
 
         access_log /dev/stdout main;
+
+        root   /app/dist;
+        index index.html;
 
         location / {
           if ($http_user_agent ~* "(kube-probe)" ) {
             access_log off;
           }
-          root   /app/dist;
-          index  index.html index.htm;
+          try_files $uri $uri/ $uri.html /index.html;
         }
 
         error_page   500 502 503 504  /50x.html;
