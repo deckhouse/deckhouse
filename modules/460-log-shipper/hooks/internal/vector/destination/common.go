@@ -56,7 +56,7 @@ type CommonTLS struct {
 }
 
 type Buffer struct {
-	Size      uint32                  `json:"max_size,omitempty"`
+	Size      uint32                  `json:"max_bytes,omitempty"`
 	Type      v1alpha1.BufferType     `json:"type,omitempty"`
 	MaxEvents uint32                  `json:"max_events,omitempty"`
 	WhenFull  v1alpha1.BufferWhenFull `json:"when_full,omitempty"`

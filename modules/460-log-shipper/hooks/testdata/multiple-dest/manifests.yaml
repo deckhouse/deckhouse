@@ -69,6 +69,11 @@ spec:
   extraLabels:
     foo: bar
     app: "{{ ap_p[0].a }}"
+  buffer:
+    type: Memory
+    memory:
+      maxEvents: 4096
+    whenFull: DropNew
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -87,6 +92,11 @@ spec:
       verifyCertificate: true
   extraLabels:
     foo: bar
+  buffer:
+    type: Disk
+    disk:
+      maxSizeBytes: 536870912
+    whenFull: DropNew
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -109,3 +119,8 @@ spec:
       password: c2VjcmV0
   extraLabels:
     foo: bar
+  buffer:
+    type: Disk
+    disk:
+      maxSizeBytes: 268435488
+    whenFull: Block

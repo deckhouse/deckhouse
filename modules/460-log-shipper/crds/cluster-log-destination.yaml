@@ -563,6 +563,7 @@ spec:
                       required:
                         - disk
                         - type
+                        - whenFull
                     - properties:
                         memory: {}
                         type:
@@ -571,6 +572,7 @@ spec:
                       required:
                         - memory
                         - type
+                        - whenFull
                   properities:
                     type:
                       type: string
@@ -583,13 +585,13 @@ spec:
                           description: |
                             The maximum size of the buffer on disk.
                             Must be at least ~256 megabytes (268435488 bytes).
-                          type: int
+                          type: number
                     memory:
                       type: object
                       properities:
                         maxEvents:
                           description: The maximum number of events allowed in the buffer.
-                          type: int
+                          type: number
                     whenFull:
                       type: string
                       description: Event handling behavior when a buffer is full.

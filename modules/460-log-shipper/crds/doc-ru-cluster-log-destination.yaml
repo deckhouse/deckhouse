@@ -260,3 +260,20 @@ spec:
                     - pod_owner
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                buffer:
+                  properities:
+                    type:
+                      type: string
+                      description: Тип буффера для использования.
+                    disk:
+                      properities:
+                        maxSizeBytes:
+                          description: |
+                            Максимальный размер буффера н диске.
+                            Должен быть не меньше ~256 мегабайт (268435488 байтов).
+                    memory:
+                      properities:
+                        maxEvents:
+                          description: Максимальное количество событий в буффере.
+                    whenFull:
+                      description: Поведение при заполнении буфера.
