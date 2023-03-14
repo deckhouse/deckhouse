@@ -13,24 +13,24 @@ bb-sync-file /var/lib/bashible/policies/deckhouse.te - << "EOF"
 module deckhouse 1.0;
 
 require {
-	      type unlabeled_t;
-        type httpd_t;
-        type http_port_t;
-        type init_t;
-        type var_lib_t;
-	      type sge_port_t;
-        type load_policy_t;
-        type var_lock_t;
-        type setfiles_t;
-	      type unreserved_port_t;
-        type spc_t;
-	      type container_runtime_t;
-	      class bpf prog_run;
-        class tcp_socket name_connect;
-	      class capability sys_resource;
-	      class process setrlimit;
-	      class file { getattr open read write execute_no_trans execute };
-	      class tcp_socket name_bind;
+  type unlabeled_t;
+  type httpd_t;
+  type http_port_t;
+  type init_t;
+  type var_lib_t;
+  type sge_port_t;
+  type load_policy_t;
+  type var_lock_t;
+  type setfiles_t;
+  type unreserved_port_t;
+  type spc_t;
+  type container_runtime_t;
+  class bpf prog_run;
+  class tcp_socket name_connect;
+  class capability sys_resource;
+  class process setrlimit;
+  class file { getattr open read write execute_no_trans execute };
+  class tcp_socket name_bind;
 }
 
 #============= httpd_t ==============
