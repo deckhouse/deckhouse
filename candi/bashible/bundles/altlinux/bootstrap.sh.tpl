@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-. /var/lib/bashible/common_functions.sh
+. /var/lib/bashible/common.sh
 export LANG=C
 set_proxy
 if ! type jq 2>/dev/null || ! type curl 2>/dev/null || ! type nc 2>/dev/null; then

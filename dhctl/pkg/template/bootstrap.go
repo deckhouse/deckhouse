@@ -35,7 +35,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			data: bashibleData,
 		},
 		{
-			from: filepath.Join(candiBashibleDir, "common_functions.sh.tpl"),
+			from: filepath.Join(candiBashibleDir, "bootstrap-functions"),
 			to:   bootstrapDir,
 			data: bashibleData,
 		},

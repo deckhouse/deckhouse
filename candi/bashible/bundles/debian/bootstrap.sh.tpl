@@ -13,5 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-. /var/lib/bashible/common_functions.sh
+. /var/lib/bashible/common.sh
 bootstrap_debian_based

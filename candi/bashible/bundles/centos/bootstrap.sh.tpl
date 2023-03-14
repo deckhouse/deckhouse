@@ -160,7 +160,7 @@ bb-rp-install() {
 # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
 */}}
 export PATH="/usr/local/bin:$PATH"
-. /var/lib/bashible/common_functions.sh
+. /var/lib/bashible/common.sh
 set_proxy
 yum updateinfo
 until yum install nc curl wget -y; do
