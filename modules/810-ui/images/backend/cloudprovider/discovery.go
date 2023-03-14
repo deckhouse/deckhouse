@@ -24,13 +24,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func Discover(providerName string, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
-	config, err := GetClusterConfig(context.TODO(), clientset)
+func Discover(ctx context.Context, providerName string, clientset *kubernetes.Clientset) (map[string]interface{}, error) {
+	config, err := GetClusterConfig(ctx, clientset)
 	if err != nil {
 		return nil, err
 	}
 
-	knownTypes := make(map[string]*InstanceType)
+	var knownTypes map[string]*InstanceType
 
 	switch providerName {
 	case "aws":
@@ -43,10 +43,17 @@ func Discover(providerName string, clientset *kubernetes.Clientset) (map[string]
 		knownTypes = openstackInstanceTypes
 	}
 
-	return map[string]interface{}{
-		"knownInstanceTypes": knownTypes,
-		"zones":              config.Zones(),
-	}, nil
+	res := map[string]interface{}{
+		"configuration": map[string]interface{}{
+			"zones": config.Zones(),
+		},
+	}
+
+	if knownTypes != nil {
+		res["knownInstanceTypes"] = knownTypes
+	}
+
+	return res, nil
 }
 
 // InstanceType is the spec of an instance
