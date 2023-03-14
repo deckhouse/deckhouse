@@ -1,18 +1,35 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_NGINX_ALPINE }}
 docker:
+  # WORKDIR: /app
   EXPOSE: '8080'
-import:
-- artifact: application-assets
-  add: /app/dist
-  after: install
+  # USER: app
 git:
 - add: /modules/810-ui/images/frontend/nginx.conf
   to: /etc/nginx/nginx.conf
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-assets-{{ $image_version }}
+  add: /app/dist
+  after: install
 
 ---
-artifact: application-assets
+artifact: {{ .ModuleName }}/{{ .ImageName }}-assets-{{ $image_version }}
 from: {{ .Images.BASE_NODE_16_ALPINE }}
+git:
+- add: /modules/810-ui/images/frontend
+  to: /app
+  # owner: app
+  # group: app
+  excludePaths:
+  - public/mockServiceWorker.js
+  - vendor
+  - node_modules
+  - nginx.conf
+  stageDependencies:
+    install:
+    - package-lock.json
+    setup:
+    - src/*
 ansible:
   install:
   - name: 'Install dependencies'
@@ -32,18 +49,3 @@ ansible:
       npm run build-only
     args:
       executable: /bin/bash
-git:
-# was /
-- add: /modules/810-ui/images/frontend
-  to: /app
-  # owner: app
-  # group: app
-  excludePaths:
-  - public/mockServiceWorker.js
-  - vendor
-  - node_modules
-  stageDependencies:
-    install:
-    - package-lock.json
-    setup:
-    - src/*
