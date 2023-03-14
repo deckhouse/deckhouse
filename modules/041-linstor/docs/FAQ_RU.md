@@ -137,8 +137,7 @@ linstor node evacuate <имя_узла>
 Проверьте состояние Pod'ов `linstor-node`:
 
 ```shell
-kubectl get pod -n d8-linstor -l app.kubernetes.io/instance=linstor,\
-app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node
+kubectl get pod -n d8-linstor -l app=linstor-node
 ```
 
 Если вы видите что некоторые из них находятся в состоянии `Init:CrashLoopBackOff`, проверьте логи контейнера `kernel-module-injector`:
@@ -189,8 +188,7 @@ contain driver linstor.csi.linbit.com
 Проверьте состояние Pod'ов `linstor-csi-node`:
 
 ```shell
-kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,\
-app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi
+kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node
 ```
 
 Наиболее вероятно, что они зависли в состоянии `Init`, ожидая пока узел сменит статус на `Online` в LINSTOR. Проверьте список узлов с помощью следующей команды:
