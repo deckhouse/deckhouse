@@ -29,7 +29,16 @@ func newNamespacedHandler(informer informers.GenericInformer, ri dynamic.Namespa
 
 func (dh *namespacedResourceHandler) HandleList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	namespace := params.ByName("namespace")
-	list, err := dh.informer.Lister().ByNamespace(namespace).List(labels.Everything())
+	q := r.URL.Query()
+	labelSelector, err := labels.Parse(q.Get("labelSelector"))
+	if err != nil {
+		klog.Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+	}
+	list, err := dh.informer.Lister().ByNamespace(namespace).List(labelSelector)
 	if err != nil {
 		err := fmt.Errorf("listing %s: %v", dh.gvr.Resource, err)
 		klog.Error(err)
