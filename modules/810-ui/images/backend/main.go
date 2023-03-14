@@ -149,8 +149,6 @@ func initHandlers(
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
 	reh := newResourceEventHandler()
-	sc := newSubscriptionController(reh)
-	sc.Start(ctx)
 
 	{
 		// Nodes
@@ -268,10 +266,12 @@ func initHandlers(
 		discovery["cloudProvider"] = cloudProvider
 	}
 
-	// Websocket endpoint
+	// Websocket
+	sc := newSubscriptionController(reh)
+	go sc.Start(ctx)
 	router.GET("/subscribe", handleSubscribe(sc))
 
-	// Discovery endpoint
+	// Discovery
 	router.GET("/discovery", handleDiscovery(clientset, discovery))
 
 	var wrapper http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {

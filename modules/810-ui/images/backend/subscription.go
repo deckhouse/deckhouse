@@ -114,24 +114,23 @@ type subscriptionController struct {
 }
 
 func (sc *subscriptionController) Start(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case evMessage := <-sc.resourceEventHandler.Data():
-				evMessage.subscriber.send(cableMessagePayload{
-					Identifier: gvrIdentifier(evMessage.gvr),
-					Message:    evMessage.message,
-				})
-			// case data := <-sc.discoveryHandler:
-			// 	data.subscriber.send(cableMessagePayload{
-			// 		Identifier: `{"channel": "DiscoveryChannel"}`,
-			// 		Message:    data.message,
-			// 	})
-			case <-ctx.Done():
-				return
-			}
+	for {
+		select {
+		case evMessage := <-sc.resourceEventHandler.Data():
+			evMessage.subscriber.send(cableMessagePayload{
+				Identifier: gvrIdentifier(evMessage.gvr),
+				Message:    evMessage.message,
+			})
+		// case data := <-sc.discoveryHandler:
+		// 	data.subscriber.send(cableMessagePayload{
+		// 		Identifier: `{"channel": "DiscoveryChannel"}`,
+		// 		Message:    data.message,
+		// 	})
+		case <-ctx.Done():
+			return
 		}
-	}()
+	}
+
 }
 
 // subscribe handles the user subscription
