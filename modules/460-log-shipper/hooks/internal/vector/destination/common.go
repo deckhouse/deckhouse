@@ -56,10 +56,10 @@ type CommonTLS struct {
 }
 
 type Buffer struct {
-	Size      uint32                  `json:"max_bytes,omitempty"`
-	Type      v1alpha1.BufferType     `json:"type,omitempty"`
-	MaxEvents uint32                  `json:"max_events,omitempty"`
-	WhenFull  v1alpha1.BufferWhenFull `json:"when_full,omitempty"`
+	MaxBytes  uint32 `json:"max_bytes,omitempty"`
+	Type      string `json:"type,omitempty"`
+	MaxEvents uint32 `json:"max_events,omitempty"`
+	WhenFull  string `json:"when_full,omitempty"`
 }
 
 func (cs *CommonSettings) SetInputs(inp []string) {
@@ -90,15 +90,15 @@ func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	switch buffer.Type {
 	case v1alpha1.BufferTypeDisk:
 		return &Buffer{
-			Type:     v1alpha1.BufferTypeDisk,
-			Size:     buffer.Disk.MaxSizeBytes,
-			WhenFull: buffer.WhenFull,
+			Type:     v1alpha1.BufferTypeDisk.ToVectorValue(),
+			MaxBytes: buffer.Disk.MaxSizeBytes,
+			WhenFull: buffer.WhenFull.ToVectorValue(),
 		}
 	case v1alpha1.BufferTypeMemory:
 		return &Buffer{
-			Type:      v1alpha1.BufferTypeMemory,
+			Type:      v1alpha1.BufferTypeMemory.ToVectorValue(),
 			MaxEvents: buffer.Memory.MaxEvents,
-			WhenFull:  buffer.WhenFull,
+			WhenFull:  buffer.WhenFull.ToVectorValue(),
 		}
 	}
 	return nil

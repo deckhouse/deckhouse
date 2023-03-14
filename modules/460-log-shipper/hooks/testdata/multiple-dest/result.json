@@ -221,9 +221,9 @@
       "mode": "bulk",
       "suppress_type_name": true,
       "buffer": {
-        "type": "Disk",
+        "type": "disk",
         "max_bytes": 268435488,
-        "when_full": "Block"
+        "when_full": "block"
       }
     },
     "destination/cluster/test-logstash-dest": {
@@ -252,9 +252,9 @@
         "time_secs": 7200
       },
       "buffer": {
-        "type": "Disk",
+        "type": "disk",
         "max_bytes": 536870912,
-        "when_full": "DropNew"
+        "when_full": "drop_newest"
       }
     },
     "destination/cluster/test-loki-dest": {
@@ -293,9 +293,9 @@
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp",
       "buffer": {
-        "type": "Memory",
+        "type": "memory",
         "max_events": 4096,
-        "when_full": "DropNew"
+        "when_full": "drop_newest"
       }
     }
   }
