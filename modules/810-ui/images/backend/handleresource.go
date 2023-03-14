@@ -31,94 +31,120 @@ func (dh *resourceHandler) HandleList(w http.ResponseWriter, r *http.Request, _ 
 	// List
 	list, err := dh.informer.Lister().List(labels.Everything())
 	if err != nil {
-		klog.Errorf("error listing %s: %v", dh.gvr.Resource, err)
+		err := fmt.Errorf("listing %s: %v", dh.gvr.Resource, err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": fmt.Sprintf("error listing %s", dh.gvr.Resource),
+			"error": err.Error(),
 		})
 		return
 	}
-
-	data, _ := json.Marshal(list)
-	w.Write(data)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(list)
 }
 
 // Item by name
 func (dh *resourceHandler) HandleGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	name := params.ByName("name")
-	// Single object
 	obj, err := dh.informer.Lister().Get(name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
-			return
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-		klog.Errorf("error listing %s: %v", dh.gvr.Resource, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error getting item"}`))
+		klog.Error(err)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
-	data, _ := json.Marshal(obj)
-	w.Write(data)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(obj)
 }
 
 func (dh *resourceHandler) HandleCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		klog.Errorf("error reading body: %v", err)
+		err := fmt.Errorf("reading body: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error reading body"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 	var obj unstructured.Unstructured
 	err = json.Unmarshal(body, &obj)
 	if err != nil {
-		klog.Errorf("error unmarshalling body: %v", err)
+		err := fmt.Errorf("unmarshalling body: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error unmarshalling body"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 	createdObj, err := dh.ri.Create(r.Context(), &obj, metav1.CreateOptions{})
 	if err != nil {
-		klog.Errorf("error creating object: %v", err)
+		err := fmt.Errorf("creating object: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error creating object"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	data, _ := json.Marshal(createdObj)
-	w.Write(data)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(createdObj)
 }
 
 func (dh *resourceHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Update
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		klog.Errorf("error reading body: %v", err)
+		err := fmt.Errorf("reading body: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error reading body"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 	var obj unstructured.Unstructured
 	err = json.Unmarshal(body, &obj)
 	if err != nil {
-		klog.Errorf("error unmarshalling body: %v", err)
+		err := fmt.Errorf("unmarshalling body: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error unmarshalling body"}`))
-		return
-	}
-	updatedObj, err := dh.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
-	if err != nil {
-		klog.Errorf("error updating object: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error updating object"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	data, _ := json.Marshal(updatedObj)
-	w.Write(data)
+	updatedObj, err := dh.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
+	if err != nil {
+		err := fmt.Errorf("updating body: %s", err)
+		klog.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(updatedObj)
 }
 
 func (dh *resourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -126,9 +152,13 @@ func (dh *resourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, 
 	name := params.ByName("name")
 	err := dh.ri.Delete(r.Context(), name, metav1.DeleteOptions{})
 	if err != nil {
-		klog.Errorf("error deleting object: %v", err)
+		err := fmt.Errorf("deleting object: %s", err)
+		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"error deleting object"}`))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
