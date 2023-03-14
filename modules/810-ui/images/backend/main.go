@@ -20,7 +20,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"deckhouse.io/uibackend/cloudprovider"
 	"github.com/julienschmidt/httprouter"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -145,7 +144,6 @@ type resourceDefinition struct {
 	ns    bool         // is it namespaced?
 	subh  []subHandler // subhandlers for a named object
 	check gvrCheck     // should we register this API?
-	// TODO discoveryCollector, collect all registered API routes into discovery
 }
 
 type gvrCheck func(context.Context, schema.GroupVersionResource) (bool, error)
@@ -230,6 +228,7 @@ func initHandlers(
 		},
 	}
 
+	discovery := newDiscoveryCollector(clientset)
 	for _, def := range definitions {
 		gvr, namespaced := def.gvr, def.ns
 
@@ -256,106 +255,23 @@ func initHandlers(
 		router.PUT(namedItemPath, h.HandleUpdate)
 		router.DELETE(namedItemPath, h.HandleDelete)
 
+		discovery.AddPath(collectionPath)
+		discovery.AddPath(namedItemPath)
+
 		for _, s := range def.subh {
 			path := namedItemPath + "/" + s.suffix
 			router.Handle(s.method, path, s.handler(clientset, informer))
+			discovery.AddPath(path)
 		}
 
-		// TODO collect discovery
-	}
-
-	// Websocket
-	sc := newSubscriptionController(reh)
-	go sc.Start(ctx)
-	router.GET("/subscribe", handleSubscribe(sc))
-
-	// Discovery
-	// router.GET("/discovery", handleDiscovery(clientset, discovery))
-
-	var wrapper http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-		// CORS
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		if r.Method == "OPTIONS" {
-			return
-		}
-
-		klog.V(5).Infof("Request: %s %s", r.Method, r.URL.Path)
-		router.ServeHTTP(w, r)
-		// TODO: Use echo/v4. To log response status, we need to wrap the response writer or
-		// use non-standard library. It still will help to handle path parameters.
-	}
-
-	return wrapper, nil
-}
-
-func initHandlers2(
-	ctx context.Context,
-	router *httprouter.Router,
-	clientset *kubernetes.Clientset,
-	factory informers.SharedInformerFactory,
-	dynClient *dynamic.DynamicClient,
-	dynFactory dynamicinformer.DynamicSharedInformerFactory,
-) (http.HandlerFunc, error) {
-	reh := newResourceEventHandler()
-
-	// CRUD with Cloud Providers, along with that adding the provider to discovery if it is present
-	// TODO in cloud provider, add known instance classes, known router paths
-	discovery := map[string]interface{}{
-		"cloudProvider":     "none",
-		"kubernetesVersion": "unknown",
-	}
-	for _, gvr := range []schema.GroupVersionResource{
-		{Group: "deckhouse.io", Version: "v1", Resource: "awsinstanceclasses"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "azureinstanceclasses"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "gcpinstanceclasses"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "openstackinstanceclasses"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "vsphereinstanceclasses"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"},
-	} {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		_, err := dynClient.Resource(gvr).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			if apierrors.IsForbidden(err) || apierrors.IsNotFound(err) {
-				// 403 is expected if the CRD is not present locally, 404 is expected when run in a Pod
-				klog.V(5).Infof("CRD %s is not available: %v", gvr.String(), err)
-				continue
+		if strings.HasSuffix(gvr.Resource, "instanceclasses") {
+			cloudProviderName := strings.TrimSuffix(gvr.Resource, "instanceclasses")
+			discoveryCtx, discoveryCtxCancel := context.WithTimeout(ctx, checkTimeout)
+			defer discoveryCtxCancel()
+			if err := discovery.AddCloudProvider(discoveryCtx, cloudProviderName); err != nil {
+				return nil, err
 			}
-			return nil, err
 		}
-
-		namespaced := false
-		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
-		namedItemPath := collectionPath + "/:name"
-
-		informer := dynFactory.ForResource(gvr)
-		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
-
-		router.GET(collectionPath, h.HandleList)
-		router.GET(namedItemPath, h.HandleGet)
-		router.POST(collectionPath, h.HandleCreate)
-		router.PUT(collectionPath, h.HandleUpdate)
-		router.DELETE(namedItemPath, h.HandleDelete)
-
-		cloudProvider := make(map[string]interface{})
-		cloudProviderName := strings.TrimSuffix(gvr.Resource, "instanceclasses")
-		cloudProvider["name"] = cloudProviderName
-
-		discoveryCtx, discoveryCtxCancel := context.WithTimeout(ctx, 10*time.Second)
-		defer discoveryCtxCancel()
-
-		providerData, err := cloudprovider.Discover(discoveryCtx, cloudProviderName, clientset)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range providerData {
-			cloudProvider[k] = v
-		}
-
-		discovery["cloudProvider"] = cloudProvider
 	}
 
 	// Websocket
@@ -364,7 +280,7 @@ func initHandlers2(
 	router.GET("/subscribe", handleSubscribe(sc))
 
 	// Discovery
-	router.GET("/discovery", handleDiscovery(clientset, discovery))
+	router.GET("/discovery", handleDiscovery(clientset, discovery.Build()))
 
 	var wrapper http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		// CORS
@@ -415,7 +331,7 @@ func handleSubscribe(sc *subscriptionController) httprouter.Handle {
 	}
 }
 
-func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]interface{}) httprouter.Handle {
+func handleDiscovery(clientset *kubernetes.Clientset, discovery *discoveryData) httprouter.Handle {
 	lock := sync.Mutex{}
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		// The version of the Kubernetes API server can change, so we need to check it every time
@@ -428,9 +344,9 @@ func handleDiscovery(clientset *kubernetes.Clientset, discovery map[string]inter
 		}
 		v := kubeVersion.String()
 
-		if discovery["kubernetesVersion"] != v {
+		if discovery.KubernetesVersion != v {
 			lock.Lock()
-			discovery["kubernetesVersion"] = v
+			discovery.KubernetesVersion = v
 			lock.Unlock()
 		}
 
