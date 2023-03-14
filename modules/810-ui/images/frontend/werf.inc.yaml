@@ -41,7 +41,5 @@ ansible:
   - name: "Build assets"
     shell: |
       set -e
-      export NODE_ENV=production
       cd /app
-
-      npm run build-only
+      NODE_ENV=production npm run build-only
