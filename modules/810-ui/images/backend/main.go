@@ -10,7 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -382,7 +382,7 @@ func handleNodeDrain(clientset *kubernetes.Clientset, informer informers.Generic
 			GracePeriodSeconds:  -1,
 			// If a pod is not evicted in 5 minutes, delete the pod
 			Timeout: 5 * time.Minute,
-			Out:     ioutil.Discard,
+			Out:     io.Discard,
 			ErrOut:  &sb,
 			Ctx:     r.Context(),
 		}
