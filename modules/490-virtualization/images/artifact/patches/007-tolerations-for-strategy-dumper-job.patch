@@ -1,8 +1,8 @@
 diff --git a/pkg/virt-operator/kubevirt.go b/pkg/virt-operator/kubevirt.go
-index 640750c7a..185ee8d0f 100644
+index ff9645371..08f9a36f5 100644
 --- a/pkg/virt-operator/kubevirt.go
 +++ b/pkg/virt-operator/kubevirt.go
-@@ -741,6 +741,19 @@ func (c *KubeVirtController) generateInstallStrategyJob(config *operatorutil.Kub
+@@ -744,6 +744,19 @@ func (c *KubeVirtController) generateInstallStrategyJob(config *operatorutil.Kub
  					},
  				},
  				Spec: k8sv1.PodSpec{

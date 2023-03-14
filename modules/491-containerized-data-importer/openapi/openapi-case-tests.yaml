@@ -3,6 +3,14 @@ positive:
   - {}
   values:
   - { internal: {} }
+  - https:
+      mode: CustomCertificate
+      customCertificate:
+        secretName: "plainstring"
+    internal:
+      customCertificateData:
+        tls.crt: plainstring
+        tls.key: plainstring
 negative:
   configValues:
   - { somethingInConfig: yes }
