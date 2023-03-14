@@ -4,9 +4,6 @@ docker:
   # WORKDIR: /app
   EXPOSE: '8080'
   # USER: app
-git:
-- add: /modules/810-ui/images/frontend/nginx.conf
-  to: /etc/nginx/nginx.conf
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-assets
   add: /app/dist
