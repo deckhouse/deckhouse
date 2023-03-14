@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"sort"
+	"sync"
 
 	"deckhouse.io/uibackend/cloudprovider"
+	"github.com/julienschmidt/httprouter"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 type discoveryData struct {
@@ -53,4 +58,28 @@ func (dc *discoveryCollector) AddCloudProvider(ctx context.Context, cloudProvide
 func (dc *discoveryCollector) Build() *discoveryData {
 	sort.Strings(dc.data.Paths)
 	return dc.data
+}
+
+func handleDiscovery(clientset *kubernetes.Clientset, discovery *discoveryData) httprouter.Handle {
+	lock := sync.Mutex{}
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		// The version of the Kubernetes API server can change, so we need to check it every time
+		kubeVersion, err := clientset.ServerVersion()
+		if err != nil {
+			klog.Errorf("failed to get kube version: %v", err)
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		v := kubeVersion.String()
+
+		if discovery.KubernetesVersion != v {
+			lock.Lock()
+			discovery.KubernetesVersion = v
+			lock.Unlock()
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(discovery)
+	}
 }

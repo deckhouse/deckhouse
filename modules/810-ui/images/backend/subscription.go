@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -346,5 +349,36 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 				}
 			}
 		},
+	}
+}
+
+func handleSubscribe(sc *subscriptionController) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			InsecureSkipVerify: true,
+			// Declaring supported protocol for frontend tooling based on ActionCable;
+			// "actioncable-unsupported" is omitted because it seem to be unneeded.
+			Subprotocols: []string{"actioncable-v1-json"},
+		})
+		if err != nil {
+			klog.V(5).ErrorS(err, "failed to accept websocket connection")
+			return
+		}
+		defer c.Close(websocket.StatusInternalError, "")
+
+		err = sc.subscribe(r.Context(), c)
+		if errors.Is(err, context.Canceled) {
+			klog.V(5).InfoS("websocket connection closed", "context", "cancelled")
+			return
+		}
+		if websocket.CloseStatus(err) == websocket.StatusNormalClosure ||
+			websocket.CloseStatus(err) == websocket.StatusGoingAway {
+			klog.V(5).InfoS("websocket connection closed", "status", websocket.CloseStatus(err))
+			return
+		}
+		if err != nil {
+			klog.V(5).ErrorS(err, "websocket connection closed with error")
+			return
+		}
 	}
 }
