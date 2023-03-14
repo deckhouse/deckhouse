@@ -1,6 +1,6 @@
 x-config-version: 2
 type: object
-required: {}
+required: []
 properties:
   auth:
     type: object

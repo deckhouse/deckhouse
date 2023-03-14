@@ -7,71 +7,45 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "frontend")) | nindent 2 }}
 data:
   nginx.conf: |
-    worker_processes 1;
-    error_log /dev/stderr warn;
-    pid       /tmp/nginx.pid;
-
     events {
-      worker_connections 1024;
-      multi_accept on;
+        worker_connections 1024;
     }
 
     http {
-      include       /etc/nginx/mime.types;
-      default_type  application/octet-stream;
+        include mime.types;
+        sendfile on;
 
-      access_log off;
-      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                        '$status $body_bytes_sent "$http_referer" '
-                        '"$http_user_agent" "$http_x_forwarded_for"';
+        server {
+            listen 8080;
+            listen [::]:8080;
 
-      sendfile        on;
+            resolver 127.0.0.11;
+            autoindex off;
 
-      client_body_temp_path /tmp/client_temp;
-      proxy_temp_path       /tmp/proxy_temp;
-      fastcgi_temp_path     /tmp/fastcgi_temp;
-      uwsgi_temp_path       /tmp/uwsgi_temp;
-      scgi_temp_path        /tmp/scgi_temp;
+            server_name _;
+            server_tokens off;
 
-      server {
-        server_name _;
-        listen 10253;
-        location /healthz {
-          return 200;
+            gzip on;
+            gzip_types text/html application/javascript application/json text/css;
+            gzip_static on;
+
+            root /app/dist;
+            index index.html;
+
+            location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to redirecting to index.html
+                try_files $uri $uri/ $uri.html /index.html;
+            }
+
+            location ~* \.(?:css|js|jpg|svg)$ {
+                expires 30d;
+                add_header Cache-Control "public";
+            }
+
+            location ~* \.(?:json)$ {
+                expires 1d;
+                add_header Cache-Control "public";
+            }
         }
-      }
-
-      server {
-          listen 8080;
-          listen [::]:8080;
-
-          resolver 127.0.0.11;
-          autoindex off;
-
-          server_name _;
-          server_tokens off;
-
-          gzip on;
-          gzip_types text/html application/javascript application/json text/css;
-          gzip_static on;
-
-          root /app/dist;
-          index index.html;
-
-          location / {
-              # First attempt to serve request as file, then
-              # as directory, then fall back to redirecting to index.html
-              try_files $uri $uri/ $uri.html /index.html;
-          }
-
-          location ~* \.(?:css|js|jpg|svg)$ {
-              expires 30d;
-              add_header Cache-Control "public";
-          }
-
-          location ~* \.(?:json)$ {
-              expires 1d;
-              add_header Cache-Control "public";
-          }
-      }
     }
