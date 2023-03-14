@@ -173,16 +173,6 @@ type Buffer struct {
 
 type BufferType string
 
-func (t BufferType) ToVectorValue() string {
-	switch t {
-	case BufferTypeDisk:
-		return "disk"
-	case BufferTypeMemory:
-		return "memory"
-	}
-	return ""
-}
-
 const (
 	// Events are buffered on disk.
 	// This is less performant, but more durable. Data that has been synchronized to disk will not be lost if Vector is restarted forcefully or crashes.
@@ -195,16 +185,6 @@ const (
 )
 
 type BufferWhenFull string
-
-func (t BufferWhenFull) ToVectorValue() string {
-	switch t {
-	case BufferWhenFullDropNew:
-		return "drop_newest"
-	case BufferWhenFullBlock:
-		return "block"
-	}
-	return ""
-}
 
 const (
 	// 	Drops the event instead of waiting for free space in buffer.

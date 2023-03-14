@@ -63,6 +63,13 @@ func TestConfig(t *testing.T) {
 				}, false)
 
 				spec := v1alpha1.ClusterLogDestinationSpec{
+					Buffer: &v1alpha1.Buffer{
+						Type: "Disk",
+						Disk: v1alpha1.BufferDisk{
+							MaxSizeBytes: 268435488,
+						},
+						WhenFull: "Block",
+					},
 					Loki: v1alpha1.LokiSpec{
 						Endpoint: "http://testmeip:9000",
 					},
