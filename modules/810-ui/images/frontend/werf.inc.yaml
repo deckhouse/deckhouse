@@ -37,8 +37,6 @@ ansible:
       set -e
       cd /app
       npm ci --ignore-scripts
-    args:
-      executable: /bin/bash
   setup:
   - name: "Build assets"
     shell: |
@@ -47,5 +45,3 @@ ansible:
       cd /app
 
       npm run build-only
-    args:
-      executable: /bin/bash
