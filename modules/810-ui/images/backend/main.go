@@ -156,10 +156,10 @@ func initHandlers(
 		// Dynamic informer returns apiVersion and kind, while typed informer does not.
 		informer := dynFactory.ForResource(gvr)
 
-		h := newHandler(informer, dynClient.Resource(gvr), gvr)
+		namespaced := false
+		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
-		namespaced := false
 		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
 		namedPathPrefix := pathPrefix + "/:name"
 
@@ -176,7 +176,7 @@ func initHandlers(
 		informer := dynFactory.ForResource(gvr)
 
 		namespaced := true
-		h := newNamespacedHandler(informer, dynClient.Resource(gvr), gvr)
+		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
@@ -198,7 +198,7 @@ func initHandlers(
 		namedItemPath := collectionPath + "/:name"
 
 		informer := dynFactory.ForResource(gvr)
-		h := newHandler(informer, dynClient.Resource(gvr), gvr)
+		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)
@@ -239,7 +239,7 @@ func initHandlers(
 		namedItemPath := collectionPath + "/:name"
 
 		informer := dynFactory.ForResource(gvr)
-		h := newHandler(informer, dynClient.Resource(gvr), gvr)
+		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
 
 		router.GET(collectionPath, h.HandleList)

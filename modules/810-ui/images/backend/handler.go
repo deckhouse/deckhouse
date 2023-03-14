@@ -11,24 +11,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/klog/v2"
 )
 
-type namespacedResourceHandler struct {
+type resourceHandler struct {
 	gvr      schema.GroupVersionResource
-	ri       dynamic.NamespaceableResourceInterface
 	informer informers.GenericInformer
+	// ri is resourceInterface that is used namespaceable if `namespaced` is set to true
+	ri         dynamic.NamespaceableResourceInterface
+	namespaced bool
 }
 
-func newNamespacedHandler(informer informers.GenericInformer, ri dynamic.NamespaceableResourceInterface, gvr schema.GroupVersionResource) *namespacedResourceHandler {
-	return &namespacedResourceHandler{gvr, ri, informer}
+func newHandler(informer informers.GenericInformer, ri dynamic.NamespaceableResourceInterface, gvr schema.GroupVersionResource, namespaced bool) *resourceHandler {
+	return &resourceHandler{gvr, informer, ri, namespaced}
 }
 
-func (dh *namespacedResourceHandler) HandleList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	namespace := params.ByName("namespace")
+func (h *resourceHandler) HandleList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	q := r.URL.Query()
 	labelSelector, err := labels.Parse(q.Get("labelSelector"))
 	if err != nil {
@@ -38,9 +40,16 @@ func (dh *namespacedResourceHandler) HandleList(w http.ResponseWriter, r *http.R
 			"error": err.Error(),
 		})
 	}
-	list, err := dh.informer.Lister().ByNamespace(namespace).List(labelSelector)
+
+	var list []runtime.Object
+	if h.namespaced {
+		namespace := params.ByName("namespace")
+		list, err = h.informer.Lister().ByNamespace(namespace).List(labelSelector)
+	} else {
+		list, err = h.informer.Lister().List(labelSelector)
+	}
 	if err != nil {
-		err := fmt.Errorf("listing %s: %v", dh.gvr.Resource, err)
+		err := fmt.Errorf("listing %s: %v", h.gvr.Resource, err)
 		klog.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -48,16 +57,26 @@ func (dh *namespacedResourceHandler) HandleList(w http.ResponseWriter, r *http.R
 		})
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(list)
 }
 
 // Item by name
-func (dh *namespacedResourceHandler) HandleGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (h *resourceHandler) HandleGet(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var (
+		obj runtime.Object
+		err error
+	)
+
 	name := params.ByName("name")
-	namespace := params.ByName("namespace")
-	// Single object
-	obj, err := dh.informer.Lister().ByNamespace(namespace).Get(name)
+	if h.namespaced {
+		namespace := params.ByName("namespace")
+		obj, err = h.informer.Lister().ByNamespace(namespace).Get(name)
+	} else {
+		obj, err = h.informer.Lister().Get(name)
+	}
+
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			w.WriteHeader(http.StatusNotFound)
@@ -75,9 +94,7 @@ func (dh *namespacedResourceHandler) HandleGet(w http.ResponseWriter, r *http.Re
 	_ = json.NewEncoder(w).Encode(obj)
 }
 
-func (dh *namespacedResourceHandler) HandleCreate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	namespace := params.ByName("namespace")
-
+func (h *resourceHandler) HandleCreate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		err := fmt.Errorf("reading body: %s", err)
@@ -102,7 +119,13 @@ func (dh *namespacedResourceHandler) HandleCreate(w http.ResponseWriter, r *http
 		return
 	}
 
-	createdObj, err := dh.ri.Namespace(namespace).Create(r.Context(), &obj, metav1.CreateOptions{})
+	var createdObj *unstructured.Unstructured
+	if h.namespaced {
+		namespace := params.ByName("namespace")
+		createdObj, err = h.ri.Namespace(namespace).Create(r.Context(), &obj, metav1.CreateOptions{})
+	} else {
+		createdObj, err = h.ri.Create(r.Context(), &obj, metav1.CreateOptions{})
+	}
 	if err != nil {
 		err := fmt.Errorf("creating object: %s", err)
 		klog.Error(err)
@@ -119,8 +142,7 @@ func (dh *namespacedResourceHandler) HandleCreate(w http.ResponseWriter, r *http
 	_ = json.NewEncoder(w).Encode(createdObj)
 }
 
-func (dh *namespacedResourceHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	namespace := params.ByName("namespace")
+func (h *resourceHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		err := fmt.Errorf("reading body: %s", err)
@@ -145,7 +167,13 @@ func (dh *namespacedResourceHandler) HandleUpdate(w http.ResponseWriter, r *http
 		return
 	}
 
-	updatedObj, err := dh.ri.Namespace(namespace).Update(r.Context(), &obj, metav1.UpdateOptions{})
+	var updatedObj *unstructured.Unstructured
+	if h.namespaced {
+		namespace := params.ByName("namespace")
+		updatedObj, err = h.ri.Namespace(namespace).Update(r.Context(), &obj, metav1.UpdateOptions{})
+	} else {
+		updatedObj, err = h.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
+	}
 	if err != nil {
 		err := fmt.Errorf("updating body: %s", err)
 		klog.Error(err)
@@ -161,12 +189,16 @@ func (dh *namespacedResourceHandler) HandleUpdate(w http.ResponseWriter, r *http
 	_ = json.NewEncoder(w).Encode(updatedObj)
 }
 
-func (dh *namespacedResourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func (h *resourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Delete
 	name := params.ByName("name")
-	namespace := params.ByName("namespace")
-
-	err := dh.ri.Namespace(namespace).Delete(r.Context(), name, metav1.DeleteOptions{})
+	var err error
+	if h.namespaced {
+		namespace := params.ByName("namespace")
+		err = h.ri.Namespace(namespace).Delete(r.Context(), name, metav1.DeleteOptions{})
+	} else {
+		err = h.ri.Delete(r.Context(), name, metav1.DeleteOptions{})
+	}
 	if err != nil {
 		err := fmt.Errorf("deleting object: %s", err)
 		klog.Error(err)

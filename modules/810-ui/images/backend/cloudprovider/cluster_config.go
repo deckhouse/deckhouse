@@ -31,7 +31,6 @@ func (c *ProviderConfig) Zones() []string {
 
 func GetClusterConfig(ctx context.Context, client *kubernetes.Clientset) (*ProviderConfig, error) {
 	secret, err := client.CoreV1().Secrets("kube-system").Get(ctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
-
 	if err != nil {
 		return nil, err
 	}

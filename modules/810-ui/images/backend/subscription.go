@@ -130,7 +130,6 @@ func (sc *subscriptionController) Start(ctx context.Context) {
 			return
 		}
 	}
-
 }
 
 // subscribe handles the user subscription
