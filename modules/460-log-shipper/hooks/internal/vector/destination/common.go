@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 var _ apis.LogDestination = (*CommonSettings)(nil)
@@ -30,7 +31,7 @@ type CommonSettings struct {
 	Type        string      `json:"type"`
 	Inputs      set.Set     `json:"inputs,omitempty"`
 	Healthcheck Healthcheck `json:"healthcheck"`
-	Buffer      Buffer      `json:"buffer,omitempty"`
+	Buffer      *Buffer     `json:"buffer,omitempty"`
 }
 
 type Healthcheck struct {
@@ -55,8 +56,10 @@ type CommonTLS struct {
 }
 
 type Buffer struct {
-	Size uint32 `json:"max_size,omitempty"`
-	Type string `json:"type,omitempty"`
+	Size      uint32                  `json:"max_size,omitempty"`
+	Type      v1alpha1.BufferType     `json:"type,omitempty"`
+	MaxEvents uint32                  `json:"max_events,omitempty"`
+	WhenFull  v1alpha1.BufferWhenFull `json:"when_full,omitempty"`
 }
 
 func (cs *CommonSettings) SetInputs(inp []string) {
@@ -74,4 +77,29 @@ func decodeB64(input string) string {
 
 func ComposeName(n string) string {
 	return "destination/cluster/" + n
+}
+
+func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
+	if buffer != nil {
+		return buildVectorBufferNotNil(buffer)
+	}
+	return nil
+}
+
+func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
+	switch buffer.Type {
+	case v1alpha1.BufferTypeDisk:
+		return &Buffer{
+			Type:     v1alpha1.BufferTypeDisk,
+			Size:     buffer.Disk.MaxSizeBytes,
+			WhenFull: buffer.WhenFull,
+		}
+	case v1alpha1.BufferTypeMemory:
+		return &Buffer{
+			Type:      v1alpha1.BufferTypeMemory,
+			MaxEvents: buffer.Memory.MaxEvents,
+			WhenFull:  buffer.WhenFull,
+		}
+	}
+	return nil
 }
