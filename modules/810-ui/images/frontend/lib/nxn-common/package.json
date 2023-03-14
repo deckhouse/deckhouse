@@ -1,0 +1,7 @@
+{
+  "name": "nxn-common",
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-webfont": "^1.6.0"
+  }
+}

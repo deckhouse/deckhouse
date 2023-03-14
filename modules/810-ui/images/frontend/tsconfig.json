@@ -1,0 +1,29 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.web.json",
+  "include": ["env.d.ts", "src/**/*.ts", "src/**/*.vue", "lib/**/*.ts"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@lib/*": [
+        "./lib/*"
+      ],
+
+      // KOSTYL: see https://github.com/vuejs/language-tools/discussions/592#discussioncomment-2163181
+      "react": [
+        "./stub/types__react"
+      ]
+    },
+    "types": [
+      "vite/client"
+    ]
+  },
+
+  "references": [
+    {
+      "path": "./tsconfig.config.json"
+    }
+  ]
+}

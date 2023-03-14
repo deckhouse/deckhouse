@@ -1,0 +1,439 @@
+[
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-03-22T08:35:01Z",
+      "generation": 1,
+      "name": "v1-30-16",
+      "resourceVersion": "4064789950",
+      "uid": "ad049a39-0607-4608-85f2-6c03e0703d12"
+    },
+    "spec": {
+      "version": "v1.30.16"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-03-29T06:48:01.378519559Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-10-12T12:45:03Z",
+      "generation": 1,
+      "name": "v1-37-5",
+      "resourceVersion": "5639377927",
+      "uid": "c64d6edc-8036-4250-bf84-bed6b76f7d5d"
+    },
+    "spec": {
+      "changelog": {
+        "istio": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2714",
+              "summary": "Fix the  alert."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.37.5",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.37.5"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-10-17T13:04:15.121278193Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-10-17T12:34:01Z",
+      "generation": 1,
+      "name": "v1-37-6",
+      "resourceVersion": "5720514644",
+      "uid": "36130725-ca2a-4bf9-8953-f67f723535ee"
+    },
+    "spec": {
+      "applyAfter": "2022-10-17T13:04:01.313565005Z",
+      "changelog": {
+        "candi": {
+          "fixes": [
+            {
+              "impact": "No impact for existing cluster. Only fixes cluster bootstap of  layot in Yandex Cloud.",
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2730",
+              "summary": "Fix Yandex NAT Instance netplan config."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.37.6",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.37.6"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-10-27T06:00:00.150511052Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-10-25T09:02:01Z",
+      "generation": 1,
+      "name": "v1-38-2",
+      "resourceVersion": "5720514647",
+      "uid": "3b3d027b-8837-45eb-8cc1-15979d412798"
+    },
+    "spec": {
+      "applyAfter": "2022-10-25T10:32:01.241406175Z",
+      "changelog": {
+        "node-manager": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2837",
+              "summary": "Avoid \"node-role.kubernetes.io/master\" taint removal when it is explicitly set in the master NG."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.38.2",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.38.2"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-10-27T06:00:00.150511637Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-10-26T08:19:03Z",
+      "generation": 1,
+      "name": "v1-38-4",
+      "resourceVersion": "5764623892",
+      "uid": "5cfd3ed5-5d74-4cd0-9a73-1796289feff7"
+    },
+    "spec": {
+      "applyAfter": "2022-10-26T10:49:03.233700892Z",
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.38.4",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.38.4"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-11-01T13:15:15.139990146Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-11-01T11:15:09Z",
+      "generation": 1,
+      "name": "v1-38-5",
+      "resourceVersion": "5839341980",
+      "uid": "c5802b0f-2908-467f-8c45-56d0dc424c26"
+    },
+    "spec": {
+      "applyAfter": "2022-11-01T13:15:09.597090108Z",
+      "changelog": {
+        "prometheus": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2918",
+              "summary": "Fixed calculation of PVC size and retention size."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.38.5",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.38.5"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-11-10T06:00:00.06063293Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-11-08T08:36:01Z",
+      "generation": 1,
+      "name": "v1-39-2",
+      "resourceVersion": "5967188739",
+      "uid": "69536607-6fed-4883-ba50-fa379e779d49"
+    },
+    "spec": {
+      "applyAfter": "2022-11-08T09:36:01.118945457Z",
+      "changelog": {
+        "node-manager": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2928",
+              "summary": "Update the description of  and  in the NodeGroup CR documentation."
+            }
+          ]
+        },
+        "prometheus": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/2934",
+              "summary": "Fixed calculation of PVC size and retention size."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.39.2",
+      "requirements": {
+        "ingressNginx": "0.33",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.39.2"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-11-24T06:00:00.297576897Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-11-22T08:34:01Z",
+      "generation": 1,
+      "name": "v1-40-3",
+      "resourceVersion": "6145866960",
+      "uid": "697678ff-9fa8-4c65-9d23-4fb434a28bfb"
+    },
+    "spec": {
+      "applyAfter": "2022-11-22T09:04:01.673656401Z",
+      "changelog": {
+        "node-manager": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3062",
+              "summary": "Fix  configMap generation when a few node groups have the same priority."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.40.3",
+      "requirements": {
+        "ingressNginx": "1.1",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.40.3"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2022-12-15T06:00:00.094812198Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2022-12-13T08:32:01Z",
+      "generation": 1,
+      "name": "v1-41-2",
+      "resourceVersion": "6507812683",
+      "uid": "b6bb65a1-665b-4da4-87ae-f0ae400b56c5"
+    },
+    "spec": {
+      "applyAfter": "2022-12-13T11:02:01.294097811Z",
+      "changelog": {
+        "ingress-nginx": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3259",
+              "summary": "Fix auth TLS certificates bug which leads to absent certificates on the Ingress controller bootstrap."
+            }
+          ]
+        },
+        "namespace-configurator": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3273",
+              "summary": "Apply configuration only for namespaces matched the filter in this configuration."
+            }
+          ]
+        },
+        "node-manager": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3248",
+              "summary": "Fix the description in the  alert."
+            }
+          ]
+        },
+        "user-authn": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3249",
+              "summary": "Read CA for OIDC provider from encoded PEM string."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.41.2",
+      "requirements": {
+        "ingressNginx": "1.1",
+        "k8s": "1.20.0"
+      },
+      "version": "v1.41.2"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2023-01-26T06:00:00.193575505Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2023-01-24T08:37:01Z",
+      "generation": 1,
+      "name": "v1-42-6",
+      "resourceVersion": "6573581318",
+      "uid": "0929e45e-aa09-4dcd-9f8d-816c12a506b8"
+    },
+    "spec": {
+      "applyAfter": "2023-01-24T10:07:01.291220422Z",
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.42.6",
+      "requirements": {
+        "ingressNginx": "1.1",
+        "k8s": "1.21.0"
+      },
+      "version": "v1.42.6"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Outdated",
+      "transitionTime": "2023-02-02T13:10:15.2554062Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2023-02-02T13:10:03Z",
+      "generation": 1,
+      "name": "v1-42-7",
+      "resourceVersion": "6573581312",
+      "uid": "a0798e6e-49f2-4e4a-a4da-4defc9f26224"
+    },
+    "spec": {
+      "changelog": {
+        "prometheus": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3723",
+              "summary": "Fix Alertmanager CA file (caused Unauthorized error)."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.42.7",
+      "requirements": {
+        "ingressNginx": "1.1",
+        "k8s": "1.21.0"
+      },
+      "version": "v1.42.7"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Deployed",
+      "transitionTime": "2023-02-02T13:10:15.255405646Z"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1alpha1",
+    "approved": false,
+    "kind": "DeckhouseRelease",
+    "metadata": {
+      "creationTimestamp": "2023-02-02T15:10:03Z",
+      "generation": 1,
+      "name": "v1-42-8",
+      "resourceVersion": "6573581313",
+      "uid": "a0798e6e-49f2-4e4a-a4da-4defc9f26225"
+    },
+    "spec": {
+      "changelog": {
+        "prometheus": {
+          "fixes": [
+            {
+              "pull_request": "https://github.com/deckhouse/deckhouse/pull/3723",
+              "summary": "Fix Alertmanager CA file (caused Unauthorized error)."
+            }
+          ]
+        }
+      },
+      "changelogLink": "https://github.com/deckhouse/deckhouse/releases/tag/v1.42.7",
+      "requirements": {
+        "ingressNginx": "1.1",
+        "k8s": "1.21.0"
+      },
+      "version": "v1.42.7"
+    },
+    "status": {
+      "approved": true,
+      "message": "",
+      "phase": "Pending"
+    }
+  }
+]

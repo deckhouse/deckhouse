@@ -1,0 +1,4 @@
+{
+  "cloudProvider": "openstack",
+  "kubernetesVersion": "v1.21.14"
+}

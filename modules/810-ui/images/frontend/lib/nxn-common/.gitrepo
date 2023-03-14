@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@fox.flant.com:tnt/nxn-common.git
+	branch = master
+	commit = 4d65db694f4d43b0617212abc40d0dd254b2e315
+	parent = 1940b84ed720139f888c4798cd5dbeb2424b4615
+	cmdver = 0.4.3
+	method = merge
