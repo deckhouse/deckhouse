@@ -8,7 +8,7 @@
   <GridBlock>
     <CardBlock notice-placement="top">
       <template #title>
-        <CardTitle title="Конфигурация" icon="IconAWSLogo" />
+        <CardTitle title="Конфигурация" icon="IconAzureLogo" />
       </template>
       <template #content>
         <SelectButton 
@@ -21,13 +21,13 @@
         <div class="flex flex-wrap items-start -mx-24 -my-6">
           <div class="mx-24 my-6">
             <template v-if="mode == 'default'">
-              <InputBlock title="Тип Машины" spec="spec.instanceType" type="column" class="mb-6">
-                <Dropdown :options="typeOptions" v-model="type" optionLabel="" class="p-inputtext-sm w-[500px]" />
+              <InputBlock title="Тип Машины" spec="spec.machineSize" type="column" class="mb-6">
+                <Dropdown :options="typeOptions" v-model="type" optionLabel="" class="p-inputtext-sm w-[450px]" />
               </InputBlock>
             </template>
             <template v-if="mode == 'user'">
               <InputBlock title="Имя" help="Обязательное поле" type="column" class="mb-6">
-                <InputText class="p-inputtext-sm w-[500px]" />
+                <InputText class="p-inputtext-sm w-[450px]" />
               </InputBlock>
               <FieldGroupTitle title="Ресурсы" help="Укажите ресурсы для этого типа машин, чтобы cluster-autoscaler мог масштабировать группы узлов с нулевого размера (minPerZone=0)" />
               <div class="flex flex-col gap-y-6 mb-6">
@@ -41,10 +41,10 @@
             </template>
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
-              <InputBlock title="Размер ГБ" spec="spec.diskSizeGb">
+              <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" :help="mode == 'default' ? 'Установлено значение по умолчанию' : undefined">
                 <InputText class="p-inputtext-sm" />
               </InputBlock>
-              <InputBlock title="Тип" spec="spec.machineType">
+              <InputBlock title="Тип" spec="spec.machineType" :help="mode == 'default' ? 'Установлено значение по умолчанию' : undefined">
                 <Dropdown class="p-inputtext-sm" />
               </InputBlock>
             </div>
@@ -54,10 +54,10 @@
             <FieldGroupTitle title="Прочее" />
 
             <div class="flex flex-col gap-y-6">
-              <InputBlock title="Образ машины" spec="spec.ami" type="column" help="<a href='ya.ru' target='_blank' class='text-blue-500'>Список доступных AMI</a>">
+              <InputBlock title="Образ машины" spec="spec.urn" type="column" help="По умолчанию используется образ группы узлов master<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Список доступных образов</a>">
                 <InputText class="p-inputtext-sm w-[450px]" />
               </InputBlock>
-              <InputBlock title="Использовать Spot" spec="spec.spot" tooltip="Spot-инстансы запускаются с минимальной возможной для успешного запуска ценой за час">
+              <InputBlock title="Ускоренная сеть" spec="spec.disableExternalIP" help="Установлено значение по-умолчанию">
                 <InputSwitch />
               </InputBlock>
             </div>
@@ -67,8 +67,7 @@
         <CardDivider />
         
         <div class="flex flex-wrap items-start -mx-12 -my-6">
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные сетевые теги" spec="spec.additionalNetworkTags" :fields="['Value']" />
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные лейблы" spec="spec.additionalLabels" :fields="['Key', 'Value']" />
+          <InputLabelGroup class="mx-12 my-6" title="Дополнительные теги" spec="spec.additionalTags" :fields="['Key', 'Value']" />
         </div>
 
 

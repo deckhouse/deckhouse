@@ -79,7 +79,7 @@
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
             <InputBlock title="Число резервных узлов от общего количества узлов">
-                <div class="p-inputgroup !w-[150px]">
+                <div class="p-inputgroup !w-[100px]">
                   <InputText class="p-inputtext-sm w-[50px]" />
                   <span class="p-inputgroup-addon">из 6</span>
                 </div>

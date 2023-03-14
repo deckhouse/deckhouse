@@ -8,3 +8,5 @@ export { default as IconSpinner } from "./IconSpinner.vue";
 export { default as IconAWSLogo } from "./IconAWSLogo.vue";
 export { default as IconOpenStackLogo } from "./IconOpenStackLogo.vue";
 export { default as IconVmWareLogo } from "./IconVmWareLogo.vue";
+export { default as IconGCPLogo } from "./IconGCPLogo.vue";
+export { default as IconAzureLogo } from "./IconAzureLogo.vue";

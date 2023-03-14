@@ -6,8 +6,8 @@
   >
     <nav class="relative w-full bg-blue-500 rounded-md py-6 px-6 flex">
       <div class="flex items-center justify-between gap-6">
-        <ButtonBlock title="Сохранить изменения" type="primary-inverse" disabled loading @click="emit('submit')"></ButtonBlock>
-        <ButtonBlock title="Отменить изменения" type="default-inverse" disabled @click="emit('reset')"></ButtonBlock>
+        <ButtonBlock title="Сохранить изменения" type="primary-inverse" :loading="submitLoading" @click="emit('submit')"></ButtonBlock>
+        <ButtonBlock title="Отменить изменения" type="default-inverse" @click="emit('reset')"></ButtonBlock>
       </div>
     </nav>
   </div>
@@ -22,6 +22,10 @@ const props = defineProps({
   compact: {
     type: Boolean,
     default: true,
+  },
+  submitLoading: {
+    type: Boolean,
+    default: false,
   },
 });
 

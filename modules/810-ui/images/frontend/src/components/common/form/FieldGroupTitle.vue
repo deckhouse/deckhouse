@@ -1,7 +1,8 @@
 <template>
-  <div>
+  <div class="mb-3">
     <CardSubtitle :title="title" :tooltip="tooltip" />
-    <SpecLabel :spec="spec" v-if="spec" class="-mt-3 mb-3" />
+    <SpecLabel :spec="spec" v-if="spec" class="-mt-6 mb-6" />
+    <span class="block text-sm text-slate-400 -mt-6 mb-6 leading-normal w-[450px]" v-html="help" v-if="help" />
   </div>
 </template>
 
@@ -12,5 +13,6 @@ const props = defineProps({
   title: String,
   tooltip: String,
   spec: String,
+  help: String
 });
 </script>

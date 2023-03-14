@@ -61,7 +61,7 @@ export const handlers = [
     const json = await req.json();
     console.log("REQ!", json);
 
-    return res(ctx.json(json));
+    return res(ctx.delay(500), ctx.json(json));
   }),
   rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name/drain"), (req, res, ctx) => {
     return res(ctx.delay(2000), ctx.status(204));

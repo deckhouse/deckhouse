@@ -91,25 +91,37 @@
           v-if="node.needDisruptionApproval"
           @click="disruptionApprove"
         ></ButtonBlock>
-        <ButtonBlock :title="node.unschedulable ? 'Uncordon' : 'Cordon'" type="primary-subtle" @click="toggleCordon"></ButtonBlock>
+        <ButtonBlock
+          :title="node.unschedulable ? 'Uncordon' : 'Cordon'"
+          type="primary-subtle"
+          @click="toggleCordon"
+          :loading="cordonLoading"
+        ></ButtonBlock>
         <ButtonBlock title="Drain" type="primary-subtle" @click="drain" :loading="drainLoading"></ButtonBlock>
       </template>
       <template #notice v-if="node.errorMessage"> {{ node.errorMessage }} </template>
     </CardBlock>
-    <FormActions :compact="false" v-if="!readonly && meta.dirty" @submit="submitForm" @reset="resetForm" />
+    <FormActions
+      :compact="false"
+      v-if="!readonly && (meta.dirty || submitLoading)"
+      @submit="submitForm"
+      @reset="resetForm"
+      :submit-loading="submitLoading"
+    />
   </GridBlock>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, } from "vue";
+import { computed, ref } from "vue";
 import type { PropType } from "vue";
-import { useRouter } from "vue-router";
+import { onBeforeRouteLeave, useRouter } from "vue-router";
 
 import { formatTime, formatBytes, objectAsArray, arrayToObject } from "@/utils";
 
 import { useForm, FieldArray } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";
 import { z } from "zod";
+import useFormLeaveGuard from "@/composables/useFormLeaveGuard";
 
 import type Node from "@/models/Node";
 
@@ -142,6 +154,8 @@ const props = defineProps({
 });
 
 const drainLoading = ref(false);
+const cordonLoading = ref(false);
+const submitLoading = ref(false);
 
 const badges = computed<IBadge[]>(() => {
   return props.node
@@ -206,10 +220,13 @@ const { handleSubmit, values, meta, resetForm, errors } = useForm({
   initialValues,
 });
 
+useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
+
 // Functions
 
 const submitForm = handleSubmit(
   (values) => {
+    submitLoading.value = true;
     console.log(JSON.stringify(values, null, 2));
     console.log(meta.value);
 
@@ -223,9 +240,10 @@ const submitForm = handleSubmit(
 
     props.node.save().then((a: any) => {
       console.log("Save response", a);
-    });
+      submitLoading.value = false;
 
-    router.push({ name: "NodeShow" });
+      router.push({ name: "NodeShow" });
+    });
   },
   (err) => {
     console.error("Validation error", err, errors);
@@ -233,11 +251,14 @@ const submitForm = handleSubmit(
 );
 
 function toggleCordon(): void {
+  cordonLoading.value = true;
+
   // TODO: fix unexpected mutation
   // eslint-disable-next-line vue/no-mutating-props
   props.node.spec.unschedulable = !props.node.spec.unschedulable;
   props.node.save().then((a: any) => {
     console.log("Save response", a);
+    cordonLoading.value = false;
   });
 }
 
@@ -252,8 +273,8 @@ function drain() {
 function disruptionApprove() {
   props.node.disruptionApprove().then((a: any) => {
     console.log("disruptionApprove response", a);
-    console.log(props.node.metadata.annotations, props.needDisruptionApproval);
-
+    console.log(props.node.metadata.annotations, props.node.needDisruptionApproval);
   });
 }
+
 </script>

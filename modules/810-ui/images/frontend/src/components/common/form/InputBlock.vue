@@ -1,9 +1,9 @@
 <template>
     <div class="flex justify-between items-start gap-2" :class="classes[type].container">
-      <FieldLabel :title="title" :spec="spec" :tooltip="tooltip" :help="help" />
+      <FieldLabel :title="title" :spec="spec" :tooltip="tooltip" :help="help" :required="required" />
       <div class="flex items-start gap-2" :class="classes[type].input">
         <slot></slot>
-        <Button icon="pi pi-replay" v-tippy="'Сбросить'" class="p-button-rounded p-button-primary p-button-sm p-button-text shrink-0" />
+        <Button icon="pi pi-replay" v-tippy="'Сбросить'" class="p-button-rounded p-button-primary p-button-sm p-button-text shrink-0" v-if="reset" />
       </div>
     </div>
 </template>
@@ -31,6 +31,8 @@ const props = defineProps({
   help: String,
   spec: String,
   tooltip: String,
+  reset: Boolean,
+  required: Boolean,
   type: {
     type: String,
     required: false,
