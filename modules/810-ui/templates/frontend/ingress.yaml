@@ -9,17 +9,22 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "frontend"
     web.deckhouse.io/export-icon: "/public/img/frontend.png"
-# {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.frontend.externalAuthentication }}
-#     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.frontend.externalAuthentication.authSignInURL }}
-#     nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.frontend.externalAuthentication.authURL }}
-# {{- else }}
-#     nginx.ingress.kubernetes.io/auth-type: basic
-#     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-#     nginx.ingress.kubernetes.io/auth-secret: basic-auth-frontend
-# {{- end }}
-# {{- if .Values.ui.auth.frontend.whitelistSourceRanges }}
-#     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.frontend.whitelistSourceRanges | join "," }}
-# {{- end }}
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.externalAuthentication.authURL | quote }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+{{- end }}
+{{- if .Values.ui.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.whitelistSourceRanges | join "," }}
+{{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
@@ -48,25 +53,25 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "backend")) | nindent 2 }}
   annotations:
-# {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.frontend.externalAuthentication }}
-#     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.frontend.externalAuthentication.authSignInURL }}
-#     nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.frontend.externalAuthentication.authURL }}
-# {{- else }}
-#     nginx.ingress.kubernetes.io/auth-type: basic
-#     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-#     nginx.ingress.kubernetes.io/auth-secret: basic-auth-frontend
-# {{- end }}
-# {{- if .Values.ui.auth.frontend.whitelistSourceRanges }}
-#     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.frontend.whitelistSourceRanges | join "," }}
-# {{- end }}
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ui.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ui.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.ui.auth.externalAuthentication.authURL | quote }}
+  {{- if .Values.ui.auth.externalAuthentication.useBearerTokens }}
+    nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
+  {{- end }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+{{- end }}
+{{- if .Values.ui.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ui.auth.whitelistSourceRanges | join "," }}
+{{- end }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}

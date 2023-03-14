@@ -1,58 +1,57 @@
 x-config-version: 2
 type: object
-required:
-  - auth
+required: {}
 properties:
   auth:
     type: object
-    default: {}
     description: |
-      Configuration of authentication for Upmeter frontends.
-    required:
-      - frontend
+      Authentication configuration.
+    default: {}
     properties:
-      frontend:
+      externalAuthentication:
         type: object
         description: |
-          Authentication configuration.
-        default: {}
+          Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
         properties:
-          externalAuthentication:
-            type: object
-            description: |
-              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
-            properties:
-              authURL:
-                type: string
-                description: |
-                  URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
-              authSignInURL:
-                type: string
-                description: |
-                  URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
-          password:
+          authURL:
             type: string
             description: |
-              Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
-
-              This parameter is used if the `externalAuthentication` is not enabled.
-          allowedUserGroups:
-            type: array
-            items:
-              type: string
+              URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
             description: |
-              An array of user groups that can access Grafana & Prometheus.
+              URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          useBearerTokens:
+            type: boolean
+            description: |
+              The dashboard must use the user ID to work with the Kubernetes API (the authentication service must return the Authorization HTTP header that contains the bearer-token – the dashboard will use this token to make requests to the Kubernetes API server).
 
-              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+              Default value is false.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
-          whitelistSourceRanges:
-            type: array
-            items:
-              type: string
-            x-examples:
-              - ["1.1.1.1/32"]
-            description: An array if CIDRs that are allowed to authenticate.
+              > **Caution!** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`;
+      password:
+        type: string
+        description: |
+          Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
+
+          This parameter is used if the `externalAuthentication` is not enabled.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access Grafana & Prometheus.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - ["1.1.1.1/32"]
+        description: An array if CIDRs that are allowed to authenticate.
   https:
     type: object
     x-examples:
