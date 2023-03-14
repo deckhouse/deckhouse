@@ -8,12 +8,12 @@ git:
 - add: /modules/810-ui/images/frontend/nginx.conf
   to: /etc/nginx/nginx.conf
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-assets-{{ $image_version }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-assets
   add: /app/dist
   after: install
 
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-assets-{{ $image_version }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-assets
 from: {{ .Images.BASE_NODE_16_ALPINE }}
 git:
 - add: /modules/810-ui/images/frontend
