@@ -156,9 +156,9 @@ type subHandler struct {
 	handler func(*kubernetes.Clientset, informers.GenericInformer) httprouter.Handle
 }
 
-func checkCustomResourceExistence(dynClient *dynamic.DynamicClient) func(context.Context, schema.GroupVersionResource) (bool, error) {
+func checkCustomResourceExistence(dynClient *dynamic.DynamicClient, timeout time.Duration) func(context.Context, schema.GroupVersionResource) (bool, error) {
 	return func(ctx context.Context, gvr schema.GroupVersionResource) (bool, error) {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		_, err := dynClient.Resource(gvr).List(ctx, metav1.ListOptions{})
@@ -183,6 +183,7 @@ func initHandlers(
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
 	reh := newResourceEventHandler()
+	checkTimeout := 10 * time.Second
 
 	definitions := []resourceDefinition{
 		{
@@ -205,27 +206,27 @@ func initHandlers(
 
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "awsinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "azureinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "gcpinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "openstackinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "vsphereinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "yandexinstanceclasses", Version: "v1"},
-			check: checkCustomResourceExistence(dynClient),
+			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
 	}
 
@@ -298,64 +299,6 @@ func initHandlers2(
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
 	reh := newResourceEventHandler()
-
-	{
-		// Nodes
-		gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-		// Dynamic informer returns apiVersion and kind, while typed informer does not.
-		informer := dynFactory.ForResource(gvr)
-
-		namespaced := false
-		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
-
-		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
-		namedPathPrefix := pathPrefix + "/:name"
-
-		router.GET(pathPrefix, h.HandleList)
-		router.GET(namedPathPrefix, h.HandleGet)
-		router.PUT(namedPathPrefix, h.HandleUpdate)
-		router.POST(namedPathPrefix+"/drain", handleNodeDrain(clientset, informer))
-	}
-
-	{
-		// Deployments
-		gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-		// Dynamic informer returns apiVersion and kind, while typed informer does not.
-		informer := dynFactory.ForResource(gvr)
-
-		namespaced := true
-		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
-
-		pathPrefix := getPathPrefix(gvr, namespaced, "k8s")
-		namedPathPrefix := pathPrefix + "/:name"
-
-		router.GET(pathPrefix, h.HandleList)
-		router.GET(namedPathPrefix, h.HandleGet)
-		router.PUT(namedPathPrefix, h.HandleUpdate)
-	}
-
-	// CRUD with cluster-scoped custom resources that are expected to be present
-	for _, gvr := range []schema.GroupVersionResource{
-		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "deckhousereleases"},
-		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"},
-		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"},
-	} {
-		namespaced := false
-		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
-		namedItemPath := collectionPath + "/:name"
-
-		informer := dynFactory.ForResource(gvr)
-		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
-		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
-
-		router.GET(collectionPath, h.HandleList)
-		router.GET(namedItemPath, h.HandleGet)
-		router.POST(collectionPath, h.HandleCreate)
-		router.PUT(namedItemPath, h.HandleUpdate)
-		router.DELETE(namedItemPath, h.HandleDelete)
-	}
 
 	// CRUD with Cloud Providers, along with that adding the provider to discovery if it is present
 	// TODO in cloud provider, add known instance classes, known router paths
