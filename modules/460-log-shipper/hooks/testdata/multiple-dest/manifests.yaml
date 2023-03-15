@@ -73,7 +73,7 @@ spec:
     type: Memory
     memory:
       maxEvents: 4096
-    whenFull: DropNew
+    whenFull: DropNewest
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -96,7 +96,7 @@ spec:
     type: Disk
     disk:
       maxSizeBytes: 536870912
-    whenFull: DropNew
+    whenFull: DropNewest
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination

@@ -171,7 +171,7 @@ type Buffer struct {
 	WhenFull BufferWhenFull `json:"whenFull,omitempty"`
 }
 
-type BufferType string
+type BufferType = string
 
 const (
 	// Events are buffered on disk.
@@ -184,13 +184,13 @@ const (
 	BufferTypeMemory BufferType = "Memory"
 )
 
-type BufferWhenFull string
+type BufferWhenFull = string
 
 const (
 	// 	Drops the event instead of waiting for free space in buffer.
 	// The event will be intentionally dropped. This mode is typically used when performance is the highest priority,
 	// and it is preferable to temporarily lose events rather than cause a slowdown in the acceptance/consumption of events.
-	BufferWhenFullDropNew BufferWhenFull = "DropNew"
+	BufferWhenFullDropNewest BufferWhenFull = "DropNewest"
 
 	// Wait for free space in the buffer.
 	// This applies backpressure up the topology, signalling that sources should slow down the acceptance/consumption of events. This means that while no data is lost, data will pile up at the edge.

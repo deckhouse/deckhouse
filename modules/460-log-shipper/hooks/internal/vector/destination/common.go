@@ -24,14 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-)
-
-const (
-	vectorBufferTypeDisk   = "disk"
-	vectorBufferTypeMemory = "memory"
-
-	vectorWhenFullBlock   = "block"
-	vectorWhenFullDropNew = "drop_newest"
+	"github.com/iancoleman/strcase"
 )
 
 var _ apis.LogDestination = (*CommonSettings)(nil)
@@ -94,21 +87,21 @@ type Buffer struct {
 }
 
 func (b *Buffer) validate() error {
-	if b.Type != vectorBufferTypeDisk && b.Type != vectorBufferTypeMemory {
+	if b.Type != toVectorValue(v1alpha1.BufferTypeDisk) && b.Type != toVectorValue(v1alpha1.BufferTypeMemory) {
 		return fmt.Errorf("'type' field can't be with value '%s'", b.Type)
 	}
-	if b.WhenFull != vectorWhenFullBlock && b.WhenFull != vectorWhenFullDropNew {
+	if b.WhenFull != toVectorValue(v1alpha1.BufferWhenFullBlock) && b.WhenFull != toVectorValue(v1alpha1.BufferWhenFullDropNewest) {
 		return fmt.Errorf("'when_full' field can't be with value '%s'", b.WhenFull)
 	}
 
-	if b.Type == vectorBufferTypeDisk && b.MaxEvents != 0 {
+	if b.Type == toVectorValue(v1alpha1.BufferTypeDisk) && b.MaxEvents != 0 {
 		return fmt.Errorf("can't set max_events when buffer type is 'disk'")
 	}
-	if b.Type == vectorBufferTypeMemory && b.MaxBytes != 0 {
+	if b.Type == toVectorValue(v1alpha1.BufferTypeMemory) && b.MaxBytes != 0 {
 		return fmt.Errorf("can't set max_bytes when buffer type is 'memory'")
 	}
 
-	if b.Type == vectorBufferTypeDisk && b.MaxBytes < 268435488 {
+	if b.Type == toVectorValue(v1alpha1.BufferTypeDisk) && b.MaxBytes < 268435488 {
 		return fmt.Errorf("'max_bytes' can't be less 268435488")
 	}
 	return nil
@@ -134,36 +127,21 @@ func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	switch buffer.Type {
 	case v1alpha1.BufferTypeDisk:
 		return &Buffer{
-			Type:     typeToVectorValue(v1alpha1.BufferTypeDisk),
+			Type:     toVectorValue(string(v1alpha1.BufferTypeDisk)),
 			MaxBytes: buffer.Disk.MaxSizeBytes,
-			WhenFull: whenFullToVectorValue(buffer.WhenFull),
+			WhenFull: toVectorValue(buffer.WhenFull),
 		}
 	case v1alpha1.BufferTypeMemory:
 		return &Buffer{
-			Type:      typeToVectorValue(v1alpha1.BufferTypeMemory),
+			Type:      toVectorValue(string(v1alpha1.BufferTypeMemory)),
 			MaxEvents: buffer.Memory.MaxEvents,
-			WhenFull:  whenFullToVectorValue(buffer.WhenFull),
+			WhenFull:  toVectorValue(buffer.WhenFull),
 		}
 	}
 	return nil
 }
 
-func typeToVectorValue(t v1alpha1.BufferType) string {
-	switch t {
-	case v1alpha1.BufferTypeDisk:
-		return vectorBufferTypeDisk
-	case v1alpha1.BufferTypeMemory:
-		return vectorBufferTypeMemory
-	}
-	return ""
-}
-
-func whenFullToVectorValue(t v1alpha1.BufferWhenFull) string {
-	switch t {
-	case v1alpha1.BufferWhenFullDropNew:
-		return vectorWhenFullDropNew
-	case v1alpha1.BufferWhenFullBlock:
-		return vectorWhenFullBlock
-	}
-	return ""
+// it is a contract between Deckhouse and vector: Deckhouse use upper kebap, vector use snake case.
+func toVectorValue(t string) string {
+	return strcase.ToSnake(t)
 }

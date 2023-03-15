@@ -595,5 +595,5 @@ spec:
                     whenFull:
                       type: string
                       description: Event handling behavior when a buffer is full.
-                      enum: ["DropNew", "Block"]
+                      enum: ["DropNewest", "Block"]
                       default: "Block"
