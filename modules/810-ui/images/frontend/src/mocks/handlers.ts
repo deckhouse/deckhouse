@@ -35,7 +35,7 @@ export const handlers = [
     return res(ctx.delay(500), ctx.json(deckhouseConfig));
   }),
   rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/moduleconfigs/deckhouse"), (req, res, ctx) => {
-    return res(ctx.json(req.json()));
+    return res(ctx.delay(500), ctx.json(req.json()));
   }),
 
   // Releases
@@ -46,7 +46,7 @@ export const handlers = [
     return res(ctx.json(getDeckhouseRelease(req.params.name)));
   }),
   rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases/:name"), (req, res, ctx) => {
-    return res(ctx.json(req.json()));
+    return res(ctx.delay(500), ctx.json(req.json()));
   }),
 
   // Nodes

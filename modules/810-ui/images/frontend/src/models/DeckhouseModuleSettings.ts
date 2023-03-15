@@ -23,7 +23,7 @@ interface IDeckhouseModuleReleaseWindow {
   to: string;
 }
 
-interface IDeckhouseModuleReleaseNotification {
+export interface IDeckhouseModuleReleaseNotification {
   webhook?: string;
   minimalNotificationTime?: string;
   auth?: {

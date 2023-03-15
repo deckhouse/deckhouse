@@ -1,169 +1,145 @@
 <template>
   <GridBlock mode="form">
-    <CardBlock
-      title="Канал обновлений"
-      tooltip="Канал обновлений влияет на множество вещей"
-      class="col-span-2"
-      :content-loading="isLoading"
-    >
-      <template #content v-if="!isLoading">
-        <Field v-model="values.releaseChannel" :name="'releaseChannel'" v-slot="{ handleBlur }">
+    <CardBlock title="Канал обновлений" tooltip="Канал обновлений влияет на множество вещей" class="col-span-2">
+      <template #content>
+        <Field :name="'releaseChannel'">
           <SelectButton
             v-model="values.releaseChannel"
             :options="releaseChannelOptions"
             optionLabel="name"
             optionValue="value"
             :unselectable="false"
-            @change="handleBlur"
           />
         </Field>
       </template>
     </CardBlock>
-    <CardBlock title="Режим обновлений" tooltip="Всегда вручную или же автоамтически? Выбор за вами" :content-loading="isLoading">
-      <template #content v-if="!isLoading">
-        <Field v-model="values.release.mode" :name="'release.mode'" v-slot="{ handleBlur }">
+    <CardBlock title="Режим обновлений" tooltip="Всегда вручную или же автоамтически? Выбор за вами">
+      <template #content>
+        <Field :name="'release.mode'">
           <SelectButton
             v-model="values.release.mode"
             :options="releaseModeOptions"
             optionLabel="name"
             optionValue="value"
             :unselectable="false"
-            @change="handleBlur"
           />
         </Field>
       </template>
     </CardBlock>
-    <CardBlock title="Disruptive update" tooltip="Разрешить даже опасные обновления с острым соусом?" :content-loading="isLoading">
-      <template #content v-if="!isLoading">
-        <Field v-model="values.release.disruptionApprovalMode" :name="'release.disruptionApprovalMode'" v-slot="{ handleBlur }">
+    <CardBlock title="Disruptive update" tooltip="Разрешить даже опасные обновления с острым соусом?">
+      <template #content>
+        <Field :name="'release.disruptionApprovalMode'">
           <SelectButton
             v-model="values.release.disruptionApprovalMode"
             :options="disruptionApprovalModeOptions"
             optionLabel="name"
             optionValue="value"
             :unselectable="false"
-            @change="handleBlur"
           />
         </Field>
       </template>
     </CardBlock>
-    <CardBlock title="Окна обновлений" class="col-span-2" :content-loading="isLoading">
-      <template #content v-if="!isLoading">
+    <CardBlock title="Окна обновлений" class="col-span-2">
+      <template #content>
         <FieldArray :name="'release.windows'" v-model="values.release.windows" v-slot="{ fields, push, remove }">
           <InputRow v-for="(window, index) in fields" :key="window.key" class="mb-6">
-            <Field :name="`release.windows[${index}].days`" v-slot="{ handleBlur }">
+            <Field :name="`release.windows[${index}].days`">
               <MultiSelect
                 v-model="values.release.windows[index].days"
                 :options="weekDaysOptions"
                 optionLabel="name"
                 optionValue="value"
                 placeholder="Выберите дни"
-                @blur="handleBlur"
               />
             </Field>
-            <Field :name="`release.windows[${index}].from`" v-slot="{ handleBlur }">
+            <Field :name="`release.windows[${index}].from`">
               <FormLabel value="С" />
-              <Calendar v-model="values.release.windows[index].from" :showTime="true" :timeOnly="true" @blur="handleBlur" />
+              <Calendar v-model="values.release.windows[index].from" :showTime="true" :timeOnly="true" />
             </Field>
-            <Field :name="`release.windows[${index}].to`" v-slot="{ handleBlur }">
+            <Field :name="`release.windows[${index}].to`">
               <FormLabel value="До" />
-              <Calendar v-model="values.release.windows[index].to" :showTime="true" :timeOnly="true" @blur="handleBlur" />
+              <Calendar v-model="values.release.windows[index].to" :showTime="true" :timeOnly="true" />
             </Field>
-            <Button
-              icon="pi pi-times"
-              class="p-button-rounded p-button-danger p-button-outlined"
-              @click="
-                setFieldTouched('release.mode', true);
-                remove(index);
-              "
-            />
+            <Button icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined" @click="remove(index)" />
           </InputRow>
-          <Button
-            label="Добавить"
-            class="p-button-outlined p-button-info w-full"
-            @click="
-              push({ days: [], from: '00:00', to: '03:00' });
-              setFieldTouched('release.mode', true);
-            "
-          />
+          <Button label="Добавить" class="p-button-outlined p-button-info w-full" @click="push({ days: [], from: '00:00', to: '03:00' })" />
         </FieldArray>
       </template>
     </CardBlock>
-    <CardBlock title="Уведомить об обновлениях" v-if="!isLoading && values.release.notification">
+    <CardBlock title="Уведомить об обновлениях" v-if="values.notificationConfig">
       <template #content>
         <div class="flex gap-x-6 items-center mb-6">
           <div>
-            <Field
-              v-model="values.release.notification.minimalNotificationTime"
-              :name="'release.notification.minimalNotificationTime'"
-              v-slot="{ handleBlur }"
-            >
+            <Field :name="'notificationConfig.minimalNotificationTime'">
               <FormLabel value="Оповестить за:" />
               <Dropdown
-                v-model="values.release.notification.minimalNotificationTime"
+                v-model="values.notificationConfig.minimalNotificationTime"
                 :options="notifyBeforeOptions"
                 optionLabel="name"
                 optionValue="value"
-                @blur="handleBlur"
               />
             </Field>
           </div>
           <div>
-            <Field
-              v-model="values.release.notification.webhook"
-              :name="'release.notification.webhook'"
-              v-slot="{ handleBlur, errorMessage }"
-            >
+            <Field :name="'notificationConfig.webhook'" v-slot="{ errorMessage }">
               <FormLabel value="Через webhook" />
               <InputText
-                v-model="values.release.notification.webhook"
+                v-model="values.notificationConfig.webhook"
                 type="text"
                 :class="{ 'p-invalid': errorMessage }"
                 placeholder="http://example.com"
-                @blur="handleBlur"
               />
               <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
             </Field>
           </div>
         </div>
-        <Field v-model="notificationAuthMode" :name="'notificationAuthMode'" v-slot="{ handleBlur }">
+        <Field :name="'notificationAuthMode'">
           <FormLabel value="Используя авторизацию" />
           <SelectButton
-            v-model="notificationAuthMode"
+            v-model="values.notificationAuthMode"
             :options="notificationAuthModeOptions"
             optionLabel="name"
             optionValue="value"
             :unselectable="false"
-            @change="
-              notificationAuthModeChange();
-              handleBlur();
-            "
           />
         </Field>
 
-        <div class="flex gap-x-6 items-center mt-6" v-if="notificationAuthMode == 'basic'">
-          <Field v-model="values.release.notification.auth.basic.username" :name="'release.notification.auth.basic.username'">
-            <InputText v-model="values.release.notification.auth.basic.username" type="text" placeholder="Логин" />
+        <div class="flex gap-x-6 items-center mt-6" v-if="values.notificationAuthMode == 'basic'">
+          <Field :name="'notificationBasicAuth.username'" v-slot="{ errorMessage }">
+            <InputText
+              v-model="values.notificationBasicAuth.username"
+              type="text"
+              placeholder="Логин"
+              :class="{ 'p-invalid': errorMessage }"
+            />
+            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
           </Field>
-          <Field v-model="values.release.notification.auth.basic.password" :name="'release.notification.auth.basic.password'">
-            <InputText v-model="values.release.notification.auth.basic.password" type="text" placeholder="Пароль" />
+          <Field :name="'notificationBasicAuth.password'" v-slot="{ errorMessage }">
+            <InputText
+              v-model="values.notificationBasicAuth.password"
+              type="text"
+              placeholder="Пароль"
+              :class="{ 'p-invalid': errorMessage }"
+            />
+            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
           </Field>
         </div>
-        <div class="mt-6" v-if="notificationAuthMode == 'token'">
-          <Field v-model="values.release.notification.auth.bearerToken" :name="'release.notification.auth.bearerToken'">
-            <InputText v-model="values.release.notification.auth.bearerToken" type="text" placeholder="Token" />
+        <div class="mt-6" v-if="values.notificationAuthMode == 'token'">
+          <Field :name="'notificationAuthToken'" v-slot="{ errorMessage }">
+            <InputText v-model="values.notificationAuthToken" type="text" placeholder="Token" :class="{ 'p-invalid': errorMessage }" />
+            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
           </Field>
         </div>
       </template>
     </CardBlock>
   </GridBlock>
-  <FormActions v-if="!isLoading && meta.touched" @submit="submitForm($event)" @reset="resetForm()" />
+  <FormActions v-if="meta.dirty || submitLoading" @submit="submitForm($event)" @reset="resetForm()" :submit-loading="submitLoading" />
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, type PropType } from "vue";
 
-import DeckhouseModuleSettings, { DeckhouseSettings } from "@/models/DeckhouseModuleSettings";
-import type { IDeckhouseModuleRelease } from "@/models/DeckhouseModuleSettings";
+import type DeckhouseModuleSettings from "@/models/DeckhouseModuleSettings";
+import type { IDeckhouseModuleReleaseNotification } from "@/models/DeckhouseModuleSettings";
 
 import MultiSelect from "primevue/multiselect";
 import SelectButton from "primevue/selectbutton";
@@ -183,11 +159,17 @@ import FormLabel from "@/components/common/form/FormLabel.vue";
 import { Field, FieldArray, useForm } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";
 import { z } from "zod";
+import useFormLeaveGuard from "@/composables/useFormLeaveGuard";
 // import dayjs from "dayjs";
 
-// KOSTYL: we need to save full object for correct saving
-const deckhouseModuleSettings = ref<DeckhouseModuleSettings>();
-const isLoading = ref(true);
+const props = defineProps({
+  deckhouseModuleSettings: {
+    type: Object as PropType<DeckhouseModuleSettings>,
+    required: true,
+  },
+});
+
+const submitLoading = ref(false);
 
 const weekDaysOptions = [
   { name: "Понедельник", value: "Mon" },
@@ -226,12 +208,34 @@ const notifyBeforeOptions = [
   { name: "48 часов", value: "48h" },
 ];
 
-const notificationAuthMode = ref("none");
 const notificationAuthModeOptions = [
   { name: "Нет", value: "none" },
   { name: "Http-auth", value: "basic" },
   { name: "Token", value: "token" },
 ];
+const notificationAuthModes: string[] = notificationAuthModeOptions.map((t: any) => t.value);
+
+const initialValues = computed(() => {
+  let { notification, ...releaseConfig } = props.deckhouseModuleSettings.settings.release;
+  let notificationAuthMode: (typeof notificationAuthModes)[number];
+
+  if (!notification || Object.keys(notification).length == 0) notification = { webhook: "", minimalNotificationTime: "" };
+
+  const { auth: notificationAuth, ...notificationConfig } = notification;
+
+  if (notificationAuth && "basic" in notificationAuth) notificationAuthMode = "basic";
+  else if (notificationAuth && "bearerToken" in notificationAuth) notificationAuthMode = "token";
+  else notificationAuthMode = "none";
+
+  return {
+    release: releaseConfig,
+    releaseChannel: props.deckhouseModuleSettings.settings.releaseChannel,
+    notificationAuthMode: notificationAuthMode,
+    notificationConfig: notificationConfig,
+    notificationBasicAuth: notificationAuth?.basic || { username: "", password: "" },
+    notificationAuthToken: notificationAuth?.bearerToken,
+  };
+});
 
 // Validations
 const settingsSchema = z.object({
@@ -247,98 +251,75 @@ const settingsSchema = z.object({
       })
       .array()
       .optional(),
-    notification: z
-      .object({
-        minimalNotificationTime: z.string().optional(),
-        webhook: z.string().url().optional(),
-        auth: z
-          .object({
-            basic: z
-              .object({
-                username: z.string(),
-                password: z.string(),
-              })
-              .optional(),
-            bearerToken: z.string().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
   }),
+  notificationAuthMode: z.enum(notificationAuthModes as [string, ...string[]]),
+  notificationConfig: z.object({
+    minimalNotificationTime: z.string().optional(),
+    webhook: z.union([z.string().url().optional(), z.literal("")]),
+  }),
+  notificationBasicAuth: z
+    .object({
+      username: z
+        .string()
+        .optional()
+        .refine((val): boolean => (values.notificationAuthMode == "basic" ? !!val : true)),
+      password: z
+        .string()
+        .optional()
+        .refine((val): boolean => (values.notificationAuthMode == "basic" ? !!val : true)),
+    })
+    .optional(),
+  notificationAuthToken: z
+    .string()
+    .optional()
+    .refine((val): boolean => (values.notificationAuthMode == "token" ? !!val : true)),
 });
-const {
-  handleSubmit,
-  values,
-  meta,
-  setValues,
-  setFieldTouched,
-  resetForm: doFormReset,
-} = useForm({
+
+const { handleSubmit, values, meta, resetForm } = useForm({
   validationSchema: toFormValidator(settingsSchema),
+  initialValues: initialValues,
 });
+
+useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
 
 // Functions
+const submitForm = handleSubmit(
+  (values) => {
+    console.log(JSON.stringify(values, null, 2));
+    console.log(meta.value);
+    submitLoading.value = true;
+    let notification: IDeckhouseModuleReleaseNotification;
 
-const submitForm = handleSubmit((values) => {
-  console.log(JSON.stringify(values, null, 2));
-  console.log(meta.value);
+    // TODO: no mutating props?
+    // eslint-disable-next-line vue/no-mutating-props
+    props.deckhouseModuleSettings.spec.settings.releaseChannel = values.releaseChannel;
+    // eslint-disable-next-line vue/no-mutating-props
+    props.deckhouseModuleSettings.spec.settings.release = values.release;
 
-  for (const key of Object.keys(values)) {
-    if (key in deckhouseModuleSettings.value!.spec.settings) {
-      deckhouseModuleSettings.value!.spec.settings[key as keyof DeckhouseSettings] = values[key];
+    if (values.notificationConfig.minimalNotificationTime && values.notificationConfig.webhook) {
+      notification = { ...values.notificationConfig };
+      switch (values.notificationAuthMode) {
+        case "basic": {
+          notification.auth = { basic: values.notificationBasicAuth };
+          break;
+        }
+        case "token": {
+          notification.auth = { bearerToken: values.notificationAuthToken };
+          break;
+        }
+      }
+      // eslint-disable-next-line vue/no-mutating-props
+      props.deckhouseModuleSettings.spec.settings.release.notification = notification;
     }
+
+    props.deckhouseModuleSettings.save().then((a) => {
+      submitLoading.value = false;
+      // TODO: updated?
+      resetForm();
+    });
+  },
+  (err) => {
+    console.log("Validation errors", err);
   }
-
-  deckhouseModuleSettings.value!.save().then((a) => {
-    console.log(a);
-    resetForm();
-  });
-});
-
-function resetForm(): void {
-  doFormReset();
-  reload();
-}
-
-// TODO: settings setter?
-function notificationAuthModeChange() {
-  switch (notificationAuthMode.value) {
-    case "basic": {
-      values.release.notification.auth = { basic: { username: "", password: "" } };
-      break;
-    }
-    case "token": {
-      values.release.notification.auth = { bearerToken: "" };
-      break;
-    }
-    default: {
-      delete values.release.notification.auth;
-    }
-  }
-}
-
-function reload(): void {
-  isLoading.value = true;
-  DeckhouseModuleSettings.get().then((res: DeckhouseModuleSettings) => {
-    res.spec.settings.release ||= {} as IDeckhouseModuleRelease;
-    res.spec.settings.release.notification ||= {};
-
-    // deckhouseSettings.value = new DeckhouseSettings(res.spec.settings);
-    deckhouseModuleSettings.value = res;
-    setValues(res.spec.settings);
-    isLoading.value = false;
-
-    // TODO: settings getter?
-    if (res.spec.settings.release.notification?.auth && "basic" in res.spec.settings.release.notification.auth)
-      notificationAuthMode.value = "basic";
-    else if (res.spec.settings.release.notification?.auth && "bearerToken" in res.spec.settings.release.notification.auth)
-      notificationAuthMode.value = "token";
-    else notificationAuthMode.value = "none";
-
-    // @ts-ignore
-    // DeckhouseModuleSettings.subscribe(); // TODO: Alerts if smth change
-  });
-}
-
-reload();
+);
 </script>
