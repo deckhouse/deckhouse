@@ -33,3 +33,4 @@ csi/                        @zuzzas @kvaps
 deckhouse-controller/       @diafour
 dhctl/                      @name212
 docs/                       @z9r5
+helm_lib/                   @name212
