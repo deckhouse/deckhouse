@@ -59,7 +59,7 @@ metadata:
   annotations:
     extended-monitoring.flant.com/enabled: ""
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: test

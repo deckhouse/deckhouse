@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "cronjobs",
-			ApiVersion: "batch/v1beta1",
+			ApiVersion: "batch/v1",
 			Kind:       "CronJob",
 			FilterFunc: applyNameNamespaceFilter,
 		},
