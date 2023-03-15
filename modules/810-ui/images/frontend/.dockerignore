@@ -16,6 +16,11 @@ dist
 dist-ssr
 coverage
 *.local
+.husky
+.storybook
+.git
+.dockerignore
+.gitignore
 
 /cypress/videos/
 /cypress/screenshots/

@@ -1,0 +1,42 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
+docker:
+  # WORKDIR: /app
+  EXPOSE: '8080'
+  # USER: app
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-assets
+  add: /app/dist
+  after: install
+
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-assets
+from: {{ .Images.BASE_NODE_16_ALPINE }}
+git:
+- add: /modules/810-ui/images/frontend
+  to: /app
+  # owner: app
+  # group: app
+  excludePaths:
+  - public/mockServiceWorker.js
+  - vendor
+  - node_modules
+  - nginx.conf
+  stageDependencies:
+    install:
+    - package-lock.json
+    setup:
+    - src/*
+ansible:
+  install:
+  - name: 'Install dependencies'
+    shell: |
+      set -e
+      cd /app
+      npm i --ignore-scripts
+  setup:
+  - name: "Build assets"
+    shell: |
+      set -e
+      cd /app
+      NODE_ENV=production npm run build-only
