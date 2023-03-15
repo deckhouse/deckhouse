@@ -42,7 +42,7 @@ func initHandlers(
 	ctx context.Context,
 	router *httprouter.Router,
 	clientset *kubernetes.Clientset,
-	factory informers.SharedInformerFactory,
+	factory informers.SharedInformerFactory, // FIXME seem to be unused
 	dynClient *dynamic.DynamicClient,
 	dynFactory dynamicinformer.DynamicSharedInformerFactory,
 ) (http.HandlerFunc, error) {
@@ -100,8 +100,7 @@ func initHandlers(
 	for _, def := range definitions {
 		gvr, namespaced := def.gvr, def.ns
 
-		// Some GVRs require prelimmiaty check, because informers fail to init for
-		// inexisting custom resources
+		// Preliminary check for GVR that are expected to be absent
 		if def.check != nil {
 			ok, err := def.check(ctx, gvr)
 			if err != nil {
@@ -121,7 +120,7 @@ func initHandlers(
 		informer := dynFactory.ForResource(gvr)
 
 		// Resource event handler will dispatch resource events to its subscribers
-		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr))
+		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr.GroupResource()))
 
 		// HTTP handlers
 		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)

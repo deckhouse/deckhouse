@@ -89,17 +89,16 @@ func (s *subscriber) send(msg cableMessagePayload) {
 	}
 }
 
-func gvrIdentifier(gvr schema.GroupVersionResource) string {
+func gvrIdentifier(gr schema.GroupResource) string {
 	b, _ := json.Marshal(map[string]string{
 		"channel":       "GroupResourceChannel",
-		"groupResource": gvr.GroupResource().String(),
+		"groupResource": gr.String(),
 	})
 	return string(b)
 }
 
 func newSubscriptionController(resourceEventHandler *resourceEventHandler) *subscriptionController {
 	return &subscriptionController{
-		// subscribers:             make(map[*subscriber]struct{}),
 		subscriberMessageBuffer: 16,
 		resourceEventHandler:    resourceEventHandler,
 	}
@@ -119,10 +118,10 @@ type subscriptionController struct {
 func (sc *subscriptionController) Start(ctx context.Context) {
 	for {
 		select {
-		case evMessage := <-sc.resourceEventHandler.Data():
-			evMessage.subscriber.send(cableMessagePayload{
-				Identifier: gvrIdentifier(evMessage.gvr),
-				Message:    evMessage.message,
+		case ev := <-sc.resourceEventHandler.Events():
+			ev.subscriber.send(cableMessagePayload{
+				Identifier: gvrIdentifier(ev.groupResource),
+				Message:    ev.message,
 			})
 		// case data := <-sc.discoveryHandler:
 		// 	data.subscriber.send(cableMessagePayload{
@@ -149,6 +148,8 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 
 	in := make(chan cableCommandPayload)
 	readerr := make(chan error)
+
+	// Receiving commands from client
 	go func() {
 		for {
 			select {
@@ -200,6 +201,13 @@ func (sc *subscriptionController) subscribe(ctx context.Context, conn *websocket
 	}
 }
 
+func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	return c.Write(ctx, websocket.MessageText, msg)
+}
+
 type channelMessage struct {
 	Channel string `json:"channel"`
 }
@@ -247,9 +255,17 @@ func (sc *subscriptionController) handleGroupResourceChannelSubscription(s *subs
 }
 
 type resourceEventMessage struct {
-	gvr        schema.GroupVersionResource
-	subscriber *subscriber
-	message    eventMessage
+	groupResource schema.GroupResource
+	subscriber    *subscriber
+	message       eventMessage
+}
+
+type resourceEventHandler struct {
+	// subscribers map tracks the subscription of a subscriber to a particular GroupResource
+	subscribers   map[*subscriber]map[string]struct{}
+	subscribersMu sync.Mutex
+
+	data chan resourceEventMessage
 }
 
 func newResourceEventHandler() *resourceEventHandler {
@@ -259,22 +275,8 @@ func newResourceEventHandler() *resourceEventHandler {
 	}
 }
 
-func (reh *resourceEventHandler) Data() <-chan resourceEventMessage {
+func (reh *resourceEventHandler) Events() <-chan resourceEventMessage {
 	return reh.data
-}
-
-type resourceEventHandler struct {
-	subscribers   map[*subscriber]map[string]struct{}
-	subscribersMu sync.Mutex
-
-	data chan resourceEventMessage
-}
-
-func writeWithTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	return c.Write(ctx, websocket.MessageText, msg)
 }
 
 func (reh *resourceEventHandler) addResourceSubscription(s *subscriber, gr schema.GroupResource) {
@@ -294,8 +296,8 @@ func (reh *resourceEventHandler) deleteResourceSubscription(s *subscriber, gr sc
 	reh.subscribersMu.Unlock()
 }
 
-func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
-	key := gvr.GroupResource().String()
+func (reh *resourceEventHandler) Handle(gr schema.GroupResource) cache.ResourceEventHandlerFuncs {
+	key := gr.String()
 
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(o interface{}) {
@@ -305,8 +307,8 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
 					reh.data <- resourceEventMessage{
-						gvr:        gvr,
-						subscriber: s,
+						groupResource: gr,
+						subscriber:    s,
 						message: eventMessage{
 							MessageType: "create",
 							Message:     o,
@@ -322,8 +324,8 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
 					reh.data <- resourceEventMessage{
-						gvr:        gvr,
-						subscriber: s,
+						groupResource: gr,
+						subscriber:    s,
 						message: eventMessage{
 							MessageType: "update",
 							Message:     updated,
@@ -339,8 +341,8 @@ func (reh *resourceEventHandler) Handle(gvr schema.GroupVersionResource) cache.R
 			for s, groupResourceSubs := range reh.subscribers {
 				if _, ok := groupResourceSubs[key]; ok {
 					reh.data <- resourceEventMessage{
-						gvr:        gvr,
-						subscriber: s,
+						groupResource: gr,
+						subscriber:    s,
 						message: eventMessage{
 							MessageType: "delete",
 							Message:     old,
