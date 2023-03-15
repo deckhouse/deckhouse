@@ -89,9 +89,9 @@ func newDynamicTransform(threshold int32, keyField string) *DynamicTransform {
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
+			excludeField:  "null",
 			"threshold":   threshold,
 			"window_secs": 60,
-			excludeField:  "null",
 		},
 	}
 	if keyField != "" {
