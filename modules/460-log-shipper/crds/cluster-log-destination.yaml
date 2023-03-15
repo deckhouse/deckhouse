@@ -596,3 +596,4 @@ spec:
                       type: string
                       description: Event handling behavior when a buffer is full.
                       enum: ["DropNew", "Block"]
+                      default: "Block"
