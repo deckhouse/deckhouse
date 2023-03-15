@@ -16,7 +16,7 @@
         description: |
           The recommended course of action:
           1. Retrieve details of the DaemonSet: `kubectl -n d8-linstor describe daemonset linstor-csi-node`
-          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi`
+          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/component=csi-node`
 
     - alert: D8LinstorCsiNodePodIsNotRunning
       expr: absent(avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"linstor-csi-node-.*"})
@@ -33,4 +33,4 @@
         description: |
           The recommended course of action:
           1. Retrieve details of the DaemonSet: `kubectl -n d8-linstor describe daemonset linstor-csi-node`
-          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi`
+          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/component=csi-node`
