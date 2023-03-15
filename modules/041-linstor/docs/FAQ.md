@@ -137,8 +137,7 @@ Some typical problems are described here:
 Check the status of the `linstor-node` Pods:
 
 ```shell
-kubectl get pod -n d8-linstor -l app.kubernetes.io/instance=linstor,\
-app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node
+kubectl get pod -n d8-linstor -l app=linstor-node
 ```
 
 If you see that some of them get stuck in `Init:CrashLoopBackOff` state, check the logs of `kernel-module-injector` container:
@@ -189,8 +188,7 @@ contain driver linstor.csi.linbit.com
 Check the status of the `linstor-csi-node` Pods:
 
 ```shell
-kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,\
-app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi
+kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node
 ```
 
 Most likely they are stuck in the `Init` state, waiting for the node to change its status to `Online` in LINSTOR. Run the following command to check the list of nodes:
