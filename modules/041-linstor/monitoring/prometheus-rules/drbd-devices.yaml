@@ -42,23 +42,30 @@
 
           The recommended course of action:
           1. Login into node with the problem: `kubectl -n d8-linstor exec -ti $(kubectl -n d8-linstor get pod --field-selector=spec.nodeName={{ $labels.node }} -l app=linstor-node -o name) -c linstor-satellite -- bash`
-          2. Check the LINSTOR resource states: `linstor resource list -r {{ $labels.name }}`
-          3. Make sure if {{ $labels.node }} persists in output of above command
+          2. Check the drbd resource state: `drbd status {{ $labels.name }}`
+             If all the connections are green (Diskless or UpToDate) but you see `quorum:no blocked:upper`, then most probably you're faced with this [DRBD bug](https://lists.linbit.com/pipermail/drbd-user/2023-March/026373.html).
+             To fix this it should be enough to remove and create an additional diskless replica:
+             ```
+             linstor resource create some-node {{ $labels.name }} -d
+             linstor resource delete some-node {{ $labels.name }}
+             ```
+
+          3. Check the LINSTOR resource states: `linstor resource list -r {{ $labels.name }}`
+          4. Make sure if {{ $labels.node }} persists in output of above command
 
           If non-persists:
-          4a. Try to remove the resource from the kernel: `drbdsetup down {{ $labels.name }}`
-          5a. If command has stuck consider rebooting the node {{ $labels.node }}
+          5a. Try to remove the resource from the kernel: `drbdsetup down {{ $labels.name }}`
+          6a. If command has stuck consider rebooting the node {{ $labels.node }}
 
           If persists:
-          4b. Check the LINSTOR node and peer node states: `linstor node list -n {{ $labels.node }} {{ $labels.conn_name }}`
-          
-          5b. Check connectivity between {{ $labels.node }} and {{ $labels.conn_name }}
-          6b. View the status of the DRBD device on the node and try to figure out why it has no quorum:
+          5b. Check the LINSTOR node and peer node states: `linstor node list -n {{ $labels.node }} {{ $labels.conn_name }}`
+          6b. Check connectivity between {{ $labels.node }} and {{ $labels.conn_name }}
+          7b. View the status of the DRBD device on the node and try to figure out why it has no quorum:
               ```
               drbdsetup status --verbose {{ $labels.name }}
               dmesg --color=always | grep 'drbd {{ $labels.name }}'
               ```
-          7b. Consider recreating failed resources in LINSTOR
+          8b. Consider recreating failed resources in LINSTOR
               ```
               linstor resource delete {{ $labels.node }} {{ $labels.name }}
               linstor resource-definition auto-place {{ $labels.name }}
@@ -157,7 +164,6 @@
 
           If persists:
           4b. Check the LINSTOR node and peer node states: `linstor node list -n {{ $labels.node }} {{ $labels.conn_name }}`
-          
           5b. Check connectivity between {{ $labels.node }} and {{ $labels.conn_name }}
           6b. View the status of the DRBD device on the node and try to figure out why it is not connected:
               ```
