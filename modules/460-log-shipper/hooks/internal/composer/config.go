@@ -113,9 +113,6 @@ func (v *VectorFile) AppendLogPipeline(pipeline *Pipeline) error {
 
 	for _, pipelineDest := range pipeline.Destinations {
 		dest := pipelineDest.Destination
-		if err := dest.Validate(); err != nil {
-			return err
-		}
 
 		if _, ok := v.Sinks[dest.GetName()]; !ok {
 			v.Sinks[dest.GetName()] = dest

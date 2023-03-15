@@ -33,5 +33,4 @@ type LogTransform interface {
 type LogDestination interface {
 	GetName() string
 	SetInputs([]string)
-	Validate() error
 }

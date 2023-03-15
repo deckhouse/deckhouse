@@ -18,8 +18,6 @@ package destination
 
 import (
 	"encoding/base64"
-	"fmt"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
@@ -43,19 +41,6 @@ func (cs *CommonSettings) SetInputs(inp []string) {
 
 func (cs *CommonSettings) GetName() string {
 	return cs.Name
-}
-
-func (cs *CommonSettings) Validate() error {
-	errorsList := make([]string, 0)
-	if cs.Buffer != nil {
-		if err := cs.Buffer.validate(); err != nil {
-			errorsList = append(errorsList, err.Error())
-		}
-	}
-	if len(errorsList) > 0 {
-		return fmt.Errorf(strings.Join(errorsList, "\n"))
-	}
-	return nil
 }
 
 type Healthcheck struct {
@@ -86,27 +71,6 @@ type Buffer struct {
 	WhenFull  string `json:"when_full,omitempty"`
 }
 
-func (b *Buffer) validate() error {
-	if b.Type != toVectorValue(v1alpha1.BufferTypeDisk) && b.Type != toVectorValue(v1alpha1.BufferTypeMemory) {
-		return fmt.Errorf("'type' field can't be with value '%s'", b.Type)
-	}
-	if b.WhenFull != toVectorValue(v1alpha1.BufferWhenFullBlock) && b.WhenFull != toVectorValue(v1alpha1.BufferWhenFullDropNewest) {
-		return fmt.Errorf("'when_full' field can't be with value '%s'", b.WhenFull)
-	}
-
-	if b.Type == toVectorValue(v1alpha1.BufferTypeDisk) && b.MaxEvents != 0 {
-		return fmt.Errorf("can't set max_events when buffer type is 'disk'")
-	}
-	if b.Type == toVectorValue(v1alpha1.BufferTypeMemory) && b.MaxBytes != 0 {
-		return fmt.Errorf("can't set max_bytes when buffer type is 'memory'")
-	}
-
-	if b.Type == toVectorValue(v1alpha1.BufferTypeDisk) && b.MaxBytes < 268435488 {
-		return fmt.Errorf("'max_bytes' can't be less 268435488")
-	}
-	return nil
-}
-
 func decodeB64(input string) string {
 	res, _ := base64.StdEncoding.DecodeString(input)
 	return string(res)
@@ -116,6 +80,7 @@ func ComposeName(n string) string {
 	return "destination/cluster/" + n
 }
 
+// buildVectorBuffer generates buffer config for vector if CRD buffer config is set
 func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
 	if buffer != nil {
 		return buildVectorBufferNotNil(buffer)
@@ -123,6 +88,8 @@ func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
 	return nil
 }
 
+// buildVectorBufferNotNil generates buffer config for vector
+// There is no need to validation, because there is already validation on CRD site
 func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	switch buffer.Type {
 	case v1alpha1.BufferTypeDisk:
@@ -141,7 +108,8 @@ func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	return nil
 }
 
-// it is a contract between Deckhouse and vector: Deckhouse use upper kebap, vector use snake case.
+// toVectorValue converts string to snake case
+// it is a contract between Deckhouse and vector: Deckhouse uses upper kebap, vector uses snake case.
 func toVectorValue(t string) string {
 	return strcase.ToSnake(t)
 }
