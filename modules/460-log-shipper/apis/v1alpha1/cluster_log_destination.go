@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -200,7 +201,7 @@ const (
 type BufferDisk struct {
 	// 	The maximum size of the buffer on disk.
 	// Must be at least ~256 megabytes (268435488 bytes).
-	MaxSizeBytes uint32 `json:"maxSizeBytes,omitempty"`
+	MaxSizeBytes resource.Quantity `json:"maxSizeBytes,omitempty"`
 }
 
 type BufferMemory struct {

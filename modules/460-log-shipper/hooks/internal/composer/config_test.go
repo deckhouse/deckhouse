@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -66,7 +67,7 @@ func TestConfig(t *testing.T) {
 					Buffer: &v1alpha1.Buffer{
 						Type: "Disk",
 						Disk: v1alpha1.BufferDisk{
-							MaxSizeBytes: 268435488,
+							MaxSizeBytes: *resource.NewQuantity(268435488, resource.BinarySI),
 						},
 						WhenFull: "Block",
 					},

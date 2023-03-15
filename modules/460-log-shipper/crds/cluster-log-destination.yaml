@@ -585,7 +585,11 @@ spec:
                           description: |
                             The maximum size of the buffer on disk.
                             Must be at least ~256 megabytes (268435488 bytes).
-                          type: number
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
                     memory:
                       type: object
                       properities:

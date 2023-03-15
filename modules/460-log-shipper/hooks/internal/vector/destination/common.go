@@ -128,7 +128,7 @@ func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	case v1alpha1.BufferTypeDisk:
 		return &Buffer{
 			Type:     toVectorValue(v1alpha1.BufferTypeDisk),
-			MaxBytes: buffer.Disk.MaxSizeBytes,
+			MaxBytes: uint32(buffer.Disk.MaxSizeBytes.Value()),
 			WhenFull: toVectorValue(buffer.WhenFull),
 		}
 	case v1alpha1.BufferTypeMemory:
