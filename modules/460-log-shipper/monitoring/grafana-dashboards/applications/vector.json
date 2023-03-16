@@ -1524,7 +1524,7 @@
           ]
         },
         "definition": "label_values(vector_component_errors_total{node=~\"$node\", job=\"log-shipper-agent\", component_name=~\"$component\"}, component_name)",
-        "hide": 0,
+        "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "component_with_errors",
