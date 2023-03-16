@@ -222,7 +222,7 @@ k8s:
       kubeProxy: sha256:2f0df9a9723a314a5c85e9bedd5f1cdc28468655ed8e5d6393250e4acc886bb8
   '1.25':
     status: available
-    patch: 4
+    patch: 5
     cniVersion: 1.1.1
     bashible: *bashible_k8s_ge_1_21
     ccm:
@@ -244,5 +244,5 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:840d5b9fc29f4cddef60d832f410e3979dde2b8224cdb76dce0784394c0366a0
-      kubeProxy: sha256:1df694ba49eb1263a84c6cb32dd143d09b3e0b6cb0d48fddb3424cc4afe22e49
+      kubeScheduler: sha256:556cc202a64cde3c84a2e11be976eec8514966d961b4339cb299bfd5a71835de
+      kubeProxy: sha256:673a1b3cee0d57d78e91c33ff488afb13f09f968b8750ecf0a0eabec6f5a93eb
