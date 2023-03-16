@@ -311,6 +311,7 @@ apiVersions:
           The name of the tag category used to identify the zone (vSphere Cluster).
         default: "k8s-zone"
       disableTimesync:
+        x-doc-default: true
         type: boolean
         description: |
           Disable time synchronization on the vSphere side.
