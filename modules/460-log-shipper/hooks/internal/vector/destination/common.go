@@ -28,6 +28,10 @@ import (
 
 var _ apis.LogDestination = (*CommonSettings)(nil)
 
+const (
+	bufferMaxBytesMinimumValue uint32 = 268435488
+)
+
 type CommonSettings struct {
 	Name        string      `json:"-"`
 	Type        string      `json:"type"`
@@ -94,9 +98,13 @@ func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
 func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
 	switch buffer.Type {
 	case v1alpha1.BufferTypeDisk:
+		maxBytes := uint32(buffer.Disk.MaxSize.Value())
+		if maxBytes < bufferMaxBytesMinimumValue {
+			maxBytes = bufferMaxBytesMinimumValue
+		}
 		return &Buffer{
 			Type:     toVectorValue(v1alpha1.BufferTypeDisk),
-			MaxBytes: uint32(buffer.Disk.MaxSizeBytes.Value()),
+			MaxBytes: maxBytes,
 			WhenFull: toVectorValue(buffer.WhenFull),
 		}
 	case v1alpha1.BufferTypeMemory:

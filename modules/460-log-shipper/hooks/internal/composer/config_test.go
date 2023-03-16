@@ -67,7 +67,7 @@ func TestConfig(t *testing.T) {
 					Buffer: &v1alpha1.Buffer{
 						Type: "Disk",
 						Disk: v1alpha1.BufferDisk{
-							MaxSizeBytes: *resource.NewQuantity(268435488, resource.BinarySI),
+							MaxSize: *resource.NewQuantity(268435488, resource.BinarySI),
 						},
 						WhenFull: "Block",
 					},
@@ -99,6 +99,13 @@ func TestConfig(t *testing.T) {
 				spec := v1alpha1.ClusterLogDestinationSpec{
 					Logstash: v1alpha1.LogstashSpec{
 						Endpoint: "192.168.0.1:9000",
+					},
+					Buffer: &v1alpha1.Buffer{
+						Type: "Disk",
+						Disk: v1alpha1.BufferDisk{
+							MaxSize: *resource.NewQuantity(215, resource.BinarySI),
+						},
+						WhenFull: "Block",
 					},
 				}
 

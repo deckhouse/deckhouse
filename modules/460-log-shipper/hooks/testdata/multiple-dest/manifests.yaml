@@ -95,7 +95,7 @@ spec:
   buffer:
     type: Disk
     disk:
-      maxSizeBytes: 536870912
+      maxSize: 536870912
     whenFull: DropNewest
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -122,5 +122,5 @@ spec:
   buffer:
     type: Disk
     disk:
-      maxSizeBytes: 268435488
+      maxSize: 258Mi
     whenFull: Block

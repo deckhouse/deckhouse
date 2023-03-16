@@ -201,7 +201,7 @@ const (
 type BufferDisk struct {
 	// 	The maximum size of the buffer on disk.
 	// Must be at least ~256 megabytes (268435488 bytes).
-	MaxSizeBytes resource.Quantity `json:"maxSizeBytes,omitempty"`
+	MaxSize resource.Quantity `json:"maxSize,omitempty"`
 }
 
 type BufferMemory struct {

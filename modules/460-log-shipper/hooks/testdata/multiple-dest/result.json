@@ -222,7 +222,7 @@
       "suppress_type_name": true,
       "buffer": {
         "type": "disk",
-        "max_bytes": 268435488,
+        "max_bytes": 270532608,
         "when_full": "block"
       }
     },
