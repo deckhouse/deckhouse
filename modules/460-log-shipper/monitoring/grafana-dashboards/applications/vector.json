@@ -1517,10 +1517,10 @@
         "current": {
           "selected": true,
           "text": [
-            "cluster_logging_config/okmeter-loki"
+            "All"
           ],
           "value": [
-            "cluster_logging_config/okmeter-loki"
+            "$__all"
           ]
         },
         "definition": "label_values(vector_component_errors_total{node=~\"$node\", job=\"log-shipper-agent\", component_name=~\"$component\"}, component_name)",
