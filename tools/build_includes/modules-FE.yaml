@@ -74,6 +74,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/500-operator-trivy
+  to: /deckhouse/modules/500-operator-trivy
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/502-delivery
   to: /deckhouse/modules/502-delivery
   stageDependencies:

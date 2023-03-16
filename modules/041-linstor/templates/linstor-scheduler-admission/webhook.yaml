@@ -21,6 +21,7 @@ webhooks:
       - d8-metallb
       - d8-keepalived
       - d8-network-gateway
+      - d8-operator-trivy
       - d8-delivery
       - d8-flant-integration
       - d8-runtime-audit-engine
@@ -52,7 +53,6 @@ webhooks:
       - d8-cdi
       - d8-okmeter
       - d8-openvpn
-      - d8-operator-trivy
   rules:
   - apiGroups:   [""]
     apiVersions: ["v1"]
