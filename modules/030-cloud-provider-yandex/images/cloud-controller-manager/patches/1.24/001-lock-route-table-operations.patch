@@ -1,4 +1,4 @@
-Subject: [PATCH] Added route table API locking
+Subject: [PATCH] 001
 ---
 Index: pkg/cloudprovider/yandex/routes.go
 IDEA additional info:
@@ -7,13 +7,15 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/cloudprovider/yandex/routes.go b/pkg/cloudprovider/yandex/routes.go
 --- a/pkg/cloudprovider/yandex/routes.go	(revision fd5725566d06883e6102499a1280982401be4432)
-+++ b/pkg/cloudprovider/yandex/routes.go	(date 1674041399136)
-@@ -3,7 +3,9 @@
++++ b/pkg/cloudprovider/yandex/routes.go	(date 1679489787689)
+@@ -2,8 +2,10 @@
+
  import (
  	"context"
- 	"fmt"
+-	"fmt"
 +	"sync"
 
++	"github.com/davecgh/go-spew/spew"
 +	"github.com/pkg/errors"
  	"github.com/yandex-cloud/go-genproto/yandex/cloud/operation"
  	"github.com/yandex-cloud/go-genproto/yandex/cloud/vpc/v1"
