@@ -72,7 +72,6 @@ func processExtraFieldKey(key string, value string) string {
 		return fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", dataField, key, dataField)
 	}
 	return fmt.Sprintf(" .%s=\"%s\" \n", key, value)
-
 }
 
 func mapKeys(m map[string]string) []string {
