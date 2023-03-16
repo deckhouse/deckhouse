@@ -19,10 +19,11 @@ package destination
 import (
 	"encoding/base64"
 
+	"github.com/iancoleman/strcase"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/iancoleman/strcase"
 )
 
 var _ apis.LogDestination = (*CommonSettings)(nil)
