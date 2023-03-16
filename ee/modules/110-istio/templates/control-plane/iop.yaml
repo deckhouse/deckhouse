@@ -134,8 +134,6 @@ spec:
         level: "default:info"
       logAsJson: false
       imagePullPolicy: IfNotPresent
-      imagePullSecrets:
-      - d8-istio-sidecar-registry
 
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}

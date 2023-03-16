@@ -5,12 +5,6 @@
 Iternal patch which adds `libguestfs`, `virt-exportserver` and `virt-exportproxy`
 to images bundle target.
 
-#### `002-deckhouse-registry.patch`
-
-Internal patch which adds deckhouse ImagePullSecrets to kubevirt VMs
-
-- https://github.com/kubevirt/kubevirt/issues/8302
-
 #### `003-network-aware-livemigration.patch`
 
 Allow live-migration for pod network in bridge mode

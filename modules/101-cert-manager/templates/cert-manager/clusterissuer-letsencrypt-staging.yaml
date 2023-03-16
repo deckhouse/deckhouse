@@ -21,7 +21,6 @@ spec:
           {{- end }}
           podTemplate:
             spec:
-              serviceAccountName: acme-solver-deckhouse-sa
               tolerations:
                 - key: "node-role.kubernetes.io/master"
                   operator: "Exists"

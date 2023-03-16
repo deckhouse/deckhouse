@@ -177,9 +177,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			deploymentOperatorV13 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x13x7")
 			deploymentOperatorV12 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x12x6")
 
-			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
-			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
-
 			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
 
 			serviceGlobal := f.KubernetesResource("Service", "d8-istio", "istiod")
@@ -189,9 +186,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(deploymentOperatorV13.Exists()).To(BeTrue())
 			Expect(deploymentOperatorV12.Exists()).To(BeTrue())
 			Expect(secretCacerts.Exists()).To(BeTrue())
-
-			Expect(secretD8RegistryFoo.Exists()).To(BeTrue())
-			Expect(secretD8RegistryBar.Exists()).To(BeTrue())
 
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(serviceGlobal.Exists()).To(BeTrue())
