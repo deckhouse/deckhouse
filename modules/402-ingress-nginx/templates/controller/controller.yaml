@@ -69,7 +69,7 @@ spec:
     {{- end }}
 {{- end }}
 ---
-apiVersion: apps/v1
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   name: controller-{{ $name }}
@@ -86,6 +86,7 @@ metadata:
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
+    apps.kruise.io/image-predownload-parallelism: "3"
 spec:
   revisionHistoryLimit: 3
   {{- if $loadBalancer }}
