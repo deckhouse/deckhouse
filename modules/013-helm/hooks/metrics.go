@@ -70,7 +70,7 @@ const unsupportedVersionsYAML = `
   "snapshot.storage.k8s.io/v1beta1": ["VolumeSnapshot"]
 
 "1.25":
-  "batch/v1beta1": ["CronJob"]
+  "batch/v1": ["CronJob"]
   "discovery.k8s.io/v1beta1": ["EndpointSlice"]
   "events.k8s.io/v1beta1": ["Event"]
   "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
