@@ -81,7 +81,7 @@ func handleNodeDrain(clientset *kubernetes.Clientset, reg *informerRegistry, gvr
 // handleNodeGroupScripts fetches bootstrap.sh and adopt.sh from corresponding NG secret.
 func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegistry, ngGVR schema.GroupVersionResource) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-		nodegroupName := params.ByName("name")
+		ngName := params.ByName("name")
 
 		// Verify setup
 		ngInformer := reg.Get(ngGVR.GroupResource())
@@ -95,9 +95,9 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 		}
 
 		// Ensure NodeGroup type is suitable to share scripts
-		ngObj, err := ngInformer.Lister().Get(nodegroupName)
+		ngObj, err := ngInformer.Lister().Get(ngName)
 		if err != nil {
-			klog.Errorf("error getting NodeGroup %q: %v", nodegroupName, err)
+			klog.Errorf("error getting NodeGroup %q: %v", ngName, err)
 			if apierrors.IsNotFound(err) {
 				w.WriteHeader(http.StatusNotFound)
 				_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -109,20 +109,20 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 		}
 		ng := ngObj.(*unstructured.Unstructured)
 		ngType, ok, err := unstructured.NestedString(ng.UnstructuredContent(), "spec", "nodeType")
-		if err != nil {
-			klog.Errorf("reading spec.nodeType in NodeGroup %q: %v", nodegroupName, err)
+		if err != nil || !ok {
+			if err != nil {
+				klog.Errorf("reading spec.nodeType in NodeGroup %q: %v", ngName, err)
+			}
+			if !ok {
+				klog.Errorf("reading spec.nodeType in NodeGroup %q: no such field", ngName)
+			}
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting NodeGroup"}) // generic error for client
 			return
 		}
-		if !ok {
-			klog.Errorf("error getting NodeGroup %q: %v", nodegroupName, err)
-			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting NodeGroup"}) // generic error for client
-			return
-		}
-		// Check for allowed node types
-		if ngType != "CloudStatic" && ngType != "Static" && ngType != "CloudPermanent" {
+
+		// Check for allowed node types (static ones)
+		if ngType != "CloudStatic" && ngType != "Static" {
 			// No scripts implied, though secrets might be there
 			w.WriteHeader(http.StatusNotFound)
 			w.Header().Set("Content-Type", "application/json")
@@ -131,7 +131,7 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 		}
 
 		namespace := "d8-cloud-instance-manager"
-		secretName := "manual-bootstrap-for-" + nodegroupName
+		secretName := "manual-bootstrap-for-" + ngName
 		secretObj, err := informer.Lister().ByNamespace(namespace).Get(secretName)
 		if err != nil {
 			klog.Errorf("error getting secret %q: %v", secretName, err)
