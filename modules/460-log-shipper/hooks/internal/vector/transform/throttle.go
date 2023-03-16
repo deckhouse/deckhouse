@@ -32,7 +32,6 @@ const (
 
 // ThrottleTransform adds throttling to event's flow.
 func ThrottleTransform(rl v1alpha1.RateLimitSpec) ([]apis.LogTransform, error) {
-
 	if rl.Excludes != nil && rl.KeyField != "" {
 		return processExcludesForDynamicTransform(rl.Excludes, *rl.LinesPerMinute, rl.KeyField)
 	}
