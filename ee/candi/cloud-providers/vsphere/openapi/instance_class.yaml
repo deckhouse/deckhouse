@@ -45,10 +45,13 @@ spec:
 
                     The disk will be automatically enlarged if its size in the template is less than specified.
                   example: 20
+                  x-doc-default: 20
                   type: integer
                 template:
                   description: |
                     Path to the template to be cloned. Relative to the datacenter.
+
+                    By default, a template from the `master` InstanceClass is used.
                   example: dev/golden_image
                   type: string
                 mainNetwork:
@@ -68,9 +71,12 @@ spec:
                 datastore:
                   description: |
                     Path to a Datastore in which VirtualMachines will be cloned. Relative to the datacenter.
+
+                    By default, a datastore from the `master` InstanceClass is used.
                   example: lun-1201
                   type: string
                 disableTimesync:
+                  x-doc-default: true
                   description: >
                     Disable time synchronization in Guest VM.
 
@@ -79,6 +85,8 @@ spec:
                 resourcePool:
                   description: |
                     Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
+
+                    By default, the value from `VsphereCloudDiscoveryData` is used.
                   example: rp-2012
                   type: string
                 runtimeOptions:

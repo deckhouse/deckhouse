@@ -153,6 +153,7 @@ apiVersions:
           description: |
             Имя категории тегов, использующихся для идентификации зоны (vSphere Cluster).
         disableTimesync:
+          x-doc-default: true
           description: |
             Отключение синхронизации времени со стороны vSphere.
 
