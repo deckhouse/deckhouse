@@ -33,69 +33,17 @@ var (
 )
 
 // ExtraFieldTransform converts templated labels to values.
-//
-// TODO(nabokihms): Honestly, I do not know exactly how this function works.
+// It generates valid VRL remaps from key-value pairs
 //
 //	Only required for Elasticsearch sinks.
-//	It definitely deserves refactoring. My assumption is that it generates VRL rules from extra labels.
 //	Example:
 //	  label_name: {{ values.app }} -> .label_name = .values.app
-//
-// NOTE: it seems like this function does not escape variable names with a minus sign
-// Example: {{ screw-driver }} leads to .parsed_data.screw-driver, which is invalid for vector.
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
-	var dataField string
+	tmpFields := make([]string, 0)
+	keys := mapKeys(extraFields)
 
-	tmpFields := make([]string, 0, len(extraFields))
-	keys := make([]string, 0, len(extraFields))
-	for key := range extraFields {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
 	for _, k := range keys {
-		if validMustacheTemplate.MatchString(extraFields[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(extraFields[k])[1]
-			if dataField == "parsed_data" {
-				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", k))
-			} else {
-				tmpDataFieldParts := strings.Split(dataField, ".")
-				dataFieldParts := make([]string, 0)
-				i := 0
-				for i < len(tmpDataFieldParts) {
-					if tmpDataFieldParts[i][len(tmpDataFieldParts[i])-1] == '\\' && i+1 <= len(tmpDataFieldParts) {
-						buf := tmpDataFieldParts[i]
-						iter := i + 1
-						for iter < len(tmpDataFieldParts) {
-							if tmpDataFieldParts[iter][len(tmpDataFieldParts[iter])-1] != '\\' {
-								buf = buf + "." + tmpDataFieldParts[iter]
-								break
-							}
-							buf = buf + "." + tmpDataFieldParts[iter]
-							iter++
-						}
-						dataFieldParts = append(dataFieldParts, buf)
-						i = iter + 1
-					} else {
-						dataFieldParts = append(dataFieldParts, tmpDataFieldParts[i])
-						i++
-					}
-				}
-				for i := range dataFieldParts {
-					if strings.Contains(dataFieldParts[i], "-") || strings.Contains(dataFieldParts[i], "\\") {
-						if vectorArrayTemplate.MatchString(dataFieldParts[i]) {
-							arrayVarParts := strings.Split(dataFieldParts[i], "[")
-							dataFieldParts[i] = fmt.Sprintf("\"%s\"[%s", strings.ReplaceAll(arrayVarParts[0], "\\", ""), arrayVarParts[1])
-						} else {
-							dataFieldParts[i] = fmt.Sprintf("\"%s\"", strings.ReplaceAll(dataFieldParts[i], "\\", ""))
-						}
-					}
-				}
-				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", strings.Join(dataFieldParts, "."), k, strings.Join(dataFieldParts, ".")))
-			}
-		} else {
-			tmpFields = append(tmpFields, fmt.Sprintf(" .%s=\"%s\" \n", k, extraFields[k]))
-		}
+		tmpFields = append(tmpFields, processExtraFieldKey(k, extraFields[k]))
 	}
 
 	extraFieldsTransform := DynamicTransform{
@@ -111,4 +59,77 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	}
 
 	return &extraFieldsTransform
+}
+
+func processExtraFieldKey(key string, value string) string {
+	key = escapeVectorString(key)
+	if validMustacheTemplate.MatchString(value) {
+		dataField := validMustacheTemplate.FindStringSubmatch(value)[1]
+		if dataField == "parsed_data" {
+			return fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", key)
+		}
+		dataField = combineDataFieldParts(generateDataFieldParts(dataField))
+		return fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", dataField, key, dataField)
+	}
+	return fmt.Sprintf(" .%s=\"%s\" \n", key, value)
+
+}
+
+func mapKeys(m map[string]string) []string {
+	keys := make([]string, 0)
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+	return keys
+}
+
+func generateDataFieldParts(dataField string) []string {
+	tmpDataFieldParts := strings.Split(dataField, ".")
+	dataFieldParts := make([]string, 0)
+	i := 0
+	for i < len(tmpDataFieldParts) {
+		buf, iter := processDataFieldWithEscape(i, tmpDataFieldParts)
+		dataFieldParts = append(dataFieldParts, buf)
+		i = iter + 1
+	}
+	return dataFieldParts
+}
+
+func processDataFieldWithEscape(i int, tmpDataFieldParts []string) (string, int) {
+	buf := tmpDataFieldParts[i]
+	if buf[len(buf)-1] != '\\' || i+1 > len(tmpDataFieldParts) {
+		return buf, i
+	}
+
+	iter := i + 1
+	for iter < len(tmpDataFieldParts) {
+		iterBuf := tmpDataFieldParts[iter]
+		if iterBuf[len(iterBuf)-1] != '\\' {
+			buf = buf + "." + iterBuf
+			break
+		}
+		buf = buf + "." + iterBuf
+		iter++
+	}
+	return buf, iter
+}
+
+func combineDataFieldParts(dataFieldParts []string) string {
+	for i := range dataFieldParts {
+		dataFieldParts[i] = escapeVectorString(dataFieldParts[i])
+	}
+	return strings.Join(dataFieldParts, ".")
+}
+
+func escapeVectorString(s string) string {
+	if strings.Contains(s, "-") || strings.Contains(s, "\\") {
+		if vectorArrayTemplate.MatchString(s) {
+			arrayVarParts := strings.Split(s, "[")
+			return fmt.Sprintf("\"%s\"[%s", strings.ReplaceAll(arrayVarParts[0], "\\", ""), arrayVarParts[1])
+		}
+		return fmt.Sprintf("\"%s\"", strings.ReplaceAll(s, "\\", ""))
+	}
+	return s
 }
