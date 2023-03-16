@@ -35,7 +35,34 @@ type gvrCheck func(context.Context, schema.GroupVersionResource) (bool, error)
 type subHandler struct {
 	method  string
 	suffix  string
-	handler func(*kubernetes.Clientset, informers.GenericInformer) httprouter.Handle
+	handler func(*kubernetes.Clientset, *informerRegistry, schema.GroupVersionResource) httprouter.Handle
+}
+
+type informerRegistry struct {
+	dynfactory dynamicinformer.DynamicSharedInformerFactory
+	informers  map[string]informers.GenericInformer
+}
+
+func newInformerRegistry(dynFactory dynamicinformer.DynamicSharedInformerFactory) *informerRegistry {
+	return &informerRegistry{
+		dynfactory: dynFactory,
+		informers:  make(map[string]informers.GenericInformer),
+	}
+}
+
+func (r *informerRegistry) Add(gvr schema.GroupVersionResource) informers.GenericInformer {
+	key := gvr.GroupResource().String()
+	i := r.dynfactory.ForResource(gvr)
+	r.informers[key] = i
+	return i
+}
+
+func (r *informerRegistry) Get(gr schema.GroupResource) informers.GenericInformer {
+	key := gr.String()
+	if i, ok := r.informers[key]; ok {
+		return i
+	}
+	return nil
 }
 
 func initHandlers(
@@ -60,11 +87,23 @@ func initHandlers(
 		},
 
 		{
+			gvr: schema.GroupVersionResource{Group: "", Resource: "secrets", Version: "v1"},
+			ns:  true,
+		},
+
+		{
 			gvr: schema.GroupVersionResource{Group: "apps", Resource: "deployments", Version: "v1"},
 			ns:  true,
 		},
 
-		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "nodegroups", Version: "v1"}},
+		{
+			gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "nodegroups", Version: "v1"},
+			subh: []subHandler{{
+				method:  http.MethodGet,
+				suffix:  "scripts",
+				handler: handleNodeGroupScripts,
+			}},
+		},
 		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "deckhousereleases", Version: "v1alpha1"}},
 		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "moduleconfigs", Version: "v1alpha1"}},
 
@@ -96,11 +135,12 @@ func initHandlers(
 
 	// Adapter loop that both registers HTTP handlers and creates informers and subscription
 	// handlers
+	infReg := newInformerRegistry(dynFactory)
 	discovery := newDiscoveryCollector(clientset)
 	for _, def := range definitions {
-		gvr, namespaced := def.gvr, def.ns
 
 		// Preliminary check for GVR that are expected to be absent
+		gvr := def.gvr
 		if def.check != nil {
 			ok, err := def.check(ctx, gvr)
 			if err != nil {
@@ -112,17 +152,19 @@ func initHandlers(
 		}
 
 		// Router paths
+		namespaced := def.ns
 		collectionPath := getPathPrefix(gvr, namespaced, "k8s")
 		namedItemPath := collectionPath + "/:name"
 
 		// Using dynamic client for all resources since typed build-in informers do not
 		// return kind and apiVersion from listers. Additionally, the code is unified.
-		informer := dynFactory.ForResource(gvr)
+		informer := infReg.Add(gvr)
 
 		// Resource event handler will dispatch resource events to its subscribers
 		_, _ = informer.Informer().AddEventHandler(reh.Handle(gvr.GroupResource()))
 
-		// HTTP handlers
+		// HTTP handlers. Despite we add handlers for all operations, some of them might be
+		// unaccessible due to RBAC.
 		h := newHandler(informer, dynClient.Resource(gvr), gvr, namespaced)
 		router.GET(collectionPath, h.HandleList)
 		router.GET(namedItemPath, h.HandleGet)
@@ -135,7 +177,7 @@ func initHandlers(
 		discovery.AddPath(namedItemPath)
 		for _, s := range def.subh {
 			path := namedItemPath + "/" + s.suffix
-			router.Handle(s.method, path, s.handler(clientset, informer))
+			router.Handle(s.method, path, s.handler(clientset, infReg, gvr))
 			discovery.AddPath(path)
 		}
 
