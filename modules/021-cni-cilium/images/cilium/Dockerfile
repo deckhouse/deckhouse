@@ -1,8 +1,5 @@
 # syntax=docker/dockerfile:1.2
 
-# Copyright 2020-2021 Authors of Cilium
-# SPDX-License-Identifier: Apache-2.0
-
 # https://github.com/cilium/cilium/blob/v1.11.14/images/runtime/Dockerfile#L7-L12
 ARG GOLANG_IMAGE=docker.io/library/golang:1.17.13@sha256:87262e4a4c7db56158a80a18fefdc4fee5accc41b59cde821e691d05541bbb18
 ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:4a45212e9518f35983a976eead0de5eecc555a2f047134e9dd2cfc589076a00d
@@ -82,10 +79,6 @@ RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 FROM cilium_builder as builder
 
 WORKDIR /tmp/cilium-repo/cilium-1.11.14
-
-# Apply patches
-COPY ./patches /patches
-RUN find /patches -name '*.patch' -exec git apply {} \;
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
