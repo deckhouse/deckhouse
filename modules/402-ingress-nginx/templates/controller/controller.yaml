@@ -110,6 +110,9 @@ spec:
   template:
     metadata:
       labels:
+      {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+        example.io/block-deleting: "true"
+      {{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         sidecar.istio.io/inject: "true"
       {{- end }}
