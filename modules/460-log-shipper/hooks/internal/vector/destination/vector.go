@@ -40,13 +40,6 @@ type VectorKeepalive struct {
 func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
 		CertFile:          decodeB64(spec.TLS.CertFile),
@@ -70,6 +63,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 			Name:   ComposeName(name),
 			Type:   "vector",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		TLS:     tls,
 		Version: "2",

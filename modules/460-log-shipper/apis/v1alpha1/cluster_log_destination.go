@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,6 +64,8 @@ type ClusterLogDestinationSpec struct {
 
 	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
+
+	Buffer *Buffer `json:"buffer,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {
@@ -153,4 +156,55 @@ type SplunkSpec struct {
 	Index string `json:"index,omitempty"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
+}
+
+type Buffer struct {
+	// The type of buffer to use.
+	Type BufferType `json:"type,omitempty"`
+
+	// Relevant when: type = "disk"
+	Disk BufferDisk `json:"disk,omitempty"`
+
+	// Relevant when: type = "memory"
+	Memory BufferMemory `json:"memory,omitempty"`
+
+	// Event handling behavior when a buffer is full.
+	WhenFull BufferWhenFull `json:"whenFull,omitempty"`
+}
+
+type BufferType = string
+
+const (
+	// Events are buffered on disk.
+	// This is less performant, but more durable. Data that has been synchronized to disk will not be lost if Vector is restarted forcefully or crashes.
+	// Data is synchronized to disk every 500ms.
+	BufferTypeDisk BufferType = "Disk"
+
+	// Events are buffered in memory.
+	// This is more performant, but less durable. Data will be lost if Vector is restarted forcefully or crashes.
+	BufferTypeMemory BufferType = "Memory"
+)
+
+type BufferWhenFull = string
+
+const (
+	// 	Drops the event instead of waiting for free space in buffer.
+	// The event will be intentionally dropped. This mode is typically used when performance is the highest priority,
+	// and it is preferable to temporarily lose events rather than cause a slowdown in the acceptance/consumption of events.
+	BufferWhenFullDropNewest BufferWhenFull = "DropNewest"
+
+	// Wait for free space in the buffer.
+	// This applies backpressure up the topology, signalling that sources should slow down the acceptance/consumption of events. This means that while no data is lost, data will pile up at the edge.
+	BufferWhenFullBlock BufferWhenFull = "Block"
+)
+
+type BufferDisk struct {
+	// 	The maximum size of the buffer on disk.
+	// Must be at least ~256 megabytes (268435488 bytes).
+	MaxSize resource.Quantity `json:"maxSize,omitempty"`
+}
+
+type BufferMemory struct {
+	// The maximum number of events allowed in the buffer.
+	MaxEvents uint32 `json:"maxEvents,omitempty"`
 }

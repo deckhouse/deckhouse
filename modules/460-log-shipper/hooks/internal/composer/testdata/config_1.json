@@ -69,7 +69,12 @@
         "stream": "{{ stream }}"
       },
       "remove_label_fields": true,
-      "out_of_order_action": "rewrite_timestamp"
+      "out_of_order_action": "rewrite_timestamp",
+      "buffer": {
+        "type": "disk",
+        "max_bytes": 268435488,
+        "when_full": "block"
+      }
     }
   }
 }
