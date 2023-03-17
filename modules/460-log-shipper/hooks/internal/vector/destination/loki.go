@@ -56,13 +56,6 @@ type LokiAuth struct {
 func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 	spec := cspec.Loki
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	// default labels
 	//
 	// Asterisk is required here to expand all pod labels
@@ -115,6 +108,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 			Name:   ComposeName(name),
 			Type:   "loki",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		Auth: LokiAuth{
 			User:     spec.Auth.User,

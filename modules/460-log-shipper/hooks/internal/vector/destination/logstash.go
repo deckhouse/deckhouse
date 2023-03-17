@@ -42,13 +42,6 @@ type LogstashKeepalive struct {
 func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
 		CertFile:          decodeB64(spec.TLS.CertFile),
@@ -72,6 +65,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 			Name:   ComposeName(name),
 			Type:   "socket",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		Encoding: Encoding{
 			Codec:           "json",

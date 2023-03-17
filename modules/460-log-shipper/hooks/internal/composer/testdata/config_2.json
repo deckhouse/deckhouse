@@ -61,6 +61,11 @@
       },
       "keepalive": {
         "time_secs": 7200
+      },
+      "buffer": {
+        "type": "disk",
+        "max_bytes": 268435488,
+        "when_full": "block"
       }
     }
   }

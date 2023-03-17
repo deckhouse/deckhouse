@@ -42,13 +42,6 @@ type Splunk struct {
 func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 	spec := cspec.Splunk
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
 		CertFile:          decodeB64(spec.TLS.CertFile),
@@ -86,6 +79,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 			Name:   ComposeName(name),
 			Type:   "splunk_hec_logs",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		TLS:   tls,
 		Index: spec.Index,
