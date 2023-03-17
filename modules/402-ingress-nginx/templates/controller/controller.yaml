@@ -103,6 +103,12 @@ spec:
       maxUnavailable: 1
       maxSurge: 0
     {{- end }}
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+  lifecycle:
+    preDelete:
+      labelsHandler:
+        example.io/block-deleting: "true"
+  {{- end }}
   selector:
     matchLabels:
       app: controller
@@ -222,11 +228,6 @@ spec:
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
         lifecycle:
-          {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
-          preDelete:
-            labelsHandler:
-              example.io/block-deleting: "true"
-          {{- end }}
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
             exec:
