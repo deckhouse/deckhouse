@@ -93,10 +93,13 @@ RUN apk update \
     mkdir -p ${dir}; \
     chown -R www-data.www-data ${dir}; \
   done' \
+  && echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /etc/ld-musl-x86_64.path \
   && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
   && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
+  && setcap    cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && setcap -v cap_net_bind_service=+ep /usr/bin/dumb-init \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
   && ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log \
