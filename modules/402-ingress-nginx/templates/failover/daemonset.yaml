@@ -32,7 +32,7 @@ spec:
       app: proxy-failover
       name: {{ $crd.name }}
 ---
-apiVersion: apps/v1
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   name: proxy-{{ $crd.name }}-failover
