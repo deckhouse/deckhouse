@@ -2,3 +2,4 @@ dictdiffer==0.9.0
 dotmap==1.3.30
 PyYAML==6.0
 shell-operator==0.0.8
+stringcase==1.2.0
