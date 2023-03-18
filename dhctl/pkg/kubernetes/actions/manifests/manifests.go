@@ -17,6 +17,7 @@ package manifests
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +44,8 @@ const (
 	deployTimeEnvVarFormat      = time.RFC3339
 
 	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
+
+	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -55,6 +58,24 @@ type DeckhouseDeploymentParams struct {
 	IsSecureRegistry   bool
 	MasterNodeSelector bool
 	KubeadmBootstrap   bool
+}
+
+type imagesDigests map[string]map[string]interface{}
+
+func loadImagesDigests(filename string) (imagesDigests, error) {
+	var imagesDigestsDict imagesDigests
+
+	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	if err != nil {
+		return imagesDigestsDict, fmt.Errorf("%s file load: %v", filename, err)
+	}
+
+	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
+	if err != nil {
+		return imagesDigestsDict, fmt.Errorf("%s file unmarshal: %v", filename, err)
+	}
+
+	return imagesDigestsDict, nil
 }
 
 func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
@@ -148,6 +169,15 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 }
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
+	initContainerImage := params.Registry
+	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSON)
+	if err != nil {
+		log.ErrorLn(err)
+	} else {
+		imageSplitIndex := strings.LastIndex(params.Registry, ":")
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
+	}
+
 	deckhouseDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deckhouse",
@@ -271,6 +301,22 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
+	deckhouseInitContainer := apiv1.Container{
+		Name:            "init-external-modules",
+		Image:           initContainerImage,
+		ImagePullPolicy: apiv1.PullAlways,
+		Command: []string{
+			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 65534 /deckhouse/external-modules && chmod -R 0700 /deckhouse/external-modules",
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      "external-modules",
+				ReadOnly:  false,
+				MountPath: "/deckhouse/external-modules",
+			},
+		},
+	}
+
 	deckhouseContainerEnv := []apiv1.EnvVar{
 		{
 			Name: "DECKHOUSE_POD",
@@ -337,6 +383,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
