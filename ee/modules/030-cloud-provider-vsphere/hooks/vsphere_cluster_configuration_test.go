@@ -78,7 +78,8 @@ cloudProviderVsphere:
   "apiVersion":"deckhouse.io/v1",
   "kind":"VsphereCloudDiscoveryData",
   "vmFolderPath":"test",
-  "resourcePoolPath": "test"
+  "resourcePoolPath": "test",
+  "zones": ["test"]
 }
 `
 		stateAClusterConfiguration1 = `

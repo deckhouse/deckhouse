@@ -391,6 +391,10 @@ properties:
             type: string
           resourcePoolPath:
             type: string
+          zones:
+            type: array
+            items:
+              type: string
       vsphereDiscoveryData:
         type: object
         additionalProperties: false

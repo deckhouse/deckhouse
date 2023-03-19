@@ -17,3 +17,7 @@ apiVersions:
         minLength: 1
       resourcePoolPath:
         type: string
+      zones:
+        type: array
+        items:
+          type: string
