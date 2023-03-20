@@ -58,6 +58,6 @@ locals {
   external_subnet_ids           = lookup(local.master_instance_class, "externalSubnetIDs", [])
   external_subnet_id_deprecated = lookup(local.master_instance_class, "externalSubnetID", null)
 
-  network_type      = contains(keys(local.master_instance_class), "networkType") ? var.network_types[local.master_instance_class.networkType] : null
+  network_type      = contains(keys(local.master_instance_class), "networkType") ? var.network_types[local.master_instance_class.networkType] : var.network_types["SoftwareAccelerated"]
   additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.master_instance_class, "additionalLabels", {}))
 }
