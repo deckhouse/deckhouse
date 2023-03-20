@@ -1,8 +1,8 @@
 diff --git a/api/openapi-spec/swagger.json b/api/openapi-spec/swagger.json
-index 69b8d5bf5..a44f473d9 100644
+index 900bfcfba..359129d55 100644
 --- a/api/openapi-spec/swagger.json
 +++ b/api/openapi-spec/swagger.json
-@@ -5099,7 +5099,7 @@
+@@ -5015,7 +5015,7 @@
       "infra": {
        "description": "Rules on which nodes CDI infrastructure pods will be scheduled",
        "default": {},
@@ -11,7 +11,7 @@ index 69b8d5bf5..a44f473d9 100644
       },
       "priorityClass": {
        "description": "PriorityClass of the CDI control plane",
-@@ -5926,6 +5926,17 @@
+@@ -5868,6 +5868,17 @@
       }
      }
     },
@@ -30,10 +30,10 @@ index 69b8d5bf5..a44f473d9 100644
      "description": "StorageSpec defines the Storage type specification",
      "type": "object",
 diff --git a/pkg/apis/core/v1beta1/openapi_generated.go b/pkg/apis/core/v1beta1/openapi_generated.go
-index 9cbbb32a6..3667cdb25 100644
+index 379dbe399..2bb714580 100644
 --- a/pkg/apis/core/v1beta1/openapi_generated.go
 +++ b/pkg/apis/core/v1beta1/openapi_generated.go
-@@ -524,6 +524,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
+@@ -525,6 +525,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.FilesystemOverhead":       schema_pkg_apis_core_v1beta1_FilesystemOverhead(ref),
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ImportProxy":              schema_pkg_apis_core_v1beta1_ImportProxy(ref),
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ImportStatus":             schema_pkg_apis_core_v1beta1_ImportStatus(ref),
@@ -41,7 +41,7 @@ index 9cbbb32a6..3667cdb25 100644
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransfer":           schema_pkg_apis_core_v1beta1_ObjectTransfer(ref),
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransferCondition":  schema_pkg_apis_core_v1beta1_ObjectTransferCondition(ref),
  		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransferList":       schema_pkg_apis_core_v1beta1_ObjectTransferList(ref),
-@@ -23122,7 +23123,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
+@@ -23123,7 +23124,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
  						SchemaProps: spec.SchemaProps{
  							Description: "Rules on which nodes CDI infrastructure pods will be scheduled",
  							Default:     map[string]interface{}{},
@@ -50,7 +50,7 @@ index 9cbbb32a6..3667cdb25 100644
  						},
  					},
  					"workload": {
-@@ -23162,7 +23163,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
+@@ -23163,7 +23164,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
  			},
  		},
  		Dependencies: []string{
@@ -59,7 +59,7 @@ index 9cbbb32a6..3667cdb25 100644
  	}
  }
  
-@@ -24651,6 +24652,26 @@ func schema_pkg_apis_core_v1beta1_ImportStatus(ref common.ReferenceCallback) com
+@@ -24692,6 +24693,26 @@ func schema_pkg_apis_core_v1beta1_ImportStatus(ref common.ReferenceCallback) com
  	}
  }
  
@@ -87,10 +87,10 @@ index 9cbbb32a6..3667cdb25 100644
  	return common.OpenAPIDefinition{
  		Schema: spec.Schema{
 diff --git a/pkg/operator/resources/crds_generated.go b/pkg/operator/resources/crds_generated.go
-index 979deb137..a73224fdd 100644
+index bee88f6ec..46d0ab5c3 100644
 --- a/pkg/operator/resources/crds_generated.go
 +++ b/pkg/operator/resources/crds_generated.go
-@@ -1099,6 +1099,12 @@ spec:
+@@ -1196,6 +1196,12 @@ spec:
                        each of the indicated key-value pairs as labels (it can have
                        additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector'
                      type: object
@@ -103,7 +103,7 @@ index 979deb137..a73224fdd 100644
                    tolerations:
                      description: tolerations is a list of tolerations applied to the
                        relevant kind of pods See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-@@ -3312,6 +3318,12 @@ spec:
+@@ -3412,6 +3418,12 @@ spec:
                        each of the indicated key-value pairs as labels (it can have
                        additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector'
                      type: object
@@ -137,10 +137,10 @@ index 3cf254561..4ab295583 100644
          "//vendor/sigs.k8s.io/controller-runtime/pkg/client:go_default_library",
      ],
 diff --git a/pkg/operator/resources/namespaced/apiserver.go b/pkg/operator/resources/namespaced/apiserver.go
-index 76ae14f69..5eb228eda 100644
+index 9e6fbfc11..d1bec5936 100644
 --- a/pkg/operator/resources/namespaced/apiserver.go
 +++ b/pkg/operator/resources/namespaced/apiserver.go
-@@ -28,8 +28,7 @@ import (
+@@ -26,8 +26,7 @@ import (
  	"k8s.io/apimachinery/pkg/util/intstr"
  	"sigs.k8s.io/controller-runtime/pkg/client"
  
@@ -150,7 +150,7 @@ index 76ae14f69..5eb228eda 100644
  	"kubevirt.io/containerized-data-importer/pkg/common"
  	utils "kubevirt.io/containerized-data-importer/pkg/operator/resources/utils"
  )
-@@ -48,7 +47,12 @@ func createAPIServerResources(args *FactoryArgs) []client.Object {
+@@ -46,7 +45,12 @@ func createAPIServerResources(args *FactoryArgs) []client.Object {
  		createAPIServerRoleBinding(),
  		createAPIServerRole(),
  		createAPIServerService(),
@@ -164,7 +164,7 @@ index 76ae14f69..5eb228eda 100644
  	}
  }
  
-@@ -93,9 +97,9 @@ func createAPIServerService() *corev1.Service {
+@@ -91,9 +95,9 @@ func createAPIServerService() *corev1.Service {
  	return service
  }
  
@@ -316,10 +316,10 @@ index 0fe71d1b9..74f85d45b 100644
  }
  
 diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
-index cf9a55fab..5dab6fee9 100644
+index 7194d4014..91b3bbdbc 100644
 --- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
 +++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
-@@ -635,7 +635,7 @@ type CDISpec struct {
+@@ -658,7 +658,7 @@ type CDISpec struct {
  	// CDIUninstallStrategy defines the state to leave CDI on uninstall
  	UninstallStrategy *CDIUninstallStrategy `json:"uninstallStrategy,omitempty"`
  	// Rules on which nodes CDI infrastructure pods will be scheduled
@@ -328,7 +328,7 @@ index cf9a55fab..5dab6fee9 100644
  	// Restrict on which nodes CDI workload pods will be scheduled
  	Workloads sdkapi.NodePlacement `json:"workload,omitempty"`
  	// Clone strategy override: should we use a host-assisted copy even if snapshots are available?
-@@ -807,3 +807,14 @@ type ImportProxy struct {
+@@ -830,3 +830,14 @@ type ImportProxy struct {
  	// +optional
  	TrustedCAProxy *string `json:"trustedCAProxy,omitempty"`
  }
@@ -344,11 +344,11 @@ index cf9a55fab..5dab6fee9 100644
 +	Replicas *int32 `json:"replicas,omitempty"`
 +}
 diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
-index 986b8c358..f498b0f1d 100644
+index 9736d946f..69e118236 100644
 --- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
 +++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
-@@ -396,3 +396,10 @@ func (ImportProxy) SwaggerDoc() map[string]string {
- 		"trustedCAProxy": "TrustedCAProxy is the name of a ConfigMap in the cdi namespace that contains a user-provided trusted certificate authority (CA) bundle.\nThe TrustedCAProxy field is consumed by the import controller that is resposible for coping it to a config map named trusted-ca-proxy-bundle-cm in the cdi namespace.\nHere is an example of the ConfigMap (in yaml):\n\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: trusted-ca-proxy-bundle-cm\n  namespace: cdi\ndata:\n  ca.pem: |",
+@@ -406,3 +406,10 @@ func (ImportProxy) SwaggerDoc() map[string]string {
+ 		"trustedCAProxy": "TrustedCAProxy is the name of a ConfigMap in the cdi namespace that contains a user-provided trusted certificate authority (CA) bundle.\nThe TrustedCAProxy ConfigMap is consumed by the DataImportCron controller for creating cronjobs, and by the import controller referring a copy of the ConfigMap in the import namespace.\nHere is an example of the ConfigMap (in yaml):\n\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: my-ca-proxy-cm\n  namespace: cdi\ndata:\n  ca.pem: |",
  	}
  }
 +
@@ -359,10 +359,10 @@ index 986b8c358..f498b0f1d 100644
 +	}
 +}
 diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
-index 7010e9c5f..d61247b32 100644
+index 8913ef514..8107c5a15 100644
 --- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
 +++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
-@@ -1178,6 +1178,31 @@ func (in *ImportStatus) DeepCopy() *ImportStatus {
+@@ -1204,6 +1204,31 @@ func (in *ImportStatus) DeepCopy() *ImportStatus {
  	return out
  }
  

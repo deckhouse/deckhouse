@@ -1,8 +1,8 @@
 diff --git a/pkg/controller/clone-controller.go b/pkg/controller/clone-controller.go
-index fd48baf1..a5f8defd 100644
+index 66deb8e8a..24fc7e06b 100644
 --- a/pkg/controller/clone-controller.go
 +++ b/pkg/controller/clone-controller.go
-@@ -675,6 +675,9 @@ func MakeCloneSourcePodSpec(sourceVolumeMode corev1.PersistentVolumeMode, image,
+@@ -629,6 +629,9 @@ func MakeCloneSourcePodSpec(sourceVolumeMode corev1.PersistentVolumeMode, image,
  					},
  				},
  			},
@@ -12,11 +12,11 @@ index fd48baf1..a5f8defd 100644
  			NodeSelector:      workloadNodePlacement.NodeSelector,
  			Tolerations:       workloadNodePlacement.Tolerations,
  			Affinity:          workloadNodePlacement.Affinity,
-diff --git a/pkg/controller/datavolume-controller.go b/pkg/controller/datavolume-controller.go
-index 81edbf94..a7b1efbb 100644
---- a/pkg/controller/datavolume-controller.go
-+++ b/pkg/controller/datavolume-controller.go
-@@ -1650,6 +1650,9 @@ func (r *DatavolumeReconciler) createExpansionPod(pvc *corev1.PersistentVolumeCl
+diff --git a/pkg/controller/datavolume/clone-controller-base.go b/pkg/controller/datavolume/clone-controller-base.go
+index b564c7d34..1f1db3462 100644
+--- a/pkg/controller/datavolume/clone-controller-base.go
++++ b/pkg/controller/datavolume/clone-controller-base.go
+@@ -458,6 +458,9 @@ func (r *CloneReconcilerBase) createExpansionPod(pvc *corev1.PersistentVolumeCla
  					},
  				},
  			},
@@ -26,11 +26,25 @@ index 81edbf94..a7b1efbb 100644
  			NodeSelector: workloadNodePlacement.NodeSelector,
  			Tolerations:  workloadNodePlacement.Tolerations,
  			Affinity:     workloadNodePlacement.Affinity,
+diff --git a/pkg/controller/datavolume/pvc-clone-controller.go b/pkg/controller/datavolume/pvc-clone-controller.go
+index 5ff540e90..a08419e74 100644
+--- a/pkg/controller/datavolume/pvc-clone-controller.go
++++ b/pkg/controller/datavolume/pvc-clone-controller.go
+@@ -1263,6 +1263,9 @@ func (r *PvcCloneReconciler) makeSizeDetectionPodSpec(
+ 			Volumes: []corev1.Volume{
+ 				*volume,
+ 			},
++			ImagePullSecrets: []corev1.LocalObjectReference{
++				{Name: "cdi-deckhouse-registry"},
++			},
+ 			RestartPolicy:     corev1.RestartPolicyOnFailure,
+ 			NodeSelector:      workloadNodePlacement.NodeSelector,
+ 			Tolerations:       workloadNodePlacement.Tolerations,
 diff --git a/pkg/controller/import-controller.go b/pkg/controller/import-controller.go
-index 9e688056..94643b34 100644
+index 34254a072..66d97ac0d 100644
 --- a/pkg/controller/import-controller.go
 +++ b/pkg/controller/import-controller.go
-@@ -1028,6 +1028,9 @@ func makeNodeImporterPodSpec(args *importerPodArgs) *corev1.Pod {
+@@ -964,6 +964,9 @@ func makeNodeImporterPodSpec(args *importerPodArgs) *corev1.Pod {
  					},
  				},
  			},
@@ -41,7 +55,7 @@ index 9e688056..94643b34 100644
  			Volumes:           volumes,
  			NodeSelector:      args.workloadNodePlacement.NodeSelector,
 diff --git a/pkg/controller/upload-controller.go b/pkg/controller/upload-controller.go
-index d96ea549..362d7977 100644
+index 253b1e409..71dcaa6da 100644
 --- a/pkg/controller/upload-controller.go
 +++ b/pkg/controller/upload-controller.go
 @@ -835,6 +835,9 @@ func (r *UploadReconciler) makeUploadPodSpec(args UploadPodArgs, resourceRequire
@@ -55,7 +69,7 @@ index d96ea549..362d7977 100644
  			Tolerations:       workloadNodePlacement.Tolerations,
  			Affinity:          workloadNodePlacement.Affinity,
 diff --git a/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go b/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
-index c3699ce7..d7fdf053 100644
+index c3699ce75..d7fdf053e 100644
 --- a/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
 +++ b/vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/rbac.go
 @@ -86,6 +86,9 @@ func (b *ResourceBuilder) CreateServiceAccount(name string) *corev1.ServiceAccou
