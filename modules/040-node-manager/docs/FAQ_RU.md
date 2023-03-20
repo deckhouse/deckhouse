@@ -536,7 +536,7 @@ spec:
   kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> **Внимание!** Нельзя устанавливать `cri.type` для NodeGroup, созданных при помощи `dhctl` (например, NodeGroup `master`).
+> **Внимание!** При смене `cri.type` для NodeGroup, созданных при помощи `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и в настройках объекта `NodeGroup`.
 
 После настройки нового CRI для NodeGroup модуль node-manager по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль node-manager либо автоматически разрешает обновление
