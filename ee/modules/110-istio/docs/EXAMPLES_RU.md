@@ -196,7 +196,7 @@ spec:
 Пример:
 
 ```yaml
-apiVersion: deckhouse.io/v1beta1
+apiVersion: deckhouse.io/v1alpha1
 kind: IngressIstioController
 metadata:
  name: main
