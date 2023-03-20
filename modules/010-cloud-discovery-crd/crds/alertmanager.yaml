@@ -1,0 +1,65 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: users.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: users
+    singular: user
+    kind: User
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Contains information about the static user.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  description: |
+                    User E-mail.
+
+                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+                  example: 'user@domain.com'
+                password:
+                  type: string
+                  description: |
+                    Hashed user password.
+
+                    You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Also, you can use the [online service](https://bcrypt-generator.com/).
+                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+                  pattern: '^\$2[ayb]\$.{56}$'
+                userID:
+                  type: string
+                  description: 'Unique issuer user ID. It equals to .metadata.name by default.'
+                  example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
+                groups:
+                  type: array
+                  description: 'Static user groups.'
+                  items:
+                    type: string
+                ttl:
+                  type: string
+                  pattern: '^\d+(?:m|h)$'
+                  description: |
+                    Static user TTL.
+                    * It is specified as a string containing the time unit: 30m, 1h, 24h. Either in minutes or hours.
+                    * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
+                  example: '24h'
