@@ -1,59 +1,185 @@
+diff --git a/api/v1/models/daemon_configuration_status.go b/api/v1/models/daemon_configuration_status.go
+index f8308ad372..0b69c362cc 100644
+--- a/api/v1/models/daemon_configuration_status.go
++++ b/api/v1/models/daemon_configuration_status.go
+@@ -37,6 +37,12 @@ type DaemonConfigurationStatus struct {
+ 	// Configured compatibility mode for --egress-multi-home-ip-rule-compat
+ 	EgressMultiHomeIPRuleCompat bool `json:"egress-multi-home-ip-rule-compat,omitempty"`
+ 
++	// MAC address for host side veth interface
++	EndpointInterfaceHostMAC string `json:"endpointInterfaceHostMAC,omitempty"`
++
++	// MAC address for container side veth interface
++	EndpointInterfaceMAC string `json:"endpointInterfaceMAC,omitempty"`
++
+ 	// Immutable configuration (read-only)
+ 	Immutable ConfigurationMap `json:"immutable,omitempty"`
+ 
+diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
+index b7f2e070b6..f23639a1e1 100644
+--- a/api/v1/openapi.yaml
++++ b/api/v1/openapi.yaml
+@@ -2219,6 +2219,12 @@ definitions:
+       routeMTU:
+         description: MTU for network facing routes
+         type: integer
++      endpointInterfaceHostMAC:
++        description: MAC address for host side veth interface
++        type: string
++      endpointInterfaceMAC:
++        description: MAC address for container side veth interface
++        type: string
+       datapathMode:
+         "$ref": "#/definitions/DatapathMode"
+       ipvlanConfiguration:
+diff --git a/api/v1/server/embedded_spec.go b/api/v1/server/embedded_spec.go
+index e40a35c83c..6ad61b4389 100644
+--- a/api/v1/server/embedded_spec.go
++++ b/api/v1/server/embedded_spec.go
+@@ -1945,6 +1945,14 @@ func init() {
+           "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
+           "type": "boolean"
+         },
++        "endpointInterfaceHostMAC": {
++          "description": "MAC address for host side veth interface",
++          "type": "string"
++        },
++        "endpointInterfaceMAC": {
++          "description": "MAC address for container side veth interface",
++          "type": "string"
++        },
+         "immutable": {
+           "description": "Immutable configuration (read-only)",
+           "$ref": "#/definitions/ConfigurationMap"
+@@ -6407,6 +6415,14 @@ func init() {
+           "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
+           "type": "boolean"
+         },
++        "endpointInterfaceHostMAC": {
++          "description": "MAC address for host side veth interface",
++          "type": "string"
++        },
++        "endpointInterfaceMAC": {
++          "description": "MAC address for container side veth interface",
++          "type": "string"
++        },
+         "immutable": {
+           "description": "Immutable configuration (read-only)",
+           "$ref": "#/definitions/ConfigurationMap"
+diff --git a/daemon/cmd/config.go b/daemon/cmd/config.go
+index f10a493a0b..be6977d328 100644
+--- a/daemon/cmd/config.go
++++ b/daemon/cmd/config.go
+@@ -199,6 +199,8 @@ func (h *getConfig) Handle(params GetConfigParams) middleware.Responder {
+ 			IPV6: option.Config.EnableIPv6Masquerade,
+ 		},
+ 		EgressMultiHomeIPRuleCompat: option.Config.EgressMultiHomeIPRuleCompat,
++		EndpointInterfaceHostMAC:    option.Config.EndpointInterfaceHostMAC,
++		EndpointInterfaceMAC:        option.Config.EndpointInterfaceMAC,
+ 	}
+ 
+ 	cfg := &models.DaemonConfiguration{
 diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
-index 7b3e13f44b..a00597f9e7 100644
+index 7b3e13f44b..f53ee552ea 100644
 --- a/pkg/datapath/connector/veth.go
 +++ b/pkg/datapath/connector/veth.go
-@@ -62,11 +62,13 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu int, ep *models.Endpoin
+@@ -62,11 +62,19 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu int, ep *models.Endpoin
  	// explicitly setting MAC addrs for both veth ends. This sets
  	// addr_assign_type for NET_ADDR_SET which prevents systemd from changing
  	// the addrs.
 -	epHostMAC, err = mac.GenerateRandMAC()
-+	epHostMACSeed := "h" + ep.Addressing.IPV4 + ep.Addressing.IPV6
-+	epHostMAC, err = mac.GenerateRandMACWithSeed(epHostMACSeed)
++	if ep.HostMac != "" {
++		epHostMAC, err = mac.ParseMAC(ep.HostMac)
++	} else {
++		epHostMAC, err = mac.GenerateRandMAC()
++	}
  	if err != nil {
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
  	}
 -	epLXCMAC, err = mac.GenerateRandMAC()
-+	epLXCMACSeed := "c" + ep.Addressing.IPV4 + ep.Addressing.IPV6
-+	epLXCMAC, err = mac.GenerateRandMACWithSeed(epLXCMACSeed)
++	if ep.Mac != "" {
++		epLXCMAC, _ = mac.ParseMAC(ep.Mac)
++	} else {
++		epLXCMAC, err = mac.GenerateRandMAC()
++	}
  	if err != nil {
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
  	}
-diff --git a/pkg/mac/mac.go b/pkg/mac/mac.go
-index ce6706dc5a..19bfba465a 100644
---- a/pkg/mac/mac.go
-+++ b/pkg/mac/mac.go
-@@ -5,9 +5,10 @@ package mac
+diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
+index c7f8a69bb6..8ef03de38a 100644
+--- a/pkg/defaults/defaults.go
++++ b/pkg/defaults/defaults.go
+@@ -307,6 +307,12 @@ const (
+ 	// interface names shared by all endpoints
+ 	EndpointInterfaceNamePrefix = "lxc+"
  
- import (
- 	"bytes"
--	"crypto/rand"
- 	"encoding/hex"
- 	"fmt"
-+	"hash/crc64"
-+	"math/rand"
- 	"net"
++	// EndpointInterfaceHostMAC is set to empty to enable auto generation (default mode)
++	EndpointInterfaceHostMAC = ""
++
++	// EndpointInterfaceMAC is set to empty to enable auto generation (default mode)
++	EndpointInterfaceMAC = ""
++
+ 	// ForceLocalPolicyEvalAtSource is the default value for
+ 	// option.ForceLocalPolicyEvalAtSource. It is enabled by default to
+ 	// provide backwards compatibility, it can be disabled via an option
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index a1548650b9..c34f6d6529 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -766,6 +766,12 @@ const (
+ 	// names shared by all endpoints
+ 	EndpointInterfaceNamePrefix = "endpoint-interface-name-prefix"
  
- 	"github.com/vishvananda/netlink"
-@@ -101,6 +102,22 @@ func GenerateRandMAC() (MAC, error) {
- 	return MAC(buf), nil
- }
++	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
++	EndpointInterfaceHostMAC = "endpoint-interface-host-mac"
++
++	// EndpointInterfaceMAC defines MAC address for container side veth interface
++	EndpointInterfaceMAC = "endpoint-interface-mac"
++
+ 	// ForceLocalPolicyEvalAtSource forces a policy decision at the source
+ 	// endpoint for all local communication
+ 	ForceLocalPolicyEvalAtSource = "force-local-policy-eval-at-source"
+@@ -1732,6 +1738,12 @@ type DaemonConfig struct {
+ 	// names shared by all endpoints
+ 	EndpointInterfaceNamePrefix string
  
-+// GenerateRandMACWithSeed generates a predictable unicast and locally administered MAC address from seed.
-+func GenerateRandMACWithSeed(s string) (MAC, error) {
-+	buf := make([]byte, 6)
-+	table := crc64.MakeTable(crc64.ISO)
-+	seed := crc64.Checksum([]byte(s), table)
-+	rand.Seed(int64(seed))
-+	if _, err := rand.Read(buf); err != nil {
-+		return nil, fmt.Errorf("Unable to retrieve 6 rnd bytes: %s", err)
-+	}
++	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
++	EndpointInterfaceHostMAC string
 +
-+	// Set locally administered addresses bit and reset multicast bit
-+	buf[0] = (buf[0] | 0x02) & 0xfe
++	// EndpointInterfaceMAC defines MAC address for container side veth interface
++	EndpointInterfaceMAC string
 +
-+	return MAC(buf), nil
-+}
-+
- // HasMacAddr returns true if the given network interface has L2 addr.
- func HasMacAddr(iface string) bool {
- 	link, err := netlink.LinkByName(iface)
+ 	// ForceLocalPolicyEvalAtSource forces a policy decision at the source
+ 	// endpoint for all local communication
+ 	ForceLocalPolicyEvalAtSource bool
+@@ -2153,6 +2165,8 @@ var (
+ 		SelectiveRegeneration:        defaults.SelectiveRegeneration,
+ 		LoopbackIPv4:                 defaults.LoopbackIPv4,
+ 		EndpointInterfaceNamePrefix:  defaults.EndpointInterfaceNamePrefix,
++		EndpointInterfaceHostMAC:     defaults.EndpointInterfaceHostMAC,
++		EndpointInterfaceMAC:         defaults.EndpointInterfaceMAC,
+ 		ForceLocalPolicyEvalAtSource: defaults.ForceLocalPolicyEvalAtSource,
+ 		EnableEndpointRoutes:         defaults.EnableEndpointRoutes,
+ 		AnnotateK8sNode:              defaults.AnnotateK8sNode,
+@@ -2606,6 +2620,8 @@ func (c *DaemonConfig) Populate() {
+ 	c.EnableWireguardUserspaceFallback = viper.GetBool(EnableWireguardUserspaceFallback)
+ 	c.EnableWellKnownIdentities = viper.GetBool(EnableWellKnownIdentities)
+ 	c.EndpointInterfaceNamePrefix = viper.GetString(EndpointInterfaceNamePrefix)
++	c.EndpointInterfaceHostMAC = viper.GetString(EndpointInterfaceHostMAC)
++	c.EndpointInterfaceMAC = viper.GetString(EndpointInterfaceMAC)
+ 	c.EnableXDPPrefilter = viper.GetBool(EnableXDPPrefilter)
+ 	c.DevicePreFilter = viper.GetString(PrefilterDevice)
+ 	c.DisableCiliumEndpointCRD = viper.GetBool(DisableCiliumEndpointCRDName)
+diff --git a/plugins/cilium-cni/cilium-cni.go b/plugins/cilium-cni/cilium-cni.go
+index 0bbde3be7b..327ca55e4b 100644
+--- a/plugins/cilium-cni/cilium-cni.go
++++ b/plugins/cilium-cni/cilium-cni.go
+@@ -402,6 +402,8 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
+ 		Addressing:   &models.AddressPair{},
+ 		K8sPodName:   string(cniArgs.K8S_POD_NAME),
+ 		K8sNamespace: string(cniArgs.K8S_POD_NAMESPACE),
++		Mac:          conf.EndpointInterfaceMAC,
++		HostMac:      conf.EndpointInterfaceHostMAC,
+ 	}
+ 
+ 	switch conf.DatapathMode {

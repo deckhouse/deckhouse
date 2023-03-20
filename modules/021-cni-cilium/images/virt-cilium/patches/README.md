@@ -10,7 +10,7 @@ Upstream <https://github.com/cilium/cilium/pull/24098>
 
 ## 002-stable-mac.patch
 
-Use predicted MAC-address generation mechanism to make live-migration working.
+Use predefined MAC-addresses for virtualization workloads
 
 Upstream <https://github.com/cilium/cilium/pull/24100>
 
