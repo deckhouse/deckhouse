@@ -102,6 +102,11 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/500-operator-trivy"
+      type: "pages"
+    values:
+      d8Revision: ee
+  - scope:
       path: "*/041-linstor"
       type: "pages"
     values:

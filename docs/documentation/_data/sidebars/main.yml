@@ -978,6 +978,7 @@ entries:
               - title: FAQ
                 url: /modules/101-cert-manager/faq.html
           - title: operator-trivy
+            d8Revision: ee
             folders:
               - title:
                   en: Description
