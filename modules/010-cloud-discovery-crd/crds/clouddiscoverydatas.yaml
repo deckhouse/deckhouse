@@ -1,0 +1,44 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clouddiscoverydatas.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-discovery-crd
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clouddiscoverydatas
+    singular: clouddiscoverydata
+    kind: CloudDiscoveryData
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Contains information about discovered data from cloud.
+          required:
+            - instanceTypes
+          properties:
+            instanceTypes:
+              description: List of available instance types.
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Instance type name.
+                  memory:
+                    type: integer
+                    format: int64
+                    description: The amount of RAM a instance type has, in MiB.
+                  cpu:
+                    type: integer
+                    format: int64
+                    description: The number of CPUs for the instance type.

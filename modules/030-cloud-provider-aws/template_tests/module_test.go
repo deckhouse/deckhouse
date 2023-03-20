@@ -33,6 +33,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -236,4 +237,86 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("Cloud data discoverer", func() {
+		deployment := func(f *Config) object_store.KubeObject {
+			return f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-data-discoverer")
+		}
+
+		assertEnv := func(f *Config, envName, val string) {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			envs := d.Field("spec.template.spec.containers.0.env").Array()
+
+			found := false
+			for _, e := range envs {
+				if e.Map()["name"].String() == envName {
+					found = true
+
+					Expect(e.Map()["value"].String()).To(Equal(val))
+
+					break
+				}
+			}
+
+			Expect(found).To(BeTrue())
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render cloud data discoverer deployment with two containers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+			Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+		})
+
+		It("Should render AWS_REGION env for first container", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			assertEnv(f, "AWS_REGION", "myregion")
+		})
+
+		Context("vertical-pod-autoscaler-crd module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-aws", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("vertical-pod-autoscaler-crd module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-aws", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeFalse())
+			})
+		})
+	})
 })
