@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {!{- $enableWorkflowOnTestRepos := false -}!}
-{!{- $workflowName := "Daily e2e tests" -}!}
+{!{- $workflowName := "Daily e2e tests" }!}
 name: '{!{ $workflowName }!}'
 on:
   schedule:
