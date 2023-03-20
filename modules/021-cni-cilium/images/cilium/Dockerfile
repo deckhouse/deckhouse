@@ -53,7 +53,6 @@ COPY --from=gops-cni-builder /out/linux/amd64/bin/gops /bin/gops
 
 
 FROM scratch as cilium-runtime
-LABEL maintainer="maintainer@cilium.io"
 COPY --from=rootfs / /
 
 
