@@ -94,3 +94,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/810-ui
+  to: /deckhouse/modules/810-ui
+  stageDependencies:
+    setup:
+        - '**/*.go'

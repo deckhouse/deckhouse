@@ -25,6 +25,7 @@ webhooks:
       - d8-delivery
       - d8-flant-integration
       - d8-runtime-audit-engine
+      - d8-ui
       - d8-system
       - d8-admission-policy-engine
       - d8-cni-cilium

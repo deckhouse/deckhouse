@@ -22,6 +22,8 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/pricing"
 	_ "github.com/deckhouse/deckhouse/ee/modules/650-runtime-audit-engine/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/810-ui/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/810-ui/hooks/https"
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/deckhouse-config"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
@@ -91,6 +93,4 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
-	_ "github.com/deckhouse/deckhouse/modules/810-ui/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/810-ui/hooks/https"
 )
