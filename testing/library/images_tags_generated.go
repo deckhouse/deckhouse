@@ -43,6 +43,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderAzure-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderAzure-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderAzure-cloudControllerManager126",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager122": "imageHash-cloudProviderGcp-cloudControllerManager122",
