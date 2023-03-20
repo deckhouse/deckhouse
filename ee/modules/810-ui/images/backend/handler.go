@@ -106,6 +106,8 @@ func initHandlers(
 		},
 		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "deckhousereleases", Version: "v1alpha1"}},
 		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "moduleconfigs", Version: "v1alpha1"}},
+		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "dexauthenticators", Version: "v1alpha1"}},
+		{gvr: schema.GroupVersionResource{Group: "deckhouse.io", Resource: "users", Version: "v1"}},
 
 		{
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "awsinstanceclasses", Version: "v1"},
