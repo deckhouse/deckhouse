@@ -1,9 +1,9 @@
 ARG BASE_UBUNTU
-ARG BASE_GOLANG_18_BULLSEYE
+ARG BASE_GOLANG_19_BULLSEYE
 
-FROM $BASE_GOLANG_18_BULLSEYE as builder
+FROM $BASE_GOLANG_19_BULLSEYE as builder
 ARG LINSTOR_SCHEDULER_EXTENDER_GITREPO=https://github.com/piraeusdatastore/linstor-scheduler-extender
-ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=0.3.0
+ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=0.3.1
 
 RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-scheduler-extender \
  && cd /usr/local/go/linstor-scheduler-extender \
