@@ -4,7 +4,7 @@ import BaseLayout from "@/components/layout/BaseLayout.vue";
 import NodeListPage from "@/pages/NodeListPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Node List",
+  title: "Deckhouse UI/Pages/Node/List",
   component: NodeListPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

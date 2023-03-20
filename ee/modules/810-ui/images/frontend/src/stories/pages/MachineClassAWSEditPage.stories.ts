@@ -4,7 +4,7 @@ import BaseLayout from "../../components/layout/BaseLayout.vue";
 import MachineClassAWSEditPage from "../../pages/MachineClassAWSEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Machine Class AWS Edit",
+  title: "Deckhouse UI/Pages/Instance Classes/AWS Edit",
   component: MachineClassAWSEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

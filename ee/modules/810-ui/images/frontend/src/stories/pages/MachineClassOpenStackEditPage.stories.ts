@@ -4,7 +4,7 @@ import BaseLayout from "../../components/layout/BaseLayout.vue";
 import MachineClassOpenStackEditPage from "../../pages/MachineClassOpenStackEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Machine Class Open Stack Edit",
+  title: "Deckhouse UI/Pages/Instance Classes/Open Stack Edit",
   component: MachineClassOpenStackEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

@@ -11,46 +11,47 @@
         <CardTitle title="Конфигурация" icon="IconOpenStackLogo" />
       </template>
       <template #content>
-        <TabsBlock :items="card_tabs" class="mb-10" />
         
-        <InputBlock title="Тип Машины" spec="spec.diskSizeGb" help="Обязательный параметр">
-          <Dropdown :options="typeOptions" v-model="type" optionLabel="" class="p-inputtext-sm" />
-        </InputBlock>
-
-        <CardDivider />
-
-        <FieldGroupTitle title="Диск" />
-        <div class="flex flex-wrap items-start -mx-24 -my-6">          
-          <div class="mx-24 my-6">
-            <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" 
-              help="Параметр влияет на тип диска.<br><a href='ya.ru' target='_blank' class='text-blue-500'>Прочитайте</a>, как подобрать размер диска">
-              <InputText class="p-inputtext-sm w-[50px]" />
-            </InputBlock>
-          </div>
-          <div class="mx-24 my-6"> 
-            <InputBlock title="Образ машины" spec="spec.diskSizeGb" help="По умолчанию используется значение из настроек провайдера">
-              <InputText class="p-inputtext-sm" />
-            </InputBlock>
-          </div>
-        </div>
-
-        <CardDivider />
-
         <div class="flex flex-wrap items-start -mx-24 -my-6">
           <div class="mx-24 my-6">
-            <FieldGroupTitle title="Основная сеть" />
-            <InputBlock type="column" help="По-умолчанию используется значение из настроек провайдера">
-              <InputText class="p-inputtext-sm w-full" />
+            <InputBlock title="Имя" type="column" class="mb-6" required>
+              <InputText class="p-inputtext-sm w-[450px]" />
             </InputBlock>
+            <FieldGroupTitle title="Диск" />
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Размер ГБ" spec="spec.rootDiskSizeGb" help="Этот параметр влияет на тип диска<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Как подобрать размер диска</a>">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+            </div>
           </div>
-          <InputLabelGroup class="mx-24 my-6" title="Дополнительные сети" :fields="['Value']" />
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Сеть" />
+
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Основная сеть" spec="spec.mainSubnet" type="column">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputLabelGroup title="Дополнительные сети" spec="spec.additionalNetworks" :fields="['Network']" />
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Прочее" />
+
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Образ машины" spec="spec.ImageName" type="column" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+            </div>
+          </div>
         </div>
 
         <CardDivider />
         
         <div class="flex flex-wrap items-start -mx-12 -my-6">
           <InputLabelGroup class="mx-12 my-6" title="Дополнительные группы безопасности" spec="spec.extraSecurityGroups" :fields="['Value']" default="Настройки провайдера" />
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные теги" spec="spec.extraTags" :fields="['Key', 'Value']" default="Настройки провайдера" />
+          <InputLabelGroup class="mx-12 my-6" title="Дополнительные теги" spec="spec.additionalLabels" :fields="['Key', 'Value']" default="Настройки провайдера" />
         </div>
 
       </template>
@@ -72,6 +73,7 @@ import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import InputSwitch from 'primevue/inputswitch';
+import SelectButton from "primevue/selectbutton";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
 import PageActions from "@/components/common/page/PageActions.vue";
@@ -88,9 +90,6 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardTitle from "@/components/common/card/CardTitle.vue";
 import CardDivider from "@/components/common/card/CardDivider.vue";
 
-const type = ref('m5.xlarge');
-const typeOptions = ref(['m5.xlarge']);
-
 const tabs = [
   {
     id: "1",
@@ -101,20 +100,6 @@ const tabs = [
     id: "2",
     title: "Редактирование",
     active: true,
-    routeName: "home",
-  },
-];
-
-const card_tabs = [
-  {
-    id: "1",
-    title: "Стандартная",
-    active: true,
-    routeName: "home",
-  },
-  {
-    id: "2",
-    title: "Пользовательская",
     routeName: "home",
   },
 ];

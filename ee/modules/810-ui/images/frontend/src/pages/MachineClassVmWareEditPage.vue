@@ -8,50 +8,92 @@
   <GridBlock>
     <CardBlock notice-placement="top">
       <template #title>
-        <CardTitle title="Конфигурация" icon="IconOpenStackLogo" />
+        <CardTitle title="Конфигурация" icon="IconVmWareLogo" />
       </template>
       <template #content>
-        <TabsBlock :items="card_tabs" class="mb-10" />
         
-        <InputBlock title="Тип Машины" spec="spec.diskSizeGb" help="Обязательный параметр">
-          <Dropdown :options="typeOptions" v-model="type" optionLabel="" class="p-inputtext-sm" />
-        </InputBlock>
-
-        <CardDivider />
-
-        <FieldGroupTitle title="Диск" />
-        <div class="flex flex-wrap items-start -mx-24 -my-6">          
-          <div class="mx-24 my-6">
-            <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" 
-              help="Параметр влияет на тип диска.<br><a href='ya.ru' target='_blank' class='text-blue-500'>Прочитайте</a>, как подобрать размер диска">
-              <InputText class="p-inputtext-sm w-[50px]" />
-            </InputBlock>
-          </div>
+        <div class="flex flex-wrap items-start -mx-24 -my-6">
           <div class="mx-24 my-6"> 
-            <InputBlock title="Образ машины" spec="spec.diskSizeGb" help="По умолчанию используется значение из настроек провайдера">
-              <InputText class="p-inputtext-sm" />
-            </InputBlock>
+            <FieldGroupTitle title="Ресурсы" />
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="ЦПУ, виртуальных ядер" spec="spec.numCPUs" required>
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+              <InputBlock title="Память МмБ" spec="spec.memory">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+              <InputBlock title="Размер корневого диска Гб" spec="spec.rootDiskSize" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Сеть" />
+
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Основная сеть" spec="spec.mainNetwork" type="column">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputLabelGroup title="Дополнительные подсети" spec="spec.additionalSubnets" :fields="['Network']" />
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Прочее" />
+
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Идентификатор образа" spec="spec.template" type="column" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputBlock title="Datastore" spec="spec.datastore" type="column" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputBlock title="Пул ресурсов" spec="spec.resourcePool" type="column" help="Установлено значение из конфигурации провайдера">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputBlock title="Включить синхронизацию времени с ESXi в гостевой ОС" spec="spec.disableTimesync" special>
+                <InputSwitch />
+              </InputBlock>
+            </div>
           </div>
         </div>
 
         <CardDivider />
+        
+        <CardTitle title="Дополнительные параметры" />
 
         <div class="flex flex-wrap items-start -mx-24 -my-6">
+          <div class="mx-24 my-6"> 
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Верхний лимит потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuLimit" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+              <InputBlock title="Величина зарезервированной потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuReservation" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+              <InputBlock title="Относительная величина CPU Shares" spec="spec.runtimeOptions.cpuShares" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+              <InputBlock title="Верхний лимит потребляемой памяти Миб" spec="spec.runtimeOptions.memoryLimit" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+              <InputBlock title="Процент зарезервированной памяти в кластере ( % от spec.memory)" spec="spec.runtimeOptions.memoryReservations" help="Допустимые значения 0 < x < 100<br>Значение по умолчанию: 80" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+              <InputBlock title="Относительная величина Memory Shares" spec="spec.runtimeOptions.memoryShares" help="Допустимые значения 0 < x < 100" toggle>
+                <InputText class="p-inputtext-sm w-[50px]" />
+              </InputBlock>
+            </div>
+          </div>
+
           <div class="mx-24 my-6">
-            <FieldGroupTitle title="Основная сеть" />
-            <InputBlock type="column" help="По-умолчанию используется значение из настроек провайдера">
-              <InputText class="p-inputtext-sm w-full" />
+            <InputBlock title="Hardware Assisted Virtualization" spec="spec.runtimeOptions.nestedHardwareVirtualisation" special class="w-[550px]">
+              <InputSwitch />
             </InputBlock>
           </div>
-          <InputLabelGroup class="mx-24 my-6" title="Дополнительные сети" :fields="['Value']" />
         </div>
 
-        <CardDivider />
-        
-        <div class="flex flex-wrap items-start -mx-12 -my-6">
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные группы безопасности" spec="spec.extraSecurityGroups" :fields="['Value']" default="Настройки провайдера" />
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные теги" spec="spec.extraTags" :fields="['Key', 'Value']" default="Настройки провайдера" />
-        </div>
 
       </template>
       <template #actions>
@@ -72,6 +114,7 @@ import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import InputSwitch from 'primevue/inputswitch';
+import SelectButton from "primevue/selectbutton";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
 import PageActions from "@/components/common/page/PageActions.vue";
@@ -88,9 +131,6 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardTitle from "@/components/common/card/CardTitle.vue";
 import CardDivider from "@/components/common/card/CardDivider.vue";
 
-const type = ref('m5.xlarge');
-const typeOptions = ref(['m5.xlarge']);
-
 const tabs = [
   {
     id: "1",
@@ -101,20 +141,6 @@ const tabs = [
     id: "2",
     title: "Редактирование",
     active: true,
-    routeName: "home",
-  },
-];
-
-const card_tabs = [
-  {
-    id: "1",
-    title: "Стандартная",
-    active: true,
-    routeName: "home",
-  },
-  {
-    id: "2",
-    title: "Пользовательская",
     routeName: "home",
   },
 ];

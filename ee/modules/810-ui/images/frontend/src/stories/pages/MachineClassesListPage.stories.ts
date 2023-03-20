@@ -4,7 +4,7 @@ import BaseLayout from "../../components/layout/BaseLayout.vue";
 import MachineClassesListPage from "../../pages/MachineClassesListPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Machine Classes List",
+  title: "Deckhouse UI/Pages/Instance Classes/List",
   component: MachineClassesListPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

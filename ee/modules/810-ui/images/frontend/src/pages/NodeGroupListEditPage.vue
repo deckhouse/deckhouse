@@ -66,25 +66,25 @@
         <div class="mx-24 my-6">
           <CardTitle title="Параметры автомасштабирования" />
           <div class="flex flex-col gap-y-6">
-            <InputBlock title="Приоритет масштабирования" help="Установлено значение по-умолчанию">
+            <InputBlock title="Приоритет масштабирования" help="Установлено значение по-умолчанию" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="MaxUnavailablePerZone" help="Максимум недоступных узлов при обновлении">
+            <InputBlock title="MaxUnavailablePerZone" help="Максимум недоступных узлов при обновлении" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Максимальное количество одновременно обновляемых узлов" help="Установлено значение по-умолчанию">
+            <InputBlock title="Максимальное количество одновременно обновляемых узлов" help="Установлено значение по-умолчанию" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Stand by" help="Установлено значение по-умолчанию">
+            <InputBlock title="Stand by" help="Установлено значение по-умолчанию" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Число резервных узлов от общего количества узлов">
+            <InputBlock title="Число резервных узлов от общего количества узлов" reset>
                 <div class="p-inputgroup !w-[100px]">
                   <InputText class="p-inputtext-sm w-[50px]" />
                   <span class="p-inputgroup-addon">из 6</span>
                 </div>
             </InputBlock>
-            <InputBlock title="Max Surge" help="Установлено значение по-умолчанию">
+            <InputBlock title="Max Surge" help="Установлено значение по-умолчанию" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
             <InputBlock title="Quick Shutdown">
@@ -124,10 +124,10 @@
           <FieldGroupTitle title="Настройки CRI" tooltip="Тут будет тултип" />
           <div class="flex flex-col gap-y-12 mb-12">
             <SelectButton v-model="CRIMode" :options="CRIModeOptions" optionLabel="name" optionValue="value" />
-            <InputBlock title="Максимальное количество параллельных потоков загрузки для каждой операции pull">
+            <InputBlock title="Максимальное количество параллельных потоков загрузки для каждой операции pull" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Автоматическое управление версией и параметрами Docker" tooltip="Тут будет тултип">
+            <InputBlock title="Автоматическое управление версией и параметрами Docker">
               <InputSwitch class="shrink-0" />
             </InputBlock>
           </div>
@@ -141,16 +141,16 @@
         <div class="mx-24 my-6">
           <FieldGroupTitle title="Параметры kubelet" tooltip="Тут будет тултип" />
           <div class="flex flex-col gap-y-12 mb-12">
-            <InputBlock title="Максимальное количество файлов журналов с учетом ротации" spec="spec.kubelet.containerlogtyrpyr">
+            <InputBlock title="Максимальное количество файлов журналов с учетом ротации" spec="spec.kubelet.containerlogtyrpyr" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Максимальный размер файла журнала до ротации, МиБ" spec="spec.kubelet.containerlogtyrpyr">
+            <InputBlock title="Максимальный размер файла журнала до ротации, МиБ" spec="spec.kubelet.containerlogtyrpyr" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Максимальное количество pod-ов" help="Установлено значение по-умолчанию">
+            <InputBlock title="Максимальное количество pod-ов" help="Установлено значение по-умолчанию" reset>
               <InputText class="p-inputtext-sm w-[50px]" />
             </InputBlock>
-            <InputBlock title="Путь к каталогу для файлов kubelet">
+            <InputBlock title="Путь к каталогу для файлов kubelet" reset>
               <InputText class="p-inputtext-sm w-[200px]" />
             </InputBlock>
           </div>
@@ -163,7 +163,7 @@
       <CardTitle title="Параметры chaos monkey" />
       <div class="flex flex-col gap-y-6 mb-12">
         <SelectButton v-model="monkey" :options="monkeyOptions" optionLabel="name" optionValue="value" />      
-        <InputBlock title="Интервал срабатывания" help="Установлено значение по-умолчанию">
+        <InputBlock title="Интервал срабатывания" help="Установлено значение по-умолчанию" reset>
           <Calendar :showTime="true" :timeOnly="true" class="w-[100px]" />
         </InputBlock>
       </div>

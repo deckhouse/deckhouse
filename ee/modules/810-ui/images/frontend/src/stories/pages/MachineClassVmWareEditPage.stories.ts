@@ -4,7 +4,7 @@ import BaseLayout from "../../components/layout/BaseLayout.vue";
 import MachineClassVmWareEditPage from "../../pages/MachineClassVmWareEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Machine Class Open Stack Edit",
+  title: "Deckhouse UI/Pages/Instance Classes/VmWare Edit",
   component: MachineClassVmWareEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

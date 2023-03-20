@@ -1,4 +1,5 @@
 import type { App } from "vue";
+import { ref } from 'vue'
 
 import router from "./router";
 
@@ -49,6 +50,10 @@ export default async function initApp({
   dayjs.extend(customParseFormat);
   dayjs.extend(advancedFormat);
   dayjs.locale("ru");
+
+  app.provide("globalSettings", ref({
+    "specMode": true
+  }))
 
   NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   initWS = initWS && !import.meta.env.VITE_NO_WS;

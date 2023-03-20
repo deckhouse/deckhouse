@@ -4,7 +4,7 @@ import BaseLayout from "../../components/layout/BaseLayout.vue";
 import NodeGroupListEditPage from "../../pages/NodeGroupListEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Node Group List Edit",
+  title: "Deckhouse UI/Pages/Node Group/Edit",
   component: NodeGroupListEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

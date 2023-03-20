@@ -6,7 +6,7 @@ import BaseLayout from "@/components/layout/BaseLayout.vue";
 import NodePage from "@/pages/NodePage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Node",
+  title: "Deckhouse UI/Pages/Nodes/Edit",
   component: NodePage,
   parameters: { layout: "fullscreen" },
   decorators: [routerDecorator],

@@ -1,16 +1,16 @@
 import type { Meta, Story } from "@storybook/vue3";
 
 import BaseLayout from "@/components/layout/BaseLayout.vue";
-import MachineClassGCPEditPage from "@/pages/MachineClassGCPEditPage.vue";
+import InstanceClassYandexCloudEditPage from "@/pages/InstanceClassYandexCloudEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Instance Classes/GCP Edit",
-  component: MachineClassGCPEditPage,
+  title: "Deckhouse UI/Pages/Instance Classes/Yandex Cloud Edit",
+  component: InstanceClassYandexCloudEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;
 
 const Template: Story = (args, { loaded: { releases } }) => ({
-  components: { MachineClassGCPEditPage, BaseLayout },
+  components: { InstanceClassYandexCloudEditPage, BaseLayout },
 
   setup() {
     return { args };
@@ -18,7 +18,7 @@ const Template: Story = (args, { loaded: { releases } }) => ({
 
   template: `
     <BaseLayout :compact="false">
-      <MachineClassGCPEditPage />
+      <InstanceClassYandexCloudEditPage />
     </BaseLayout>
   `,
 });

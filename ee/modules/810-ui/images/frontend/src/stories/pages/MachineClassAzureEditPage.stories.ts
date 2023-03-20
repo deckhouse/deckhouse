@@ -4,7 +4,7 @@ import BaseLayout from "@/components/layout/BaseLayout.vue";
 import MachineClassAzureEditPage from "@/pages/MachineClassAzureEditPage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Machine Class Azure Edit",
+  title: "Deckhouse UI/Pages/Instance Classes/Azure Edit",
   component: MachineClassAzureEditPage,
   parameters: { layout: "fullscreen" },
 } as Meta;

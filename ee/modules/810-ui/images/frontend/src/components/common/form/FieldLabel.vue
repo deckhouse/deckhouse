@@ -8,7 +8,6 @@
         </div>
       </div>
       <SpecLabel :spec="spec" v-if="spec" />
-      <span class="text-sm text-slate-400 mt-1 leading-normal" v-html="help" v-if="help" />
     </div>
 </template>
 
@@ -17,7 +16,6 @@ import * as Icons from "@/components/common/icon";
 import SpecLabel from "@/components/common/form/SpecLabel.vue";
 const props = defineProps({
   title: String,
-  help: String,
   spec: String,
   tooltip: String,
   required: Boolean

@@ -8,22 +8,55 @@
   <GridBlock>
     <CardBlock notice-placement="top">
       <template #title>
-        <CardTitle title="Конфигурация" icon="IconAWSLogo" />
+        <CardTitle title="Конфигурация" icon="IconYandexCloudLogo" />
       </template>
       <template #content>
         
         <div class="flex flex-wrap items-start -mx-24 -my-6">
-          <div class="mx-24 my-6">
-            <InputBlock title="Имя" type="column" class="mb-6" required>
-              <InputText class="p-inputtext-sm w-[500px]" />
-            </InputBlock>
+          <div class="mx-24 my-6"> 
+            <FieldGroupTitle title="Ресурсы" />
+            <div class="flex flex-col gap-y-6 mb-6">
+              <InputBlock title="ЦПУ, виртуальных ядер" spec="spec.cores" required>
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+              <InputBlock title="Платформа ЦПУ" spec="spec.platformID" help="Установлено значение по умолчанию<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Список существующих платформ</a>">
+                <InputText class="p-inputtext-sm" />
+              </InputBlock>
+              <InputBlock title="Память МмБ" spec="spec.memory">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+              <InputBlock title="Базовый уровень производительности ядер" spec="spec.coreFraction" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+              <InputBlock title="Количество графических адаптеров" spec="spec.gpus" help="Установлено значение по-умолчанию">
+                <InputText class="p-inputtext-sm w-[100px]" />
+              </InputBlock>
+            </div>
+            
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
               <InputBlock title="Размер ГБ" spec="spec.diskSizeGb">
                 <InputText class="p-inputtext-sm" />
               </InputBlock>
-              <InputBlock title="Тип" spec="spec.machineType">
+              <InputBlock title="Тип" spec="spec.diskType">
                 <Dropdown class="p-inputtext-sm" />
+              </InputBlock>
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Сеть" />
+
+            <div class="flex flex-col gap-y-6">
+              <InputBlock title="Основная подсеть" spec="spec.mainSubnet" type="column">
+                <InputText class="p-inputtext-sm w-[450px]" />
+              </InputBlock>
+              <InputBlock title="Тип сети" spec="spec.networkType">
+                <Dropdown class="p-inputtext-sm" />
+              </InputBlock>
+              <InputLabelGroup title="Дополнительные подсети" spec="spec.additionalSubnets" :fields="['Network']" />
+              <InputBlock title="Публичный IP" spec="spec.assignPublicIPAdress" special>
+                <InputSwitch />
               </InputBlock>
             </div>
           </div>
@@ -32,10 +65,10 @@
             <FieldGroupTitle title="Прочее" />
 
             <div class="flex flex-col gap-y-6">
-              <InputBlock title="Образ машины" spec="spec.ami" type="column" help="<a href='ya.ru' target='_blank' class='text-blue-500'>Список доступных AMI</a>">
+              <InputBlock title="Идентификатор образа" spec="spec.ImageID" type="column" help="По умолчанию используется образ группы узлов master">
                 <InputText class="p-inputtext-sm w-[450px]" />
               </InputBlock>
-              <InputBlock title="Использовать Spot" spec="spec.spot" tooltip="Spot-инстансы запускаются с минимальной возможной для успешного запуска ценой за час" special>
+              <InputBlock title="Прерываемые ВМ" spec="spec.preemptible" special>
                 <InputSwitch />
               </InputBlock>
             </div>
@@ -45,7 +78,6 @@
         <CardDivider />
         
         <div class="flex flex-wrap items-start -mx-12 -my-6">
-          <InputLabelGroup class="mx-12 my-6" title="Дополнительные сетевые теги" spec="spec.additionalNetworkTags" :fields="['Value']" />
           <InputLabelGroup class="mx-12 my-6" title="Дополнительные лейблы" spec="spec.additionalLabels" :fields="['Key', 'Value']" />
         </div>
 
@@ -69,6 +101,7 @@ import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import InputSwitch from 'primevue/inputswitch';
+import SelectButton from "primevue/selectbutton";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
 import PageActions from "@/components/common/page/PageActions.vue";
@@ -85,16 +118,16 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardTitle from "@/components/common/card/CardTitle.vue";
 import CardDivider from "@/components/common/card/CardDivider.vue";
 
-const tabs = [
+const card_tabs = [
   {
     id: "1",
-    title: "Просмотр",
+    title: "Стандартная",
+    active: true,
     routeName: "home",
   },
   {
     id: "2",
-    title: "Редактирование",
-    active: true,
+    title: "Пользовательская",
     routeName: "home",
   },
 ];

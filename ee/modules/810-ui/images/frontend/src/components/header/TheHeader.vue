@@ -1,6 +1,6 @@
 <template>
-  <header class="sticky top-0 inset-x-0 flex flex-wrap z-[48] w-full bg-white border-b text-sm py-5 pl-64">
-    <nav class="flex basis-full items-center w-full mx-auto px-10" aria-label="Global">
+  <header class="sticky top-0 inset-x-0 flex flex-row flex-wrap z-[48] w-full bg-white border-b text-sm py-5 pl-64 pr-3">
+    <nav class="flex items-center px-10" aria-label="Global">
       <div class="w-full flex items-center justify-end ml-auto justify-between gap-x-3 order-3">
         <ol class="flex items-center whitespace-nowrap min-w-0" aria-label="Breadcrumb">
           <li class="text-sm text-gray-500">
@@ -24,5 +24,16 @@
         </ol>
       </div>
     </nav>
+    <div class="ml-auto flex items-center">
+      <span class="block font-medium text-gray-800 mr-3">Spec</span>
+      <InputSwitch v-model="globalSettings['specMode']" inputClass="test" />
+    </div>
   </header>
 </template>
+
+<script setup lang="ts">
+import { inject } from "vue";
+import InputSwitch from 'primevue/inputswitch';
+
+const globalSettings = inject("globalSettings");
+</script>

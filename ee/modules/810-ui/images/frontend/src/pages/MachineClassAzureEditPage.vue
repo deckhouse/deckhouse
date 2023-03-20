@@ -11,34 +11,12 @@
         <CardTitle title="Конфигурация" icon="IconAzureLogo" />
       </template>
       <template #content>
-        <SelectButton 
-        v-model="mode" 
-        :options="modeOptions"
-        optionLabel="name"
-        optionValue="value" 
-        class="mb-10" />
         
         <div class="flex flex-wrap items-start -mx-24 -my-6">
           <div class="mx-24 my-6">
-            <template v-if="mode == 'default'">
-              <InputBlock title="Тип Машины" spec="spec.machineSize" type="column" class="mb-6">
-                <Dropdown :options="typeOptions" v-model="type" optionLabel="" class="p-inputtext-sm w-[450px]" />
-              </InputBlock>
-            </template>
-            <template v-if="mode == 'user'">
-              <InputBlock title="Имя" help="Обязательное поле" type="column" class="mb-6">
-                <InputText class="p-inputtext-sm w-[450px]" />
-              </InputBlock>
-              <FieldGroupTitle title="Ресурсы" help="Укажите ресурсы для этого типа машин, чтобы cluster-autoscaler мог масштабировать группы узлов с нулевого размера (minPerZone=0)" />
-              <div class="flex flex-col gap-y-6 mb-6">
-                <InputBlock title="ЦПУ, виртуальных ядер" spec="spec.capacity.cpu" required>
-                  <InputText class="p-inputtext-sm" />
-                </InputBlock>
-                <InputBlock title="Память ММБ" spec="spec.capacity.memory" required>
-                  <InputText class="p-inputtext-sm" />
-                </InputBlock>
-              </div>
-            </template>
+            <InputBlock title="Имя" type="column" class="mb-6" required>
+              <InputText class="p-inputtext-sm w-[450px]" />
+            </InputBlock>
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
               <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" :help="mode == 'default' ? 'Установлено значение по умолчанию' : undefined">
@@ -57,7 +35,7 @@
               <InputBlock title="Образ машины" spec="spec.urn" type="column" help="По умолчанию используется образ группы узлов master<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Список доступных образов</a>">
                 <InputText class="p-inputtext-sm w-[450px]" />
               </InputBlock>
-              <InputBlock title="Ускоренная сеть" spec="spec.disableExternalIP" help="Установлено значение по-умолчанию">
+              <InputBlock title="Ускоренная сеть" spec="spec.disableExternalIP" help="Установлено значение по-умолчанию" special>
                 <InputSwitch />
               </InputBlock>
             </div>
@@ -90,7 +68,6 @@ import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import InputSwitch from 'primevue/inputswitch';
-import SelectButton from "primevue/selectbutton";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
 import PageActions from "@/components/common/page/PageActions.vue";
@@ -107,15 +84,6 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardTitle from "@/components/common/card/CardTitle.vue";
 import CardDivider from "@/components/common/card/CardDivider.vue";
 
-const type = ref('m5.xlarge');
-const typeOptions = ref(['m5.xlarge']);
-
-const mode = ref('default');
-const modeOptions = [
-  { name: "Стандартная", value: "default" },
-  { name: "Пользовательская", value: "user" }
-];
-
 const tabs = [
   {
     id: "1",
@@ -126,20 +94,6 @@ const tabs = [
     id: "2",
     title: "Редактирование",
     active: true,
-    routeName: "home",
-  },
-];
-
-const card_tabs = [
-  {
-    id: "1",
-    title: "Стандартная",
-    active: true,
-    routeName: "home",
-  },
-  {
-    id: "2",
-    title: "Пользовательская",
     routeName: "home",
   },
 ];

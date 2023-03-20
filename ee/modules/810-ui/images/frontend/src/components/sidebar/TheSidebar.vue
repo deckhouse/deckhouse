@@ -5,7 +5,7 @@
   >
     <div class="px-6">
       <a class="flex-none text-xl font-semibold dark:text-white" href="#" aria-label="Deckhouse Commander">
-        <img alt="Deckhouse Commander" class="logo" src="@/assets/logo.svg" width="159" height="53" />
+        <img alt="Deckhouse Commander" class="logo" src="@/assets/logo.svg" width="190" height="45" />
       </a>
     </div>
     <SidebarNav />
