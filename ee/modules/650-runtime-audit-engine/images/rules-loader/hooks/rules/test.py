@@ -58,6 +58,16 @@ class TestConvertSpec(unittest.TestCase):
                         "tags": ["filesystem", "mitre_persistence"],
                         "source": "Syscall",
                     }
+                },
+                {
+                    "rule": {
+                        "name": "Test name",
+                        "desc": "Alert about test",
+                        "condition": "ka.user.name == \"test\"",
+                        "output": "Test output %ka.user.name",
+                        "priority": "Error",
+                        "source": "K8sAudit",
+                    }
                 }
             ]
         })
@@ -75,6 +85,14 @@ class TestConvertSpec(unittest.TestCase):
                 "priority": "Error",
                 "tags": ["filesystem", "mitre_persistence"],
                 "source": "syscall",
+            },
+            {
+                "desc": "Alert about test",
+                "condition": 'ka.user.name == "test"',
+                "output": "Test output %ka.user.name",
+                "priority": "Error",
+                "source": "k8s_audit",
+                "rule": "Test name",
             }
         ]
         self.assertListEqual(res, expect)

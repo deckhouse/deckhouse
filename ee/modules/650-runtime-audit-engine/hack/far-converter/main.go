@@ -159,7 +159,7 @@ func convert(path string, rules []RawRule) FalcoAuditRule {
 
 			if source, ok := r["source"]; ok {
 				switch strings.ToLower(source.(string)) {
-				case "k8saudit":
+				case "k8s_audit":
 					ruleToAdd.Source = "K8sAudit"
 				case "syscall":
 					ruleToAdd.Source = "Syscall"
