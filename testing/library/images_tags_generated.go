@@ -50,6 +50,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager124": "imageHash-cloudProviderGcp-cloudControllerManager124",
 		"cloudControllerManager125": "imageHash-cloudProviderGcp-cloudControllerManager125",
 		"cloudControllerManager126": "imageHash-cloudProviderGcp-cloudControllerManager126",
+		"cloudDataDiscoverer":       "imageHash-cloudProviderGcp-cloudDataDiscoverer",
 		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
