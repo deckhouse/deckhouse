@@ -7,7 +7,7 @@ search: DNS, domain, домен, clusterdomain
 
 Добавляем новый домен и сохраняем предыдущий:
 
-1. В `controlPlaneManager.apiserver.certSANs` прописать
+1. В [controlPlaneManager.apiserver.certSANs](../040-control-plane-manager/configuration.html#parameters-apiserver-certsans) прописать
     - `kubernetes.default.svc.<старый clusterDomain>`
     - `kubernetes.default.svc.<новый clusterDomain>`
 1. В [kubeDns.clusterDomainAliases](configuration.html#параметры) указать
