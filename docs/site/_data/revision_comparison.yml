@@ -83,6 +83,13 @@ sections:
               <li>Приоритетное исправление ошибок и выпуск обновлений.</li>
               <li>Консультации по миграции на ОС.</li></ul></p>
         url: /documentation/v1/supported_versions.html
+      - description:
+          ru: Встроенная платформа виртуализации
+          en: Built-in virtualization platform
+        revision:
+          ce: true
+          ee: true
+        url: /documentation/v1/modules/490-virtualization/
   - id: features
     description:
       en: Supported features
@@ -98,17 +105,18 @@ sections:
           ru: Multitenancy
         revision: ee
       - description:
-          en: Extended security
-          ru: Расширенная безопасность
+          en: Security threat detection engine
+          ru: Модуль поиска угроз безопасности
+        url: /documentation/v1.44/modules/650-runtime-audit-engine/
         revision:
           ce: false
-          ee: partial
-        hint:
-          ee:
-            en: |
-              (coming soon) Including Vault integration and encrypted secrets in etcd
-            ru: |
-              (скоро появится) Включая интеграцию с Vault и зашифрованные секреты в etcd
+          ee: true
+      - description:
+          en: Application images security scanner
+          ru: Сканирование образов приложений на уязвимости
+        revision:
+          ce: false
+          ee: true
       - description:
           en: BGP support
           ru: Поддержка BGP
@@ -136,6 +144,13 @@ sections:
           ru: <a href="/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений">Выбор окна времени для обновлений</a>
         revision:
           ce: true
+          ee: true
+      - description:
+          en: Out-of-the-box application delivery to the cluster
+          ru: Решение вопросов по доставке приложений в кластер
+        url: /documentation/v1/modules/502-delivery/
+        revision:
+          ce: false
           ee: true
   - id: other
     description:
