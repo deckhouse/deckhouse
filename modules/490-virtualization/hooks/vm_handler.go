@@ -341,7 +341,7 @@ func processD8VM(input *go_hook.HookInput, d8vm *v1alpha1.VirtualMachine) error 
 		for _, diskSource := range *d8vm.Spec.DiskAttachments {
 			disk := getDisk(&diskSnap, d8vm.Namespace, diskSource.Name)
 			if disk == nil {
-				return fmt.Errorf("disk not found: %v", disk.Name)
+				return fmt.Errorf("disk not found: %v", diskSource.Name)
 			}
 			if disk.VMName != "" && disk.VMName != d8vm.Name {
 				return fmt.Errorf("disk already attached to another VirtualMachine: %v", disk.VMName)
