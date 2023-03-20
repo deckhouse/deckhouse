@@ -79,6 +79,10 @@ FROM cilium_builder as builder
 
 WORKDIR /tmp/cilium-repo/cilium-1.11.14
 
+# Apply patches
+COPY ./patches /patches
+RUN find /patches -name '*.patch' -exec git apply {} \;
+
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
 
