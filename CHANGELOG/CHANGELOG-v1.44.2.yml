@@ -1,0 +1,35 @@
+cni-cilium:
+  fixes:
+    - summary: Use predefined MAC-addresses for virtualization workloads.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4071
+    - summary: Perform routing lookup for custom tables.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4046
+containerized-data-importer:
+  fixes:
+    - summary: Make CDI working with `customCertificate`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3985
+external-module-manager:
+  fixes:
+    - summary: Fix decoding empty file with module checksums
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4077
+kube-dns:
+  fixes:
+    - summary: Minor documentation fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4143
+log-shipper:
+  fixes:
+    - summary: Add job label selector to alerts query.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4051
+operator-trivy:
+  fixes:
+    - summary: Disabled infra assessment jobs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4093
+prometheus:
+  fixes:
+    - summary: Increase Prometheus self sample limit.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4066
+runtime-audit-engine:
+  fixes:
+    - summary: Fix `K8sAudit` -> `k8s_audit` source convert action.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4134
+

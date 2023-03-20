@@ -36,6 +36,9 @@
     `kube-proxy` Pods will be recreated.
  - **[cloud-provider-openstack]** Support for offline resize. Fix no effect after enable `ignoreVolumeMicroversion`. [#3909](https://github.com/deckhouse/deckhouse/pull/3909)
  - **[cloud-provider-vsphere]** Stop depending on CCM to uniquely identify instance ID. Fixes a couple of bugs. [#3721](https://github.com/deckhouse/deckhouse/pull/3721)
+ - **[cni-cilium]** Use predefined MAC-addresses for virtualization workloads. [#4071](https://github.com/deckhouse/deckhouse/pull/4071)
+ - **[cni-cilium]** Perform routing lookup for custom tables. [#4046](https://github.com/deckhouse/deckhouse/pull/4046)
+ - **[containerized-data-importer]** Make CDI working with `customCertificate`. [#3985](https://github.com/deckhouse/deckhouse/pull/3985)
  - **[deckhouse-config]** Place the `deckhouse-config-webhook` on the same node as Deckhouse. [#4014](https://github.com/deckhouse/deckhouse/pull/4014)
  - **[go_lib]** Remove the `go_lib/hooks/delete_not_matching_certificate_secret/hook.go` hook. [#3777](https://github.com/deckhouse/deckhouse/pull/3777)
  - **[ingress-nginx]** Improve rollout hook to avoid concurrent controller pod deletion [#3915](https://github.com/deckhouse/deckhouse/pull/3915)
@@ -43,20 +46,25 @@
     All `proxy-<ingress-name>-failover` daemonsets will be restarted.
  - **[istio]** D8IstioDeprecatedIstioVersionInstalled alert description clarification. [#4010](https://github.com/deckhouse/deckhouse/pull/4010)
  - **[istio]** Added check of istiod operation before controller starts upgrading required resources. [#3710](https://github.com/deckhouse/deckhouse/pull/3710)
+ - **[log-shipper]** Add job label selector to alerts query. [#4051](https://github.com/deckhouse/deckhouse/pull/4051)
  - **[log-shipper]** Fix the exclude clause for unschedulable nodes in the RateLimit alert. [#4018](https://github.com/deckhouse/deckhouse/pull/4018)
  - **[log-shipper]** Bump `librdkafka` to `v2.0.2` to make log-shipper read the full CA certificates chain for Kafka. [#3693](https://github.com/deckhouse/deckhouse/pull/3693)
  - **[monitoring-kubernetes]** Fix regex in the `node_exporter`. [#3799](https://github.com/deckhouse/deckhouse/pull/3799)
     All `node_exporter` Pods will be restarted.
  - **[node-manager]** Stop deleting Yandex Cloud preemptible instances if percent of Ready Machines in a NodeGroup dips below 90%. Algorithm is simplified. [#3589](https://github.com/deckhouse/deckhouse/pull/3589)
  - **[openvpn]** Use the same tunnel network for TCP and UDP. [#3749](https://github.com/deckhouse/deckhouse/pull/3749)
+ - **[prometheus]** Increase Prometheus self sample limit. [#4066](https://github.com/deckhouse/deckhouse/pull/4066)
  - **[prometheus]** Change resources determination for Prometheus. [#3848](https://github.com/deckhouse/deckhouse/pull/3848)
  - **[prometheus-metrics-adapter]** Use relative CPU metrics query interval to fix an issue with flaky CPU metrics if a scrape interval is higher than 30s. [#3846](https://github.com/deckhouse/deckhouse/pull/3846)
+ - **[runtime-audit-engine]** Fix `K8sAudit` -> `k8s_audit` source convert action. [#4134](https://github.com/deckhouse/deckhouse/pull/4134)
 
 ## Chore
 
 
  - **[admission-policy-engine]** Change recommended `imagePullPolicy` to `Always`. [#3940](https://github.com/deckhouse/deckhouse/pull/3940)
  - **[cloud-provider-aws]** Added `etcdDisk.sizeGb` and `etcdDisk.type` parameters to `AWSClusterConfiguration`. [#2369](https://github.com/deckhouse/deckhouse/pull/2369)
+ - **[cni-cilium]** Split `cilium` and `virt-cilium`. [#4088](https://github.com/deckhouse/deckhouse/pull/4088)
+    All cilium agent Pods will be restarted.
  - **[cni-cilium]** Bump cilium to `v1.11.14`. [#3870](https://github.com/deckhouse/deckhouse/pull/3870)
     All `cilium` Pods will be restarted.
  - **[cni-cilium]** Bump cilium to `v1.11.13` [#3837](https://github.com/deckhouse/deckhouse/pull/3837)
