@@ -19,7 +19,7 @@ tunnelMode: Disabled
 
 Problems with using this mode:
 
-- It is not possible to access nodes (curl) from the pod network using node internal ip addresses (except node where is pod is located).
+- It is impossible to access nodes (curl) from the Pod network using node internal IP addresses (except the node where the Pod is located).
 
 An example of the results of the connectivity tests:
 
@@ -64,11 +64,11 @@ tunnelMode: Disabled
 
 Problems with using this mode:
 
-- It is not possible to access nodes (curl, ping) from the pod network using internal ip addresses of nodes (except node where is pod is located).
+- It is impossible to access nodes (curl, ping) from the Pod network using the internal IP addresses of nodes (except the node where the Pod is located).
 
 An example of the results of the connectivity tests:
 
-Connection tests do not run because the internal node ip is not available from the pod.
+Connection tests do not run because the internal node IP is not available from the Pod.
 
 ```text
 ⌛ [k8s-dev-cluster] Waiting for NodePort 10.233.32.10:30860 (cilium-test/echo-same-node) to become ready...
@@ -86,7 +86,7 @@ tunnelMode: Disabled
 
 Problems with using this mode:
 
-- It is not possible to access nodes (curl, ping) from the pod network using external ip addresses of nodes (except node where is pod is located).
+- It is impossible to access nodes (curl, ping) from the Pod network using external IP addresses of nodes (except the node where the Pod is located).
 
 An example of the results of the connectivity tests:
 
@@ -139,7 +139,7 @@ tunnelMode: VXLAN
 
 Problems with using this mode:
 
-- It is not possible to access nodes (curl, ping) from the pod network using external ip addresses of nodes (except node where is pod is located).
+- It is impossible to access nodes (curl, ping) from the Pod network using external IP addresses of nodes (except the node where the Pod is located).
 
 An example of the results of the connectivity tests:
 
@@ -184,7 +184,7 @@ tunnelMode: VXLAN
 
 Problems with using this mode:
 
-- It is not possible to access nodes (ping, curl) from the pod network using external ip addresses of nodes (except node where is pod is located).
+- It is impossible to access nodes (ping, curl) from the Pod network using external IP addresses of nodes (except the node where the Pod is located).
 
 An example of the results of the connectivity tests:
 
