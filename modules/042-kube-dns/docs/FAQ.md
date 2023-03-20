@@ -7,7 +7,7 @@ search: DNS, domain, clusterdomain
 
 Add the new domain and save the old one:
 
-1. In the `controlPlaneManager.apiserver.certSANs` section, enter the following parameters:
+1. In the [controlPlaneManager.apiserver.certSANs](../040-control-plane-manager/configuration.html#parameters-apiserver-certsans) section, enter the following parameters:
     - `kubernetes.default.svc.<old clusterDomain>`
     - `kubernetes.default.svc.<new clusterDomain>`
 1. In the [kubeDns.clusterDomainAliases](configuration.html#parameters) section, enter:
