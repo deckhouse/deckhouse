@@ -41,7 +41,11 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
+        {{- if has "virtualization" .Values.global.enabledModules }}
+        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
+        {{- else }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        {{- end }}
         command:
         - cilium-agent
         args:
