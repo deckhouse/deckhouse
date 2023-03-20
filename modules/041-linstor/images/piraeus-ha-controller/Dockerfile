@@ -1,10 +1,10 @@
 ARG BASE_UBUNTU
-ARG BASE_GOLANG_18_BULLSEYE
+ARG BASE_GOLANG_19_BULLSEYE
 
 FROM $BASE_UBUNTU as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.23.0
+ARG UTILS_VERSION=9.23.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -32,9 +32,9 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_GOLANG_18_BULLSEYE as builder
+FROM $BASE_GOLANG_19_BULLSEYE as builder
 ARG PIRAEUS_HA_CONTROLLER_GITREPO=https://github.com/piraeusdatastore/piraeus-ha-controller
-ARG PIRAEUS_HA_CONTROLLER_VERSION=1.1.1
+ARG PIRAEUS_HA_CONTROLLER_VERSION=1.1.3
 
 RUN git clone ${PIRAEUS_HA_CONTROLLER_GITREPO} /usr/local/go/piraeus-ha-controller \
  && cd /usr/local/go/piraeus-ha-controller \
