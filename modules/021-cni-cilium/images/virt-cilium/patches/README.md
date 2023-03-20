@@ -14,8 +14,14 @@ Use predicted MAC-address generation mechanism to make live-migration working.
 
 Upstream <https://github.com/cilium/cilium/pull/24100>
 
-## 002-mtu.patch
+## 003-mtu.patch
 
 Set correct MTU value for veth interfaces
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
+
+## 004-fib.patch
+
+Perform routing lookup for custom tables
+
+Upstream <https://github.com/cilium/cilium/pull/24271>
