@@ -80,7 +80,7 @@ type BootDisk struct {
 	// The type of disk device to emulate.
 	//
 	// Supported values: `virtio`, `sata`, `scsi`, `usb`.
-	Bus string `json:"bus,omitempty"`
+	Bus virtv1.DiskBus `json:"bus,omitempty"`
 }
 
 // The source of existing disk.
