@@ -6,6 +6,7 @@
 from os import remove, walk
 
 from shell_operator import hook
+from stringcase import snakecase
 from yaml import dump
 
 _FALCO_RULES_DIR = '/etc/falco/rules.d'
@@ -41,7 +42,7 @@ def convert_spec(spec: dict) -> list:
 
             source = item["rule"].get("source")
             if source is not None:
-                converted_item["source"] = source.lower()
+                converted_item["source"] = snakecase(source)
 
             result.append(converted_item)
             continue
