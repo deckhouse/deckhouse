@@ -23,13 +23,14 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
 	"discoverer/internal/apis/discoverer/v1alpha1"
@@ -178,38 +179,52 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	}
 	c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(0.0)
 
-	data := v1alpha1.NewCloudDiscoveryData(instanceTypes)
-
-	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(data)
-	if err != nil {
-		c.logger.Errorln("Instance types error: %v", err)
-		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		return
-	}
-
-	u := &unstructured.Unstructured{Object: content}
-
 	for i := 1; i <= 3; i++ {
 		if i > 1 {
 			c.logger.Infoln("Waiting 3 seconds before next attempt")
 			time.Sleep(3 * time.Second)
 		}
 
-		updateCtx, updateCancel := context.WithTimeout(ctx, 10*time.Second)
-		_, err := c.k8sClient.Resource(v1alpha1.GRV).Update(updateCtx, u, metav1.UpdateOptions{})
-		updateCancel()
-		if errors.IsNotFound(err) {
-			createCtx, createCancel := context.WithTimeout(ctx, 10*time.Second)
-			_, err := c.k8sClient.Resource(v1alpha1.GRV).Create(createCtx, u, metav1.CreateOptions{})
-			createCancel()
+		getCtx, cancelGetting := context.WithTimeout(ctx, 10*time.Second)
+		data, errGetting := c.k8sClient.Resource(v1alpha1.GRV).Get(getCtx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
+		cancelGetting()
+
+		if errors.IsNotFound(errGetting) {
+			o, err := c.cloudDiscoveryUnstructured(nil, instanceTypes)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			createCtx, cancelCreating := context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1alpha1.GRV).Create(createCtx, o, metav1.CreateOptions{})
+			cancelCreating()
+
 			if err != nil {
 				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
 				continue
 			}
+
+			errGetting = nil
+		} else {
+			o, err := c.cloudDiscoveryUnstructured(data, instanceTypes)
+			if err != nil {
+				// return because we have error in conversion
+				return
+			}
+
+			createCtx, cancelUpdating := context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1alpha1.GRV).Update(createCtx, o, metav1.UpdateOptions{})
+			cancelUpdating()
+
+			if err != nil {
+				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
+				continue
+			}
 		}
 
-		if err != nil {
-			c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v", i, err)
+		if errGetting != nil {
+			c.logger.Errorf("Attempt %d. Cannot get cloud data resource: %v", i, errGetting)
 			continue
 		}
 
@@ -218,4 +233,40 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	}
 
 	c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+	c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+}
+
+func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
+	data := v1alpha1.CloudDiscoveryData{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1alpha1.CloudDiscoveryDataResourceName,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CloudDiscoveryData",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+	}
+
+	if o != nil {
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &data)
+		if err != nil {
+			c.logger.Errorln("Instance types error: %v", err)
+			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+			return nil, err
+		}
+
+	}
+
+	data.InstanceTypes = instanceTypes
+
+	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
+	if err != nil {
+		c.logger.Errorln("Instance types error: %v", err)
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		return nil, err
+	}
+
+	u := &unstructured.Unstructured{Object: content}
+
+	return u, nil
 }

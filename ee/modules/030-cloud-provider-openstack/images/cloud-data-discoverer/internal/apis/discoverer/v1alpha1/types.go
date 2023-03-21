@@ -25,16 +25,3 @@ type CloudDiscoveryData struct {
 
 	InstanceTypes []InstanceType `json:"instanceTypes"`
 }
-
-func NewCloudDiscoveryData(i []InstanceType) *CloudDiscoveryData {
-	return &CloudDiscoveryData{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: CloudDiscoveryDataResourceName,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CloudDiscoveryData",
-			APIVersion: "deckhouse.io/v1alpha1",
-		},
-		InstanceTypes: i,
-	}
-}
