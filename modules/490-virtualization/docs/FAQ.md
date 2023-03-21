@@ -11,7 +11,7 @@ To apply the changes, delete the running VM instance:
 kubectl delete virtualmachineinstance <vmName>
 ```
 
-The newly created VM instance will include all the latest changes from the VirtualMachine spec.
+The newly created VM instance will include all the latest changes from the [VirtualMachine](cr.html#virtualmachine) custom resource.
 
 ## How to store an image in the registry
 
