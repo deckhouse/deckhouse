@@ -53,7 +53,7 @@ func parseIdentifierGroupResource(s string) (gr schema.GroupResource, err error)
 	return
 }
 
-func rejectMessage(err error) interface{} {
+func rejectMessage(identifier string, err error) interface{} {
 	return map[string]string{
 		"type":   "rejected",
 		"reason": err.Error(),
@@ -215,7 +215,7 @@ type channelMessage struct {
 func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCommandPayload) interface{} {
 	var chm channelMessage
 	if err := json.Unmarshal([]byte(command.Identifier), &chm); err != nil {
-		return rejectMessage(err)
+		return rejectMessage(command.Identifier, err)
 	}
 
 	if chm.Channel == "GroupResourceChannel" {
@@ -225,7 +225,7 @@ func (sc *subscriptionController) dispatchCommand(s *subscriber, command cableCo
 	// TODO DiscoveryChannel 🐒🐒🐒
 	// TODO NamedResourceChannel, e.g. ModuleConfig/deckhouse
 
-	return rejectMessage(fmt.Errorf("invalid subscription parameters"))
+	return rejectMessage(command.Identifier, fmt.Errorf("invalid subscription parameters"))
 }
 
 type groupResourceMessage struct {
@@ -235,11 +235,11 @@ type groupResourceMessage struct {
 func (sc *subscriptionController) handleGroupResourceChannelSubscription(s *subscriber, command cableCommandPayload) interface{} {
 	var grm groupResourceMessage
 	if err := json.Unmarshal([]byte(command.Identifier), &grm); err != nil {
-		return rejectMessage(err)
+		return rejectMessage(command.Identifier, err)
 	}
 	gr, err := parseIdentifierGroupResource(grm.GroupResource)
 	if err != nil {
-		return rejectMessage(err)
+		return rejectMessage(command.Identifier, err)
 	}
 	switch command.Command {
 	case "subscribe":
@@ -251,7 +251,7 @@ func (sc *subscriptionController) handleGroupResourceChannelSubscription(s *subs
 		return confirmUnsubMessage(command.Identifier)
 	}
 
-	return rejectMessage(fmt.Errorf("invalid subscription parameters"))
+	return rejectMessage(command.Identifier, fmt.Errorf("invalid subscription parameters"))
 }
 
 type resourceEventMessage struct {
