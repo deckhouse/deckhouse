@@ -1,4 +1,4 @@
-package openstack
+package main
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	log "github.com/sirupsen/logrus"
 
-	"discoverer/internal/apis/discoverer/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 type Discoverer struct {

@@ -16,7 +16,7 @@ var GRV = schema.GroupVersionResource{
 type InstanceType struct {
 	Name   string `json:"name"`
 	CPU    int64  `json:"cpu"`
-	Memory int64  `json:"openapi"`
+	Memory int64  `json:"memory"`
 }
 
 type CloudDiscoveryData struct {

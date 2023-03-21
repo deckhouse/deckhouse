@@ -17,12 +17,11 @@ package main
 import (
 	"os"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
 
-	"discoverer/app"
-	"discoverer/internal"
-	"discoverer/internal/openstack"
+	cloud_data "github.com/deckhouse/deckhouse/go_lib/cloud-data"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/app"
 )
 
 func main() {
@@ -34,9 +33,9 @@ func main() {
 	kpApp.Action(func(context *kingpin.ParseContext) error {
 		logger := app.InitLogger()
 		client := app.InitClient(logger)
-		discoverer := openstack.NewDiscoverer(logger)
+		discoverer := NewDiscoverer(logger)
 
-		r := internal.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client)
+		r := cloud_data.NewReconciler(discoverer, app.ListenAddress, app.DiscoveryPeriod, logger, client)
 		r.Start()
 
 		return nil

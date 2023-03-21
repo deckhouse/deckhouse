@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package cloud_data
 
 import (
 	"context"
@@ -23,17 +23,16 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
-	"discoverer/internal/apis/discoverer/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 type Discoverer interface {

@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
