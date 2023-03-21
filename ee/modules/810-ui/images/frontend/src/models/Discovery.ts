@@ -21,7 +21,7 @@ interface ICloudProvider {
 }
 
 class Discovery extends NxnResourceWs {
-  public klassName: string;
+  public static klassName: string = "Discovery";
 
   public kubernetesVersion: string;
   public cloudProvider: ICloudProvider;
@@ -30,7 +30,6 @@ class Discovery extends NxnResourceWs {
     super();
     this.kubernetesVersion = attrs.kubernetesVersion;
     this.cloudProvider = attrs.cloudProvider;
-    this.klassName = "Discovery";
   }
 
   public static get(): Discovery {

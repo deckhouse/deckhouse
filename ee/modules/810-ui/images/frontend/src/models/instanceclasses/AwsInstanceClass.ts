@@ -4,11 +4,7 @@ import type { InstanceClassAttributes } from "./InstanceClassBase";
 import type { IBadge } from "@/types";
 
 class AwsInstanceClass extends InstanceClassBase {
-  constructor(attrs: InstanceClassAttributes) {
-    super(attrs);
-
-    this.klassName = "AwsInstanceClass";
-  }
+  public static klassName: string = "AwsInstanceClass";
 
   public get badges(): IBadge[] {
     const badges: IBadge[] = super.badges;

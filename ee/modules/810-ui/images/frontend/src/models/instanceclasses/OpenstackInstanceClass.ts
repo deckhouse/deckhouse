@@ -3,11 +3,7 @@ import InstanceClassBase from "./InstanceClassBase";
 import type { InstanceClassAttributes } from "./InstanceClassBase";
 
 class OpenstackInstanceClass extends InstanceClassBase {
-  constructor(attrs: InstanceClassAttributes) {
-    super(attrs);
-
-    this.klassName = "OpenstackInstanceClass";
-  }
+  public static klassName: string = "OpenstackInstanceClass";
 
   public get diskSizeGb(): string | undefined {
     return this.spec?.rootDiskSizeGb;

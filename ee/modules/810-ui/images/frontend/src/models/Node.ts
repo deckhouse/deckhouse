@@ -38,8 +38,8 @@ interface NodeAttributes {
 
 class Node extends NxnResourceWs implements NodeAttributes {
   public static ws_disconnected: boolean;
+  public static klassName: string = "Node";
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
-  public klassName: string;
   public is_stale: boolean = false;
   public nodeGroupName?: string;
 
@@ -56,7 +56,6 @@ class Node extends NxnResourceWs implements NodeAttributes {
     this.kind = attrs.kind;
     this.spec = attrs.spec;
     this.status = attrs.status;
-    this.klassName = "Node";
     // KOSTYL for local filter
     this.nodeGroupName = attrs.metadata.labels && attrs.metadata.labels["node.deckhouse.io/group"];
   }
@@ -181,7 +180,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public async save(): Promise<Node | null> {
-    const attrs = (({ klassName, is_stale, nodeGroupName, ...o }) => o)(this);
+    const attrs = (({ is_stale, nodeGroupName, ...o }) => o)(this);
     return Node.update({ name: this.metadata.name }, attrs);
   }
 

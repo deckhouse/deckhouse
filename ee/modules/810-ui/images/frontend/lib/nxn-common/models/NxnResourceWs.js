@@ -46,7 +46,7 @@ class NxnResourceWs extends NxnResourceHttp {
         return;
       },
       received(msg) {
-        console.log("RECEIVED IN NXN", msg.message_type);
+        console.log("RECEIVED IN NXN", msg);
         if (!!kwargs && !!kwargs.received) return kwargs.received.call(klass, msg);
 
         // channel will be checked in `shouldIgnoreCallback`

@@ -63,7 +63,7 @@ export default async function initApp({
     }),
   });
 
-  NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:6006/api";
+  NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   initWS = initWS && !import.meta.env.VITE_NO_WS;
   if (initWS) {
     NxnResourceWs.cableUrl = import.meta.env.VITE_WS_URL || `${window.location.host}/api/subscribe`;
@@ -89,5 +89,7 @@ export default async function initApp({
 
     getWorker().use(...handlers.discovery);
   }
+  if (initWS) await NxnResourceWs.getCable().ensureActiveConnection(); // TODO: KOSTYL??? wait ws connection before starting application. But this function is not async :/
+
   await Discovery.load();
 }

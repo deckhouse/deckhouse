@@ -29,8 +29,8 @@ interface DeckhouseReleaseAttributes {
 
 class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttributes {
   public static ws_disconnected: boolean;
+  public static klassName: string = "DeckhouseRelease";
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
-  public klassName: string;
   public is_stale: boolean = false;
 
   public status: IDeckhouseReleaseStatus;
@@ -48,7 +48,6 @@ class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttribut
     this.kind = attrs.kind;
     this.spec = attrs.spec;
     this.status = attrs.status;
-    this.klassName = "DeckhouseRelease";
   }
 
   public static toPrimaryKey(model: DeckhouseRelease): string | undefined {
@@ -81,7 +80,7 @@ class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttribut
 
   public async approve(params: object = {}): Promise<null> {
     this.approved = true;
-    const updateAttrs = (({ klassName, is_stale, ...o }) => o)(this);
+    const updateAttrs = (({ is_stale, ...o }) => o)(this);
     return this.constructor.update({ name: this.metadata.name }, updateAttrs);
   }
 }
@@ -92,13 +91,13 @@ DeckhouseRelease.setRoutes(
   resourceBaseUrl,
   {},
   {
-    query:   { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
-    get:     { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: false, withCredentials: false },
-    update:  { method: "PUT", url: resourceBaseUrl + "/:name", withCredentials: false }
+    query: { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
+    get: { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: false, withCredentials: false },
+    update: { method: "PUT", url: resourceBaseUrl + "/:name", withCredentials: false },
   },
   {
     queryCache: true,
-    noQueryFilters: true
+    noQueryFilters: true,
   }
 );
 DeckhouseRelease.initSubscription("GroupResourceChannel", { groupResource: "deckhousereleases.deckhouse.io" });

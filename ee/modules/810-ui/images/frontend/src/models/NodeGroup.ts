@@ -108,8 +108,8 @@ export interface NodeGroupSpec {
 
 class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   public static ws_disconnected: boolean;
+  public static klassName: string = "NodeGroup";
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
-  public klassName: string;
   public is_stale: boolean = false;
   public isNew?: boolean = false;
 
@@ -128,7 +128,6 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
     this.status = attrs.status;
 
     this.isNew = attrs.isNew;
-    this.klassName = "NodeGroup";
   }
 
   public static toPrimaryKey(model: NodeGroup): string | undefined {
@@ -157,7 +156,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   public async save(): Promise<NodeGroup | null> {
-    const attrs = (({ klassName, is_stale, isNew, ...o }) => o)(this);
+    const attrs = (({ is_stale, isNew, ...o }) => o)(this);
     if (this.isNew) {
       return this.constructor.create({}, attrs).then(() => {
         delete this.isNew;
@@ -269,6 +268,6 @@ NodeGroup.setRoutes(
     noQueryFilters: true,
   }
 );
-NodeGroup.initSubscription("NodeGroupResourceChannel", { groupResource: "nodegroups.deckhouse.io" });
+NodeGroup.initSubscription("GroupResourceChannel", { groupResource: "nodegroups.deckhouse.io" });
 
 export default NodeGroup;

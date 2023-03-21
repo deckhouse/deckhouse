@@ -26,8 +26,8 @@ export interface InstanceClassAttributes {
 abstract class InstanceClassBase extends NxnResourceWs {
   public static resourceBaseUrl: string;
   public static ws_disconnected: boolean;
+  public static klassName: string;
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
-  public klassName: string;
   public is_stale: boolean = false;
   public isNew?: boolean = false;
   public nodeGroupName?: string;
@@ -45,7 +45,6 @@ abstract class InstanceClassBase extends NxnResourceWs {
     this.spec = attrs.spec || ({} as IInstanceClassSpec);
 
     this.isNew = attrs.isNew;
-    this.klassName = "InstanceClassBase";
   }
 
   public static toPrimaryKey(model: InstanceClassBase): string | undefined {
@@ -57,7 +56,7 @@ abstract class InstanceClassBase extends NxnResourceWs {
   }
 
   public async save(): Promise<InstanceClassBase | null> {
-    const attrs = (({ klassName, is_stale, isNew, ...o }) => o)(this);
+    const attrs = (({ is_stale, isNew, ...o }) => o)(this);
     if (this.isNew) {
       return this.constructor.create({}, attrs).then(() => {
         delete this.isNew;

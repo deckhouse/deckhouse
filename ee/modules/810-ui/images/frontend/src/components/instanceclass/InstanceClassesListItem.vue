@@ -43,7 +43,7 @@ const props = defineProps({
 });
 
 const icon = computed<IconsType | undefined>(() => {
-  switch (props.item.klassName) {
+  switch (props.item.constructor.klassName) {
     case "AwsInstanceClass": {
       return "IconAWSLogo";
     }
@@ -57,7 +57,7 @@ const icon = computed<IconsType | undefined>(() => {
 });
 
 const diskInfo = computed((): string | undefined => {
-  switch (props.item.klassName) {
+  switch (props.item.constructor.klassName) {
     case "AwsInstanceClass": {
       return `${props.item.spec?.diskSizeGb} G ${props.item.spec?.diskType}`;
     }

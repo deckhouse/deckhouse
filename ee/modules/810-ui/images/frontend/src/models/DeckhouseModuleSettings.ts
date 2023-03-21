@@ -48,11 +48,11 @@ export class DeckhouseSettings {
 }
 
 class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleAttributes {
-  public klassName: string;
+  public static klassName: string = "DeckhouseModuleSettings";
 
   public apiVersion: string;
   public kind: string;
-  public metadata: { [key: string]: string | object; uid: string; resourceVersion: string; };
+  public metadata: { [key: string]: string | object; uid: string; resourceVersion: string };
   public spec: { [key: string]: string | object; settings: DeckhouseSettings };
   public status: object;
 
@@ -63,7 +63,6 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
     this.metadata = attrs.metadata;
     this.spec = attrs.spec;
     this.status = attrs.status;
-    this.klassName = "DeckhouseModuleSettings";
 
     // KOSTYL
     // this.spec.settings.release ||= {} as IDeckhouseModuleRelease;
@@ -82,7 +81,7 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
   }
 
   public async save(): Promise<void> {
-    const attrs = (({ klassName, is_stale, ...o }) => o)(this);
+    const attrs = (({ is_stale, ...o }) => o)(this);
     return DeckhouseModuleSettings.update({}, attrs);
   }
 }
