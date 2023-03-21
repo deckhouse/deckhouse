@@ -8,8 +8,6 @@ lang: ru
 anchors_disabled: true
 ---
 
-{::options parse_block_html="false" /}
-
 <section class="intro">
   <div class="intro__content container">
     <h1 class="intro__title text_lead text_alt">
