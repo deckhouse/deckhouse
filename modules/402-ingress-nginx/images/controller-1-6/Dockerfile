@@ -107,7 +107,8 @@ RUN apk update \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tmpl.patch
+  && patch -p1 < /nginx-tmpl.patch \
+  && rm -rf /*.patch
 WORKDIR /
 USER www-data
 EXPOSE 80 443
