@@ -167,7 +167,7 @@ func handleVMs(input *go_hook.HookInput) error {
 	for _, sRaw := range deckhouseVMSnap {
 		d8vm := sRaw.(*v1alpha1.VirtualMachine)
 		if err := processD8VM(input, d8vm); err != nil {
-			return err
+			input.LogEntry.Errorln(err)
 		}
 	}
 
@@ -347,8 +347,8 @@ func processD8VM(input *go_hook.HookInput, d8vm *v1alpha1.VirtualMachine) error 
 				return fmt.Errorf("disk already attached to another VirtualMachine: %v", disk.VMName)
 			}
 			if disk.VMName != d8vm.Name {
-				patch := map[string]interface{}{"spec": map[string]string{"vmName": d8vm.Name}}
-				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineDisk", disk.Namespace, disk.Name)
+				patch := map[string]interface{}{"status": map[string]interface{}{"ephemeral": false, "vmName": d8vm.Name}}
+				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineDisk", disk.Namespace, disk.Name, object_patch.WithSubresource("/status"))
 			}
 		}
 	}

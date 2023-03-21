@@ -55,6 +55,42 @@ var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineIPAddressClaim
 metadata:
+  name: vm10
+  namespace: default
+spec:
+  static: false
+  address: 10.10.10.0
+  leaseName: ip-10-10-10-0
+status:
+  phase: Bound
+  vmName: vm0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vm0
+  namespace: default
+spec:
+  running: true
+  resources:
+    memory: 512M
+    cpu: "1"
+  userName: admin
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAEQClLFf8t6raygWlAQ7wJqon"
+  ipAddressClaimName: mysql
+  bootDisk:
+    source:
+      kind: ClusterVirtualMachineImage
+      name: ubuntu-20.04
+    size: 10Gi
+    storageClassName: linstor-slow
+    autoDelete: true
+  diskAttachments:
+  - name: foobar
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachineIPAddressClaim
+metadata:
   name: mysql
   namespace: default
 spec:
@@ -96,12 +132,14 @@ spec:
     size: 10Gi
     storageClassName: linstor-slow
     autoDelete: true
+  diskAttachments:
+  - name: mydata
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineDisk
 metadata:
   name: mydata
-  namespace: ns1
+  namespace: default
 spec:
   source:
     kind: ClusterVirtualMachineImage
@@ -371,19 +409,28 @@ status:
 		})
 
 		It("Manages VirtualMachine and boot Disk", func() {
+			vm := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm0")
+			Expect(vm).To(BeEmpty())
+
 			Expect(f).To(ExecuteSuccessfully())
 			disk := f.KubernetesResource("VirtualMachineDisk", "default", "vm1-boot")
 			Expect(disk).To(Not(BeEmpty()))
 			Expect(disk.Field(`status.vmName`).String()).To(Equal("vm1"))
 			Expect(disk.Field(`status.ephemeral`).Bool()).To(BeTrue())
-			vm := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm1")
+
+			vm = f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm1")
 			Expect(vm).To(Not(BeEmpty()))
 			Expect(vm.Field(`apiVersion`).String()).To(Equal("kubevirt.io/v1"))
 			Expect(vm.Field(`spec.template.metadata.labels.aaa`).String()).To(Equal("bbb"))
 			Expect(vm.Field(`spec.template.metadata.annotations.some`).String()).To(Equal("value"))
 			Expect(vm.Field(`spec.template.spec.nodeSelector.disktype`).String()).To(Equal("ssd"))
 			Expect(vm.Field(`spec.template.spec.tolerations`).Array()).To(HaveLen(1))
-			Expect(vm.Field(`spec.template.spec.volumes`).Array()).To(HaveLen(2))
+			Expect(vm.Field(`spec.template.spec.volumes`).Array()).To(HaveLen(3))
+
+			dataDisk := f.KubernetesResource("VirtualMachineDisk", "default", "mydata")
+			Expect(dataDisk).To(Not(BeEmpty()))
+			Expect(dataDisk.Field(`status.vmName`).String()).To(Equal("vm1"))
+			Expect(dataDisk.Field(`status.ephemeral`).Bool()).To(BeFalse())
 
 			d8vm := f.KubernetesResource("VirtualMachine", "default", "vm1")
 			Expect(d8vm).To(Not(BeEmpty()))
