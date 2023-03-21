@@ -5,8 +5,8 @@ import deckhouseConfig from "./objects/deckhouse_settings.json";
 import deckhouseReleases from "./objects/deckhouse_releases.json";
 import nodes from "./objects/nodes.json";
 import nodeGroups from "./objects/nodegroups.json";
-import awsMachineClasses from "./objects/awsinstanceclasses.json";
-import openstackMachineClasses from "./objects/openstackinstanceclasses.json";
+import awsInstanceClasses from "./objects/awsinstanceclasses.json";
+import openstackInstanceClasses from "./objects/openstackinstanceclasses.json";
 
 // @ts-ignore
 import NxnResourceHttp from "@lib/nxn-common/models/NxnResourceHttp";
@@ -35,8 +35,8 @@ function getNode(name: any): any {
   return nodes.find((n) => n.metadata.name == name);
 }
 
-function getAwsMachineClass(name: any): any {
-  return awsMachineClasses.find((n) => n.metadata.name == name);
+function getAwsInstanceClass(name: any): any {
+  return awsInstanceClasses.find((n) => n.metadata.name == name);
 }
 
 console.log("HELLO!", NxnResourceHttp.apiUrl("discovery"));
@@ -113,7 +113,7 @@ export const handlers = {
   // Instanceclasses
   awsInstanceClasses: [
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(awsMachineClasses));
+      return res(ctx.delay(500), ctx.json(awsInstanceClasses));
     }),
 
     rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), async (req, res, ctx) => {
@@ -122,7 +122,7 @@ export const handlers = {
     }),
 
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
+      return res(ctx.delay(500), ctx.json(getAwsInstanceClass(req.params.name)));
     }),
     rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), async (req, res, ctx) => {
       const json = await req.json();
@@ -136,14 +136,14 @@ export const handlers = {
   //  Openstack
   openstackInstanceClasses: [
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(openstackMachineClasses));
+      return res(ctx.delay(500), ctx.json(openstackInstanceClasses));
     }),
     rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), async (req, res, ctx) => {
       const json = await req.json();
       return res(ctx.delay(500), ctx.json(json));
     }),
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
+      return res(ctx.delay(500), ctx.json(getAwsInstanceClass(req.params.name)));
     }),
     rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), async (req, res, ctx) => {
       const json = await req.json();

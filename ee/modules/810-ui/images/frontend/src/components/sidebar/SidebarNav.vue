@@ -16,7 +16,7 @@ import Discovery from "@/models/Discovery";
 import DeckhouseRelease from "@/models/DeckhouseRelease";
 import NodeGroup from "@/models/NodeGroup";
 import Node from "@/models/Node";
-import InstanceClassBase from "@/models/instanceclasses/InstanceClassBase";
+import type InstanceClassBase from "@/models/instanceclasses/InstanceClassBase";
 
 const counts = {
   releaseItems: ref<number | null>(null),

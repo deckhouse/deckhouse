@@ -119,7 +119,6 @@ import { computed, ref, type PropType } from "vue";
 import { useRouter } from "vue-router";
 import { arrayToObject, objectAsArray } from "@/utils";
 
-import type Discovery from "@/models/Discovery";
 import type OpenstackInstanceClass from "@/models/instanceclasses/OpenstackInstanceClass";
 
 import { z } from "zod";
@@ -152,10 +151,6 @@ const props = defineProps({
   readonly: {
     type: Boolean,
     default: false,
-  },
-  discovery: {
-    type: Object as PropType<Discovery>,
-    required: true,
   },
 });
 

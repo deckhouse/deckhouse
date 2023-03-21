@@ -647,8 +647,8 @@ const { handleSubmit, values, meta, resetForm, errors, isSubmitting } = useForm(
 watch(values, updateValidationSchema, { immediate: true });
 
 useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
-// Functions
 
+// Functions
 const submitForm = handleSubmit(
   (values) => {
     console.log(JSON.stringify(values, null, 2));

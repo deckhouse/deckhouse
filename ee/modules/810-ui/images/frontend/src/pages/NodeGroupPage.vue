@@ -17,6 +17,7 @@ import { ref, computed, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 
 import NodeGroup, { type NodeTypesType } from "@/models/NodeGroup";
+import Discovery from "@/models/Discovery";
 
 import Skeleton from "primevue/skeleton";
 
@@ -30,7 +31,6 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 // TODO: one "type" of tabs = one object with one list
 import Node from "@/models/Node";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
-import Discovery from "@/models/Discovery";
 
 const route = useRoute();
 
