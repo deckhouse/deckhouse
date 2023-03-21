@@ -8,39 +8,7 @@
 
         <CardTitle title="Шаблон узла" />
         <div class="flex flex-wrap items-start -mx-12 -my-6">
-          <FieldArray :name="'labelsAsArray'" v-slot="{ push, remove, fields }" v-model="values.labelsAsArray">
-            <InputLabelGroup
-              class="mx-12 my-6"
-              title="Лейблы"
-              :fields="['key', 'value']"
-              :disabled="readonly"
-              :model="fields"
-              @remove="remove"
-              @push="push({ key: '', value: '' })"
-            />
-          </FieldArray>
-          <FieldArray :name="'annotationsAsArray'" v-slot="{ push, remove, fields }" v-model="values.annotationsAsArray">
-            <InputLabelGroup
-              class="mx-12 my-6"
-              title="Аннотации"
-              :fields="['key', 'value']"
-              :disabled="readonly"
-              :model="fields"
-              @remove="remove"
-              @push="push({ key: '', value: '' })"
-            />
-          </FieldArray>
-          <FieldArray :name="'taints'" v-slot="{ push, remove, fields }">
-            <InputLabelGroup
-              class="mx-12 my-6"
-              title="Тейнты"
-              :fields="['effect', 'key', 'value']"
-              :disabled="readonly"
-              :model="fields"
-              @remove="remove"
-              @push="push({ key: '', value: '', effect: '' })"
-            />
-          </FieldArray>
+          <NodeTemplateInputs v-model="values" input-class="mx-12 my-6" :disabled="readonly" name-path=""> </NodeTemplateInputs>
         </div>
 
         <CardDivider />
@@ -85,19 +53,7 @@
         </div>
       </template>
       <template #actions>
-        <ButtonBlock
-          title="Одобрить обновление с перезагрузкой"
-          type="primary"
-          v-if="node.needDisruptionApproval"
-          @click="disruptionApprove"
-        ></ButtonBlock>
-        <ButtonBlock
-          :title="node.unschedulable ? 'Uncordon' : 'Cordon'"
-          type="primary-subtle"
-          @click="toggleCordon"
-          :loading="cordonLoading"
-        ></ButtonBlock>
-        <ButtonBlock title="Drain" type="primary-subtle" @click="drain" :loading="drainLoading"></ButtonBlock>
+        <NodeActions :node="node" />
       </template>
       <template #notice v-if="node.errorMessage"> {{ node.errorMessage }} </template>
     </CardBlock>
@@ -118,7 +74,7 @@ import { onBeforeRouteLeave, useRouter } from "vue-router";
 
 import { formatTime, formatBytes, objectAsArray, arrayToObject } from "@/utils";
 
-import { useForm, FieldArray } from "vee-validate";
+import { useForm } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";
 import { z } from "zod";
 import useFormLeaveGuard from "@/composables/useFormLeaveGuard";
@@ -126,10 +82,10 @@ import useFormLeaveGuard from "@/composables/useFormLeaveGuard";
 import type Node from "@/models/Node";
 
 import GridBlock from "@/components/common/grid/GridBlock.vue";
-import ButtonBlock from "@/components/common/button/ButtonBlock.vue";
 
 import FormActions from "@/components/common/form/FormActions.vue";
-import InputLabelGroup from "@/components/common/form/InputLabelGroup.vue";
+import NodeTemplateInputs from "@/components/common/form/NodeTemplateInputs.vue";
+import NodeActions from "@/components/node/NodeActions.vue";
 
 import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardTitle from "@/components/common/card/CardTitle.vue";
@@ -139,6 +95,7 @@ import CardParam from "@/components/common/card/CardParam.vue";
 import CardParamGrid from "@/components/common/card/CardParamGrid.vue";
 import CardTable from "@/components/common/card/CardTable.vue";
 import type { IBadge } from "@/types";
+import { nodeTemplateSchema } from "@/validations";
 
 const router = useRouter();
 
@@ -153,14 +110,12 @@ const props = defineProps({
   },
 });
 
-const drainLoading = ref(false);
-const cordonLoading = ref(false);
 const submitLoading = ref(false);
 
 const badges = computed<IBadge[]>(() => {
   return props.node
     ? [
-        { id: 1, title: props.node.state, type: props.node.errorMessage ? "warning" : "success" },
+        { title: props.node.state, type: props.node.errorMessage ? "warning" : "success" },
         // { id: 2, title: "Scheduling", type: "warning" },
       ]
     : [];
@@ -180,30 +135,7 @@ const table_data = computed(() => {
 });
 
 // Validations Schema
-const formSchema = z.object({
-  // labels: z.record(z.string(), z.any()),
-  // annotations: z.record(z.string(), z.any()),
-  labelsAsArray: z
-    .object({
-      key: z.string().min(1),
-      value: z.string().optional(),
-    })
-    .array(),
-  annotationsAsArray: z
-    .object({
-      key: z.string().min(1),
-      value: z.string().optional(),
-    })
-    .array(),
-  taints: z
-    .object({
-      key: z.string().min(1),
-      value: z.string().optional(),
-      effect: z.string(),
-    })
-    .array()
-    .optional(),
-});
+const formSchema = nodeTemplateSchema;
 
 // Form
 
@@ -249,32 +181,4 @@ const submitForm = handleSubmit(
     console.error("Validation error", err, errors);
   }
 );
-
-function toggleCordon(): void {
-  cordonLoading.value = true;
-
-  // TODO: fix unexpected mutation
-  // eslint-disable-next-line vue/no-mutating-props
-  props.node.spec.unschedulable = !props.node.spec.unschedulable;
-  props.node.save().then((a: any) => {
-    console.log("Save response", a);
-    cordonLoading.value = false;
-  });
-}
-
-function drain() {
-  drainLoading.value = true;
-  props.node.drain().then((a: any) => {
-    console.log("Drain response", a);
-    drainLoading.value = false;
-  });
-}
-
-function disruptionApprove() {
-  props.node.disruptionApprove().then((a: any) => {
-    console.log("disruptionApprove response", a);
-    console.log(props.node.metadata.annotations, props.node.needDisruptionApproval);
-  });
-}
-
 </script>

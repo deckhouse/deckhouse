@@ -38,12 +38,9 @@
         </td>
       </tr>
       <tr>
-        <Button
-          v-if="!disabled"
-          @click="emit('push')"
-          icon="pi pi-plus"
-          class="p-button-rounded p-button-success p-button-outlined p-button-sm"
-        />
+        <td :colspan="fields.length + 1">
+          <Button v-if="!disabled" @click="emit('push')" label="Добавить" class="p-button-outlined p-button-info w-full" />
+        </td>
       </tr>
     </table>
   </div>

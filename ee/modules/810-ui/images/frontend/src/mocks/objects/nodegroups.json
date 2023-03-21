@@ -1,0 +1,633 @@
+[
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-08-26T13:38:24Z",
+      "generation": 1,
+      "name": "autotests",
+      "resourceVersion": "1550658494",
+      "uid": "8681570d-b13a-4781-85ad-3d2dea6df463"
+    },
+    "spec": {
+      "disruptions": {
+        "approvalMode": "Manual"
+      },
+      "kubelet": {
+        "containerLogMaxFiles": 4,
+        "containerLogMaxSize": "50Mi",
+        "maxPods": 220
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "pricing.flant.com/nodeType": "Hard"
+        },
+        "labels": {
+          "node-role.kubernetes.io/autotests": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated.flant.com",
+            "value": "autotests"
+          }
+        ]
+      },
+      "nodeType": "Static"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T13:18:56Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T09:25:01Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error",
+          "message": "First error; Second error"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Scaling"
+        }
+      ],
+      "desired": 2,
+      "error": "",
+      "instances": 2,
+      "kubernetesVersion": "1.23",
+      "lastMachineFailures": [],
+      "max": 2,
+      "min": 1,
+      "nodes": 2,
+      "ready": 2,
+      "upToDate": 2
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:45Z",
+      "generation": 13,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-console",
+      "resourceVersion": "6681151790",
+      "uid": "2d0f7cbe-e80d-4124-81ce-7f13cb1aecaf"
+    },
+    "spec": {
+      "chaos": {
+        "mode": "Disabled"
+      },
+      "cloudInstances": {
+        "classReference": {
+          "kind": "AWSInstanceClass",
+          "name": "muffin-console"
+        },
+        "maxPerZone": 10,
+        "minPerZone": 2,
+        "standby": 1,
+        "standbyHolder": {
+          "notHeldResources": {
+            "cpu": "200m",
+            "memory": "2Gi"
+          }
+        },
+        "zones": [
+          "us-east-2c"
+        ]
+      },
+      "cri": {
+        "type": "Containerd"
+      },
+      "disruptions": {
+        "approvalMode": "Automatic"
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "threshold.extended-monitoring.flant.com/load-average-per-core-warning": "5"
+        },
+        "labels": {
+          "node-role.muffin.io/muffin-console": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated.muffin.io",
+            "value": "muffin-console"
+          }
+        ]
+      },
+      "nodeType": "CloudEphemeral"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T13:18:56Z",
+          "status": "False",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T09:25:01Z",
+          "status": "True",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error",
+          "message": "First error; Second error"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "Scaling"
+        }
+      ],
+      "desired": 2,
+      "error": "",
+      "instances": 2,
+      "lastMachineFailures": [],
+      "max": 10,
+      "min": 2,
+      "nodes": 2,
+      "ready": 2,
+      "standby": 1,
+      "upToDate": 2
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:45Z",
+      "generation": 19,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-daemons",
+      "resourceVersion": "6681884764",
+      "uid": "e7663cd7-a2ee-45f3-820e-3987c982be04"
+    },
+    "spec": {
+      "chaos": {
+        "mode": "Disabled"
+      },
+      "cloudInstances": {
+        "classReference": {
+          "kind": "AWSInstanceClass",
+          "name": "muffin-daemons"
+        },
+        "maxPerZone": 20,
+        "minPerZone": 1,
+        "standby": 1,
+        "standbyHolder": {
+          "notHeldResources": {
+            "cpu": "200m",
+            "memory": "2Gi"
+          }
+        },
+        "zones": [
+          "us-east-2c"
+        ]
+      },
+      "cri": {
+        "type": "Containerd"
+      },
+      "disruptions": {
+        "approvalMode": "Automatic"
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "threshold.extended-monitoring.flant.com/load-average-per-core-warning": "5"
+        },
+        "labels": {
+          "node-role.muffin.io/muffin-daemons": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated.muffin.io",
+            "value": "muffin-daemons"
+          }
+        ]
+      },
+      "nodeType": "CloudEphemeral"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": "Some status message"
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T13:18:56Z",
+          "status": "False",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T09:25:01Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "Error",
+          "message": "First error; Second error"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Scaling"
+        }
+      ],
+      "desired": 18,
+      "error": "",
+      "instances": 18,
+      "lastMachineFailures": [],
+      "max": 20,
+      "min": 1,
+      "nodes": 18,
+      "ready": 18,
+      "standby": 1,
+      "upToDate": 18
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-08-26T13:38:24Z",
+      "generation": 1,
+      "name": "another-autotests",
+      "resourceVersion": "1550658494",
+      "uid": "8681570d-b13a-4781-85ad-3d2dea6df464"
+    },
+    "spec": {
+      "disruptions": {
+        "approvalMode": "Automatic",
+        "automatic": {
+          "windows": [
+            {
+              "days": ["Thu"],
+              "from": "03:00",
+              "to": "05:00"
+            }
+          ],
+          "drainBeforeApproval": true
+        }
+      },
+      "kubelet": {
+        "containerLogMaxFiles": 4,
+        "containerLogMaxSize": "50Mi",
+        "maxPods": 220
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "pricing.flant.com/nodeType": "Hard"
+        },
+        "labels": {
+          "node-role.kubernetes.io/autotests": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated.flant.com",
+            "value": "autotests"
+          }
+        ]
+      },
+      "nodeType": "Static"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T13:21:32Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error"
+        }
+      ],
+      "error": "",
+      "nodes": 1,
+      "ready": 1,
+      "upToDate": 1
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:45Z",
+      "generation": 13,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "another-muffin-console",
+      "resourceVersion": "6681151790",
+      "uid": "2d0f7cbe-e80d-4124-81ce-7f13cb1aecafd"
+    },
+    "spec": {
+      "chaos": {
+        "mode": "DrainAndDelete",
+        "period": "60m"
+      },
+      "cloudInstances": {
+        "classReference": {
+          "kind": "AWSInstanceClass",
+          "name": "muffin-console"
+        },
+        "maxPerZone": 10,
+        "minPerZone": 2,
+        "standby": 1,
+        "standbyHolder": {
+          "overprovisioningRate": 50
+        },
+        "zones": [
+          "us-east-2c"
+        ]
+      },
+      "cri": {
+        "type": "Containerd"
+      },
+      "disruptions": {
+        "approvalMode": "Automatic",
+        "automatic": {
+          "windows": [
+            {
+              "from": "01:00",
+              "to": "02:00",
+              "days": ["Mon"]
+            }
+          ],
+          "drainBeforeApproval": false
+        }
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "threshold.extended-monitoring.flant.com/load-average-per-core-warning": "5"
+        },
+        "labels": {
+          "node-role.muffin.io/muffin-console": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated.muffin.io",
+            "value": "muffin-console"
+          }
+        ]
+      },
+      "nodeType": "CloudEphemeral"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T13:21:32Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T15:24:30Z",
+          "status": "False",
+          "type": "Scaling"
+        }
+      ],
+      "desired": 1,
+      "error": "",
+      "instances": 1,
+      "kubernetesVersion": "1.23",
+      "lastMachineFailures": [],
+      "max": 1,
+      "min": 1,
+      "nodes": 1,
+      "ready": 1,
+      "upToDate": 1
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "creationTimestamp": "2021-05-21T10:42:17Z",
+      "generation": 12,
+      "name": "master",
+      "resourceVersion": "833144880",
+      "uid": "6df59f07-b627-47b4-a93d-c4b3afd32f52"
+    },
+    "spec": {
+      "cri": {
+        "type": "Containerd"
+      },
+      "disruptions": {
+        "approvalMode": "Manual"
+      },
+      "nodeTemplate": {
+        "labels": {
+          "cluster": "dev2",
+          "node-role.kubernetes.io/master": ""
+        },
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "node-role.kubernetes.io/control-plane"
+          }
+        ]
+      },
+      "nodeType": "CloudPermanent"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T13:21:10Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T14:42:07Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error"
+        }
+      ],
+      "error": "",
+      "kubernetesVersion": "1.23",
+      "nodes": 3,
+      "ready": 3,
+      "upToDate": 3
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "cluster-resources-custom",
+        "meta.helm.sh/release-namespace": "default"
+      },
+      "creationTimestamp": "2022-08-02T09:12:08Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "prod-main-app",
+      "resourceVersion": "898487758",
+      "uid": "c54f2670-a8c3-4efa-91ca-ab30d306b9c6"
+    },
+    "spec": {
+      "disruptions": {
+        "approvalMode": "Automatic"
+      },
+      "nodeTemplate": {
+        "annotations": {
+          "threshold.extended-monitoring.flant.com/disk-bytes-critical": "95",
+          "threshold.extended-monitoring.flant.com/disk-bytes-warning": "85"
+        },
+        "labels": {
+          "node-role.kubernetes.io/prod-main-app": ""
+        },
+        "taints": [
+          {
+            "effect": "NoExecute",
+            "key": "dedicated",
+            "value": "prod-main-app"
+          }
+        ]
+      },
+      "nodeType": "CloudStatic"
+    },
+    "status": {
+      "conditionSummary": {
+        "ready": "True",
+        "statusMessage": ""
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2023-03-15T13:21:32Z",
+          "status": "False",
+          "type": "Updating"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "WaitingForDisruptiveApproval"
+        },
+        {
+          "lastTransitionTime": "2023-03-13T12:56:51Z",
+          "status": "False",
+          "type": "Error"
+        }
+      ],
+      "error": "",
+      "nodes": 1,
+      "ready": 1,
+      "upToDate": 1
+    }
+  }
+]

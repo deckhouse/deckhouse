@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@rails/actioncable": "^7.0.4-2",
+    "@vee-validate/i18n": "^4.8.3",
     "@vee-validate/zod": "^4.7.4",
     "axios": "^1.3.3",
     "dayjs": "^1.11.7",
     "deepcopy": "^1.0.1",
+    "mitt": "^3.0.0",
     "preline": "^1.7.0",
     "primevue": "^3.23.0",
     "vee-validate": "^4.7.4",

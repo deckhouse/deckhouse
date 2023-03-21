@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onBeforeUnmount } from "vue";
 
 import type { ITabsItem } from "@/types";
 import DeckhouseModuleSettings, { type IDeckhouseModuleRelease } from "@/models/DeckhouseModuleSettings";
@@ -22,15 +22,34 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 
 import DeckhouseModuleSettingsForm from "@/components/releases/DeckhouseModuleSettingsForm.vue";
 
+import { useRoute } from "vue-router";
+// import Breadcrumb from 'primevue/breadcrumb';
+// const breadcrumbItems = useRoute().meta.breadcrumbs();
+
+// TODO: one "type" of tabs = one object with one list
+import DeckhouseRelease from "@/models/DeckhouseRelease";
+import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
+const ReleaseItemsCount = ref<number | null>(null);
+function resetCount() { ReleaseItemsCount.value = list.items.length; }
+const list = useListDynamic<DeckhouseRelease>(
+  DeckhouseRelease,
+  {
+    onLoadSuccess: resetCount,
+    afterAdd: resetCount,
+    afterRemove: resetCount,
+    onLoadError: (error: any) => { console.error("Failed to load counts: " + JSON.stringify(error)); },
+  },
+  {}
+);
+list.activate();
+onBeforeUnmount(() => list.destroyList() );
 const tabs = [
   {
-    id: "1",
     title: "Версии",
-    badge: ref<number>(0),
-    routeName: "home",
+    badge: ReleaseItemsCount,
+    routeName: "Home",
   },
   {
-    id: "2",
     active: true,
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",

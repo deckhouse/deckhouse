@@ -17,37 +17,36 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, onBeforeUnmount } from "vue";
 
 import DeckhouseRelease from "@/models/DeckhouseRelease";
 import ReleaseItem from "@/components/releases/ReleaseItem.vue";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
 import Sidebar from "primevue/sidebar";
 import CardBlock from "../common/card/CardBlock.vue";
-import { onBeforeUnmount } from "vue";
 
+const emit = defineEmits<{ (e: "set-count", value: number): void }>();
+function resetCount() { console.log(`deckhousereleases.deckhouse.io: emit("set-count", ${list.items.length});`); emit("set-count", list.items.length); }
 const filter = reactive({});
 const list = useListDynamic<DeckhouseRelease>(
   DeckhouseRelease,
   {
+    onLoadSuccess: resetCount,
+    afterAdd: resetCount,
+    afterRemove: resetCount,
+
     sortBy: (a: DeckhouseRelease, b: DeckhouseRelease) => {
       return Date.parse(b.metadata.creationTimestamp) - Date.parse(a.metadata.creationTimestamp);
     },
 
     onLoadError: (error: any) => {
-      console.error("NotImplementedError: ReleaseItemsList.onLoadError: " + JSON.stringify(error));
+      console.error("Failed to load counts: " + JSON.stringify(error));
     },
   },
-  filter,
-  null,
-  true
+  filter
 );
 
-const emit = defineEmits<{ (e: "set-count", value: number): void }>();
-
-list.activate().then(() => {
-  emit("set-count", list.items.length);
-});
+list.activate();
 
 // popups
 const popup = reactive({
@@ -69,7 +68,5 @@ function toggleChangelogWindow(data: DeckhouseRelease) {
   }
 }
 
-onBeforeUnmount(() => {
-  list.destroyList();
-});
+onBeforeUnmount(() => list.destroyList() );
 </script>

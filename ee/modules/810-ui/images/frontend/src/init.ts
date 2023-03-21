@@ -1,5 +1,5 @@
 import type { App } from "vue";
-import { ref } from 'vue'
+import { ref } from "vue";
 
 import router from "./router";
 
@@ -19,6 +19,10 @@ import timezone from "dayjs/plugin/timezone";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import "dayjs/locale/ru"; // import locale
+
+import { configure as veeValidateConfigure } from "vee-validate";
+import { localize as veeValidateLocalize } from "@vee-validate/i18n";
+import veeValidateRu from "@vee-validate/i18n/dist/locale/ru.json";
 
 import "./index.css";
 import "./assets/main.css";
@@ -51,9 +55,12 @@ export default async function initApp({
   dayjs.extend(advancedFormat);
   dayjs.locale("ru");
 
-  app.provide("globalSettings", ref({
-    "specMode": true
-  }))
+  // TODO: Why isn't it working?
+  veeValidateConfigure({
+    generateMessage: veeValidateLocalize({
+      ru: veeValidateRu,
+    }),
+  });
 
   NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   initWS = initWS && !import.meta.env.VITE_NO_WS;

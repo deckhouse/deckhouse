@@ -1,0 +1,888 @@
+[
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:42Z",
+      "generation": 2,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-console",
+      "resourceVersion": "6672832718",
+      "uid": "11ba7e68-7d0b-42c7-8139-b21eb264dd64"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "muffin",
+        "service": "console"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "c5a.large"
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:42Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-daemons",
+      "resourceVersion": "6672832722",
+      "uid": "173ab7d0-a874-4211-86da-77301e6a0530"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin",
+        "service": "daemons"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "big-node-group",
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2022-08-22T11:10:31Z",
+      "generation": 4,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-frontend",
+      "resourceVersion": "6672832725",
+      "uid": "3ceedfce-0141-4147-95a8-e6b067fed056"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin",
+        "service": "frontend"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.medium"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2022-05-12T10:31:03Z",
+      "generation": 2,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-preprod",
+      "resourceVersion": "6672832729",
+      "uid": "d0808f0e-a114-4217-82b9-71f5268056fb"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "preprod",
+        "project": "muffin"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2022-05-12T10:31:03Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-preprod-stateful",
+      "resourceVersion": "6672832734",
+      "uid": "60252672-c2a2-48ed-8e68-c2327f384736"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "preprod",
+        "project": "muffin"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:56Z",
+      "generation": 8,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin",
+      "resourceVersion": "6672832738",
+      "uid": "22ad1016-09b1-4d55-b200-7efef7e5f15a"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-22T17:12:21Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-backend-main",
+      "resourceVersion": "6672832742",
+      "uid": "c9a76815-f7f1-4fff-8801-0b65edad9677"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin",
+        "service": "backend-main"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:42Z",
+      "generation": 5,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-backend-secondary",
+      "resourceVersion": "6672832746",
+      "uid": "6dde9f5d-5344-4000-ac7f-2a2971c342e0"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin",
+        "service": "backend-secondary"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:42Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-nuzzle-main",
+      "resourceVersion": "6672832752",
+      "uid": "ca20940b-2c11-4e41-b568-7a78b053851d"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "muffin",
+        "service": "nuzzle-main"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-06-28T13:18:42Z",
+      "generation": 4,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-nuzzle-other",
+      "resourceVersion": "6672832756",
+      "uid": "03e103a9-909e-438b-91ec-e6057fd48bdb"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "muffin",
+        "service": "nuzzle-other"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2022-04-26T09:26:20Z",
+      "generation": 2,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "muffin-crumbs",
+      "resourceVersion": "6672832759",
+      "uid": "378ea49d-f229-4e25-9149-0c7b45889e78"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "muffin",
+        "service": "crumbs"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2022-08-09T13:08:01Z",
+      "generation": 2,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "shalom",
+      "resourceVersion": "6672832763",
+      "uid": "ea4de1be-a6c1-4754-98fa-8ee2c57487b3"
+    },
+    "spec": {
+      "additionalTags": {
+        "cluster": "stage",
+        "nodeType": "regular",
+        "project": "shalom"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "t3.2xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:56Z",
+      "generation": 6,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "potrokh",
+      "resourceVersion": "6672832766",
+      "uid": "2c25d815-9bb9-4285-805c-8ea8db595a02"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "potrokh"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5a.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:57Z",
+      "generation": 6,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "feelit",
+      "resourceVersion": "6672832769",
+      "uid": "29b6f788-3d31-486d-b3d6-be3c5ae0285a"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "feelit"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5a.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:57Z",
+      "generation": 13,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "zumba",
+      "resourceVersion": "6672832772",
+      "uid": "7c27728e-7d59-4fa5-9468-e386abfdfffa"
+    },
+    "spec": {
+      "additionalTags": {
+        "nodeType": "regular",
+        "project": "zumba"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:11:13Z",
+      "generation": 4,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "deckhouse",
+      "resourceVersion": "6672832775",
+      "uid": "ac51bfd8-b4d2-4a68-adc9-0b3b4a140ab9"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "deckhouse"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "c5.2xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-05-31T14:40:17Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "influxdb",
+      "resourceVersion": "6672832781",
+      "uid": "6594edeb-8e58-44fa-bc5e-a9332ddbafe3"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "influxdb"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:11:13Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "ingress",
+      "resourceVersion": "6672832784",
+      "uid": "ac173a5e-4bb8-4599-9c50-d065aea806aa"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "ingress"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5a.2xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-08-25T09:51:17Z",
+      "generation": 2,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "ingress-api",
+      "resourceVersion": "6672832787",
+      "uid": "9b14ec47-741b-4236-9b53-5714c6b8279e"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "ingress"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5a.2xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:57Z",
+      "generation": 4,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "gracias",
+      "resourceVersion": "6672832790",
+      "uid": "668459f7-960d-445c-8405-382f98601871"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "gracias"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "c5a.4xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:11:13Z",
+      "generation": 5,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "logging",
+      "resourceVersion": "6672832793",
+      "uid": "eb5811cc-d848-4cdc-a82b-d6058e695b76"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "logging"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.small"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-05-31T12:32:29Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "skyhigh",
+      "resourceVersion": "6672832802",
+      "uid": "fd1c786b-a5cd-417d-8ebe-538e85473b19"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "skyhigh"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5.large",
+      "spot": true
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-13T10:30:57Z",
+      "generation": 8,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "cart",
+      "resourceVersion": "6672832804",
+      "uid": "0904c50b-91e3-4836-948c-1631fe611b59"
+    },
+    "spec": {
+      "additionalTags": {
+        "project": "cart"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m1.medium"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-09-20T13:48:03Z",
+      "generation": 4,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "sentry-stateful",
+      "resourceVersion": "6672832806",
+      "uid": "7bcf2dac-6fe6-465b-879e-6a6b2f5a3e30"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "sentry"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m6i.xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:11:13Z",
+      "generation": 3,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "sentry-web",
+      "resourceVersion": "6672832809",
+      "uid": "3f32de1c-4de2-41c2-bf8f-c3f32514635e"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "sentry"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "c5.large"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:11:13Z",
+      "generation": 7,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "sentry-worker",
+      "resourceVersion": "6672832812",
+      "uid": "8e19e7a4-187d-4884-a439-efca8e46b16d"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "sentry"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "c5a.xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "AWSInstanceClass",
+    "metadata": {
+      "annotations": {
+        "meta.helm.sh/release-name": "kube-infrastructure",
+        "meta.helm.sh/release-namespace": "kube-infrastructure"
+      },
+      "creationTimestamp": "2021-04-08T12:42:54Z",
+      "generation": 10,
+      "labels": {
+        "app.kubernetes.io/managed-by": "Helm"
+      },
+      "name": "system",
+      "resourceVersion": "6672832814",
+      "uid": "3743ddd2-d1ab-4285-98e7-e69453eea4eb"
+    },
+    "spec": {
+      "additionalTags": {
+        "environment": "cluster",
+        "project": "system"
+      },
+      "ami": "ami-0e312244e15c975b0",
+      "diskSizeGb": 50,
+      "diskType": "gp3",
+      "instanceType": "m5a.12xlarge"
+    },
+    "status": {
+      "nodeGroupConsumers": [
+        "worker-small"
+      ]
+    }
+  }
+]

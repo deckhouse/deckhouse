@@ -1,20 +1,21 @@
+import type { IStatusCondition, ITaint } from "@/types";
 // @ts-ignore
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
-interface INodeMetadata {
+interface NodeMetadata {
   creationTimestamp: string;
   name?: string;
   resourceVersion?: number;
   uid?: string;
-  labels: any;
-  annotations: any;
+  labels?: { [key: string]: any };
+  annotations?: { [key: string]: any };
 }
 
-interface INodeStatus {
+interface NodeStatus {
   addresses: any[];
   allocatable: any;
   capacity: any;
-  conditions: any[];
+  conditions: IStatusCondition[];
   daemonEndpoints: any;
   images: any[];
   nodeInfo: any;
@@ -22,14 +23,17 @@ interface INodeStatus {
   volumesInUse?: string[];
 }
 
+interface NodeSpec {
+  taints: ITaint[];
+  [key: string]: any;
+}
+
 interface NodeAttributes {
   apiVersion: string;
   kind: string;
-  metadata: INodeMetadata;
-  spec: {
-    [key: string]: any;
-  };
-  status: INodeStatus;
+  metadata: NodeMetadata;
+  spec: NodeSpec;
+  status: NodeStatus;
 }
 
 class Node extends NxnResourceWs implements NodeAttributes {
@@ -37,12 +41,13 @@ class Node extends NxnResourceWs implements NodeAttributes {
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public klassName: string;
   public is_stale: boolean = false;
+  public nodeGroupName?: string;
 
-  public status: INodeStatus;
+  public status: NodeStatus;
   public apiVersion: string;
-  public metadata: INodeMetadata;
+  public metadata: NodeMetadata;
   public kind: string;
-  public spec: { [key: string]: any };
+  public spec: NodeSpec;
 
   constructor(attrs: NodeAttributes) {
     super();
@@ -52,10 +57,16 @@ class Node extends NxnResourceWs implements NodeAttributes {
     this.spec = attrs.spec;
     this.status = attrs.status;
     this.klassName = "Node";
+    // KOSTYL for local filter
+    this.nodeGroupName = attrs.metadata.labels && attrs.metadata.labels["node.deckhouse.io/group"];
   }
 
   public static toPrimaryKey(model: Node): string | undefined {
     return model.metadata && model.metadata.uid;
+  }
+
+  public static toVersionKey(model: Node): number | undefined {
+    return model.metadata?.resourceVersion;
   }
 
   public static onWsDisconnect() {
@@ -64,7 +75,6 @@ class Node extends NxnResourceWs implements NodeAttributes {
     this.all().forEach((item: Node) => {
       item.ws_disconnected = true;
     });
-    console.log('this.$eventBus.emit("::wsDisconnected", "Incident");');
   }
 
   // Attributes
@@ -137,7 +147,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public get unschedulable(): boolean {
-    return this.spec.unschedulable == "true";
+    return !!this.spec.unschedulable;
   }
 
   public get needDisruptionApproval(): boolean {
@@ -171,7 +181,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public async save(): Promise<Node | null> {
-    const attrs = (({ klassName, is_stale, ...o }) => o)(this);
+    const attrs = (({ klassName, is_stale, nodeGroupName, ...o }) => o)(this);
     return Node.update({ name: this.metadata.name }, attrs);
   }
 
@@ -191,12 +201,15 @@ Node.setRoutes(
   resourceBaseUrl,
   {},
   {
-    query:  { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
-    get:    { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
+    query: { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
+    get: { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
     update: { method: "PUT", url: resourceBaseUrl + "/:name", storeResponse: false, withCredentials: false },
-    drain:  { method: "PUT", url: resourceBaseUrl + "/:name/drain", storeResponse: false, withCredentials: false },
+    drain: { method: "PUT", url: resourceBaseUrl + "/:name/drain", storeResponse: false, withCredentials: false },
   },
-  { dynamic_cache: false }
+  {
+    queryCache: true,
+    noQueryFilters: true,
+  }
 );
 Node.initSubscription("GroupResourceChannel", { groupResource: "nodes" });
 

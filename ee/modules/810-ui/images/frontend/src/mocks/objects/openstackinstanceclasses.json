@@ -1,0 +1,109 @@
+[
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "OpenStackInstanceClass",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-08-11T09:38:01Z",
+      "generation": 2,
+      "labels": {
+        "argocd.argoproj.io/instance": "kube-infrastructure"
+      },
+      "name": "application",
+      "resourceVersion": "163563613",
+      "uid": "0fc05fdd-3ec2-4f5a-b276-3e10bc924087"
+    },
+    "spec": {
+      "flavorName": "diskless-c8m16",
+      "imageName": "ubuntu-22-04-cloud-amd64",
+      "mainNetwork": "kube-infrastructure",
+      "rootDiskSize": 50
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "OpenStackInstanceClass",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-08-09T08:58:52Z",
+      "generation": 2,
+      "labels": {
+        "argocd.argoproj.io/instance": "kube-infrastructure"
+      },
+      "name": "loadbalancer",
+      "resourceVersion": "163942339",
+      "uid": "acb60a59-63fb-4ecf-91b5-2bed299378c6"
+    },
+    "spec": {
+      "additionalNetworks": [
+        "BGP-VLAN-27-DEV"
+      ],
+      "flavorName": "diskless-c2m4",
+      "imageName": "ubuntu-22-04-cloud-amd64",
+      "mainNetwork": "kube-infrastructure",
+      "rootDiskSize": 30
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "OpenStackInstanceClass",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-10-10T12:21:02Z",
+      "generation": 3,
+      "labels": {
+        "argocd.argoproj.io/instance": "kube-infrastructure"
+      },
+      "name": "asdf-common",
+      "resourceVersion": "254517437",
+      "uid": "f98437b1-5756-4969-8844-6a64974c4e67"
+    },
+    "spec": {
+      "flavorName": "diskless-c4m8",
+      "imageName": "ubuntu-22-04-cloud-amd64",
+      "mainNetwork": "kube-infrastructure",
+      "rootDiskSize": 30
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "OpenStackInstanceClass",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-10-10T12:21:03Z",
+      "generation": 3,
+      "labels": {
+        "argocd.argoproj.io/instance": "kube-infrastructure"
+      },
+      "name": "colonoscopy",
+      "resourceVersion": "254517439",
+      "uid": "9a3bc038-e881-44a9-b3fa-2659250e3ff5"
+    },
+    "spec": {
+      "flavorName": "diskless-c4m8",
+      "imageName": "ubuntu-22-04-cloud-amd64",
+      "mainNetwork": "kube-infrastructure",
+      "rootDiskSize": 30
+    }
+  },
+  {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "OpenStackInstanceClass",
+    "metadata": {
+      "annotations": {},
+      "creationTimestamp": "2022-08-09T08:58:52Z",
+      "generation": 3,
+      "labels": {
+        "argocd.argoproj.io/instance": "kube-infrastructure"
+      },
+      "name": "system",
+      "resourceVersion": "169883043",
+      "uid": "be670ec0-7bd7-4b5b-bfca-aa75a786dc24"
+    },
+    "spec": {
+      "flavorName": "diskless-c4m12",
+      "imageName": "ubuntu-22-04-cloud-amd64",
+      "rootDiskSize": 30
+    }
+  }
+]

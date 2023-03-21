@@ -1,14 +1,15 @@
 <template>
-    <div>
-      <span class="block text-sm text-green-500" style="font-family: monospace;" v-if="globalSettings['specMode']">{{ spec }}</span>
-    </div>
+  <div>
+    <span class="block text-sm text-green-500 break-words" style="font-family: monospace" v-if="specMode">{{ spec }}</span>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { inject } from "vue";
-const globalSettings = inject("globalSettings");
+import useSpecMode from "@/composables/useSpecMode";
+
+const { specMode } = useSpecMode();
 
 const props = defineProps({
-  spec: String
+  spec: String,
 });
 </script>

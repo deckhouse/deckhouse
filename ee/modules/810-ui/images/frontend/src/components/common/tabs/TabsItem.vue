@@ -1,7 +1,9 @@
 <template>
-  <router-link :to="{ name: item.routeName }" type="button" :class="getTabStyles(item)">
+  <router-link :to="{ name: item.routeName, params: item.routeParams || {} }" type="button" :class="getTabStyles(item)">
     {{ item.title }}
-    <span v-if="item.badge" class="ml-1 py-0.5 px-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-500">{{ item.badge.value || '...' }}</span>
+
+    <BadgeItem v-if="item.badge" :title="item.badge.value == null ? '...' : item.badge.value" class="bg-blue-100 text-blue-500" />
+    
   </router-link>
 </template>
 
@@ -10,6 +12,8 @@ import type { PropType } from "vue";
 import { computed } from "vue";
 import type { ITabsItem } from "@/types";
 import { useRoute } from "vue-router";
+
+import BadgeItem from "@/components/common/badge/BadgeItem.vue";
 
 const route = useRoute();
 

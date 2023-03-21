@@ -53,7 +53,5 @@ DeckhouseModuleSettings.get().then((res: DeckhouseModuleSettings) => {
   DeckhouseModuleSettings.subscribe({ klassChannel: true });
 });
 
-onBeforeUnmount(() => {
-  DeckhouseModuleSettings.unsubscribe();
-});
+onBeforeUnmount(() => DeckhouseModuleSettings.unsubscribe() );
 </script>

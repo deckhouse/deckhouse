@@ -41,29 +41,7 @@
     </CardBlock>
     <CardBlock title="Окна обновлений" class="col-span-2">
       <template #content>
-        <FieldArray :name="'release.windows'" v-model="values.release.windows" v-slot="{ fields, push, remove }">
-          <InputRow v-for="(window, index) in fields" :key="window.key" class="mb-6">
-            <Field :name="`release.windows[${index}].days`">
-              <MultiSelect
-                v-model="values.release.windows[index].days"
-                :options="weekDaysOptions"
-                optionLabel="name"
-                optionValue="value"
-                placeholder="Выберите дни"
-              />
-            </Field>
-            <Field :name="`release.windows[${index}].from`">
-              <FormLabel value="С" />
-              <Calendar v-model="values.release.windows[index].from" :showTime="true" :timeOnly="true" />
-            </Field>
-            <Field :name="`release.windows[${index}].to`">
-              <FormLabel value="До" />
-              <Calendar v-model="values.release.windows[index].to" :showTime="true" :timeOnly="true" />
-            </Field>
-            <Button icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined" @click="remove(index)" />
-          </InputRow>
-          <Button label="Добавить" class="p-button-outlined p-button-info w-full" @click="push({ days: [], from: '00:00', to: '03:00' })" />
-        </FieldArray>
+        <UpdateWindows v-model="values.release.windows" field-name-path="release" />
       </template>
     </CardBlock>
     <CardBlock title="Уведомить об обновлениях" v-if="values.notificationConfig">
@@ -141,25 +119,22 @@ import { computed, ref, type PropType } from "vue";
 import type DeckhouseModuleSettings from "@/models/DeckhouseModuleSettings";
 import type { IDeckhouseModuleReleaseNotification } from "@/models/DeckhouseModuleSettings";
 
-import MultiSelect from "primevue/multiselect";
 import SelectButton from "primevue/selectbutton";
-// import RadioButton from "primevue/radiobutton";
 import InputText from "primevue/inputtext";
 import Dropdown from "primevue/dropdown";
-import Button from "primevue/button";
-import Calendar from "primevue/calendar";
 import InlineMessage from "primevue/inlinemessage";
 
 import GridBlock from "@/components/common/grid/GridBlock.vue";
 import CardBlock from "@/components/common/card/CardBlock.vue";
-import InputRow from "@/components/common/form/InputRow.vue";
+import UpdateWindows from "@/components/common/form/UpdateWindows.vue";
 import FormActions from "@/components/common/form/FormActions.vue";
 import FormLabel from "@/components/common/form/FormLabel.vue";
 
-import { Field, FieldArray, useForm } from "vee-validate";
+import { Field, useForm } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";
 import { z } from "zod";
 import useFormLeaveGuard from "@/composables/useFormLeaveGuard";
+import { updateWindowSchema } from "@/validations";
 // import dayjs from "dayjs";
 
 const props = defineProps({
@@ -170,16 +145,6 @@ const props = defineProps({
 });
 
 const submitLoading = ref(false);
-
-const weekDaysOptions = [
-  { name: "Понедельник", value: "Mon" },
-  { name: "Вторник", value: "Tue" },
-  { name: "Среда", value: "Wed" },
-  { name: "Четверг", value: "Thu" },
-  { name: "Пятница", value: "Fri" },
-  { name: "Суббота", value: "Sat" },
-  { name: "Воскресенье", value: "Sun" },
-];
 
 const releaseChannelOptions = [
   { name: "Alpha", value: "Alpha" },
@@ -243,14 +208,7 @@ const settingsSchema = z.object({
   release: z.object({
     mode: z.enum(releaseModeOptions.map((umo) => umo.value) as [string, ...string[]]),
     disruptionApprovalMode: z.enum(disruptionApprovalModeOptions.map((damo) => damo.value) as [string, ...string[]]).optional(),
-    windows: z
-      .object({
-        days: z.enum(weekDaysOptions.map((wdo) => wdo.value) as [string, ...string[]]).array(),
-        from: z.string(),
-        to: z.string(),
-      })
-      .array()
-      .optional(),
+    windows: updateWindowSchema.array(),
   }),
   notificationAuthMode: z.enum(notificationAuthModes as [string, ...string[]]),
   notificationConfig: z.object({
@@ -285,6 +243,7 @@ useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
 // Functions
 const submitForm = handleSubmit(
   (values) => {
+    console.log(settingsSchema.shape);
     console.log(JSON.stringify(values, null, 2));
     console.log(meta.value);
     submitLoading.value = true;

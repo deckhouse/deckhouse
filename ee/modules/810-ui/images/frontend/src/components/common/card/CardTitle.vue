@@ -9,14 +9,17 @@
       {{ title }}
     </h4>
     <component :is="Icons[icon]" v-if="icon" />
-    <span
-      class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium text-white uppercase"
-      :class="getBadgeStyles(item.type)"
-      v-for="item in badges"
-      :key="item.id"
-    >
-      {{ item.title }}
-    </span>
+    <template v-if="badges">
+      <BadgeItem
+        :title="item.title"
+        class="text-white uppercase"
+        :class="getBadgeStyles(item.type)"
+        :loading="item.loading"
+        size="spaced"
+        v-for="(item, idx) in badges"
+        :key="idx"
+      />
+    </template>
     <div v-if="tooltip" class="text-slate-400">
       <component :is="Icons['IconInfo']" v-tippy="tooltip" />
     </div>
@@ -28,19 +31,21 @@ import type { PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { IBadge } from "@/types";
 import * as Icons from "@/components/common/icon";
+import BadgeItem from "@/components/common/badge/BadgeItem.vue";
 
 const props = defineProps({
   title: String,
   tooltip: String,
   badges: Array as PropType<Array<IBadge>>,
   route: Object as PropType<RouteLocationRaw>,
-  icon: String,
+  icon: String as PropType<keyof typeof Icons>,
 });
 
 function getBadgeStyles(type: string): string {
   const classes = {
     default: "bg-black",
     warning: "bg-orange-400",
+    error: "bg-red-400",
     info: "bg-slate-400",
     success: "bg-green-500",
   };

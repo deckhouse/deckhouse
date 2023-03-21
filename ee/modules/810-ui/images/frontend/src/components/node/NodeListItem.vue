@@ -3,7 +3,7 @@
     :title="item.metadata.name"
     :route="{ name: 'NodeShow', params: { ng_name: item.group, name: item.metadata.name } }"
     notice-type="warning"
-    :badges="[{ id: 1, title: item.state, type: item.errorMessage ? 'warning' : 'success' }]"
+    :badges="[{ title: item.state, type: item.errorMessage ? 'warning' : 'success' }]"
   >
     <template #content>
       <CardParamGrid>
@@ -16,6 +16,9 @@
         <CardParam title="Версия kernel" :value="item.kernelVersion" />
         <CardParam title="OS Image" :value="item.osImage" />
       </CardParamGrid>
+    </template>
+    <template #actions>
+      <NodeActions :node="item" />
     </template>
     <template #notice v-if="item.errorMessage">
       {{ item.errorMessage }}
@@ -31,6 +34,7 @@ import type Node from "@/models/Node";
 import CardBlock from "../common/card/CardBlock.vue";
 import CardParamGrid from "../common/card/CardParamGrid.vue";
 import CardParam from "../common/card/CardParam.vue";
+import NodeActions from "./NodeActions.vue";
 
 const props = defineProps({
   item: {

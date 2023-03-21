@@ -21,19 +21,18 @@ import DeckhouseModuleSettings from "@/components/releases/DeckhouseModuleSettin
 import ReleaseItemsList from "@/components/releases/ReleaseItemsList.vue";
 import { ref } from "vue";
 import type { ITabsItem } from "@/types";
+// import Breadcrumb from 'primevue/breadcrumb';
+// import { useRoute } from "vue-router";
+// const breadcrumbItems = useRoute().meta.breadcrumbs();
 
-const ReleaseItemsCount = ref<number>(0);
-
+const ReleaseItemsCount = ref<number | null>(null);
 const tabs = [
   {
-    id: "1",
     title: "Версии",
-    active: true,
     badge: ReleaseItemsCount,
-    routeName: "home",
+    routeName: "Home",
   },
   {
-    id: "2",
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",
   },

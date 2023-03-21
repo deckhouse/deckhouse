@@ -1,6 +1,7 @@
 import axios from "axios";
-// import NxnQueryCache from '../services/NxnQueryCache.js';
 // import NxnQueryCacheDynamic from '../services/NxnQueryCacheDynamic.js';
+import NxnQueryCache from './NxnQueryCache.js';
+import NxnQueryCacheNoFilters from './NxnQueryCacheNoFilters.js';
 import NxnResourceDB from './NxnResourceDB.js';
 
 function wrapInKey(key, subject) {
@@ -26,7 +27,16 @@ class NxnResourceHttp extends NxnResourceDB {
   }
 
   static setRoutes(defaultUrl, defaultUrlParams, apiActions, kwargs) {
-    // kwargs && kwargs.dynamic_cache ? NxnQueryCacheDynamic(this, kwargs) : NxnQueryCache(this);
+    if (kwargs && kwargs.queryCache) {
+      // TODO: somehow make NxnQueryCache do it itself
+      Object.assign(NxnResourceHttp, kwargs.noQueryFilters ? NxnQueryCacheNoFilters : NxnQueryCache);
+      this.queryCache = [];
+      var onWsDisconnectCall = this.onWsDisconnect;
+      this.onWsDisconnect = function(scope) {
+        this.flushQueryCache();
+        if (onWsDisconnectCall) onWsDisconnectCall.call(this, scope);
+      }
+    };
 
     this.defaultUrl = defaultUrl;
     this.defaultUrlParams = defaultUrlParams || {};
@@ -60,7 +70,7 @@ class NxnResourceHttp extends NxnResourceDB {
         data = arguments[1];
       }
 
-      var cachedResult = actionDescr.queryCache && klass.cachedResultFor(actionDescr, name, params, arguments);
+      var cachedResult = actionDescr.queryCache ? klass.cachedResultFor(actionDescr, name, params, arguments) : undefined;
       if (cachedResult) {
         return Promise.resolve(cachedResult);
       }
@@ -119,17 +129,11 @@ class NxnResourceHttp extends NxnResourceDB {
         }
       });
 
-      if (actionDescr.queryCache) klass.pushToQueryCache(name, Object.assign({}, params, data), newPromise);
+      if (actionDescr.queryCache) klass.pushToQueryCache(name, newPromise, Object.assign({}, params, data));
 
       return newPromise;
     };
   } // addApiAction
-
-  // TODO: do
-  static pushToQueryCache(name, params, newPromise) {
-  }
-  static cachedResultFor(action, name, params) {
-  }
 }
 
 export default NxnResourceHttp;

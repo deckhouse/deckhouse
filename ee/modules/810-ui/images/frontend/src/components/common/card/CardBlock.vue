@@ -1,5 +1,7 @@
 <template>
-  <div class="rounded-md overflow-hidden bg-white drop-shadow transition-all flex items-stretch hover:drop-shadow-xl">
+  <div
+    class="rounded-md overflow-hidden bg-white transition-all flex items-stretch drop-shadow-[0_0_3px_rgba(0,0,0,0.1)] hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.15)]"
+  >
     <div class="flex-1">
       <div
         class="flex gap-3 items-center shadow-inner px-6 py-3"
@@ -41,7 +43,7 @@
 
 <script setup lang="ts">
 import type { PropType } from "vue";
-import type { IBadge } from "@/types";
+import type { IBadge, IconsType } from "@/types";
 
 import * as Icons from "@/components/common/icon";
 import CardTitle from "@/components/common/card/CardTitle.vue";
@@ -59,7 +61,7 @@ const props = defineProps({
     type: String,
     default: "bottom",
   },
-  icon: String as PropType<keyof typeof Icons>,
+  icon: String as PropType<IconsType>,
   route: [String, Object],
   contentLoading: {
     type: Boolean,
@@ -71,6 +73,7 @@ function getNoticeStyles(notice_type: string | undefined): string {
   const classes = {
     default: "bg-slate-50 text-slate-500",
     warning: "bg-orange-100 text-orange-500",
+    danger: "bg-red-100 text-red-500",
   };
   return notice_type ? classes[notice_type as keyof typeof classes] : classes["default"];
 }

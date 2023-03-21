@@ -13,7 +13,7 @@ Object.copyExcept = function(src, excludedKeys) {
 };
 
 window.equalInSome = function(a, b, keys) {
-  return equal(Object.assignedOnly(a, keys), Object.assignedOnly(b, keys));
+  return deepEqual(Object.assignedOnly(a, keys), Object.assignedOnly(b, keys));
 };
 
 Object.values = Object.values || (function(obj){ return Object.keys(obj).map(function(key){ return obj[key]; }); });

@@ -1,4 +1,5 @@
 // @ts-ignore
+import type { IUpdateWindow } from "@/types";
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
 interface IDeckhouseModuleAttributes {
@@ -6,6 +7,7 @@ interface IDeckhouseModuleAttributes {
   kind: string;
   metadata: {
     uid: string;
+    resourceVersion: string;
     [key: string]: string | object;
   };
   spec: {
@@ -13,14 +15,6 @@ interface IDeckhouseModuleAttributes {
     [key: string]: string | object;
   };
   status: object;
-}
-
-type IDeckhouseModuleReleaseWindowDate = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
-
-interface IDeckhouseModuleReleaseWindow {
-  days: IDeckhouseModuleReleaseWindowDate[];
-  from: string;
-  to: string;
 }
 
 export interface IDeckhouseModuleReleaseNotification {
@@ -35,7 +29,7 @@ export interface IDeckhouseModuleReleaseNotification {
 export interface IDeckhouseModuleRelease {
   mode?: string;
   disruptionApprovalMode?: string;
-  windows: IDeckhouseModuleReleaseWindow[];
+  windows: IUpdateWindow[];
   notification?: IDeckhouseModuleReleaseNotification;
 }
 
@@ -58,7 +52,7 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
 
   public apiVersion: string;
   public kind: string;
-  public metadata: { [key: string]: string | object; uid: string };
+  public metadata: { [key: string]: string | object; uid: string; resourceVersion: string; };
   public spec: { [key: string]: string | object; settings: DeckhouseSettings };
   public status: object;
 
@@ -77,6 +71,10 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
 
   public static toPrimaryKey(model: DeckhouseModuleSettings): string {
     return model?.metadata.uid;
+  }
+
+  public static toVersionKey(model: DeckhouseModuleSettings): string | undefined {
+    return model.metadata?.resourceVersion;
   }
 
   public get settings(): DeckhouseSettings {

@@ -1,13 +1,10 @@
-// import GlobalNxnFlash from '../services/GlobalNxnFlash.js';
-import { ref, reactive, inject, onBeforeUnmount, watch } from "vue";
+import { ref, reactive, inject, watch } from "vue";
 import { useRoute } from "vue-router";
-const equal = import("fast-deep-equal");
+import deepEqual from "fast-deep-equal";
 import type NxnResourceWs from "../models/NxnResourceWs";
 
 interface useListDynamicCallbacks<T> {
   // REQUIRED CALLBACKS
-  sortBy(a: T, b: T): number;
-
   /**
    * Callback called after failing to load elements of the list.
    * @param {Object} error - error message digestable by `FormatError`.
@@ -15,6 +12,8 @@ interface useListDynamicCallbacks<T> {
   onLoadError(error: any): void;
 
   // OPTIONAL CALLBACKS
+  sortBy?(a: T, b: T): number;
+
   /**
    * Promise to load data that is necessary to initiate or render elements of this list.
    * @return {Promise}
@@ -59,9 +58,8 @@ export default function useListDynamic<T extends NxnResourceWs>(
   cb: useListDynamicCallbacks<T>,
   filter: Filter,
   localFilter: Filter | null = null, // this one is for double checking, used in itemBelongsInList
-  noFilters: Boolean = false
+  noQueryFilters: Boolean = false
 ) {
-  // const $eventBus = inject('$eventBus');
   const route = useRoute();
 
   const items = reactive<Array<T>>([]);
@@ -84,9 +82,9 @@ export default function useListDynamic<T extends NxnResourceWs>(
     }
   );
 
-  if (!noFilters) {
+  if (!noQueryFilters) {
     watch(
-      filter,
+      () => filter,
       (newVal) => {
         onFilterChange(newVal);
       }, // WARNING oldVal is reference to old value, not it's deep copy!
@@ -102,7 +100,7 @@ export default function useListDynamic<T extends NxnResourceWs>(
    * @param {object} newVal - new filter value
    */
   function onFilterChange(newVal: object) {
-    if (equal(lastLoadedFilter, newVal)) return;
+    if (deepEqual(lastLoadedFilter, newVal)) return;
     reloadItems();
   }
 
@@ -154,7 +152,7 @@ export default function useListDynamic<T extends NxnResourceWs>(
    * Resorts list using `sortBy(a, b)`.
    */
   function resort() {
-    items.sort(cb.sortBy);
+    if (cb.sortBy) items.sort(cb.sortBy);
   }
 
   /**
@@ -165,10 +163,15 @@ export default function useListDynamic<T extends NxnResourceWs>(
    */
   function subscribe() {
     if (!channel) {
-      channel = itemClass.subscribe({ params: filter });
+      channel = itemClass.subscribe({ params: filter, klassChannel: itemClass.noQueryFilters });
     } else {
       itemClass.channelChangeParams(channel, Object.assign({}, filter));
     }
+  }
+
+  function unsubscribe() {
+    if (!channel) return;
+    itemClass.noQueryFilters ? itemClass.unsubscribe() : channel.unsubscribe();
   }
 
   /**
@@ -204,7 +207,7 @@ export default function useListDynamic<T extends NxnResourceWs>(
 
     return itemClass
       .query(filter)
-      .then((resp: any) => {
+      .then((resp: Array<T>) => {
         resp
           .filter((item: T) => {
             return itemBelongsInList(item) && !isInItems(item.primaryKey());
@@ -219,7 +222,6 @@ export default function useListDynamic<T extends NxnResourceWs>(
         return resp;
       })
       .catch((error: any) => {
-        console.error(error);
         isLoading.value = false;
         return cb.onLoadError(error);
       });
@@ -265,15 +267,11 @@ export default function useListDynamic<T extends NxnResourceWs>(
   /**
    * Activates list in correct order: channel subscriptions - first, http data load - second.
    */
-  function activate(): Promise<object> {
-    if (!noFilters) addChannelCallbacks();
+  function activate(): Promise<Array<T>> | Promise<string> {
+    if (!noQueryFilters) addChannelCallbacks();
     return (cb.loadAuxData ? cb.loadAuxData() : Promise.resolve(null)).then(() => {
       return reloadItems();
     });
-  }
-
-  function unsubscribe() {
-    if (channel) channel.unsubscribe();
   }
 
   /**
@@ -295,7 +293,7 @@ export default function useListDynamic<T extends NxnResourceWs>(
    * @param {Object} kwargs - extraKwargs passed from channel handlers.
    */
   function shouldIgnoreCallback(kwargs: ChannelCBsKwargs): Boolean {
-    return !!kwargs && !!kwargs.channel && kwargs.channel !== channel;
+    return !!kwargs && !!kwargs.channel && kwargs.channel != channel;
   }
 
   /**
@@ -360,5 +358,6 @@ export default function useListDynamic<T extends NxnResourceWs>(
     activate,
     destroyList,
     clearOut,
+    resort,
   };
 }

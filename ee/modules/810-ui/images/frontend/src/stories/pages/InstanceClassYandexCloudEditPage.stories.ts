@@ -1,7 +1,7 @@
 import type { Meta, Story } from "@storybook/vue3";
 
 import BaseLayout from "@/components/layout/BaseLayout.vue";
-import InstanceClassYandexCloudEditPage from "@/pages/InstanceClassYandexCloudEditPage.vue";
+import InstanceClassYandexCloudEditPage from "@/pages/instanceclass/InstanceClassYandexCloudEditPage.vue";
 
 export default {
   title: "Deckhouse UI/Pages/Instance Classes/Yandex Cloud Edit",

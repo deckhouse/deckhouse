@@ -55,13 +55,16 @@ class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttribut
     return model.metadata && model.metadata.uid;
   }
 
+  public static toVersionKey(model: DeckhouseRelease): number | undefined {
+    return model.metadata?.resourceVersion;
+  }
+
   public static onWsDisconnect() {
     if (this.ws_disconnected) return;
     this.ws_disconnected = true;
     this.all().forEach((item: DeckhouseRelease) => {
       item.ws_disconnected = true;
     });
-    console.log('this.$eventBus.emit("::wsDisconnected", "Incident");');
   }
 
   public static async query(params: object = {}): Promise<Array<DeckhouseRelease>> {
@@ -93,7 +96,10 @@ DeckhouseRelease.setRoutes(
     get:     { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: false, withCredentials: false },
     update:  { method: "PUT", url: resourceBaseUrl + "/:name", withCredentials: false }
   },
-  { dynamic_cache: false }
+  {
+    queryCache: true,
+    noQueryFilters: true
+  }
 );
 DeckhouseRelease.initSubscription("GroupResourceChannel", { groupResource: "deckhousereleases.deckhouse.io" });
 

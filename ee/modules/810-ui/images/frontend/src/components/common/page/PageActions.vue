@@ -7,7 +7,7 @@
       <div v-if="$slots.filter">
         <slot name="filter" />
       </div>
-      <div v-if="$slots.actions">
+      <div v-if="$slots.actions" class="flex items-start gap-x-3">
         <slot name="actions" />
       </div>
     </div>

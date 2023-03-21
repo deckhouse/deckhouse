@@ -1,8 +1,7 @@
-// import GlobalNxnFlash from 'nxn-common/services/GlobalNxnFlash.js';
-// import CurrentEditSession from 'nxn-common/services/CurrentEditSession.js';
 import NxnResourceHttp from "./NxnResourceHttp.js";
 import { createConsumer } from "@rails/actioncable";
 import { reactive } from "vue";
+import FlashMessagesService from "@/services/FlashMessagesService.js";
 
 // TODO:
 class NxnResourceCables {}
@@ -16,12 +15,17 @@ class NxnResourceWs extends NxnResourceHttp {
     this.channelName = channelName;
     this.channelParams = params;
     // TODO: put called actions in queue, TODO: do smth with unsubscribe?!
+    this.klassChannelSubscribtionsCount = 0
     if (!this.channel) this.channel = undefined;
   }
 
   // WARNING: requires initialized storage
   static subscribe(kwargs) {
     if (!this.getCable()) return;
+    if (kwargs.klassChannel && !!this.channel) {
+      this.klassChannelSubscribtionsCount += 1;
+      return this.channel;
+    }
 
     // params:, received:, handleConnected:
     if (!kwargs) kwargs = {};
@@ -38,8 +42,7 @@ class NxnResourceWs extends NxnResourceHttp {
         var errorText = `${channelName} subscription has been terminated by the server`;
         console.error(errorText);
         if (klass.onWsDisconnect) klass.onWsDisconnect(channel);
-        //GlobalNxnFlash.proposeReload(errorText);
-        console.log("GlobalNxnFlash.proposeReload(errorText);");
+        FlashMessagesService.proposeReload(errorText);
         return;
       },
       received(msg) {
@@ -49,10 +52,7 @@ class NxnResourceWs extends NxnResourceHttp {
         // channel will be checked in `shouldIgnoreCallback`
         switch (msg.message_type) {
           case "__modelfeed-started":
-            //GlobalNxnFlash.proposeReload('Sorry, but currently the only way for client to catch up with server after changefeed error is full reload.');
-            console.log(
-              "GlobalNxnFlash.proposeReload('Sorry, but currently the only way for client to catch up with server after changefeed error is full reload.');"
-            );
+            FlashMessagesService.proposeReload('Sorry, but currently the only way for client to catch up with server after changefeed error is full reload.');
             break;
           case "create":
             var item = klass.saveServerRepresentation(msg.message, {
@@ -93,16 +93,23 @@ class NxnResourceWs extends NxnResourceHttp {
         if (kwargs.connected) kwargs.connected.call(klass, channel);
       },
     });
-    if (kwargs.klassChannel) this.channel = channel;
+
+    if (kwargs.klassChannel) {
+      this.channel = channel;
+      this.klassChannelSubscribtionsCount += 1;
+    }
     return channel;
   }
 
   static unsubscribe() {
     if (this.channel) {
-      if (this.flushQueryCache) this.flushQueryCache(this.channel);
-      this.channel.unsubscribe();
-      this.channel = undefined;
-      this.unappliedUpdates = {};
+      this.klassChannelSubscribtionsCount -= 1;
+      if (this.klassChannelSubscribtionsCount == 0) {
+        if (this.flushQueryCache) this.flushQueryCache(this.channel);
+        this.channel.unsubscribe();
+        this.channel = undefined;
+        this.unappliedUpdates = {};
+      }
     }
     return true;
   }

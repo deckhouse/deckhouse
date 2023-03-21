@@ -38,7 +38,6 @@ function toggleChangelog() {
 function getBadges() {
   let badges = [
     {
-      id: 1,
       title: props.item.status.phase,
       type: getStatusType(),
     },
@@ -46,7 +45,6 @@ function getBadges() {
 
   if (props.item.status.phase == "Deployed") {
     badges.push({
-      id: 2,
       title: "Текущая версия",
       type: getStatusType(),
     });

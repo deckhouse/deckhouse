@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-wrap gap-3 items-center mb-6" v-if="title">
-    <span class="block font-medium text-lg text-gray-800">
+    <span class="block text-lg text-gray-800">
       {{ title }}
     </span>
     <div v-if="tooltip" class="text-gray-400">

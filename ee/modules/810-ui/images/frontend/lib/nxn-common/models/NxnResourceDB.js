@@ -4,7 +4,11 @@
 class NxnResourceDB {
   // class methods
   static toPrimaryKey(model) {
-    return model.metadata && (model.metadata.name + '-' + model.metadata.resourceVersion);
+    return console.error("NotImplementedError: NxnResourceDB::toPrimaryKey");
+  }
+
+  static toVersionKey() {
+    return console.error("NotImplementedError: NxnResourceDB::toVersionKey");
   }
 
   static all() {
@@ -133,9 +137,12 @@ class NxnResourceDB {
   }
 
   // instance methods
-  // TODO: stop using instance method?
   primaryKey() {
     return this.constructor.toPrimaryKey(this);
+  }
+
+  versionKey() {
+    return this.constructor.toVersionKey(this);
   }
 
   nxndbSave(kwargs) {
@@ -157,7 +164,7 @@ class NxnResourceDB {
   }
 
   nxndbUpdate(newVal, kwargs) {
-    if (!this.metadata.resourceVersion || !newVal.metadata.resourceVersion || (this.metadata.resourceVersion <= newVal.metadata.resourceVersion)) {
+    if (!this.versionKey() || !this.constructor.toVersionKey(newVal) || (this.versionKey() <= this.constructor.toVersionKey(newVal))) {
       var preChangeCopy = Object.assign({}, this) // deepcopy(this); // WARNING doesn't copy functions anymore!
       if (!this.constructor.NxnDBMergeableAttrs) {
         Object.assign(this, newVal);
@@ -241,6 +248,26 @@ class NxnResourceDB {
 
   // private
 
+  static addChannelCallback(messageType, callback) {
+    if (callback == undefined) console.error('Tried to add undefined callback to ' + this.klassName);
+    if (!this.channelCallbacks[messageType]) {
+      this.channelCallbacks[messageType] = [];
+    }
+    this.channelCallbacks[messageType].push(callback);
+    return callback;
+  };
+
+  static removeChannelCallbacks() {
+    var self = this;
+    Array.from(arguments).forEach(function(cbReference){ if (cbReference){ cbReference.isDeprecatedCB = true; } });
+    Object.keys(this.channelCallbacks).forEach(function(messageType) {
+      if (!!self.channelCallbacks && !!self.channelCallbacks[messageType]) {
+        self.channelCallbacks[messageType] = self.channelCallbacks[messageType].filter(function(cb) { return !cb.isDeprecatedCB; });
+      }
+    });
+    return true;
+  };
+
   static runChannelCallbacks(messageType, fnArgs, kwargs) {
     if (!this.channelCallbacks || !!kwargs && kwargs.noCallbacks) {
       return;
@@ -259,10 +286,12 @@ class NxnResourceDB {
     });
   }
 
+  // placeholder functions for cache;
   static queryCacheOnDestroy() {
+    console.error("NotImplementedError: NxnResourceDB::queryCacheOnDestroy");
   }
-
   static queryCacheOnCreate() {
+    console.error("NotImplementedError: NxnResourceDB::queryCacheOnCreate");
   }
 }
 

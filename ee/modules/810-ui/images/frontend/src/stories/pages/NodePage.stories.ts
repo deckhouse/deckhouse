@@ -6,7 +6,7 @@ import BaseLayout from "@/components/layout/BaseLayout.vue";
 import NodePage from "@/pages/NodePage.vue";
 
 export default {
-  title: "Deckhouse UI/Pages/Nodes/Edit",
+  title: "Deckhouse UI/Pages/Node/Edit",
   component: NodePage,
   parameters: { layout: "fullscreen" },
   decorators: [routerDecorator],
@@ -30,6 +30,6 @@ export const Default = Template.bind({});
 
 Default.parameters = {
   router: {
-    currentRoute: { name: "NodeShow", params: { ng_name: "all", name: "kube-system-5bb6d73e-58dbf-f8t4t" } },
+    currentRoute: { name: "NodeEdit", params: { ng_name: "all", name: "kube-system-5bb6d73e-58dbf-f8t4t" } },
   },
 };

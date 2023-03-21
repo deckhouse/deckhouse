@@ -25,7 +25,7 @@ Default.args = {
       title: "Версии",
       active: true,
       badge: "3+",
-      routeName: "home",
+      routeName: "Home",
     },
     {
       id: "2",
