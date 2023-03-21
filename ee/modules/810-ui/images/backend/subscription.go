@@ -55,8 +55,9 @@ func parseIdentifierGroupResource(s string) (gr schema.GroupResource, err error)
 
 func rejectMessage(identifier string, err error) interface{} {
 	return map[string]string{
-		"type":   "rejected",
-		"reason": err.Error(),
+		"type":       "rejected",
+		"identifier": identifier,
+		"reason":     err.Error(),
 	}
 }
 
