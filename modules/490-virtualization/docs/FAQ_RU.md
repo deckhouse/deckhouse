@@ -11,7 +11,7 @@ title: "Модуль virtualization: FAQ"
 kubectl delete virtualmachineinstance <vmName>
 ```
 
-Вновь созданный инстанс ВМ, будет включать все последние изменения из спеки ресурса VirtualMachine.
+Вновь созданный инстанс ВМ будет включать все последние изменения из ресурса [VirtualMachine](cr.html#virtualmachine).
 
 ## Как сохранить образ в registry
 
