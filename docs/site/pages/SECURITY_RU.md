@@ -18,9 +18,7 @@ anchors_disabled: true
     <div class="intro__row">
       <div>
         <p class="text text_big">
-          Чтобы повысить защищенность кластера и развернутых в нем приложений, мы используем проверенные Open
-          Source-инструменты и лучшие практики DevSecOps. В платформе реализованы продвинутые механизмы аутентификации и
-          авторизации, безопасное взаимодействие компонентов, шифрование, аудит и другие важные функции.
+          Чтобы повысить защищенность кластера и развернутых в нем приложений, мы используем проверенные Open Source-инструменты и лучшие практики DevSecOps. В платформе реализованы продвинутые механизмы аутентификации и авторизации, шифрование, аудит и другие важные функции. Все инструменты и политики преднастроены: вы разворачиваете Deckhouse — и получаете уже защищенный кластер.
         </p>
       </div>
     </div>
@@ -31,13 +29,13 @@ anchors_disabled: true
         CIS Benchmarks
       </h2>
       <p class="text text_big">
-        Deckhouse соответствует
-        <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">рекомендациям CIS Kubernetes Benchmark</a>*.
-        Это реализовано на уровне компонентов и платформы в целом. Например, можно указывать сетевые привязки
-        только к нужным интерфейсам, запретить анонимный доступ, использовать сертификаты, права на файлы и каталоги.
+        Deckhouse соответствует рекомендациям <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">CIS Kubernetes Benchmark</a>*. Это реализовано на уровне компонентов и платформы в целом. Например, можно указывать сетевые привязки только к нужным интерфейсам, запретить анонимный доступ, использовать сертификаты, права на файлы и каталоги.
+      </p>
+      <p class="text text_big">
+        Также для проверки соответствия CIS Benchmarks в каждом кластере Deckhouse запускаются автоматические тесты. Отчеты с результатами выводятся в дашборде Grafana.
       </p>
       <p class="text text_small">
-        * CIS Kubernetes Benchmark — набор рекомендаций по созданию надежной системы безопасности для ПО на базе Kubernetes.
+        * CIS Kubernetes Benchmark — набор рекомендаций по созданию надежной системы безопасности для ПО на базе Kubernetes.
       </p>
     </div>
     <div>
@@ -45,12 +43,10 @@ anchors_disabled: true
         SELinux
       </h2>
       <p class="text text_big">
-        <a href="https://github.com/SELinuxProject" target="_blank">Security-Enhanced Linux (SELinux)</a>*
-        — стандарт для защиты Linux-дистрибутивов. В дистрибутивах, которые используются в Deckhouse,
-        можно активировать принудительное включение режима SELinux.
+        <a href="https://github.com/SELinuxProject" target="_blank">Security-Enhanced Linux (SELinux)</a>* — стандарт для защиты Linux-дистрибутивов. В дистрибутивах, которые используются в Deckhouse, можно активировать принудительное включение режима SELinux.
       </p>
       <p class="text text_small">
-        * SELinux определяет политики доступа к приложениям, процессам и файлам.
+        * SELinux определяет политики доступа к приложениям, процессам и файлам.
       </p>
     </div>
   </div>
@@ -59,48 +55,30 @@ anchors_disabled: true
         PCI SSC
       </h2>
     <p class="text text_big">
-      Deckhouse соответствует большинству рекомендаций <a href="https://www.pcisecuritystandards.org/" target="_blank">PCI&nbsp;Security Standards Council</a> (PCI&nbsp;SSC)*. Платформа надежно защищена от&nbsp;угроз, актуальных для платежных систем, в&nbsp;которых применяются контейнерные технологии. Для оценки защищенности Deckhouse мы&nbsp;использовали «<a href="https://docs-prv.pcisecuritystandards.org/Guidance%20Document/Containers%20and%20Container%20Orchestration%20Tools/Guidance-for-Containers-and-Container-Ochestration-Tools-v1_0.pdf" target="_blank">Руководство по&nbsp;контейнерам и&nbsp;инструментам оркестровки контейнеров</a>». <a href="#" data-open-modal="get_a_report">Узнать больше</a>.
+      Deckhouse соответствует большинству рекомендаций <a href="https://www.pcisecuritystandards.org/" target="_blank">PCI Security Standards Council</a> (PCI SSC)*. Платформа надежно защищена от угроз, актуальных для платежных систем, в которых применяются контейнерные технологии. Для оценки защищенности Deckhouse мы использовали «<a href="https://docs-prv.pcisecuritystandards.org/Guidance%20Document/Containers%20and%20Container%20Orchestration%20Tools/Guidance-for-Containers-and-Container-Ochestration-Tools-v1_0.pdf" target="_blank">Руководство по контейнерам и инструментам оркестровки контейнеров</a>».
     </p>
+    <p><a href="#" class="button button_alt" data-open-modal="get_a_report">Скачать отчет</a></p>
     <p class="text text_small">
-      * PCI SSC — организация, которая помогает разрабатывать, применять и улучшать стандарты безопасности для защиты платежных систем.
+      * PCI SSC — организация, которая помогает разрабатывать, применять и улучшать стандарты безопасности для защиты платежных систем.
     </p>
   </div>
 </section>
 
 <section class="features">
-  <div class="container">
-    <h2 class="features__title text_lead text_alt">
-      Инструменты
-    </h2>
-    <p class="text text_big">
-      Deckhouse предоставляет набор решений для безопасной аутентификации, авторизации, управления сетевыми политиками,
-      заказа TLS-сертификатов и не только.
-    </p>
-  </div>
-
   <div class="features__item features__item_even">
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Федеративный провайдер аутентификации
+          ФСТЭК
         </h2>
       </div>
       <ul class="features__item-list">
+        <li style="width: 100%">В настоящий момент Deckhouse проходит сертификационные испытания на соответствие:</li>
         <li>
-          Предустановленный федеративный провайдер аутентификации на базе Dex (Identity Provider, IdP).
+          Требованиями по безопасности информации к средствам контейнеризации, которые утверждены <a href="https://fstec.ru/tekhnicheskaya-zashchita-informatsii/dokumenty-po-sertifikatsii/120-normativnye-dokumenty/2557-vypiska-iz-trebovanij-po-bezopasnosti-informatsii-utverzhdennykh-prikazom-fstek-rossii-ot-4-iyulya-2022-g-n-118" target="_blank">приказом ФСТЭК России от 4 июля 2022 г. № 118</a> по 4-му классу.
         </li>
         <li>
-          Интегрирован с Kubernetes и всеми служебными компонентами.
-        </li>
-        <li>
-          Возможна интеграция с приложением, если оно поддерживает OIDC.
-        </li>
-        <li>
-          Оператор oauth2-proxy поддерживает удобное взаимодействие с Ingress-контроллером.
-        </li>
-        <li>
-          Можно создавать пользователей прямо в кластере, а также подключать пользователей внешних систем
-          аутентификации: GitHub, GitLab, OIDC, LDAP.
+          Требованиями по безопасности информации, которые устанавливают уровни доверия к средствам технической защиты информации и средствам обеспечения безопасности информационных технологий. Утверждены <a href="https://fstec.ru/tekhnicheskaya-zashchita-informatsii/dokumenty-po-sertifikatsii/120-normativnye-dokumenty/2126-vypiska-iz-trebovanij-po-bezopasnosti-informatsii-utverzhdennykh-prikazom-fstek-rossii-ot-2-iyunya-2020-g-n-76" target="_blank">приказом ФСТЭК России от 2 июня 2020 г. № 76</a> по 4-му уровню доверия.
         </li>
       </ul>
     </div>
@@ -110,17 +88,37 @@ anchors_disabled: true
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Авторизация<br>
-          <small>упрощенный RBAC</small>
+          Инструменты и лучшие практики
         </h2>
       </div>
       <ul class="features__item-list">
+        <li style="width: 100%">Deckhouse предоставляет продуманную безопасность «из коробки».</li>
         <li>
-          Deckhouse предлагает более простую и удобную версию RBAC Kubernetes — 7 готовых ролей, которые подходят для
-          любых практических сценариев. Это снижает вероятность ошибки и облегчает настройку политик авторизации.
+          Федеративный <a href="https://deckhouse.ru/documentation/latest/modules/150-user-authn/" target="_blank">провайдер аутентификации</a> с возможностью подключения любых внешних служб каталогов. Управляйте актуальным каталогом пользователей там, где вам привычно.
         </li>
         <li>
-          Если необходимо, можно расширить количество ролей через обычные средства RBAC Kubernetes.
+          Сквозная <a href="https://deckhouse.ru/documentation/latest/modules/140-user-authz/" target="_blank">авторизация</a> на основе ролей, которая расширяет функциональность стандартного механизма RBAC. Гибкое централизованное управление доступами. 7 предустановленных ролей плюс возможность создания новых.
+        </li>
+        <li>
+          Продвинутые <a href="https://deckhouse.ru/documentation/latest/modules/021-cni-cilium/" target="_blank">сетевые политики</a> на базе Cilium.
+        </li>
+        <li>
+          <a href="https://deckhouse.ru/documentation/latest/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B8%D1%82%D1%8C-%D0%B4%D0%BE%D0%BF%D0%BE%D0%BB%D0%BD%D0%B8%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8-%D0%B0%D1%83%D0%B4%D0%B8%D1%82%D0%B0" target="_blank">Аудит событий</a> Kubernetes для учета операций в кластере и анализа ошибок.
+        </li>
+        <li>
+          <a href="https://deckhouse.ru/documentation/latest/modules/015-admission-policy-engine/" target="_blank">Политики безопасности</a> согласно рекомендациям <a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank">Pod Security Standards</a> с тремя предустановленными уровнями ограничений и <a href="https://deckhouse.ru/documentation/latest/modules/015-admission-policy-engine/faq.html#%D0%BA%D0%B0%D0%BA-%D1%80%D0%B0%D1%81%D1%88%D0%B8%D1%80%D0%B8%D1%82%D1%8C-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8-pod-security-standards" target="_blank">возможностью расширения</a>.
+        </li>
+        <li>
+          Рекомендованный набор <a href="https://deckhouse.ru/documentation/latest/modules/015-admission-policy-engine/#%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%BD%D1%8B%D0%B5-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8" target="_blank">операционных политик</a> и лучших практик для работы ваших приложений с возможностью расширения.
+        </li>
+        <li>
+          Модуль для <a href="https://deckhouse.ru/documentation/latest/modules/650-runtime-audit-engine/" target="_blank">поиска угроз безопасности</a> с набором встроенных правил и возможностью их расширения.
+        </li>
+        <li>
+          Централизованное <a href="https://deckhouse.ru/documentation/latest/modules/101-cert-manager/" target="_blank">управление TLS-сертификатами</a>: контроль актуальности, заказ и перевыпуск, а также выпуск самоподписанных.
+        </li>
+        <li>
+          Ежедневное <a href="https://deckhouse.ru/documentation/latest/modules/500-operator-trivy/" target="_blank">сканирование образов контейнеров на уязвимости</a> с предоставлением отчета.
         </li>
       </ul>
     </div>
@@ -130,20 +128,33 @@ anchors_disabled: true
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          А также
+          Сборка компонентов
         </h2>
       </div>
       <ul class="features__item-list">
         <li>
-          Модуль управления сетевыми политиками. Простая и надежная система с правилами, которые не зависят от типа
-          инсталляции и используемого CNI.
+          Docker-образы для всех компонентов платформы можно скачивать только из репозитория Deckhouse.
         </li>
         <li>
-          Аудит событий Kubernetes для учета операций в кластере и анализа ошибок.
+          Из оригинальных образов от разработчиков ПО используются только нужные бинарные файлы.
         </li>
         <li>
-          Модуль cert-manager. Поддерживает заказ сторонних TLS-сертификатов и выпуск самоподписанных. Актуализирует и
-          автоматически перевыпускает сертификаты.
+          Все зависимости на оригинальные образы, а также SHA256-digest образа строго прописаны. Результирующий образ собирается из нашего базового образа.
+        </li>
+        <li>
+          Для сборки базового образа почти всегда используем Alpine — самый безопасный дистрибутив Linux.
+        </li>
+        <li>
+          Регулярно обновляем компоненты Deckhouse и Kubernetes.
+        </li>
+        <li>
+          Тщательно выбираем софт. Используем только те решения, которые доказали свою надежность в наших проектах и в Open Source-сообществе.
+        </li>
+        <li>
+          Большинство проверок автоматизированы, за это отвечают линтеры. Например, они отслеживают корректную конфигурацию Dockerfile’ов и запрещают использовать сторонние образы.
+        </li>
+        <li>
+          Сборка в CI ежедневно сканируется на CVE; отчет о сканировании отправляется разработчикам. Разбираем инциденты уровня Sn и выше в течение 3 часов, уровня Sn-Sk — в течение 24 часов.
         </li>
       </ul>
     </div>
@@ -153,183 +164,44 @@ anchors_disabled: true
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Скоро
+          Настройка и взаимодействие компонентов
         </h2>
       </div>
       <ul class="features__item-list">
         <li>
-          Multitenancy
+          Каждый компонент запускается с минимальными правами доступа в Kubernetes, которые достаточны для его работы («минимальный RBAC»).
         </li>
         <li>
-          Интеграция с HashiCorp Vault
+          Компоненты не запускаются под root-правами. Исключения явно прописаны в списке разрешений.
         </li>
         <li>
-          Интеграция с OpenPolicyAgent
+          Корневая файловая система открыта только на чтение, за исключением отдельных директорий.
+        </li>
+        <li>
+          Ни один компонент Deckhouse не открывает локальный порт без TLS-шифрования и аутентификации.
+        </li>
+        <li>
+          Линтеры проверяют, что RBAC-права описаны в определенном файле каждого модуля Deckhouse явно и однозначно. Это обеспечивает единую точку контроля.
+        </li>
+        <li>
+          Названия для Service Accounts, Roles, RoleBindings и т. п. строго регламентированы — это защищает от человеческих ошибок.
+        </li>
+        <li>
+          Аутентификация между компонентами кластера всегда проводится одним из двух способов: через TLS или с помощью bearer-токенов. Авторизация — через механизмы Kubernetes (SubjectAccessReview).
         </li>
       </ul>
     </div>
   </div>
-
-</section>
-
-<section class="features">
-  <div class="container">
-    <h2 class="features__title text_lead text_alt">
-      Сборка компонентов
-    </h2>
-  </div>
-
-  <div class="features__item features__item_even">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Правила
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Docker-образы для всех компонентов платформы можно скачивать только из репозитория Deckhouse.
-        </li>
-        <li>
-          Из оригинальных образов от разработчиков ПО используются только нужные бинарные файлы.
-        </li>
-        <li>
-          Все зависимости на оригинальные образы, а также digest образа строго прописаны. Результирующий образ
-          собирается из нашего базового образа.
-        </li>
-        <li>
-          Для сборки базового образа почти всегда используется Alpine — самый безопасный дистрибутив Linux.
-        </li>
-        <li>
-          Базовые образы обновляются бесшовно. Kubernetes обновляется автоматически в соответствии с регламентом.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Как это реализовано
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Тщательно выбираем софт. Используем только те решения, которые доказали свою надежность в наших проектах и в
-          Open Source-сообществе.
-        </li>
-        <li>
-          Большинство проверок автоматизированы, за это отвечают линтеры. Например, они отслеживают корректную
-          конфигурацию Dockerfile’ов и запрещают использовать сторонние образы.
-        </li>
-        <li>
-          Отслеживаем новые CVE по всему используемому ПО. Разбираем инциденты уровня Sn и выше в течение 3 часов,
-          уровня Sn-Sk — в течение 24 часов.
-        </li>
-      </ul>
-    </div>
-  </div>
-
 </section>
 
 <section class="block container">
   <div class="block__content">
     <h2 class="text text_h1">
-      Пример Dockerfile для модуля kube-dns*
+      Roadmap
     </h2>
-<div markdown="1" class="docs">
-
-```docker
-# Based on https://github.com/coredns/coredns/blob/master/Dockerfile
-ARG BASE_ALPINE
-FROM coredns/coredns:1.6.9@sha256:40ee1b708e20e3a6b8e04ccd8b6b3dd8fd25343eab27c37154946f232649ae21 as artifact
-
-FROM $BASE_ALPINE
-COPY --from=artifact /coredns /coredns
-ENTRYPOINT [ "/coredns" ]
-```
-
-</div>
-<p class="text">
-  * Модуль устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes.
-</p>
-  </div>
-</section>
-
-<section class="features">
-  <div class="container">
-    <h2 class="features__title text_h1">
-      Настройка и взаимодействие компонентов
-    </h2>
-  </div>
-
-  <div class="features__item features__item_even">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Правила
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Каждый компонент запускается с минимальными правами доступа в Kubernetes, которые достаточны для его работы
-          («минимальный RBAC»).
-        </li>
-        <li>
-          Компоненты не запускаются под root-правами. Исключения явно прописаны в списке разрешений.
-        </li>
-        <li>
-          Корневая файловая система открыта только на чтение, за исключением отдельных директорий.
-        </li>
-        <li>
-          Ни один компонент Deckhouse не открывает локальный порт без TLS-шифрования и аутентификации.
-        </li>
-        <li>
-          Дополнительные запросы к API Kubernetes для проверки аутентификации и авторизации кешируются и не влияют на
-          производительность.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Авторизация<br>
-          <small>упрощенный RBAC</small>
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Линтеры проверяют, что RBAC-права описаны в определенном файле каждого модуля Deckhouse, явно и однозначно. Это обеспечивает
-          единую точку контроля.
-        </li>
-        <li>
-          Названия для Service Accounts, Roles, RoleBindings и т. п. строго регламентированы — это защищает от
-          человеческих ошибок.
-        </li>
-        <li>
-          Аутентификация между компонентами кластера всегда проводится одним из двух способов: через TLS или с помощью
-          bearer-токенов. Авторизация — через механизмы Kubernetes (SubjectAccessReview).
-        </li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="block container">
-  <div class="block__content">
     <p class="text text_big">
-      <strong>Пример:</strong> для мониторинга в кластере используется Prometheus. Он собирает данные со всех компонентов.
-      У каждого из компонентов есть порт для подключения сервиса мониторинга. При подключении к этому порту Prometheus
-      использует индивидуальный SSL-сертификат.
-    </p>
-    <p class="text text_big">
-      Когда от Prometheus поступает запрос, компонент проводит аутентификацию — проверяет, что сертификат Prometheus
-      подписан Certificate Authority Kubernetes; после этого — авторизацию, запрашивая SubjectAccessReview. Такой механизм
-      гарантирует, что только Prometheus может подключаться к портам мониторинга.
+      Мы постоянно повышаем уровень безопасности Deckhouse. За планом по добавлению новых функций и улучшению существующих можно следить в нашем
+      <a href="https://github.com/orgs/deckhouse/projects/6/views/1?filterQuery=area%2Fsecurity" target="_blank">roadmap</a>.
     </p>
   </div>
 </section>
