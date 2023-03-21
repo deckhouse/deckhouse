@@ -26,8 +26,8 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 16742,
   "graphTooltip": 0,
-  "id": 35,
-  "iteration": 1676990498200,
+  "id": 13,
+  "iteration": 1679402867911,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -313,6 +313,39 @@
                 ]
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bdu_id"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "",
+                    "url": "https://bdu.fstec.ru/vul/${__value.text}"
+                  }
+                ]
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "pattern": "BDU:(.+)",
+                      "result": {
+                        "index": 0,
+                        "text": "$1"
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -350,7 +383,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"Critical|High|Medium|Low|Unknown\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource_name)",
+          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"Critical|High|Medium|Low|Unknown\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource_name) * on(vuln_id) group_left(bdu_id) bdu_exporter_cve",
           "format": "table",
           "instant": true,
           "range": false,
@@ -366,7 +399,18 @@
               "Time": true,
               "Value": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Time": 0,
+              "Value": 9,
+              "bdu_id": 8,
+              "image_repository": 1,
+              "image_tag": 2,
+              "namespace": 3,
+              "resource_kind": 4,
+              "resource_name": 5,
+              "severity": 6,
+              "vuln_id": 7
+            },
             "renameByName": {
               "image_repository": ""
             }
@@ -441,6 +485,6 @@
   "timezone": "",
   "title": "Trivy Image Vulnerability Overview",
   "uid": "4SECJjm4z",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }

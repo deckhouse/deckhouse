@@ -302,6 +302,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
 	},
 	"operatorTrivy": map[string]interface{}{
+		"bduExporter":   "imageHash-operatorTrivy-bduExporter",
 		"nodeCollector": "imageHash-operatorTrivy-nodeCollector",
 		"operator":      "imageHash-operatorTrivy-operator",
 		"trivy":         "imageHash-operatorTrivy-trivy",
