@@ -202,20 +202,20 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 		UID:                d8vm.UID,
 	}})
 
-	cloudInit := make(map[string]interface{})
-	if d8vm.Spec.CloudInit != nil {
-		err := yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
+	cloudInitUserData := make(map[string]interface{})
+	if d8vm.Spec.CloudInit != nil && d8vm.Spec.CloudInit.UserData != "" {
+		err := yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInitUserData)
 		if err != nil {
 			return fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
 		}
 	}
 	if d8vm.Spec.SSHPublicKey != nil {
-		cloudInit["ssh_authorized_keys"] = []string{*d8vm.Spec.SSHPublicKey}
+		cloudInitUserData["ssh_authorized_keys"] = []string{*d8vm.Spec.SSHPublicKey}
 	}
 	if d8vm.Spec.UserName != nil {
-		cloudInit["user"] = *d8vm.Spec.UserName
+		cloudInitUserData["user"] = *d8vm.Spec.UserName
 	}
-	cloudInitRaw, _ := yaml.Marshal(cloudInit)
+	cloudInitUserDataRaw, _ := yaml.Marshal(cloudInitUserData)
 
 	annotations := d8vm.Annotations
 	if annotations == nil {
@@ -281,8 +281,20 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 		})
 	}
 
+	cloudInitNoCloud := d8vm.Spec.CloudInit
+
+	if len(cloudInitUserData) != 0 {
+		if cloudInitNoCloud == nil {
+			cloudInitNoCloud = &virtv1.CloudInitNoCloudSource{}
+		}
+		if cloudInitNoCloud.UserDataSecretRef != nil || cloudInitNoCloud.UserDataBase64 != "" {
+			return fmt.Errorf("cloud-config variables can only be appended to userData section")
+		}
+		cloudInitNoCloud.UserData = fmt.Sprintf("#cloud-config\n%s", cloudInitUserDataRaw)
+	}
+
 	// attach cloud-init
-	if len(cloudInit) != 0 {
+	if cloudInitNoCloud != nil {
 		vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, virtv1.Disk{
 			Name: "cloudinit",
 			DiskDevice: virtv1.DiskDevice{
@@ -294,10 +306,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 		vm.Spec.Template.Spec.Volumes = append(vm.Spec.Template.Spec.Volumes, virtv1.Volume{
 			Name: "cloudinit",
 			VolumeSource: virtv1.VolumeSource{
-				CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
-					// TODO handle cloudinit from secret
-					UserData: fmt.Sprintf("#cloud-config\n%s", cloudInitRaw),
-				},
+				CloudInitNoCloud: cloudInitNoCloud,
 			},
 		})
 	}
