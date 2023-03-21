@@ -1,0 +1,109 @@
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index 958397dd5..8b6de93c5 100755
+--- a/etc/nginx/template/nginx.tmpl
++++ b/etc/nginx/template/nginx.tmpl
+@@ -12,6 +12,9 @@
+ # setup custom paths that do not require root access
+ pid {{ .PID }};
+ 
++# enables the use of “just-in-time compilation” for the regular expressions known by the time of configuration parsing
++pcre_jit on;
++
+ {{ if $cfg.UseGeoIP2 }}
+ load_module /etc/nginx/modules/ngx_http_geoip2_module.so;
+ {{ end }}
+@@ -98,11 +101,11 @@ http {
+         end
+ 
+         {{ if $all.EnableMetrics }}
+-        ok, res = pcall(require, "monitor")
++        ok, res = pcall(require, "pbmetrics")
+         if not ok then
+           error("require failed: " .. tostring(res))
+         else
+-          monitor = res
++          pbmetrics = res
+         end
+         {{ end }}
+ 
+@@ -127,11 +130,9 @@ http {
+     init_worker_by_lua_block {
+         lua_ingress.init_worker()
+         balancer.init_worker()
+-        {{ if $all.EnableMetrics }}
+-        monitor.init_worker({{ $all.MonitorMaxBatchSize }})
+-        {{ end }}
+ 
+         plugins.run()
++        pbmetrics.init_worker()
+     }
+ 
+     {{/* Enable the real_ip module only if we use either X-Forwarded headers or Proxy Protocol. */}}
+@@ -668,6 +669,23 @@ http {
+ 
+     {{ end }}
+ 
++    server {
++        listen 8080;
++
++        access_log off;
++
++        keepalive_timeout 0;
++        gzip off;
++
++        location ~ ^/healthz$ {
++            try_files /tmp$uri =500;
++        }
++
++        location / {
++          return 404;
++        }
++    }
++
+     # backend for when default-backend-service is not configured or it does not have endpoints
+     server {
+         listen {{ $all.ListenPorts.Default }} default_server {{ if $all.Cfg.ReusePort }}reuseport{{ end }} backlog={{ $all.BacklogSize }};
+@@ -739,7 +757,7 @@ stream {
+     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;";
+ 
+     lua_shared_dict tcp_udp_configuration_data 5M;
+-    
++
+     {{ buildResolvers $cfg.Resolver $cfg.DisableIpv6DNS }}
+ 
+     init_by_lua_block {
+@@ -910,9 +928,7 @@ stream {
+ 
+             proxy_pass            http://upstream_balancer;
+             log_by_lua_block {
+-                {{ if $enableMetrics }}
+-                monitor.call()
+-                {{ end }}
++                pbmetrics.call()
+             }
+         }
+         {{ end }}
+@@ -1203,6 +1219,10 @@ stream {
+             set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
+             set $global_rate_limit_exceeding n;
+ 
++            set $content_kind "";
++            set $total_upstream_response_time "0";
++            set $upstream_retries "0";
++
+             {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
+ 
+             {{ if $location.Mirror.Source }}
+@@ -1233,11 +1253,9 @@ stream {
+ 
+             log_by_lua_block {
+                 balancer.log()
+-                {{ if $all.EnableMetrics }}
+-                monitor.call()
+-                {{ end }}
+ 
+                 plugins.run()
++                pbmetrics.call()
+             }
+ 
+             {{ if not $location.Logs.Access }}
