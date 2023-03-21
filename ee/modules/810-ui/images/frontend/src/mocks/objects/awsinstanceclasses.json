@@ -54,12 +54,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "big-node-group",
-        "worker-small"
-      ]
     }
   },
   {
@@ -89,11 +83,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.medium"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -122,10 +111,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-      ]
     }
   },
   {
@@ -154,10 +139,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-      ]
     }
   },
   {
@@ -186,11 +167,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -220,11 +196,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -254,11 +225,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -287,11 +253,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -320,11 +281,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -354,10 +310,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-      ]
     }
   },
   {
@@ -387,10 +339,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "t3.2xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-      ]
     }
   },
   {
@@ -418,11 +366,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5a.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -450,11 +393,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5a.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -483,11 +421,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -516,11 +449,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "c5.2xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -549,11 +477,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -582,11 +505,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5a.2xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -615,11 +533,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5a.2xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -647,11 +560,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "c5a.4xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -680,11 +588,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.small"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -714,11 +617,6 @@
       "diskType": "gp3",
       "instanceType": "m5.large",
       "spot": true
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -746,11 +644,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m1.medium"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -779,11 +672,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m6i.xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -812,11 +700,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "c5.large"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -845,11 +728,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "c5a.xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   },
   {
@@ -878,11 +756,6 @@
       "diskSizeGb": 50,
       "diskType": "gp3",
       "instanceType": "m5a.12xlarge"
-    },
-    "status": {
-      "nodeGroupConsumers": [
-        "worker-small"
-      ]
     }
   }
 ]

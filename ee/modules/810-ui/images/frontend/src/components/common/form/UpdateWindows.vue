@@ -70,7 +70,6 @@ import InlineMessage from "primevue/inlinemessage";
 const props = defineProps({
   modelValue: {
     type: Object as PropType<IUpdateWindow[]>,
-    required: true,
   },
   disabled: Boolean,
   fieldNamePath: {

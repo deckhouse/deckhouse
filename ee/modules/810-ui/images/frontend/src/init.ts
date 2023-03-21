@@ -32,6 +32,7 @@ import "primevue/resources/primevue.min.css";
 import "primeicons/primeicons.css";
 
 import "tippy.js/dist/tippy.css";
+import Discovery from "./models/Discovery";
 
 export default async function initApp({
   app,
@@ -41,7 +42,7 @@ export default async function initApp({
 }: {
   app: App;
   initWS?: boolean;
-  initMocks?: boolean;
+  initMocks?: "app" | "storybook" | false;
   initRouter?: boolean;
 }): Promise<void> {
   if (initRouter) app.use(router);
@@ -62,13 +63,13 @@ export default async function initApp({
     }),
   });
 
-  NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  NxnResourceHttp.baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:6006/api";
   initWS = initWS && !import.meta.env.VITE_NO_WS;
   if (initWS) {
     NxnResourceWs.cableUrl = import.meta.env.VITE_WS_URL || `${window.location.host}/api/subscribe`;
   }
 
-  if (initMocks) {
+  if (initMocks == "app") {
     const { worker } = await import("./mocks/browser");
     worker.start({
       onUnhandledRequest: "bypass",
@@ -78,5 +79,15 @@ export default async function initApp({
     if (initWS) {
       await import("./mocks/actioncable");
     }
+  } else if (initMocks == "storybook") {
+    const { initialize, getWorker } = await import("msw-storybook-addon");
+    const { handlers } = await import("@/mocks/handlers");
+
+    initialize({
+      onUnhandledRequest: "bypass",
+    });
+
+    getWorker().use(...handlers.discovery);
   }
+  await Discovery.load();
 }

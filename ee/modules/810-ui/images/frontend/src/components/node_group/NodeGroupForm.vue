@@ -67,7 +67,12 @@
             </Field>
             <Field :name="'cloudInstances.instanceClass'">
               <InputBlock title="Класс машин" spec="spec.cloudInstances.classReference" type="column">
-                <Dropdown v-model="values.cloudInstances.instanceClass" class="w-full" :options="['TODO']" :disabled="readonly" />
+                <Dropdown
+                  v-model="values.cloudInstances.instanceClass"
+                  class="w-full"
+                  :options="instanceClassesOptions"
+                  :disabled="readonly"
+                />
               </InputBlock>
             </Field>
             <Field :name="'cloudInstances.priority'">
@@ -345,6 +350,7 @@ import { z, ZodObject } from "zod";
 
 import type NodeGroup from "@/models/NodeGroup";
 import Discovery from "@/models/Discovery";
+import type { InstanceClassesTypes } from "@/models/instanceclasses";
 
 import FormActions from "@/components/common/form/FormActions.vue";
 import InputBlock from "@/components/common/form/InputBlock.vue";
@@ -378,6 +384,9 @@ const props = defineProps({
 
 const discovery = Discovery.get();
 const submitLoading = ref(false);
+const instanceClassesOptions = discovery.instanceClassKlass.all().map((ic: InstanceClassesTypes) => ic.name);
+
+console.log("instanceClassesOptions", instanceClassesOptions);
 
 const updateModeOptions = [
   { name: "Авто", value: "Automatic" },

@@ -9,11 +9,11 @@ export default {
   parameters: { layout: "fullscreen" },
 } as Meta;
 
-const Template: Story = (args, { loaded: { releases } }) => ({
+const Template: Story = (args) => ({
   components: { DeckhouseSettingsPage, BaseLayout },
 
   setup() {
-    return { args, releases: releases };
+    return { args };
   },
 
   template: `

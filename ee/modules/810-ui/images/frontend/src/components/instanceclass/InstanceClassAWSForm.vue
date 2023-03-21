@@ -108,7 +108,7 @@
       <template #actions>
         <InstanceClassActions :item="item" />
       </template>
-      <template #notice v-if="!!nodeGroupConsumers?.length"> Используется в {{nodeGroupConsumers.length}} группах узлов: <b>{{nodeGroupConsumers.join(', ')}}</b> </template>
+      <template #notice> TODO: Используется в 3 группах узлов: <b>big-node-group, redis, oopyachka-node</b> </template>
     </CardBlock>
   </GridBlock>
   <FormActions :compact="false" v-if="!readonly && meta.dirty" @reset="resetForm" @submit="submitForm" :submit-loading="submitLoading" />
@@ -193,10 +193,6 @@ const initialValues = computed(() => ({
   additionalSecurityGroups: props.item.spec.additionalSecurityGroups?.map((asg: string) => ({ value: asg })),
   additionalTagsAsArray: objectAsArray(props.item.spec.additionalTags),
 }));
-
-const nodeGroupConsumers = computed((): string [] | undefined => {
-  return props.item.status?.nodeGroupConsumers;
-});
 
 const { handleSubmit, values, meta, resetForm, errors } = useForm({
   validationSchema: toFormValidator(formSchema),

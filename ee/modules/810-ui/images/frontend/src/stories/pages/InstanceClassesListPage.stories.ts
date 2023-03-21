@@ -1,7 +1,7 @@
 import type { Meta, Story } from "@storybook/vue3";
 
 import BaseLayout from "../../components/layout/BaseLayout.vue";
-import InstanceClassesListPage from "../../pages/instanceclass/InstanceClassesListPage.vue";
+import InstanceClassesListPage from "@/pages/InstanceClassesListPage.vue";
 
 export default {
   title: "Deckhouse UI/Pages/Instance Classes/List",

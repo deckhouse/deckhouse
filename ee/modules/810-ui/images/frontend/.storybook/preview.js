@@ -1,7 +1,10 @@
 import { app } from '@storybook/vue3';
 import initApp from "@/init";
+import { mswDecorator } from 'msw-storybook-addon';
 
-await initApp({ app, initWS: false, initMocks: true });
+await initApp({ app, initWS: false, initMocks: "storybook" });
+
+const { handlers } = await import("@/mocks/handlers");
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },
@@ -11,4 +14,9 @@ export const parameters = {
       date: /Date$/,
     },
   },
+  msw: {
+    handlers
+  }
 }
+
+export const decorators = [ mswDecorator ]

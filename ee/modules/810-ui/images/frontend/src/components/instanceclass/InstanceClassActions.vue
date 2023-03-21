@@ -1,5 +1,5 @@
 <template>
-  <ButtonBlock title="Удалить" type="danger-subtle" @click="deleteItem" :loading="deleteLoading" :disabled="!!item.status?.nodeGroupConsumers?.length"></ButtonBlock>
+  <ButtonBlock title="Удалить" type="danger-subtle" @click="deleteItem" :loading="deleteLoading"></ButtonBlock>
 </template>
 
 <script setup lang="ts">

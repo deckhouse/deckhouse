@@ -228,7 +228,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   public get cloudInstanceKind(): string | undefined {
-    return this.spec.cloudInstances?.classReference?.kind;
+    return this.spec.cloudInstances?.classReference?.name;
   }
 
   public get zones(): Array<string> {
@@ -269,6 +269,6 @@ NodeGroup.setRoutes(
     noQueryFilters: true,
   }
 );
-NodeGroup.initSubscription("NodeGroupResourceChannel", { groupResource: "nodegroup.deckhouse.io" });
+NodeGroup.initSubscription("NodeGroupResourceChannel", { groupResource: "nodegroups.deckhouse.io" });
 
 export default NodeGroup;

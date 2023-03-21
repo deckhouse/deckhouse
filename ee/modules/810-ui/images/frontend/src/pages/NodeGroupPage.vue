@@ -30,6 +30,7 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 // TODO: one "type" of tabs = one object with one list
 import Node from "@/models/Node";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
+import Discovery from "@/models/Discovery";
 
 const route = useRoute();
 
@@ -79,21 +80,25 @@ const tabs = computed(() =>
       ]
 );
 
-if (isNew.value) {
-  console.log("NEW!!");
+Discovery.get()
+  .instanceClassKlass.query()
+  .then(() => {
+    if (isNew.value) {
+      console.log("NEW!!");
 
-  const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
-  nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType } }); // TODO: validate type param
-  isLoading.value = false;
-} else {
-  NodeGroup.get({ name: route.params.name }).then((res: NodeGroup | null): void => {
-    console.log("RESRES!", res);
+      const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
+      nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType } }); // TODO: validate type param
+      isLoading.value = false;
+    } else {
+      NodeGroup.get({ name: route.params.name }).then((res: NodeGroup | null): void => {
+        console.log("RESRES!", res);
 
-    if (res) {
-      nodeGroup.value = res;
-      // breadcrumbItems.value = route.meta.breadcrumbs(nodeGroup.value);
+        if (res) {
+          nodeGroup.value = res;
+          // breadcrumbItems.value = route.meta.breadcrumbs(nodeGroup.value);
+        }
+        isLoading.value = false;
+      });
     }
-    isLoading.value = false;
   });
-}
 </script>

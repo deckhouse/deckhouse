@@ -15,17 +15,11 @@ interface IInstanceClassMetadata {
 interface IInstanceClassSpec {
   [key: string]: any;
 }
-
-interface InstanceClassStatus {
-  nodeGroupConsumers: string [];
-}
-
 export interface InstanceClassAttributes {
   apiVersion?: string;
   kind?: string;
   metadata?: IInstanceClassMetadata;
   spec?: IInstanceClassSpec;
-  status?: InstanceClassStatus;
   isNew?: boolean;
 }
 
@@ -42,7 +36,6 @@ abstract class InstanceClassBase extends NxnResourceWs {
   public kind?: string;
   public metadata: IInstanceClassMetadata;
   public spec: IInstanceClassSpec;
-  public status: InstanceClassStatus;
 
   constructor(attrs: InstanceClassAttributes) {
     super();
@@ -50,7 +43,6 @@ abstract class InstanceClassBase extends NxnResourceWs {
     this.kind = attrs.kind;
     this.metadata = attrs.metadata || ({} as IInstanceClassMetadata);
     this.spec = attrs.spec || ({} as IInstanceClassSpec);
-    this.status = attrs.status || ({} as InstanceClassStatus);
 
     this.isNew = attrs.isNew;
     this.klassName = "InstanceClassBase";

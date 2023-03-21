@@ -39,108 +39,122 @@ function getAwsMachineClass(name: any): any {
   return awsMachineClasses.find((n) => n.metadata.name == name);
 }
 
-export const handlers = [
-  // Discovery
-  rest.get(NxnResourceHttp.apiUrl("discovery"), (req, res, ctx) => {
-    return res(ctx.json(discovery));
-  }),
+console.log("HELLO!", NxnResourceHttp.apiUrl("discovery"));
 
-  // Deckhouse Config
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/moduleconfigs/deckhouse"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(deckhouseConfig));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/moduleconfigs/deckhouse"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(req.json()));
-  }),
+export const handlers = {
+  discovery: [
+    rest.get(NxnResourceHttp.apiUrl("discovery"), (req, res, ctx) => {
+      return res(ctx.json(discovery));
+    }),
+  ],
 
-  // Releases
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(deckhouseReleases));
-  }),
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases/:name"), (req, res, ctx) => {
-    return res(ctx.json(getDeckhouseRelease(req.params.name)));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(req.json()));
-  }),
+  deckhouseConfig: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/moduleconfigs/deckhouse"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(deckhouseConfig));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/moduleconfigs/deckhouse"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(req.json()));
+    }),
+  ],
 
-  // Nodes
-  rest.get(NxnResourceHttp.apiUrl("k8s/nodes"), (req, res, ctx) => {
-    const group = req.url.searchParams.get("node.deckhouse.io/group");
-    return res(ctx.delay(500), ctx.json(getNodesByGroup(group)));
-  }),
-  rest.get(NxnResourceHttp.apiUrl("k8s/nodes/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(getNode(req.params.name)));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name"), async (req, res, ctx) => {
-    const json = await req.json();
-    console.log("REQ!", json);
+  releases: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(deckhouseReleases));
+    }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases/:name"), (req, res, ctx) => {
+      return res(ctx.json(getDeckhouseRelease(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/deckhousereleases/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(req.json()));
+    }),
+  ],
 
-    return res(ctx.delay(500), ctx.json(json));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name/drain"), (req, res, ctx) => {
-    return res(ctx.delay(2000), ctx.status(204));
-  }),
+  nodes: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/nodes"), (req, res, ctx) => {
+      const group = req.url.searchParams.get("node.deckhouse.io/group");
+      return res(ctx.delay(500), ctx.json(getNodesByGroup(group)));
+    }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/nodes/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getNode(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      console.log("REQ!", json);
 
-  // NodeGroups
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(nodeGroups));
-  }),
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name/drain"), (req, res, ctx) => {
+      return res(ctx.delay(2000), ctx.status(204));
+    }),
+  ],
 
-  rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
+  nodeGroups: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(nodeGroups));
+    }),
 
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(getNodeGroup(req.params.name)));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
-  rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.status(200));
-  }),
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getNodeGroup(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.status(200));
+    }),
+  ],
 
   // Instanceclasses
-  //  AWS
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(awsMachineClasses));
-  }),
+  awsInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(awsMachineClasses));
+    }),
 
-  rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
 
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
-  rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), (req, res, ctx) => {
-    return res(ctx.delay(1500), ctx.status(200));
-  }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ],
 
   //  Openstack
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(openstackMachineClasses));
-  }),
-  rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
-  rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
-    return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
-  }),
-  rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), async (req, res, ctx) => {
-    const json = await req.json();
-    return res(ctx.delay(500), ctx.json(json));
-  }),
-  rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
-    return res(ctx.delay(1500), ctx.status(200));
-  }),
-];
+  openstackInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(openstackMachineClasses));
+    }),
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getAwsMachineClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ],
+};
+
+export const rawHandlers = Object.values(handlers)
+  .filter(Boolean)
+  .reduce((handlers, handlersList) => handlers.concat(handlersList), []);

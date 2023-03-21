@@ -5,6 +5,8 @@ import ReleasesPage from "@/pages/ReleasesPage.vue";
 
 import DeckhouseRelease from "@/models/DeckhouseRelease";
 
+import { rest } from "msw";
+
 export default {
   title: "Deckhouse UI/Pages/Releases",
   component: ReleasesPage,
@@ -26,8 +28,17 @@ const Template: Story = (args, { loaded: { releases } }) => ({
 });
 
 export const Default = Template.bind({});
-Default.loaders = [
-  async () => ({
-    releases: await DeckhouseRelease.query(),
-  }),
-];
+
+export const Empty = Template.bind({});
+
+Empty.parameters = {
+  msw: {
+    handlers: {
+      releases: [
+        rest.get(DeckhouseRelease.apiUrl("k8s/deckhouse.io/deckhousereleases"), (req, res, ctx) => {
+          return res(ctx.delay(500), ctx.json([]));
+        }),
+      ],
+    },
+  },
+};
