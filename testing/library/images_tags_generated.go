@@ -199,6 +199,7 @@ var DefaultImagesTags = map[string]interface{}{
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller11":          "imageHash-ingressNginx-controller11",
+		"controller16":          "imageHash-ingressNginx-controller16",
 		"nginxExporter":         "imageHash-ingressNginx-nginxExporter",
 		"protobufExporter":      "imageHash-ingressNginx-protobufExporter",
 		"proxyFailover":         "imageHash-ingressNginx-proxyFailover",

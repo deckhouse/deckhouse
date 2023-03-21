@@ -1,0 +1,23 @@
+diff --git a/Makefile b/Makefile
+index 25855a224..42c93cc54 100644
+--- a/Makefile
++++ b/Makefile
+@@ -107,6 +107,7 @@ clean-chroot-image: ## Removes local image
+
+ .PHONY: build
+ build:  ## Build ingress controller, debug tool and pre-stop hook.
++ifeq ($(USE_DOCKER), true)
+ 	build/run-in-docker.sh \
+ 		MAC_OS=$(MAC_OS) \
+ 		PKG=$(PKG) \
+@@ -115,7 +116,9 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
+ 		REPO_INFO=$(REPO_INFO) \
+ 		TAG=$(TAG) \
+ 		build/build.sh
+-
++else
++	build/build.sh
++endif
+
+ .PHONY: clean
+ clean: ## Remove .gocache directory.
