@@ -166,12 +166,12 @@ spec:
                 path: /
                 authorization:
                   resourceAttributes:
-                    namespace: d8-cloud-provider-yandex
+                    namespace: d8-cloud-provider-openstack
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
                     subresource: prometheus-metrics
-                    name: cloud-metrics-exporter
+                    name: cloud-data-discoverer
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
