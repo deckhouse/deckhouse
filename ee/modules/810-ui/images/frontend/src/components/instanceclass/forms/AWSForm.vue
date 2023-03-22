@@ -163,6 +163,7 @@ const formSchema = z.object({
   name: z.string().min(1),
   instanceType: z.string(),
   diskSizeGb: z.number().optional(),
+  diskType: z.string().optional(),
   ami: z.string().optional(),
   spot: z.boolean().optional(),
   additionalSecurityGroups: z

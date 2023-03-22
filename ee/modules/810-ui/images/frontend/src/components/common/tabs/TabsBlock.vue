@@ -8,10 +8,10 @@
 
 <script setup lang="ts">
 import type { PropType } from "vue";
-import type { ITabsItem } from "@/types";
+import type { TabsItem as TabsItemInterface } from "@/types";
 import TabsItem from "./TabsItem.vue";
 
 const props = defineProps({
-  items: Array as PropType<Array<ITabsItem>>,
+  items: Array as PropType<Array<TabsItemInterface>>,
 });
 </script>

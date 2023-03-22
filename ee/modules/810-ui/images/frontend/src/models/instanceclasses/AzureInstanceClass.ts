@@ -3,6 +3,7 @@ import InstanceClassBase from "./InstanceClassBase";
 
 class AzureInstanceClass extends InstanceClassBase {
   public static klassName: string = "AzureInstanceClass";
+  public kind: string = "AzureInstanceClass";
 }
 
 AzureInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/AzureInstanceClasses`;

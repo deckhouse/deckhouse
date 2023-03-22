@@ -16,7 +16,7 @@ import yandexInstanceClasses from "./objects/yandexinstanceclasses.json";
 // @ts-ignore
 import NxnResourceHttp from "@lib/nxn-common/models/NxnResourceHttp";
 
-const discovery = discoveries[(import.meta.env.VITE_CLOUD_PROVIDER || "aws") as keyof typeof discoveries];
+const discovery = discoveries[(import.meta.env.VITE_CLOUD_PROVIDER || "vsphere") as keyof typeof discoveries];
 
 console.log("import.meta.env.VITE_CLOUD_PROVIDER", import.meta.env.VITE_CLOUD_PROVIDER, discovery);
 

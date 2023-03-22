@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount } from "vue";
 
-import type { ITabsItem } from "@/types";
+import type { TabsItem } from "@/types";
 import DeckhouseModuleSettings, { type IDeckhouseModuleRelease } from "@/models/DeckhouseModuleSettings";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
@@ -30,19 +30,23 @@ import { useRoute } from "vue-router";
 import DeckhouseRelease from "@/models/DeckhouseRelease";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
 const ReleaseItemsCount = ref<number | null>(null);
-function resetCount() { ReleaseItemsCount.value = list.items.length; }
+function resetCount() {
+  ReleaseItemsCount.value = list.items.length;
+}
 const list = useListDynamic<DeckhouseRelease>(
   DeckhouseRelease,
   {
     onLoadSuccess: resetCount,
     afterAdd: resetCount,
     afterRemove: resetCount,
-    onLoadError: (error: any) => { console.error("Failed to load counts: " + JSON.stringify(error)); },
+    onLoadError: (error: any) => {
+      console.error("Failed to load counts: " + JSON.stringify(error));
+    },
   },
   {}
 );
 list.activate();
-onBeforeUnmount(() => list.destroyList() );
+onBeforeUnmount(() => list.destroyList());
 const tabs = [
   {
     title: "Версии",
@@ -54,10 +58,10 @@ const tabs = [
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",
   },
-] as Array<ITabsItem>;
+] as Array<TabsItem>;
 
 const isLoading = ref(true);
-const deckhouseModuleSettings = ref<DeckhouseModuleSettings>()
+const deckhouseModuleSettings = ref<DeckhouseModuleSettings>();
 DeckhouseModuleSettings.get().then((res: DeckhouseModuleSettings) => {
   res.spec.settings.release ||= {} as IDeckhouseModuleRelease;
   res.spec.settings.release.notification ||= {};

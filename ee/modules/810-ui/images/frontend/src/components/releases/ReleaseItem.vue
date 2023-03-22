@@ -3,14 +3,14 @@
     <template #content>
       <CardParamGrid>
         <CardParam title="Дата релиза" :value="formatTime(item.metadata.creationTimestamp)" />
-        <CardParam title="Дата установки" :value="formatTime(item.status.transitionTime)" v-if="item.status.transitionTime" />
+        <CardParam title="Дата установки" :value="formatTime(item.status.transitionTime)" v-if="item.status?.transitionTime" />
       </CardParamGrid>
     </template>
     <template #actions>
       <ButtonBlock title="Установить обновление" type="primary" icon="IconInstall" @click="approve()" v-if="canApprove()"></ButtonBlock>
       <ButtonBlock title="Читать Changelog" type="subtle" @click="toggleChangelog()"></ButtonBlock>
     </template>
-    <template #notice v-if="item.status.phase == 'Pending'"> Обновление готово к установке </template>
+    <template #notice v-if="item.status?.phase == 'Pending'"> Обновление готово к установке </template>
   </CardBlock>
 </template>
 <script setup lang="ts">
@@ -21,6 +21,7 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardParam from "@/components/common/card/CardParam.vue";
 import CardParamGrid from "@/components/common/card/CardParamGrid.vue";
 import ButtonBlock from "@/components/common/button/ButtonBlock.vue";
+import type { Badge } from "@/types";
 // import { watch, reactive, getCurrentInstance } from 'vue';
 
 const props = defineProps({
@@ -35,13 +36,14 @@ function toggleChangelog() {
   emit("toggleChangelog", props.item);
 }
 
-function getBadges() {
-  let badges = [
-    {
-      title: props.item.status.phase,
-      type: getStatusType(),
-    },
-  ];
+function getBadges(): Badge[] {
+  let badges: Badge[] = [];
+  if (!props.item.status) return badges;
+
+  badges.push({
+    title: props.item.status?.phase,
+    type: getStatusType(),
+  });
 
   if (props.item.status.phase == "Deployed") {
     badges.push({
@@ -54,21 +56,19 @@ function getBadges() {
 }
 
 function getStatusType() {
-  let styles = "";
+  let styles: Badge["type"] = "info";
 
-  if (props.item.status.phase == "Pending") {
+  if (props.item.status?.phase == "Pending") {
     styles = "warning";
-  } else if (props.item.status.phase == "Deployed") {
+  } else if (props.item.status?.phase == "Deployed") {
     styles = "success";
-  } else {
-    styles = "info";
   }
 
   return styles;
 }
 
 function canApprove() {
-  return props.item.status.phase == "Pending";
+  return props.item.status?.phase == "Pending";
 }
 
 function approve() {

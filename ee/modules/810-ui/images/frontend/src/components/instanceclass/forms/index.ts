@@ -8,7 +8,7 @@ import InstanceClassYandexForm from "./YandexForm.vue";
 export default {
   aws: InstanceClassAWSForm,
   azure: InstanceClassAzureForm,
-  gsp: InstanceClassGcpForm,
+  gcp: InstanceClassGcpForm,
   openstack: InstanceClassOpenstackForm,
   vsphere: InstanceClassVsphereForm,
   yandex: InstanceClassYandexForm

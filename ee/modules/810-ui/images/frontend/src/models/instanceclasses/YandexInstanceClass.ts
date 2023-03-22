@@ -3,6 +3,7 @@ import InstanceClassBase from "./InstanceClassBase";
 
 class YandexInstanceClass extends InstanceClassBase {
   public static klassName: string = "YandexInstanceClass";
+  public kind: string = "YandexInstanceClass";
 }
 
 YandexInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/YandexInstanceClasses`;

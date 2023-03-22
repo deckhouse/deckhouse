@@ -8,12 +8,17 @@
     },
     "spec": {
       "cores": 4,
+      "platformID": "standart-v3",
+      "coreFraction": 100,
       "gpus": 4,
       "diskSizeGB": 20,
       "diskType": "network-hdd",
       "memory": 8192,
       "assignPublicIPAddress": true,
       "mainSubnet": "e9bnc7g9mu9mper9clk4",
+      "networkType": "Standart",
+      "ImageID": "xyz",
+      "preemptible": true,
       "additionalSubnets": [
         "b0csh41c1or82vuch89v",
         "e2lgddi5svochh5fbq96"

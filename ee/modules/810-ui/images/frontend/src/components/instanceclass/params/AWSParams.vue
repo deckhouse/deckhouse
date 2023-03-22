@@ -32,6 +32,4 @@ const additionalTags = computed(() => {
   if (!props.item.spec?.additionalTags) return [];
   return Object.keys(props.item.spec?.additionalTags).map((key: string) => `${key}: ${props.item.spec?.additionalTags[key]}`);
 });
-
 </script>
-

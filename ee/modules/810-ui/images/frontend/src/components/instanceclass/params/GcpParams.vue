@@ -25,7 +25,6 @@ const props = defineProps({
 });
 
 const diskInfo = computed((): string | undefined => {
-  return props.item.spec?.diskSizeGb ? `${props.item.spec?.diskSizeGb} ${props.item.spec?.diskType || '–'}` : undefined;
+  return props.item.spec?.diskSizeGb ? `${props.item.spec?.diskSizeGb} ${props.item.spec?.diskType || "–"}` : undefined;
 });
-
 </script>

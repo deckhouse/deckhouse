@@ -27,5 +27,4 @@ const props = defineProps({
 const diskInfo = computed((): string | undefined => {
   return props.item.spec?.rootDiskSize ? `${props.item.spec?.rootDiskSize} G` : undefined;
 });
-
 </script>

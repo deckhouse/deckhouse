@@ -29,14 +29,14 @@
 <script setup lang="ts">
 import type { PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { IBadge } from "@/types";
+import type { Badge } from "@/types";
 import * as Icons from "@/components/common/icon";
 import BadgeItem from "@/components/common/badge/BadgeItem.vue";
 
 const props = defineProps({
   title: String,
   tooltip: String,
-  badges: Array as PropType<Array<IBadge>>,
+  badges: Array as PropType<Array<Badge>>,
   route: Object as PropType<RouteLocationRaw>,
   icon: String as PropType<keyof typeof Icons>,
 });

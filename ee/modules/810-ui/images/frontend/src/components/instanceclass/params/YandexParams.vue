@@ -35,5 +35,4 @@ const diskInfo = computed((): string | undefined => {
 const memoryInfo = computed((): string | undefined => {
   return props.item.spec?.memory ? `${props.item.spec?.memory} M` : undefined;
 });
-
 </script>

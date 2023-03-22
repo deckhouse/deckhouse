@@ -12,7 +12,22 @@
       "rootDiskSize": 40,
       "datastore": "lun-1201",
       "resourcePool": "rp-2012",
-      "template": "dev/golden_image"
+      "template": "dev/golden_image",
+      "disableTimesync": true,
+      "mainNetwork": "main",
+      "runtimeOptions": {
+        "cpuLimit": 1,
+        "cpuReservation": 1,
+        "cpuShares": 1,
+        "memoryLimit": 1,
+        "memoryReservations": 1,
+        "memoryShares": 1,
+        "nestedHardwareVirtualisation": true
+      },
+      "additionalSubnets": [
+        "one",
+        "two"
+      ]
     },
     "status": {
       "nodeGroupConsumers": [

@@ -20,7 +20,7 @@ import GridBlock from "@/components/common/grid/GridBlock.vue";
 import DeckhouseModuleSettings from "@/components/releases/DeckhouseModuleSettings.vue";
 import ReleaseItemsList from "@/components/releases/ReleaseItemsList.vue";
 import { ref } from "vue";
-import type { ITabsItem } from "@/types";
+import type { TabsItem } from "@/types";
 // import Breadcrumb from 'primevue/breadcrumb';
 // import { useRoute } from "vue-router";
 // const breadcrumbItems = useRoute().meta.breadcrumbs();
@@ -36,5 +36,5 @@ const tabs = [
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",
   },
-] as Array<ITabsItem>;
+] as Array<TabsItem>;
 </script>

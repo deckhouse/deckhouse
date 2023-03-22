@@ -94,7 +94,7 @@ import CardDivider from "@/components/common/card/CardDivider.vue";
 import CardParam from "@/components/common/card/CardParam.vue";
 import CardParamGrid from "@/components/common/card/CardParamGrid.vue";
 import CardTable from "@/components/common/card/CardTable.vue";
-import type { IBadge } from "@/types";
+import type { Badge } from "@/types";
 import { nodeTemplateSchema } from "@/validations";
 
 const router = useRouter();
@@ -112,7 +112,7 @@ const props = defineProps({
 
 const submitLoading = ref(false);
 
-const badges = computed<IBadge[]>(() => {
+const badges = computed<Badge[]>(() => {
   return props.node
     ? [
         { title: props.node.state, type: props.node.errorMessage ? "warning" : "success" },

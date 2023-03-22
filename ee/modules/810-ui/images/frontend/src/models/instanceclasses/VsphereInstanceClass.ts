@@ -3,6 +3,7 @@ import InstanceClassBase from "./InstanceClassBase";
 
 class VsphereInstanceClass extends InstanceClassBase {
   public static klassName: string = "VsphereInstanceClass";
+  public kind: string = "VsphereInstanceClass";
 }
 
 VsphereInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/VsphereInstanceClasses`;

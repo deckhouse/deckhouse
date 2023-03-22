@@ -1,4 +1,4 @@
-import type { IBadge, IStatusCondition, ITaint, IUpdateWindow } from "@/types";
+import type { Badge, IStatusCondition, ITaint, IUpdateWindow } from "@/types";
 // @ts-ignore
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
@@ -29,15 +29,6 @@ interface NodeGroupStatus {
   upToDate?: number;
   error?: string;
   kubernetesVersion?: string;
-}
-
-interface NodeGroupAttributes {
-  isNew?: boolean;
-  apiVersion?: string;
-  kind?: string;
-  metadata: NodeGroupMetadata;
-  spec: NodeGroupSpec;
-  status?: NodeGroupStatus;
 }
 
 interface DisruptionConfig {
@@ -107,6 +98,15 @@ export interface NodeGroupSpec {
   [key: string]: any;
 }
 
+interface NodeGroupAttributes {
+  isNew?: boolean;
+  apiVersion?: string;
+  kind?: string;
+  metadata: NodeGroupMetadata;
+  spec: NodeGroupSpec;
+  status?: NodeGroupStatus;
+}
+
 class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   public static ws_disconnected: boolean;
   public static klassName: string = "NodeGroup";
@@ -114,17 +114,18 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   public is_stale: boolean = false;
   public isNew?: boolean = false;
 
-  public apiVersion?: string;
-  public kind?: string;
+  public apiVersion: string = "deckhouse.io/v1";
+  public kind: string = "NodeGroup";
   public metadata: NodeGroupMetadata;
   public spec: NodeGroupSpec;
   public status?: NodeGroupStatus;
 
   constructor(attrs: NodeGroupAttributes) {
     super();
-    this.apiVersion = attrs.apiVersion;
+    this.apiVersion = attrs.apiVersion || this.apiVersion;
+    this.kind = attrs.kind || this.apiVersion;
+
     this.metadata = attrs.metadata;
-    this.kind = attrs.kind;
     this.spec = attrs.spec;
     this.status = attrs.status;
 
@@ -182,8 +183,8 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   // TODO: move to view?
-  public get badges(): IBadge[] {
-    const badges: IBadge[] = [];
+  public get badges(): Badge[] {
+    const badges: Badge[] = [];
 
     if (!this.status?.conditions?.length) return badges;
 

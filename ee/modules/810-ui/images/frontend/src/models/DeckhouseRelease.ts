@@ -17,14 +17,14 @@ interface IDeckhouseReleaseStatus {
 }
 
 interface DeckhouseReleaseAttributes {
+  kind: string;
   apiVersion: string;
   approved: boolean;
-  kind: string;
   metadata: DeckhouseReleaseMetadata;
   spec: {
     [key: string]: string | object;
   };
-  status: IDeckhouseReleaseStatus;
+  status?: IDeckhouseReleaseStatus;
 }
 
 class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttributes {
@@ -33,19 +33,21 @@ class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttribut
   public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public is_stale: boolean = false;
 
-  public status: IDeckhouseReleaseStatus;
-  public apiVersion: string;
+  public apiVersion: string = "deckhouse.io/v1";
+  public kind: string = "DeckhouseRelease";
+
+  public status?: IDeckhouseReleaseStatus;
   public approved: boolean;
   public metadata: DeckhouseReleaseMetadata;
-  public kind: string;
   public spec: { [key: string]: string | object };
 
   constructor(attrs: DeckhouseReleaseAttributes) {
     super();
+    this.kind = attrs.kind;
     this.apiVersion = attrs.apiVersion;
+
     this.approved = attrs.approved;
     this.metadata = attrs.metadata;
-    this.kind = attrs.kind;
     this.spec = attrs.spec;
     this.status = attrs.status;
   }

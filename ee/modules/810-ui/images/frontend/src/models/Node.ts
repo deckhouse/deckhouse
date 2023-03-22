@@ -203,7 +203,7 @@ Node.setRoutes(
     query: { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
     get: { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
     update: { method: "PUT", url: resourceBaseUrl + "/:name", storeResponse: false, withCredentials: false },
-    drain: { method: "PUT", url: resourceBaseUrl + "/:name/drain", storeResponse: false, withCredentials: false },
+    drain: { method: "POST", url: resourceBaseUrl + "/:name/drain", storeResponse: false, withCredentials: false },
   },
   {
     queryCache: true,

@@ -12,7 +12,9 @@
     <template #actions>
       <InstanceClassActionsVue :item="item" />
     </template>
-    <template #notice v-if="!!nodeGroupConsumers?.length"> Используется в {{nodeGroupConsumers?.length}} группах узлов: <b>{{nodeGroupConsumers?.join(', ')}}</b> </template>
+    <template #notice v-if="!!nodeGroupConsumers?.length">
+      Используется в {{ nodeGroupConsumers?.length }} группах узлов: <b>{{ nodeGroupConsumers?.join(", ") }}</b>
+    </template>
   </CardBlock>
 </template>
 
@@ -37,22 +39,28 @@ const props = defineProps({
 // TODO: uses hash const
 const icon = computed<IconsType | undefined>(() => {
   switch (props.item.constructor.klassName) {
-    case "AwsInstanceClass":        return "IconAWSLogo";
-    case "AzureInstanceClass":      return "IconAzureLogo";
-    case "GcpInstanceClass":        return "IconGCPLogo";
-    case "OpenstackInstanceClass":  return "IconOpenStackLogo";
-    case "VsphereInstanceClass":    return "IconVmWareLogo";
-    case "YandexInstanceClass":     return "IconYandexCloudLogo";
-    default:                        return undefined;
+    case "AwsInstanceClass":
+      return "IconAWSLogo";
+    case "AzureInstanceClass":
+      return "IconAzureLogo";
+    case "GcpInstanceClass":
+      return "IconGCPLogo";
+    case "OpenstackInstanceClass":
+      return "IconOpenStackLogo";
+    case "VsphereInstanceClass":
+      return "IconVmWareLogo";
+    case "YandexInstanceClass":
+      return "IconYandexCloudLogo";
+    default:
+      return undefined;
   }
 });
 
-const nodeGroupConsumers = computed((): string [] | undefined => {
+const nodeGroupConsumers = computed((): string[] | undefined => {
   return props.item.status?.nodeGroupConsumers;
 });
 
 const discovery = Discovery.get();
 const itemParams = shallowRef();
 itemParams.value = params[discovery.cloudProvider.name as keyof typeof params];
-
 </script>

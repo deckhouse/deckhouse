@@ -1,13 +1,15 @@
 // @ts-ignore
 import InstanceClassBase from "./InstanceClassBase";
 import type { InstanceClassAttributes } from "./InstanceClassBase";
-import type { IBadge } from "@/types";
+import type { Badge } from "@/types";
 
 class AwsInstanceClass extends InstanceClassBase {
   public static klassName: string = "AwsInstanceClass";
 
-  public get badges(): IBadge[] {
-    const badges: IBadge[] = super.badges;
+  public kind: string = "AwsInstanceClass";
+
+  public get badges(): Badge[] {
+    const badges: Badge[] = super.badges;
 
     if (this.spec.spot) badges.push({ title: "Spot", type: "warning" });
     return badges;

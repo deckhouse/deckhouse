@@ -1,5 +1,5 @@
 // @ts-ignore
-import type { IBadge } from "@/types";
+import type { Badge } from "@/types";
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 import Discovery, { type IInstanceTypeInfo } from "../Discovery";
 
@@ -14,10 +14,11 @@ interface IInstanceClassMetadata {
 
 interface IInstanceClassSpec {
   [key: string]: any;
+  runtimeOptions?: { [key: string]: any };
 }
 
 interface InstanceClassStatus {
-  nodeGroupConsumers: string [];
+  nodeGroupConsumers: string[];
 }
 
 export interface InstanceClassAttributes {
@@ -38,16 +39,16 @@ abstract class InstanceClassBase extends NxnResourceWs {
   public isNew?: boolean = false;
   public nodeGroupName?: string;
 
-  public apiVersion?: string;
-  public kind?: string;
+  public apiVersion: string = "deckhouse.io/v1";
+  public kind: string = "InstanceClass"; // need to initialize in child class
   public metadata: IInstanceClassMetadata;
   public spec: IInstanceClassSpec;
   public status: InstanceClassStatus;
 
   constructor(attrs: InstanceClassAttributes) {
     super();
-    this.apiVersion = attrs.apiVersion;
-    this.kind = attrs.kind;
+    this.apiVersion = attrs.apiVersion || this.apiVersion;
+    this.kind = attrs.kind || this.kind;
     this.metadata = attrs.metadata || ({} as IInstanceClassMetadata);
     this.spec = attrs.spec || ({} as IInstanceClassSpec);
     this.status = attrs.status || ({} as InstanceClassStatus);
@@ -94,8 +95,8 @@ abstract class InstanceClassBase extends NxnResourceWs {
     return Discovery.get().instanceTypeInfo(this.spec.instanceType);
   }
 
-  public get badges(): IBadge[] {
-    const badges: IBadge[] = [];
+  public get badges(): Badge[] {
+    const badges: Badge[] = [];
     return badges;
   }
 

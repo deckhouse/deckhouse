@@ -24,7 +24,7 @@ export type TabsItem = {
   routeParams?: RouteParamsRaw;
 };
 
-export type IBadge = {
+export type Badge = {
   title?: string;
   type: "success" | "warning" | "info" | "error";
   loading?: boolean;

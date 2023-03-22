@@ -1,13 +1,13 @@
 // @ts-ignore
 import InstanceClassBase from "./InstanceClassBase";
 import type { InstanceClassAttributes } from "./InstanceClassBase";
-import type { IBadge } from "@/types";
-
+import type { Badge } from "@/types";
 class GcpInstanceClass extends InstanceClassBase {
   public static klassName: string = "GcpInstanceClass";
+  public kind: string = "GCPInstanceClass";
 
-  public get badges(): IBadge[] {
-    const badges: IBadge[] = super.badges;
+  public get badges(): Badge[] {
+    const badges: Badge[] = super.badges;
 
     if (this.spec.preemptible) badges.push({ title: "Preemptible", type: "warning" });
     return badges;

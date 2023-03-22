@@ -4,6 +4,7 @@ import type { InstanceClassAttributes } from "./InstanceClassBase";
 
 class OpenstackInstanceClass extends InstanceClassBase {
   public static klassName: string = "OpenstackInstanceClass";
+  public kind: string = "OpenStackInstanceClass";
 
   public get diskSizeGb(): string | undefined {
     return this.spec?.rootDiskSize;
