@@ -1,0 +1,195 @@
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kruise-manager
+  namespace: kruise-system
+---
+# Source: kruise/templates/manager.yaml
+{{/*apiVersion: v1*/}}
+{{/*kind: ServiceAccount*/}}
+{{/*metadata:*/}}
+{{/*  name: kruise-daemon*/}}
+{{/*  namespace: kruise-system*/}}
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kruise-webhook-certs
+  namespace: kruise-system
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kruise-webhook-service
+  namespace: kruise-system
+spec:
+  ports:
+    - port: 443
+      targetPort: 9876
+  selector:
+    control-plane: controller-manager
+---
+# Source: kruise/templates/manager.yaml
+{{/*apiVersion: apps/v1*/}}
+{{/*kind: DaemonSet*/}}
+{{/*metadata:*/}}
+{{/*  name: kruise-daemon*/}}
+{{/*  namespace: kruise-system*/}}
+{{/*  labels:*/}}
+{{/*    control-plane: daemon*/}}
+{{/*spec:*/}}
+{{/*  selector:*/}}
+{{/*    matchLabels:*/}}
+{{/*      control-plane: daemon*/}}
+{{/*  minReadySeconds: 3*/}}
+{{/*  updateStrategy:*/}}
+{{/*    type: RollingUpdate*/}}
+{{/*    rollingUpdate:*/}}
+{{/*      maxUnavailable: 10%*/}}
+{{/*  template:*/}}
+{{/*    metadata:*/}}
+{{/*      labels:*/}}
+{{/*        control-plane: daemon*/}}
+{{/*    spec:*/}}
+{{/*      containers:*/}}
+{{/*        - command:*/}}
+{{/*            - /kruise-daemon*/}}
+{{/*          args:*/}}
+{{/*            - --logtostderr=true*/}}
+{{/*            - --v=4*/}}
+{{/*            - --addr=:10221*/}}
+{{/*            - --feature-gates=PreDownloadImageForInPlaceUpdate=true*/}}
+{{/*            - --socket-file=*/}}
+{{/*          image: openkruise/kruise-manager:v1.3.0*/}}
+{{/*          imagePullPolicy: Always*/}}
+{{/*          name: daemon*/}}
+{{/*          env:*/}}
+{{/*            - name: KUBE_CACHE_MUTATION_DETECTOR*/}}
+{{/*              value: "true"*/}}
+{{/*            - name: NODE_NAME*/}}
+{{/*              valueFrom:*/}}
+{{/*                fieldRef:*/}}
+{{/*                  apiVersion: v1*/}}
+{{/*                  fieldPath: spec.nodeName*/}}
+{{/*          livenessProbe:*/}}
+{{/*            failureThreshold: 3*/}}
+{{/*            httpGet:*/}}
+{{/*              path: /healthz*/}}
+{{/*              port: 10221*/}}
+{{/*              scheme: HTTP*/}}
+{{/*            initialDelaySeconds: 60*/}}
+{{/*            periodSeconds: 10*/}}
+{{/*            successThreshold: 1*/}}
+{{/*            timeoutSeconds: 1*/}}
+{{/*          resources:*/}}
+{{/*            limits:*/}}
+{{/*              cpu: 50m*/}}
+{{/*              memory: 128Mi*/}}
+{{/*            requests:*/}}
+{{/*              cpu: "0"*/}}
+{{/*              memory: "0"*/}}
+{{/*          volumeMounts:*/}}
+{{/*            - mountPath: /hostvarrun*/}}
+{{/*              name: runtime-socket*/}}
+{{/*              readOnly: true*/}}
+{{/*      tolerations:*/}}
+{{/*        - operator: Exists*/}}
+{{/*      hostNetwork: true*/}}
+{{/*      terminationGracePeriodSeconds: 10*/}}
+{{/*      serviceAccountName: kruise-daemon*/}}
+{{/*      volumes:*/}}
+{{/*        - hostPath:*/}}
+{{/*            path: /var/run*/}}
+{{/*            type: ""*/}}
+{{/*          name: runtime-socket*/}}
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: kruise-controller-manager
+  namespace: kruise-system
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  minReadySeconds: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+        - args:
+            - --enable-leader-election
+            - --metrics-addr=:8080
+            - --health-probe-addr=:8000
+            - --logtostderr=true
+            - --leader-election-namespace=d8-ingress-nginx
+            - --v=4
+            - --feature-gates=ResourcesDeletionProtection=true
+            - --sync-period=0
+          command:
+            - /manager
+          image: openkruise/kruise-manager:v1.3.0
+          imagePullPolicy: Always
+          name: manager
+          env:
+            - name: KUBE_CACHE_MUTATION_DETECTOR
+              value: "true"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: WEBHOOK_PORT
+              value: "9876"
+            - name: WEBHOOK_CONFIGURATION_FAILURE_POLICY_PODS
+              value: Ignore
+          ports:
+            - containerPort: 9876
+              name: webhook-server
+              protocol: TCP
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            - containerPort: 8000
+              name: health
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: readyz
+              port: 8000
+          resources:
+            limits:
+              cpu: 200m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      hostNetwork: false
+      terminationGracePeriodSeconds: 10
+      serviceAccountName: kruise-manager
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: control-plane
+                      operator: In
+                      values:
+                        - controller-manager
+                topologyKey: kubernetes.io/hostname
+              weight: 100
