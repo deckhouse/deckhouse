@@ -19,6 +19,7 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -28,6 +29,18 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
+
+type datasource struct {
+	Name     string `json:"name"`
+	JSONData struct {
+		TimeInterval string `json:"timeInterval"`
+	} `json:"jsonData"`
+}
+
+type datasourcesConfig struct {
+	Datasources       []datasource `json:"datasources"`
+	DeleteDatasources []datasource `json:"deleteDatasources"`
+}
 
 var _ = Describe("Module :: prometheus :: helm template :: render data sources", func() {
 	getGlobalValues := func(haEnabled bool) string {
@@ -83,8 +96,8 @@ internal:
 `, longtermRetentionDays)
 
 	}
-	extractYamlDataFromData := func(createdSecret object_store.KubeObject, key string) map[string]interface{} {
-		var dataSources map[string]interface{}
+	extractYamlDataFromData := func(createdSecret object_store.KubeObject, key string) *datasourcesConfig {
+		var dataSources datasourcesConfig
 
 		prometheusYamlEncoded := createdSecret.Field(fmt.Sprintf("data.%s", key)).String()
 		prometheusYaml, err := base64.StdEncoding.DecodeString(prometheusYamlEncoded)
@@ -92,17 +105,13 @@ internal:
 		err = yaml.Unmarshal(prometheusYaml, &dataSources)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		return dataSources
+		return &dataSources
 	}
 
 	assertDataSources := func(createdSecret object_store.KubeObject, countSources, countDeleted int) {
 		dataSources := extractYamlDataFromData(createdSecret, "prometheus\\.yaml")
-
-		Expect(dataSources).To(HaveKey("deleteDatasources"))
-		Expect(dataSources["deleteDatasources"]).To(HaveLen(countDeleted))
-
-		Expect(dataSources).To(HaveKey("datasources"))
-		Expect(dataSources["datasources"]).To(HaveLen(countSources))
+		Expect(dataSources.DeleteDatasources).To(HaveLen(countDeleted))
+		Expect(dataSources.Datasources).To(HaveLen(countSources))
 	}
 
 	f := SetupHelmConfig(``)
@@ -131,4 +140,29 @@ internal:
 		Entry("High availability disabled, longterm enabled", false, 1, 2, 2),
 		Entry("High availability and longterm disabled", false, 0, 1, 3),
 	)
+
+	Describe("Check Scrape Interval", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", getGlobalValues(true))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("prometheus", getPrometheusValues(5))
+			f.HelmRender()
+		})
+
+		It("Should has proper scrape interval", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			createdSecret := f.KubernetesResource("Secret", "d8-monitoring", "grafana-datasources")
+			Expect(createdSecret.Exists()).To(BeTrue())
+
+			dataSources := extractYamlDataFromData(createdSecret, "prometheus\\.yaml")
+			for _, ds := range dataSources.Datasources {
+				if strings.Contains(ds.Name, "longterm") {
+					Expect(ds.JSONData.TimeInterval).To(Equal("5m"))
+				} else {
+					Expect(ds.JSONData.TimeInterval).To(Equal(f.ValuesGet("prometheus.scrapeInterval").String()))
+				}
+			}
+		})
+	})
 })
