@@ -37,6 +37,10 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 2
+  # Migration: delete in 1.45
+  strategy:
+    type: Recreate
+  # /Migration
   selector:
     matchLabels:
       heritage: deckhouse
