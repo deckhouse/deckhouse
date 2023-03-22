@@ -33,8 +33,9 @@ func InitLogger() *log.Entry {
 		formatter = &log.JSONFormatter{}
 	}
 
-	log.SetFormatter(formatter)
-	log.SetLevel(log.Level(LoggerLevel))
+	l := log.New()
+	l.SetLevel(log.Level(LoggerLevel))
+	l.SetFormatter(formatter)
 
-	return log.NewEntry(log.New())
+	return log.NewEntry(l)
 }

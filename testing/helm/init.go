@@ -186,7 +186,7 @@ func (hec *Config) HelmRender(options ...Option) {
 			err = yaml.Unmarshal([]byte(doc), &t)
 
 			if err != nil {
-				By("Doc\n:" + doc)
+				By("Failed file content:\n" + doc)
 			}
 			Expect(err).To(Not(HaveOccurred()))
 			if t == nil {
