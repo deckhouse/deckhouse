@@ -65,7 +65,7 @@ abstract class InstanceClassBase extends NxnResourceWs {
   }
 
   public async save(): Promise<InstanceClassBase | null> {
-    const attrs = (({ is_stale, isNew, ...o }) => o)(this);
+    const attrs = (({ is_stale, isNew, status, ...o }) => o)(this);
     if (this.isNew) {
       return this.constructor.create({}, attrs).then(() => {
         delete this.isNew;
@@ -127,6 +127,6 @@ abstract class InstanceClassBase extends NxnResourceWs {
 //   { dynamic_cache: false }
 // );
 // @ts-ignore
-// InstanceClassBase.initSubscription("GroupResourceChannel", { groupResource: "insanceclasses.deckhouse.io" });
+// InstanceClassBase.initSubscription("GroupResourceChannel", { groupResource: "instanceclasses.deckhouse.io" });
 
 export default InstanceClassBase;

@@ -16,7 +16,7 @@ function addWrappedInKey(data, key, subject) {
 
 class NxnResourceHttp extends NxnResourceDB {
   constructor(attrs) {
-    super()
+    super();
     Object.assign(this, attrs);
   }
 

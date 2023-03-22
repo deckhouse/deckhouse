@@ -158,7 +158,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   public async save(): Promise<NodeGroup | null> {
-    const attrs = (({ is_stale, isNew, ...o }) => o)(this);
+    const attrs = (({ is_stale, isNew, status, ...o }) => o)(this);
     if (this.isNew) {
       return this.constructor.create({}, attrs).then(() => {
         delete this.isNew;

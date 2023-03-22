@@ -22,6 +22,6 @@ GcpInstanceClass.setRoutes(GcpInstanceClass.resourceBaseUrl, {}, GcpInstanceClas
   noQueryFilters: true,
 });
 // @ts-ignore
-GcpInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "gcpinsanceclasses.deckhouse.io" });
+GcpInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "gcpinstanceclasses.deckhouse.io" });
 
 export default GcpInstanceClass;

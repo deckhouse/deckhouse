@@ -81,7 +81,7 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
   }
 
   public async save(): Promise<void> {
-    const attrs = (({ is_stale, ...o }) => o)(this);
+    const attrs = (({ is_stale, status, ...o }) => o)(this);
     return DeckhouseModuleSettings.update({}, attrs);
   }
 }

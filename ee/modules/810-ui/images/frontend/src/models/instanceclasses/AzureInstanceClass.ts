@@ -14,6 +14,6 @@ AzureInstanceClass.setRoutes(AzureInstanceClass.resourceBaseUrl, {}, AzureInstan
   noQueryFilters: true,
 });
 // @ts-ignore
-AzureInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "azureinsanceclasses.deckhouse.io" });
+AzureInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "azureinstanceclasses.deckhouse.io" });
 
 export default AzureInstanceClass;

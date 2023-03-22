@@ -14,6 +14,6 @@ VsphereInstanceClass.setRoutes(VsphereInstanceClass.resourceBaseUrl, {}, Vsphere
   noQueryFilters: true,
 });
 // @ts-ignore
-VsphereInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "vsphereinsanceclasses.deckhouse.io" });
+VsphereInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "vsphereinstanceclasses.deckhouse.io" });
 
 export default VsphereInstanceClass;

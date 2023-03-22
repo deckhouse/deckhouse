@@ -14,6 +14,6 @@ YandexInstanceClass.setRoutes(YandexInstanceClass.resourceBaseUrl, {}, YandexIns
   noQueryFilters: true,
 });
 // @ts-ignore
-YandexInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "yandexinsanceclasses.deckhouse.io" });
+YandexInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "yandexinstanceclasses.deckhouse.io" });
 
 export default YandexInstanceClass;

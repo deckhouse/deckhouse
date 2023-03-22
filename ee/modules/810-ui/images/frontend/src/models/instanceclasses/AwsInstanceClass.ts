@@ -24,6 +24,6 @@ AwsInstanceClass.setRoutes(AwsInstanceClass.resourceBaseUrl, {}, AwsInstanceClas
   noQueryFilters: true,
 });
 // @ts-ignore
-AwsInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "awsinsanceclasses.deckhouse.io" });
+AwsInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "awsinstanceclasses.deckhouse.io" });
 
 export default AwsInstanceClass;

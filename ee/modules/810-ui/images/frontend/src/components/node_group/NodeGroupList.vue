@@ -1,8 +1,9 @@
 <template>
   <template v-if="!list.isLoading.value">
-    <NodeGroupListItem v-for="item in list.items" :key="item.metadata.name" :item="item" ></NodeGroupListItem>
+    <NodeGroupListItem v-for="item in list.items" :key="item.metadata.name" :item="item"></NodeGroupListItem>
   </template>
   <CardBlock v-if="list.isLoading.value" :content-loading="true"></CardBlock>
+  <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
 </template>
 
 <script setup lang="ts">
@@ -14,6 +15,7 @@ import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
 import NodeGroup from "@/models/NodeGroup";
 
 import CardBlock from "@/components/common/card/CardBlock.vue";
+import CardEmpty from "@/components/common/card/CardEmpty.vue";
 import NodeGroupListItem from "@/components/node_group/NodeGroupListItem.vue";
 
 const props = defineProps({
@@ -53,5 +55,5 @@ const list = useListDynamic<NodeGroup>(
 );
 
 list.activate();
-onBeforeUnmount(() => list.destroyList() );
+onBeforeUnmount(() => list.destroyList());
 </script>

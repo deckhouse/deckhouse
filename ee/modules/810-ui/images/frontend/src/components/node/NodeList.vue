@@ -3,6 +3,7 @@
     <NodeListItem v-for="item in list.items" :key="item.metadata.name" :item="item"></NodeListItem>
   </template>
   <CardBlock v-if="list.isLoading.value" :content-loading="true"></CardBlock>
+  <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
 </template>
 
 <script setup lang="ts">
@@ -14,6 +15,7 @@ import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
 import Node from "@/models/Node";
 
 import CardBlock from "@/components/common/card/CardBlock.vue";
+import CardEmpty from "@/components/common/card/CardEmpty.vue";
 import NodeListItem from "@/components/node/NodeListItem.vue";
 
 const props = defineProps({
@@ -39,7 +41,9 @@ if (route.params.ng_name) {
 }
 
 const emit = defineEmits<{ (e: "set-count", value: number): void }>();
-function resetCount() { emit("set-count", list.items.length); }
+function resetCount() {
+  emit("set-count", list.items.length);
+}
 
 const list = useListDynamic<Node>(
   Node,
@@ -68,5 +72,5 @@ const list = useListDynamic<Node>(
 );
 
 list.activate();
-onBeforeUnmount(() => list.destroyList() );
+onBeforeUnmount(() => list.destroyList());
 </script>

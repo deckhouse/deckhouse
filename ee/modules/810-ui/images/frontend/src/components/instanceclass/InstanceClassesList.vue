@@ -3,6 +3,7 @@
     <InstanceClassesListItem v-for="item in list.items" :key="item.name" :item="item"></InstanceClassesListItem>
   </template>
   <CardBlock v-if="list.isLoading.value" :content-loading="!!list.isLoading.value"></CardBlock>
+  <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
 </template>
 
 <script setup lang="ts">
@@ -15,6 +16,7 @@ import type { InstanceClassesTypes } from "@/models/instanceclasses";
 import Discovery from "@/models/Discovery";
 
 import CardBlock from "@/components/common/card/CardBlock.vue";
+import CardEmpty from "@/components/common/card/CardEmpty.vue";
 import InstanceClassesListItem from "@/components/instanceclass/InstanceClassesListItem.vue";
 
 const route = useRoute();

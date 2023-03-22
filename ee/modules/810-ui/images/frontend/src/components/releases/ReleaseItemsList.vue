@@ -4,7 +4,7 @@
   </template>
   <CardBlock v-if="list.isLoading.value" :content-loading="true"></CardBlock>
   <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
-  
+
   <Sidebar :header="popup.title" position="right" v-model:visible="popup.key" class="p-sidebar-md" :modal="false">
     <span class="block text-2xl font-medium text-gray-800 mb-6">Changelog: {{ popup.title }}</span>
     <div v-for="(cl_value, cl_label) in popup.content" :key="cl_label" class="mb-6">
@@ -28,7 +28,10 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardEmpty from "@/components/common/card/CardEmpty.vue";
 
 const emit = defineEmits<{ (e: "set-count", value: number): void }>();
-function resetCount() { console.log(`deckhousereleases.deckhouse.io: emit("set-count", ${list.items.length});`); emit("set-count", list.items.length); }
+function resetCount() {
+  console.log(`deckhousereleases.deckhouse.io: emit("set-count", ${list.items.length});`);
+  emit("set-count", list.items.length);
+}
 const filter = reactive({});
 const list = useListDynamic<DeckhouseRelease>(
   DeckhouseRelease,
@@ -70,5 +73,5 @@ function toggleChangelogWindow(data: DeckhouseRelease) {
   }
 }
 
-onBeforeUnmount(() => list.destroyList() );
+onBeforeUnmount(() => list.destroyList());
 </script>

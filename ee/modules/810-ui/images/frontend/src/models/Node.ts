@@ -180,7 +180,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public async save(): Promise<Node | null> {
-    const attrs = (({ is_stale, nodeGroupName, ...o }) => o)(this);
+    const attrs = (({ is_stale, nodeGroupName, status, ...o }) => o)(this);
     return Node.update({ name: this.metadata.name }, attrs);
   }
 
@@ -189,6 +189,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public async disruptionApprove(): Promise<Node | null> {
+    this.metadata.annotations ||= {};
     this.metadata.annotations["update.node.deckhouse.io/disruption-approved"] = "";
     return this.save();
   }

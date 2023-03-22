@@ -19,6 +19,6 @@ OpenstackInstanceClass.setRoutes(OpenstackInstanceClass.resourceBaseUrl, {}, Ope
   noQueryFilters: true,
 });
 // @ts-ignore
-OpenstackInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "openstackinsanceclasses.deckhouse.io" });
+OpenstackInstanceClass.initSubscription("GroupResourceChannel", { groupResource: "openstackinstanceclasses.deckhouse.io" });
 
 export default OpenstackInstanceClass;
