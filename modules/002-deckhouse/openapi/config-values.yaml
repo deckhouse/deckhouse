@@ -157,10 +157,12 @@ properties:
             description: Skip TLS certificate verification while webhook request.
           minimalNotificationTime:
             type: string
-            pattern: '^[0-9]+[mh]{1}$'
+            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
             x-doc-example: '6h'
             description: |
               The minimum time that must pass from the notification before the update.
+
+              It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
 
               The update mechanism ensures that Deckhouse will not be updated before the specified time.
 

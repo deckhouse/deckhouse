@@ -609,7 +609,7 @@ metadata:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.notification.webhook", []byte(svr.URL))
 			f.ValuesDelete("deckhouse.update.windows")
-			f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("4h"))
+			f.ValuesSetFromYaml("deckhouse.update.notification.minimalNotificationTime", []byte("4h10m"))
 			f.KubeStateSet(deckhousePodYaml + postponedMinorRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 

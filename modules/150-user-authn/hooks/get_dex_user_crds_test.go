@@ -94,7 +94,7 @@ spec:
   - Admins
   - Everyone
   password: password
-  ttl: 60m
+  ttl: 1h10m
 status:
   expireAt: "2020-02-02T22:22:22Z"
 `))

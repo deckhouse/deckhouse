@@ -1710,8 +1710,10 @@ spec:
                     period:
                       type: string
                       description: |
-                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: "^[0-9]+[mh]{1}$"
+                        The time interval to use for the chaos monkey.
+
+                        It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+                      pattern: "^([0-9]+h([0-9]+m)?|[0-9]+m)$"
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
