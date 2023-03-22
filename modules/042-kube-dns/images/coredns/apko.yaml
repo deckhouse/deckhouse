@@ -1,0 +1,11 @@
+contents:
+  repositories:
+    - https://dl-cdn.alpinelinux.org/alpine/v3.17/main
+    - https://dl-cdn.alpinelinux.org/alpine/v3.17/community
+  packages:
+    - alpine-baselayout-data
+os-release:
+  id: alpine
+  version-id: '3.17.0'
+  name: 'alpine'
+  pretty-name: 'alpine'
