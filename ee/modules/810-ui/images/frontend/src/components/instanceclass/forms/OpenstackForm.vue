@@ -2,7 +2,7 @@
   <GridBlock>
     <CardBlock notice-placement="top">
       <template #title>
-        <CardTitle title="Конфигурация" icon="IconAWSLogo" />
+        <CardTitle title="Конфигурация" icon="IconOpenStackLogo" />
       </template>
       <template #content>
         <div class="flex flex-wrap items-start -mx-24 -my-6">
@@ -17,11 +17,11 @@
                 />
               </InputBlock>
             </Field>
-            <Field :name="'instanceType'" v-slot="{ errorMessage }">
+            <Field :name="'flavorName'" v-slot="{ errorMessage }">
               <InputBlock
                 title="Тип"
                 type="column"
-                spec="spec.instanceType"
+                spec="spec.flavorName"
                 class="mb-6"
                 :disabled="readonly"
                 :error-message="errorMessage"
@@ -30,18 +30,47 @@
                 <InputText
                   class="p-inputtext-sm w-[450px]"
                   :class="{ 'p-invalid': errorMessage }"
-                  v-model="values.instanceType"
+                  v-model="values.flavorName"
                   :disabled="readonly"
                 />
               </InputBlock>
             </Field>
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
-              <Field :name="'diskSizeGb'" v-slot="{ errorMessage }">
-                <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" :disabled="readonly" :error-message="errorMessage">
-                  <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.diskSizeGb" />
+              <Field :name="'rootDiskSize'" v-slot="{ errorMessage }">
+                <InputBlock
+                  title="Размер ГБ"
+                  spec="spec.rootDiskSize"
+                  help="Этот параметр влияет на тип диска<br> <a href='ya.ru' target='_blank' class='text-blue-500'>TODO: Как подобрать размер диска</a>"
+                  :disabled="readonly"
+                  :error-message="errorMessage"
+                >
+                  <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.rootDiskSize" />
                 </InputBlock>
               </Field>
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Сеть" />
+
+            <div class="flex flex-col gap-y-6">
+              <Field :name="'mainNetwork'" v-slot="{ errorMessage }">
+                <InputBlock title="Основная сеть" spec="spec.mainNetwork" type="column" :disabled="readonly" :error-message="errorMessage">
+                  <InputText class="p-inputtext-sm w-[450px]" v-model="values.mainNetwork" :disabled="readonly" />
+                </InputBlock>
+              </Field>
+              <FieldArray :name="'additionalNetworks'" v-slot="{ fields, push, remove }" v-model="values.additionalNetworks">
+                <InputLabelGroup
+                  :model="fields"
+                  @push="push({ value: '' })"
+                  @remove="remove"
+                  title="Дополнительные сети"
+                  spec="spec.additionalNetworks"
+                  :fields="['network']"
+                  :disabled="readonly"
+                />
+              </FieldArray>
             </div>
           </div>
 
@@ -49,27 +78,16 @@
             <FieldGroupTitle title="Прочее" />
 
             <div class="flex flex-col gap-y-6">
-              <Field :name="'ami'" v-slot="{ errorMessage }">
+              <Field :name="'imageName'" v-slot="{ errorMessage }">
                 <InputBlock
                   title="Образ машины"
-                  spec="spec.ami"
+                  spec="spec.imageName"
                   type="column"
-                  help="<a href='ya.ru' target='_blank' class='text-blue-500'>Список доступных AMI</a>"
-                  :error-message="errorMessage"
+                  help="Установлено значение по-умолчанию"
                   :disabled="readonly"
-                >
-                  <InputText class="p-inputtext-sm w-[450px]" :disabled="readonly" />
-                </InputBlock>
-              </Field>
-              <Field :name="'spot'" v-slot="{ errorMessage }">
-                <InputBlock
-                  title="Использовать Spot"
-                  spec="spec.spot"
-                  tooltip="Spot-инстансы запускаются с минимальной возможной для успешного запуска ценой за час"
                   :error-message="errorMessage"
-                  :disabled="readonly"
                 >
-                  <InputSwitch :disabled="readonly" v-model="values.spot" />
+                  <InputText class="p-inputtext-sm w-[450px]" v-model="values.imageName" :disabled="readonly" />
                 </InputBlock>
               </Field>
             </div>
@@ -108,7 +126,7 @@
       <template #actions>
         <InstanceClassActions :item="item" />
       </template>
-      <template #notice> TODO: Используется в 3 группах узлов: <b>big-node-group, redis, oopyachka-node</b> </template>
+      <template #notice v-if="!!nodeGroupConsumers?.length"> Используется в {{nodeGroupConsumers.length}} группах узлов: <b>{{nodeGroupConsumers.join(', ')}}</b> </template>
     </CardBlock>
   </GridBlock>
   <FormActions :compact="false" v-if="!readonly && meta.dirty" @reset="resetForm" @submit="submitForm" :submit-loading="submitLoading" />
@@ -119,17 +137,12 @@ import { computed, ref, type PropType } from "vue";
 import { useRouter } from "vue-router";
 import { arrayToObject, objectAsArray } from "@/utils";
 
-import Discovery from "@/models/Discovery";
-import type InstanceClassBase from "@/models/instanceclasses/InstanceClassBase";
-
 import { z } from "zod";
 import { toFormValidator } from "@vee-validate/zod";
 import { Field, FieldArray, useForm } from "vee-validate";
 
-import Dropdown from "primevue/dropdown";
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
-import InputSwitch from "primevue/inputswitch";
 
 import InstanceClassActions from "@/components/instanceclass/InstanceClassActions.vue";
 
@@ -157,16 +170,13 @@ const props = defineProps({
   },
 });
 
-const discovery = Discovery.get();
 const submitLoading = ref(false);
 
 // Validations Schema
 const formSchema = z.object({
   name: z.string().min(1),
-  diskSizeGb: z.number().optional(),
-  instanceType: z.string(),
-  ami: z.string().optional(),
-  spot: z.boolean().optional(),
+  flavorName: z.string(),
+  rootDiskSize: z.number().optional(),
   additionalSecurityGroups: z
     .object({
       value: z.string().optional(),
@@ -184,15 +194,19 @@ const formSchema = z.object({
 // Form
 
 const initialValues = computed(() => ({
-  name: props.item.metadata.name,
-  instanceType: props.item.spec.instanceType,
-  diskSizeGb: props.item.spec.diskSizeGb,
-  diskType: props.item.spec.diskType,
-  ami: props.item.spec.ami,
-  spot: props.item.spec.spot,
-  additionalSecurityGroups: props.item.spec.additionalSecurityGroups?.map((asg: string) => ({ value: asg })),
-  additionalTagsAsArray: objectAsArray(props.item.spec.additionalTags),
+  name: props.item.name,
+  flavorName: props.item.spec.flavorName,
+  rootDiskSize: props.item.spec?.rootDiskSize,
+  mainNetwork: props.item.spec?.mainNetwork,
+  imageName: props.item.spec?.imageName,
+  additionalSecurityGroups: props.item.spec.additionalSecurityGroups?.map((n: string) => ({ value: n })) || [],
+  additionalNetworks: props.item.spec.additionalNetworks?.map((n: string) => ({ network: n })) || [],
+  additionalTagsAsArray: objectAsArray(props.item.spec?.additionalTags),
 }));
+
+const nodeGroupConsumers = computed((): string [] | undefined => {
+  return props.item.status?.nodeGroupConsumers;
+});
 
 const { handleSubmit, values, meta, resetForm, errors } = useForm({
   validationSchema: toFormValidator(formSchema),
@@ -206,12 +220,9 @@ const submitForm = handleSubmit(
 
     let newSpec = { ...props.item.spec }; // TODO: deepcopy?
 
-    newSpec.instanceType = values.instanceType;
-    newSpec.diskSizeGb = values.diskSizeGb;
-    newSpec.diskType = values.diskType;
-    newSpec.ami = values.ami;
-    newSpec.spot = values.spot;
-    newSpec.additionalSecurityGroups = values.additionalSecurityGroups?.map((obj: { value: string }) => obj.value);
+    newSpec.flavorName = values.flavorName;
+    newSpec.rootDiskSize = values.rootDiskSize;
+    newSpec.additionalNetworks = values.additionalNetworks.map((i: { network: string }) => i.network);
     newSpec.additionalTags = arrayToObject(values.additionalTagsAsArray);
 
     props.item.metadata.name = values.name;

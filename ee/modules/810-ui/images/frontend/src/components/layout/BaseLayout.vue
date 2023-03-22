@@ -4,7 +4,7 @@
     <TheSidebar />
     <FlashMessages />
 
-    <div class="w-full pt-10 px-4 pl-72 flex-1 relative" :class="compact == true ? 'max-w-screen-2xl' : ''">
+    <div class="w-full pt-10 px-4 pl-72 flex-1 relative flex flex-col" :class="compact == true ? 'max-w-screen-2xl' : ''">
       <slot />
     </div>
   </div>

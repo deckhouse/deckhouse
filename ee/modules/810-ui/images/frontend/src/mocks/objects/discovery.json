@@ -51,6 +51,110 @@
     },
     "kubernetesVersion": "v1.21.14"
   },
+  "azure": {
+    "cloudProvider": {
+      "name": "azure",
+      "configuration": {
+        "zones": [
+          "os-west-1a",
+          "os-west-1b",
+          "os-west-1c",
+          "os-west-1d",
+          "os-east-2c"
+        ]
+      },
+      "knownInstanceTypes": {
+        "m1.large": {
+          "InstanceType": "m1.large",
+          "VCPU": 4,
+          "MemoryMb": 8192,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.medium": {
+          "InstanceType": "m1.medium",
+          "VCPU": 2,
+          "MemoryMb": 4096,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.small": {
+          "InstanceType": "m1.small",
+          "VCPU": 1,
+          "MemoryMb": 2048,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.tiny": {
+          "InstanceType": "m1.tiny",
+          "VCPU": 1,
+          "MemoryMb": 512,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.xlarge": {
+          "InstanceType": "m1.xlarge",
+          "VCPU": 8,
+          "MemoryMb": 16384,
+          "GPU": 0,
+          "Architecture": "amd64"
+        }
+      }
+    },
+    "kubernetesVersion": "v1.21.14"
+  },
+  "gcp": {
+    "cloudProvider": {
+      "name": "gcp",
+      "configuration": {
+        "zones": [
+          "os-west-1a",
+          "os-west-1b",
+          "os-west-1c",
+          "os-west-1d",
+          "os-east-2c"
+        ]
+      },
+      "knownInstanceTypes": {
+        "m1.large": {
+          "InstanceType": "m1.large",
+          "VCPU": 4,
+          "MemoryMb": 8192,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.medium": {
+          "InstanceType": "m1.medium",
+          "VCPU": 2,
+          "MemoryMb": 4096,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.small": {
+          "InstanceType": "m1.small",
+          "VCPU": 1,
+          "MemoryMb": 2048,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.tiny": {
+          "InstanceType": "m1.tiny",
+          "VCPU": 1,
+          "MemoryMb": 512,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.xlarge": {
+          "InstanceType": "m1.xlarge",
+          "VCPU": 8,
+          "MemoryMb": 16384,
+          "GPU": 0,
+          "Architecture": "amd64"
+        }
+      }
+    },
+    "kubernetesVersion": "v1.21.14"
+  },
   "openstack": {
     "cloudProvider": {
       "configuration": {
@@ -100,6 +204,110 @@
         }
       },
       "name": "openstack"
+    },
+    "kubernetesVersion": "v1.21.14"
+  },
+  "vsphere": {
+    "cloudProvider": {
+      "name": "vsphere",
+      "configuration": {
+        "zones": [
+          "os-west-1a",
+          "os-west-1b",
+          "os-west-1c",
+          "os-west-1d",
+          "os-east-2c"
+        ]
+      },
+      "knownInstanceTypes": {
+        "m1.large": {
+          "InstanceType": "m1.large",
+          "VCPU": 4,
+          "MemoryMb": 8192,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.medium": {
+          "InstanceType": "m1.medium",
+          "VCPU": 2,
+          "MemoryMb": 4096,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.small": {
+          "InstanceType": "m1.small",
+          "VCPU": 1,
+          "MemoryMb": 2048,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.tiny": {
+          "InstanceType": "m1.tiny",
+          "VCPU": 1,
+          "MemoryMb": 512,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.xlarge": {
+          "InstanceType": "m1.xlarge",
+          "VCPU": 8,
+          "MemoryMb": 16384,
+          "GPU": 0,
+          "Architecture": "amd64"
+        }
+      }
+    },
+    "kubernetesVersion": "v1.21.14"
+  },
+  "yandex": {
+    "cloudProvider": {
+      "name": "yandex",
+      "configuration": {
+        "zones": [
+          "os-west-1a",
+          "os-west-1b",
+          "os-west-1c",
+          "os-west-1d",
+          "os-east-2c"
+        ]
+      },
+      "knownInstanceTypes": {
+        "m1.large": {
+          "InstanceType": "m1.large",
+          "VCPU": 4,
+          "MemoryMb": 8192,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.medium": {
+          "InstanceType": "m1.medium",
+          "VCPU": 2,
+          "MemoryMb": 4096,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.small": {
+          "InstanceType": "m1.small",
+          "VCPU": 1,
+          "MemoryMb": 2048,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.tiny": {
+          "InstanceType": "m1.tiny",
+          "VCPU": 1,
+          "MemoryMb": 512,
+          "GPU": 0,
+          "Architecture": "amd64"
+        },
+        "m1.xlarge": {
+          "InstanceType": "m1.xlarge",
+          "VCPU": 8,
+          "MemoryMb": 16384,
+          "GPU": 0,
+          "Architecture": "amd64"
+        }
+      }
     },
     "kubernetesVersion": "v1.21.14"
   }

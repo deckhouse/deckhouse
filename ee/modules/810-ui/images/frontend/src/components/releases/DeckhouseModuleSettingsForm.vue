@@ -67,7 +67,7 @@
                 :class="{ 'p-invalid': errorMessage }"
                 placeholder="http://example.com"
               />
-              <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
+              <FormError v-if="errorMessage" :text="errorMessage" />
             </Field>
           </div>
         </div>
@@ -84,28 +84,34 @@
 
         <div class="flex gap-x-6 items-center mt-6" v-if="values.notificationAuthMode == 'basic'">
           <Field :name="'notificationBasicAuth.username'" v-slot="{ errorMessage }">
-            <InputText
-              v-model="values.notificationBasicAuth.username"
-              type="text"
-              placeholder="Логин"
-              :class="{ 'p-invalid': errorMessage }"
-            />
-            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
+            <div class="flex flex-col gap-y-1">
+              <InputText
+                v-model="values.notificationBasicAuth.username"
+                type="text"
+                placeholder="Логин"
+                :class="{ 'p-invalid': errorMessage }"
+              />
+              <FormError v-if="errorMessage" :text="errorMessage" />
+            </div>
           </Field>
           <Field :name="'notificationBasicAuth.password'" v-slot="{ errorMessage }">
-            <InputText
-              v-model="values.notificationBasicAuth.password"
-              type="text"
-              placeholder="Пароль"
-              :class="{ 'p-invalid': errorMessage }"
-            />
-            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
+            <div class="flex flex-col gap-y-1">
+              <InputText
+                v-model="values.notificationBasicAuth.password"
+                type="text"
+                placeholder="Пароль"
+                :class="{ 'p-invalid': errorMessage }"
+              />
+              <FormError v-if="errorMessage" :text="errorMessage" />
+            </div>
           </Field>
         </div>
         <div class="mt-6" v-if="values.notificationAuthMode == 'token'">
           <Field :name="'notificationAuthToken'" v-slot="{ errorMessage }">
-            <InputText v-model="values.notificationAuthToken" type="text" placeholder="Token" :class="{ 'p-invalid': errorMessage }" />
-            <InlineMessage v-if="errorMessage">{{ errorMessage }}</InlineMessage>
+            <div class="flex flex-col gap-y-1">
+              <InputText v-model="values.notificationAuthToken" type="text" placeholder="Token" :class="{ 'p-invalid': errorMessage }" />
+              <FormError v-if="errorMessage" :text="errorMessage" />
+            </div>
           </Field>
         </div>
       </template>
@@ -122,13 +128,13 @@ import type { IDeckhouseModuleReleaseNotification } from "@/models/DeckhouseModu
 import SelectButton from "primevue/selectbutton";
 import InputText from "primevue/inputtext";
 import Dropdown from "primevue/dropdown";
-import InlineMessage from "primevue/inlinemessage";
 
 import GridBlock from "@/components/common/grid/GridBlock.vue";
 import CardBlock from "@/components/common/card/CardBlock.vue";
 import UpdateWindows from "@/components/common/form/UpdateWindows.vue";
 import FormActions from "@/components/common/form/FormActions.vue";
 import FormLabel from "@/components/common/form/FormLabel.vue";
+import FormError from "@/components/common/form/FormError.vue";
 
 import { Field, useForm } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";

@@ -3,10 +3,10 @@
     <div class="min-w-0">
       <FieldLabel :title="title" :spec="spec" :tooltip="tooltip" :required="required" />
       <span class="block text-sm text-slate-400 mt-1 leading-tight" v-html="help" v-if="help && type != 'column'" />
+      <FormError v-if="errorMessage && type != 'column'" :text="errorMessage" />
     </div>
     <div class="flex items-center gap-2" :class="type_classes[type].input">
       <slot></slot>
-      <InlineMessage v-if="errorMessage"> {{ errorMessage }}</InlineMessage>
       <Button
         icon="pi pi-replay"
         v-tippy="'Сбросить'"
@@ -15,6 +15,7 @@
       />
       <InputSwitch v-if="toggle" :disabled="disabled" />
     </div>
+    <FormError v-if="errorMessage && type == 'column'" :text="errorMessage" />
     <span class="block text-sm text-slate-400 mt-1 leading-tight" v-html="help" v-if="help && type == 'column'" />
   </div>
 </template>
@@ -22,8 +23,8 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import FieldLabel from "@/components/common/form/FieldLabel.vue";
+import FormError from "@/components/common/form/FormError.vue";
 import InputSwitch from "primevue/inputswitch";
-import InlineMessage from "primevue/inlinemessage";
 import type { PropType } from "vue";
 
 const type_classes = {

@@ -34,6 +34,28 @@ import "primeicons/primeicons.css";
 import "tippy.js/dist/tippy.css";
 import Discovery from "./models/Discovery";
 
+import * as ActionCable from "@rails/actioncable";
+ActionCable.logger.enabled = true;
+
+// TODO: kostyl???
+async function waitWsConnection() {
+  const cable = NxnResourceWs.getCable();
+
+  if (!cable.connection.isOpen()) {
+    cable.ensureActiveConnection();
+
+    const timeout = 2000;
+    const intrasleep = 50;
+    const ttl = timeout / intrasleep; // time to loop
+    let loop = 0;
+    while (!cable.connection.isOpen() && loop < ttl) {
+      ActionCable.logger.log("waiting for WS connection...");
+      await new Promise((resolve) => setTimeout(resolve, intrasleep));
+      loop++;
+    }
+  }
+}
+
 export default async function initApp({
   app,
   initWS = true,
@@ -89,7 +111,7 @@ export default async function initApp({
 
     getWorker().use(...handlers.discovery);
   }
-  if (initWS) await NxnResourceWs.getCable().ensureActiveConnection(); // TODO: KOSTYL??? wait ws connection before starting application. But this function is not async :/
+  if (initWS) await waitWsConnection(); // TODO: KOSTYL??? wait ws connection before starting application. But this function is not async :/
 
   await Discovery.load();
 }

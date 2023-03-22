@@ -1,7 +1,7 @@
-import { ref, reactive, inject, watch } from "vue";
+import { ref, reactive, watch } from "vue";
 import { useRoute } from "vue-router";
 import deepEqual from "fast-deep-equal";
-import type NxnResourceWs from "../models/NxnResourceWs";
+import type NxnResourceWs from "@/models/NxnResourceWs";
 
 interface useListDynamicCallbacks<T> {
   // REQUIRED CALLBACKS

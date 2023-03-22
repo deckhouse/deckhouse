@@ -6,7 +6,7 @@ class OpenstackInstanceClass extends InstanceClassBase {
   public static klassName: string = "OpenstackInstanceClass";
 
   public get diskSizeGb(): string | undefined {
-    return this.spec?.rootDiskSizeGb;
+    return this.spec?.rootDiskSize;
   }
 }
 

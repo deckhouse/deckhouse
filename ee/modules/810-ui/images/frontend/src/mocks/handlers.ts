@@ -5,8 +5,13 @@ import deckhouseConfig from "./objects/deckhouse_settings.json";
 import deckhouseReleases from "./objects/deckhouse_releases.json";
 import nodes from "./objects/nodes.json";
 import nodeGroups from "./objects/nodegroups.json";
+// InstanceClasses
 import awsInstanceClasses from "./objects/awsinstanceclasses.json";
+import azureInstanceClasses from "./objects/azureinstanceclasses.json";
 import openstackInstanceClasses from "./objects/openstackinstanceclasses.json";
+import gcpInstanceClasses from "./objects/gcpinstanceclasses.json";
+import vsphereInstanceClasses from "./objects/vsphereinstanceclasses.json";
+import yandexInstanceClasses from "./objects/yandexinstanceclasses.json";
 
 // @ts-ignore
 import NxnResourceHttp from "@lib/nxn-common/models/NxnResourceHttp";
@@ -35,8 +40,30 @@ function getNode(name: any): any {
   return nodes.find((n) => n.metadata.name == name);
 }
 
+// InstanceClasses
+
 function getAwsInstanceClass(name: any): any {
   return awsInstanceClasses.find((n) => n.metadata.name == name);
+}
+
+function getAzureInstanceClass(name: any): any {
+  return azureInstanceClasses.find((n) => n.metadata.name == name);
+}
+
+function getOpenstackInstanceClass(name: any): any {
+  return openstackInstanceClasses.find((n) => n.metadata.name == name);
+}
+
+function getGcpInstanceClass(name: any): any {
+  return gcpInstanceClasses.find((n) => n.metadata.name == name);
+}
+
+function getVsphereInstanceClass(name: any): any {
+  return vsphereInstanceClasses.find((n) => n.metadata.name == name);
+}
+
+function getYandexInstanceClass(name: any): any {
+  return yandexInstanceClasses.find((n) => n.metadata.name == name);
 }
 
 console.log("HELLO!", NxnResourceHttp.apiUrl("discovery"));
@@ -110,7 +137,7 @@ export const handlers = {
     }),
   ],
 
-  // Instanceclasses
+  // InstanceClasses
   awsInstanceClasses: [
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/awsinstanceclasses"), (req, res, ctx) => {
       return res(ctx.delay(500), ctx.json(awsInstanceClasses));
@@ -133,7 +160,28 @@ export const handlers = {
     }),
   ],
 
-  //  Openstack
+  azureInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/azureinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(azureInstanceClasses));
+    }),
+
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/azureinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/azureinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getAzureInstanceClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/azureinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/azureinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ],
+
   openstackInstanceClasses: [
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses"), (req, res, ctx) => {
       return res(ctx.delay(500), ctx.json(openstackInstanceClasses));
@@ -143,7 +191,7 @@ export const handlers = {
       return res(ctx.delay(500), ctx.json(json));
     }),
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(getAwsInstanceClass(req.params.name)));
+      return res(ctx.delay(500), ctx.json(getOpenstackInstanceClass(req.params.name)));
     }),
     rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/openstackinstanceclasses/:name"), async (req, res, ctx) => {
       const json = await req.json();
@@ -153,6 +201,68 @@ export const handlers = {
       return res(ctx.delay(1500), ctx.status(200));
     }),
   ],
+
+  gcpInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/gcpinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(gcpInstanceClasses));
+    }),
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/gcpinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/gcpinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getGcpInstanceClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/gcpinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/gcpinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ],
+
+  vsphereInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/vsphereinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(vsphereInstanceClasses));
+    }),
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/vsphereinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/vsphereinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getVsphereInstanceClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/vsphereinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/vsphereinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ],
+
+  yandexInstanceClasses: [
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(yandexInstanceClasses));
+    }),
+
+    rest.post(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+
+    rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(500), ctx.json(getYandexInstanceClass(req.params.name)));
+    }),
+    rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses/:name"), async (req, res, ctx) => {
+      const json = await req.json();
+      return res(ctx.delay(500), ctx.json(json));
+    }),
+    rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses/:name"), (req, res, ctx) => {
+      return res(ctx.delay(1500), ctx.status(200));
+    }),
+  ]
 };
 
 export const rawHandlers = Object.values(handlers)

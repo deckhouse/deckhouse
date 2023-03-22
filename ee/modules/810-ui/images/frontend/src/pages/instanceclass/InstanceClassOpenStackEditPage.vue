@@ -19,7 +19,7 @@
             </InputBlock>
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
-              <InputBlock title="Размер ГБ" spec="spec.rootDiskSizeGb" help="Этот параметр влияет на тип диска<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Как подобрать размер диска</a>">
+              <InputBlock title="Размер ГБ" spec="spec.rootDiskSize" help="Этот параметр влияет на тип диска<br> <a href='ya.ru' target='_blank' class='text-blue-500'>Как подобрать размер диска</a>">
                 <InputText class="p-inputtext-sm w-[100px]" />
               </InputBlock>
             </div>

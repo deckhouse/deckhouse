@@ -56,6 +56,7 @@ class Discovery extends NxnResourceWs {
     return this.cloudProvider.configuration.zones;
   }
 
+  // BUG: not everywhere has `InstanceType`
   public instanceTypeInfo(instanceType: string): IInstanceTypeInfo {
     return this.knownInstanceTypes.find((it) => it.InstanceType == instanceType) || ({} as IInstanceTypeInfo);
   }
