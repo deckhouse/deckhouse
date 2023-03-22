@@ -195,7 +195,7 @@ func initHandlers(
 	}
 
 	// Websocket
-	sc := newSubscriptionController(reh)
+	sc := newSubscriptionController(reh, infReg)
 	go sc.Start(ctx)
 	router.GET("/subscribe", handleSubscribe(sc))
 

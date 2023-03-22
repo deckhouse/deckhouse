@@ -98,13 +98,6 @@ func gvrIdentifier(gr schema.GroupResource) string {
 	return string(b)
 }
 
-func newSubscriptionController(resourceEventHandler *resourceEventHandler) *subscriptionController {
-	return &subscriptionController{
-		subscriberMessageBuffer: 16,
-		resourceEventHandler:    resourceEventHandler,
-	}
-}
-
 type subscriptionController struct {
 	// subscriberMessageBuffer controls the max number
 	// of messages that can be queued for a subscriber
@@ -114,6 +107,17 @@ type subscriptionController struct {
 	subscriberMessageBuffer int
 
 	resourceEventHandler *resourceEventHandler
+
+	// Informer registry is used to reject subscriptions for unregistered GroupResources
+	informerRegistry *informerRegistry
+}
+
+func newSubscriptionController(resourceEventHandler *resourceEventHandler, infreg *informerRegistry) *subscriptionController {
+	return &subscriptionController{
+		subscriberMessageBuffer: 16,
+		resourceEventHandler:    resourceEventHandler,
+		informerRegistry:        infreg,
+	}
 }
 
 func (sc *subscriptionController) Start(ctx context.Context) {
@@ -242,6 +246,10 @@ func (sc *subscriptionController) handleGroupResourceChannelSubscription(s *subs
 	if err != nil {
 		return rejectMessage(command.Identifier, err)
 	}
+	if sc.informerRegistry.Get(gr) == nil {
+		return rejectMessage(command.Identifier, fmt.Errorf("unregistered GroupResource %s", gr.String()))
+	}
+
 	switch command.Command {
 	case "subscribe":
 		sc.resourceEventHandler.addResourceSubscription(s, gr)
