@@ -3,7 +3,7 @@ version: 0.13.4
 aws:
   namespace: hashicorp
   type: aws
-  version: 4.16.0
+  version: 4.50.0
 
 azure:
   namespace: hashicorp
