@@ -15,7 +15,7 @@ rules:
 - apiGroups:
   - deckhouse.io/v1alpha1
   resources:
-  - leases
+  - clouddiscoverydatas
   verbs:
   - create
   - get
