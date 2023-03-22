@@ -1,18 +1,19 @@
-FROM alpine:3.17.2 as apk_extractor
+FROM cgr.dev/chainguard/apko:0.7.1 as apk_extractor
 
 WORKDIR /workdir
 
-RUN apk update
-RUN apk fetch -R -o . busybox bash iptables inotify-tools alpine-baselayout-data
+COPY apko.yaml .
 
-RUN mkdir /apk && for apk in *.apk; do tar -xzvf "$apk" -C /apk; done
+RUN apko build --arch x86_64 apko.yaml image:latest image.tar
+RUN tar -xvf image.tar
+RUN mkdir /rootfs && tar -xzvf *.tar.gz -C /rootfs
 
 COPY iptables-wrapper-installer.sh /
 RUN /iptables-wrapper-installer.sh
 
 FROM scratch
 
-COPY --from=apk_extractor /apk/ /
+COPY --from=apk_extractor /rootfs/ /
 
 COPY iptables-loop.sh /
 

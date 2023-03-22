@@ -16,8 +16,8 @@
 
 set -eu
 
-chroot_sbin="/apk/usr/sbin"
-sbin="/usr/sbin"
+chroot_sbin="/rootfs/sbin"
+sbin="/sbin"
 
 # Start creating the wrapper...
 rm -f "${chroot_sbin}/iptables-wrapper"
