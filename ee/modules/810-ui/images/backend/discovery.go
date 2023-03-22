@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"sort"
 	"sync"
 
 	"deckhouse.io/uibackend/cloudprovider"
@@ -56,7 +55,7 @@ func (dc *discoveryCollector) AddCloudProvider(ctx context.Context, cloudProvide
 }
 
 func (dc *discoveryCollector) Build() *discoveryData {
-	sort.Strings(dc.data.Paths)
+	// sort.Strings(dc.data.Paths) // or let it be in the order of appending?
 	return dc.data
 }
 
