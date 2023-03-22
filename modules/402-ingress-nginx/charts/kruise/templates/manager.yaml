@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kruise-manager
-  namespace: kruise-system
+  namespace: d8-ingress-nginx
 ---
 # Source: kruise/templates/manager.yaml
 {{/*apiVersion: v1*/}}
@@ -18,14 +18,14 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: kruise-webhook-certs
-  namespace: kruise-system
+  namespace: d8-ingress-nginx
 ---
 # Source: kruise/templates/manager.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: kruise-webhook-service
-  namespace: kruise-system
+  namespace: d8-ingress-nginx
 spec:
   ports:
     - port: 443
@@ -114,7 +114,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: kruise-controller-manager
-  namespace: kruise-system
+  namespace: d8-ingress-nginx
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
@@ -138,9 +138,25 @@ spec:
             - --health-probe-addr=:8000
             - --logtostderr=true
             - --leader-election-namespace=d8-ingress-nginx
+            - --namespace=d8-ingress-nginx
             - --v=4
             - --feature-gates=ResourcesDeletionProtection=true
             - --sync-period=0
+            - --advancedcronjob-workers=0
+            - --broadcastjob-workers=0
+            - --cloneset-workers=0
+            - --crr-workers=0
+            - --imagepulljob-workers=0
+            - --nodeimage-workers=0
+            - --nodepodprobe-workers=0
+            - --persistentpodstate-workers=0
+            - --podprobemarker-workers=0
+            - --podunavailablebudget-workers=0
+            - --resourcedistribution-workers=0
+            - --sidecarset-workers=0
+            - --statefulset-workers=0
+            - --uniteddeployment-workers=0
+            - --workloadspread-workers=0
           command:
             - /manager
           image: openkruise/kruise-manager:v1.3.0

@@ -1,2 +1,6 @@
 name: ingress-nginx
 version: 0.0.1
+dependencies:
+  - name: kruise
+    version: 0.0.1
+    repository: "file:///deckhouse/modules/402-ingress-nginx/charts/kruise"
