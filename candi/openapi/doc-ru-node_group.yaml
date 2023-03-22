@@ -141,7 +141,9 @@ spec:
                         - `Disabled` — не трогает данную NodeGroup.
                     period:
                       description: |
-                        Интервал времени срабатывания chaos monkey (указывать можно [в Go-формате](https://golang.org/pkg/time/#ParseDuration)).
+                        Интервал времени срабатывания chaos monkey.
+
+                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
                 operatingSystem: &operatingSystem
                   description: |
                     Параметры операционной системы.
