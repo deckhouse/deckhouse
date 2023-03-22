@@ -71,7 +71,7 @@
                   v-model="values.cloudInstances.instanceClass"
                   class="w-full"
                   :options="instanceClassesOptions"
-                  :disabled="readonly"
+                  :disabled="readonly || !item.isNew"
                 />
               </InputBlock>
             </Field>
@@ -456,7 +456,7 @@ const formValidator = computed(() => (formSchema.value ? toFormValidator(formSch
 function updateValidationSchema(newValues: any = null): void {
   let schema = z.object({});
 
-  if (props.item.isNew) schema = schema.merge(z.object({ name: z.string() }));
+  if (props.item.isNew) schema = schema.merge(z.object({ name: z.string().min(1) }));
 
   if (!newValues) {
     formSchema.value = schema;

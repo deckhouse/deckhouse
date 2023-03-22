@@ -31,6 +31,7 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 // TODO: one "type" of tabs = one object with one list
 import Node from "@/models/Node";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
+import type { TabsItem } from "@/types";
 
 const route = useRoute();
 
@@ -59,26 +60,31 @@ const nodeGroup = ref<NodeGroup>();
 const isEdit = computed(() => route.name == "NodeGroupEdit");
 const isNew = computed(() => route.name == "NodeGroupNew");
 
-const tabs = computed(() =>
-  isNew.value
-    ? []
-    : [
-        {
-          title: "Просмотр",
-          routeName: "NodeGroupShow",
-        },
-        {
-          title: "Редактирование",
-          routeName: "NodeGroupEdit",
-        },
-        {
-          title: "Список узлов",
-          routeName: "NodeList",
-          badge: nodesCount,
-          routeParams: { ng_name: route.params.name },
-        },
-      ]
-);
+const tabs = computed(() => {
+  let res: TabsItem[] = [];
+
+  if (isNew.value || !nodeGroup.value) return res;
+
+  res.push({
+    title: "Просмотр",
+    routeName: "NodeGroupShow",
+  });
+
+  res.push({
+    title: "Редактирование",
+    routeName: "NodeGroupEdit",
+    disabled: nodeGroup.value?.isDeleting, //TODO: not working
+  });
+
+  res.push({
+    title: "Список узлов",
+    routeName: "NodeList",
+    badge: nodesCount,
+    routeParams: { ng_name: route.params.name },
+  });
+
+  return res;
+});
 
 Discovery.get()
   .instanceClassKlass.query()
@@ -87,7 +93,7 @@ Discovery.get()
       console.log("NEW!!");
 
       const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
-      nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType } }); // TODO: validate type param
+      nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType }, metadata: { name: "" } }); // TODO: validate type param
       isLoading.value = false;
     } else {
       NodeGroup.get({ name: route.params.name }).then((res: NodeGroup | null): void => {

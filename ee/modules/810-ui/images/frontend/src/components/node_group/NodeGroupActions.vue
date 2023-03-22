@@ -3,14 +3,15 @@
     v-if="showEdit"
     title="Редактировать"
     type="primary-subtle"
-    :route="{ name: 'NodeGroupEdit', params: { name: item.metadata.name } }"
+    :disabled="item.isDeleting"
+    :route="{ name: 'NodeGroupEdit', params: { name: item.name } }"
   ></ButtonBlock>
   <ButtonBlock
     title="Удалить"
     type="danger-subtle"
     @click="handleDelete"
-    :loading="deleteLoading"
-    :disabled="item.spec.nodeType == 'CloudPermanent'"
+    :loading="deleteLoading || !!item.isDeleting"
+    :disabled="item.spec.nodeType == 'CloudPermanent' || !!item.isDeleting"
   ></ButtonBlock>
 </template>
 

@@ -133,7 +133,9 @@ export const handlers = {
       return res(ctx.delay(500), ctx.json(json));
     }),
     rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.status(200));
+      const json = getNodeGroup(req.params.name);
+      json.metadata.deletionTimestamp = Date.now().toString();
+      return res(ctx.delay(500), ctx.json(json));
     }),
   ],
 
@@ -262,7 +264,7 @@ export const handlers = {
     rest.delete(NxnResourceHttp.apiUrl("k8s/deckhouse.io/yandexinstanceclasses/:name"), (req, res, ctx) => {
       return res(ctx.delay(1500), ctx.status(200));
     }),
-  ]
+  ],
 };
 
 export const rawHandlers = Object.values(handlers)

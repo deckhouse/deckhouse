@@ -3,8 +3,9 @@ import type { IBadge, IStatusCondition, ITaint, IUpdateWindow } from "@/types";
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
 interface NodeGroupMetadata {
-  creationTimestamp?: string;
   name: string;
+  creationTimestamp?: string;
+  deletionTimestamp?: string;
   resourceVersion?: number;
   uid?: string;
   labels?: any;
@@ -34,7 +35,7 @@ interface NodeGroupAttributes {
   isNew?: boolean;
   apiVersion?: string;
   kind?: string;
-  metadata?: NodeGroupMetadata;
+  metadata: NodeGroupMetadata;
   spec: NodeGroupSpec;
   status?: NodeGroupStatus;
 }
@@ -115,7 +116,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
 
   public apiVersion?: string;
   public kind?: string;
-  public metadata?: NodeGroupMetadata;
+  public metadata: NodeGroupMetadata;
   public spec: NodeGroupSpec;
   public status?: NodeGroupStatus;
 
@@ -167,15 +168,17 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   public async delete(): Promise<void> {
-    return this.constructor.delete({ name: this.metadata.name }).then(() => {
-      this.nxndbDestroy();
-    });
+    return this.constructor.delete({ name: this.metadata.name });
   }
 
   // Attributes
 
   public get name(): string | undefined {
-    return this.metadata?.name;
+    return this.metadata.name;
+  }
+
+  public get isDeleting(): boolean {
+    return !!this.metadata.deletionTimestamp;
   }
 
   // TODO: move to view?
@@ -259,9 +262,9 @@ NodeGroup.setRoutes(
   {
     query: { method: "GET", storeResponse: true, queryCache: true, format: "array", withCredentials: false },
     get: { method: "GET", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
-    create: { method: "POST", url: resourceBaseUrl, withCredentials: false },
-    update: { method: "PUT", url: resourceBaseUrl + "/:name", withCredentials: false },
-    delete: { method: "DELETE", url: resourceBaseUrl + "/:name", withCredentials: false },
+    create: { method: "POST", url: resourceBaseUrl, storeResponse: true, withCredentials: false },
+    update: { method: "PUT", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
+    delete: { method: "DELETE", url: resourceBaseUrl + "/:name", storeResponse: true, withCredentials: false },
   },
   {
     queryCache: true,

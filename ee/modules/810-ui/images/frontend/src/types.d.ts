@@ -15,10 +15,11 @@ export type ISidebarItem = {
   badge?: Ref<number | boolean>;
 };
 
-export type ITabsItem = {
+export type TabsItem = {
   title: string;
   active?: boolean;
   badge?: Ref<number>;
+  disabled?: boolean;
   routeName: string;
   routeParams?: RouteParamsRaw;
 };
