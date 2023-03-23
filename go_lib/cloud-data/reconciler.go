@@ -168,11 +168,11 @@ func (c *Reconciler) getHTTPServer() *http.Server {
 
 func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Infoln("Start next data discovery")
-	defer c.logger.Infoln("Finish next data discovery")
+	defer c.logger.Infoln("Finish data discovery")
 
 	instanceTypes, err := c.discoverer.InstanceTypes(ctx)
 	if err != nil {
-		c.logger.Errorln("Instance types error: %v", err)
+		c.logger.Errorf("Getting instance types error: %v\n", err)
 		c.cloudRequestErrorMetric.WithLabelValues("instance_types").Set(1.0)
 		return
 	}
@@ -249,7 +249,7 @@ func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, in
 	if o != nil {
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &data)
 		if err != nil {
-			c.logger.Errorln("Instance types error: %v", err)
+			c.logger.Errorf("Failed to convert unstructured to data. Error: %v\n", err)
 			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 			return nil, err
 		}
@@ -260,7 +260,7 @@ func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, in
 
 	content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&data)
 	if err != nil {
-		c.logger.Errorln("Instance types error: %v", err)
+		c.logger.Errorf("Failed to convert data to unstructured. Error: %v\n", err)
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		return nil, err
 	}

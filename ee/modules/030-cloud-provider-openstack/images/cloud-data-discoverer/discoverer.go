@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/gophercloud/gophercloud"
@@ -13,8 +14,9 @@ import (
 )
 
 type Discoverer struct {
-	client *gophercloud.ServiceClient
-	logger *log.Entry
+	logger   *log.Entry
+	authOpts gophercloud.AuthOptions
+	region   string
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -23,32 +25,33 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Cannnot get opts from env: %v", err)
 	}
 
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		logger.Fatalf("Cannnot create client: %v", err)
-	}
-
 	region := os.Getenv("OS_REGION")
 	if region == "" {
 		logger.Fatalf("Cannnot get OS_REGION env: %v", err)
 	}
 
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: region,
-	})
-
-	if err != nil {
-		logger.Fatalf("Cannnot create compute v2 client: %v", err)
-	}
-
 	return &Discoverer{
-		client: client,
-		logger: logger,
+		logger:   logger,
+		region:   region,
+		authOpts: authOpts,
 	}
 }
 
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
-	pages, err := flavors.ListDetail(d.client, nil).AllPages()
+	provider, err := openstack.AuthenticatedClient(d.authOpts)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create AuthenticatedClient: %v", err)
+	}
+
+	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.region,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot create ComputeV2 client: %v", err)
+	}
+
+	pages, err := flavors.ListDetail(client, nil).AllPages()
 	if err != nil {
 		return nil, err
 	}
