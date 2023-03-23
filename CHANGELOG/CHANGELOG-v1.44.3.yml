@@ -1,0 +1,23 @@
+ceph-csi:
+  fixes:
+    - summary: Added info about how to show mapped RBD volume into a FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4205
+deckhouse-config:
+  fixes:
+    - summary: Remove `nodeSelector` for `deckhouse-config-webhook`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4192
+    - summary: Temporarily set the `Recreate` strategy for `deckhouse-config-webhook` Deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4191
+log-shipper:
+  fixes:
+    - summary: Fix VPA condition in the template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4197
+prometheus:
+  fixes:
+    - summary: Fix the time interval for Prometheus longterm.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4174
+virtualization:
+  fixes:
+    - summary: Fix nil pointer exception and `volumeAttachments` status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4164
+
