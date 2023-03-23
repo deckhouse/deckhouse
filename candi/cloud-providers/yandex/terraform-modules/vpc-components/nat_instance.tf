@@ -88,6 +88,8 @@ locals {
     EOF
 
     netplan apply
+
+    sysctl -w net.netfilter.nf_conntrack_max=1048576
   EOT
 }
 
