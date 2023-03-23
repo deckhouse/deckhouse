@@ -133,6 +133,11 @@ func initHandlers(
 			gvr:   schema.GroupVersionResource{Group: "deckhouse.io", Resource: "yandexinstanceclasses", Version: "v1"},
 			check: checkCustomResourceExistence(dynClient, checkTimeout),
 		},
+
+		{
+			gvr: schema.GroupVersionResource{Group: "aquasecurity.github.io", Resource: "vulnerabilityreports", Version: "v1alpha1"},
+			ns:  true,
+		},
 	}
 
 	// Adapter loop that both registers HTTP handlers and creates informers and subscription
@@ -173,6 +178,15 @@ func initHandlers(
 		router.POST(collectionPath, h.HandleCreate)
 		router.PUT(namedItemPath, h.HandleUpdate)
 		router.DELETE(namedItemPath, h.HandleDelete)
+
+		if namespaced {
+			// Support listing objects across all namespaces.
+			noNamespace := false
+			collectionPath := getPathPrefix(gvr, noNamespace, "k8s")
+			h := newHandler(informer, dynClient.Resource(gvr), gvr, noNamespace)
+			router.GET(collectionPath, h.HandleList) // get list across all namespaces
+			discovery.AddPath(collectionPath)
+		}
 
 		// Additional HTTP handlers along with server paths discovery
 		discovery.AddPath(collectionPath)
