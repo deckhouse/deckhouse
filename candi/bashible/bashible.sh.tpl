@@ -85,7 +85,7 @@ function get_secret() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -123,7 +123,7 @@ function get_bundle() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if curl -s -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
          return 0
         else
