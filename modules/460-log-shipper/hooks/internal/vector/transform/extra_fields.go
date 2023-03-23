@@ -61,21 +61,9 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	return &extraFieldsTransform
 }
 
-func processExtraFieldKey(key string, value string) string {
-	key = escapeVectorString(key)
-	if validMustacheTemplate.MatchString(value) {
-		dataField := validMustacheTemplate.FindStringSubmatch(value)[1]
-		if dataField == "parsed_data" {
-			return fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", key)
-		}
-		dataField = combineDataFieldParts(generateDataFieldParts(dataField))
-		return fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", dataField, key, dataField)
-	}
-	return fmt.Sprintf(" .%s=\"%s\" \n", key, value)
-}
-
+// mapKeys returns sorted keys of map
 func mapKeys(m map[string]string) []string {
-	keys := make([]string, 0)
+	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)
 	}
@@ -84,7 +72,53 @@ func mapKeys(m map[string]string) []string {
 	return keys
 }
 
-func generateDataFieldParts(dataField string) []string {
+// processExtraFieldKey processes key-value pairs to valid vrls
+// used for extra deild remap transformation
+//
+// example with template in value:
+// aaa: {{ pay-load[0].a }} -> if exists(.parsed_data."pay-load"[0].a) { .aaa=.parsed_data."pay-load"[0].a }
+//
+// example with template and parsed_data in value:
+// abc: {{ parsed_data }} -> if exists(.parsed_data) { .abc=.parsed_data }
+//
+// example with plain string in value:
+// aba: bbb -> .aba="bbb"
+func processExtraFieldKey(key, value string) string {
+	key = escapeVectorString(key)
+
+	if !validMustacheTemplate.MatchString(value) {
+		return fmt.Sprintf(" .%s=\"%s\" \n", key, value)
+	}
+
+	// From regex lib docs:
+	//   If 'Submatch' is present, the return value is a slice identifying the
+	//   successive submatches of the expression. Submatches are matches of
+	//   parenthesized subexpressions (also known as capturing groups) within the
+	//   regular expression, numbered from left to right in order of opening
+	//   parenthesis. Submatch 0 is the match of the entire expression, submatch 1 is
+	//   the match of the first parenthesized subexpression, and so on.
+	//
+	// for example, for string `{{ parsed_data.asas }}` there would be
+	// two submatches for expression from 'validMustacheTemplate' variable:
+	// `{{ parsed_data.asas }}` and `parsed_data.asas`
+	//
+	dataField := validMustacheTemplate.FindStringSubmatch(value)[1]
+	if dataField == "parsed_data" {
+		return fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", key)
+	}
+
+	dataField = generateDataField(dataField)
+	return fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", dataField, key, dataField)
+
+}
+
+// generateDataField escapes field for valid vrl. In detail,
+// this func splits field by dots (`.`), then it iterates over
+// splitted slices and determines fields with
+// 'processDataFieldWithEscape' function, for example:
+// `test.pay\.lo\.ad.hel\.lo.world` -> [`test`, `pay\.lo\.ad`, `hel\.lo`, `world`]
+// and then it escapes every field and concatenates them back
+func generateDataField(dataField string) string {
 	tmpDataFieldParts := strings.Split(dataField, ".")
 	dataFieldParts := make([]string, 0)
 	i := 0
@@ -93,9 +127,22 @@ func generateDataFieldParts(dataField string) []string {
 		dataFieldParts = append(dataFieldParts, buf)
 		i = iter + 1
 	}
-	return dataFieldParts
+
+	for i := range dataFieldParts {
+		dataFieldParts[i] = escapeVectorString(dataFieldParts[i])
+	}
+	return strings.Join(dataFieldParts, ".")
 }
 
+// processDataFieldWithEscape retrieves full field from datafield parts.
+// this func would iterate over tmpDataFieldParts from i to n (n > i), where n is index,
+// which corresponds to first string after ith string, that DOESN'T ends with `\\`
+// for example:
+// tmpDataFieldParts := []string{"test", "pay\", "lo\", "ad", "hel\", "lo", "world"}
+// i := 0 -> `test`
+// i := 1 -> `pay\.lo\.ad`
+// i := 4 -> `hel\.lo`
+// i := 6 -> `world`
 func processDataFieldWithEscape(i int, tmpDataFieldParts []string) (string, int) {
 	buf := tmpDataFieldParts[i]
 	if buf[len(buf)-1] != '\\' || i+1 > len(tmpDataFieldParts) {
@@ -115,13 +162,9 @@ func processDataFieldWithEscape(i int, tmpDataFieldParts []string) (string, int)
 	return buf, iter
 }
 
-func combineDataFieldParts(dataFieldParts []string) string {
-	for i := range dataFieldParts {
-		dataFieldParts[i] = escapeVectorString(dataFieldParts[i])
-	}
-	return strings.Join(dataFieldParts, ".")
-}
-
+// escapeVectorString func escapes "-" and "." in labels and removes "\" in string
+// example: `pay\.lo[3]` -> `"pay.lo"[3]`
+// example: `pay-load[0]` -> `"pay-load"[0]`
 func escapeVectorString(s string) string {
 	if strings.Contains(s, "-") || strings.Contains(s, "\\") {
 		if vectorArrayTemplate.MatchString(s) {

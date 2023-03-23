@@ -105,6 +105,9 @@ func TestTransformSnippet(t *testing.T) {
 			"add": `{{ test.pay\.lo }}`,
 			"adc": `{{ pay\.lo.test }}`,
 			"bdc": `{{ pay\.lo[3].te\.st }}`,
+			"bda": `{{ pay\.lo[0].te-st }}`,
+			"abd": `{{ pay-load[0].te\.st }}`,
+			"dba": `{{ parsed_data }}`,
 		}
 
 		transforms = append(transforms, ExtraFieldTransform(extraLabels))
