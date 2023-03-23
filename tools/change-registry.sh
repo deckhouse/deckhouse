@@ -88,9 +88,9 @@ function parse_args() {
   REGISTRY_SCHEME="$(sed "s/:\/\///" <<< "$REGISTRY_SCHEME")"
   DECKHOUSE_TAG="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.containers[] | select(.name=="deckhouse") | .image | split(":")[-1]' -r)"
 
-  tmp_external_modules_tag="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.initContainers[] | select(.name=="init-external-modules") | .image | split(":")[-1]' -r 2>/dev/null)"
+  tmp_init_external_modules_container_tag="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.initContainers[] | select(.name=="init-external-modules") | .image | split(":")[-1]' -r 2>/dev/null)"
   if [[ "$tmp_external_modules_tag" != "" ]]; then
-    DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG="${tmp_external_modules_tag}"
+    DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG="${tmp_init_external_modules_container_tag}"
   fi
 
   if [[ "$REGISTRY_PATH" == "" ]]; then
@@ -121,8 +121,8 @@ function parse_args() {
 
 
   curl_image_by_tag "$DECKHOUSE_TAG"
-  if [[ "$DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG" != "" ]]; then
-    curl_image_by_tag "$DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG"
+  if [[ "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG" != "" ]]; then
+    curl_image_by_tag "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG"
   fi
 }
 
@@ -175,7 +175,7 @@ if  [[ "$REGISTRY_CAFILE" != "" ]]; then
   kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CA_B64}\"}}"
 fi
 
-if [[ "$DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG" != "" ]]; then
+if [[ "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG" != "" ]]; then
   temp_patch_file=$(mktemp /tmp/patch.XXXXXX.yaml)
   cat <<EOF | tee "${temp_patch_file}"
 ---
@@ -185,7 +185,7 @@ spec:
     spec:
       initContainers:
         - name: init-external-modules
-          image: ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG}
+          image: ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG}
 EOF
   kubectl patch -n d8-system deploy deckhouse --patch-file "${temp_patch_file}"
   rm "${temp_patch_file}"
