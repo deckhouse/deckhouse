@@ -32,7 +32,7 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 
 	region := os.Getenv("OS_REGION")
 	if region == "" {
-		logger.Fatalf("Cannnot get OS_REGION env: %v", err)
+		logger.Fatalf("Cannnot get OS_REGION env")
 	}
 
 	return &Discoverer{
