@@ -45,7 +45,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		if err != nil {
 			return nil, err
 		}
-		transforms = append(transforms, transform...)
+		transforms = append(transforms, transform)
 	}
 
 	switch dest.Spec.Type {

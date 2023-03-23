@@ -18,6 +18,7 @@ package transform
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
@@ -31,38 +32,49 @@ const (
 )
 
 // ThrottleTransform adds throttling to event's flow.
-func ThrottleTransform(rl v1alpha1.RateLimitSpec) ([]apis.LogTransform, error) {
-	if rl.Excludes != nil && rl.KeyField != "" {
-		return processExcludesForDynamicTransform(rl.Excludes, *rl.LinesPerMinute, rl.KeyField)
+func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
+	throttleTransform := &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "ratelimit",
+			Type:   "throttle",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			excludeField:  "null",
+			"threshold":   *rl.LinesPerMinute,
+			"window_secs": 60,
+		},
 	}
 
-	return []apis.LogTransform{newDynamicTransform(*rl.LinesPerMinute, rl.KeyField)}, nil
+	if rl.KeyField != "" {
+		throttleTransform.DynamicArgsMap[keyFieldField] = rl.KeyField
+	}
+
+	if rl.Excludes != nil {
+		excludeCond, err := processExcludesForDynamicTransform(rl.Excludes, *rl.LinesPerMinute, rl.KeyField)
+		if err != nil {
+			return nil, err
+		}
+		throttleTransform.DynamicArgsMap[excludeField] = excludeCond
+	}
+	return throttleTransform, nil
 }
 
-func processExcludesForDynamicTransform(excludes []v1alpha1.Filter, threshold int32, keyField string) ([]apis.LogTransform, error) {
-	throttleTransforms := make([]apis.LogTransform, len(excludes))
+func processExcludesForDynamicTransform(excludes []v1alpha1.Filter, threshold int32, keyField string) (map[string]interface{}, error) {
+	throttleTransformExcludes := make([]string, len(excludes))
 	for i, filter := range excludes {
-		throttleTransform := newDynamicTransform(threshold, keyField)
-		throttleTransform.CommonTransform.Inputs = set.New()
-		if err := setExcludeThrottleTransformDynamicArg(throttleTransform.DynamicArgsMap, &filter); err != nil {
+		condition, err := excludeThrottleTransformCond(&filter)
+		if err != nil {
 			return nil, err
 		}
 
-		throttleTransforms[i] = throttleTransform
+		throttleTransformExcludes[i] = *condition
 	}
-	return throttleTransforms, nil
+	resultCond := combineThrottleTransformExcludes(throttleTransformExcludes)
+	return map[string]interface{}{"type": "vrl", "source": resultCond}, nil
 }
 
-func setExcludeThrottleTransformDynamicArg(m map[string]interface{}, exclude *v1alpha1.Filter) error {
-	v, err := throttleTransformExclude(exclude)
-	if err != nil {
-		return err
-	}
-	m[excludeField] = v
-	return nil
-}
-
-func throttleTransformExclude(exclude *v1alpha1.Filter) (map[string]interface{}, error) {
+func excludeThrottleTransformCond(exclude *v1alpha1.Filter) (*string, error) {
 	if exclude == nil {
 		return nil, fmt.Errorf("no filter provided for dynamic transform exclude")
 	}
@@ -77,24 +89,18 @@ func throttleTransformExclude(exclude *v1alpha1.Filter) (map[string]interface{},
 		return nil, fmt.Errorf("error rendering exclude rule for dynamic transform: %w", err)
 	}
 
-	return map[string]interface{}{"type": "vrl", "source": condition}, nil
+	return &condition, nil
 }
 
-func newDynamicTransform(threshold int32, keyField string) *DynamicTransform {
-	throttleTransform := DynamicTransform{
-		CommonTransform: CommonTransform{
-			Name:   "ratelimit",
-			Type:   "throttle",
-			Inputs: set.New(),
-		},
-		DynamicArgsMap: map[string]interface{}{
-			excludeField:  "null",
-			"threshold":   threshold,
-			"window_secs": 60,
-		},
+func combineThrottleTransformExcludes(excludes []string) string {
+	resultExcludeConds := make([]string, len(excludes)+1)
+	resultExcludeConds[0] = "matchedExcludeCond"
+	resultCond := fmt.Sprintf("%s = false;\n", resultExcludeConds[0])
+
+	for i, excludeCond := range excludes {
+		resultExcludeConds[i+1] = fmt.Sprintf("matchedExcludeCond%d", i)
+		resultCond += fmt.Sprintf("%s = %s;\n", resultExcludeConds[i+1], excludeCond)
 	}
-	if keyField != "" {
-		throttleTransform.DynamicArgsMap[keyFieldField] = keyField
-	}
-	return &throttleTransform
+	resultCond += strings.Join(resultExcludeConds, " || ")
+	return resultCond
 }
