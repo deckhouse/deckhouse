@@ -3,13 +3,15 @@
   <PageTitle v-if="!isLoading && nodeGroup?.isNew">Добавление группы типа {{ nodeGroup.spec.nodeType }}</PageTitle>
   <Skeleton v-if="isLoading" class="mb-6" height="2rem" />
   <PageActions>
-    <template #tabs>
+    <template #tabs v-if="tabs.length">
       <TabsBlock :items="tabs" />
     </template>
   </PageActions>
 
   <NodeGroupForm v-if="!isLoading && nodeGroup" :readonly="!isEdit && !isNew" :item="nodeGroup" />
   <CardBlock v-if="isLoading" :content-loading="isLoading" />
+
+  <ErrorPage v-if="loadError" :load-error="loadError" />
 </template>
 
 <script setup lang="ts">
@@ -27,15 +29,17 @@ import TabsBlock from "@/components/common/tabs/TabsBlock.vue";
 
 import NodeGroupForm from "@/components/node_group/NodeGroupForm.vue";
 import CardBlock from "@/components/common/card/CardBlock.vue";
+import ErrorPage from "@/pages/ErrorPage.vue";
 
 // TODO: one "type" of tabs = one object with one list
 import Node from "@/models/Node";
 import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
-import type { TabsItem } from "@/types";
+import type { LoadError, TabsItem } from "@/types";
 
 const route = useRoute();
 
 const nodesCount = ref<number | null>(null);
+const loadError = ref<LoadError | undefined>();
 function resetCount() {
   nodesCount.value = list.items.length;
 }
@@ -90,21 +94,37 @@ Discovery.get()
   .instanceClassKlass.query()
   .then(() => {
     if (isNew.value) {
-      console.log("NEW!!");
-
       const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
       nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType }, metadata: { name: "" } }); // TODO: validate type param
       isLoading.value = false;
     } else {
-      NodeGroup.get({ name: route.params.name }).then((res: NodeGroup | null): void => {
-        console.log("RESRES!", res);
-
-        if (res) {
-          nodeGroup.value = res;
-          // breadcrumbItems.value = route.meta.breadcrumbs(nodeGroup.value);
+      NodeGroup.get({ name: route.params.name }).then(
+        (res: NodeGroup | null): void => {
+          if (res) {
+            nodeGroup.value = res;
+            // breadcrumbItems.value = route.meta.breadcrumbs(nodeGroup.value);
+          }
+          isLoading.value = false;
+        },
+        (error) => {
+          console.log("ERROR!", error);
+          isLoading.value = false;
+          let errorText;
+          switch (error.response.status) {
+            case 404: {
+              errorText = "Не найдено.";
+              break;
+            }
+            default: {
+              errorText = "Что-то пошло не так.";
+            }
+          }
+          loadError.value = {
+            code: error.response.status,
+            text: errorText,
+          };
         }
-        isLoading.value = false;
-      });
+      );
     }
   });
 </script>

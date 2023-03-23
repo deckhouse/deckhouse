@@ -1,6 +1,6 @@
 <template>
   <template v-if="!list.isLoading.value">
-    <InstanceClassesListItem v-for="item in list.items" :key="item.name" :item="item"></InstanceClassesListItem>
+    <InstanceClassesListItem v-for="item in list.items" :key="item.metadata.uid" :item="item"></InstanceClassesListItem>
   </template>
   <CardBlock v-if="list.isLoading.value" :content-loading="!!list.isLoading.value"></CardBlock>
   <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />

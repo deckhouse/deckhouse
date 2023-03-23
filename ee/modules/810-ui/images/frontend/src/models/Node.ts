@@ -43,10 +43,10 @@ class Node extends NxnResourceWs implements NodeAttributes {
   public is_stale: boolean = false;
   public nodeGroupName?: string;
 
+  public apiVersion: string = "v1";
+  public kind: string = "Node";
   public status: NodeStatus;
-  public apiVersion: string;
   public metadata: NodeMetadata;
-  public kind: string;
   public spec: NodeSpec;
 
   constructor(attrs: NodeAttributes) {
@@ -61,11 +61,11 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public static toPrimaryKey(model: Node): string | undefined {
-    return model.metadata && model.metadata.uid;
+    return model.metadata.uid;
   }
 
   public static toVersionKey(model: Node): number | undefined {
-    return model.metadata?.resourceVersion;
+    return model.metadata.resourceVersion;
   }
 
   public static onWsDisconnect() {

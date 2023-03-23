@@ -18,8 +18,6 @@ import NxnResourceHttp from "@lib/nxn-common/models/NxnResourceHttp";
 
 const discovery = discoveries[(import.meta.env.VITE_CLOUD_PROVIDER || "aws") as keyof typeof discoveries];
 
-console.log("import.meta.env.VITE_CLOUD_PROVIDER", import.meta.env.VITE_CLOUD_PROVIDER, discovery);
-
 function getDeckhouseRelease(name: any): any {
   return deckhouseReleases.find((dr) => dr.metadata.name == name);
 }
@@ -126,7 +124,9 @@ export const handlers = {
     }),
 
     rest.get(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), (req, res, ctx) => {
-      return res(ctx.delay(500), ctx.json(getNodeGroup(req.params.name)));
+      const ng = getNodeGroup(req.params.name);
+      if (ng) return res(ctx.delay(500), ctx.json(ng));
+      else return res(ctx.delay(500), ctx.status(404));
     }),
     rest.put(NxnResourceHttp.apiUrl("k8s/deckhouse.io/nodegroups/:name"), async (req, res, ctx) => {
       const json = await req.json();

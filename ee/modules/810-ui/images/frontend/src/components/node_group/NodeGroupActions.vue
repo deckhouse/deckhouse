@@ -11,7 +11,7 @@
     type="danger-subtle"
     @click="handleDelete"
     :loading="deleteLoading || !!item.isDeleting"
-    :disabled="item.spec.nodeType == 'CloudPermanent' || !!item.isDeleting"
+    :disabled="item.spec.nodeType == 'CloudPermanent'"
   ></ButtonBlock>
 </template>
 

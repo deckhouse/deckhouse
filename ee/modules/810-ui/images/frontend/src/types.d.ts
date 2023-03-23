@@ -53,3 +53,8 @@ export interface IUpdateWindow {
   from: string;
   to: string;
 }
+
+export interface LoadError {
+  code: number;
+  text?: string;
+}

@@ -1,7 +1,7 @@
 <template>
   <button
     type="button"
-    :disabled="disabled"
+    :disabled="disabled || loading"
     class="py-2 px-3 inline-flex justify-center items-center gap-2 rounded-md border-2 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-all text-sm hover:bg-gray-800 hover:border-gray-800 hover:text-white"
     :class="getButtonStyles(type, disabled, loading)"
     @click="onClick"

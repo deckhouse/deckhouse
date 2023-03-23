@@ -116,7 +116,7 @@
               <InputBlock title="Число резервных узлов от общего количества узлов" spec="spec.cloudInstances.standBy">
                 <div class="p-inputgroup !w-[100px]">
                   <InputNumber inputClass="p-inputtext-sm w-[50px]" v-model="values.cloudInstances.standBy" :disabled="readonly" />
-                  <span class="p-inputgroup-addon">из 6</span>
+                  <span class="p-inputgroup-addon">из {{ item.status?.nodes || "0" }}</span>
                 </div>
               </InputBlock>
             </Field>

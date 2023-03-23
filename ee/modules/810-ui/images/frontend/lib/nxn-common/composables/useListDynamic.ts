@@ -268,7 +268,8 @@ export default function useListDynamic<T extends NxnResourceWs>(
    * Activates list in correct order: channel subscriptions - first, http data load - second.
    */
   function activate(): Promise<Array<T>> | Promise<string> {
-    if (!noQueryFilters) addChannelCallbacks();
+    // TODO: if (!noQueryFilters) addChannelCallbacks();
+    addChannelCallbacks();
     return (cb.loadAuxData ? cb.loadAuxData() : Promise.resolve(null)).then(() => {
       return reloadItems();
     });

@@ -57,11 +57,11 @@ abstract class InstanceClassBase extends NxnResourceWs {
   }
 
   public static toPrimaryKey(model: InstanceClassBase): string | undefined {
-    return model?.name;
+    return model.metadata.uid;
   }
 
   public static toVersionKey(model: InstanceClassBase): string | undefined {
-    return model.metadata?.creationTimestamp;
+    return model.metadata.resourceVersion;
   }
 
   public async save(): Promise<InstanceClassBase | null> {

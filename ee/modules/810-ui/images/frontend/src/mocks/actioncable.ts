@@ -6,6 +6,9 @@ import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 import deckhouseConfig from "./objects/deckhouse_settings.json";
 import deckhouseReleases from "./objects/deckhouse_releases.json";
 
+const cloudProvider = import.meta.env.VITE_CLOUD_PROVIDER || "aws";
+const { default: instanceclasses } = await import(`./objects/${cloudProvider}instanceclasses.json`);
+
 // replace adapter to mocked
 ActionCable.adapters.WebSocket = WebSocket;
 ActionCable.logger.enabled = true;
@@ -114,4 +117,37 @@ mockServer.on("connection", (socket) => {
   }
 
   setInterval(deckhouseReleasesPulse, 5000);
+
+  //// Instance Classes
+
+  function instanceClassesPulse() {
+    const ics = [...instanceclasses];
+
+    const randomIc = arraySample(ics);
+    const type = arraySample(["create", "update", "delete"]);
+
+    switch (type) {
+      case "create": {
+        randomIc.metadata.name = randomString();
+        randomIc.metadata.uid = randomString();
+        break;
+      }
+      case "update": {
+        randomIc.metadata.name = randomString();
+        break;
+      }
+    }
+
+    cableSend(
+      {
+        message: {
+          message_type: type,
+          message: randomIc,
+        },
+      },
+      { channel: "GroupResourceChannel", groupResource: `${cloudProvider}instanceclasses.deckhouse.io` }
+    );
+  }
+
+  setInterval(instanceClassesPulse, 5000);
 });

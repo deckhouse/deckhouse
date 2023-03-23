@@ -123,7 +123,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   constructor(attrs: NodeGroupAttributes) {
     super();
     this.apiVersion = attrs.apiVersion || this.apiVersion;
-    this.kind = attrs.kind || this.apiVersion;
+    this.kind = attrs.kind || this.kind;
 
     this.metadata = attrs.metadata;
     this.spec = attrs.spec;
@@ -133,11 +133,11 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   }
 
   public static toPrimaryKey(model: NodeGroup): string | undefined {
-    return model.metadata && model.metadata.uid;
+    return model.metadata.uid;
   }
 
   public static toVersionKey(model: NodeGroup): string | undefined {
-    return model.metadata?.creationTimestamp;
+    return model.metadata.creationTimestamp;
   }
 
   public static onWsDisconnect() {

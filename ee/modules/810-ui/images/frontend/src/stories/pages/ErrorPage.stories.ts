@@ -25,12 +25,16 @@ const Template: Story = (args) => ({
 
 export const Page404 = Template.bind({});
 Page404.args = {
-  code: 404,
-  text: "Страница не найдена.",
+  loadError: {
+    code: 404,
+    text: "Страница не найдена.",
+  },
 };
 
 export const Page500 = Template.bind({});
 Page500.args = {
-  code: 500,
-  text: "Что-то пошло не так. Перезагрузите страницу.",
+  loadError: {
+    code: 500,
+    text: "Что-то пошло не так. Перезагрузите страницу.",
+  },
 };
