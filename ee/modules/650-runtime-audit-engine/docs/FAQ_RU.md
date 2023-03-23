@@ -93,6 +93,9 @@ metadata:
   name: rule-example
 spec:
     rules:
+    - macro:
+        name: spawned_process
+        condition: (evt.type in (execve, execveat) and evt.dir=<)
     - rule:
         name: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
         condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
