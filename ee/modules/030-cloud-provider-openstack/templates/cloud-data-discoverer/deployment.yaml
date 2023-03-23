@@ -20,12 +20,13 @@ spec:
     updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
-    - containerName: "openstack-cloud-data-discoverer"
+    - containerName: "cloud-data-discoverer"
       minAllowed:
         {{- include "openstack_cloud_data_discoverer_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: policy/v1
