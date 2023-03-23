@@ -19,12 +19,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
