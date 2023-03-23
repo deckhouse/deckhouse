@@ -76,27 +76,30 @@ Example of a script output:
 
 ```yaml
 # /path/to/falco/rule_example.yaml
-- rule: Linux Cgroup Container Escape Vulnerability (CVE-2022-4092)
+- rule: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
   desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
   condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
-  output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-4092) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
+  output: "Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)"
   priority: CRITICAL
   tags: [process, mitre_privilege_escalation]
 ```
 
 ```yaml
 # ./my-rules-cr.yaml
-apiversion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
 metadata:
   name: rule-example
 spec:
     rules:
+    - macro:
+        name: spawned_process
+        condition: (evt.type in (execve, execveat) and evt.dir=<)
     - rule:
-        name: Linux Cgroup Container Escape Vulnerability (CVE-2022-4092)
+        name: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
         condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
         desc: This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel.
-        output: Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-4092) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)
+        output: Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)
         priority: Critical
         tags:
         - process

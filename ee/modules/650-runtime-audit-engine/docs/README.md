@@ -32,7 +32,7 @@ There are five different containers in a single agent Pod:
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco-driver-loader` — this init container compiles the eBPF program and saves it in an empty dir to make it available to Falco.
-2. `falco` — collects events, enriches them with metadata and saves them.
+2. `falco` — collects events, enriches them with metadata and sends them to stdout.
 3. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
 4. `falcosidekick` — exports events as metrics on which alerts can be generated.
 5. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
