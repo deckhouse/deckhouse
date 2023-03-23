@@ -167,7 +167,7 @@ func handleVMs(input *go_hook.HookInput) error {
 	for _, sRaw := range deckhouseVMSnap {
 		d8vm := sRaw.(*v1alpha1.VirtualMachine)
 		if err := processD8VM(input, d8vm); err != nil {
-			return err
+			input.LogEntry.Errorln(err)
 		}
 	}
 
@@ -341,14 +341,14 @@ func processD8VM(input *go_hook.HookInput, d8vm *v1alpha1.VirtualMachine) error 
 		for _, diskSource := range *d8vm.Spec.DiskAttachments {
 			disk := getDisk(&diskSnap, d8vm.Namespace, diskSource.Name)
 			if disk == nil {
-				return fmt.Errorf("disk not found: %v", disk.Name)
+				return fmt.Errorf("disk not found: %v", diskSource.Name)
 			}
 			if disk.VMName != "" && disk.VMName != d8vm.Name {
 				return fmt.Errorf("disk already attached to another VirtualMachine: %v", disk.VMName)
 			}
 			if disk.VMName != d8vm.Name {
-				patch := map[string]interface{}{"spec": map[string]string{"vmName": d8vm.Name}}
-				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineDisk", disk.Namespace, disk.Name)
+				patch := map[string]interface{}{"status": map[string]interface{}{"ephemeral": false, "vmName": d8vm.Name}}
+				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineDisk", disk.Namespace, disk.Name, object_patch.WithSubresource("/status"))
 			}
 		}
 	}
