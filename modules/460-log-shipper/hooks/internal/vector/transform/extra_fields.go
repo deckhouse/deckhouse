@@ -63,9 +63,11 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 
 // mapKeys returns sorted keys of map
 func mapKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
+	keys := make([]string, len(m))
+	i := 0
 	for key := range m {
-		keys = append(keys, key)
+		keys[i] = key
+		i++
 	}
 
 	sort.Strings(keys)
