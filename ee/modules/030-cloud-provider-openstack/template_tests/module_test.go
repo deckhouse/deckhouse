@@ -500,7 +500,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 				d := deployment(f)
 				Expect(d.Exists()).To(BeTrue())
 
-				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("openstack-cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
 				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
 			})
 
@@ -540,7 +540,7 @@ region: myreg
 				d := deployment(f)
 				Expect(d.Exists()).To(BeTrue())
 
-				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("openstack-cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
 				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
 			})
 
@@ -575,7 +575,7 @@ ca
 				d := deployment(f)
 				Expect(d.Exists()).To(BeTrue())
 
-				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("openstack-cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
 				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
 			})
 
