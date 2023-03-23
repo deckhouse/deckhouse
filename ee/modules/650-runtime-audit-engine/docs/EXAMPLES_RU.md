@@ -11,6 +11,9 @@ metadata:
   name: ownership-permissions
 spec:
   rules:
+  - macro:
+      name: spawned_process
+      condition: (evt.type in (execve, execveat) and evt.dir=<)
   - rule:
       name: Detect Ownership Change
       desc: detect file permission/ownership change
