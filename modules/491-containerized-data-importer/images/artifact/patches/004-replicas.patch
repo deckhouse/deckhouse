@@ -1,0 +1,396 @@
+diff --git a/api/openapi-spec/swagger.json b/api/openapi-spec/swagger.json
+index 69b8d5bf5..a44f473d9 100644
+--- a/api/openapi-spec/swagger.json
++++ b/api/openapi-spec/swagger.json
+@@ -5099,7 +5099,7 @@
+      "infra": {
+       "description": "Rules on which nodes CDI infrastructure pods will be scheduled",
+       "default": {},
+-      "$ref": "#/definitions/api.NodePlacement"
++      "$ref": "#/definitions/v1beta1.InfraNodePlacement"
+      },
+      "priorityClass": {
+       "description": "PriorityClass of the CDI control plane",
+@@ -5926,6 +5926,17 @@
+      }
+     }
+    },
++   "v1beta1.InfraNodePlacement": {
++    "description": "InfraNodePlacement provides information about replicas and placement for CDI components",
++    "type": "object",
++    "properties": {
++     "replicas": {
++      "description": "replicas indicates how many replicas should be created for each CDI infrastructure component (like cdi-api or cdi-deployment, cdi-uploadserver). Defaults to 1.",
++      "type": "integer",
++      "format": "int32"
++     }
++    }
++   },
+    "v1beta1.StorageSpec": {
+     "description": "StorageSpec defines the Storage type specification",
+     "type": "object",
+diff --git a/pkg/apis/core/v1beta1/openapi_generated.go b/pkg/apis/core/v1beta1/openapi_generated.go
+index 9cbbb32a6..3667cdb25 100644
+--- a/pkg/apis/core/v1beta1/openapi_generated.go
++++ b/pkg/apis/core/v1beta1/openapi_generated.go
+@@ -524,6 +524,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.FilesystemOverhead":       schema_pkg_apis_core_v1beta1_FilesystemOverhead(ref),
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ImportProxy":              schema_pkg_apis_core_v1beta1_ImportProxy(ref),
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ImportStatus":             schema_pkg_apis_core_v1beta1_ImportStatus(ref),
++		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.InfraNodePlacement":       schema_pkg_apis_core_v1beta1_InfraNodePlacement(ref),
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransfer":           schema_pkg_apis_core_v1beta1_ObjectTransfer(ref),
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransferCondition":  schema_pkg_apis_core_v1beta1_ObjectTransferCondition(ref),
+ 		"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.ObjectTransferList":       schema_pkg_apis_core_v1beta1_ObjectTransferList(ref),
+@@ -23122,7 +23123,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
+ 						SchemaProps: spec.SchemaProps{
+ 							Description: "Rules on which nodes CDI infrastructure pods will be scheduled",
+ 							Default:     map[string]interface{}{},
+-							Ref:         ref("kubevirt.io/controller-lifecycle-operator-sdk/api.NodePlacement"),
++							Ref:         ref("kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.InfraNodePlacement"),
+ 						},
+ 					},
+ 					"workload": {
+@@ -23162,7 +23163,7 @@ func schema_pkg_apis_core_v1beta1_CDISpec(ref common.ReferenceCallback) common.O
+ 			},
+ 		},
+ 		Dependencies: []string{
+-			"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.CDICertConfig", "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.CDIConfigSpec", "kubevirt.io/controller-lifecycle-operator-sdk/api.NodePlacement"},
++			"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.CDICertConfig", "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.CDIConfigSpec", "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1.InfraNodePlacement", "kubevirt.io/controller-lifecycle-operator-sdk/api.NodePlacement"},
+ 	}
+ }
+ 
+@@ -24651,6 +24652,26 @@ func schema_pkg_apis_core_v1beta1_ImportStatus(ref common.ReferenceCallback) com
+ 	}
+ }
+ 
++func schema_pkg_apis_core_v1beta1_InfraNodePlacement(ref common.ReferenceCallback) common.OpenAPIDefinition {
++	return common.OpenAPIDefinition{
++		Schema: spec.Schema{
++			SchemaProps: spec.SchemaProps{
++				Description: "InfraNodePlacement provides information about replicas and placement for CDI components",
++				Type:        []string{"object"},
++				Properties: map[string]spec.Schema{
++					"replicas": {
++						SchemaProps: spec.SchemaProps{
++							Description: "replicas indicates how many replicas should be created for each CDI infrastructure component (like cdi-api or cdi-deployment, cdi-uploadserver). Defaults to 1.",
++							Type:        []string{"integer"},
++							Format:      "int32",
++						},
++					},
++				},
++			},
++		},
++	}
++}
++
+ func schema_pkg_apis_core_v1beta1_ObjectTransfer(ref common.ReferenceCallback) common.OpenAPIDefinition {
+ 	return common.OpenAPIDefinition{
+ 		Schema: spec.Schema{
+diff --git a/pkg/operator/resources/crds_generated.go b/pkg/operator/resources/crds_generated.go
+index 979deb137..a73224fdd 100644
+--- a/pkg/operator/resources/crds_generated.go
++++ b/pkg/operator/resources/crds_generated.go
+@@ -1099,6 +1099,12 @@ spec:
+                       each of the indicated key-value pairs as labels (it can have
+                       additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector'
+                     type: object
++                  replicas:
++                    description: replicas indicates how many replicas should be created
++                      for each CDI infrastructure component (like cdi-api or cdi-deployment,
++                      cdi-uploadserver). Defaults to 1.
++                    format: int32
++                    type: integer
+                   tolerations:
+                     description: tolerations is a list of tolerations applied to the
+                       relevant kind of pods See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+@@ -3312,6 +3318,12 @@ spec:
+                       each of the indicated key-value pairs as labels (it can have
+                       additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector'
+                     type: object
++                  replicas:
++                    description: replicas indicates how many replicas should be created
++                      for each CDI infrastructure component (like cdi-api or cdi-deployment,
++                      cdi-uploadserver). Defaults to 1.
++                    format: int32
++                    type: integer
+                   tolerations:
+                     description: tolerations is a list of tolerations applied to the
+                       relevant kind of pods See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+diff --git a/pkg/operator/resources/namespaced/BUILD.bazel b/pkg/operator/resources/namespaced/BUILD.bazel
+index 3cf254561..4ab295583 100644
+--- a/pkg/operator/resources/namespaced/BUILD.bazel
++++ b/pkg/operator/resources/namespaced/BUILD.bazel
+@@ -16,6 +16,7 @@ go_library(
+         "//pkg/controller:go_default_library",
+         "//pkg/operator/resources/utils:go_default_library",
+         "//pkg/util:go_default_library",
++        "//staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1:go_default_library",
+         "//vendor/k8s.io/api/apps/v1:go_default_library",
+         "//vendor/k8s.io/api/core/v1:go_default_library",
+         "//vendor/k8s.io/api/rbac/v1:go_default_library",
+@@ -23,7 +24,6 @@ go_library(
+         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+         "//vendor/k8s.io/apimachinery/pkg/runtime:go_default_library",
+         "//vendor/k8s.io/apimachinery/pkg/util/intstr:go_default_library",
+-        "//vendor/kubevirt.io/controller-lifecycle-operator-sdk/api:go_default_library",
+         "//vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources:go_default_library",
+         "//vendor/sigs.k8s.io/controller-runtime/pkg/client:go_default_library",
+     ],
+diff --git a/pkg/operator/resources/namespaced/apiserver.go b/pkg/operator/resources/namespaced/apiserver.go
+index 76ae14f69..5eb228eda 100644
+--- a/pkg/operator/resources/namespaced/apiserver.go
++++ b/pkg/operator/resources/namespaced/apiserver.go
+@@ -28,8 +28,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/intstr"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+-	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
+-
++	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+ 	"kubevirt.io/containerized-data-importer/pkg/common"
+ 	utils "kubevirt.io/containerized-data-importer/pkg/operator/resources/utils"
+ )
+@@ -48,7 +47,12 @@ func createAPIServerResources(args *FactoryArgs) []client.Object {
+ 		createAPIServerRoleBinding(),
+ 		createAPIServerRole(),
+ 		createAPIServerService(),
+-		createAPIServerDeployment(args.APIServerImage, args.Verbosity, args.PullPolicy, args.PriorityClassName, args.InfraNodePlacement),
++		createAPIServerDeployment(
++			args.APIServerImage,
++			args.Verbosity,
++			args.PullPolicy,
++			args.PriorityClassName,
++			args.InfraNodePlacement),
+ 	}
+ }
+ 
+@@ -93,9 +97,9 @@ func createAPIServerService() *corev1.Service {
+ 	return service
+ }
+ 
+-func createAPIServerDeployment(image, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *sdkapi.NodePlacement) *appsv1.Deployment {
++func createAPIServerDeployment(image, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *cdiv1.InfraNodePlacement) *appsv1.Deployment {
+ 	defaultMode := corev1.ConfigMapVolumeSourceDefaultMode
+-	deployment := utils.CreateDeployment(apiServerRessouceName, cdiLabel, apiServerRessouceName, apiServerRessouceName, 1, infraNodePlacement)
++	deployment := utils.CreateDeployment(apiServerRessouceName, cdiLabel, apiServerRessouceName, apiServerRessouceName, infraNodePlacement)
+ 	if priorityClassName != "" {
+ 		deployment.Spec.Template.Spec.PriorityClassName = priorityClassName
+ 	}
+diff --git a/pkg/operator/resources/namespaced/controller.go b/pkg/operator/resources/namespaced/controller.go
+index aa084f3a0..b2ef3301a 100644
+--- a/pkg/operator/resources/namespaced/controller.go
++++ b/pkg/operator/resources/namespaced/controller.go
+@@ -27,8 +27,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/intstr"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+-	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
+-
++	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+ 	"kubevirt.io/containerized-data-importer/pkg/common"
+ 	"kubevirt.io/containerized-data-importer/pkg/controller"
+ 	utils "kubevirt.io/containerized-data-importer/pkg/operator/resources/utils"
+@@ -161,9 +160,9 @@ func createControllerServiceAccount() *corev1.ServiceAccount {
+ 	return utils.ResourceBuilder.CreateServiceAccount(common.ControllerServiceAccountName)
+ }
+ 
+-func createControllerDeployment(controllerImage, importerImage, clonerImage, uploadServerImage, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *sdkapi.NodePlacement) *appsv1.Deployment {
++func createControllerDeployment(controllerImage, importerImage, clonerImage, uploadServerImage, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *cdiv1.InfraNodePlacement) *appsv1.Deployment {
+ 	defaultMode := corev1.ConfigMapVolumeSourceDefaultMode
+-	deployment := utils.CreateDeployment(controllerResourceName, "app", "containerized-data-importer", common.ControllerServiceAccountName, int32(1), infraNodePlacement)
++	deployment := utils.CreateDeployment(controllerResourceName, "app", "containerized-data-importer", common.ControllerServiceAccountName, infraNodePlacement)
+ 	if priorityClassName != "" {
+ 		deployment.Spec.Template.Spec.PriorityClassName = priorityClassName
+ 	}
+diff --git a/pkg/operator/resources/namespaced/factory.go b/pkg/operator/resources/namespaced/factory.go
+index ff59509d9..224fecee8 100644
+--- a/pkg/operator/resources/namespaced/factory.go
++++ b/pkg/operator/resources/namespaced/factory.go
+@@ -22,7 +22,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+-	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
++	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+ 
+ 	utils "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+ )
+@@ -41,7 +41,7 @@ type FactoryArgs struct {
+ 	PullPolicy             string `required:"true" split_words:"true"`
+ 	PriorityClassName      string
+ 	Namespace              string
+-	InfraNodePlacement     *sdkapi.NodePlacement
++	InfraNodePlacement     *cdiv1.InfraNodePlacement
+ }
+ 
+ type factoryFunc func(*FactoryArgs) []client.Object
+diff --git a/pkg/operator/resources/namespaced/uploadproxy.go b/pkg/operator/resources/namespaced/uploadproxy.go
+index df26afb81..92667df82 100644
+--- a/pkg/operator/resources/namespaced/uploadproxy.go
++++ b/pkg/operator/resources/namespaced/uploadproxy.go
+@@ -24,8 +24,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/intstr"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+-	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
+-
++	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+ 	utils "kubevirt.io/containerized-data-importer/pkg/operator/resources/utils"
+ )
+ 
+@@ -39,7 +38,12 @@ func createUploadProxyResources(args *FactoryArgs) []client.Object {
+ 		createUploadProxyService(),
+ 		createUploadProxyRoleBinding(),
+ 		createUploadProxyRole(),
+-		createUploadProxyDeployment(args.UploadProxyImage, args.Verbosity, args.PullPolicy, args.PriorityClassName, args.InfraNodePlacement),
++		createUploadProxyDeployment(
++			args.UploadProxyImage,
++			args.Verbosity,
++			args.PullPolicy,
++			args.PriorityClassName,
++			args.InfraNodePlacement),
+ 	}
+ }
+ 
+@@ -84,9 +88,9 @@ func createUploadProxyRole() *rbacv1.Role {
+ 	return utils.ResourceBuilder.CreateRole(uploadProxyResourceName, rules)
+ }
+ 
+-func createUploadProxyDeployment(image, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *sdkapi.NodePlacement) *appsv1.Deployment {
++func createUploadProxyDeployment(image, verbosity, pullPolicy, priorityClassName string, infraNodePlacement *cdiv1.InfraNodePlacement) *appsv1.Deployment {
+ 	defaultMode := corev1.ConfigMapVolumeSourceDefaultMode
+-	deployment := utils.CreateDeployment(uploadProxyResourceName, cdiLabel, uploadProxyResourceName, uploadProxyResourceName, int32(1), infraNodePlacement)
++	deployment := utils.CreateDeployment(uploadProxyResourceName, cdiLabel, uploadProxyResourceName, uploadProxyResourceName, infraNodePlacement)
+ 	if priorityClassName != "" {
+ 		deployment.Spec.Template.Spec.PriorityClassName = priorityClassName
+ 	}
+diff --git a/pkg/operator/resources/utils/BUILD.bazel b/pkg/operator/resources/utils/BUILD.bazel
+index 7d1f0f2a0..4f872cd41 100644
+--- a/pkg/operator/resources/utils/BUILD.bazel
++++ b/pkg/operator/resources/utils/BUILD.bazel
+@@ -8,10 +8,10 @@ go_library(
+     deps = [
+         "//pkg/common:go_default_library",
+         "//pkg/util:go_default_library",
++        "//staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1:go_default_library",
+         "//vendor/k8s.io/api/apps/v1:go_default_library",
+         "//vendor/k8s.io/api/core/v1:go_default_library",
+         "//vendor/k8s.io/utils/pointer:go_default_library",
+-        "//vendor/kubevirt.io/controller-lifecycle-operator-sdk/api:go_default_library",
+         "//vendor/kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources:go_default_library",
+     ],
+ )
+diff --git a/pkg/operator/resources/utils/common.go b/pkg/operator/resources/utils/common.go
+index 0fe71d1b9..74f85d45b 100644
+--- a/pkg/operator/resources/utils/common.go
++++ b/pkg/operator/resources/utils/common.go
+@@ -21,9 +21,9 @@ import (
+ 	corev1 "k8s.io/api/core/v1"
+ 	"k8s.io/utils/pointer"
+ 
++	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+ 	"kubevirt.io/containerized-data-importer/pkg/common"
+ 	"kubevirt.io/containerized-data-importer/pkg/util"
+-	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
+ 	utils "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+ )
+ 
+@@ -87,13 +87,17 @@ func CreatePortsContainer(name, image, pullPolicy string, ports []corev1.Contain
+ }
+ 
+ // CreateDeployment creates deployment
+-func CreateDeployment(name, matchKey, matchValue, serviceAccountName string, replicas int32, infraNodePlacement *sdkapi.NodePlacement) *appsv1.Deployment {
++func CreateDeployment(name, matchKey, matchValue, serviceAccountName string, infraNodePlacement *cdiv1.InfraNodePlacement) *appsv1.Deployment {
+ 	podSpec := corev1.PodSpec{
+ 		SecurityContext: &corev1.PodSecurityContext{
+ 			RunAsNonRoot: &[]bool{true}[0],
+ 		},
+ 	}
+-	deployment := ResourceBuilder.CreateDeployment(name, "", matchKey, matchValue, serviceAccountName, replicas, podSpec, infraNodePlacement)
++	var replicas int32 = 1
++	if infraNodePlacement != nil && infraNodePlacement.Replicas != nil {
++		replicas = *infraNodePlacement.Replicas
++	}
++	deployment := ResourceBuilder.CreateDeployment(name, "", matchKey, matchValue, serviceAccountName, replicas, podSpec, infraNodePlacement.NodePlacement)
+ 	return deployment
+ }
+ 
+diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
+index cf9a55fab..5dab6fee9 100644
+--- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
++++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types.go
+@@ -635,7 +635,7 @@ type CDISpec struct {
+ 	// CDIUninstallStrategy defines the state to leave CDI on uninstall
+ 	UninstallStrategy *CDIUninstallStrategy `json:"uninstallStrategy,omitempty"`
+ 	// Rules on which nodes CDI infrastructure pods will be scheduled
+-	Infra sdkapi.NodePlacement `json:"infra,omitempty"`
++	Infra InfraNodePlacement `json:"infra,omitempty"`
+ 	// Restrict on which nodes CDI workload pods will be scheduled
+ 	Workloads sdkapi.NodePlacement `json:"workload,omitempty"`
+ 	// Clone strategy override: should we use a host-assisted copy even if snapshots are available?
+@@ -807,3 +807,14 @@ type ImportProxy struct {
+ 	// +optional
+ 	TrustedCAProxy *string `json:"trustedCAProxy,omitempty"`
+ }
++
++// InfraNodePlacement provides information about replicas and placement for CDI components
++type InfraNodePlacement struct {
++	// nodePlacement describes scheduling configuration for specific CDI components
++	//+optional
++	*sdkapi.NodePlacement `json:",omitempty"`
++	// replicas indicates how many replicas should be created for each CDI infrastructure
++	// component (like cdi-api or cdi-deployment, cdi-uploadserver). Defaults to 1.
++	//+optional
++	Replicas *int32 `json:"replicas,omitempty"`
++}
+diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
+index 986b8c358..f498b0f1d 100644
+--- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
++++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/types_swagger_generated.go
+@@ -396,3 +396,10 @@ func (ImportProxy) SwaggerDoc() map[string]string {
+ 		"trustedCAProxy": "TrustedCAProxy is the name of a ConfigMap in the cdi namespace that contains a user-provided trusted certificate authority (CA) bundle.\nThe TrustedCAProxy field is consumed by the import controller that is resposible for coping it to a config map named trusted-ca-proxy-bundle-cm in the cdi namespace.\nHere is an example of the ConfigMap (in yaml):\n\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: trusted-ca-proxy-bundle-cm\n  namespace: cdi\ndata:\n  ca.pem: |",
+ 	}
+ }
++
++func (InfraNodePlacement) SwaggerDoc() map[string]string {
++	return map[string]string{
++		"":         "InfraNodePlacement provides information about replicas and placement for CDI components",
++		"replicas": "replicas indicates how many replicas should be created for each CDI infrastructure\ncomponent (like cdi-api or cdi-deployment, cdi-uploadserver). Defaults to 1.\n+optional",
++	}
++}
+diff --git a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
+index 7010e9c5f..d61247b32 100644
+--- a/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
++++ b/staging/src/kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1/zz_generated.deepcopy.go
+@@ -1178,6 +1178,31 @@ func (in *ImportStatus) DeepCopy() *ImportStatus {
+ 	return out
+ }
+ 
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *InfraNodePlacement) DeepCopyInto(out *InfraNodePlacement) {
++	*out = *in
++	if in.NodePlacement != nil {
++		in, out := &in.NodePlacement, &out.NodePlacement
++		*out = (*in).DeepCopy()
++	}
++	if in.Replicas != nil {
++		in, out := &in.Replicas, &out.Replicas
++		*out = new(int32)
++		**out = **in
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new InfraNodePlacement.
++func (in *InfraNodePlacement) DeepCopy() *InfraNodePlacement {
++	if in == nil {
++		return nil
++	}
++	out := new(InfraNodePlacement)
++	in.DeepCopyInto(out)
++	return out
++}
++
+ // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+ func (in *ObjectTransfer) DeepCopyInto(out *ObjectTransfer) {
+ 	*out = *in
