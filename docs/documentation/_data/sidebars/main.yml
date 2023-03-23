@@ -1012,7 +1012,7 @@ entries:
                 - title: Custom Resources
                   url: /modules/031-ceph-csi/cr.html
             - title: FAQ
-              url: /modules/041-ceph-csi/faq.html
+              url: /modules/031-ceph-csi/faq.html
             - title: snapshot-controller
               folders:
                 - title:
