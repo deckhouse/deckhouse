@@ -69,7 +69,6 @@ properties:
     x-doc-default: false
     description: |
       Routing all client traffic through the VPN. A default route will be added to clients.
-    x-examples: [false, true]
   pushToClientRoutes:
     type: array
     items:
@@ -136,7 +135,6 @@ properties:
       An IP address or a domain clients use to connect to the OpenVPN server.
 
       By default, data from an `openvpn-external` service are used.
-    x-examples: ["1.2.3.4"]
   ingressClass:
     type: string
     description: |
@@ -184,7 +182,6 @@ properties:
             x-doc-default: 'false'
   highAvailability:
     type: boolean
-    x-examples: [true, false]
     description: |
       Manually enable the high availability mode.
 
@@ -220,11 +217,9 @@ properties:
   tcpEnabled:
     type: boolean
     default: true
-    x-examples: [true, false]
   udpEnabled:
     type: boolean
     default: false
-    x-examples: [true, false]
   pmacctEnabled:
     description: |
       Enable logging of user's activity via VPN in JSON format.
@@ -233,7 +228,6 @@ properties:
       as `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`
     type: boolean
     default: false
-    x-examples: [true, false]
 oneOf:
   - properties:
       tcpEnabled:
