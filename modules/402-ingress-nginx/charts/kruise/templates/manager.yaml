@@ -81,9 +81,9 @@ spec:
             - --workloadspread-workers=0
           command:
             - /manager
-          image: {{ include "helm_lib_module_image" (list $ "kruise") }}
+          image: {{ include "helm_lib_module_image" (list . "kruise") }}
           imagePullPolicy: Always
-          name: manager
+          name: kruise
           env:
             - name: KUBE_CACHE_MUTATION_DETECTOR
               value: "true"

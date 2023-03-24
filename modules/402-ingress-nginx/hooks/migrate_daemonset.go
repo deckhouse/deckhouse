@@ -93,6 +93,10 @@ func inletFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	inlet, _, err := unstructured.NestedString(spec, "inlet")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get inlet for ingress controller %s: %v", name, err)
+	}
+
 	if inlet != "HostWithFailover" {
 		return nil, nil
 	}
