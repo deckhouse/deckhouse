@@ -3,13 +3,12 @@ module discoverer
 go 1.19
 
 require (
+	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.0
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
 
 require (
-	github.com/alecthomas/kingpin v2.2.6+incompatible // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	k8s.io/apimachinery v0.26.3 // indirect
 	k8s.io/client-go v0.26.3 // indirect
