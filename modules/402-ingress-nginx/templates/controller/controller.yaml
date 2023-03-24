@@ -107,7 +107,7 @@ spec:
   lifecycle:
     preDelete:
       labelsHandler:
-        example.io/block-deleting: "true"
+        ingress.deckhouse.io/block-deleting: "true"
   {{- end }}
   selector:
     matchLabels:
@@ -117,7 +117,7 @@ spec:
     metadata:
       labels:
       {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
-        example.io/block-deleting: "true"
+        ingress.deckhouse.io/block-deleting: "true"
       {{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         sidecar.istio.io/inject: "true"
