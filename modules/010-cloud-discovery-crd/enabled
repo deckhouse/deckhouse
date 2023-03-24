@@ -17,11 +17,11 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  if kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
-      echo "true" > "$MODULE_ENABLED_RESULT"
-      return
+  if values::has global.clusterConfiguration.cloud ; then
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
   fi
-  echo "false" > "$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"
