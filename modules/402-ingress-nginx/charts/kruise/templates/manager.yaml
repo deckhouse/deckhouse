@@ -7,13 +7,6 @@ metadata:
   namespace: d8-ingress-nginx
 ---
 # Source: kruise/templates/manager.yaml
-{{/*apiVersion: v1*/}}
-{{/*kind: ServiceAccount*/}}
-{{/*metadata:*/}}
-{{/*  name: kruise-daemon*/}}
-{{/*  namespace: kruise-system*/}}
----
-# Source: kruise/templates/manager.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -32,80 +25,6 @@ spec:
       targetPort: 9876
   selector:
     control-plane: controller-manager
----
-# Source: kruise/templates/manager.yaml
-{{/*apiVersion: apps/v1*/}}
-{{/*kind: DaemonSet*/}}
-{{/*metadata:*/}}
-{{/*  name: kruise-daemon*/}}
-{{/*  namespace: kruise-system*/}}
-{{/*  labels:*/}}
-{{/*    control-plane: daemon*/}}
-{{/*spec:*/}}
-{{/*  selector:*/}}
-{{/*    matchLabels:*/}}
-{{/*      control-plane: daemon*/}}
-{{/*  minReadySeconds: 3*/}}
-{{/*  updateStrategy:*/}}
-{{/*    type: RollingUpdate*/}}
-{{/*    rollingUpdate:*/}}
-{{/*      maxUnavailable: 10%*/}}
-{{/*  template:*/}}
-{{/*    metadata:*/}}
-{{/*      labels:*/}}
-{{/*        control-plane: daemon*/}}
-{{/*    spec:*/}}
-{{/*      containers:*/}}
-{{/*        - command:*/}}
-{{/*            - /kruise-daemon*/}}
-{{/*          args:*/}}
-{{/*            - --logtostderr=true*/}}
-{{/*            - --v=4*/}}
-{{/*            - --addr=:10221*/}}
-{{/*            - --feature-gates=PreDownloadImageForInPlaceUpdate=true*/}}
-{{/*            - --socket-file=*/}}
-{{/*          image: openkruise/kruise-manager:v1.3.0*/}}
-{{/*          imagePullPolicy: Always*/}}
-{{/*          name: daemon*/}}
-{{/*          env:*/}}
-{{/*            - name: KUBE_CACHE_MUTATION_DETECTOR*/}}
-{{/*              value: "true"*/}}
-{{/*            - name: NODE_NAME*/}}
-{{/*              valueFrom:*/}}
-{{/*                fieldRef:*/}}
-{{/*                  apiVersion: v1*/}}
-{{/*                  fieldPath: spec.nodeName*/}}
-{{/*          livenessProbe:*/}}
-{{/*            failureThreshold: 3*/}}
-{{/*            httpGet:*/}}
-{{/*              path: /healthz*/}}
-{{/*              port: 10221*/}}
-{{/*              scheme: HTTP*/}}
-{{/*            initialDelaySeconds: 60*/}}
-{{/*            periodSeconds: 10*/}}
-{{/*            successThreshold: 1*/}}
-{{/*            timeoutSeconds: 1*/}}
-{{/*          resources:*/}}
-{{/*            limits:*/}}
-{{/*              cpu: 50m*/}}
-{{/*              memory: 128Mi*/}}
-{{/*            requests:*/}}
-{{/*              cpu: "0"*/}}
-{{/*              memory: "0"*/}}
-{{/*          volumeMounts:*/}}
-{{/*            - mountPath: /hostvarrun*/}}
-{{/*              name: runtime-socket*/}}
-{{/*              readOnly: true*/}}
-{{/*      tolerations:*/}}
-{{/*        - operator: Exists*/}}
-{{/*      hostNetwork: true*/}}
-{{/*      terminationGracePeriodSeconds: 10*/}}
-{{/*      serviceAccountName: kruise-daemon*/}}
-{{/*      volumes:*/}}
-{{/*        - hostPath:*/}}
-{{/*            path: /var/run*/}}
-{{/*            type: ""*/}}
-{{/*          name: runtime-socket*/}}
 ---
 # Source: kruise/templates/manager.yaml
 apiVersion: apps/v1
@@ -131,6 +50,9 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       containers:
         - args:
             - --enable-leader-election
@@ -159,7 +81,7 @@ spec:
             - --workloadspread-workers=0
           command:
             - /manager
-          image: openkruise/kruise-manager:v1.3.0
+          image: {{ include "helm_lib_module_image" (list $ "kruise") }}
           imagePullPolicy: Always
           name: manager
           env:
