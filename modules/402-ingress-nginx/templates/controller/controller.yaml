@@ -78,8 +78,6 @@ metadata:
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if $failover }}
     ingress-nginx-failover: ""
-    {{- else }}
-    ingress-nginx-safe-update: ""
     {{- end }}
   {{- end }}
   annotations:

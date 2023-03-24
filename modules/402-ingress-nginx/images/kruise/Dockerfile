@@ -1,1 +1,1 @@
-FROM openkruise/kruise-manager:v1.3.0
+FROM openkruise/kruise-manager:v1.3.0@sha256:0440d31cc4e7532820f82e2bb721d19f809deb66d632a67e71f840a67a456654
