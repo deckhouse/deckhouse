@@ -45,5 +45,7 @@
       description: |
         Some targets are down because of a sample limit exceeded.
 
-        To find the targets, you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword.
+        To find the targets, you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword or
+        `kubectl -n d8-monitoring exec -it prometheus-main-0 -- curl localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.lastError=="sample limit exceeded") | .labels'`
+
       summary: Scrapes are exceding sample limit
