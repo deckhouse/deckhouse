@@ -142,6 +142,17 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/500-operator-trivy
+  to: /deckhouse/modules/500-operator-trivy
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/502-delivery
   to: /deckhouse/modules/502-delivery
   excludePaths:
