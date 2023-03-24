@@ -87,7 +87,7 @@ func processExtraFieldKey(key, value string) string {
 	key = escapeVectorString(key)
 
 	if !validMustacheTemplate.MatchString(value) {
-		return fmt.Sprintf(" .%s=\"%s\" \n", key, value)
+		return fmt.Sprintf(" .%s=%q \n", key, value)
 	}
 
 	// From regex lib docs:
