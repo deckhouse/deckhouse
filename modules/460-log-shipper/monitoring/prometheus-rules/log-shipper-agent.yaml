@@ -87,7 +87,7 @@
     for: 10m
     expr: |
       sum by (node, component_id) (
-        vector_events_discarded_total{job="log-shipper-agent"} * on (node) group_left() (abs(kube_node_spec_unschedulable - 1))
+        vector_events_discarded_total{job="log-shipper-agent", component_type="throttle"} * on (node) group_left() (abs(kube_node_spec_unschedulable - 1))
       )
       > 0
     labels:
