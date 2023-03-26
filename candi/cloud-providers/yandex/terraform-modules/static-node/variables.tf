@@ -62,6 +62,6 @@ locals {
   external_ip_addresses         = lookup(local.instance_class, "externalIPAddresses", [])
   external_subnet_id_deprecated = lookup(local.instance_class, "externalSubnetID", null)
 
-  network_type      = contains(keys(local.instance_class), "networkType") ? var.network_types[local.instance_class.networkType] : var.network_types["SoftwareAccelerated"]
+  network_type      = contains(keys(local.instance_class), "networkType") ? var.network_types[local.instance_class.networkType] : null
   additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.instance_class, "additionalLabels", {}))
 }
