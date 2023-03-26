@@ -21,8 +21,10 @@ RUN apt-get update \
     && make install
 
 WORKDIR /vector
-RUN git clone --depth 1 --branch v0.27.0 https://github.com/vectordotdev/vector.git \
-    && cd vector
+COPY patches/match-speedup.patch /
+RUN git clone --depth 1 --branch v0.28.1 https://github.com/vectordotdev/vector.git \
+    && cd vector \
+    && git apply /match-speedup.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector
@@ -45,8 +47,9 @@ RUN mkdir -p /etc/vector \
     && rm -rf /var/cache/apt/archives/*
 
 # libssl.1
-RUN wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb \
-    && dpkg -i libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb
+COPY lib/libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb .
+RUN dpkg -i libssl1.1_1.1.1f-1ubuntu2.17_amd64.deb
+
 # libcurl.4
 RUN apt-get install -yq libcurl4
 
