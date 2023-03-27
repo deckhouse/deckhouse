@@ -1,5 +1,11 @@
-ARG BASE_ALPINE
-FROM $BASE_ALPINE
-RUN apk add --no-cache bash sed curl inotify-tools
-COPY resolv-conf-check /
-ENTRYPOINT /resolv-conf-check
+ARG BASE_GOLANG_19_ALPINE
+
+FROM $BASE_GOLANG_19_ALPINE as artifact
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags='-extldflags "-static" -s -w' -o resolv-watcher main.go
+
+
+FROM scratch
+COPY --from=artifact /src/resolv-watcher /
+ENTRYPOINT [ "/resolv-watcher" ]
