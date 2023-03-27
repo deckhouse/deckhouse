@@ -30,6 +30,10 @@ on:
     types:
       - opened
       - synchronize
+  pull_request:
+    types:
+      - milestoned
+      - demilestoned
   milestone:
     types:
       - created
