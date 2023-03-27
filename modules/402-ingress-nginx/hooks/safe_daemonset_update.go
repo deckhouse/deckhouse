@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	v12 "k8s.io/api/apps/v1"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -49,66 +51,87 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyIngressPodFilter,
 		},
 		{
-			Name:                         "all_pods",
-			ApiVersion:                   "v1",
-			Kind:                         "Pod",
+			Name:                         "proxy_ads",
+			ApiVersion:                   "apps.kruise.io/v1alpha1",
+			Kind:                         "DaemonSet",
 			NamespaceSelector:            internal.NsSelector(),
 			ExecuteHookOnEvents:          pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			LabelSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "app",
-						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{"controller", "proxy-failover"},
-					},
-					{
-						Key:      "ingress.deckhouse.io/block-deleting",
-						Operator: metav1.LabelSelectorOpDoesNotExist,
-					},
+				MatchLabels: map[string]string{
+					"app": "proxy-failover",
 				},
 			},
-			FilterFunc: applyIngressPodFilter,
+			FilterFunc: applyDaemonSetFilter,
+		},
+		{
+			Name:                         "failover_ads",
+			ApiVersion:                   "apps.kruise.io/v1alpha1",
+			Kind:                         "DaemonSet",
+			NamespaceSelector:            internal.NsSelector(),
+			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"ingress-nginx-failover": "",
+					"app":                    "controller",
+				},
+			},
+			FilterFunc: applyDaemonSetFilter,
 		},
 	},
 }, safeControllerUpdate)
 
 func safeControllerUpdate(input *go_hook.HookInput) (err error) {
-	snap := input.Snapshots["for_delete"]
-	if len(snap) == 0 {
+	proxys := input.Snapshots["proxy_ads"]
+	failovers := input.Snapshots["failover_ads"]
+	controllerPods := input.Snapshots["for_delete"]
+	if len(controllerPods) == 0 {
 		return nil
 	}
-	podForDelete := snap[0].(ingressControllerPod)
 
-	var failoverReady, proxyReady bool
+	controllerMap := make(map[string]struct{}, len(failovers))
 
-	for _, sn := range input.Snapshots["all_pods"] {
-		pod := sn.(ingressControllerPod)
-
-		if pod.Node != podForDelete.Node {
-			continue
-		}
-
-		if !(pod.ControllerName == podForDelete.ControllerName || pod.ControllerName == podForDelete.ControllerName+"-failover") {
-			continue
-		}
-
-		if !pod.IsReady {
-			continue
-		}
-
-		if strings.HasPrefix(pod.Name, "proxy") {
-			proxyReady = true
-			continue
-		}
-
-		if strings.HasPrefix(pod.Name, "controller-"+podForDelete.ControllerName+"-failover") {
-			failoverReady = true
-			continue
-		}
+	proxyMap := make(map[string]daemonSet, len(proxys))
+	for _, pc := range proxys {
+		ds := pc.(daemonSet)
+		proxyMap[ds.ControllerName] = ds
 	}
 
-	if proxyReady && failoverReady {
+	for _, fc := range failovers {
+		ds := fc.(daemonSet)
+
+		proxy, ok := proxyMap[ds.ControllerName]
+		if !ok {
+			input.LogEntry.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			continue
+		}
+
+		if proxy.Checksum != ds.Checksum {
+			continue
+		}
+
+		if proxy.UpdatedCount != proxy.DesiredCount && proxy.CurrentReadyCount != proxy.DesiredCount {
+			continue
+		}
+
+		if ds.UpdatedCount != ds.DesiredCount && ds.CurrentReadyCount != ds.DesiredCount {
+			continue
+		}
+
+		controllerMap[ds.ControllerName] = struct{}{}
+	}
+
+	for _, sn := range controllerPods {
+		podForDelete := sn.(ingressControllerPod)
+
+		_, ok := controllerMap[podForDelete.ControllerName]
+		if !ok {
+			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			continue
+		}
+
+		// proxy and failover pods are ready
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
@@ -127,6 +150,31 @@ type ingressControllerPod struct {
 	Node           string
 	ControllerName string
 	IsReady        bool
+}
+
+type daemonSet struct {
+	ControllerName    string
+	Checksum          string
+	DesiredCount      int32
+	CurrentReadyCount int32
+	UpdatedCount      int32
+}
+
+func applyDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ds v12.DaemonSet
+
+	err := sdk.FromUnstructured(obj, &ds)
+	if err != nil {
+		return nil, err
+	}
+
+	return daemonSet{
+		ControllerName:    strings.TrimSuffix(ds.Labels["name"], "-failover"),
+		Checksum:          ds.Annotations["ingress-nginx-controller.deckhouse.io/checksum"],
+		DesiredCount:      ds.Status.DesiredNumberScheduled,
+		CurrentReadyCount: ds.Status.NumberAvailable,
+		UpdatedCount:      ds.Status.UpdatedNumberScheduled,
+	}, nil
 }
 
 func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
