@@ -117,7 +117,6 @@ func processExtraFieldKey(key, value string) string {
 
 	dataField = generateDataField(dataField)
 	return fmt.Sprintf(" if exists(.%s.%s) { .%s=.%s.%s } \n", parsedDataField, dataField, key, parsedDataField, dataField)
-
 }
 
 // generateDataField escapes field for valid vrl. In detail,
