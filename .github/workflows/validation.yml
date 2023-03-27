@@ -27,10 +27,11 @@
 name: Validations
 on:
   pull_request_target:
-     types:
+    types:
       - opened
       - synchronize
-      - edited
+      - milestoned
+      - demilestoned
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
