@@ -96,6 +96,7 @@ locals {
 
     cat > /etc/sysctl.d/999-netfilter-nf-conntrack.conf <<EOF
     net.netfilter.nf_conntrack_max=1048576
+    net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
     EOF
 
     sysctl -p /etc/sysctl.d/999-netfilter-nf-conntrack.conf
