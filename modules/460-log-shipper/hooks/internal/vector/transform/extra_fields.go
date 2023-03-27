@@ -32,6 +32,10 @@ var (
 	validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
 )
 
+const (
+	parsedDataField = "parsed_data"
+)
+
 // ExtraFieldTransform converts templated labels to values.
 // It generates valid VRL remaps from key-value pairs
 //
@@ -84,6 +88,10 @@ func mapKeys(m map[string]string) []string {
 // example with plain string in value:
 // aba: bbb -> .aba="bbb"
 func processExtraFieldKey(key, value string) string {
+	if key == "" {
+		return ""
+	}
+
 	key = escapeVectorString(key)
 
 	if !validMustacheTemplate.MatchString(value) {
@@ -103,12 +111,12 @@ func processExtraFieldKey(key, value string) string {
 	// `{{ parsed_data.asas }}` and `parsed_data.asas`
 	//
 	dataField := validMustacheTemplate.FindStringSubmatch(value)[1]
-	if dataField == "parsed_data" {
-		return fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", key)
+	if dataField == parsedDataField {
+		return fmt.Sprintf(" if exists(.%s) { .%s=.%s } \n", parsedDataField, key, parsedDataField)
 	}
 
 	dataField = generateDataField(dataField)
-	return fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", dataField, key, dataField)
+	return fmt.Sprintf(" if exists(.%s.%s) { .%s=.%s.%s } \n", parsedDataField, dataField, key, parsedDataField, dataField)
 
 }
 
@@ -120,6 +128,10 @@ func processExtraFieldKey(key, value string) string {
 // and then it escapes every field and concatenates them back
 func generateDataField(dataField string) string {
 	tmpDataFieldParts := strings.Split(dataField, ".")
+	if tmpDataFieldParts[0] == parsedDataField {
+		tmpDataFieldParts = tmpDataFieldParts[1:]
+	}
+
 	dataFieldParts := make([]string, 0)
 	i := 0
 	for i < len(tmpDataFieldParts) {
