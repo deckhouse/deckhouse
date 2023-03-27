@@ -89,6 +89,10 @@ locals {
 
     netplan apply
 
+    # Load conntrack module at boot time
+    cat > /etc/modules-load.d/ip_conntrack.conf <<EOF
+    ip_conntrack
+    EOF
     cat > /etc/sysctl.d/999-netfilter-nf-conntrack.conf <<EOF
     net.netfilter.nf_conntrack_max=1048576
     EOF
