@@ -150,8 +150,8 @@ metadata:
 spec: {}
 status:
   desiredNumberScheduled: 3
-  numberAvailable: 2
-  updatedNumberScheduled: 2
+  numberAvailable: 3
+  updatedNumberScheduled: 0
 `)
 
 			f.BindingContexts.Set(st)

@@ -97,6 +97,8 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 		proxyMap[ds.ControllerName] = ds
 	}
 
+	fmt.Println("$#!")
+
 	for _, fc := range failovers {
 		ds := fc.(daemonSet)
 
@@ -113,11 +115,11 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		if proxy.UpdatedCount != proxy.DesiredCount && proxy.CurrentReadyCount != proxy.DesiredCount {
+		if !(proxy.DesiredCount == proxy.UpdatedCount && proxy.DesiredCount == proxy.CurrentReadyCount) {
 			continue
 		}
 
-		if ds.UpdatedCount != ds.DesiredCount && ds.CurrentReadyCount != ds.DesiredCount {
+		if !(ds.DesiredCount == ds.UpdatedCount && ds.DesiredCount == ds.CurrentReadyCount) {
 			continue
 		}
 
