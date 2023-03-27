@@ -30,10 +30,6 @@ on:
     types:
       - opened
       - synchronize
-  pull_request:
-    types:
-      - milestoned
-      - demilestoned
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -342,36 +338,6 @@ jobs:
           name: pr_diff
           path: pr.diff
 
-  check-pr-milestone:
-    name: Check milestone
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check that a milestone is set for a pull request
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const prNumber = context.payload.pull_request.number;
-
-            const response = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-
-            if (response.status != 200 || !response.data) {
-              return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
-            }
-
-            let pr = response.data;
-            core.debug(`response: ${pr}`)
-
-            if (pr.milestone) {
-              core.debug(`This pull request has a milestone: ${pr.milestone.title}`);
-            } else {
-              core.setFailed("The pull request has no milestone. Set a milestone for the pull request.");
-            }
-
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
@@ -490,4 +456,47 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
         run: |
           make lint-markdown
+---
+name: Milestone check
+on:
+  pull_request:
+    types:
+      - milestoned
+      - demilestoned
+      - created
 
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-pr-milestone:
+    name: Check milestone
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that a milestone is set for a pull request
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            const response = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            if (response.status != 200 || !response.data) {
+              return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+            }
+
+            let pr = response.data;
+            core.debug(`response: ${pr}`)
+
+            if (pr.milestone) {
+              core.debug(`This pull request has a milestone: ${pr.milestone.title}`);
+            } else {
+              core.setFailed("The pull request has no milestone. Set a milestone for the pull request.");
+            }
