@@ -96,11 +96,12 @@ locals {
 resource "yandex_compute_instance" "nat_instance" {
   count = local.is_with_nat_instance ? 1 : 0
 
-  name         = join("-", [var.prefix, "nat"])
-  hostname     = join("-", [var.prefix, "nat"])
-  zone         = local.internal_subnet_zone
+  name                      = join("-", [var.prefix, "nat"])
+  hostname                  = join("-", [var.prefix, "nat"])
+  zone                      = local.internal_subnet_zone
+  network_acceleration_type = "software_accelerated"
 
-  platform_id  = "standard-v2"
+  platform_id = "standard-v2"
   resources {
     cores  = 2
     memory = 2
