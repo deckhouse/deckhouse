@@ -66,7 +66,7 @@ shell:
   {{- else if contains "el9" $image_version }}
   - curl -sfL https://download.docker.com/linux/centos/9/x86_64/stable/Packages/{{ $version }}.rpm --output /containerd.io.x86_64.rpm
   - curl -sfL {{ index $selinux_version "9" }} --output /container-selinux.x86_64.rpm
-  - curl -sfL https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/selinux-policy-38.1.4-1.el9.noarch.rpm  --output /selinux-policy.x86_64.rpm
-  - curl -sfL https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/selinux-policy-targeted-38.1.4-1.el9.noarch.rpm  --output /selinux-policy-targeted.x86_64.rpm
+  - curl -sfL https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/selinux-policy-38.1.8-1.el9.noarch.rpm  --output /selinux-policy.x86_64.rpm
+  - curl -sfL https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/selinux-policy-targeted-38.1.8-1.el9.noarch.rpm  --output /selinux-policy-targeted.x86_64.rpm
   {{- end }}
 {{- end }}
