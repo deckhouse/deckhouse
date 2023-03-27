@@ -30,8 +30,13 @@ on:
     types:
       - opened
       - synchronize
-      - milestoned
-      - demilestoned
+  milestaone:
+    types:
+      - created
+      - closed
+      - opened
+      - edited
+      - deleted
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
