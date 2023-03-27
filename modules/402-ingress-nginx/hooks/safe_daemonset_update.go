@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"strings"
 
-	v12 "k8s.io/api/apps/v1"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -107,6 +106,9 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
+		fmt.Printf("FAILOVER %+v\n", ds)
+		fmt.Printf("PROXY %+v\n", proxy)
+
 		if proxy.Checksum != ds.Checksum {
 			continue
 		}
@@ -119,6 +121,8 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
+		fmt.Println("READY ", ds.ControllerName)
+
 		controllerMap[ds.ControllerName] = struct{}{}
 	}
 
@@ -130,6 +134,8 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
 			continue
 		}
+
+		fmt.Println("DELETING POD", podForDelete.Name)
 
 		// proxy and failover pods are ready
 		metadata := map[string]interface{}{
@@ -161,7 +167,7 @@ type daemonSet struct {
 }
 
 func applyDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ds v12.DaemonSet
+	var ds appsv1.DaemonSet
 
 	err := sdk.FromUnstructured(obj, &ds)
 	if err != nil {
