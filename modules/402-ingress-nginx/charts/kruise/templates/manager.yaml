@@ -39,6 +39,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      app: kruise
   minReadySeconds: 3
   strategy:
     type: RollingUpdate
@@ -49,6 +50,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
+        app: kruise
     spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -81,7 +83,7 @@ spec:
             - --workloadspread-workers=0
           command:
             - /manager
-          image: {{ include "helm_lib_module_image" (list . "kruise") }}
+          image: {{ include "helm_lib_module_image" (list . "kruise" "ingress-nginx") }}
           imagePullPolicy: Always
           name: kruise
           env:

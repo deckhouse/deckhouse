@@ -260,7 +260,7 @@ memory: 500Mi`))
 
 			mainDS := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-solid")
 			Expect(mainDS.Exists()).To(BeTrue())
-			Expect(mainDS.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
+			Expect(mainDS.Field("spec.updateStrategy.type").String()).To(Equal("RollingUpdate"))
 			Expect(mainDS.Field("spec.template.spec.hostNetwork").String()).To(Equal("true"))
 			Expect(mainDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(mainDS.Field("spec.template.spec.containers.0.args").Array()).To(ContainElement(ContainSubstring(`--shutdown-grace-period=0`)))
