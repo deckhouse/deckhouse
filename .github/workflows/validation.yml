@@ -30,7 +30,7 @@ on:
     types:
       - opened
       - synchronize
-  milestaone:
+  milestone:
     types:
       - created
       - closed
