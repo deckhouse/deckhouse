@@ -85,11 +85,11 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 	for _, sn := range input.Snapshots["all_pods"] {
 		pod := sn.(ingressControllerPod)
 
-		if pod.Name != podForDelete.Node {
+		if pod.Node != podForDelete.Node {
 			continue
 		}
 
-		if pod.ControllerName != podForDelete.ControllerName || pod.ControllerName != podForDelete.ControllerName+"-failover" {
+		if !(pod.ControllerName == podForDelete.ControllerName || pod.ControllerName == podForDelete.ControllerName+"-failover") {
 			continue
 		}
 
@@ -102,7 +102,7 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		if strings.HasPrefix(pod.Name, "controller-"+pod.ControllerName+"-failover-") {
+		if strings.HasPrefix(pod.Name, "controller-"+podForDelete.ControllerName+"-failover") {
 			failoverReady = true
 			continue
 		}
