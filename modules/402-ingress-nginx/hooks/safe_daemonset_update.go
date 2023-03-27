@@ -97,8 +97,6 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 		proxyMap[ds.ControllerName] = ds
 	}
 
-	fmt.Println("$#!")
-
 	for _, fc := range failovers {
 		ds := fc.(daemonSet)
 
@@ -107,9 +105,6 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			input.LogEntry.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
 			continue
 		}
-
-		fmt.Printf("FAILOVER %+v\n", ds)
-		fmt.Printf("PROXY %+v\n", proxy)
 
 		if proxy.Checksum != ds.Checksum {
 			continue
@@ -123,8 +118,6 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		fmt.Println("READY ", ds.ControllerName)
-
 		controllerMap[ds.ControllerName] = struct{}{}
 	}
 
@@ -136,8 +129,6 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
 			continue
 		}
-
-		fmt.Println("DELETING POD", podForDelete.Name)
 
 		// proxy and failover pods are ready
 		metadata := map[string]interface{}{
@@ -157,7 +148,6 @@ type ingressControllerPod struct {
 	Name           string
 	Node           string
 	ControllerName string
-	IsReady        bool
 }
 
 type daemonSet struct {
@@ -197,22 +187,5 @@ func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		Name:           pod.Name,
 		Node:           pod.Spec.NodeName,
 		ControllerName: pod.Labels["name"],
-		IsReady:        podIsReady(pod),
 	}, nil
-}
-
-func podIsReady(pod v1.Pod) bool {
-	var conditionReady bool
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
-			conditionReady = true
-			break
-		}
-	}
-
-	if conditionReady && pod.DeletionTimestamp == nil {
-		return true
-	}
-
-	return false
 }

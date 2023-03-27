@@ -88,6 +88,8 @@ spec:
   revisionHistoryLimit: 3
   {{- if $loadBalancer }}
   minReadySeconds: 30
+  {{- else }}
+  minReadySeconds: 10
   {{- end }}
   updateStrategy:
     type: RollingUpdate
