@@ -31,6 +31,10 @@ on:
      types:
       - opened
       - synchronize
+  pull_request:
+    types:
+      - milestoned
+      - demilestoned
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -115,6 +119,7 @@ jobs:
   check-pr-milestone:
     name: Check milestone
     runs-on: ubuntu-latest
+    if: (github.event_name == 'pull_request' && ( github.event.action == 'demilestoned' || github.event.action == 'milestoned')) || (github.event_name == 'pull_request' && github.event.action == 'created')
     steps:
       - name: Check that a milestone is set for a pull request
         uses: {!{ index (ds "actions") "actions/github-script" }!}
