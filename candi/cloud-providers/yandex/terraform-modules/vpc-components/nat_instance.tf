@@ -137,6 +137,7 @@ resource "yandex_compute_instance" "nat_instance" {
       metadata,
       boot_disk[0].initialize_params[0].image_id,
       boot_disk[0].initialize_params[0].size,
+      network_acceleration_type,
     ]
   }
 
