@@ -48,6 +48,7 @@
     All `proxy-<ingress-name>-failover` daemonsets will be restarted.
  - **[istio]** D8IstioDeprecatedIstioVersionInstalled alert description clarification. [#4010](https://github.com/deckhouse/deckhouse/pull/4010)
  - **[istio]** Added check of istiod operation before controller starts upgrading required resources. [#3710](https://github.com/deckhouse/deckhouse/pull/3710)
+ - **[log-shipper]** Fix throttling alert labels. [#4222](https://github.com/deckhouse/deckhouse/pull/4222)
  - **[log-shipper]** Add job label selector to alerts query. [#4051](https://github.com/deckhouse/deckhouse/pull/4051)
  - **[log-shipper]** Fix the exclude clause for unschedulable nodes in the RateLimit alert. [#4018](https://github.com/deckhouse/deckhouse/pull/4018)
  - **[log-shipper]** Bump `librdkafka` to `v2.0.2` to make log-shipper read the full CA certificates chain for Kafka. [#3693](https://github.com/deckhouse/deckhouse/pull/3693)
