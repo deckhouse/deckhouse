@@ -89,7 +89,11 @@ locals {
 
     netplan apply
 
-    sysctl -w net.netfilter.nf_conntrack_max=1048576
+    cat > /etc/sysctl.d/999-netfilter-nf-conntrack.conf <<EOF
+    net.netfilter.nf_conntrack_max=1048576
+    EOF
+
+    sysctl -p /etc/sysctl.d/999-netfilter-nf-conntrack.conf
   EOT
 }
 
