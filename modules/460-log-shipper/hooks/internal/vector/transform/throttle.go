@@ -51,7 +51,7 @@ func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
 	}
 
 	if rl.Excludes != nil {
-		excludeCond, err := processExcludesForDynamicTransform(rl.Excludes, *rl.LinesPerMinute, rl.KeyField)
+		excludeCond, err := generateExcludesForDynamicTransform(rl.Excludes)
 		if err != nil {
 			return nil, err
 		}
@@ -60,47 +60,22 @@ func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
 	return throttleTransform, nil
 }
 
-func processExcludesForDynamicTransform(excludes []v1alpha1.Filter, threshold int32, keyField string) (map[string]interface{}, error) {
-	throttleTransformExcludes := make([]string, len(excludes))
-	for i, filter := range excludes {
-		condition, err := excludeThrottleTransformCond(&filter)
+func generateExcludesForDynamicTransform(excludes []v1alpha1.Filter) (map[string]interface{}, error) {
+	var trottleResult strings.Builder
+	trottleResult.WriteString("{ false }")
+
+	for _, filter := range excludes {
+		rule := getRuleOutOfFilter(&filter)
+		if rule == "" {
+			return nil, fmt.Errorf("exclude rule value is empty for dynamic transform")
+		}
+		condition, err := rule.Render(vrl.Args{"filter": filter})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error rendering exclude rule for dynamic transform: %w", err)
 		}
 
-		throttleTransformExcludes[i] = *condition
-	}
-	resultCond := combineThrottleTransformExcludes(throttleTransformExcludes)
-	return map[string]interface{}{"type": "vrl", "source": resultCond}, nil
-}
-
-func excludeThrottleTransformCond(exclude *v1alpha1.Filter) (*string, error) {
-	if exclude == nil {
-		return nil, fmt.Errorf("no filter provided for dynamic transform exclude")
+		trottleResult.WriteString("|| { " + condition + " }")
 	}
 
-	rule := getRuleOutOfFilter(exclude)
-	if rule == "" {
-		return nil, fmt.Errorf("exclude rule value is empty for dynamic transform")
-	}
-
-	condition, err := rule.Render(vrl.Args{"filter": exclude})
-	if err != nil {
-		return nil, fmt.Errorf("error rendering exclude rule for dynamic transform: %w", err)
-	}
-
-	return &condition, nil
-}
-
-func combineThrottleTransformExcludes(excludes []string) string {
-	resultExcludeConds := make([]string, len(excludes)+1)
-	resultExcludeConds[0] = "matchedExcludeCond"
-	resultCond := fmt.Sprintf("%s = false;\n", resultExcludeConds[0])
-
-	for i, excludeCond := range excludes {
-		resultExcludeConds[i+1] = fmt.Sprintf("matchedExcludeCond%d", i)
-		resultCond += fmt.Sprintf("%s = %s;\n", resultExcludeConds[i+1], excludeCond)
-	}
-	resultCond += strings.Join(resultExcludeConds, " || ")
-	return resultCond
+	return map[string]interface{}{"type": "vrl", "source": trottleResult.String()}, nil
 }
