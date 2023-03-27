@@ -348,19 +348,19 @@ type NodeGroupStatus struct {
 	Instances int32 `json:"instances,omitempty"`
 
 	// Number of desired machines in the group.
-	Desired int32 `json:"desired,omitempty"`
+	Desired *int32 `json:"desired"`
 
 	// Minimal amount of instances in the group.
-	Min int32 `json:"min,omitempty"`
+	Min *int32 `json:"min"`
 
 	// Maximum amount of instances in the group.
-	Max int32 `json:"max,omitempty"`
+	Max *int32 `json:"max"`
+
+	// Number of overprovisioned instances in the group.
+	Standby *int32 `json:"standby"`
 
 	// Number of up-to-date nodes in the group.
 	UpToDate int32 `json:"upToDate,omitempty"`
-
-	// Number of overprovisioned instances in the group.
-	Standby int32 `json:"standby,omitempty"`
 
 	// Error message about possible problems with the group handling.
 	Error string `json:"error,omitempty"`

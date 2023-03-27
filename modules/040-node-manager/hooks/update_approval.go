@@ -202,8 +202,13 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		approvedNodeNames := make(map[string]struct{}, countToApprove)
 
+		// This is because when Status.Desired was a value (not a pointer) - it would be the value "0"
+		// refer to test `Modules :: nodeManager :: hooks :: update_approval :: approve_updates ->  [It] Works as expected `
+		if ng.Status.Desired == nil {
+			ng.Status.Desired = pointer.Int32(0)
+		}
 		//     Allow one node, if 100% nodes in NodeGroup are ready
-		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
+		if *ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			var allReady = true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {

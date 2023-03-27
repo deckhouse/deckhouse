@@ -111,7 +111,8 @@ func conditionsToPatch(conditions []ngv1.NodeGroupCondition) []map[string]interf
 }
 
 func buildUpdateStatusPatch(
-	nodesNum, readyNodesNum, uptodateNodesCount, minPerZone, maxPerZone, desiredMax, instancesNum int32,
+	nodesNum, readyNodesNum, uptodateNodesCount, instancesNum int32,
+	minPerZone, maxPerZone, desiredMax *int32,
 	nodeType ngv1.NodeType, statusMsg string,
 	lastMachineFailures []*v1alpha1.MachineSummary,
 	newConditions []ngv1.NodeGroupCondition,

@@ -390,9 +390,8 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		newConditions := conditions.CalculateNodeGroupConditions(ngForConditions, nodesForCalcConditions, nodeGroup.Conditions, errors)
 
 		patch := buildUpdateStatusPatch(
-			nodesNum, readyNodesNum, uptodateNodesCount,
-			minPerZone, maxPerZone,
-			desiredMax, instancesCount,
+			nodesNum, readyNodesNum, uptodateNodesCount, instancesCount,
+			pointer.Int32(minPerZone), pointer.Int32(maxPerZone), pointer.Int32(desiredMax),
 			nodeGroup.NodeType, statusMsg,
 			lastMachineFailures, newConditions,
 		)

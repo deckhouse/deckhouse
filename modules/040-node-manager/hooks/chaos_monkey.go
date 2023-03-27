@@ -222,7 +222,7 @@ func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	isReadyForChaos := false
 	if ng.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
-		if ng.Status.Desired > 1 && ng.Status.Desired == ng.Status.Ready {
+		if ng.Status.Desired != nil && *ng.Status.Desired > 1 && *ng.Status.Desired == ng.Status.Ready {
 			isReadyForChaos = true
 		}
 	} else {
