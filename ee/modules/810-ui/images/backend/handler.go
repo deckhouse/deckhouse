@@ -182,15 +182,16 @@ func initHandlers(
 		if namespaced {
 			// Support listing objects across all namespaces.
 			noNamespace := false
-			collectionPath := getPathPrefix(gvr, noNamespace, "k8s")
+			clusterScopeCollectionPath := getPathPrefix(gvr, noNamespace, "k8s")
 			h := newHandler(informer, dynClient.Resource(gvr), gvr, noNamespace)
-			router.GET(collectionPath, h.HandleList) // get list across all namespaces
-			discovery.AddPath(collectionPath)
-		}
+			router.GET(clusterScopeCollectionPath, h.HandleList) // get list across all namespaces
 
-		// Additional HTTP handlers along with server paths discovery
+			discovery.AddPath(clusterScopeCollectionPath)
+		}
 		discovery.AddPath(collectionPath)
 		discovery.AddPath(namedItemPath)
+
+		// Additional HTTP handlers
 		for _, s := range def.subh {
 			path := namedItemPath + "/" + s.suffix
 			router.Handle(s.method, path, s.handler(clientset, infReg, gvr))
