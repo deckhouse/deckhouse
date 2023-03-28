@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,29 +32,67 @@ import (
 )
 
 const (
-	waitingApprovalAnnotation = `control-plane-manager.deckhouse.io/waiting-for-approval`
-	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
-	maxRetries                = 42
-	namespace                 = `kube-system`
+	waitingApprovalAnnotation          = `control-plane-manager.deckhouse.io/waiting-for-approval`
+	approvedAnnotation                 = `control-plane-manager.deckhouse.io/approved`
+	maxRetries                         = 42
+	namespace                          = `kube-system`
 	minimalKubernetesVersionConstraint = `>= 1.22`
 	maximalKubernetesVersionConstraint = `< 1.27`
+	manifestsPath                      = `/etc/kubernetes/manifests`
 )
 
-func newClient() (*kubernetes.Clientset, error) {
+var (
+	myPodName         string
+	kubernetesVersion string
+	nodeName          string
+	myIP              string
+	k8sClient         *kubernetes.Clientset
+	quit              = make(chan struct{})
+)
+
+func readEnvs() error {
+	myPodName = os.Getenv("MY_POD_NAME")
+	if myPodName == "" {
+		return errors.New("MY_POD_NAME env should be set")
+	}
+
+	myIP = os.Getenv("MY_IP")
+	if myIP == "" {
+		return errors.New("MY_IP env should be set")
+	}
+
+	kubernetesVersion = os.Getenv("KUBERNETES_VERSION")
+	if kubernetesVersion == "" {
+		return errors.New("KUBERNETES_VERSION env should be set")
+	}
+
+	// get hostname
+	nodeName, err := getNodeName()
+	if err != nil {
+		return err
+	}
+	if nodeName == "" {
+		return errors.New("node name should be set")
+	}
+	return nil
+}
+
+func newClient() error {
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return kubernetes.NewForConfig(config)
+	k8sClient, err = kubernetes.NewForConfig(config)
+	return err
 }
 
 func getNodeName() (string, error) {
 	return os.Hostname()
 }
 
-func annotateNode(k8sClient *kubernetes.Clientset, nodeName string) error {
+func annotateNode() error {
 	log.Infof("annotate node %s with annotation '%s'", nodeName, waitingApprovalAnnotation)
 	node, err := k8sClient.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
@@ -71,7 +111,7 @@ func annotateNode(k8sClient *kubernetes.Clientset, nodeName string) error {
 	return err
 }
 
-func waitNodeApproval(k8sClient *kubernetes.Clientset, nodeName string) error {
+func waitNodeApproval() error {
 	for i := 0; i < maxRetries; i++ {
 		log.Infof("waiting for '%s' annotation on our node %s", approvedAnnotation, nodeName)
 		node, err := k8sClient.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
@@ -86,10 +126,10 @@ func waitNodeApproval(k8sClient *kubernetes.Clientset, nodeName string) error {
 	return errors.Errorf("can't get annotation '%s' from our node %s", approvedAnnotation, nodeName)
 }
 
-func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) error {
+func waitImageHolderContainers() error {
 	for {
 		log.Info("waiting for all image-holder containers will be ready")
-		pod, err := k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		pod, err := k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), myPodName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -111,8 +151,8 @@ func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) 
 	}
 }
 
-func kubernetesVersionAllowed(version string) bool {
-	log.Info("check desired kubernetes version %s", version)
+func checkKubernetesVersion() error {
+	log.Info("check desired kubernetes version %s", kubernetesVersion)
 	minimalConstraint, err := semver.NewConstraint(minimalKubernetesVersionConstraint)
 	if err != nil {
 		log.Fatal(err)
@@ -123,53 +163,87 @@ func kubernetesVersionAllowed(version string) bool {
 		log.Fatal(err)
 	}
 
-	v := semver.MustParse(version)
-	return minimalConstraint.Check(v) && maximalConstraint.Check(v)
+	v := semver.MustParse(kubernetesVersion)
+	if minimalConstraint.Check(v) && maximalConstraint.Check(v) {
+		return nil
+	}
+	return errors.Errorf("kubernetes version '%s' is not allowed", kubernetesVersion)
+
+}
+
+func checkEtcd() error {
+	etcdManifestPath := filepath.Join(manifestsPath, "etcd.yaml")
+	if _, err := os.Stat(etcdManifestPath); err != nil {
+		// etcd manifest does not exist, may be first run
+		return nil
+	}
+
+	content, err := os.ReadFile(etcdManifestPath)
+	if err != nil {
+		return err
+	}
+	re := regexp.MustCompile(`--advertise-client-urls=https://(.+):2379`)
+	res := re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find '--advertise-client-urls' submatch in etcd manifest")
+	}
+	if string(res[1]) != myIP {
+		return errors.Errorf("etcd is not supposed to change advertise address from '%s' to '%s'. Verify Node's InternalIP.", res[1], myIP)
+	}
+
+	re = regexp.MustCompile(`--name=(.+)`)
+	res = re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find '--name' submatch in etcd manifest")
+	}
+	if string(res[1]) != nodeName {
+		return errors.Errorf("etcd is not supposed to change its name from '%s' to '%s'. Verify Node's hostname.", res[1], nodeName)
+	}
+
+	re = regexp.MustCompile(`--data-dir=(.+)`)
+	res = re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find '--data-dir' submatch in etcd manifest")
+	}
+	if string(res[1]) != "/var/lib/etcd" {
+		return errors.Errorf("etcd is not supposed to change data-dir from '%s' to '/var/lib/etcd'. Verify current '--data-dir'.", res[1])
+	}
+
+	return nil
+
 }
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	pod := os.Getenv("MY_POD_NAME")
-	if pod == "" {
-		log.Fatal("MY_POD_NAME env should be set")
-	}
-
-	k8s := os.Getenv("KUBERNETES_VERSION")
-	if k8s == "" {
-		log.Fatal("KUBERNETES_VERSION env should be set")
-	}
-
-	// check kubernetes version
-	if !kubernetesVersionAllowed(k8s) {
-		log.Fatal("kubernetes version %s is not allowed", k8s)
-	}
-
-	// get hostname
-	node, err := getNodeName()
-	if err != nil {
+	if err := readEnvs(); err != nil {
 		log.Fatal(err)
 	}
 
-	// get k8s dynamic client
-	k8sClient, err := newClient()
-	if err != nil {
+	if err := checkKubernetesVersion(); err != nil {
 		log.Fatal(err)
 	}
 
-	err = annotateNode(k8sClient, node)
-	if err != nil {
+	if err := newClient(); err != nil {
 		log.Fatal(err)
 	}
 
-	err = waitNodeApproval(k8sClient, node)
-	if err != nil {
+	if err := annotateNode(); err != nil {
 		log.Fatal(err)
 	}
 
-	err = waitImageHolderContainers(k8sClient, pod)
-	if err != nil {
+	if err := waitNodeApproval(); err != nil {
 		log.Fatal(err)
 	}
 
+	if err := waitImageHolderContainers(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := checkEtcd(); err != nil {
+		log.Fatal(err)
+	}
+
+	// pause loop
+	<-quit
 }
