@@ -45,6 +45,11 @@
       "healthcheck": {
         "enabled": false
       },
+      "buffer": {
+        "max_size": 268435488,
+        "type": "disk",
+        "when_full": "block"
+      },
       "encoding": {
         "only_fields": [
           "message"
@@ -69,12 +74,7 @@
         "stream": "{{ stream }}"
       },
       "remove_label_fields": true,
-      "out_of_order_action": "rewrite_timestamp",
-      "buffer": {
-        "type": "disk",
-        "max_bytes": 268435488,
-        "when_full": "block"
-      }
+      "out_of_order_action": "rewrite_timestamp"
     }
   }
 }
