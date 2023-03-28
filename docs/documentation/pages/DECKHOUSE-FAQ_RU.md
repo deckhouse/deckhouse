@@ -249,17 +249,17 @@ chmod 700 d8-push.sh
 
 ## Использование proxy-сервера 
 
-### Setting up a proxy for repositories
+### Настройка proxy-сервера
 
-* Prepare the VM for setting up the proxy.
-* The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
-* Install squid on the machine (in our example, the Ubuntu machine is used):
+Пример шагов по настройке proxy-сервера на базе Squid:
+* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.   
+* Установите Squid (здесь и далее примеры для Ubuntu):
 
   ```shell
   apt-get install squid
   ```
 
-* Create a config file:
+* Создайте файл конфигурации Squid:
 
   ```shell
   cat <<EOF > /etc/squid/squid.conf
@@ -272,13 +272,15 @@ chmod 700 d8-push.sh
   http_port 3128
   ```
 
-* Create a user (test/test):
+* Создайте пользователя и пароль для аутентификации на proxy-сервере:
+
+  Пример для пользователя `test` с паролем `test` (обязательно измените):
 
   ```shell
   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
   ```
 
-* Start squid and enable the system to start it up automatically:
+* Запустите Squid и включите его автоматический запуск при загрузке сервера:
 
   ```shell
   systemctl restart squid
@@ -287,9 +289,9 @@ chmod 700 d8-push.sh
 
 ### Настройка Deckhouse на использование proxy
 
-Для настройки работы через proxy-сервер используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy)Insert the appropriate configuration into the [ClusterConfiguration](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/cluster_configuration.yaml) file.
+Для настройки работы через proxy-сервер используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
 
-An example:
+Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -304,9 +306,8 @@ kubernetesVersion: "1.23"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 proxy:
-  uri: "http://192.168.199.25:3128"
-  username: "test"
-  password: "test"
+  httpProxy: "http://user:password@proxy.company.my:3128"
+  httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?

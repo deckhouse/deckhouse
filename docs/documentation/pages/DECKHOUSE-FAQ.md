@@ -246,11 +246,10 @@ This case is only valid if you don't have release channel images in your air-gap
 
 ## Using a proxy server
 
-### Setting up a proxy for repositories
+### Setting up a proxy server
 
-* Prepare the VM for setting up the proxy.
-* The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
-* Install squid on the machine (in our example, the Ubuntu machine is used):
+* Prepare the VM for setting up the proxy. The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
+* Install Squid on the server (here and further examples for Ubuntu):
 
   ```shell
   apt-get install squid
@@ -269,8 +268,10 @@ This case is only valid if you don't have release channel images in your air-gap
   http_port 3128
   ```
 
-* Create a user (test/test):
+* Create a user for proxy-server authentication:
 
+  Example for the user `test` with the password `test` (be sure to change):
+  
   ```shell
   echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
   ```
@@ -284,7 +285,7 @@ This case is only valid if you don't have release channel images in your air-gap
 
 ### Configuring proxy usage in Deckhouse
 
-Insert the appropriate configuration into the [ClusterConfiguration](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/cluster_configuration.yaml) file.
+Use the [proxy](installing/configuration.html#clusterconfiguration-proxy) parameter of the `ClusterConfiguration` resource to configure proxy usage.
 
 An example:
 
@@ -300,10 +301,9 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.23"
 cri: "Containerd"
 clusterDomain: "cluster.local"
-packagesProxy:
-  uri: "http://192.168.199.25:3128"
-  username: "test"
-  password: "test"
+proxy:
+  httpProxy: "http://user:password@proxy.company.my:3128"
+  httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
