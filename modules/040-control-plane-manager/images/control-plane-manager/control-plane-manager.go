@@ -38,7 +38,8 @@ const (
 	namespace                          = `kube-system`
 	minimalKubernetesVersionConstraint = `>= 1.22`
 	maximalKubernetesVersionConstraint = `< 1.27`
-	manifestsPath                      = `/etc/kubernetes/manifests`
+	kubernetesConfigPath               = `/etc/kubernetes`
+	manifestsPath                      = kubernetesConfigPath + `/manifests`
 )
 
 var (
@@ -168,8 +169,10 @@ func checkKubernetesVersion() error {
 
 }
 
-func checkEtcd() error {
+func checkEtcdManifest() error {
 	etcdManifestPath := filepath.Join(manifestsPath, "etcd.yaml")
+	log.Info("check etcd manifest '%s'", etcdManifestPath)
+
 	if _, err := os.Stat(etcdManifestPath); err != nil {
 		// etcd manifest does not exist, may be first run
 		return nil
@@ -207,7 +210,27 @@ func checkEtcd() error {
 	}
 
 	return nil
+}
 
+func checkKubeletConfig() error {
+	kubeletPath := filepath.Join(kubernetesConfigPath, "kubelet.conf")
+	log.Info("check kubelet config '%s'", kubeletPath)
+
+	if _, err := os.Stat(kubeletPath); err != nil {
+		// kubelet manifest does not exist, may be first run
+		return errors.Errorf("kubelet config does not exist in %s", kubeletPath)
+	}
+
+	content, err := os.ReadFile(kubeletPath)
+	if err != nil {
+		return err
+	}
+	re := regexp.MustCompile(`server: https://127.0.0.1:6445`)
+	if re.Match(content) {
+		return nil
+	}
+
+	return errors.Errorf("cannot find 'server: https://127.0.0.1:6445' in kubelet config '%s'", kubeletPath)
 }
 
 func main() {
@@ -237,7 +260,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := checkEtcd(); err != nil {
+	if err := checkEtcdManifest(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := checkKubeletConfig(); err != nil {
 		log.Fatal(err)
 	}
 
