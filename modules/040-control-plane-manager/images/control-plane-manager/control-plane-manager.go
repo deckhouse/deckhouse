@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -230,7 +231,59 @@ func checkKubeletConfig() error {
 		return nil
 	}
 
-	return errors.Errorf("cannot find 'server: https://127.0.0.1:6445' in kubelet config '%s'", kubeletPath)
+	return errors.Errorf("cannot find 'server: https://127.0.0.1:6445' in kubelet config '%s'. Kubelet should be configured "+
+		"to access apiserver via kube-api-proxy (through https://127.0.0.1:6445). Probably node is not managed by node-manager.", kubeletPath)
+}
+
+func installFileIfChanged(src, dst string, perm os.FileMode) error {
+	var srcBytes, dstBytes []byte
+
+	srcBytes, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	dstBytes, _ = os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
+
+	if bytes.Compare(srcBytes, dstBytes) == 0 {
+		log.Infof("file %s is not changed, skipping", src)
+		return nil
+	}
+
+	log.Infof("install file '%s' to destionation '%s'", src, dst)
+	err = os.WriteFile(dst, srcBytes, perm)
+	if err != nil {
+		return err
+	}
+	return os.Chown(dst, 0, 0)
+}
+
+func installKubeadmConfig() error {
+	log.Info("install kubeadm configuration")
+	kubeadmDir := filepath.Join(kubernetesConfigPath, "deckhouse", "kubeadm")
+	patchesDir := filepath.Join(kubeadmDir, "patches")
+	if err := os.MkdirAll(patchesDir, 0755); err != nil {
+		return err
+	}
+
+	//	if err := removeOrphanFiles(patchesDir); err != nil {
+	//		return err
+	//	}
+
+	if err := installFileIfChanged("/config/kubeadm-config.yaml", filepath.Join(kubeadmDir, "config.yaml"), 0644); err != nil {
+		return err
+	}
+	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+		if err := installFileIfChanged("/config"+component+".yaml.tpl", filepath.Join(patchesDir, component+".yaml"), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {
@@ -265,6 +318,10 @@ func main() {
 	}
 
 	if err := checkKubeletConfig(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := installKubeadmConfig(); err != nil {
 		log.Fatal(err)
 	}
 
