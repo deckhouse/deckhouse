@@ -31,7 +31,7 @@ request-callback:
   success-message:
     ru:
       title: "Заявка отправлена"
-      text: "Мы свяжемся с вами в течении рабочего дня"
+      text: "Мы свяжемся с вами в течение рабочего дня"
     en:
       title: "Thank you"
       text: "We will contact you on this or the next business day"
@@ -91,4 +91,16 @@ get-a-report:
       file-name: "Deckhouse_PCI_SSC_requirements_ru.pdf"
     en:
       file-name: "Deckhouse_PCI_SSC_requirements.pdf"
-
+become-a-partner:
+  header:
+    ru:
+      title: "Запросить подробности партнёрской программы"
+      text: "Оставьте ваши данные, и мы свяжемся с вами."
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Мы свяжемся с вами в течение рабочего дня"
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
