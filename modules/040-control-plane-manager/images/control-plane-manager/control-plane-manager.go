@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,8 @@ const (
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
 	maxRetries                = 42
 	namespace                 = `kube-system`
+	minimalKubernetesVersion = `1.22`
+	maximalKubernetesVersion = `1.26`
 )
 
 func newClient() (*kubernetes.Clientset, error) {
@@ -95,7 +98,7 @@ func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) 
 			if container.Name == "control-plane-manager" {
 				continue
 			}
-			if ! container.Ready {
+			if !container.Ready {
 				isReady = false
 				break
 			}
@@ -108,12 +111,37 @@ func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) 
 	}
 }
 
+func kubernetesVersionAllowed(version string) bool {
+	minimalConstraint, err := semver.NewConstraint(">= " + minimalKubernetesVersion)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	maximalConstraint, err := semver.NewConstraint("< " + maximalKubernetesVersion)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	v := semver.MustParse(version)
+	return minimalConstraint.Check(v) && maximalConstraint.Check(v)
+}
+
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
 	pod := os.Getenv("MY_POD_NAME")
 	if pod == "" {
-		log.Fatal("MY_POD_NAME env should be set !")
+		log.Fatal("MY_POD_NAME env should be set")
+	}
+
+	k8s := os.Getenv("KUBERNETES_VERSION")
+	if k8s == "" {
+		log.Fatal("KUBERNETES_VERSION env should be set")
+	}
+
+	// check kubernetes version
+	if !kubernetesVersionAllowed(k8s) {
+		log.Fatal("kubernetes version %s is not allowed", k8s)
 	}
 
 	// get hostname
