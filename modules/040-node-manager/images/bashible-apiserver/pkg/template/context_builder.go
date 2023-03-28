@@ -235,8 +235,6 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 		return errors.Wrap(err, "marshal bashibleContext failed")
 	}
 
-	checksumCollector.Write(bcData)
-
 	var res map[string]interface{}
 
 	err = yaml.Unmarshal(bcData, &res)
