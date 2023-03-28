@@ -43,6 +43,9 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app: proxy-failover
