@@ -7,7 +7,7 @@ COPY package.json /app/
 COPY package-lock.json /app/
 RUN npm i --ignore-scripts
 COPY . /app
-RUN NODE_ENV=production npm run build-only
+RUN NODE_ENV=production VITE_NO_MOCK=1 npm run build-only
 
 FROM $BASE_NGINX_ALPINE
 COPY --from=artifact /app/dist /app/dist
