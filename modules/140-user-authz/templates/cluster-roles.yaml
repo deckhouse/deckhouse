@@ -106,9 +106,14 @@
   - networking.k8s.io
   resources:
   - ingresses
-  - networkpolicies
   verbs:
   {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+{{- include "user_authz_verbs" "r" }}
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -258,6 +263,12 @@
   - deckhouse.io
   resources:
   - clusterauthorizationrules
+  verbs:
+{{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
   verbs:
 {{- include "user_authz_verbs" "rw" }}
 {{- end }}
