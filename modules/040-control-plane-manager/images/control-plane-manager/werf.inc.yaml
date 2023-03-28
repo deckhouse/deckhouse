@@ -58,12 +58,8 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/{{ $.ImageName }}
   to: /
-  includePaths:
-  - control-plane-manager.go
-  - go.mod
-  - go.sum
   stageDependencies:
     install:
       - '**/*'
@@ -72,5 +68,5 @@ mount:
     to: /go/pkg
 shell:
   install:
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager control-plane-manager.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager control-plane-manager.go node.go util.go
   - chmod +x /control-plane-manager
