@@ -25,6 +25,7 @@ import (
 	"hash"
 	"sort"
 
+	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 )
@@ -224,6 +225,11 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 }
 
 func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, bc bashibleContext, bundleNgContext *bundleNGContext, versionMap map[string]interface{}) error {
+	err := bc.AddToChecksum(checksumCollector)
+	if err != nil {
+		return err
+	}
+
 	bcData, err := yaml.Marshal(bc)
 	if err != nil {
 		return errors.Wrap(err, "marshal bashibleContext failed")
@@ -436,6 +442,32 @@ type bashibleContext struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry *registry                    `json:"registry" yaml:"registry"`
 	Proxy    map[string]interface{}       `json:"proxy" yaml:"proxy"`
+}
+
+func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
+	cpy := deepcopy.Copy(bc)
+	bcCopy := cpy.(*bashibleContext)
+
+	cloudInstancesRaw, ok := bcCopy.NodeGroup["cloudInstances"]
+	if ok {
+		cloudInstances, ok := cloudInstancesRaw.(map[string]interface{})
+		if ok {
+			// remove counter for prevent updating nodes while upscale
+			delete(cloudInstances, "maxPerZone")
+			delete(cloudInstances, "maxSurgePerZone")
+			delete(cloudInstances, "maxUnavailablePerZone")
+			delete(cloudInstances, "minPerZone")
+		}
+	}
+
+	bcData, err := yaml.Marshal(bcCopy)
+	if err != nil {
+		return errors.Wrap(err, "marshal bashibleContext for checksum collect failed")
+	}
+
+	checksumCollector.Write(bcData)
+
+	return nil
 }
 
 // for appropriate marshalling
