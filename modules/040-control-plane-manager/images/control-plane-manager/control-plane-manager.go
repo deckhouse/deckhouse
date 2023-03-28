@@ -32,6 +32,7 @@ const (
 	waitingApprovalAnnotation = `control-plane-manager.deckhouse.io/waiting-for-approval`
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
 	maxRetries                = 42
+	namespace                 = `kube-system`
 )
 
 func newClient() (*kubernetes.Clientset, error) {
@@ -82,32 +83,63 @@ func waitNodeApproval(k8sClient *kubernetes.Clientset, nodeName string) error {
 	return errors.Errorf("can't get annotation '%s' from our node %s", approvedAnnotation, nodeName)
 }
 
+func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) error {
+	for {
+		pod, err := k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		isReady := true
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == "control-plane-manager" {
+				continue
+			}
+			if ! container.Ready {
+				isReady = false
+				break
+			}
+		}
+
+		if isReady {
+			return nil
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	// get k8s dynamic client
-	k8sClient, err := newClient()
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+	podName := os.Getenv("MY_POD_NAME")
+	if podName == "" {
+		log.Fatal("MY_POD_NAME env should be set !")
 	}
 
 	// get hostname
 	node, err := getNodeName()
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		log.Fatal(err)
+	}
+
+	// get k8s dynamic client
+	k8sClient, err := newClient()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	err = annotateNode(k8sClient, node)
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	err = waitNodeApproval(k8sClient, node)
 	if err != nil {
-		log.Error(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
+
+	err = waitNodeApproval(k8sClient, node)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

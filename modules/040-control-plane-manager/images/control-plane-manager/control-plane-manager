@@ -66,6 +66,15 @@ do
   sleep 10
 done
 
+
+
+
+
+
+
+
+
+
 >&2 echo "Waiting for all image-holder containers will be ready..."
 until
   kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf -n kube-system get po ${MY_POD_NAME} -o json | \
