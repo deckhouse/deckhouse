@@ -85,6 +85,7 @@ func waitNodeApproval(k8sClient *kubernetes.Clientset, nodeName string) error {
 
 func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) error {
 	for {
+		log.Info("waiting for all image-holder containers will be ready")
 		pod, err := k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -110,8 +111,8 @@ func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	podName := os.Getenv("MY_POD_NAME")
-	if podName == "" {
+	pod := os.Getenv("MY_POD_NAME")
+	if pod == "" {
 		log.Fatal("MY_POD_NAME env should be set !")
 	}
 
@@ -137,7 +138,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = waitNodeApproval(k8sClient, node)
+	err = waitImageHolderContainers(k8sClient, pod)
 	if err != nil {
 		log.Fatal(err)
 	}
