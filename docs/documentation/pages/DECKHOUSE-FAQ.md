@@ -238,10 +238,11 @@ Example of pushing images:
 
 This case is only valid if you don't have release channel images in your air-gapped registry.
 
-* If you want to bootstrap a cluster, you have to use the exact tag of a Docker image to install the Deckhouse Platform.
-For example, if you want to install release v1.32.13, you have to use image `your.private.registry.com/deckhouse/install:v1.32.13`. And you have to use `devBranch: v1.32.13` instead of `releaseChannel: XXX` in `config.yml`.
-* If you already have a cluster up and running, you have to remove `releaseChannel` setting from the `deckhouse` module configuration and set the appropriate `image` parameter for `d8-system/deckhouse` Deployment. Further updates have to be done by a manual update of the `image` parameter of the `d8-system/deckhouse` Deployment.
-For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.32.13` for release v1.32.13.
+* If you want to install Deckhouse with automatic updates disabled:
+  * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.44.3`, if you want to install release `v1.44.3`.
+  * Set the corresponding version number in the [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) parameter of the `InitConfiguration` resource.
+  * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
+* If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration. 
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 

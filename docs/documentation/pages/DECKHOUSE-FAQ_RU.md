@@ -28,8 +28,7 @@ kubectl get mc global -o yaml
 
 ## Как установить желаемый канал обновлений?
 
-Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить
-(установить) параметр `releaseChannel`.
+Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить (установить) параметр `releaseChannel`.
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
 
@@ -242,10 +241,11 @@ chmod 700 d8-push.sh
 
 Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
 
-* Если вы хотите создать кластер, то вы должны использовать точный тег образа Deckhouse, чтобы установить Deckhouse Platform.
-Например, если вы хотите установить релиз v1.32.13, то вы должны использовать образ `your.private.registry.com/deckhouse/install:v1.32.13`. Также вы должны указать `devBranch: v1.32.13` вместо `releaseChannel: XXX` в `config.yml`.
-* Если у вас уже есть рабочий кластер, то вы должны удалить `releaseChannel` из конфигурации модуля `deckhouse` и указать выбранный образ Deckhouse в поле `image` в Deployment `d8-system/deckhouse`. Дальнейшее обновление необходимо производить также изменяя образ вручную.
-Например, для релиза v1.32.13 следует указывать в поле `image` значение `your.private.registry.com/deckhouse:v1.32.13`.
+* Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
+  * Используйте тэг образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, то используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
+  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе `InitConfiguration`.
+  *  **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе `InitConfiguration`.
+* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), то удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
