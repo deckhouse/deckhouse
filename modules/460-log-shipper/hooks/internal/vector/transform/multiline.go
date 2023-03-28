@@ -95,7 +95,7 @@ func processMultilineRegex(parserRegex *v1alpha1.ParserRegex) (*string, error) {
 	var resultRegexRule vrl.Rule
 	var multilineRegex string
 	if parserRegex.NotRegex != nil {
-		resultRegexRule = vrl.RegexMultilineRule
+		resultRegexRule = vrl.NotRegexMultilineRule
 		multilineRegex = *parserRegex.NotRegex
 	} else if parserRegex.Regex != nil {
 		resultRegexRule = vrl.RegexMultilineRule

@@ -1,6 +1,6 @@
 [
 	{
-		"ends_when": "matched, err = match(.message, r'^endsWhenRegexEnd');\nif err != null {\n    false;\n} else {\n    matched;\n}",
+		"ends_when": "matched, err = match(.message, r'^endsWhenRegexEnd');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
 		"group_by": [
 			"file",
 			"stream"
@@ -22,7 +22,7 @@
 		"merge_strategies": {
 			"message": "concat"
 		},
-		"starts_when": "matched, err = match(.message, r'^startsWhenRegexEnd');\nif err != null {\n    false;\n} else {\n    matched;\n}",
+		"starts_when": "matched, err = match(.message, r'^startsWhenRegexEnd');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
 		"type": "reduce"
 	},
 	{
@@ -40,7 +40,7 @@
 		"type": "reduce"
 	},
 	{
-		"ends_when": "matched, err = match(.message, r'^startsWhenRegex');\nif err != null {\n    false;\n} else {\n    matched;\n}",
+		"ends_when": "matched, err = match(.message, r'^startsWhenRegex');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
 		"group_by": [
 			"file",
 			"stream"
