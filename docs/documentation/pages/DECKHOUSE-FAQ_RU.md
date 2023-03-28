@@ -244,15 +244,15 @@ chmod 700 d8-push.sh
 * Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
   * Используйте тэг образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, то используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
   * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе `InitConfiguration`.
-  *  **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе `InitConfiguration`.
+  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе `InitConfiguration`.
 * Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), то удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
-## Использование proxy-сервера 
+## Использование proxy-сервера
 
 ### Настройка proxy-сервера
 
 Пример шагов по настройке proxy-сервера на базе Squid:
-* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.   
+* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
 * Установите Squid (здесь и далее примеры для Ubuntu):
 
   ```shell
