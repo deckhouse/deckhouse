@@ -368,9 +368,11 @@ func (h *resourceHandler) HandleCreate(w http.ResponseWriter, r *http.Request, p
 		createdObj, err = h.ri.Create(r.Context(), &obj, metav1.CreateOptions{})
 	}
 	if err != nil {
-		err := fmt.Errorf("creating object: %s", err)
+		w.WriteHeader(getStatusCode(err))
+
+		err := fmt.Errorf("creating: %s", err)
 		klog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": err.Error(),
@@ -416,13 +418,16 @@ func (h *resourceHandler) HandleUpdate(w http.ResponseWriter, r *http.Request, p
 		updatedObj, err = h.ri.Update(r.Context(), &obj, metav1.UpdateOptions{})
 	}
 	if err != nil {
+		w.WriteHeader(getStatusCode(err))
+
 		err := fmt.Errorf("updating body: %s", err)
 		klog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": err.Error(),
 		})
+
 		return
 	}
 
@@ -441,9 +446,11 @@ func (h *resourceHandler) HandleDelete(w http.ResponseWriter, r *http.Request, p
 		err = h.ri.Delete(r.Context(), name, metav1.DeleteOptions{})
 	}
 	if err != nil {
-		err := fmt.Errorf("deleting object: %s", err)
+		w.WriteHeader(getStatusCode(err))
+
+		err := fmt.Errorf("deleting: %s", err)
 		klog.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error": err.Error(),
@@ -479,4 +486,12 @@ func getPathSegments(gvr schema.GroupVersionResource, isNamespaced bool, prefixe
 	}
 	segments[i] = gvr.Resource
 	return segments
+}
+
+func getStatusCode(err error) int {
+	statusCode := http.StatusInternalServerError
+	if sterr, ok := err.(*apierrors.StatusError); ok && sterr.Status().Code > 0 {
+		statusCode = int(sterr.Status().Code)
+	}
+	return statusCode
 }

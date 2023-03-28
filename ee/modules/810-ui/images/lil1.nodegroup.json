@@ -1,0 +1,163 @@
+{
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "NodeGroup",
+    "metadata": {
+        "creationTimestamp": "2023-03-27T15:52:58Z",
+        "generation": 9,
+        "managedFields": [
+            {
+                "apiVersion": "deckhouse.io/v1",
+                "fieldsType": "FieldsV1",
+                "fieldsV1": {
+                    "f:status": {
+                        ".": {},
+                        "f:conditionSummary": {
+                            ".": {},
+                            "f:ready": {},
+                            "f:statusMessage": {}
+                        },
+                        "f:conditions": {},
+                        "f:desired": {},
+                        "f:error": {},
+                        "f:instances": {},
+                        "f:kubernetesVersion": {},
+                        "f:lastMachineFailures": {},
+                        "f:max": {},
+                        "f:min": {},
+                        "f:nodes": {},
+                        "f:ready": {},
+                        "f:upToDate": {}
+                    }
+                },
+                "manager": "deckhouse-controller",
+                "operation": "Update",
+                "subresource": "status",
+                "time": "2023-03-27T15:52:59Z"
+            },
+            {
+                "apiVersion": "deckhouse.io/v1",
+                "fieldsType": "FieldsV1",
+                "fieldsV1": {
+                    "f:spec": {
+                        ".": {},
+                        "f:cloudInstances": {
+                            ".": {},
+                            "f:classReference": {
+                                ".": {},
+                                "f:kind": {},
+                                "f:name": {}
+                            },
+                            "f:maxPerZone": {},
+                            "f:minPerZone": {},
+                            "f:priority": {},
+                            "f:zones": {}
+                        },
+                        "f:cri": {
+                            ".": {},
+                            "f:containerd": {
+                                ".": {},
+                                "f:maxConcurrentDownloads": {}
+                            },
+                            "f:type": {}
+                        },
+                        "f:disruptions": {
+                            ".": {},
+                            "f:approvalMode": {}
+                        },
+                        "f:nodeTemplate": {
+                            ".": {},
+                            "f:annotations": {},
+                            "f:labels": {
+                                ".": {},
+                                "f:param": {}
+                            },
+                            "f:taints": {}
+                        },
+                        "f:nodeType": {}
+                    }
+                },
+                "manager": "backend",
+                "operation": "Update",
+                "time": "2023-03-27T17:15:59Z"
+            }
+        ],
+        "name": "lil1",
+        "resourceVersion": "852732897",
+        "uid": "45ab090f-2e87-4d1b-afd4-2e61ff829d49"
+    },
+    "spec": {
+        "cloudInstances": {
+            "classReference": {
+                "kind": "OpenStackInstanceClass",
+                "name": "little-one"
+            },
+            "maxPerZone": 1,
+            "minPerZone": 3,
+            "priority": 15,
+            "zones": [
+                "nova"
+            ]
+        },
+        "cri": {
+            "containerd": {
+                "maxConcurrentDownloads": 3
+            },
+            "type": "Docker"
+        },
+        "disruptions": {
+            "approvalMode": "Manual"
+        },
+        "nodeTemplate": {
+            "annotations": {},
+            "labels": {
+                "param": "pam-pam"
+            },
+            "taints": []
+        },
+        "nodeType": "CloudEphemeral"
+    },
+    "status": {
+        "conditionSummary": {
+            "ready": "True",
+            "statusMessage": ""
+        },
+        "conditions": [
+            {
+                "lastTransitionTime": "2023-03-27T17:27:29Z",
+                "status": "True",
+                "type": "Ready"
+            },
+            {
+                "lastTransitionTime": "2023-03-28T09:32:33Z",
+                "status": "False",
+                "type": "Updating"
+            },
+            {
+                "lastTransitionTime": "2023-03-28T09:14:05Z",
+                "status": "False",
+                "type": "WaitingForDisruptiveApproval"
+            },
+            {
+                "lastTransitionTime": "2023-03-27T15:52:58Z",
+                "status": "False",
+                "type": "Error"
+            },
+            {
+                "lastTransitionTime": "2023-03-27T17:09:06Z",
+                "status": "False",
+                "type": "Scaling"
+            }
+        ],
+        "desired": 3,
+        "error": "",
+        "instances": 3,
+        "kubernetesVersion": "1.23",
+        "lastMachineFailures": [],
+        "max": 3,
+        "min": 3,
+        "nodes": 3,
+        "ready": 3,
+        "upToDate": 3
+    }
+}
+
