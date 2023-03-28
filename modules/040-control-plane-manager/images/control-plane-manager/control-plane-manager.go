@@ -34,8 +34,8 @@ const (
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
 	maxRetries                = 42
 	namespace                 = `kube-system`
-	minimalKubernetesVersion = `1.22`
-	maximalKubernetesVersion = `1.26`
+	minimalKubernetesVersionConstraint = `>= 1.22`
+	maximalKubernetesVersionConstraint = `< 1.27`
 )
 
 func newClient() (*kubernetes.Clientset, error) {
@@ -112,12 +112,13 @@ func waitImageHolderContainers(k8sClient *kubernetes.Clientset, podName string) 
 }
 
 func kubernetesVersionAllowed(version string) bool {
-	minimalConstraint, err := semver.NewConstraint(">= " + minimalKubernetesVersion)
+	log.Info("check desired kubernetes version %s", version)
+	minimalConstraint, err := semver.NewConstraint(minimalKubernetesVersionConstraint)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	maximalConstraint, err := semver.NewConstraint("< " + maximalKubernetesVersion)
+	maximalConstraint, err := semver.NewConstraint(maximalKubernetesVersionConstraint)
 	if err != nil {
 		log.Fatal(err)
 	}
