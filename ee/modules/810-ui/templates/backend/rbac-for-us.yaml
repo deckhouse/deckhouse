@@ -42,6 +42,14 @@ rules:
     - list
     - get
     - watch
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+    - vulnerabilityreports
+    verbs:
+    - get
+    - list
+    - watch
+    - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
