@@ -68,7 +68,9 @@ func NodeToConditionsNode(node *corev1.Node) *Node {
 		}
 	}
 
-	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
+	_, disruptionRequired := node.Annotations["update.node.deckhouse.io/disruption-required"]
+	_, disruptionApproved := node.Annotations["update.node.deckhouse.io/disruption-approved"]
+	if disruptionRequired && !disruptionApproved {
 		res.WaitingDisruptiveApproval = true
 		res.Updating = true
 	}
