@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/010-cloud-discovery-crd/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/010-cluster-autoscaler-crd/crds/*.yaml")

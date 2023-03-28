@@ -68,10 +68,15 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 	res := make([]v1alpha1.InstanceType, 0, len(flvs))
 	for _, f := range flvs {
+		diskSize := f.Disk
+		if diskSize == 0 {
+			diskSize = f.Ephemeral
+		}
 		res = append(res, v1alpha1.InstanceType{
-			Name:   f.Name,
-			CPU:    int64(f.VCPUs),
-			Memory: int64(f.RAM),
+			Name:     f.Name,
+			CPU:      int64(f.VCPUs),
+			Memory:   int64(f.RAM),
+			RootDisk: int64(diskSize),
 		})
 	}
 

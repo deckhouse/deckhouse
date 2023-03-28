@@ -74,26 +74,26 @@ func (c *Reconciler) Start() {
 	c.logger.Infoln("Checks interval: ", c.checkInterval)
 
 	// channels to stop converge loop
-	shutdownAllCh := make(chan struct{})
 	doneCh := make(chan struct{})
 
 	c.registerMetrics()
 
 	httpServer := c.getHTTPServer()
 
-	rootCtx := context.Background()
+	rootCtx, cancel := context.WithCancel(context.Background())
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		c.logger.Infof("Signal received: %v. Exiting.\n", <-signalChan)
+		cancel()
 		c.logger.Infoln("Waiting for stop reconcile loop...")
-
-		close(shutdownAllCh)
 		<-doneCh
 
 		ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
 		defer cancel()
+
+		c.logger.Infoln("Shutdown ...")
 
 		err := httpServer.Shutdown(ctx)
 		if err != nil {
@@ -102,7 +102,7 @@ func (c *Reconciler) Start() {
 		os.Exit(0)
 	}()
 
-	go c.reconcileLoop(rootCtx, shutdownAllCh, doneCh)
+	go c.reconcileLoop(rootCtx, doneCh)
 
 	err := httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
@@ -131,7 +131,7 @@ func (c *Reconciler) registerMetrics() {
 	prometheus.MustRegister(c.updateResourceErrorMetric)
 }
 
-func (c *Reconciler) reconcileLoop(ctx context.Context, shutdownCh <-chan struct{}, doneCh chan<- struct{}) {
+func (c *Reconciler) reconcileLoop(ctx context.Context, doneCh chan<- struct{}) {
 	c.reconcile(ctx)
 
 	ticker := time.NewTicker(c.checkInterval)
@@ -141,7 +141,7 @@ func (c *Reconciler) reconcileLoop(ctx context.Context, shutdownCh <-chan struct
 		select {
 		case <-ticker.C:
 			c.reconcile(ctx)
-		case <-shutdownCh:
+		case <-ctx.Done():
 			doneCh <- struct{}{}
 			return
 		}
@@ -184,9 +184,9 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 			time.Sleep(3 * time.Second)
 		}
 
-		getCtx, cancelGetting := context.WithTimeout(ctx, 10*time.Second)
-		data, errGetting := c.k8sClient.Resource(v1alpha1.GRV).Get(getCtx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
-		cancelGetting()
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		data, errGetting := c.k8sClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
+		cancel()
 
 		if errors.IsNotFound(errGetting) {
 			o, err := c.cloudDiscoveryUnstructured(nil, instanceTypes)
@@ -195,9 +195,9 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 				return
 			}
 
-			createCtx, cancelCreating := context.WithTimeout(ctx, 10*time.Second)
-			_, err = c.k8sClient.Resource(v1alpha1.GRV).Create(createCtx, o, metav1.CreateOptions{})
-			cancelCreating()
+			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1alpha1.GVR).Create(cctx, o, metav1.CreateOptions{})
+			cancel()
 
 			if err != nil {
 				c.logger.Errorf("Attempt %d. Cannot create cloud data resource: %v\n", i, err)
@@ -212,9 +212,9 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 				return
 			}
 
-			createCtx, cancelUpdating := context.WithTimeout(ctx, 10*time.Second)
-			_, err = c.k8sClient.Resource(v1alpha1.GRV).Update(createCtx, o, metav1.UpdateOptions{})
-			cancelUpdating()
+			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.Resource(v1alpha1.GVR).Update(cctx, o, metav1.UpdateOptions{})
+			cancel()
 
 			if err != nil {
 				c.logger.Errorf("Attempt %d. Cannot update cloud data resource: %v\n", i, err)
@@ -236,12 +236,12 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 }
 
 func (c *Reconciler) cloudDiscoveryUnstructured(o *unstructured.Unstructured, instanceTypes []v1alpha1.InstanceType) (*unstructured.Unstructured, error) {
-	data := v1alpha1.CloudDiscoveryData{
+	data := v1alpha1.MachineTypesCatalog{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1alpha1.CloudDiscoveryDataResourceName,
 		},
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "CloudDiscoveryData",
+			Kind:       "MachineTypesCatalog",
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 	}

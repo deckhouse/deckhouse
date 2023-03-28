@@ -15,7 +15,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - clouddiscoverydatas
+  - machinetypescatalogs
   verbs:
   - create
   - get
