@@ -88,17 +88,30 @@ locals {
     EOF
 
     netplan apply
+
+    # Load conntrack module at boot time
+    cat > /etc/modules-load.d/ip_conntrack.conf <<EOF
+    ip_conntrack
+    EOF
+
+    cat > /etc/sysctl.d/999-netfilter-nf-conntrack.conf <<EOF
+    net.netfilter.nf_conntrack_max=1048576
+    net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
+    EOF
+
+    sysctl -p /etc/sysctl.d/999-netfilter-nf-conntrack.conf
   EOT
 }
 
 resource "yandex_compute_instance" "nat_instance" {
   count = local.is_with_nat_instance ? 1 : 0
 
-  name         = join("-", [var.prefix, "nat"])
-  hostname     = join("-", [var.prefix, "nat"])
-  zone         = local.internal_subnet_zone
+  name                      = join("-", [var.prefix, "nat"])
+  hostname                  = join("-", [var.prefix, "nat"])
+  zone                      = local.internal_subnet_zone
+  network_acceleration_type = "software_accelerated"
 
-  platform_id  = "standard-v2"
+  platform_id = "standard-v2"
   resources {
     cores  = 2
     memory = 2
@@ -134,6 +147,7 @@ resource "yandex_compute_instance" "nat_instance" {
       metadata,
       boot_disk[0].initialize_params[0].image_id,
       boot_disk[0].initialize_params[0].size,
+      network_acceleration_type,
     ]
   }
 
