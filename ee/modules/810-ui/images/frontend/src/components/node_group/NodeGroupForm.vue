@@ -55,21 +55,48 @@
         <CardTitle title="Параметры автомасштабирования" v-if="item.isAutoscalable" />
         <div class="flex flex-wrap items-start gap-x-24 gap-y-6 mb-12" v-if="item.isAutoscalable">
           <div class="flex flex-col gap-y-6">
-            <Field :name="'cloudInstances.minPerZone'">
-              <InputBlock title="Минимум узлов на зону" spec="spec.cloudInstances.minPerZone" ref="minPerZone">
-                <InputNumber inputClass="p-inputtext-sm w-[50px]" v-model="values.cloudInstances.minPerZone" :disabled="readonly" />
+            <Field :name="'cloudInstances.minPerZone'" v-slot="{ errorMessage }">
+              <InputBlock
+                title="Минимум узлов на зону"
+                spec="spec.cloudInstances.minPerZone"
+                ref="minPerZone"
+                required
+                :error-message="errorMessage"
+              >
+                <InputNumber
+                  :input-class="{ 'p-invalid': errorMessage, 'p-inputtext-sm w-[50px]': true }"
+                  v-model="values.cloudInstances.minPerZone"
+                  :disabled="readonly"
+                />
               </InputBlock>
             </Field>
-            <Field :name="'cloudInstances.maxPerZone'">
-              <InputBlock title="Максимум узлов на зону" spec="spec.cloudInstances.maxPerZone">
-                <InputNumber inputClass="p-inputtext-sm w-[50px]" v-model="values.cloudInstances.maxPerZone" :disabled="readonly" />
+            <Field :name="'cloudInstances.maxPerZone'" v-slot="{ errorMessage }">
+              <InputBlock
+                title="Максимум узлов на зону"
+                spec="spec.cloudInstances.maxPerZone"
+                ref="maxPerZone"
+                required
+                :error-message="errorMessage"
+              >
+                <InputNumber
+                  :input-class="{ 'p-invalid': errorMessage, 'p-inputtext-sm w-[50px]': true }"
+                  v-model="values.cloudInstances.maxPerZone"
+                  :disabled="readonly"
+                />
               </InputBlock>
             </Field>
-            <Field :name="'cloudInstances.instanceClass'">
-              <InputBlock title="Класс машин" spec="spec.cloudInstances.classReference" type="column">
+            <Field :name="'cloudInstances.instanceClass'" v-slot="{ errorMessage }">
+              <InputBlock
+                title="Класс машин"
+                spec="spec.cloudInstances.classReference.kind"
+                type="column"
+                required
+                :error-message="errorMessage"
+              >
                 <Dropdown
                   v-model="values.cloudInstances.instanceClass"
                   class="w-full"
+                  :class="{ 'p-invalid': errorMessage }"
                   :options="instanceClassesOptions"
                   :disabled="readonly || !item.isNew"
                 />
@@ -77,7 +104,12 @@
             </Field>
             <Field :name="'cloudInstances.priority'">
               <InputBlock title="Зоны" spec="spec.cloudInstances.zones" type="column">
-                <Dropdown v-model="values.cloudInstances.zones" class="w-full" :options="discovery.availableZones" :disabled="readonly" />
+                <MultiSelect
+                  v-model="values.cloudInstances.zones"
+                  class="w-full"
+                  :options="discovery.availableZones"
+                  :disabled="readonly"
+                />
               </InputBlock>
             </Field>
           </div>
@@ -339,11 +371,12 @@ import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
 import SelectButton from "primevue/selectbutton";
 import Dropdown from "primevue/dropdown";
+import MultiSelect from "primevue/multiselect";
 import InputSwitch from "primevue/inputswitch";
 
 import GridBlock from "@/components/common/grid/GridBlock.vue";
 
-import { objectAsArray, arrayToObject, isBlank } from "@/utils";
+import { objectAsArray, arrayToObject, isBlank, removeEmptyFromObject } from "@/utils";
 import { useForm, Field } from "vee-validate";
 import { toFormValidator } from "@vee-validate/zod";
 import { z, ZodObject } from "zod";
@@ -463,15 +496,15 @@ function updateValidationSchema(newValues: any = null): void {
     return;
   }
 
-  if (!isBlank(newValues.cloudInsstances)) {
+  if (props.item.isAutoscalable) {
     schema = schema.merge(
       z.object({
         cloudInstances: z.object({
-          instanceClass: z.string().optional(),
+          instanceClass: z.string(),
           zones: z.string().array().optional(),
           priority: z.number().optional(),
-          minPerZone: z.number().optional(),
-          maxPerZone: z.number().optional(),
+          maxPerZone: z.number(),
+          minPerZone: z.number(),
           maxUnavailablePerZone: z.number().optional(),
           maxSurgePerZone: z.number().optional(),
           standBy: z.number().optional(),
@@ -522,19 +555,37 @@ function updateValidationSchema(newValues: any = null): void {
     );
   }
 
-  if (!isBlank(newValues.cri)) {
+  if (!isBlank(newValues.cri) && newValues.cri.type) {
+    let criSchema = z.object({
+      type: z.string(),
+    });
+
+    if (newValues.cri.type == "Docker") {
+      criSchema = criSchema.merge(
+        z.object({
+          docker: z
+            .object({
+              maxConcurrentDownloads: z.number().optional(),
+              manage: z.boolean().optional(),
+            })
+            .optional(),
+        })
+      );
+    } else if (newValues.cri.type == "Containerd") {
+      criSchema = criSchema.merge(
+        z.object({
+          containerd: z
+            .object({
+              maxConcurrentDownloads: z.number().optional(),
+            })
+            .optional(),
+        })
+      );
+    }
+
     schema = schema.merge(
       z.object({
-        cri: z.object({
-          type: z.string(),
-          docker: z.object({
-            maxConcurentDownloads: z.number(),
-            manage: z.boolean(),
-          }),
-          containerd: z.object({
-            maxConcurentDownloads: z.number(),
-          }),
-        }),
+        cri: criSchema,
       })
     );
   }
@@ -553,9 +604,9 @@ function updateValidationSchema(newValues: any = null): void {
     schema = schema.merge(
       z.object({
         kubelet: z.object({
-          containerLogMaxFiles: z.number(),
-          containerLogMaxSize: z.string().min(1),
-          maxPods: z.number(),
+          containerLogMaxFiles: z.number().optional(),
+          containerLogMaxSize: z.string().optional(),
+          maxPods: z.number().optional(),
           rootDir: z.string().optional(),
         }),
       })
@@ -583,6 +634,8 @@ function updateValidationSchema(newValues: any = null): void {
       })
     );
   }
+
+  console.log("SCHME!", schema);
 
   formSchema.value = schema;
 }
@@ -612,13 +665,13 @@ const initialValues = computed(() => {
     },
     disruptions: {
       approvalMode: props.item.spec.disruptions?.approvalMode,
-      automatic: props.item.spec.disruptions?.automatic || { windows: [], drainBeforeApproval: null },
+      automatic: props.item.spec.disruptions?.automatic || { windows: [], drainBeforeApproval: undefined },
       rollingUpdate: props.item.spec.disruptions?.rollingUpdate || { windows: [] },
     },
     cri: {
       type: props.item.spec.cri?.type,
-      docker: props.item.spec.cri?.docker || { maxConcurrentDownloads: null, manage: null },
-      containerd: props.item.spec.cri?.containerd || { maxConcurrentDownloads: null },
+      docker: props.item.spec.cri?.docker || { maxConcurrentDownloads: undefined, manage: undefined },
+      containerd: props.item.spec.cri?.containerd || { maxConcurrentDownloads: undefined },
     },
     operatingSystem: {
       manageKernel: props.item.spec.operatingSystem?.manageKernel,
@@ -646,7 +699,7 @@ const { handleSubmit, values, meta, resetForm, errors, isSubmitting } = useForm(
 
 watch(values, updateValidationSchema, { immediate: true });
 
-useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
+if (!props.readonly) useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
 
 // Functions
 const submitForm = handleSubmit(
@@ -673,10 +726,16 @@ const submitForm = handleSubmit(
     }
 
     // cloudInstances
-    if (isBlank(values.cloudInstances)) {
+    if (!props.item.isAutoscalable) {
       delete newSpec.cloudInstances;
     } else {
-      newSpec.cloudInstances = values.cloudInstances;
+      newSpec.cloudInstances = {
+        classReference: {
+          name: values.cloudInstances.instanceClass,
+          kind: discovery.instanceClassKlass.all()[0].kind, // KOSTYL
+        },
+        ...(removeEmptyFromObject((({ instanceClass, ...o }) => o)(values.cloudInstances)) as typeof values.cloudInstances),
+      };
     }
 
     // disruptions
@@ -699,11 +758,18 @@ const submitForm = handleSubmit(
       }
     }
 
+    // cri
+    if (!isBlank(values.cri) && values.cri.type) {
+      newSpec.cri = removeEmptyFromObject(values.cri) as typeof values.cri;
+    } else {
+      delete newSpec.cri;
+    }
+
     // operatingSystem
     if (isBlank(values.operatingSystem)) {
       delete newSpec.operatingSystem;
     } else {
-      newSpec.cloudInstances = values.operatingSystem;
+      newSpec.operatingSystem = values.operatingSystem;
     }
 
     // kubelet

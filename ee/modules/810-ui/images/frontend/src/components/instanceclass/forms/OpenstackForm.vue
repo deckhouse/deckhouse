@@ -5,7 +5,7 @@
         <CardTitle title="Конфигурация" icon="IconOpenStackLogo" />
       </template>
       <template #content>
-        <div class="flex flex-wrap items-start -mx-24 -my-6">
+        <div class="flex flex-wrap items-start -mx-24 -my-6 mb-6">
           <div class="mx-24 my-6">
             <Field :name="'name'" v-slot="{ errorMessage }">
               <InputBlock title="Имя" help="Обязательное поле" type="column" class="mb-6" required :error-message="errorMessage">
@@ -35,13 +35,14 @@
                 />
               </InputBlock>
             </Field>
+
             <FieldGroupTitle title="Диск" />
             <div class="flex flex-col gap-y-6">
               <Field :name="'rootDiskSize'" v-slot="{ errorMessage }">
                 <InputBlock
                   title="Размер ГБ"
                   spec="spec.rootDiskSize"
-                  help="Этот параметр влияет на тип диска<br> <a href='ya.ru' target='_blank' class='text-blue-500'>TODO: Как подобрать размер диска</a>"
+                  help="Этот параметр влияет на тип диска<br> <a href='https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#%D0%BA%D0%B0%D0%BA-%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D1%8C-rootdisksize-%D0%B8-%D0%BA%D0%BE%D0%B3%D0%B4%D0%B0-%D0%BE%D0%BD-%D0%BF%D1%80%D0%B5%D0%B4%D0%BF%D0%BE%D1%87%D1%82%D0%B8%D1%82%D0%B5%D0%BB%D0%B5%D0%BD' target='_blank' class='text-blue-500'>Как подобрать размер диска</a>"
                   :disabled="readonly"
                   :error-message="errorMessage"
                 >
@@ -51,6 +52,22 @@
             </div>
           </div>
 
+          <div class="mx-24 my-6">
+            <Field :name="'imageName'" v-slot="{ errorMessage }">
+              <InputBlock
+                title="Образ машины"
+                spec="spec.imageName"
+                type="column"
+                :disabled="readonly"
+                :error-message="errorMessage"
+              >
+                <InputText class="p-inputtext-sm w-[450px]" v-model="values.imageName" :disabled="readonly" />
+              </InputBlock>
+            </Field>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-start -mx-24 -my-6">
           <div class="mx-24 my-6">
             <FieldGroupTitle title="Сеть" />
 
@@ -75,44 +92,28 @@
           </div>
 
           <div class="mx-24 my-6">
-            <FieldGroupTitle title="Прочее" />
-
-            <div class="flex flex-col gap-y-6">
-              <Field :name="'imageName'" v-slot="{ errorMessage }">
-                <InputBlock
-                  title="Образ машины"
-                  spec="spec.imageName"
-                  type="column"
-                  help="Установлено значение по-умолчанию"
-                  :disabled="readonly"
-                  :error-message="errorMessage"
-                >
-                  <InputText class="p-inputtext-sm w-[450px]" v-model="values.imageName" :disabled="readonly" />
-                </InputBlock>
-              </Field>
-            </div>
+            <FieldArray :name="'additionalSecurityGroups'" v-slot="{ fields, push, remove }" v-model="values.additionalSecurityGroups">
+              <InputLabelGroup
+                class="mx-12 my-6"
+                title="Дополнительные группы безопасности"
+                spec="spec.additionalSecurityGroups"
+                :fields="['value']"
+                :disabled="readonly"
+                :model="fields"
+                @push="push({ value: '' })"
+                @remove="remove"
+              />
+            </FieldArray>
           </div>
         </div>
 
         <CardDivider />
 
         <div class="flex flex-wrap items-start -mx-12 -my-6">
-          <FieldArray :name="'additionalSecurityGroups'" v-slot="{ fields, push, remove }" v-model="values.additionalSecurityGroups">
-            <InputLabelGroup
-              class="mx-12 my-6"
-              title="Дополнительные группы безопасности"
-              spec="spec.additionalSecurityGroups"
-              :fields="['value']"
-              :disabled="readonly"
-              :model="fields"
-              @push="push({ value: '' })"
-              @remove="remove"
-            />
-          </FieldArray>
           <FieldArray :name="'additionalTagsAsArray'" v-slot="{ fields, push, remove }" v-model="values.additionalTagsAsArray">
             <InputLabelGroup
               class="mx-12 my-6"
-              title="Дополнительные лейблы"
+              title="Дополнительные теги"
               spec="spec.additionalTags"
               :disabled="readonly"
               :fields="['key', 'value']"

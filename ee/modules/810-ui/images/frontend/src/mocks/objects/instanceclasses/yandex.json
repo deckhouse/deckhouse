@@ -4,7 +4,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "amuffin",
-      "creationTimestamp": "2022-08-11T09:38:01Z"
+      "creationTimestamp": "2022-08-11T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b260"
     },
     "spec": {
       "cores": 4,
@@ -39,7 +40,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "bmuffin",
-      "creationTimestamp": "2022-08-12T09:38:01Z"
+      "creationTimestamp": "2022-08-12T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b261"
     },
     "spec": {
       "cores": 4,
@@ -68,7 +70,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "muffin-frontend",
-      "creationTimestamp": "2022-08-13T09:38:01Z"
+      "creationTimestamp": "2022-08-13T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b262"
     },
     "spec": {
       "cores": 4,
@@ -93,7 +96,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "muffin-preprod",
-      "creationTimestamp": "2022-08-14T09:38:01Z"
+      "creationTimestamp": "2022-08-14T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b263"
     },
     "spec": {
       "cores": 4,
@@ -123,7 +127,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "muffin-preprod-stateful",
-      "creationTimestamp": "2022-08-15T09:38:01Z"
+      "creationTimestamp": "2022-08-15T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b264"
     },
     "spec": {
       "cores": 4,
@@ -153,7 +158,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "shalom",
-      "creationTimestamp": "2022-08-16T09:38:01Z"
+      "creationTimestamp": "2022-08-16T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b265"
     },
     "spec": {
       "cores": 4,
@@ -183,7 +189,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "rumba",
-      "creationTimestamp": "2022-08-17T09:38:01Z"
+      "creationTimestamp": "2022-08-17T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b266"
     },
     "spec": {
       "cores": 4,
@@ -213,7 +220,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "zumba",
-      "creationTimestamp": "2022-08-18T09:38:01Z"
+      "creationTimestamp": "2022-08-18T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b267"
     },
     "spec": {
       "cores": 4,
@@ -243,7 +251,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "samurai",
-      "creationTimestamp": "2022-08-19T09:38:01Z"
+      "creationTimestamp": "2022-08-19T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b268"
     },
     "spec": {
       "cores": 4,
@@ -273,7 +282,8 @@
     "kind": "YandexInstanceClass",
     "metadata": {
       "name": "gun",
-      "creationTimestamp": "2022-08-20T09:38:01Z"
+      "creationTimestamp": "2022-08-20T09:38:01Z",
+      "uid": "001cc516-e239-43f7-b7b4-a22e8050b269"
     },
     "spec": {
       "cores": 4,

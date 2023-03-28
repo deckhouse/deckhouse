@@ -6,7 +6,7 @@ class YandexInstanceClass extends InstanceClassBase {
   public kind: string = "YandexInstanceClass";
 }
 
-YandexInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/YandexInstanceClasses`;
+YandexInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/yandexinstanceclasses`;
 
 // @ts-ignore
 YandexInstanceClass.setRoutes(YandexInstanceClass.resourceBaseUrl, {}, YandexInstanceClass.rawRoutes(), {

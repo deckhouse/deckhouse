@@ -2,7 +2,7 @@
 import type { IUpdateWindow } from "@/types";
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
-interface IDeckhouseModuleAttributes {
+interface DeckhouseModuleAttributes {
   apiVersion: string;
   kind: string;
   metadata: {
@@ -47,8 +47,9 @@ export class DeckhouseSettings {
   }
 }
 
-class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleAttributes {
+class DeckhouseModuleSettings extends NxnResourceWs<DeckhouseModuleSettings> implements DeckhouseModuleAttributes {
   public static klassName: string = "DeckhouseModuleSettings";
+  public is_stale: boolean = false;
 
   public apiVersion: string;
   public kind: string;
@@ -56,8 +57,8 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
   public spec: { [key: string]: string | object; settings: DeckhouseSettings };
   public status: object;
 
-  constructor(attrs: IDeckhouseModuleAttributes) {
-    super();
+  constructor(attrs: DeckhouseModuleAttributes) {
+    super(attrs);
     this.apiVersion = attrs.apiVersion;
     this.kind = attrs.kind;
     this.metadata = attrs.metadata;
@@ -86,17 +87,12 @@ class DeckhouseModuleSettings extends NxnResourceWs implements IDeckhouseModuleA
   }
 }
 
-// @ts-ignore
-DeckhouseModuleSettings.setRoutes(
-  `k8s/deckhouse.io/moduleconfigs/deckhouse`,
-  {},
-  {
-    get: { method: "GET", storeResponse: true, withCredentials: false },
-    update: { method: "PUT", storeResponse: false, withCredentials: false },
-  },
-  { dynamic_cache: false }
-);
-// @ts-ignore
+const routes = {
+  get: { method: "GET", storeResponse: true, withCredentials: false },
+  update: { method: "PUT", storeResponse: false, withCredentials: false },
+};
+
+DeckhouseModuleSettings.setRoutes(`k8s/deckhouse.io/moduleconfigs/deckhouse`, {}, routes, { queryCache: true });
 DeckhouseModuleSettings.initSubscription("GroupResourceChannel", { groupResource: "moduleconfigs.deckhouse.io" });
 
 export default DeckhouseModuleSettings;

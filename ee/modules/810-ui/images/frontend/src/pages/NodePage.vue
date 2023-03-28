@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect } from "vue";
+import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 
 import Skeleton from "primevue/skeleton";
@@ -24,19 +24,11 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import TabsBlock from "@/components/common/tabs/TabsBlock.vue";
 
 import NodeForm from "@/components/node/NodeForm.vue";
-// import Breadcrumb from 'primevue/breadcrumb';
-// const breadcrumbItems = ref([]);
+import useLoadAll from "@/composables/useLoadAll";
 
 const route = useRoute();
 const isEdit = computed(() => route.name == "NodeEdit");
-const isLoading = ref(false);
 const node = ref<Node>();
-
-// watch(
-//   () => route.name,
-//   () => { if (node.value) breadcrumbItems.value = route.meta.breadcrumbs(route.params.ng_name, node.value); },
-//   { flush: 'post' }
-// );
 
 const tabs = [
   {
@@ -49,16 +41,5 @@ const tabs = [
   },
 ];
 
-function reload(): void {
-  isLoading.value = true;
-  Node.get({ name: route.params.name }).then((res: Node | null): void => {
-    if (res) {
-      node.value = res;
-      // breadcrumbItems.value = route.meta.breadcrumbs(route.params.ng_name, node.value);
-    }
-
-    isLoading.value = false;
-  });
-}
-reload();
+const { isLoading } = useLoadAll(() => (node.value = Node.find_with((model) => model.metadata.name == route.params.name.toString())));
 </script>

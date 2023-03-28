@@ -7,7 +7,7 @@ import deckhouseConfig from "./objects/deckhouse_settings.json";
 import deckhouseReleases from "./objects/deckhouse_releases.json";
 
 const cloudProvider = import.meta.env.VITE_CLOUD_PROVIDER || "aws";
-const { default: instanceclasses } = await import(`./objects/${cloudProvider}instanceclasses.json`);
+const { default: instanceclasses } = await import(`./objects/instanceclasses/${cloudProvider}.json`);
 
 // replace adapter to mocked
 ActionCable.adapters.WebSocket = WebSocket;

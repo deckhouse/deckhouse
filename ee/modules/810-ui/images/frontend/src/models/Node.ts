@@ -1,11 +1,11 @@
-import type { IStatusCondition, ITaint } from "@/types";
+import type { Badge, IStatusCondition, ITaint } from "@/types";
 // @ts-ignore
 import NxnResourceWs from "@lib/nxn-common/models/NxnResourceWs";
 
 interface NodeMetadata {
   creationTimestamp: string;
   name?: string;
-  resourceVersion?: number;
+  resourceVersion?: string;
   uid?: string;
   labels?: { [key: string]: any };
   annotations?: { [key: string]: any };
@@ -25,6 +25,7 @@ interface NodeStatus {
 
 interface NodeSpec {
   taints: ITaint[];
+  unschedulable?: boolean;
   [key: string]: any;
 }
 
@@ -36,10 +37,9 @@ interface NodeAttributes {
   status: NodeStatus;
 }
 
-class Node extends NxnResourceWs implements NodeAttributes {
+class Node extends NxnResourceWs<Node> implements NodeAttributes {
   public static ws_disconnected: boolean;
   public static klassName: string = "Node";
-  public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public is_stale: boolean = false;
   public nodeGroupName?: string;
 
@@ -50,7 +50,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   public spec: NodeSpec;
 
   constructor(attrs: NodeAttributes) {
-    super();
+    super(attrs);
     this.apiVersion = attrs.apiVersion;
     this.metadata = attrs.metadata;
     this.kind = attrs.kind;
@@ -64,8 +64,14 @@ class Node extends NxnResourceWs implements NodeAttributes {
     return model.metadata.uid;
   }
 
-  public static toVersionKey(model: Node): number | undefined {
+  public static toVersionKey(model: Node): string | undefined {
     return model.metadata.resourceVersion;
+  }
+
+  public static filterByNodeGroup(ngName?: string): Node[] {
+    if (!ngName) return this.all();
+
+    return this.filter((model: Node) => model.nodeGroupName == ngName);
   }
 
   public static onWsDisconnect() {
@@ -76,9 +82,19 @@ class Node extends NxnResourceWs implements NodeAttributes {
     });
   }
 
+  public get badges(): Badge[] {
+    const badges: Badge[] = [];
+
+    badges.push({ title: this.state, type: this.errorMessage ? "warning" : this.state == "Ready" ? "success" : "info" });
+
+    if (this.unschedulable) badges.push({ title: "Unschedulable", type: "warning" });
+
+    return badges;
+  }
+
   // Attributes
   public get group(): string | undefined {
-    return this.metadata.labels["node.deckhouse.io/group"];
+    return this.metadata.labels && this.metadata.labels["node.deckhouse.io/group"];
   }
 
   public get state(): string {
@@ -86,7 +102,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public get zone(): string | undefined {
-    return this.metadata.labels["topology.kubernetes.io/zone"];
+    return this.metadata.labels && this.metadata.labels["topology.kubernetes.io/zone"];
   }
 
   public get internalIP(): string | undefined {
@@ -130,7 +146,7 @@ class Node extends NxnResourceWs implements NodeAttributes {
   }
 
   public get hostname(): string | undefined {
-    return this.metadata.labels["kubernetes.io/hostname"];
+    return this.metadata.labels && this.metadata.labels["kubernetes.io/hostname"];
   }
 
   public get machineID(): string | undefined {
@@ -151,10 +167,13 @@ class Node extends NxnResourceWs implements NodeAttributes {
 
   public get needDisruptionApproval(): boolean {
     return (
-      this.metadata.annotations["update.node.deckhouse.io/disruption-required"] == "" &&
-      !this.metadata.annotations["update.node.deckhouse.io/disruption-approved"]
+      !!this.metadata.annotations && this.metadata.annotations["update.node.deckhouse.io/disruption-required"] == ""
       // TODO: check nodeGroup.metadata.annotations["disruption.mode"] == "Manual"
     );
+  }
+
+  public get disruptionApproved(): boolean {
+    return !!this.metadata.annotations && "update.node.deckhouse.io/disruption-approved" in this.metadata.annotations;
   }
 
   public get errorMessage(): string | undefined {

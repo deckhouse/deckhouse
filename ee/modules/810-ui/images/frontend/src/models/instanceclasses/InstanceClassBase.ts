@@ -30,11 +30,10 @@ export interface InstanceClassAttributes {
   isNew?: boolean;
 }
 
-abstract class InstanceClassBase extends NxnResourceWs {
+abstract class InstanceClassBase extends NxnResourceWs<InstanceClassBase> {
   public static resourceBaseUrl: string;
   public static ws_disconnected: boolean;
   public static klassName: string;
-  public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public is_stale: boolean = false;
   public isNew?: boolean = false;
   public nodeGroupName?: string;
@@ -46,7 +45,7 @@ abstract class InstanceClassBase extends NxnResourceWs {
   public status: InstanceClassStatus;
 
   constructor(attrs: InstanceClassAttributes) {
-    super();
+    super(attrs);
     this.apiVersion = attrs.apiVersion || this.apiVersion;
     this.kind = attrs.kind || this.kind;
     this.metadata = attrs.metadata || ({} as IInstanceClassMetadata);

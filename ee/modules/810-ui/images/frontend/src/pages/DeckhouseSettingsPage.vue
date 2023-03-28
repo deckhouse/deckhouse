@@ -5,15 +5,17 @@
       <TabsBlock :items="tabs" />
     </template>
   </PageActions>
-  <DeckhouseModuleSettingsForm :deckhouse-module-settings="deckhouseModuleSettings" v-if="!isLoading && deckhouseModuleSettings" />
+  <DeckhouseModuleSettingsForm :deckhouse-module-settings="deckhouseSettings" v-if="!isLoading && deckhouseSettings" />
   <CardBlock v-if="isLoading" :content-loading="isLoading" />
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from "vue";
+import { ref, computed } from "vue";
 
 import type { TabsItem } from "@/types";
 import DeckhouseModuleSettings, { type IDeckhouseModuleRelease } from "@/models/DeckhouseModuleSettings";
+
+import useLoadAll from "@/composables/useLoadAll";
 
 import PageTitle from "@/components/common/page/PageTitle.vue";
 import PageActions from "@/components/common/page/PageActions.vue";
@@ -22,56 +24,21 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 
 import DeckhouseModuleSettingsForm from "@/components/releases/DeckhouseModuleSettingsForm.vue";
 
-import { useRoute } from "vue-router";
-// import Breadcrumb from 'primevue/breadcrumb';
-// const breadcrumbItems = useRoute().meta.breadcrumbs();
+const { lists, deckhouseSettings, isLoading } = useLoadAll(({ deckhouseSettings }) => {
+  // KOSTYL
+  deckhouseSettings!.value!.spec.settings.release ||= {} as IDeckhouseModuleRelease;
+  deckhouseSettings!.value!.spec.settings.release.notification ||= {};
+});
 
-// TODO: one "type" of tabs = one object with one list
-import DeckhouseRelease from "@/models/DeckhouseRelease";
-import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
-const ReleaseItemsCount = ref<number | null>(null);
-function resetCount() {
-  ReleaseItemsCount.value = list.items.length;
-}
-const list = useListDynamic<DeckhouseRelease>(
-  DeckhouseRelease,
-  {
-    onLoadSuccess: resetCount,
-    afterAdd: resetCount,
-    afterRemove: resetCount,
-    onLoadError: (error: any) => {
-      console.error("Failed to load counts: " + JSON.stringify(error));
-    },
-  },
-  {}
-);
-list.activate();
-onBeforeUnmount(() => list.destroyList());
-const tabs = [
+const tabs = computed<TabsItem[]>(() => [
   {
     title: "Версии",
-    badge: ReleaseItemsCount,
+    badge: lists.releases.items?.length || null,
     routeName: "Home",
   },
   {
-    active: true,
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",
   },
-] as Array<TabsItem>;
-
-const isLoading = ref(true);
-const deckhouseModuleSettings = ref<DeckhouseModuleSettings>();
-DeckhouseModuleSettings.get().then((res: DeckhouseModuleSettings) => {
-  res.spec.settings.release ||= {} as IDeckhouseModuleRelease;
-  res.spec.settings.release.notification ||= {};
-
-  // deckhouseSettings.value = new DeckhouseSettings(res.spec.settings);
-  deckhouseModuleSettings.value = res;
-  // setValues(res.spec.settings);
-  isLoading.value = false;
-
-  // @ts-ignore
-  // DeckhouseModuleSettings.subscribe(); // TODO: Alerts if smth change
-});
+]);
 </script>

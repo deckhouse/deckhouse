@@ -23,7 +23,7 @@ class NxnResourceHttp extends NxnResourceDB {
   static apiUrl(_) {
     let paths = arguments;
     let baseUrl = this.baseUrl || `${window.location.protocol}//${window.location.hostname}`;
-    return [baseUrl, ...paths].filter(function (e) { return e }).join('/');
+    return [baseUrl, ...paths].filter(Boolean).join("/");
   }
 
   static setRoutes(defaultUrl, defaultUrlParams, apiActions, kwargs) {

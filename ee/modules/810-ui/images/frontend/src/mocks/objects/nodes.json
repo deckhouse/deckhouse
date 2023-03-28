@@ -1,169 +1,169 @@
 [
   {
-  "apiVersion": "v1",
-  "kind": "Node",
-  "metadata": {
-    "annotations": {
-      "csi.volume.kubernetes.io/nodeid": "{\"ebs.csi.aws.com\":\"i-c0f2d368ae68fbb72\"}",
-      "node.alpha.kubernetes.io/ttl": "15",
-      "node.deckhouse.io/configuration-checksum": "56ab7a447efb0c67e0806289f5c14ac6b3c4cd88606728d1033611efad575cdc",
-      "node.deckhouse.io/virtualization": "kvm",
-      "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+    "apiVersion": "v1",
+    "kind": "Node",
+    "metadata": {
+      "annotations": {
+        "csi.volume.kubernetes.io/nodeid": "{\"ebs.csi.aws.com\":\"i-c0f2d368ae68fbb72\"}",
+        "node.alpha.kubernetes.io/ttl": "15",
+        "node.deckhouse.io/configuration-checksum": "56ab7a447efb0c67e0806289f5c14ac6b3c4cd88606728d1033611efad575cdc",
+        "node.deckhouse.io/virtualization": "kvm",
+        "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+      },
+      "creationTimestamp": "2023-02-10T10:04:11Z",
+      "labels": {
+        "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/instance-type": "m5a.12xlarge",
+        "beta.kubernetes.io/os": "linux",
+        "failure-domain.beta.kubernetes.io/region": "us-east-2",
+        "failure-domain.beta.kubernetes.io/zone": "us-east-2c",
+        "kubernetes.io/arch": "amd64",
+        "kubernetes.io/hostname": "kube-system-5bb6d73e-58dbf-f8t4t",
+        "kubernetes.io/os": "linux",
+        "node-role.deckhouse.io/system": "",
+        "node-role.kubernetes.io/system": "",
+        "node.deckhouse.io/group": "system",
+        "node.deckhouse.io/type": "CloudEphemeral",
+        "node.kubernetes.io/instance-type": "m5a.12xlarge",
+        "topology.ebs.csi.aws.com/zone": "us-east-2c",
+        "topology.kubernetes.io/region": "us-east-2",
+        "topology.kubernetes.io/zone": "us-east-2c"
+      },
+      "name": "kube-system-5bb6d73e-58dbf-f8t4t",
+      "resourceVersion": "6682328857",
+      "uid": "79cd9077-e1ea-4c0f-975a-b7cb88ffb703"
     },
-    "creationTimestamp": "2023-02-10T10:04:11Z",
-    "labels": {
-      "beta.kubernetes.io/arch": "amd64",
-      "beta.kubernetes.io/instance-type": "m5a.12xlarge",
-      "beta.kubernetes.io/os": "linux",
-      "failure-domain.beta.kubernetes.io/region": "us-east-2",
-      "failure-domain.beta.kubernetes.io/zone": "us-east-2c",
-      "kubernetes.io/arch": "amd64",
-      "kubernetes.io/hostname": "kube-system-5bb6d73e-58dbf-f8t4t",
-      "kubernetes.io/os": "linux",
-      "node-role.deckhouse.io/system": "",
-      "node-role.kubernetes.io/system": "",
-      "node.deckhouse.io/group": "system",
-      "node.deckhouse.io/type": "CloudEphemeral",
-      "node.kubernetes.io/instance-type": "m5a.12xlarge",
-      "topology.ebs.csi.aws.com/zone": "us-east-2c",
-      "topology.kubernetes.io/region": "us-east-2",
-      "topology.kubernetes.io/zone": "us-east-2c"
+    "spec": {
+      "podCIDR": "1.2.3.4/24",
+      "podCIDRs": [
+        "1.2.3.4/24"
+      ],
+      "providerID": "aws:///us-east-2c/i-c0f2d368ae68fbb72",
+      "taints": [
+        {
+          "effect": "NoExecute",
+          "key": "dedicated.deckhouse.io",
+          "value": "system"
+        }
+      ]
     },
-    "name": "kube-system-5bb6d73e-58dbf-f8t4t",
-    "resourceVersion": "6682328857",
-    "uid": "79cd9077-e1ea-4c0f-975a-b7cb88ffb703"
-  },
-  "spec": {
-    "podCIDR": "1.2.3.4/24",
-    "podCIDRs": [
-      "1.2.3.4/24"
-    ],
-    "providerID": "aws:///us-east-2c/i-c0f2d368ae68fbb72",
-    "taints": [
-      {
-        "effect": "NoExecute",
-        "key": "dedicated.deckhouse.io",
-        "value": "system"
-      }
-    ]
-  },
-  "status": {
-    "addresses": [
-      {
-        "address": "1.2.3.4",
-        "type": "InternalIP"
+    "status": {
+      "addresses": [
+        {
+          "address": "1.2.3.4",
+          "type": "InternalIP"
+        },
+        {
+          "address": "1.2.3.4",
+          "type": "ExternalIP"
+        },
+        {
+          "address": "ip-1-2-3-4.us-east-2.compute.internal",
+          "type": "InternalDNS"
+        },
+        {
+          "address": "ip-1-2-3-4.us-east-2.compute.internal",
+          "type": "Hostname"
+        },
+        {
+          "address": "ec1-2-3-4.us-east-2.compute.amazonaws.com",
+          "type": "ExternalDNS"
+        }
+      ],
+      "allocatable": {
+        "cpu": "48",
+        "ephemeral-storage": "49377969933",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "197272181191",
+        "pods": "110"
       },
-      {
-        "address": "1.2.3.4",
-        "type": "ExternalIP"
+      "capacity": {
+        "cpu": "48",
+        "ephemeral-storage": "50758604Ki",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "194594560Ki",
+        "pods": "110"
       },
-      {
-        "address": "ip-1-2-3-4.us-east-2.compute.internal",
-        "type": "InternalDNS"
+      "conditions": [
+        {
+          "lastHeartbeatTime": "2023-03-10T10:06:58Z",
+          "lastTransitionTime": "2023-02-10T10:06:58Z",
+          "message": "RouteController created a route",
+          "reason": "RouteCreated",
+          "status": "False",
+          "type": "NetworkUnavailable"
+        },
+        {
+          "lastHeartbeatTime": "2023-02-14T15:32:51Z",
+          "lastTransitionTime": "2023-02-10T12:38:39Z",
+          "message": "kubelet has sufficient memory available",
+          "reason": "KubeletHasSufficientMemory",
+          "status": "False",
+          "type": "MemoryPressure"
+        },
+        {
+          "lastHeartbeatTime": "2023-02-14T15:32:51Z",
+          "lastTransitionTime": "2023-02-10T12:38:39Z",
+          "message": "kubelet has no disk pressure",
+          "reason": "KubeletHasNoDiskPressure",
+          "status": "False",
+          "type": "DiskPressure"
+        },
+        {
+          "lastHeartbeatTime": "2023-02-14T15:32:51Z",
+          "lastTransitionTime": "2023-02-10T12:38:39Z",
+          "message": "kubelet has sufficient PID available",
+          "reason": "KubeletHasSufficientPID",
+          "status": "False",
+          "type": "PIDPressure"
+        },
+        {
+          "lastHeartbeatTime": "2023-02-14T15:32:51Z",
+          "lastTransitionTime": "2023-02-10T12:38:39Z",
+          "message": "kubelet is posting ready status. AppArmor enabled",
+          "reason": "KubeletReady",
+          "status": "True",
+          "type": "Ready"
+        }
+      ],
+      "daemonEndpoints": {
+        "kubeletEndpoint": {
+          "Port": 10250
+        }
       },
-      {
-        "address": "ip-1-2-3-4.us-east-2.compute.internal",
-        "type": "Hostname"
+      "images": [
+        {
+          "names": [
+            "registry.deckhouse.io/deckhouse/fe@sha256:3c07d72c35883163c7217aad35f6de14be573be7d2cad081ad069bcf228f0c2a",
+            "registry.deckhouse.io/deckhouse/fe:d39f22bff0b046aedf720013d6ae2bbeef94eb6b8b377447af6f63cc-1671100152724"
+          ],
+          "sizeBytes": 297655650
+        }
+      ],
+      "nodeInfo": {
+        "architecture": "amd64",
+        "bootID": "29bb5509-3b85-4715-abbb-cc0ae7f9854a",
+        "containerRuntimeVersion": "containerd://1.5.11-1-gd037943a2",
+        "kernelVersion": "5.4.0-1049-aws",
+        "kubeProxyVersion": "v1.23.15",
+        "kubeletVersion": "v1.23.15",
+        "machineID": "ec21295328bf3862c388cfa703345044",
+        "operatingSystem": "linux",
+        "osImage": "Ubuntu 20.04.2 LTS",
+        "systemUUID": "ec212953-28bf-3862-c388-cfa703345044"
       },
-      {
-        "address": "ec1-2-3-4.us-east-2.compute.amazonaws.com",
-        "type": "ExternalDNS"
-      }
-    ],
-    "allocatable": {
-      "cpu": "48",
-      "ephemeral-storage": "49377969933",
-      "hugepages-1Gi": "0",
-      "hugepages-2Mi": "0",
-      "memory": "197272181191",
-      "pods": "110"
-    },
-    "capacity": {
-      "cpu": "48",
-      "ephemeral-storage": "50758604Ki",
-      "hugepages-1Gi": "0",
-      "hugepages-2Mi": "0",
-      "memory": "194594560Ki",
-      "pods": "110"
-    },
-    "conditions": [
-      {
-        "lastHeartbeatTime": "2023-02-10T10:06:58Z",
-        "lastTransitionTime": "2023-02-10T10:06:58Z",
-        "message": "RouteController created a route",
-        "reason": "RouteCreated",
-        "status": "False",
-        "type": "NetworkUnavailable"
-      },
-      {
-        "lastHeartbeatTime": "2023-02-14T15:32:51Z",
-        "lastTransitionTime": "2023-02-10T12:38:39Z",
-        "message": "kubelet has sufficient memory available",
-        "reason": "KubeletHasSufficientMemory",
-        "status": "False",
-        "type": "MemoryPressure"
-      },
-      {
-        "lastHeartbeatTime": "2023-02-14T15:32:51Z",
-        "lastTransitionTime": "2023-02-10T12:38:39Z",
-        "message": "kubelet has no disk pressure",
-        "reason": "KubeletHasNoDiskPressure",
-        "status": "False",
-        "type": "DiskPressure"
-      },
-      {
-        "lastHeartbeatTime": "2023-02-14T15:32:51Z",
-        "lastTransitionTime": "2023-02-10T12:38:39Z",
-        "message": "kubelet has sufficient PID available",
-        "reason": "KubeletHasSufficientPID",
-        "status": "False",
-        "type": "PIDPressure"
-      },
-      {
-        "lastHeartbeatTime": "2023-02-14T15:32:51Z",
-        "lastTransitionTime": "2023-02-10T12:38:39Z",
-        "message": "kubelet is posting ready status. AppArmor enabled",
-        "reason": "KubeletReady",
-        "status": "True",
-        "type": "Ready"
-      }
-    ],
-    "daemonEndpoints": {
-      "kubeletEndpoint": {
-        "Port": 10250
-      }
-    },
-    "images": [
-      {
-        "names": [
-          "registry.deckhouse.io/deckhouse/fe@sha256:3c07d72c35883163c7217aad35f6de14be573be7d2cad081ad069bcf228f0c2a",
-          "registry.deckhouse.io/deckhouse/fe:d39f22bff0b046aedf720013d6ae2bbeef94eb6b8b377447af6f63cc-1671100152724"
-        ],
-        "sizeBytes": 297655650
-      }
-    ],
-    "nodeInfo": {
-      "architecture": "amd64",
-      "bootID": "29bb5509-3b85-4715-abbb-cc0ae7f9854a",
-      "containerRuntimeVersion": "containerd://1.5.11-1-gd037943a2",
-      "kernelVersion": "5.4.0-1049-aws",
-      "kubeProxyVersion": "v1.23.15",
-      "kubeletVersion": "v1.23.15",
-      "machineID": "ec21295328bf3862c388cfa703345044",
-      "operatingSystem": "linux",
-      "osImage": "Ubuntu 20.04.2 LTS",
-      "systemUUID": "ec212953-28bf-3862-c388-cfa703345044"
-    },
-    "volumesAttached": [
-      {
-        "devicePath": "",
-        "name": "kubernetes.io/csi/ebs.csi.aws.com^vol-0c5bb56092b3ffcd7"
-      }
-    ],
-    "volumesInUse": [
-      "kubernetes.io/csi/ebs.csi.aws.com^vol-0c5bb56092b3ffcd7"
-    ]
-  }
+      "volumesAttached": [
+        {
+          "devicePath": "",
+          "name": "kubernetes.io/csi/ebs.csi.aws.com^vol-0c5bb56092b3ffcd7"
+        }
+      ],
+      "volumesInUse": [
+        "kubernetes.io/csi/ebs.csi.aws.com^vol-0c5bb56092b3ffcd7"
+      ]
+    }
   },
   {
     "apiVersion": "v1",
@@ -177,7 +177,7 @@
         "volumes.kubernetes.io/controller-managed-attach-detach": "true",
         "update.node.deckhouse.io/disruption-required": ""
       },
-      "creationTimestamp": "2022-08-29T14:20:42Z",
+      "creationTimestamp": "2023-03-29T14:20:42Z",
       "labels": {
         "beta.kubernetes.io/arch": "amd64",
         "beta.kubernetes.io/instance-type": "c5a.4xlarge",
@@ -185,18 +185,18 @@
         "failure-domain.beta.kubernetes.io/region": "us-east-2",
         "failure-domain.beta.kubernetes.io/zone": "us-east-2c",
         "kubernetes.io/arch": "amd64",
-        "kubernetes.io/hostname": "kube-gracias-5bb6d73e-79ccd-tsrns",
+        "kubernetes.io/hostname": "kube-autotests-5bb6d73e-79ccd-tsrns",
         "kubernetes.io/os": "linux",
-        "node-role.muffin.io/gracias": "",
-        "node-role.kubernetes.io/gracias": "",
-        "node.deckhouse.io/group": "gracias",
+        "node-role.muffin.io/autotests": "",
+        "node-role.kubernetes.io/autotests": "",
+        "node.deckhouse.io/group": "autotests",
         "node.deckhouse.io/type": "CloudEphemeral",
         "node.kubernetes.io/instance-type": "c5a.4xlarge",
         "topology.ebs.csi.aws.com/zone": "us-east-2c",
         "topology.kubernetes.io/region": "us-east-2",
         "topology.kubernetes.io/zone": "us-east-2c"
       },
-      "name": "kube-gracias-5bb6d73e-79ccd-tsrns",
+      "name": "kube-autotests-5bb6d73e-79ccd-tsrns",
       "resourceVersion": "6682352505",
       "uid": "347878d2-2042-4aba-a86c-4184fa4f5f2a"
     },
@@ -210,7 +210,7 @@
         {
           "effect": "NoExecute",
           "key": "dedicated.muffin.io",
-          "value": "gracias"
+          "value": "autotests"
         }
       ]
     },
@@ -301,6 +301,132 @@
           "reason": "SomethingHappened",
           "status": "True",
           "type": "Error"
+        }
+      ],
+      "daemonEndpoints": {
+        "kubeletEndpoint": {
+          "Port": 10250
+        }
+      },
+      "images": [
+        {
+          "names": [
+            "registry.pwlnh.com/muffin/muffin_ta_v2@sha256:8234d71e1e7c5b6e9a7387660789bddc8a306e0f1491c53add1c95c0135971c6",
+            "registry.pwlnh.com/muffin/muffin_ta_v2:0a049957de8983d784f27707d4699c6c165af582da8e72a3482d6040-1671543546087"
+          ],
+          "sizeBytes": 271748132
+        }
+      ],
+      "nodeInfo": {
+        "architecture": "amd64",
+        "bootID": "a6b21ba9-2828-476c-8d25-f09d970c5e82",
+        "containerRuntimeVersion": "containerd://1.5.11-1-gd037943a2",
+        "kernelVersion": "5.4.0-1049-aws",
+        "kubeProxyVersion": "v1.23.15",
+        "kubeletVersion": "v1.23.15",
+        "machineID": "ec25c5ec95d329ffdf7b0a16450b243c",
+        "operatingSystem": "linux",
+        "osImage": "Ubuntu 20.04.2 LTS",
+        "systemUUID": "ec25c5ec-95d3-29ff-df7b-0a16450b243c"
+      }
+    }
+  },
+  {
+    "apiVersion": "v1",
+    "kind": "Node",
+    "metadata": {
+      "annotations": {
+        "csi.volume.kubernetes.io/nodeid": "{\"ebs.csi.aws.com\":\"i-0d8916b0973d1646f\"}",
+        "node.alpha.kubernetes.io/ttl": "15",
+        "node.deckhouse.io/configuration-checksum": "63a53f6f0433085fcfd9d193cd7d527e0d18f4c6ddc15b2842db5a4f88bb4049",
+        "node.deckhouse.io/virtualization": "kvm",
+        "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+      },
+      "creationTimestamp": "2023-03-29T14:20:42Z",
+      "labels": {
+        "beta.kubernetes.io/arch": "amd64",
+        "beta.kubernetes.io/instance-type": "c5a.4xlarge",
+        "beta.kubernetes.io/os": "linux",
+        "failure-domain.beta.kubernetes.io/region": "us-east-2",
+        "failure-domain.beta.kubernetes.io/zone": "us-east-2c",
+        "kubernetes.io/arch": "amd64",
+        "kubernetes.io/hostname": "kube-autotests-5bb6d73e-79ccd-tsrns",
+        "kubernetes.io/os": "linux",
+        "node-role.muffin.io/autotests": "",
+        "node-role.kubernetes.io/autotests": "",
+        "node.deckhouse.io/group": "autotests",
+        "node.deckhouse.io/type": "CloudEphemeral",
+        "node.kubernetes.io/instance-type": "c5a.4xlarge",
+        "topology.ebs.csi.aws.com/zone": "us-east-2c",
+        "topology.kubernetes.io/region": "us-east-2",
+        "topology.kubernetes.io/zone": "us-east-2c"
+      },
+      "name": "kube-autotests-5bb6d73e-79ccd-tscbc",
+      "resourceVersion": "6682352506",
+      "uid": "347878d2-2042-4aba-a86c-4184fa4f5f2b"
+    },
+    "spec": {
+      "unschedulable": true,
+      "podCIDR": "1.2.3.4/24",
+      "podCIDRs": [
+        "1.2.3.4/24"
+      ],
+      "providerID": "aws:///us-east-2c/i-0d8916b0973d1646f",
+      "taints": [
+        {
+          "effect": "NoExecute",
+          "key": "dedicated.muffin.io",
+          "value": "autotests"
+        }
+      ]
+    },
+    "status": {
+      "addresses": [
+        {
+          "address": "1.2.3.4",
+          "type": "InternalIP"
+        },
+        {
+          "address": "1.2.3.4",
+          "type": "ExternalIP"
+        },
+        {
+          "address": "ip-1-2-3-4.us-east-2.compute.internal",
+          "type": "InternalDNS"
+        },
+        {
+          "address": "ip-1-2-3-4.us-east-2.compute.internal",
+          "type": "Hostname"
+        },
+        {
+          "address": "ec1-2-3-4-142.us-east-2.compute.amazonaws.com",
+          "type": "ExternalDNS"
+        }
+      ],
+      "allocatable": {
+        "cpu": "16",
+        "ephemeral-storage": "49377969933",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "32971230175",
+        "pods": "110"
+      },
+      "capacity": {
+        "cpu": "16",
+        "ephemeral-storage": "50758604Ki",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "32523704Ki",
+        "pods": "110"
+      },
+      "conditions": [
+        {
+          "lastHeartbeatTime": "2023-02-14T15:36:49Z",
+          "lastTransitionTime": "2023-01-30T11:18:53Z",
+          "message": "kubelet is posting ready status. AppArmor enabled",
+          "reason": "KubeletReady",
+          "status": "True",
+          "type": "Ready"
         }
       ],
       "daemonEndpoints": {

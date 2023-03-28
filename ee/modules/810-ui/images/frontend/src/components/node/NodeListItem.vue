@@ -3,7 +3,7 @@
     :title="item.metadata.name"
     :route="{ name: 'NodeShow', params: { ng_name: item.group, name: item.metadata.name } }"
     notice-type="warning"
-    :badges="[{ title: item.state, type: item.errorMessage ? 'warning' : 'success' }]"
+    :badges="item.badges"
   >
     <template #content>
       <CardParamGrid>

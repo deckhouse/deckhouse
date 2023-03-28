@@ -7,19 +7,24 @@
     <template #filter>
       <FilterBlock>
         <label class="block text-sm font-medium text-gray-800 mb-2">Сортировать по:</label>
-        <Dropdown v-model="sortBy" :options="sortOptions" optionLabel="name" optionValue="value" />
+        <Dropdown
+          :options="sortOptions"
+          optionLabel="name"
+          optionValue="value"
+          v-model="sortBy"
+          @change="$router.push({ query: { sortBy: $event.value } })"
+        />
       </FilterBlock>
     </template>
   </PageActions>
   <GridBlock>
-    <InstanceClassesList :sort-by="sortBy" />
+    <InstanceClassesList />
   </GridBlock>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-
-import Discovery from "@/models/Discovery";
+import { useRouter } from "vue-router";
 
 import Dropdown from "primevue/dropdown";
 
@@ -30,20 +35,13 @@ import ButtonBlock from "../components/common/button/ButtonBlock.vue";
 import InstanceClassesList from "@/components/instanceclass/InstanceClassesList.vue";
 import FilterBlock from "@/components/common/filter/FilterBlock.vue";
 
-import FlashMessagesService from "@/services/FlashMessagesService.js";
-import FormatError from "@/services/FormatError.js";
-import router from "@/router";
-
-// import Breadcrumb from 'primevue/breadcrumb';
-// const breadcrumbItems = useRoute().meta.breadcrumbs();
+const router = useRouter();
 
 const sortOptions = [
-  { name: "Время создания", value: "creationTimestamp" },
+  { name: "Время создания (сначала новые)", value: "creationTimestamp" },
   { name: "Имя", value: "name" },
 ];
-const sortBy = ref<string>("name");
-
-const discovery = Discovery.get();
+const sortBy = ref(router.currentRoute.value.query.sortBy?.toString() || "name");
 
 function createItem() {
   router.push({ name: "InstanceClassNew" });

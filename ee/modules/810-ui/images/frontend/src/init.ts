@@ -91,25 +91,28 @@ export default async function initApp({
     NxnResourceWs.cableUrl = import.meta.env.VITE_WS_URL || `${window.location.host}/api/subscribe`;
   }
 
-  if (initMocks == "app") {
-    const { worker } = await import("./mocks/browser");
-    worker.start({
-      onUnhandledRequest: "bypass",
-    });
+  if (!import.meta.env.VITE_NO_MOCK) {
+    //
+    if (initMocks == "app") {
+      const { worker } = await import("./mocks/browser");
+      worker.start({
+        onUnhandledRequest: "bypass",
+      });
 
-    // This initializes MockServer and mocks window.WebSocket and ActionCable.adapter.WebSockets
-    if (initWS) {
-      await import("./mocks/actioncable");
+      // This initializes MockServer and mocks window.WebSocket and ActionCable.adapter.WebSockets
+      if (initWS) {
+        await import("./mocks/actioncable");
+      }
+    } else if (initMocks == "storybook") {
+      const { initialize, getWorker } = await import("msw-storybook-addon");
+      const { handlers } = await import("@/mocks/handlers");
+
+      initialize({
+        onUnhandledRequest: "bypass",
+      });
+
+      getWorker().use(...handlers.discovery);
     }
-  } else if (initMocks == "storybook") {
-    const { initialize, getWorker } = await import("msw-storybook-addon");
-    const { handlers } = await import("@/mocks/handlers");
-
-    initialize({
-      onUnhandledRequest: "bypass",
-    });
-
-    getWorker().use(...handlers.discovery);
   }
   if (initWS) await waitWsConnection(); // TODO: KOSTYL??? wait ws connection before starting application. But this function is not async :/
 

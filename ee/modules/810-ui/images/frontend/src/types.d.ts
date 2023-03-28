@@ -1,5 +1,5 @@
 import type { RouteParamsRaw } from "vue-router";
-import * as Icons from "../common/icon";
+import * as Icons from "@/components/common/icon";
 import { UpdateWindowsDays } from "./consts";
 
 export type IconsType = keyof typeof Icons;
@@ -18,7 +18,7 @@ export type ISidebarItem = {
 export type TabsItem = {
   title: string;
   active?: boolean;
-  badge?: Ref<number>;
+  badge?: number | null;
   disabled?: boolean;
   routeName: string;
   routeParams?: RouteParamsRaw;

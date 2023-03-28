@@ -48,7 +48,7 @@
                 </InputBlock>
               </Field>
               <Field :name="'diskType'" v-slot="{ errorMessage }">
-                <InputBlock title="Тип" type="column" spec="spec.diskType" class="mb-6" :disabled="readonly" :error-message="errorMessage">
+                <InputBlock title="Тип" type="column" spec="spec.diskType" :disabled="readonly" :error-message="errorMessage">
                   <InputText
                     class="p-inputtext-sm w-[450px]"
                     :class="{ 'p-invalid': errorMessage }"
@@ -113,7 +113,7 @@
             <InputLabelGroup
               class="mx-12 my-6"
               title="Дополнительные лейблы"
-              spec="spec.additionalTags"
+              spec="spec.additionalLabels"
               :disabled="readonly"
               :fields="['key', 'value']"
               :model="fields"

@@ -41,14 +41,15 @@ const props = defineProps({
   icon: String as PropType<keyof typeof Icons>,
 });
 
-function getBadgeStyles(type: string): string {
-  const classes = {
-    default: "bg-black",
-    warning: "bg-orange-400",
-    error: "bg-red-400",
-    info: "bg-slate-400",
-    success: "bg-green-500",
-  };
-  return type ? classes[type as keyof typeof classes] : classes["default"];
+const styles = {
+  default: "bg-black",
+  warning: "bg-orange-400",
+  error: "bg-red-400",
+  info: "bg-slate-400",
+  success: "bg-green-500",
+};
+
+function getBadgeStyles(type: keyof typeof styles): string {
+  return type ? styles[type] : styles["default"];
 }
 </script>

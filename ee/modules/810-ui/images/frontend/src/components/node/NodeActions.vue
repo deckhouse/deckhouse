@@ -1,18 +1,19 @@
 <template>
   <ButtonBlock
-    title="Одобрить обновление с перезагрузкой"
+    :title="`${node.disruptionApproved ? 'Одобрено' : 'Одобрить'} обновление с перезагрузкой`"
     type="primary"
     v-if="node.needDisruptionApproval"
     @click="disruptionApprove"
     :loading="disruptionApproveLoading"
+    :disabled="node.disruptionApproved"
   ></ButtonBlock>
   <ButtonBlock
-    :title="node.unschedulable ? 'Uncordon' : 'Cordon'"
+    :title="(node.unschedulable ? 'Uncordon' : 'Cordon') + (cordonLoading ? 'ing' : '')"
     type="primary-subtle"
     @click="toggleCordon"
     :loading="cordonLoading"
   ></ButtonBlock>
-  <ButtonBlock title="Drain" type="primary-subtle" @click="drain" :loading="drainLoading"></ButtonBlock>
+  <ButtonBlock :title="`Drain${drainLoading ? 'ing' : ''}`" type="primary-subtle" @click="drain" :loading="drainLoading"></ButtonBlock>
 </template>
 
 <script setup lang="ts">

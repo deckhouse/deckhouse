@@ -48,7 +48,7 @@
                 </InputBlock>
               </Field>
               <Field :name="'diskType'" v-slot="{ errorMessage }">
-                <InputBlock title="Тип" type="column" spec="spec.diskType" class="mb-6" :disabled="readonly" :error-message="errorMessage">
+                <InputBlock title="Тип" type="column" spec="spec.diskType" :disabled="readonly" :error-message="errorMessage">
                   <InputText
                     class="p-inputtext-sm w-[450px]"
                     :class="{ 'p-invalid': errorMessage }"

@@ -1,76 +1,28 @@
 <template>
-  <template v-if="!list.isLoading.value">
-    <NodeListItem v-for="item in list.items" :key="item.metadata.name" :item="item"></NodeListItem>
+  <template v-if="!isLoading">
+    <NodeListItem v-for="item in items" :key="item.primaryKey()" :item="item"></NodeListItem>
   </template>
-  <CardBlock v-if="list.isLoading.value" :content-loading="true"></CardBlock>
-  <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
+  <CardBlock v-if="isLoading" :content-loading="true"></CardBlock>
+  <CardEmpty v-if="!isLoading && items.length == 0" />
 </template>
 
 <script setup lang="ts">
-import { reactive, watch, onBeforeUnmount } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
+import type Node from "@/models/Node";
 
-import Node from "@/models/Node";
+import useLoadAll from "@/composables/useLoadAll";
 
 import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardEmpty from "@/components/common/card/CardEmpty.vue";
 import NodeListItem from "@/components/node/NodeListItem.vue";
 
-const props = defineProps({
-  sortBy: {
-    type: String,
-    required: true,
-  },
-});
-
-watch(
-  () => props.sortBy,
-  () => list.resort()
-);
-
 const route = useRoute();
+const { isLoading, lists } = useLoadAll();
 
-const filter = reactive<any>({});
-const localFilter = reactive<any>({});
-if (route.params.ng_name) {
-  // filter["node.deckhouse.io/group"] = route.params.ng_name;
-  // localFilter["node.deckhouse.io/group"] = route.params.ng_name;
-  localFilter.nodeGroupName = route.params.ng_name;
-}
-
-const emit = defineEmits<{ (e: "set-count", value: number): void }>();
-function resetCount() {
-  emit("set-count", list.items.length);
-}
-
-const list = useListDynamic<Node>(
-  Node,
-  {
-    onLoadSuccess: resetCount,
-    afterAdd: resetCount,
-    afterRemove: resetCount,
-
-    sortBy: (a: Node, b: Node) => {
-      switch (props.sortBy) {
-        case "name": {
-          return String(a.metadata.name).localeCompare(String(b.metadata.name));
-        }
-        default: {
-          return Date.parse(b.metadata.creationTimestamp) - Date.parse(a.metadata.creationTimestamp);
-        }
-      }
-    },
-
-    onLoadError: (error: any) => {
-      console.error("NotImplementedError: ReleaseItemsList.onLoadError: " + JSON.stringify(error));
-    },
-  },
-  filter,
-  localFilter
+// KOSTYL: filter by nodegroup
+const items = computed<Node[]>(() =>
+  lists.nodes.items.filter((node: Node) => !route.params.ng_name || node.nodeGroupName == route.params.ng_name.toString())
 );
-
-list.activate();
-onBeforeUnmount(() => list.destroyList());
 </script>

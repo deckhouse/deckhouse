@@ -15,11 +15,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from "vue";
+import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 
 import NodeGroup, { type NodeTypesType } from "@/models/NodeGroup";
-import Discovery from "@/models/Discovery";
+import Node from "@/models/Node";
+import type { LoadError, TabsItem } from "@/types";
+
+import useLoadAll from "@/composables/useLoadAll";
 
 import Skeleton from "primevue/skeleton";
 
@@ -31,43 +34,31 @@ import NodeGroupForm from "@/components/node_group/NodeGroupForm.vue";
 import CardBlock from "@/components/common/card/CardBlock.vue";
 import ErrorPage from "@/pages/ErrorPage.vue";
 
-// TODO: one "type" of tabs = one object with one list
-import Node from "@/models/Node";
-import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
-import type { LoadError, TabsItem } from "@/types";
-
 const route = useRoute();
 
-const nodesCount = ref<number | null>(null);
 const loadError = ref<LoadError | undefined>();
-function resetCount() {
-  nodesCount.value = list.items.length;
-}
-const list = useListDynamic<Node>(
-  Node,
-  {
-    onLoadSuccess: resetCount,
-    afterAdd: resetCount,
-    afterRemove: resetCount,
-    onLoadError: (error: any) => {
-      console.error("Failed to load counts: " + JSON.stringify(error));
-    },
-  },
-  {},
-  { nodeGroupName: route.params.ng_name }
-);
-list.activate();
-onBeforeUnmount(() => list.destroyList());
 
-const isLoading = ref(true);
 const nodeGroup = ref<NodeGroup>();
 const isEdit = computed(() => route.name == "NodeGroupEdit");
 const isNew = computed(() => route.name == "NodeGroupNew");
 
+const { isLoading } = useLoadAll(() => {
+  if (isNew.value) {
+    const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
+    nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType }, metadata: { name: "" } }); // TODO: validate type param
+  } else {
+    nodeGroup.value = NodeGroup.find_with((model: NodeGroup) => model.name == route.params.name);
+
+    if (!nodeGroup.value) {
+      loadError.value = { code: 404, text: "Не найдено." };
+    }
+  }
+});
+
 const tabs = computed(() => {
   let res: TabsItem[] = [];
 
-  if (isNew.value || !nodeGroup.value) return res;
+  if (isNew.value || !nodeGroup.value || isLoading.value) return res;
 
   res.push({
     title: "Просмотр",
@@ -83,48 +74,10 @@ const tabs = computed(() => {
   res.push({
     title: "Список узлов",
     routeName: "NodeList",
-    badge: nodesCount,
+    badge: Node.filterByNodeGroup(route.params.name.toString()).length,
     routeParams: { ng_name: route.params.name },
   });
 
   return res;
 });
-
-Discovery.get()
-  .instanceClassKlass.query()
-  .then(() => {
-    if (isNew.value) {
-      const nodeType = route.query.type ? (route.query.type.toString() as NodeTypesType) : "CloudEphemeral";
-      nodeGroup.value = new NodeGroup({ isNew: true, spec: { nodeType }, metadata: { name: "" } }); // TODO: validate type param
-      isLoading.value = false;
-    } else {
-      NodeGroup.get({ name: route.params.name }).then(
-        (res: NodeGroup | null): void => {
-          if (res) {
-            nodeGroup.value = res;
-            // breadcrumbItems.value = route.meta.breadcrumbs(nodeGroup.value);
-          }
-          isLoading.value = false;
-        },
-        (error) => {
-          console.log("ERROR!", error);
-          isLoading.value = false;
-          let errorText;
-          switch (error.response.status) {
-            case 404: {
-              errorText = "Не найдено.";
-              break;
-            }
-            default: {
-              errorText = "Что-то пошло не так.";
-            }
-          }
-          loadError.value = {
-            code: error.response.status,
-            text: errorText,
-          };
-        }
-      );
-    }
-  });
 </script>

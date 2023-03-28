@@ -16,21 +16,35 @@ interface IDeckhouseReleaseStatus {
   transitionTime?: string;
 }
 
+export interface DeckhouseReleaseChangelog {
+  [key: string]: {
+    fixes: {
+      impact?: string;
+      pull_request: string;
+      summary: string;
+    }[];
+  };
+}
+
+interface DeckhouseReleaseSpec {
+  version: string;
+  changelogLink: string;
+  changelog: DeckhouseReleaseChangelog;
+  [key: string]: string | object;
+}
+
 interface DeckhouseReleaseAttributes {
   kind: string;
   apiVersion: string;
   approved: boolean;
   metadata: DeckhouseReleaseMetadata;
-  spec: {
-    [key: string]: string | object;
-  };
+  spec: DeckhouseReleaseSpec;
   status?: IDeckhouseReleaseStatus;
 }
 
-class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttributes {
+class DeckhouseRelease extends NxnResourceWs<DeckhouseRelease> implements DeckhouseReleaseAttributes {
   public static ws_disconnected: boolean;
   public static klassName: string = "DeckhouseRelease";
-  public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public is_stale: boolean = false;
 
   public apiVersion: string = "deckhouse.io/v1";
@@ -39,7 +53,7 @@ class DeckhouseRelease extends NxnResourceWs implements DeckhouseReleaseAttribut
   public status?: IDeckhouseReleaseStatus;
   public approved: boolean;
   public metadata: DeckhouseReleaseMetadata;
-  public spec: { [key: string]: string | object };
+  public spec: DeckhouseReleaseSpec;
 
   constructor(attrs: DeckhouseReleaseAttributes) {
     super();

@@ -14,16 +14,16 @@
 
       <div class="flex flex-wrap items-start gap-x-12 gap-y-6 mb-6">
         <CardParamGroup title="Состояние узлов">
-          <CardParamGroupItem title="Всего узлов" :value="item.status.nodes" />
-          <CardParamGroupItem title="Готовые" :value="item.status.ready" />
-          <CardParamGroupItem title="Актуальные" :value="item.status.upToDate" />
+          <CardParamGroupItem title="Всего узлов" :value="item.status?.nodes" />
+          <CardParamGroupItem title="Готовые" :value="item.status?.ready" />
+          <CardParamGroupItem title="Актуальные" :value="item.status?.upToDate" />
         </CardParamGroup>
 
         <CardParamGroup title="Параметры автомасштабирования" v-if="item.isAutoscalable">
-          <CardParamGroupItem title="Узлов на зону" :value="`${item.status.min || '?'}-${item.status.max || '?'}`" />
-          <CardParamGroupItem title="Необходимо" :value="item.status.desired || '—'" />
-          <CardParamGroupItem title="Заказано" :value="item.status.instances || '—'" />
-          <CardParamGroupItem title="Резерв" :value="item.status.standby || '—'" />
+          <CardParamGroupItem title="Узлов на зону" :value="`${item.status?.min ?? '?'}-${item.status?.max ?? '?'}`" />
+          <CardParamGroupItem title="Необходимо" :value="item.status?.desired ?? '—'" />
+          <CardParamGroupItem title="Заказано" :value="item.status?.instances ?? '—'" />
+          <CardParamGroupItem title="Резерв" :value="item.status?.standby ?? '—'" />
         </CardParamGroup>
 
         <CardParam title="Зоны" :value="item.zones" v-if="item.isAutoscalable" />

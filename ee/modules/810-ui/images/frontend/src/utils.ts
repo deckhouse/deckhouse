@@ -35,3 +35,7 @@ export function isBlank(value: any): boolean {
   if (typeof value === "object") return !value || !Object.values(value).find((v) => !isBlank(v));
   return typeof value == "undefined";
 }
+
+export function removeEmptyFromObject(obj: object): object {
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => !isBlank(v)));
+}

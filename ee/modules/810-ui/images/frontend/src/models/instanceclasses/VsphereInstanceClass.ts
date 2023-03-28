@@ -6,7 +6,7 @@ class VsphereInstanceClass extends InstanceClassBase {
   public kind: string = "VsphereInstanceClass";
 }
 
-VsphereInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/VsphereInstanceClasses`;
+VsphereInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/vsphereinstanceclasses`;
 
 // @ts-ignore
 VsphereInstanceClass.setRoutes(VsphereInstanceClass.resourceBaseUrl, {}, VsphereInstanceClass.rawRoutes(), {

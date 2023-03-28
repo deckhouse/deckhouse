@@ -6,17 +6,18 @@ import deckhouseReleases from "./objects/deckhouse_releases.json";
 import nodes from "./objects/nodes.json";
 import nodeGroups from "./objects/nodegroups.json";
 // InstanceClasses
-import awsInstanceClasses from "./objects/awsinstanceclasses.json";
-import azureInstanceClasses from "./objects/azureinstanceclasses.json";
-import openstackInstanceClasses from "./objects/openstackinstanceclasses.json";
-import gcpInstanceClasses from "./objects/gcpinstanceclasses.json";
-import vsphereInstanceClasses from "./objects/vsphereinstanceclasses.json";
-import yandexInstanceClasses from "./objects/yandexinstanceclasses.json";
+import awsInstanceClasses from "./objects/instanceclasses/aws.json";
+import azureInstanceClasses from "./objects/instanceclasses/azure.json";
+import openstackInstanceClasses from "./objects/instanceclasses/openstack.json";
+import gcpInstanceClasses from "./objects/instanceclasses/gcp.json";
+import vsphereInstanceClasses from "./objects/instanceclasses/vsphere.json";
+import yandexInstanceClasses from "./objects/instanceclasses/yandex.json";
 
 // @ts-ignore
 import NxnResourceHttp from "@lib/nxn-common/models/NxnResourceHttp";
 
-const discovery = discoveries[(import.meta.env.VITE_CLOUD_PROVIDER || "aws") as keyof typeof discoveries];
+const cloudProvider = import.meta.env.VITE_CLOUD_PROVIDER || "aws";
+const discovery = discoveries[cloudProvider as keyof typeof discoveries];
 
 function getDeckhouseRelease(name: any): any {
   return deckhouseReleases.find((dr) => dr.metadata.name == name);
@@ -108,7 +109,7 @@ export const handlers = {
 
       return res(ctx.delay(500), ctx.json(json));
     }),
-    rest.put(NxnResourceHttp.apiUrl("k8s/nodes/:name/drain"), (req, res, ctx) => {
+    rest.post(NxnResourceHttp.apiUrl("k8s/nodes/:name/drain"), (req, res, ctx) => {
       return res(ctx.delay(2000), ctx.status(204));
     }),
   ],

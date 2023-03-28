@@ -36,13 +36,30 @@
               </InputBlock>
             </Field>
             <FieldGroupTitle title="Диск" />
-            <div class="flex flex-col gap-y-6">
+            <div class="flex flex-col gap-y-6 mb-6">
               <Field :name="'diskSizeGb'" v-slot="{ errorMessage }">
                 <InputBlock title="Размер ГБ" spec="spec.diskSizeGb" :disabled="readonly" :error-message="errorMessage">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.diskSizeGb" />
                 </InputBlock>
               </Field>
+
+              <Field :name="'diskType'" v-slot="{ errorMessage }">
+                <InputBlock title="Тип" type="column" spec="spec.diskType" :disabled="readonly" :error-message="errorMessage">
+                  <InputText
+                    class="p-inputtext-sm w-[450px]"
+                    :class="{ 'p-invalid': errorMessage }"
+                    v-model="values.diskType"
+                    :disabled="readonly"
+                  />
+                </InputBlock>
+              </Field>
             </div>
+
+            <Field :name="'IOPS'" v-slot="{ errorMessage }">
+              <InputBlock title="IOPS" spec="spec.IOPS" :disabled="readonly" :error-message="errorMessage">
+                <InputNumber class="p-inputtext-sm" :disabled="true" v-model="values.IOPS" />
+              </InputBlock>
+            </Field>
           </div>
 
           <div class="mx-24 my-6">
@@ -58,7 +75,7 @@
                   :error-message="errorMessage"
                   :disabled="readonly"
                 >
-                  <InputText class="p-inputtext-sm w-[450px]" :disabled="readonly" />
+                  <InputText class="p-inputtext-sm w-[450px]" :disabled="readonly" v-model="values.ami" />
                 </InputBlock>
               </Field>
               <Field :name="'spot'" v-slot="{ errorMessage }">
@@ -94,7 +111,7 @@
           <FieldArray :name="'additionalTagsAsArray'" v-slot="{ fields, push, remove }" v-model="values.additionalTagsAsArray">
             <InputLabelGroup
               class="mx-12 my-6"
-              title="Дополнительные лейблы"
+              title="Дополнительные теги"
               spec="spec.additionalTags"
               :disabled="readonly"
               :fields="['key', 'value']"
@@ -165,6 +182,7 @@ const formSchema = z.object({
   diskSizeGb: z.number().optional(),
   diskType: z.string().optional(),
   ami: z.string().optional(),
+  IOPS: z.number().optional(),
   spot: z.boolean().optional(),
   additionalSecurityGroups: z
     .object({
@@ -188,6 +206,7 @@ const initialValues = computed(() => ({
   diskSizeGb: props.item.spec.diskSizeGb,
   diskType: props.item.spec.diskType,
   ami: props.item.spec.ami,
+  IOPS: props.item.spec.IOPS,
   spot: props.item.spec.spot,
   additionalSecurityGroups: props.item.spec.additionalSecurityGroups?.map((asg: string) => ({ value: asg })),
   additionalTagsAsArray: objectAsArray(props.item.spec.additionalTags),
@@ -213,6 +232,7 @@ const submitForm = handleSubmit(
     newSpec.diskSizeGb = values.diskSizeGb;
     newSpec.diskType = values.diskType;
     newSpec.ami = values.ami;
+    newSpec.IOPS = values.IOPS;
     newSpec.spot = values.spot;
     newSpec.additionalSecurityGroups = values.additionalSecurityGroups?.map((obj: { value: string }) => obj.value);
     newSpec.additionalTags = arrayToObject(values.additionalTagsAsArray);

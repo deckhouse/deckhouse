@@ -107,10 +107,9 @@ interface NodeGroupAttributes {
   status?: NodeGroupStatus;
 }
 
-class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
+class NodeGroup extends NxnResourceWs<NodeGroup> implements NodeGroupAttributes {
   public static ws_disconnected: boolean;
   public static klassName: string = "NodeGroup";
-  public ws_disconnected?: boolean; // probably not needed, TODO: review necessity
   public is_stale: boolean = false;
   public isNew?: boolean = false;
 
@@ -121,7 +120,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   public status?: NodeGroupStatus;
 
   constructor(attrs: NodeGroupAttributes) {
-    super();
+    super(attrs);
     this.apiVersion = attrs.apiVersion || this.apiVersion;
     this.kind = attrs.kind || this.kind;
 
@@ -143,7 +142,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
   public static onWsDisconnect() {
     if (this.ws_disconnected) return;
     this.ws_disconnected = true;
-    this.all().forEach((item: NodeGroup) => {
+    this.all().forEach((item) => {
       item.ws_disconnected = true;
     });
     console.log('this.$eventBus.emit("::wsDisconnected", "Incident");');
@@ -178,6 +177,10 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
     return this.metadata.name;
   }
 
+  public get creationTimestamp(): string {
+    return this.metadata?.creationTimestamp || Date.now().toString();
+  }
+
   public get isDeleting(): boolean {
     return !!this.metadata.deletionTimestamp;
   }
@@ -191,7 +194,13 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
     for (const condition of this.status.conditions) {
       switch (condition.type) {
         case "Ready": {
-          badges.push(condition.status == "True" ? { title: "Ready", type: "success" } : { title: "NotReady", type: "error" });
+          badges.push(
+            condition.status == "True"
+              ? { title: "Ready", type: "success" }
+              : this.status?.nodes == 0
+              ? { title: "Empty", type: "info" }
+              : { title: "NotReady", type: "error" }
+          );
           break;
         }
         case "Updating": {
@@ -234,7 +243,7 @@ class NodeGroup extends NxnResourceWs implements NodeGroupAttributes {
     return this.spec.cloudInstances?.classReference?.name;
   }
 
-  public get zones(): Array<string> {
+  public get zones(): string[] {
     return this.spec.cloudInstances?.zones || [];
   }
 

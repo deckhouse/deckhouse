@@ -312,7 +312,9 @@
         "automatic": {
           "windows": [
             {
-              "days": ["Thu"],
+              "days": [
+                "Thu"
+              ],
               "from": "03:00",
               "to": "05:00"
             }
@@ -404,7 +406,7 @@
       "cloudInstances": {
         "classReference": {
           "kind": "AWSInstanceClass",
-          "name": "muffin-console"
+          "name": "muffin"
         },
         "maxPerZone": 10,
         "minPerZone": 2,
@@ -413,11 +415,15 @@
           "overprovisioningRate": 50
         },
         "zones": [
-          "us-east-2c"
+          "us-east-2c",
+          "eu-west-1d"
         ]
       },
       "cri": {
-        "type": "Containerd"
+        "type": "Containerd",
+        "containerd": {
+          "maxConcurrentDownloads": 2
+        }
       },
       "disruptions": {
         "approvalMode": "Automatic",
@@ -426,7 +432,9 @@
             {
               "from": "01:00",
               "to": "02:00",
-              "days": ["Mon"]
+              "days": [
+                "Mon"
+              ]
             }
           ],
           "drainBeforeApproval": false
@@ -457,7 +465,7 @@
       "conditions": [
         {
           "lastTransitionTime": "2023-03-13T12:56:51Z",
-          "status": "True",
+          "status": "False",
           "type": "Ready"
         },
         {
@@ -488,9 +496,9 @@
       "lastMachineFailures": [],
       "max": 1,
       "min": 1,
-      "nodes": 1,
-      "ready": 1,
-      "upToDate": 1
+      "nodes": 0,
+      "ready": 0,
+      "upToDate": 0
     }
   },
   {
@@ -571,7 +579,7 @@
       "labels": {
         "app.kubernetes.io/managed-by": "Helm"
       },
-      "name": "prod-main-app",
+      "name": "system",
       "resourceVersion": "898487758",
       "uid": "c54f2670-a8c3-4efa-91ca-ab30d306b9c6"
     },

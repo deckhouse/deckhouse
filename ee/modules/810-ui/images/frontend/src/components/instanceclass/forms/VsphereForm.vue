@@ -5,7 +5,7 @@
         <CardTitle title="Конфигурация" icon="IconVmWareLogo" />
       </template>
       <template #content>
-        <div class="flex flex-wrap items-start -mx-24 -my-6">
+        <div class="flex flex-wrap items-start -mx-24 -my-6 mb-6">
           <div class="mx-24 my-6">
             <Field :name="'name'" v-slot="{ errorMessage }">
               <InputBlock title="Имя" help="Обязательное поле" type="column" class="mb-6" required :error-message="errorMessage">
@@ -17,17 +17,6 @@
                 />
               </InputBlock>
             </Field>
-
-             <Field :name="'template'" v-slot="{ errorMessage }">
-                <InputBlock title="Идентификатор образа" type="column" spec="spec.template" class="mb-6" :error-message="errorMessage" help="Установлено значение по-умолчанию">
-                  <InputText
-                    class="p-inputtext-sm w-[500px]"
-                    :class="{ 'p-invalid': errorMessage }"
-                    v-model="values.template"
-                    :disabled="readonly"
-                  />
-                </InputBlock>
-              </Field>
 
             <div class="flex flex-col gap-y-6">
               <Field :name="'numCPUs'" v-slot="{ errorMessage }">
@@ -41,7 +30,7 @@
                 </InputBlock>
               </Field>
               <Field :name="'resourcePool'" v-slot="{ errorMessage }">
-                <InputBlock title="Пул ресурсов" type="column" class="mb-6" :error-message="errorMessage" spec="spec.resourcePool">
+                <InputBlock title="Пул ресурсов" type="column" :error-message="errorMessage" spec="spec.resourcePool">
                   <InputText
                     class="p-inputtext-sm w-[500px]"
                     :class="{ 'p-invalid': errorMessage }"
@@ -51,7 +40,7 @@
                 </InputBlock>
               </Field>
               <Field :name="'datastore'" v-slot="{ errorMessage }">
-                <InputBlock title="Datastore" type="column" class="mb-6" :error-message="errorMessage" spec="spec.datastore">
+                <InputBlock title="Datastore" type="column" :error-message="errorMessage" spec="spec.datastore">
                   <InputText
                     class="p-inputtext-sm w-[500px]"
                     :class="{ 'p-invalid': errorMessage }"
@@ -69,11 +58,26 @@
           </div>
 
           <div class="mx-24 my-6">
+            <Field :name="'template'" v-slot="{ errorMessage }">
+              <InputBlock title="Идентификатор образа" type="column" spec="spec.template" class="mb-6" :error-message="errorMessage">
+                <InputText
+                  class="p-inputtext-sm w-[500px]"
+                  :class="{ 'p-invalid': errorMessage }"
+                  v-model="values.template"
+                  :disabled="readonly"
+                />
+              </InputBlock>
+            </Field>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-start -mx-24 -my-6">
+          <div class="mx-24 my-6">
             <FieldGroupTitle title="Сеть" />
 
             <div class="flex flex-col gap-y-6">
               <Field :name="'mainNetwork'" v-slot="{ errorMessage }">
-                <InputBlock title="Основная сеть" type="column" spec="spec.mainNetwork" class="mb-6" :disabled="readonly" :error-message="errorMessage">
+                <InputBlock title="Основная сеть" type="column" spec="spec.mainNetwork" :disabled="readonly" :error-message="errorMessage">
                   <InputText
                     class="p-inputtext-sm w-[450px]"
                     :class="{ 'p-invalid': errorMessage }"
@@ -98,6 +102,7 @@
           </div>
         </div>
 
+
         <CardDivider />
 
         <CardTitle title="Дополнительные параметры" />
@@ -106,37 +111,37 @@
           <div class="mx-24 my-6">
             <div class="flex flex-col gap-y-6">
               <Field :name="'runtimeOptions_cpuLimit'" v-slot="{ errorMessage }">
-                <InputBlock title="Верхний лимит потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuLimit" toggle>
+                <InputBlock title="Верхний лимит потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuLimit">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_cpuLimit" />
                 </InputBlock>
               </Field>
 
               <Field :name="'runtimeOptions_cpuReservation'" v-slot="{ errorMessage }">
-                <InputBlock title="Величина зарезервированной потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuReservation" toggle>
+                <InputBlock title="Величина зарезервированной потребляемой частоты ЦПУ, МГц" spec="spec.runtimeOptions.cpuReservation">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_cpuReservation" />
                 </InputBlock>
               </Field>
 
               <Field :name="'runtimeOptions_cpuShares'" v-slot="{ errorMessage }">
-                <InputBlock title="Относительная величина CPU Shares" spec="spec.runtimeOptions.cpuShares" toggle>
+                <InputBlock title="Относительная величина CPU Shares" spec="spec.runtimeOptions.cpuShares">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_cpuShares" />
                 </InputBlock>
               </Field>
 
               <Field :name="'runtimeOptions_memoryLimit'" v-slot="{ errorMessage }">
-                <InputBlock title="Верхний лимит потребляемой памяти МБ" spec="spec.runtimeOptions.memoryLimit" toggle>
+                <InputBlock title="Верхний лимит потребляемой памяти МБ" spec="spec.runtimeOptions.memoryLimit">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_memoryLimit" />
                 </InputBlock>
               </Field>
 
               <Field :name="'runtimeOptions_memoryReservations'" v-slot="{ errorMessage }">
-                <InputBlock title="Процент зарезервированной памяти в кластере ( % от spec.memory)" spec="spec.runtimeOptions.memoryReservations" help="Допустимые значения 0 < x < 100<br>Значение по умолчанию: 80"  toggle>
+                <InputBlock title="Процент зарезервированной памяти в кластере ( % от spec.memory)" spec="spec.runtimeOptions.memoryReservations" help="Допустимые значения 0 < x < 100<br>Значение по умолчанию: 80">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_memoryReservations" />
                 </InputBlock>
               </Field>
 
               <Field :name="'runtimeOptions_memoryShares'" v-slot="{ errorMessage }">
-                <InputBlock title="Относительная величина Memory Shares" spec="spec.runtimeOptions.memoryShares" help="Допустимые значения 0 < x < 100" toggle>
+                <InputBlock title="Относительная величина Memory Shares" spec="spec.runtimeOptions.memoryShares" help="Допустимые значения 0 < x < 100">
                   <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.runtimeOptions_memoryShares" />
                 </InputBlock>
               </Field>
@@ -145,7 +150,7 @@
 
           <div class="mx-24 my-6">
             <Field :name="'runtimeOptions_nestedHardwareVirtualisation'" v-slot="{ errorMessage }">
-              <InputBlock title="Hardware Assisted Virtualization" spec="spec.runtimeOptions.nestedHardwareVirtualisation" special>
+              <InputBlock title="Hardware Assisted Virtualization" class="mb-6" spec="spec.runtimeOptions.nestedHardwareVirtualisation" special>
                 <InputSwitch :disabled="readonly" v-model="values.runtimeOptions_nestedHardwareVirtualisation" />
               </InputBlock>
             </Field>

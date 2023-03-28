@@ -8,7 +8,7 @@
   <GridBlock>
     <DeckhouseModuleSettings />
 
-    <ReleaseItemsList @set-count="ReleaseItemsCount = $event" />
+    <ReleaseItemsList />
   </GridBlock>
 </template>
 
@@ -19,22 +19,21 @@ import PageActions from "@/components/common/page/PageActions.vue";
 import GridBlock from "@/components/common/grid/GridBlock.vue";
 import DeckhouseModuleSettings from "@/components/releases/DeckhouseModuleSettings.vue";
 import ReleaseItemsList from "@/components/releases/ReleaseItemsList.vue";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import type { TabsItem } from "@/types";
-// import Breadcrumb from 'primevue/breadcrumb';
-// import { useRoute } from "vue-router";
-// const breadcrumbItems = useRoute().meta.breadcrumbs();
+import useLoadAll from "@/composables/useLoadAll";
 
-const ReleaseItemsCount = ref<number | null>(null);
-const tabs = [
+const { lists } = useLoadAll();
+
+const tabs = computed<TabsItem[]>(() => [
   {
     title: "Версии",
-    badge: ReleaseItemsCount,
+    badge: lists.releases.items.length,
     routeName: "Home",
   },
   {
     title: "Настройки обновлений",
     routeName: "DeckhouseSettings",
   },
-] as Array<TabsItem>;
+]);
 </script>

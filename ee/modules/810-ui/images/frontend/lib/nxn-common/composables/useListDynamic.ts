@@ -61,6 +61,7 @@ export default function useListDynamic<T extends NxnResourceWs>(
   noQueryFilters: Boolean = false
 ) {
   const route = useRoute();
+  const isActivated = ref<Boolean>(false);
 
   const items = reactive<Array<T>>([]);
   const isLoading = ref<Boolean>(true);
@@ -268,7 +269,10 @@ export default function useListDynamic<T extends NxnResourceWs>(
    * Activates list in correct order: channel subscriptions - first, http data load - second.
    */
   function activate(): Promise<Array<T>> | Promise<string> {
-    // TODO: if (!noQueryFilters) addChannelCallbacks();
+    if (isActivated.value) return Promise.resolve("activated");
+
+    isActivated.value = true;
+
     addChannelCallbacks();
     return (cb.loadAuxData ? cb.loadAuxData() : Promise.resolve(null)).then(() => {
       return reloadItems();

@@ -24,7 +24,8 @@
       "ami": "ami-0e312244e15c975b0",
       "diskSizeGb": 50,
       "diskType": "gp3",
-      "instanceType": "c5a.large"
+      "instanceType": "c5a.large",
+      "IOPS": 110
     }
   },
   {
@@ -53,7 +54,8 @@
       "ami": "ami-0e312244e15c975b0",
       "diskSizeGb": 50,
       "diskType": "gp3",
-      "instanceType": "m1.large"
+      "instanceType": "m1.large",
+      "IOPS": 110
     },
     "status": {
       "nodeGroupConsumers": [
@@ -745,7 +747,8 @@
       "ami": "ami-0e312244e15c975b0",
       "diskSizeGb": 50,
       "diskType": "gp3",
-      "instanceType": "m1.medium"
+      "instanceType": "m1.medium",
+      "IOPS": 110
     },
     "status": {
       "nodeGroupConsumers": [

@@ -1,11 +1,11 @@
 <template>
-  <template v-if="!list.isLoading.value">
-    <ReleaseItem v-for="item in list.items" :key="item.metadata.name" :item="item" @toggle-changelog="toggleChangelogWindow" />
+  <template v-if="!isLoading">
+    <ReleaseItem v-for="item in lists.releases.items" :key="item.metadata.name" :item="item" @toggle-changelog="toggleChangelogWindow" />
   </template>
-  <CardBlock v-if="list.isLoading.value" :content-loading="true"></CardBlock>
-  <CardEmpty v-if="!list.isLoading.value && list.items.length == 0" />
+  <CardBlock v-if="isLoading" :content-loading="true"></CardBlock>
+  <CardEmpty v-if="!isLoading && lists.releases.items.length == 0" />
 
-  <Sidebar :header="popup.title" position="right" v-model:visible="popup.key" class="p-sidebar-md" :modal="false">
+  <Sidebar :header="popup.title" position="right" :visible="!!popup.key" class="p-sidebar-md" :modal="false">
     <span class="block text-2xl font-medium text-gray-800 mb-6">Changelog: {{ popup.title }}</span>
     <div v-for="(cl_value, cl_label) in popup.content" :key="cl_label" class="mb-6">
       <span class="block text-lg font-medium text-gray-800 mb-1">{{ cl_label }}</span>
@@ -18,47 +18,24 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onBeforeUnmount } from "vue";
+import { reactive } from "vue";
 
-import DeckhouseRelease from "@/models/DeckhouseRelease";
+import type DeckhouseRelease from "@/models/DeckhouseRelease";
 import ReleaseItem from "@/components/releases/ReleaseItem.vue";
-import useListDynamic from "@lib/nxn-common/composables/useListDynamic";
 import Sidebar from "primevue/sidebar";
 import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardEmpty from "@/components/common/card/CardEmpty.vue";
+import useLoadAll from "@/composables/useLoadAll";
+import type { DeckhouseReleaseChangelog } from "@/models/DeckhouseRelease";
 
-const emit = defineEmits<{ (e: "set-count", value: number): void }>();
-function resetCount() {
-  console.log(`deckhousereleases.deckhouse.io: emit("set-count", ${list.items.length});`);
-  emit("set-count", list.items.length);
-}
-const filter = reactive({});
-const list = useListDynamic<DeckhouseRelease>(
-  DeckhouseRelease,
-  {
-    onLoadSuccess: resetCount,
-    afterAdd: resetCount,
-    afterRemove: resetCount,
-
-    sortBy: (a: DeckhouseRelease, b: DeckhouseRelease) => {
-      return Date.parse(b.metadata.creationTimestamp) - Date.parse(a.metadata.creationTimestamp);
-    },
-
-    onLoadError: (error: any) => {
-      console.error("Failed to load counts: " + JSON.stringify(error));
-    },
-  },
-  filter
-);
-
-list.activate();
+const { lists, isLoading } = useLoadAll();
 
 // popups
 const popup = reactive({
   title: "",
-  content: "",
+  content: {} as DeckhouseReleaseChangelog,
   link: "",
-  key: null,
+  key: null as null | string,
 });
 
 function toggleChangelogWindow(data: DeckhouseRelease) {
@@ -72,6 +49,4 @@ function toggleChangelogWindow(data: DeckhouseRelease) {
     popup.key = newKey;
   }
 }
-
-onBeforeUnmount(() => list.destroyList());
 </script>

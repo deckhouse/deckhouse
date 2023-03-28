@@ -7,18 +7,28 @@
     <template #filter>
       <FilterBlock>
         <label class="block text-sm font-medium text-gray-800 mb-2">Сортировать по:</label>
-        <Dropdown v-model="sortBy" :options="sortOptions" optionLabel="name" optionValue="value" />
+        <Dropdown
+          :options="sortOptions"
+          optionLabel="name"
+          optionValue="value"
+          v-model="sortBy"
+          @change="$router.push({ query: { sortBy: $event.value } })"
+        />
       </FilterBlock>
     </template>
   </PageActions>
   <GridBlock>
-    <NodeList :sort-by="sortBy" @set-count="nodesCount = $event" />
+    <NodeList />
   </GridBlock>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
+
+import Node from "@/models/Node";
+
+import useLoadAll from "@/composables/useLoadAll";
 
 import Dropdown from "primevue/dropdown";
 import FilterBlock from "@/components/common/filter/FilterBlock.vue";
@@ -28,45 +38,38 @@ import PageActions from "@/components/common/page/PageActions.vue";
 import TabsBlock from "@/components/common/tabs/TabsBlock.vue";
 
 import NodeList from "@/components/node/NodeList.vue";
-// import Breadcrumb from 'primevue/breadcrumb';
 
 const route = useRoute();
 const sortOptions = [
-  { name: "Время создания", value: "creationTimestamp" },
+  { name: "Время создания (сначала новые)", value: "creationTimestamp" },
   { name: "Имя", value: "name" },
 ];
-const sortBy = ref<string>("name");
 
-// const breadcrumbItems = ref(route.meta.breadcrumbs(route.params.ng_name));
-// watch(
-//   () => route.name,
-//   (newVal) => {
-//     if (['NodeListAll', 'NodeList'].indexOf(newVal as string) < 0) return;
-//     breadcrumbItems.value = route.meta.breadcrumbs(route.params.ng_name);
-//   }
-// );
+const sortBy = ref(route.query.sortBy?.toString() || "name");
 
 const nodesCount = ref<number | null>(null);
-const tabs = route.params.ng_name
-  ? [
-      {
-        title: "Просмотр",
-        routeName: "NodeGroupShow",
-        routeParams: { name: route.params.ng_name },
-      },
-      {
-        title: "Редактирование",
-        routeName: "NodeGroupEdit",
-        routeParams: { name: route.params.ng_name },
-      },
-      {
-        title: "Список узлов",
-        badge: nodesCount,
-        routeName: "NodeList",
-        routeParams: { ng_name: route.params.ng_name },
-      },
-    ]
-  : [];
+const tabs = computed(() =>
+  route.params.ng_name
+    ? [
+        {
+          title: "Просмотр",
+          routeName: "NodeGroupShow",
+          routeParams: { name: route.params.ng_name },
+        },
+        {
+          title: "Редактирование",
+          routeName: "NodeGroupEdit",
+          routeParams: { name: route.params.ng_name },
+        },
+        {
+          title: "Список узлов",
+          badge: nodesCount.value,
+          routeName: "NodeList",
+          routeParams: { ng_name: route.params.ng_name },
+        },
+      ]
+    : []
+);
 
-console.log(route.params);
+useLoadAll(() => (nodesCount.value = Node.filterByNodeGroup(route.params.ng_name?.toString()).length));
 </script>

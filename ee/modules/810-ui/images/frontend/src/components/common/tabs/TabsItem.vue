@@ -7,7 +7,7 @@
   >
     {{ item.title }}
 
-    <BadgeItem v-if="item.badge" :title="item.badge.value == null ? '...' : item.badge.value" class="bg-blue-100 text-blue-500" />
+    <BadgeItem v-if="item.badge !== undefined" :loading="item.badge === null" :title="item.badge" class="bg-blue-100 text-blue-500" />
   </router-link>
 </template>
 

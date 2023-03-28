@@ -35,23 +35,7 @@ import CardBlock from "@/components/common/card/CardBlock.vue";
 import CardParamGrid from "../common/card/CardParamGrid.vue";
 import CardParam from "@/components/common/card/CardParam.vue";
 import { onBeforeUnmount } from "vue";
+import useLoadAll from "@/composables/useLoadAll";
 
-const deckhouseSettings = ref<DeckhouseModuleSettings>();
-const isLoading = ref(true);
-
-/*
-const settings = computed(() => {
-  return deckhouseSettings.spec ? deckhouseSettings.spec.settings : undefined;
-})
-*/
-
-DeckhouseModuleSettings.get().then((res: DeckhouseModuleSettings) => {
-  deckhouseSettings.value = res;
-  isLoading.value = false;
-
-  // @ts-ignore
-  DeckhouseModuleSettings.subscribe({ klassChannel: true });
-});
-
-onBeforeUnmount(() => DeckhouseModuleSettings.unsubscribe() );
+const { deckhouseSettings, isLoading } = useLoadAll();
 </script>

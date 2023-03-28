@@ -152,7 +152,7 @@ const { handleSubmit, values, meta, resetForm, errors } = useForm({
   initialValues,
 });
 
-useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
+if (!props.readonly) useFormLeaveGuard({ formMeta: meta, onLeave: resetForm });
 
 // Functions
 

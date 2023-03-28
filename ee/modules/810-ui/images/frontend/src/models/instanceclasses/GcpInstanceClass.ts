@@ -14,7 +14,7 @@ class GcpInstanceClass extends InstanceClassBase {
   }
 }
 
-GcpInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/GcpInstanceClasses`;
+GcpInstanceClass.resourceBaseUrl = `k8s/deckhouse.io/gcpinstanceclasses`;
 
 // @ts-ignore
 GcpInstanceClass.setRoutes(GcpInstanceClass.resourceBaseUrl, {}, GcpInstanceClass.rawRoutes(), {

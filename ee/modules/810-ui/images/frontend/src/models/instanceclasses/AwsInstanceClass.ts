@@ -1,6 +1,5 @@
 // @ts-ignore
 import InstanceClassBase from "./InstanceClassBase";
-import type { InstanceClassAttributes } from "./InstanceClassBase";
 import type { Badge } from "@/types";
 
 class AwsInstanceClass extends InstanceClassBase {

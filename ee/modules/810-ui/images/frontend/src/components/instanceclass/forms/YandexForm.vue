@@ -5,7 +5,7 @@
         <CardTitle title="Конфигурация" icon="IconYandexCloudLogo" />
       </template>
       <template #content>
-        <div class="flex flex-wrap items-start -mx-24 -my-6">
+        <div class="flex flex-wrap items-start -mx-24 -my-6 mb-6">
 
           <div class="mx-24 my-6">
             <Field :name="'name'" v-slot="{ errorMessage }">
@@ -65,78 +65,10 @@
                 </InputBlock>
               </Field>
             </div>
-
-            <FieldGroupTitle title="Диск" />
-            <div class="flex flex-col gap-y-6">
-              <Field :name="'diskSizeGB'" v-slot="{ errorMessage }">
-                <InputBlock
-                  title="Размер ГБ"
-                  spec="spec.diskSizeGB"
-                >
-                  <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.diskSizeGB" />
-                </InputBlock>
-              </Field>
-              <Field :name="'diskType'" v-slot="{ errorMessage }">
-                <InputBlock title="Тип" type="column" spec="spec.diskType" class="mb-6" :disabled="readonly" :error-message="errorMessage">
-                  <InputText
-                    class="p-inputtext-sm w-[450px]"
-                    :class="{ 'p-invalid': errorMessage }"
-                    v-model="values.diskType"
-                    :disabled="readonly"
-                  />
-                </InputBlock>
-              </Field>
-            </div>
           </div>
 
           <div class="mx-24 my-6">
-            <FieldGroupTitle title="Сеть" />
-            <div class="flex flex-col gap-y-6">
-              <Field :name="'mainSubnet'" v-slot="{ errorMessage }">
-                <InputBlock title="Основная подсеть" type="column" spec="spec.mainSubnet" class="mb-6" :disabled="readonly" :error-message="errorMessage">
-                  <InputText
-                    class="p-inputtext-sm w-[450px]"
-                    :class="{ 'p-invalid': errorMessage }"
-                    v-model="values.mainSubnet"
-                    :disabled="readonly"
-                  />
-                </InputBlock>
-              </Field>
-
-              <Field :name="'networkType'" v-slot="{ errorMessage }">
-                <InputBlock title="Тип сети" type="column" spec="spec.networkType" class="mb-6" :disabled="readonly" :error-message="errorMessage">
-                  <InputText
-                    class="p-inputtext-sm w-[450px]"
-                    :class="{ 'p-invalid': errorMessage }"
-                    v-model="values.networkType"
-                    :disabled="readonly"
-                  />
-                </InputBlock>
-              </Field>
-
-              <FieldArray :name="'additionalSubnets'" v-slot="{ fields, push, remove }" v-model="values.additionalSubnets">
-                <InputLabelGroup
-                  title="Дополнительные группы безопасности"
-                  spec="spec.additionalSubnets"
-                  :fields="['value']"
-                  :disabled="readonly"
-                  :model="fields"
-                  @push="push({ value: '' })"
-                  @remove="remove"
-                />
-              </FieldArray>
-
-              <Field :name="'assignPublicIPAddress'" v-slot="{ errorMessage }">
-                <InputBlock title="Публичный IP" spec="spec.assignPublicIPAddress" special>
-                  <InputSwitch :disabled="readonly" v-model="values.assignPublicIPAddress" />
-                </InputBlock>
-              </Field>
-            </div>
-          </div>
-
-          <div class="mx-24 my-6">
-            <FieldGroupTitle title="Прочее" />
-            <div class="flex flex-col gap-y-6">
+            <div class="flex flex-col gap-y-6 mb-6">
               <Field :name="'ImageID'" v-slot="{ errorMessage }">
                 <InputBlock
                   title="Идентификатор образа"
@@ -159,6 +91,77 @@
                 </InputBlock>
               </Field>
             </div>
+
+            <FieldGroupTitle title="Диск" />
+            <div class="flex flex-col gap-y-6">
+              <Field :name="'diskSizeGB'" v-slot="{ errorMessage }">
+                <InputBlock
+                  title="Размер ГБ"
+                  spec="spec.diskSizeGB"
+                >
+                  <InputNumber class="p-inputtext-sm" :disabled="readonly" v-model="values.diskSizeGB" />
+                </InputBlock>
+              </Field>
+              <Field :name="'diskType'" v-slot="{ errorMessage }">
+                <InputBlock title="Тип" type="column" spec="spec.diskType" :disabled="readonly" :error-message="errorMessage">
+                  <InputText
+                    class="p-inputtext-sm w-[450px]"
+                    :class="{ 'p-invalid': errorMessage }"
+                    v-model="values.diskType"
+                    :disabled="readonly"
+                  />
+                </InputBlock>
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-start -mx-24 -my-6">
+          <div class="mx-24 my-6">
+            <FieldGroupTitle title="Сеть" />
+            <div class="flex flex-col gap-y-6">
+              <Field :name="'mainSubnet'" v-slot="{ errorMessage }">
+                <InputBlock title="Основная подсеть" type="column" spec="spec.mainSubnet" :disabled="readonly" :error-message="errorMessage">
+                  <InputText
+                    class="p-inputtext-sm w-[450px]"
+                    :class="{ 'p-invalid': errorMessage }"
+                    v-model="values.mainSubnet"
+                    :disabled="readonly"
+                  />
+                </InputBlock>
+              </Field>
+
+              <Field :name="'networkType'" v-slot="{ errorMessage }">
+                <InputBlock title="Тип сети" type="column" spec="spec.networkType" :disabled="readonly" :error-message="errorMessage">
+                  <InputText
+                    class="p-inputtext-sm w-[450px]"
+                    :class="{ 'p-invalid': errorMessage }"
+                    v-model="values.networkType"
+                    :disabled="readonly"
+                  />
+                </InputBlock>
+              </Field>
+
+              <Field :name="'assignPublicIPAddress'" v-slot="{ errorMessage }">
+                <InputBlock title="Публичный IP" spec="spec.assignPublicIPAddress" special>
+                  <InputSwitch :disabled="readonly" v-model="values.assignPublicIPAddress" />
+                </InputBlock>
+              </Field>
+            </div>
+          </div>
+
+          <div class="mx-24 my-6">
+             <FieldArray :name="'additionalSubnets'" v-slot="{ fields, push, remove }" v-model="values.additionalSubnets">
+                <InputLabelGroup
+                  title="Дополнительные подсети"
+                  spec="spec.additionalSubnets"
+                  :fields="['value']"
+                  :disabled="readonly"
+                  :model="fields"
+                  @push="push({ value: '' })"
+                  @remove="remove"
+                />
+            </FieldArray>
           </div>
         </div>
 
