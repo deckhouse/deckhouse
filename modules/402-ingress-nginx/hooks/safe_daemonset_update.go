@@ -110,11 +110,11 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		if !(proxy.DesiredCount == proxy.UpdatedCount && proxy.DesiredCount == proxy.CurrentReadyCount) {
+		if proxy.DesiredCount != proxy.UpdatedCount || proxy.DesiredCount != proxy.CurrentReadyCount {
 			continue
 		}
 
-		if !(ds.DesiredCount == ds.UpdatedCount && ds.DesiredCount == ds.CurrentReadyCount) {
+		if ds.DesiredCount != ds.UpdatedCount || ds.DesiredCount != ds.CurrentReadyCount {
 			continue
 		}
 

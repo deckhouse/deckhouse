@@ -35,7 +35,7 @@ metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
 spec:
-  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  replicas: 1
   selector:
     matchLabels:
       control-plane: controller-manager
