@@ -121,7 +121,7 @@ kind: Node
 metadata:
   name: worker-2
   annotations:
-    control-plane-manger.deckhouse.io/waiting-for-approval: ""
+    control-plane-manager.deckhouse.io/waiting-for-approval: ""
   labels:
       node-role.kubernetes.io/control-plane: ""
 status:
@@ -134,7 +134,7 @@ kind: Node
 metadata:
   name: worker-3
   annotations:
-    control-plane-manger.deckhouse.io/waiting-for-approval: ""
+    control-plane-manager.deckhouse.io/waiting-for-approval: ""
   labels:
       node-role.kubernetes.io/control-plane: ""
 status:
@@ -187,12 +187,12 @@ status:
 `
 
 	initialState = fmt.Sprintf(stateTmpl,
-		"control-plane-manger.deckhouse.io/waiting-for-approval: \"\"",
+		"control-plane-manager.deckhouse.io/waiting-for-approval: \"\"",
 		"NotReady",
 	)
 
 	approvedState = fmt.Sprintf(stateTmpl,
-		"control-plane-manger.deckhouse.io/approved: \"\"",
+		"control-plane-manager.deckhouse.io/approved: \"\"",
 		"Ready",
 	)
 )

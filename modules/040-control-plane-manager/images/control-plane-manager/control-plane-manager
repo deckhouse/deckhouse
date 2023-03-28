@@ -26,39 +26,39 @@ CONFIG_DIR=/config
 ROOTFS_DIR=
 MAX_RETRIES=42
 
->&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
+>&2 echo "Setting control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node..."
 attempt=0
 until
   node_data="$(
     kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
     {
       "resourceVersion": .metadata.resourceVersion,
-      "isApproved": (.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")),
-      "isWaitingForApproval": (.metadata.annotations | has("control-plane-manger.deckhouse.io/waiting-for-approval"))
+      "isApproved": (.metadata.annotations | has("control-plane-manager.deckhouse.io/approved")),
+      "isWaitingForApproval": (.metadata.annotations | has("control-plane-manager.deckhouse.io/waiting-for-approval"))
     }
   ')" &&
    jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
 do
   attempt=$(( attempt + 1 ))
   if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-    >&2 echo "ERROR: Can't set control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node."
+    >&2 echo "ERROR: Can't set control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node."
     exit 1
   fi
   kubectl \
     --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
     --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-    control-plane-manger.deckhouse.io/waiting-for-approval= || { echo "Retry setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
+    control-plane-manager.deckhouse.io/waiting-for-approval= || { echo "Retry setting control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
 done
 
->&2 echo "Waiting for control-plane-manger.deckhouse.io/approved= annotation on our Node..."
+>&2 echo "Waiting for control-plane-manager.deckhouse.io/approved= annotation on our Node..."
 attempt=0
 until
   kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
-  jq -e '.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")' >/dev/null
+  jq -e '.metadata.annotations | has("control-plane-manager.deckhouse.io/approved")' >/dev/null
 do
   attempt=$(( attempt + 1 ))
   if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-    >&2 echo "ERROR: Can't get annotation 'control-plane-manger.deckhouse.io/approved' from our Node."
+    >&2 echo "ERROR: Can't get annotation 'control-plane-manager.deckhouse.io/approved' from our Node."
     exit 1
   fi
   echo "Waiting for approval to start:"
