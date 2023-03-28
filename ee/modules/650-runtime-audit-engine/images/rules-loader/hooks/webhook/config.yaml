@@ -1,0 +1,12 @@
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+#
+configVersion: v1
+kubernetesValidating:
+- name: python-crd-name.deckhouse.io
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1", "v1beta1", "v1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["pythons"]
+    scope:       "Cluster"
