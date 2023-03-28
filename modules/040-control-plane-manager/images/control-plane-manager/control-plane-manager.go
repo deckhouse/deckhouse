@@ -67,13 +67,14 @@ func readEnvs() error {
 	}
 
 	// get hostname
-	nodeName, err := getNodeName()
+	h, err := os.Hostname()
 	if err != nil {
 		return err
 	}
-	if nodeName == "" {
+	if h == "" {
 		return errors.New("node name should be set")
 	}
+	nodeName = h
 	return nil
 }
 
@@ -86,10 +87,6 @@ func newClient() error {
 
 	k8sClient, err = kubernetes.NewForConfig(config)
 	return err
-}
-
-func getNodeName() (string, error) {
-	return os.Hostname()
 }
 
 func annotateNode() error {

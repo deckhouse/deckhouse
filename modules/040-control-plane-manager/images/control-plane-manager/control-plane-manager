@@ -26,64 +26,7 @@ CONFIG_DIR=/config
 ROOTFS_DIR=
 MAX_RETRIES=42
 
->&2 echo "Setting control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node..."
-attempt=0
-until
-  node_data="$(
-    kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
-    {
-      "resourceVersion": .metadata.resourceVersion,
-      "isApproved": (.metadata.annotations | has("control-plane-manager.deckhouse.io/approved")),
-      "isWaitingForApproval": (.metadata.annotations | has("control-plane-manager.deckhouse.io/waiting-for-approval"))
-    }
-  ')" &&
-   jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
-do
-  attempt=$(( attempt + 1 ))
-  if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-    >&2 echo "ERROR: Can't set control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node."
-    exit 1
-  fi
-  kubectl \
-    --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
-    --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-    control-plane-manager.deckhouse.io/waiting-for-approval= || { echo "Retry setting control-plane-manager.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
-done
 
->&2 echo "Waiting for control-plane-manager.deckhouse.io/approved= annotation on our Node..."
-attempt=0
-until
-  kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
-  jq -e '.metadata.annotations | has("control-plane-manager.deckhouse.io/approved")' >/dev/null
-do
-  attempt=$(( attempt + 1 ))
-  if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-    >&2 echo "ERROR: Can't get annotation 'control-plane-manager.deckhouse.io/approved' from our Node."
-    exit 1
-  fi
-  echo "Waiting for approval to start:"
-  echo "Retry in 10sec..."
-  sleep 10
-done
-
-
-
-
-
-
-
-
-
-
->&2 echo "Waiting for all image-holder containers will be ready..."
-until
-  kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf -n kube-system get po ${MY_POD_NAME} -o json | \
-  jq -e '.status.containerStatuses | [ .[] | select(.name != "control-plane-manager").ready] | all == true' >/dev/null
-do
-  echo "Waiting for all image-holder containers will be ready..."
-  echo "Retry in 10sec..."
-  sleep 10
-done
 
 # Configuration checksum
 CONFIGURATION_CHECKSUM=$(cat "${BASH_SOURCE[0]}" $CONFIG_DIR/* | sha256sum | cut -d" " -f1)
@@ -97,14 +40,14 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
   LAST_APPLIED_CONFIGURATION_CHECKSUM=$(cat $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksum)
 fi
 
-# verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" ["1.25"]="1.25" ["1.26"]="1.26" )
-if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
-  echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
-  exit 1
-fi
-# shellcheck disable=SC2139
-kubeadm_binary="/usr/local/bin/kubeadm-${supported_kubernetes_versions[$KUBERNETES_VERSION]}"
+                              # verify Kubernetes version
+                              declare -A supported_kubernetes_versions=( ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" ["1.25"]="1.25" ["1.26"]="1.26" )
+                              if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
+                                echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
+                                exit 1
+                              fi
+                              # shellcheck disable=SC2139
+                              kubeadm_binary="/usr/local/bin/kubeadm-${supported_kubernetes_versions[$KUBERNETES_VERSION]}"
 
 function backup_file_or_folder() {
   if [[ ! -e "$BACKUP_DIR/$1" ]] ; then
