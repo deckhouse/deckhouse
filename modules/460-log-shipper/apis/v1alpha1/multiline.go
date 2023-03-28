@@ -17,7 +17,8 @@ limitations under the License.
 package v1alpha1
 
 type MultiLineParser struct {
-	Type MultiLineParserType `json:"type,omitempty"`
+	Type   MultiLineParserType   `json:"type,omitempty"`
+	Custom MultilineParserCustom `json:"custom,omitempty"`
 }
 
 type MultiLineParserType string
@@ -28,4 +29,15 @@ const (
 	MultiLineParserBackslash     MultiLineParserType = "Backslash"
 	MultiLineParserLogWithTime   MultiLineParserType = "LogWithTime"
 	MultiLineParserMultilineJSON MultiLineParserType = "MultilineJSON"
+	MultiLineParserCustom        MultiLineParserType = "Custom"
 )
+
+type MultilineParserCustom struct {
+	StartsWhen *ParserRegex `json:"startsWhen,omitempty"`
+	EndsWhen   *ParserRegex `json:"endsWhen,omitempty"`
+}
+
+type ParserRegex struct {
+	Regex    *string `json:"regex,omitempty"`
+	NotRegex *string `json:"notRegex,omitempty"`
+}

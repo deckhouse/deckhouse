@@ -82,10 +82,11 @@ func (c *Composer) Do() ([]byte, error) {
 
 	for _, s := range c.Source {
 		transforms, err := transform.CreateLogSourceTransforms(s.Name, &transform.LogSourceConfig{
-			SourceType:    s.Spec.Type,
-			MultilineType: s.Spec.MultiLineParser.Type,
-			LabelFilter:   s.Spec.LabelFilters,
-			LogFilter:     s.Spec.LogFilters,
+			SourceType:            s.Spec.Type,
+			MultilineType:         s.Spec.MultiLineParser.Type,
+			MultilineCustomConfig: s.Spec.MultiLineParser.Custom,
+			LabelFilter:           s.Spec.LabelFilters,
+			LogFilter:             s.Spec.LogFilters,
 		})
 		if err != nil {
 			return nil, err
