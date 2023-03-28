@@ -134,7 +134,7 @@ func installKubeadmConfig() error {
 		return err
 	}
 	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
-		if err := installFileIfChanged("/config"+component+".yaml.tpl", filepath.Join(patchesDir, component+".yaml"), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join("/config", component+".yaml.tpl"), filepath.Join(patchesDir, component+".yaml"), 0644); err != nil {
 			return err
 		}
 	}
