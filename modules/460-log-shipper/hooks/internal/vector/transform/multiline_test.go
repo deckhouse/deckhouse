@@ -27,7 +27,6 @@ import (
 )
 
 func Test_processMultilineRegex(t *testing.T) {
-
 	tests := []struct {
 		name        string
 		parserRegex *v1alpha1.ParserRegex
