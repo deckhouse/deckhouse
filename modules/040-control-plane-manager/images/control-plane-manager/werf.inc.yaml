@@ -54,19 +54,3 @@ shell:
   - make all WHAT=cmd/kubeadm
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
 {{- end }}
----
-artifact: {{ $.ModuleName }}/controller-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
-  to: /
-  stageDependencies:
-    install:
-      - '**/*'
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  install:
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager control-plane-manager.go node.go util.go pki.go
-  - chmod +x /control-plane-manager
