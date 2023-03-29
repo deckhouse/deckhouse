@@ -110,6 +110,14 @@ func conditionsToPatch(conditions []ngv1.NodeGroupCondition) []map[string]interf
 	return res
 }
 
+const (
+	minStatusField                 = "min"
+	maxStatusField                 = "max"
+	desiredStatusField             = "desired"
+	instancesStatusField           = "instances"
+	lastMachineFailuresStatusField = "lastMachineFailures"
+)
+
 func buildUpdateStatusPatch(
 	nodesNum, readyNodesNum, uptodateNodesCount, minPerZone, maxPerZone, desiredMax, instancesNum int32,
 	nodeType ngv1.NodeType, statusMsg string,
@@ -122,19 +130,24 @@ func buildUpdateStatusPatch(
 	}
 
 	patch := map[string]interface{}{
-		"nodes":    nodesNum,
-		"ready":    readyNodesNum,
-		"upToDate": uptodateNodesCount,
+		"nodes":                        nodesNum,
+		"ready":                        readyNodesNum,
+		"upToDate":                     uptodateNodesCount,
+		minStatusField:                 nil,
+		maxStatusField:                 nil,
+		desiredStatusField:             nil,
+		instancesStatusField:           nil,
+		lastMachineFailuresStatusField: nil,
 	}
 	if nodeType == ngv1.NodeTypeCloudEphemeral {
-		patch["min"] = minPerZone
-		patch["max"] = maxPerZone
-		patch["desired"] = desiredMax
-		patch["instances"] = instancesNum
-		patch["lastMachineFailures"] = lastMachineFailures
+		patch[minStatusField] = minPerZone
+		patch[maxStatusField] = maxPerZone
+		patch[desiredStatusField] = desiredMax
+		patch[instancesStatusField] = instancesNum
+		patch[lastMachineFailuresStatusField] = lastMachineFailures
 
 		if len(lastMachineFailures) == 0 {
-			patch["lastMachineFailures"] = make([]interface{}, 0) // to make [] array in json result
+			patch[lastMachineFailuresStatusField] = make([]interface{}, 0) // to make [] array in json result
 		}
 	}
 
