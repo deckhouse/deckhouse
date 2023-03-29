@@ -3,7 +3,10 @@
 {{- define "helm_lib_module_image" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
-  {{- $moduleName := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
+  {{- $moduleName := (include "helm_lib_module_camelcase_name" $context) }}
+  {{- if ge (len .) 3 }}
+  {{- $moduleName = (include "helm_lib_module_camelcase_name" (index . 2)) }} {{- /* Optional module name */ -}}
+  {{- end }}
   {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
   {{- if not $imageDigest }}
   {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
@@ -25,7 +28,10 @@
 {{- define "helm_lib_module_image_no_fail" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
-  {{- $moduleName := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
+  {{- $moduleName := (include "helm_lib_module_camelcase_name" $context) }}
+  {{- if ge (len .) 3 }}
+  {{- $moduleName = (include "helm_lib_module_camelcase_name" (index . 2)) }} {{- /* Optional module name */ -}}
+  {{- end }}
   {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
   {{- if $imageDigest }}
     {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
