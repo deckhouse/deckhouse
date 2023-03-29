@@ -5,6 +5,7 @@ kind: ServiceAccount
 metadata:
   name: kruise-manager
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 ---
 # Source: kruise/templates/manager.yaml
 apiVersion: v1
@@ -12,6 +13,7 @@ kind: Secret
 metadata:
   name: kruise-webhook-certs
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 ---
 # Source: kruise/templates/manager.yaml
 apiVersion: v1
@@ -19,12 +21,26 @@ kind: Service
 metadata:
   name: kruise-webhook-service
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 spec:
   ports:
     - port: 443
       targetPort: 9876
   selector:
     control-plane: controller-manager
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kruise-controller-manager
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      app: kruise
 ---
 # Source: kruise/templates/manager.yaml
 apiVersion: apps/v1
@@ -34,6 +50,7 @@ metadata:
     control-plane: controller-manager
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
@@ -81,6 +98,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "kruise" "ingress-nginx") }}
           imagePullPolicy: Always
           name: kruise
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
           env:
             - name: KUBE_CACHE_MUTATION_DETECTOR
               value: "true"

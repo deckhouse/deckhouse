@@ -3,6 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kruise-manager-role
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
       - ""
@@ -586,8 +587,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: kruise-daemon-role
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
       - apps.kruise.io
@@ -679,6 +680,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kruise-manager-rolebinding
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -693,6 +695,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kruise-daemon-rolebinding
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -708,6 +711,7 @@ kind: Role
 metadata:
   name: kruise-leader-election-role
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
       - ""
@@ -742,6 +746,7 @@ kind: RoleBinding
 metadata:
   name: kruise-leader-election-rolebinding
   namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
