@@ -120,7 +120,7 @@ func checkKubeletConfig() error {
 
 func installKubeadmConfig() error {
 	log.Info("install kubeadm configuration")
-	kubeadmDir := filepath.Join(kubernetesConfigPath, "deckhouse", "kubeadm")
+	kubeadmDir := filepath.Join(deckhousePath, "kubeadm")
 	patchesDir := filepath.Join(kubeadmDir, "patches")
 	if err := os.MkdirAll(patchesDir, 0755); err != nil {
 		return err
@@ -191,6 +191,14 @@ func main() {
 	}
 
 	if err := installBasePKIfiles(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := fillTmpDirWithPKIData(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := renewCertificates(); err != nil {
 		log.Fatal(err)
 	}
 

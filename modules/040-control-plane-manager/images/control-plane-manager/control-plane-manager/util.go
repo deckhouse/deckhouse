@@ -41,6 +41,7 @@ const (
 	maximalKubernetesVersionConstraint = `< 1.27`
 	kubernetesConfigPath               = `/etc/kubernetes`
 	manifestsPath                      = kubernetesConfigPath + `/manifests`
+	deckhousePath                      = kubernetesConfigPath + `/deckhouse`
 	configPath                         = `/config`
 	pkiPath                            = `/pki`
 )
@@ -205,7 +206,7 @@ func calculateConfigurationChecksum() error {
 
 func getLastAppliedConfigurationChecksum() error {
 	var srcBytes []byte
-	srcBytes, err := os.ReadFile(filepath.Join(kubernetesConfigPath, "deckhouse", "last_applied_configuration_checksum"))
+	srcBytes, err := os.ReadFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"))
 	lastAppliedConfigurationChecksum = string(srcBytes)
 	return err
 }
@@ -217,7 +218,7 @@ func backupFile(src string) error {
 		return err
 	}
 
-	backupDir := filepath.Join(kubernetesConfigPath, "deckhouse", "backup", configurationChecksum)
+	backupDir := filepath.Join(deckhousePath, "backup", configurationChecksum)
 
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return err
