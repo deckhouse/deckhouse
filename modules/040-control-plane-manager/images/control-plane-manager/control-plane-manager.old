@@ -165,8 +165,9 @@ function generate_or_renew_certificate() {
     certificate=$ROOTFS_DIR/etc/kubernetes/pki/$2
     tmp_certificate=$TMP_ROOTFS_DIR/etc/kubernetes/pki/$2
   fi
-  kubeadm_cmd="$kubeadm_binary init phase certs $1 --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml"
-
+  kubeadm_cmd="$kubeadm_binary init phase certs $1 --config $ROOTFS_DIR       /etc/kubernetes/deckhouse/kubeadm/config.yaml"
+/usr/local/bin/kubeadm-
+/usr/local/bin/kubeadm-1.23 init phase certs etcd-healthcheck-client --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --rootfs /tmp/87892f13336aac85cde9143be7124a5eaa837b4de48612b92bb9d71f82627358
   echo "Generate or renew $1 certificate ($certificate.crt)"
   if [[ -f $certificate.crt ]] ; then
     remove="no"

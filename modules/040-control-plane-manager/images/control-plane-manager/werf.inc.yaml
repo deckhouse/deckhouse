@@ -18,7 +18,7 @@ import:
 - artifact: {{ $.ModuleName }}/etcd-artifact
   add: /usr/local/bin/etcdctl
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/controller-artifact
   add: /control-plane-manager
   before: setup
 docker:
@@ -55,10 +55,10 @@ shell:
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
 {{- end }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/controller-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/{{ $.ImageName }}
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
   to: /
   stageDependencies:
     install:
