@@ -58,7 +58,10 @@ func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType, multi
 	case v1alpha1.MultiLineParserMultilineJSON:
 		multiLineTransform.DynamicArgsMap[startsWhen] = vrl.JSONMultilineRule.String()
 	case v1alpha1.MultiLineParserCustom:
-		processCustomMultiLIneTransform(multilineCustomConfig, multiLineTransform.DynamicArgsMap)
+		err := processCustomMultiLIneTransform(multilineCustomConfig, multiLineTransform.DynamicArgsMap)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return []apis.LogTransform{}, nil
 	}
