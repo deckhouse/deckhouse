@@ -68,5 +68,5 @@ mount:
     to: /go/pkg
 shell:
   install:
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager control-plane-manager.go node.go util.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager control-plane-manager.go node.go util.go pki.go
   - chmod +x /control-plane-manager

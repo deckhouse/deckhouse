@@ -42,6 +42,7 @@ const (
 	kubernetesConfigPath               = `/etc/kubernetes`
 	manifestsPath                      = kubernetesConfigPath + `/manifests`
 	configPath                         = `/config`
+	pkiPath                            = `/pki`
 )
 
 var (
@@ -131,7 +132,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
 	if bytes.Compare(srcBytes, dstBytes) == 0 {
-		log.Infof("file %s is not changed, skipping", src)
+		log.Infof("file %s is not changed, skipping", dst)
 		return nil
 	}
 
@@ -255,4 +256,3 @@ func removeOrphanFiles(srcDir string) error {
 	}
 	return filepath.Walk(srcDir, walkFunc)
 }
-
