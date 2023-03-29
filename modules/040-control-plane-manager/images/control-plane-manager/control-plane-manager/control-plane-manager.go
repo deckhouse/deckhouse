@@ -126,10 +126,6 @@ func installKubeadmConfig() error {
 		return err
 	}
 
-	//	if err := removeOrphanFiles(patchesDir); err != nil {
-	//		return err
-	//	}
-
 	if err := installFileIfChanged(filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(kubeadmDir, "config.yaml"), 0644); err != nil {
 		return err
 	}

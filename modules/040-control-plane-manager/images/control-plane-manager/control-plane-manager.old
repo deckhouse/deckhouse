@@ -410,6 +410,15 @@ for component in etcd kube-apiserver kube-controller-manager kube-scheduler; do
 done
 echo " * Done!"
 echo
+---------------------------------------------------
+
+
+
+
+
+
+
+
 
 # Install base pki into system
 echo "Install base pki files"

@@ -116,7 +116,12 @@ func checkKubernetesVersion() error {
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
-	srcBytes, err := os.ReadFile(src)
+	src, err := filepath.EvalSymlinks(src)
+	if err != nil {
+		return err
+	}
+
+	srcBytes, err = os.ReadFile(src)
 	if err != nil {
 		return err
 	}
@@ -159,6 +164,11 @@ func calculateConfigurationChecksum() error {
 			return nil
 		}
 
+		path, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return err
+		}
+
 		f, err := os.Open(path)
 		if err != nil {
 			return err
@@ -198,7 +208,7 @@ func backupFile(src string) error {
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return err
 	}
-	return copy.Copy(src, backupDir + src)
+	return copy.Copy(src, backupDir+src)
 }
 
 func removeFile(src string) error {
@@ -219,14 +229,16 @@ func removeOrphanFiles(srcDir string) error {
 
 		switch _, file := filepath.Split(path); file {
 		case "kube-apiserver.yaml":
+			return nil
 		case "etcd.yaml":
+			return nil
 		case "kube-controller-manager.yaml":
+			return nil
 		case "kube-scheduler.yaml":
+			return nil
 		default:
 			return removeFile(path)
 		}
-		return nil
 	}
-
-	return filepath.Walk(srcDir, walkFunc);
+	return filepath.Walk(srcDir, walkFunc)
 }
