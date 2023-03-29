@@ -41,7 +41,7 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
 
       For example, `prometheus.deckhouse.io/query-param-foo=bar` & `prometheus.deckhouse.io/query-param-bar=zxc` annotations will be converted to the `http://...?foo=bar&bar=zxc` query;
   * `prometheus.deckhouse.io/allow-unready-pod` — enables collecting metrics for Pods in any state (by default, Prometheus scrapes metrics from the Ready Pods only). Note that this option is rarely helpful. For example, it can come in handy if it takes a long time to start your application (e.g., some data are loaded into the database at startup or some caching activity occurs), but valuable metrics are supplied during the startup process, helping to monitor it;
-  * `prometheus.deckhouse.io/sample-limit` — sample limit for a Pod (1000 by default). The default value prevents a situation when the application suddenly starts to supply too many metrics, disrupting the entire monitoring process. This annotation must be attached to the resource with the `prometheus.deckhouse.io/custom-target` label;
+  * `prometheus.deckhouse.io/sample-limit` — sample limit for a Pod (5000 by default). The default value prevents a situation when the application suddenly starts to supply too many metrics, disrupting the entire monitoring process. This annotation must be attached to the resource with the `prometheus.deckhouse.io/custom-target` label;
 
 ### An example: Service
 
@@ -58,7 +58,7 @@ metadata:
     prometheus.deckhouse.io/path: "/my_app/metrics"           # /metrics by default
     prometheus.deckhouse.io/query-param-format: "prometheus"  # '' by default
     prometheus.deckhouse.io/allow-unready-pod: "true"         # by default, NON-ready Pods are ignored
-    prometheus.deckhouse.io/sample-limit: "5000"              # by default, the sample is limited to 1000 metrics for a single Pod
+    prometheus.deckhouse.io/sample-limit: "5000"              # by default, the sample is limited to 5000 metrics for a single Pod
 spec:
   ports:
   - name: my-app
@@ -89,7 +89,7 @@ spec:
         app: my-app
         prometheus.deckhouse.io/custom-target: my-app
       annotations:
-        prometheus.deckhouse.io/sample-limit: "5000"  # by default, the sample is limited to 1000 metrics for a single Pod
+        prometheus.deckhouse.io/sample-limit: "5000"  # by default, the sample is limited to 5000 metrics for a single Pod
     spec:
       containers:
       - name: my-app
