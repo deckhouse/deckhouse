@@ -85,21 +85,27 @@ func processCustomMultiLIneTransform(multilineCustomConfig v1alpha1.MultilinePar
 }
 
 func processMultilineRegex(parserRegex *v1alpha1.ParserRegex) (*string, error) {
-	if parserRegex == nil || (parserRegex.NotRegex == nil && parserRegex.Regex == nil) {
+	if parserRegex == nil {
 		return nil, fmt.Errorf("no regex provided")
 	}
 	if parserRegex.NotRegex != nil && parserRegex.Regex != nil {
 		return nil, fmt.Errorf("must be set one of regex or notRegex")
 	}
 
-	var resultRegexRule vrl.Rule
-	var multilineRegex string
-	if parserRegex.NotRegex != nil {
+	var (
+		resultRegexRule vrl.Rule
+		multilineRegex  string
+	)
+
+	switch {
+	case parserRegex.NotRegex != nil:
 		resultRegexRule = vrl.NotRegexMultilineRule
 		multilineRegex = *parserRegex.NotRegex
-	} else if parserRegex.Regex != nil {
+	case parserRegex.Regex != nil:
 		resultRegexRule = vrl.RegexMultilineRule
 		multilineRegex = *parserRegex.Regex
+	default:
+		return nil, fmt.Errorf("regex or notRegex should be provided")
 	}
 
 	resultRegex, err := resultRegexRule.Render(vrl.Args{"multiline": multilineRegex})
