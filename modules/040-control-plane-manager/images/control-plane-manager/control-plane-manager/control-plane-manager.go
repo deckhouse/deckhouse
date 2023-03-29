@@ -162,7 +162,7 @@ func main() {
 	}
 
 	// At the first run there is can be error
-	if err := removeOrphanFiles(filepath.Join(kubernetesConfigPath, "deckhouse", "kubeadm", "patches")); err != nil {
+	if err := removeOrphanFiles(); err != nil {
 		log.Errorf("%s, it is normal on the first run", err)
 	}
 
@@ -201,7 +201,6 @@ func main() {
 	if err := renewCertificates(); err != nil {
 		log.Fatal(err)
 	}
-
 	// pause loop
 	<-quit
 }

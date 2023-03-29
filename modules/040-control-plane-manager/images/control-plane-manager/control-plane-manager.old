@@ -410,16 +410,6 @@ for component in etcd kube-apiserver kube-controller-manager kube-scheduler; do
 done
 echo " * Done!"
 echo
----------------------------------------------------
-
-
-
-
-
-
-
-
-
 # Install base pki into system
 echo "Install base pki files"
 mkdir -m go= -p $ROOTFS_DIR/etc/kubernetes/pki
@@ -434,6 +424,9 @@ install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.crt $ROOTFS_DIR/etc/kubernetes/
 install_file_if_changed $CLUSTER_PKI_DIR/etcd-ca.key $ROOTFS_DIR/etc/kubernetes/pki/etcd/ca.key -o root -g root -m 0600
 echo " * Done!"
 echo
+
+
+---------------------------------------------------
 
 # Create tmp rootfs
 if [[ -d "$TMP_ROOTFS_DIR" ]] ; then

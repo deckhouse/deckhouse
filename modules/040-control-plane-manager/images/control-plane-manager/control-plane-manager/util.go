@@ -234,7 +234,8 @@ func removeFile(src string) error {
 	return os.Remove(src)
 }
 
-func removeOrphanFiles(srcDir string) error {
+func removeOrphanFiles() error {
+	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
 	log.Infof("remove orphan files from dir %s", srcDir)
 
 	walkFunc := func(path string, info os.FileInfo, _ error) error {
