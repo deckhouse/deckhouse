@@ -46,11 +46,9 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    control-plane: controller-manager
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "control-plane" "controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
@@ -98,7 +96,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "kruise" "ingress-nginx") }}
           imagePullPolicy: Always
           name: kruise
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           env:
             - name: KUBE_CACHE_MUTATION_DETECTOR
               value: "true"
