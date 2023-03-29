@@ -116,7 +116,7 @@ func checkKubernetesVersion() error {
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
-	src, err := evalSymlink(src)
+	src, err := filepath.EvalSymlinks(src)
 	if err != nil {
 		return err
 	}
@@ -159,14 +159,33 @@ func calculateConfigurationChecksum() error {
 		return err
 	}
 
-	walkFunc := func(path string, info os.FileInfo, _ error) error {
-		if info == nil || info.IsDir() {
-			return nil
-		}
+	// For tests
+	configDir := configPath
+	if env := os.Getenv("TESTS_CONFIG_PATH"); env != "" {
+		configDir = env
+	}
 
-		path, err := evalSymlink(path)
+	dirEntries, err := os.ReadDir(configDir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range dirEntries {
+		if entry.IsDir() {
+			continue
+		}
+		path, err := filepath.EvalSymlinks(filepath.Join(configDir, entry.Name()))
 		if err != nil {
 			return err
+		}
+
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
+		if fileInfo.IsDir() {
+			continue
 		}
 
 		f, err := os.Open(path)
@@ -178,12 +197,6 @@ func calculateConfigurationChecksum() error {
 		if _, err := io.Copy(h, f); err != nil {
 			return err
 		}
-
-		return nil
-	}
-
-	if err := filepath.Walk(configPath, walkFunc); err != nil {
-		return err
 	}
 	configurationChecksum = fmt.Sprintf("%x", h.Sum(nil))
 	return nil
@@ -243,15 +256,3 @@ func removeOrphanFiles(srcDir string) error {
 	return filepath.Walk(srcDir, walkFunc)
 }
 
-func evalSymlink(src string) (string, error) {
-	for {
-		path, err := filepath.EvalSymlinks(src)
-		if err != nil {
-			return "", err
-		}
-		if path == src {
-			return path, nil
-		}
-		src = path
-	}
-}
