@@ -105,6 +105,9 @@ anchors_disabled: true
     <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="business">
       Руководителям бизнеса
     </a>
+    <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="for-specialists">
+      Специалистам ИБ
+    </a>
   </div>
 
   <div class="features-tabs__item active" data-features-tabs-content="developers">
@@ -176,6 +179,26 @@ anchors_disabled: true
       <li>
           Получите <a href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&amp;grouping=category&amp;selected=flant-deckhouse" target="_blank">сертифицированную в CNCF</a> платформу, основанную на upstream-базе Kubernetes и Open Source-ядре,
         избежав vendor lock-in.
+      </li>
+    </ul>
+  </div>
+
+  <div class="features-tabs__item" data-features-tabs-content="for-specialists">
+    <ul class="features-tabs__item-list">
+      <li>
+        <strong>Безопасная конфигурация</strong> кластера Kubernetes “из коробки”: минимальные привилегии компонентов, преднастроенная ролевая модель, сквозная идентификация объектов в системе аудита, интеграция с внешними службами каталогов.
+      </li>
+      <li>
+        Соответствие <strong>лучшим практикам</strong>: регулярные проверки инфраструктуры по <a href="https://flant.slack.com/archives/C0HJDE0C8/p1680012653283939?thread_ts=1679058365.704439&cid=C0HJDE0C8" target="_blank">CIS Benchmark</a>, сканирование образов на уязвимости.
+      </li>
+      <li>
+        <strong>Сетевая безопасность</strong>: централизованное управление сетевыми политиками, контроль за всеми входящими и исходящими соединениями, визуализация сетевых взаимодействий.
+      </li>
+      <li>
+        Контроль над <strong>запускаемыми приложениями</strong>: встроенная реализация <a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank">Pod Security Standards</a>, готовый набор рекомендуемых политик с возможностью расширения.
+      </li>
+      <li>
+        <strong>Аудит</strong> и регистрация событий безопасности: готовый набор правил для определения событий безопасности с возможностью расширения, гибкая фильтрация событий, отправляемых в SIEM-систему, уведомление сотрудников ИБ об инцидентах безопасности.
       </li>
     </ul>
   </div>
