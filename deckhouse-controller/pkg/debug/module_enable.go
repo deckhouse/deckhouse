@@ -16,7 +16,7 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application) {
 	var moduleName string
 	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in ModuleConfig resource.").
 		Action(func(c *kingpin.ParseContext) error {
-			return moduleSwitch(moduleName, false, "disable")
+			return moduleSwitch(moduleName, true, "enable")
 		})
 	moduleEnableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 
@@ -30,6 +30,7 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application) {
 func moduleSwitch(moduleName string, enabled bool, actionDesc string) error {
 	// Init logging for console output.
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
+	log.SetLevel(log.ErrorLevel)
 
 	// Init Kubernetes client.
 	kubeClient := shell_operator.DefaultMainKubeClient(nil, nil)
@@ -42,5 +43,6 @@ func moduleSwitch(moduleName string, enabled bool, actionDesc string) error {
 	if err != nil {
 		return fmt.Errorf("%s module failed: %v", actionDesc, err)
 	}
+	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
 	return nil
 }
