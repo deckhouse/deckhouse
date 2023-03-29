@@ -21,6 +21,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	ModuleConfigKind = "ModuleConfig"
+	ModuleConfigResource = "moduleconfigs"
+	ModuleConfigGroup = "deckhouse.io"
+	ModuleConfigVersion = "v1alpha1"
+	ModuleConfigApiVersion = "deckhouse.io/v1alpha1"
+)
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -59,13 +67,17 @@ func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
 
 func (f *moduleConfigKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
+	return schema.GroupVersionKind{
+		Group: ModuleConfigGroup,
+		Version: ModuleConfigVersion,
+		Kind: ModuleConfigKind,
+	}
 }
 
 func GroupVersionResource() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
-		Group:    "deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "moduleconfigs",
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Resource: ModuleConfigResource,
 	}
 }

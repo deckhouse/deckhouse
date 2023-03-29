@@ -121,7 +121,6 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 		err := unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled")
 		if err != nil {
 			return fmt.Errorf("change spec.enabled to %v in ModuleConfig/%s: %w", enabled, name, err)
-
 		}
 		_, err = kubeClient.Dynamic().Resource(gvr).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{})
 		if err != nil {
@@ -133,8 +132,8 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	// Create new ModuleConfig if absent.
 	newCfg := &d8cfg_v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ModuleConfig",
-			APIVersion: "deckhouse.io/v1alpha1",
+			Kind:       d8cfg_v1alpha1.ModuleConfigKind,
+			APIVersion: d8cfg_v1alpha1.ModuleConfigApiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

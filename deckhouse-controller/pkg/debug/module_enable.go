@@ -28,13 +28,13 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application) {
 	moduleCmd := kpApp.GetCommand("module")
 
 	var moduleName string
-	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in ModuleConfig resource.").
+	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(c *kingpin.ParseContext) error {
 			return moduleSwitch(moduleName, true, "enable")
 		})
 	moduleEnableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 
-	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in ModuleConfig resource.").
+	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(c *kingpin.ParseContext) error {
 			return moduleSwitch(moduleName, false, "disable")
 		})
