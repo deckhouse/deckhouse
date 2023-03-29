@@ -376,8 +376,8 @@ spec:
                       type: object
                       description: Multiline parser custom regex rules.
                       properties:
-                        type: object
                         startsWhen:
+                          type: object
                           description: |
                             It's a condition to distinguish the first log line of multiline log.
                           oneOf:
