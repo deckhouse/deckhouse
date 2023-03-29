@@ -190,6 +190,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := installBasePKIfiles(); err != nil {
+		log.Fatal(err)
+	}
+
 	// pause loop
 	<-quit
 }
