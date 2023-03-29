@@ -17,9 +17,11 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/etcd-artifact
   add: /usr/local/bin/etcdctl
+  to: /usr/local/bin/etcdctl
   before: install
 - artifact: {{ $.ModuleName }}/controller-artifact
   add: /controller
+  to: /controller
   before: install
 docker:
   ENTRYPOINT: ["/controller"]
