@@ -129,6 +129,88 @@ spec:
 
 Для обеспечения безопасности настоятельно рекомендуем использовать **kube-rbac-proxy**.
 
+### Пример безопасного сбора метрик с приложения, расположенного вне кластера
+
+Требование: из кластера должен быть сетевой доступ до сервиса **kube-rbac-proxy**, запущенного на удалённом сервере, а с удалённого сервера должен быть доступен **kubernetes-api**.
+
+Предположим, что есть внешний сервер, который доступен через интернет и на котором работает **node-exporter**. По-умолчанию, он слушает порт 9100 и доступен на всех интерфейсах. Нам нужно сделать так, что бы доступ был контроллируемым. Начнём с подготовки некоторых объектов на стороне кластера.
+Нам нужен новый **ServiceAccount** с определёнными правами, для которого мы сгенерируем **kubeconfig**:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-external-endpoint-server-01
+  namespace: d8-service-accounts
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-external-endpoint
+rules:
+- apiGroups: ["authentication.k8s.io"]
+  resources:
+  - tokenreviews
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources:
+  - subjectaccessreviews
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-external-endpoint-server-01
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-external-endpoint
+subjects:
+- kind: ServiceAccount
+  name: prometheus-external-endpoint-server-01
+  namespace: d8-service-accounts
+```
+
+Как сгенерировать **kubeconfig** для созданного **ServiceAccount** можно посмотреть [тут](https://deckhouse.ru/documentation/v1/modules/140-user-authz/usage.html#%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-serviceaccount-%D0%B4%D0%BB%D1%8F-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80%D0%B0-%D0%B8-%D0%BF%D1%80%D0%B5%D0%B4%D0%BE%D1%81%D1%82%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B5%D0%BC%D1%83-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0).
+
+Положим получившийся **kubeconfig** на удалённую машину. В дальнейшем нам понадобится указать **kube-rbac-proxy** путь к нему.
+
+Теперь настроим **node-exporter** на удалённом сервере, что бы он был доступен только на локальном интерфейсе и слушал **127.0.0.1:9100**, а так же, запустим **kube-rbac-proxy**.
+
+```bash
+docker run --network host -d -v ${PWD}/.kube/config:/config quay.io/brancz/kube-rbac-proxy:v0.14.0 --secure-listen-address=0.0.0.0:8443 --upstream=http://127.0.0.1:9100 --kubeconfig=/config --logtostderr=true --v=10
+```
+
+Проверьте, что порт 8443 доступен по внешнему адресу удалённого сервера.
+
+Возвращаемся в кластер и создаём **Service** и **Endpoint**, указав в качестве **<server_ip_address>** внешний адрес удалённой машины:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-external-endpoint-server-01
+  labels:
+    prometheus.deckhouse.io/custom-target: prometheus-external-endpoint-server-01
+spec:
+  ports:
+  - name: https-metrics
+    port: 8443
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: prometheus-external-endpoint-server-01
+subsets:
+  - addresses:
+    - ip: <server_ip_address>
+    ports:
+    - name: https-metrics
+      port: 8443
+```
+
 ## Как добавить Alertmanager?
 
 Создайте custom resource `CustomAlertmanager` с типом `Internal`.
@@ -183,7 +265,7 @@ metadata:
   name: my-service-alertmanager
 spec:
   external:
-    service: 
+    service:
       namespace: myns
       name: my-alertmanager
       path: /myprefix/
