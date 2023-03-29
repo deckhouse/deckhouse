@@ -109,7 +109,6 @@ func main() {
 			if err != nil {
 				os.Exit(1)
 			}
-			debug.RegisterModuleEnableRoutes(operator.DebugServer, operator)
 			operator.Start()
 
 			// Init deckhouse-config service with ModuleManager instance.
@@ -133,7 +132,7 @@ func main() {
 	sh_debug.DefineDebugCommands(kpApp)
 	ad_app.DefineDebugCommands(kpApp)
 
-	// Add debug commands
+	// Add more commands to the "module" command.
 	debug.DefineModuleConfigDebugCommands(kpApp)
 
 	// deckhouse-controller helper subcommands

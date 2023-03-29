@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.1.3-0.20230328123006-e4887ca4cd1b
+	github.com/flant/addon-operator v1.1.3-0.20230209101344-0aaa96dbf974
 	github.com/flant/kube-client v0.25.0
 	github.com/flant/shell-operator v1.1.3
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -29,7 +29,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/mitchellh/mapstructure v1.4.1 // indirect
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.20.2
@@ -62,7 +62,6 @@ require (
 )
 
 require (
-	github.com/go-chi/chi/v5 v5.0.7
 	k8s.io/cli-runtime v0.25.5
 	k8s.io/kubectl v0.25.5
 )
@@ -100,6 +99,7 @@ require (
 	github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a // indirect
 	github.com/flant/logboek v0.3.4 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/go-chi/chi/v5 v5.0.7 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
