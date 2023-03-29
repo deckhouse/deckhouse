@@ -64,6 +64,28 @@ request-education:
     en:
       title: "Error"
       text: "Something went wrong..."
+request-demo:
+  header:
+    ru:
+      title: "Запросить демо"
+      text: "Оставьте ваши данные, и мы свяжемся с вами."
+    en:
+      title: "Request demo"
+      text: "Fill out this form, and we will contact you soon."
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Спасибо, мы скоро свяжемся с вами."
+    en:
+      title: "Thank you"
+      text: "We will contact you soon."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
 get-a-report:
   header:
     ru:
