@@ -130,11 +130,11 @@ func installKubeadmConfig() error {
 	//		return err
 	//	}
 
-	if err := installFileIfChanged("/config/kubeadm-config.yaml", filepath.Join(kubeadmDir, "config.yaml"), 0644); err != nil {
+	if err := installFileIfChanged(filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(kubeadmDir, "config.yaml"), 0644); err != nil {
 		return err
 	}
 	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
-		if err := installFileIfChanged(filepath.Join("/config", component+".yaml.tpl"), filepath.Join(patchesDir, component+".yaml"), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(patchesDir, component+".yaml"), 0644); err != nil {
 			return err
 		}
 	}
@@ -154,6 +154,20 @@ func main() {
 
 	if err := newClient(); err != nil {
 		log.Fatal(err)
+	}
+
+	if err := calculateConfigurationChecksum(); err != nil {
+		log.Fatal(err)
+	}
+
+	// At the first run there is can be error
+	if err := getLastAppliedConfigurationChecksum(); err != nil {
+		log.Errorf("%s, it is normal on the first run", err)
+	}
+
+	// At the first run there is can be error
+	if err := removeOrphanFiles(filepath.Join(kubernetesConfigPath, "deckhouse", "kubeadm", "patches")); err != nil {
+		log.Errorf("%s, it is normal on the first run", err)
 	}
 
 	if err := annotateNode(); err != nil {

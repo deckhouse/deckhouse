@@ -18,9 +18,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -36,15 +41,18 @@ const (
 	maximalKubernetesVersionConstraint = `< 1.27`
 	kubernetesConfigPath               = `/etc/kubernetes`
 	manifestsPath                      = kubernetesConfigPath + `/manifests`
+	configPath                         = `/config`
 )
 
 var (
-	myPodName         string
-	kubernetesVersion string
-	nodeName          string
-	myIP              string
-	k8sClient         *kubernetes.Clientset
-	quit              = make(chan struct{})
+	myPodName                        string
+	kubernetesVersion                string
+	nodeName                         string
+	myIP                             string
+	k8sClient                        *kubernetes.Clientset
+	quit                             = make(chan struct{})
+	configurationChecksum            string
+	lastAppliedConfigurationChecksum string
 )
 
 func readEnvs() error {
@@ -114,9 +122,6 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	}
 
 	dstBytes, _ = os.ReadFile(dst)
-	if err != nil {
-		return err
-	}
 
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
@@ -125,10 +130,103 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return nil
 	}
 
+	if err := backupFile(dst); err != nil {
+		return err
+	}
+
 	log.Infof("install file %s to destination %s", src, dst)
-	err = os.WriteFile(dst, srcBytes, perm)
+	if err := os.WriteFile(dst, srcBytes, perm); err != nil {
+		return err
+	}
+
+	return os.Chown(dst, 0, 0)
+}
+
+func calculateConfigurationChecksum() error {
+	h := sha256.New()
+	f, err := os.Open(os.Args[0])
 	if err != nil {
 		return err
 	}
-	return os.Chown(dst, 0, 0)
+	defer f.Close()
+
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+
+	walkFunc := func(path string, info os.FileInfo, _ error) error {
+		if info == nil || info.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(h, f); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(configPath, walkFunc); err != nil {
+		return err
+	}
+	configurationChecksum = fmt.Sprintf("%x", h.Sum(nil))
+	return nil
+}
+
+func getLastAppliedConfigurationChecksum() error {
+	var srcBytes []byte
+	srcBytes, err := os.ReadFile(filepath.Join(kubernetesConfigPath, "deckhouse", "last_applied_configuration_checksum"))
+	lastAppliedConfigurationChecksum = string(srcBytes)
+	return err
+}
+
+func backupFile(src string) error {
+	log.Infof("backup %s file", src)
+
+	if _, err := os.Stat(src); err != nil {
+		return err
+	}
+
+	backupDir := filepath.Join(kubernetesConfigPath, "deckhouse", "backup", configurationChecksum)
+
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return err
+	}
+	return copy.Copy(src, backupDir + src)
+}
+
+func removeFile(src string) error {
+	log.Infof("remove %s file", src)
+	if err := backupFile(src); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
+
+func removeOrphanFiles(srcDir string) error {
+	log.Infof("remove orphan files from dir %s", srcDir)
+
+	walkFunc := func(path string, info os.FileInfo, _ error) error {
+		if info == nil || info.IsDir() {
+			return nil
+		}
+
+		switch _, file := filepath.Split(path); file {
+		case "kube-apiserver.yaml":
+		case "etcd.yaml":
+		case "kube-controller-manager.yaml":
+		case "kube-scheduler.yaml":
+		default:
+			return removeFile(path)
+		}
+		return nil
+	}
+
+	return filepath.Walk(srcDir, walkFunc);
 }
