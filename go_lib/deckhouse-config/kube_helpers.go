@@ -106,25 +106,26 @@ func GetAllConfigs(kubeClient k8s.Client) ([]*d8cfg_v1alpha1.ModuleConfig, error
 
 // SetModuleConfigEnabledFlag updates spec.enabled flag or creates a new ModuleConfig with spec.enabled flag.
 func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool) error {
-	// This should not happen, because DebugServer is started after Kubernetes client initialization, but check it anyway.
+	// This should not happen, but check it anyway.
 	if kubeClient == nil {
-		return fmt.Errorf("kubernetes client not initialized, try again later")
+		return fmt.Errorf("kubernetes client is not initialized")
 	}
 
 	gvr := d8cfg_v1alpha1.GroupVersionResource()
 	unstructuredObj, err := kubeClient.Dynamic().Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil && !k8errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("get ModuleConfig/%s: %v", name, err)
 	}
 
 	if unstructuredObj != nil {
 		err := unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled")
 		if err != nil {
-			return err
+			return fmt.Errorf("change spec.enabled to %v in ModuleConfig/%s: %v", enabled, name, err)
+
 		}
 		_, err = kubeClient.Dynamic().Resource(gvr).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{})
 		if err != nil {
-			return err
+			return fmt.Errorf("update ModuleConfig/%s: %v", name, err)
 		}
 		return nil
 	}
@@ -145,12 +146,12 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 
 	obj, err := sdk.ToUnstructured(newCfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("converting ModuleConfig/%s to unstructured: %v", name, err)
 	}
 
 	_, err = kubeClient.Dynamic().Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("create ModuleConfig/%s: %v", name, err)
 	}
 	return nil
 }
