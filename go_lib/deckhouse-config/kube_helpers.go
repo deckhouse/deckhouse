@@ -118,7 +118,7 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	}
 
 	if unstructuredObj != nil {
-		err := unstructured.SetNestedField(unstructuredObj.Object, pointer.Bool(enabled), "spec", "enabled")
+		err := unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled")
 		if err != nil {
 			return err
 		}
