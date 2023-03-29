@@ -114,18 +114,18 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	gvr := d8cfg_v1alpha1.GroupVersionResource()
 	unstructuredObj, err := kubeClient.Dynamic().Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil && !k8errors.IsNotFound(err) {
-		return fmt.Errorf("get ModuleConfig/%s: %v", name, err)
+		return fmt.Errorf("get ModuleConfig/%s: %w", name, err)
 	}
 
 	if unstructuredObj != nil {
 		err := unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled")
 		if err != nil {
-			return fmt.Errorf("change spec.enabled to %v in ModuleConfig/%s: %v", enabled, name, err)
+			return fmt.Errorf("change spec.enabled to %v in ModuleConfig/%s: %w", enabled, name, err)
 
 		}
 		_, err = kubeClient.Dynamic().Resource(gvr).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("update ModuleConfig/%s: %v", name, err)
+			return fmt.Errorf("update ModuleConfig/%s: %w", name, err)
 		}
 		return nil
 	}
@@ -146,12 +146,12 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 
 	obj, err := sdk.ToUnstructured(newCfg)
 	if err != nil {
-		return fmt.Errorf("converting ModuleConfig/%s to unstructured: %v", name, err)
+		return fmt.Errorf("converting ModuleConfig/%s to unstructured: %w", name, err)
 	}
 
 	_, err = kubeClient.Dynamic().Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("create ModuleConfig/%s: %v", name, err)
+		return fmt.Errorf("create ModuleConfig/%s: %w", name, err)
 	}
 	return nil
 }
