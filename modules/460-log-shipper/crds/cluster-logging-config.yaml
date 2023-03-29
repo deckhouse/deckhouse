@@ -335,6 +335,24 @@ spec:
                   description: Multiline parser for different patterns
                   required:
                     - type
+                  oneOf:
+                    - properties:
+                        type:
+                          enum:
+                            - None
+                            - General
+                            - Backslash
+                            - LogWithTime
+                            - MultilineJSON
+                      required:
+                        - type
+                    - properties:
+                        custom: {}
+                        type:
+                          enum: [Custom]
+                      required:
+                        - type
+                        - custom
                   properties:
                     type:
                       type: string
@@ -345,13 +363,47 @@ spec:
                         * `Backslash` — tries to match bash style logs with backslash on all lines except the last event line.
                         * `LogWithTime` — tries to detect events by timestamp.
                         * `MultilineJSON` — tries to match JSON logs, assuming the event starts with the `{` symbol.
+                        * `Custom` - tries to match logs with the user provided regex in `spec.multilineParser.custom` field.
                       enum:
                         - None
                         - General
                         - Backslash
                         - LogWithTime
                         - MultilineJSON
+                        - Custom
                       default: None
+                    custom:
+                      type: object
+                      description: Multiline parser custom regex rules.
+                      properties:
+                        startsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the first log line of multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DOESN'T match regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match regex.
+                        endsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the last log line of multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DOESN'T match regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match regex.
                 destinationRefs:
                   type: array
                   description: |

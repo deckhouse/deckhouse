@@ -17,14 +17,21 @@ limitations under the License.
 package transform
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []apis.LogTransform {
-	multiLineTransform := DynamicTransform{
+const (
+	startsWhen = "starts_when"
+	endsWhen   = "ends_when"
+)
+
+func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType, multilineCustomConfig v1alpha1.MultilineParserCustom) ([]apis.LogTransform, error) {
+	multiLineTransform := &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "multiline",
 			Type:   "reduce",
@@ -43,16 +50,70 @@ func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []api
 
 	switch multiLineType {
 	case v1alpha1.MultiLineParserGeneral:
-		multiLineTransform.DynamicArgsMap["starts_when"] = vrl.GeneralMultilineRule.String()
+		multiLineTransform.DynamicArgsMap[startsWhen] = vrl.GeneralMultilineRule.String()
 	case v1alpha1.MultiLineParserBackslash:
-		multiLineTransform.DynamicArgsMap["ends_when"] = vrl.BackslashMultilineRule.String()
+		multiLineTransform.DynamicArgsMap[endsWhen] = vrl.BackslashMultilineRule.String()
 	case v1alpha1.MultiLineParserLogWithTime:
-		multiLineTransform.DynamicArgsMap["starts_when"] = vrl.LogWithTimeMultilineRule.String()
+		multiLineTransform.DynamicArgsMap[startsWhen] = vrl.LogWithTimeMultilineRule.String()
 	case v1alpha1.MultiLineParserMultilineJSON:
-		multiLineTransform.DynamicArgsMap["starts_when"] = vrl.JSONMultilineRule.String()
+		multiLineTransform.DynamicArgsMap[startsWhen] = vrl.JSONMultilineRule.String()
+	case v1alpha1.MultiLineParserCustom:
+		err := processCustomMultiLIneTransform(multilineCustomConfig, multiLineTransform.DynamicArgsMap)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		return []apis.LogTransform{}
+		return []apis.LogTransform{}, nil
 	}
 
-	return []apis.LogTransform{&multiLineTransform}
+	return []apis.LogTransform{multiLineTransform}, nil
+}
+
+func processCustomMultiLIneTransform(multilineCustomConfig v1alpha1.MultilineParserCustom, argMap map[string]interface{}) error {
+	if multilineCustomConfig.EndsWhen != nil {
+		endsWhenRule, err := processMultilineRegex(multilineCustomConfig.EndsWhen)
+		if err != nil {
+			return err
+		}
+		argMap[endsWhen] = endsWhenRule
+	}
+	if multilineCustomConfig.StartsWhen != nil {
+		endsWhenRule, err := processMultilineRegex(multilineCustomConfig.StartsWhen)
+		if err != nil {
+			return err
+		}
+		argMap[startsWhen] = *endsWhenRule
+	}
+	return nil
+}
+
+func processMultilineRegex(parserRegex *v1alpha1.ParserRegex) (*string, error) {
+	if parserRegex == nil {
+		return nil, fmt.Errorf("no regex provided")
+	}
+	if parserRegex.NotRegex != nil && parserRegex.Regex != nil {
+		return nil, fmt.Errorf("must be set one of regex or notRegex")
+	}
+
+	var (
+		resultRegexRule vrl.Rule
+		multilineRegex  string
+	)
+
+	switch {
+	case parserRegex.NotRegex != nil:
+		resultRegexRule = vrl.NotRegexMultilineRule
+		multilineRegex = *parserRegex.NotRegex
+	case parserRegex.Regex != nil:
+		resultRegexRule = vrl.RegexMultilineRule
+		multilineRegex = *parserRegex.Regex
+	default:
+		return nil, fmt.Errorf("regex or notRegex should be provided")
+	}
+
+	resultRegex, err := resultRegexRule.Render(vrl.Args{"multiline": multilineRegex})
+	if err != nil {
+		return nil, fmt.Errorf("can't render regex: %v", err)
+	}
+	return &resultRegex, nil
 }
