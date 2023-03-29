@@ -17,24 +17,65 @@ limitations under the License.
 package transform
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
+)
+
+const (
+	excludeField  = "exclude"
+	keyFieldField = "key_field"
 )
 
 // ThrottleTransform adds throttling to event's flow.
-func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
-	throttleTransform := DynamicTransform{
+func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
+	throttleTransform := &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "ratelimit",
 			Type:   "throttle",
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"exclude":     "null",
+			excludeField:  "null",
 			"threshold":   *rl.LinesPerMinute,
 			"window_secs": 60,
 		},
 	}
 
-	return &throttleTransform
+	if rl.KeyField != "" {
+		throttleTransform.DynamicArgsMap[keyFieldField] = rl.KeyField
+	}
+
+	if rl.Excludes != nil {
+		excludeCond, err := generateExcludesForDynamicTransform(rl.Excludes)
+		if err != nil {
+			return nil, err
+		}
+		throttleTransform.DynamicArgsMap[excludeField] = excludeCond
+	}
+	return throttleTransform, nil
+}
+
+func generateExcludesForDynamicTransform(excludes []v1alpha1.Filter) (map[string]interface{}, error) {
+	var trottleResult strings.Builder
+	trottleResult.WriteString("{ false }")
+
+	for _, filter := range excludes {
+		rule := getRuleOutOfFilter(&filter)
+		if rule == "" {
+			return nil, fmt.Errorf("exclude rule value is empty for dynamic transform")
+		}
+		condition, err := rule.Render(vrl.Args{"filter": filter})
+		if err != nil {
+			return nil, fmt.Errorf("error rendering exclude rule for dynamic transform: %w", err)
+		}
+
+		trottleResult.WriteString("|| { " + condition + " }")
+	}
+
+	return map[string]interface{}{"type": "vrl", "source": trottleResult.String()}, nil
 }
