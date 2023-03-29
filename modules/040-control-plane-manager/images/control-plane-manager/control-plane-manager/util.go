@@ -116,7 +116,7 @@ func checkKubernetesVersion() error {
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
-	src, err := filepath.EvalSymlinks(src)
+	src, err := evalSymlink(src)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func calculateConfigurationChecksum() error {
 			return nil
 		}
 
-		path, err := filepath.EvalSymlinks(path)
+		path, err := evalSymlink(path)
 		if err != nil {
 			return err
 		}
@@ -241,4 +241,17 @@ func removeOrphanFiles(srcDir string) error {
 		}
 	}
 	return filepath.Walk(srcDir, walkFunc)
+}
+
+func evalSymlink(src string) (string, error) {
+	for {
+		path, err := filepath.EvalSymlinks(src)
+		if err != nil {
+			return "", err
+		}
+		if path == src {
+			return path, nil
+		}
+		src = path
+	}
 }
