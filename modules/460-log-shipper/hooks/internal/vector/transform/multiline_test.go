@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 func Test_processMultilineRegex(t *testing.T) {
