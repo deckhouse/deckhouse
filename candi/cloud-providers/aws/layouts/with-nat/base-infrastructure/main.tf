@@ -140,7 +140,9 @@ resource "aws_iam_role" "node" {
     "Statement": [
         {
             "Action": "sts:AssumeRole",
-            "Resource": "*",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
             "Effect": "Allow"
         }
     ]
