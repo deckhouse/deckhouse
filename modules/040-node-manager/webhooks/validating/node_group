@@ -172,13 +172,18 @@ EOF
     return 0
   fi
 
-  newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
-  oldNodeType="$(context::jq -r --arg nt "${newNodeType}" '.review.request.oldObject.spec.nodeType // $nt')"
-  if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to change nodeType for NodeGroup (from ${oldNodeType} to ${newNodeType})"}
+  # Only update operation checks
+  operationType="$(context::jq -r '.review.request.operation')"
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    # Forbid changing nodeType
+    newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
+    oldNodeType="$(context::jq -r '.review.request.oldObject.spec.nodeType')"
+    if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to change nodeType for NodeGroup"}
 EOF
-      return 0
+        return 0
+    fi
   fi
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
