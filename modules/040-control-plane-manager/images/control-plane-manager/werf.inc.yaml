@@ -8,19 +8,19 @@ import:
 - image: common/pause
   add: /pause
   to: /pause
-  before: setup
+  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /usr/local/bin
   to: /usr/local/bin
   includePaths:
   - kubeadm-*
-  before: setup
+  before: install
 - artifact: {{ $.ModuleName }}/etcd-artifact
   add: /usr/local/bin/etcdctl
-  before: setup
+  before: install
 - artifact: {{ $.ModuleName }}/controller-artifact
   add: /controller
-  before: setup
+  before: install
 docker:
   ENTRYPOINT: ["/controller"]
 ---
