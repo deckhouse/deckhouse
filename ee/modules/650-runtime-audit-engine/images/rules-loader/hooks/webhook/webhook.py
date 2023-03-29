@@ -3,11 +3,8 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-from hook import convert_spec
-
-from dotmap import DotMap
 from deckhouse import hook
-
+from stringcase import snakecase
 
 # Converts FalcoAuditRules CRD format to the native Falco rules
 def convert_spec(spec: dict) -> list:
@@ -59,37 +56,37 @@ def convert_spec(spec: dict) -> list:
     return result
 
 def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        request = DotMap(ctx.binding_context).review.request
-
-        # print("request", request.pprint(pformat="json"))  # debug printing
-
+    # try:
+        print("111")
+        request = ctx.binding_context["review"]["request"]
+        print("222")
         errmsg = validate(request)
+        print("333")
         if errmsg is None:
             ctx.output.validations.allow()
         else:
             ctx.output.validations.deny(errmsg)
-    except Exception as e:
-        # print("validating error", str(e))  # debug printing
-        ctx.output.validations.error(str(e))
+    # except Exception as e:
+    #     # print("validating error", str(e))  # debug printing
+    #     ctx.output.validations.error(str(e))
 
 
-def validate(request: DotMap) -> str | None:
-    match request.operation:
+def validate(request: dict) -> str | None:
+    match request["operation"]:
         case "CREATE":
-            return validate_falco_rules(request.object)
+            print("🟣 CREATE")
+            return validate_falco_rules(request["object"]["spec"])
         case "UPDATE":
-            return validate_falco_rules(request.object)
+            return validate_falco_rules(request["object"]["spec"])
         case _:
-            raise Exception(f"Unknown operation {request.operation}")
+            raise Exception(f"Unknown operation {request['operation']}")
 
 
-def validate_falco_rules(obj: DotMap) -> str | None:
+def validate_falco_rules(spec: dict) -> str | None:
     # Validate name
-    print("Validate_falco_rules func")
-    res = convert_spec(obj.spec)
-    print(res)
+    print("🔴:", spec)
+    res = convert_spec(spec)
+    print("🟢:", res)
 
     return None
 

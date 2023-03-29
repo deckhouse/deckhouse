@@ -3,10 +3,10 @@
 #
 configVersion: v1
 kubernetesValidating:
-- name: python-crd-name.deckhouse.io
+- name: falcoauditrules.deckhouse.io
   rules:
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["v1alpha1", "v1beta1", "v1"]
+    apiVersions: ["v1alpha1"]
     operations:  ["CREATE", "UPDATE"]
-    resources:   ["pythons"]
+    resources:   ["falcoauditrules"]
     scope:       "Cluster"
