@@ -117,7 +117,7 @@ properties:
                         minLength: 1
                       kind:
                         type: string
-                        enum: [ClusterRole, Role]
+                        enum: [ClusterRole]
                       name:
                         type: string
                         minLength: 1
