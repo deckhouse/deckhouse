@@ -172,7 +172,16 @@ EOF
     return 0
   fi
 
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  oldNodeType="$(context::jq -r '.review.request.oldObject.spec.nodeType')"
+  newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
+  if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to change nodeType for NodeGroup"}
+EOF
+      return 0
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
 }
