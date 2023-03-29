@@ -63,7 +63,7 @@ func renewCertificates() error {
 	components["etcd-peer"] = "etcd/peer"
 	components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
 	for k, v := range components {
-		if err:= renewCertificate(k,v); err != nil {
+		if err := renewCertificate(k, v); err != nil {
 			return err
 		}
 	}
@@ -71,8 +71,8 @@ func renewCertificates() error {
 }
 
 func renewCertificate(componentName, f string) error {
-	path := filepath.Join(kubernetesConfigPath, "pki", f + ".crt")
-	log.Infof("generate or renew %s certificate %s.crt", componentName, path)
+	path := filepath.Join(kubernetesConfigPath, "pki", f+".crt")
+	log.Infof("generate or renew %s certificate %s", componentName, path)
 
 	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
 		var remove bool
@@ -95,7 +95,7 @@ func renewCertificate(componentName, f string) error {
 			remove = true
 		}
 
-		keyPath := filepath.Join(kubernetesConfigPath, "pki", f + ".key")
+		keyPath := filepath.Join(kubernetesConfigPath, "pki", f+".key")
 		if _, err := os.Stat(keyPath); err != nil {
 			log.Infof("certificate %s exists, but no appropriate key found")
 			remove = true
@@ -111,7 +111,7 @@ func renewCertificate(componentName, f string) error {
 		}
 	}
 
-	if _, err := os.Stat(path); err  != nil {
+	if _, err := os.Stat(path); err != nil {
 		// regenerate certificate
 		log.Infof("generate certificate %s", path)
 		c := exec.Command(fmt.Sprintf("%s init phase certs %s --config %s/kubeadm/config.yaml", kubeadm(), componentName, deckhousePath))
@@ -128,7 +128,12 @@ func renewCertificate(componentName, f string) error {
 func certificateSubjectAndSansIsChanged(componentName, path string) (bool, error) {
 	// Generate tmp certificate and compare
 	tmpPath := filepath.Join("/tmp", configurationChecksum)
-	exec.Command(fmt.Sprintf("%s init phase certs %s --config %s/kubeadm/config.yaml --rootfs %s", kubeadm(), componentName, deckhousePath, tmpPath))
+	c := exec.Command(fmt.Sprintf("%s init phase certs %s --config %s/kubeadm/config.yaml --rootfs %s", kubeadm(), componentName, deckhousePath, tmpPath))
+	out, err := c.CombinedOutput()
+	if err != nil {
+		return false, err
+	}
+	log.Infof("%s", out)
 
 	oldCert, err := loadCert(path)
 	if err != nil {
