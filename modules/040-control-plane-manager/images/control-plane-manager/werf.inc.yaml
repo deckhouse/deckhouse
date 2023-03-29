@@ -19,10 +19,10 @@ import:
   add: /usr/local/bin/etcdctl
   before: setup
 - artifact: {{ $.ModuleName }}/controller-artifact
-  add: /control-plane-manager
+  add: /controller
   before: setup
 docker:
-  ENTRYPOINT: ["/control-plane-manager"]
+  ENTRYPOINT: ["/controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.25" $version }}
@@ -54,3 +54,19 @@ shell:
   - make all WHAT=cmd/kubeadm
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
 {{- end }}
+---
+artifact: {{ $.ModuleName }}/controller-artifact
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+git:
+  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
+    to: /
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go
+    - chmod +x /controller
