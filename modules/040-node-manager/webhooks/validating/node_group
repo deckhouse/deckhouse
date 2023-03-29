@@ -180,7 +180,7 @@ EOF
     oldNodeType="$(context::jq -r '.review.request.oldObject.spec.nodeType')"
     if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to change nodeType for NodeGroup"}
+{"allowed":false, "message":".spec.nodeType field is immutable"}
 EOF
         return 0
     fi
