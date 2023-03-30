@@ -10,8 +10,12 @@ import (
 )
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	SANs: tls_certificate.DefaultSANs([]string{"127.0.0.1"}),
-	CN:   "127.0.0.1",
+	SANs: tls_certificate.DefaultSANs([]string{
+		"127.0.0.1",
+		"runtime-audit-engine-webhook",
+		"runtime-audit-engine-webhook.d8-runtime-audit-engine.svc",
+	}),
+	CN: "127.0.0.1",
 
 	Namespace:            "d8-runtime-audit-engine",
 	TLSSecretName:        "runtime-audit-engine-webhook-tls",

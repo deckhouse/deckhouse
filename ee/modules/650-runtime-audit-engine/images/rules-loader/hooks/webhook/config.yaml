@@ -3,7 +3,7 @@
 #
 configVersion: v1
 kubernetesValidating:
-- name: falcoauditrules.deckhouse.io
+- name: d8-runtime-audit-engine-webhook
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["v1alpha1"]
