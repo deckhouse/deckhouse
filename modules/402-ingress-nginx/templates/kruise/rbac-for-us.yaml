@@ -1,8 +1,16 @@
 ---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kruise
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kruise-manager-role
+  name: d8:ingress-nginx:kruise-role
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
@@ -585,124 +593,17 @@ rules:
 ---
 # Source: kruise/templates/rbac_role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kruise-daemon-role
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
-rules:
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - nodeimages
-    verbs:
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - nodeimages/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
-      - update
-      - patch
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - containerrecreaterequests
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - containerrecreaterequests/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - pods/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - nodepodprobes
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - apps.kruise.io
-    resources:
-      - nodepodprobes/status
-    verbs:
-      - get
-      - patch
-      - update
----
-# Source: kruise/templates/rbac_role.yaml
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kruise-manager-rolebinding
+  name: d8:ingress-nginx:kruise-rolebinding
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kruise-manager-role
+  name: d8:ingress-nginx:kruise-role
 subjects:
   - kind: ServiceAccount
-    name: kruise-manager
-    namespace: d8-ingress-nginx
----
-# Source: kruise/templates/rbac_role.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kruise-daemon-rolebinding
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kruise-daemon-role
-subjects:
-  - kind: ServiceAccount
-    name: kruise-daemon
+    name: kruise
     namespace: d8-ingress-nginx
 ---
 # Source: kruise/templates/rbac_role.yaml
@@ -753,5 +654,5 @@ roleRef:
   name: kruise-leader-election-role
 subjects:
   - kind: ServiceAccount
-    name: kruise-manager
+    name: kruise
     namespace: d8-ingress-nginx

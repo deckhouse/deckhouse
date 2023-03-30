@@ -1,40 +1,39 @@
+{{- define "manager_resources" }}
+cpu: 100m
+memory: 128Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
-# Source: kruise/templates/manager.yaml
-apiVersion: v1
-kind: ServiceAccount
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
 metadata:
-  name: kruise-manager
+  name: kruise-controller-manager
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
----
-# Source: kruise/templates/manager.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kruise-webhook-certs
-  namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
----
-# Source: kruise/templates/manager.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: kruise-webhook-service
-  namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  ports:
-    - port: 443
-      targetPort: 9876
-  selector:
-    control-plane: controller-manager
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: kruise-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: kruise
+        minAllowed:
+          {{- include "manager_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 300m
+          memory: 512Mi
+{{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -48,7 +47,7 @@ kind: Deployment
 metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . (dict "control-plane" "controller-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
@@ -56,6 +55,7 @@ spec:
       control-plane: controller-manager
       app: kruise
   minReadySeconds: 3
+  revisionHistoryLimit: 2
   template:
     metadata:
       labels:
@@ -65,6 +65,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
         - args:
             - --enable-leader-election
@@ -93,8 +94,8 @@ spec:
             - --workloadspread-workers=0
           command:
             - /manager
-          image: {{ include "helm_lib_module_image" (list . "kruise" "ingress-nginx") }}
-          imagePullPolicy: Always
+          image: {{ include "helm_lib_module_image" (list . "kruise") }}
+          imagePullPolicy: IfNotPresent
           name: kruise
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           env:
@@ -123,15 +124,17 @@ spec:
               path: readyz
               port: 8000
           resources:
-            limits:
-              cpu: 200m
-              memory: 512Mi
             requests:
-              cpu: 100m
-              memory: 256Mi
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "manager_resources" . | nindent 14 }}
+            limits:
+              cpu: 300m
+              memory: 512Mi
+          {{- end }}
       hostNetwork: false
       terminationGracePeriodSeconds: 10
-      serviceAccountName: kruise-manager
+      serviceAccountName: kruise
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
