@@ -43,7 +43,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"requiredLabels": {
 				"labels": [
 					{ "key": "foo" },
-					{ "key": "bar", "allowRegex": "^[a-zA-Z]+.agilebank.demo$" }
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.agilebank.demo$" }
 				],
 				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
 			},
