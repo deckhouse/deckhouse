@@ -10,11 +10,11 @@ RUN git clone --depth 1 --branch v${KRUISE_CONTROLLER_VERSION} https://github.co
     cd kruise && \
     git apply /disable-controllers.patch && \
     make build && \
-    cp bin/manager /tmp/manager
+    mv bin/manager /tmp/manager
 
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache ca-certificates bash expat && \
     rm -rf /var/cache/apk/*
-COPY --from=builder /tmp/manager /kruise-manager
-ENTRYPOINT ["/kruise-manager"]
+COPY --from=builder /tmp/manager /manager
+ENTRYPOINT ["/manager"]
