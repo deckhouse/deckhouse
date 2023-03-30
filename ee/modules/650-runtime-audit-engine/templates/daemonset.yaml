@@ -184,7 +184,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
-          value: d8-runtime-audit-engine-webhook
+          value: runtime-audit-engine.deckhouse.io
         - name: VALIDATING_WEBHOOK_SERVICE_NAME
           value: {{ .Chart.Name }}-webhook
         - name: DEBUG_UNIX_SOCKET
