@@ -9,6 +9,7 @@ from yaml import dump
 from os import remove
 import subprocess
 
+
 def main(ctx: hook.Context):
     try:
         request = ctx.binding_context["review"]["request"]
@@ -19,6 +20,7 @@ def main(ctx: hook.Context):
             ctx.output.validations.deny(errmsg)
     except Exception as e:
         ctx.output.validations.error(str(e))
+
 
 def validate(request: dict) -> str | None:
     uid = request.get("uid", "uid")
@@ -31,18 +33,19 @@ def validate(request: dict) -> str | None:
         case _:
             raise Exception(f"Unknown operation {request.operation}")
 
+
 def validate_falco_rules(uid: str, spec: dict) -> str | None:
-    rule_file_name=f'/tmp/falco-{uid}.rule'
+    rule_file_name = f'/tmp/falco-{uid}.rule'
     with open(rule_file_name, "w") as file:
         res = convert_spec(spec)
         file.write(dump(res))
     try:
         output = subprocess.check_output(
-          f'falco -V {rule_file_name}',
-          stderr=subprocess.STDOUT,
-          shell=True,
-          timeout=5,
-          universal_newlines=True
+            f'falco -V {rule_file_name}',
+            stderr=subprocess.STDOUT,
+            shell=True,
+            timeout=5,
+            universal_newlines=True
         )
     except subprocess.CalledProcessError as exc:
         remove(rule_file_name)

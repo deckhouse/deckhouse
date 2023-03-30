@@ -4,6 +4,8 @@
 from stringcase import snakecase
 
 # Converts FalcoAuditRules CRD format to the native Falco rules
+
+
 def convert_spec(spec: dict) -> list:
     result = []
 
@@ -13,7 +15,8 @@ def convert_spec(spec: dict) -> list:
             "required_engine_version": required_engine_version,
         })
 
-    required_k8saudit_plugin_version = spec.get("requiredK8sAuditPluginVersion")
+    required_k8saudit_plugin_version = spec.get(
+        "requiredK8sAuditPluginVersion")
     if required_k8saudit_plugin_version is not None:
         result.append({
             "required_plugin_versions": [

@@ -43,10 +43,10 @@ class TestConvertSpec(unittest.TestCase):
         res = convert_spec({
             "rules": [
                 {
-                  "macro": {
-                      "name": "Never True",
-                      "condition": "(evt.num=0)",
-                  }
+                    "macro": {
+                        "name": "Never True",
+                        "condition": "(evt.num=0)",
+                    }
                 },
                 {
                     "rule": {
