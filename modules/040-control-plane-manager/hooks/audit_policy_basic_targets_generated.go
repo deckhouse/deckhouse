@@ -79,6 +79,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"ingress-gateway-controller",
 	"ingress-nginx",
 	"kiali",
+	"kruise",
 	"kube-state-metrics",
 	"linstor-affinity-controller",
 	"linstor-controller",
