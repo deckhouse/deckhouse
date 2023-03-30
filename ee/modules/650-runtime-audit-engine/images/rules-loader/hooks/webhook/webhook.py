@@ -3,10 +3,7 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
-from sys import path
-path.append('/hooks/rules')
-from rules import convert_spec
-
+from lib.convert import convert_spec
 from deckhouse import hook
 from yaml import dump
 from os import remove
@@ -21,38 +18,37 @@ def main(ctx: hook.Context):
         else:
             ctx.output.validations.deny(errmsg)
     except Exception as e:
-        # print("validating error", str(e))  # debug printing
         ctx.output.validations.error(str(e))
 
-
 def validate(request: dict) -> str | None:
+    uid = request.get("uid", "uid")
+    spec = request.get("object", {}).get("spec", {})
     match request["operation"]:
         case "CREATE":
-            return validate_falco_rules(request["object"]["spec"])
+            return validate_falco_rules(uid, spec)
         case "UPDATE":
-            return validate_falco_rules(request["object"]["spec"])
+            return validate_falco_rules(uid, spec)
         case _:
-            raise Exception(f"Unknown operation {request['operation']}")
+            raise Exception(f"Unknown operation {request.operation}")
 
-
-def validate_falco_rules(spec: dict) -> str | None:
-
-    with open('/tmp/test.rule', "w") as file:
+def validate_falco_rules(uid: str, spec: dict) -> str | None:
+    rule_file_name=f'/tmp/falco-{uid}.rule'
+    with open(rule_file_name, "w") as file:
         res = convert_spec(spec)
         file.write(dump(res))
-
     try:
         output = subprocess.check_output(
-        "cat /tmp/test.rule", stderr=subprocess.STDOUT, shell=True, timeout=3,
-        universal_newlines=True)
+          f'falco -V {rule_file_name}',
+          stderr=subprocess.STDOUT,
+          shell=True,
+          timeout=5,
+          universal_newlines=True
+        )
     except subprocess.CalledProcessError as exc:
-        print("Status : FAIL", exc.returncode, exc.output)
-    else:
-        print("Output: \n{}\n".format(output))
+        remove(rule_file_name)
+        return "Spec validation error"
 
-
-    remove('/tmp/test.rule')
-
+    remove(rule_file_name)
     return None
 
 
