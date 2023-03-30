@@ -36,16 +36,30 @@ metadata:
 spec:
   rules:
   - macro:
+      name: inbound
+      condition: >
+        (((evt.type in (accept,listen) and evt.dir=<)) or
+        (fd.typechar = 4 or fd.typechar = 6) and
+        (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+
+  - macro:
+      name: outbound
+      condition: >
+        (((evt.type = connect and evt.dir=<)) or
+        (fd.typechar = 4 or fd.typechar = 6) and
+        (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+
+  - macro:
       name: app_nginx
-      condition: container and container.image contains "nginx"
-      
+      condition: container.name contains "nginx" and container.image contains "nginx"
+
   - rule:
       name: Unauthorized process opened an outbound connection (nginx)
       desc: nginx process tried to open an outbound connection and is not whitelisted
       condition: outbound and evt.rawres >= 0 and app_nginx
       output: |-
         Non-whitelisted process opened an outbound connection (command=%proc.cmdline connection=%fd.name)
-      priority: Warning      
+      priority: Warning
 
   - list:
       name: nginx_allowed_inbound_ports_tcp
@@ -57,7 +71,7 @@ spec:
       condition: |
         inbound and evt.rawres >= 0 and not fd.sport in (nginx_allowed_inbound_ports_tcp) and app_nginx
       output: |-
-        Inbound network connection to nginx on unexpected port 
+        Inbound network connection to nginx on unexpected port
         (command=%proc.cmdline pid=%proc.pid connection=%fd.name sport=%fd.sport user=%user.name %container.info image=%container.image)
       priority: Notice
 ```
