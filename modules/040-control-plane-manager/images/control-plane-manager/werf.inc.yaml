@@ -13,7 +13,7 @@ import:
   add: /usr/local/bin
   to: /usr/local/bin
   includePaths:
-  - kubeadm-*
+  - kubeadm-{{ $version }}
   before: install
 - artifact: {{ $.ModuleName }}/etcd-artifact
   add: /usr/local/bin/etcdctl
@@ -24,8 +24,6 @@ import:
   to: /controller
   before: install
 shell:
-  install:
-    - echo hello
 docker:
   ENTRYPOINT: ["/controller"]
 ---
