@@ -186,4 +186,43 @@ rules:
 			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
+
+	FContext("Cluster started with basic audit policies and the Secret with policyB", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", true)
+			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(policySecret(policyB)))
+			f.RunHook()
+		})
+
+		It("controlPlaneManager.internal.auditPolicy must contain properly appended basic rules and a policyB", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			// All rules, except last four are dropping rules.
+			for i := 0; i < len(policy.Rules)-4; i++ {
+				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
+			}
+
+			saRule := policy.Rules[len(policy.Rules)-4]
+			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
+			Expect(saRule.Users).To(Equal(auditPolicyBasicServiceAccounts))
+
+			namespaceRule := policy.Rules[len(policy.Rules)-3]
+			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
+			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
+
+			listRule := policy.Rules[len(policy.Rules)-2]
+			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
+			Expect(listRule.Namespaces).To(BeEmpty())
+
+			policyARule := policy.Rules[len(policy.Rules)-1]
+			Expect(policyARule.Level).To(Equal(audit.LevelMetadata))
+			Expect(policyARule.OmitStages[0]).To(Equal(audit.StageRequestReceived))
+			Expect(policyARule.Namespaces).To(BeEmpty())
+		})
+	})
+
 })
