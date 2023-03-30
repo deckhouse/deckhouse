@@ -258,3 +258,7 @@ func removeOrphanFiles() error {
 	}
 	return filepath.Walk(srcDir, walkFunc)
 }
+
+func kubeadm() string {
+	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", kubernetesVersion)
+}

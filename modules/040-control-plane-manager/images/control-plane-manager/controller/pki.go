@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,10 +62,6 @@ func installBasePKIfiles() error {
 	}
 
 	return nil
-}
-
-func kubeadm() string {
-	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", kubernetesVersion)
 }
 
 func renewCertificates() error {
@@ -130,7 +125,7 @@ func renewCertificate(componentName, f string) error {
 	if _, err := os.Stat(path); err != nil {
 		// regenerate certificate
 		log.Infof("generate certificate %s", path)
-		c := exec.Command(fmt.Sprintf("%s init phase certs %s --config %s/kubeadm/config.yaml", kubeadm(), componentName, deckhousePath))
+		c := exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml")
 		out, err := c.CombinedOutput()
 		if err != nil {
 			return err
@@ -144,7 +139,7 @@ func renewCertificate(componentName, f string) error {
 func certificateSubjectAndSansIsChanged(componentName, path string) (bool, error) {
 	// Generate tmp certificate and compare
 	tmpPath := filepath.Join("/tmp", configurationChecksum)
-	c := exec.Command(fmt.Sprintf("%s init phase certs %s --config %s/kubeadm/config.yaml --rootfs %s", kubeadm(), componentName, deckhousePath, tmpPath))
+	c := exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return false, err
