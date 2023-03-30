@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,6 +63,7 @@ func renewKubeconfig(componentName string) error {
 		}
 
 		var certData []byte
+		fmt.Println("%v",  currentKubeconfig)
 		if _, err := base64.StdEncoding.Decode(certData, []byte(currentKubeconfig.Users[0].User.ClientCertificateData)); err != nil {
 			return err
 		}
