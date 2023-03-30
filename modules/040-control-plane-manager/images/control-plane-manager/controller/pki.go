@@ -88,7 +88,7 @@ func renewCertificate(componentName, f string) error {
 	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
 		var remove bool
 		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", lastAppliedConfigurationChecksum, configurationChecksum)
-		if err := prepareKubeconfig(componentName, true); err != nil {
+		if err := prepareCerts(componentName, true); err != nil {
 			return err
 		}
 
@@ -129,18 +129,11 @@ func renewCertificate(componentName, f string) error {
 		}
 	}
 
-	if _, err := os.Stat(path); err != nil {
-		// regenerate certificate
-		log.Infof("generate certificate %s", path)
-		c := exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml")
-		out, err := c.CombinedOutput()
-		if err != nil {
-			return err
-		}
-		log.Infof("%s", out)
+	if _, err := os.Stat(path); err == nil {
+		return nil
 	}
-
-	return nil
+	// regenerate certificate
+	return prepareCerts(componentName, false)
 }
 
 func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {

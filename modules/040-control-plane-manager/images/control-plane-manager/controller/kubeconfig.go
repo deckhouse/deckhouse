@@ -90,8 +90,6 @@ func renewKubeconfig(componentName string) error {
 	// regenerate kubeconfig
 	log.Infof("generate new kubeconfig %s", path)
 	return prepareKubeconfig(componentName, false)
-
-	return nil
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
