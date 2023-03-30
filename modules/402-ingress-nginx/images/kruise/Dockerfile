@@ -8,7 +8,7 @@ COPY patches/disable-controllers.patch /
 
 RUN git clone --depth 1 --branch v${KRUISE_CONTROLLER_VERSION} https://github.com/openkruise/kruise.git && \
     cd kruise && \
-    patch -p1 < /disable-controllers.patch && \
+    git apply /disable-controllers.patch && \
     make build
 
 
