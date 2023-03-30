@@ -1,21 +1,5 @@
 Subject: [PATCH] Add ability to disable controllers
 ---
-Index: pkg/util/discovery/discovery.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/util/discovery/discovery.go b/pkg/util/discovery/discovery.go
---- a/pkg/util/discovery/discovery.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/util/discovery/discovery.go	(date 1680215472582)
-@@ -75,6 +75,7 @@
-
- 		// This might be caused by abnormal apiserver or etcd, ignore it
- 		klog.Errorf("Failed to find resources in group version %s: %v, waiting time %s", gvk.GroupVersion().String(), err, time.Since(startTime))
-+		panic(err)
- 	}
-
- 	return true
 Index: pkg/controller/broadcastjob/broadcastjob_controller.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -203,12 +187,11 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/controller/sidecarset/sidecarset_controller.go b/pkg/controller/sidecarset/sidecarset_controller.go
 --- a/pkg/controller/sidecarset/sidecarset_controller.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/controller/sidecarset/sidecarset_controller.go	(date 1680214138840)
-@@ -58,6 +58,10 @@
++++ b/pkg/controller/sidecarset/sidecarset_controller.go	(date 1680216335384)
+@@ -58,6 +58,9 @@
  // Add creates a new SidecarSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
  // and Start it when the Manager is Started.
  func Add(mgr manager.Manager) error {
-+	klog.V(2).Infof("SIDECAR Concurrent reconcicles set: %d", concurrentReconciles)
 +	if concurrentReconciles == 0 {
 +		return nil
 +	}
@@ -269,41 +252,6 @@ diff --git a/pkg/controller/persistentpodstate/persistent_pod_state_controller.g
  	if !discovery.DiscoverGVK(KruiseKindPps) {
  		return nil
  	}
-Index: pkg/util/fieldindex/register.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/util/fieldindex/register.go b/pkg/util/fieldindex/register.go
---- a/pkg/util/fieldindex/register.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/util/fieldindex/register.go	(date 1680215160399)
-@@ -23,7 +23,6 @@
- 	"sigs.k8s.io/controller-runtime/pkg/client"
-
- 	appsv1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
--	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
- 	batchv1 "k8s.io/api/batch/v1"
- 	v1 "k8s.io/api/core/v1"
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-@@ -70,18 +69,6 @@
- 		if err = indexJob(c); err != nil {
- 			return
- 		}
--		// broadcastjob owner
--		if utildiscovery.DiscoverObject(&appsv1alpha1.BroadcastJob{}) {
--			if err = indexBroadcastCronJob(c); err != nil {
--				return
--			}
--		}
--		// imagepulljob active
--		if utildiscovery.DiscoverObject(&appsv1alpha1.ImagePullJob{}) {
--			if err = indexImagePullJobActive(c); err != nil {
--				return
--			}
--		}
- 	})
- 	return err
- }
 Index: pkg/controller/sidecarterminator/sidecar_terminator_controller.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
