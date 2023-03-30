@@ -187,7 +187,7 @@ rules:
 		})
 	})
 
-	FContext("Cluster started with basic audit policies and the Secret with policyB", func() {
+	Context("Cluster started with basic audit policies and the Secret with policyB", func() {
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", true)
 			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
