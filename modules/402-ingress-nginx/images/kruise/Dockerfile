@@ -1,1 +1,19 @@
-FROM openkruise/kruise-manager:v1.3.0@sha256:0440d31cc4e7532820f82e2bb721d19f809deb66d632a67e71f840a67a456654
+ARG BASE_ALPINE
+ARG BASE_GOLANG_19_BULLSEYE
+
+FROM $BASE_GOLANG_19_BULLSEYE as builder
+ARG KRUISE_CONTROLLER_VERSION=1.4.0
+
+COPY patches/disable-controllers.patch /
+
+RUN git clone --depth 1 --branch v${KRUISE_CONTROLLER_VERSION} https://github.com/openkruise/kruise.git && \
+    cd kruise && \
+    patch -p1 < /disable-controllers.patch && \
+    make build
+
+
+FROM $BASE_ALPINE
+RUN apk add --no-cache ca-certificates bash expat && \
+    rm -rf /var/cache/apk/*
+COPY --from=builder kruise/bin/manager /kruise-manager
+ENTRYPOINT ["/kruise-manager"]
