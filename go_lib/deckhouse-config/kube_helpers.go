@@ -133,7 +133,7 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 	newCfg := &d8cfg_v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       d8cfg_v1alpha1.ModuleConfigKind,
-			APIVersion: d8cfg_v1alpha1.ModuleConfigApiVersion,
+			APIVersion: d8cfg_v1alpha1.ModuleConfigAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	ModuleConfigKind = "ModuleConfig"
-	ModuleConfigResource = "moduleconfigs"
-	ModuleConfigGroup = "deckhouse.io"
-	ModuleConfigVersion = "v1alpha1"
-	ModuleConfigApiVersion = "deckhouse.io/v1alpha1"
+	ModuleConfigKind       = "ModuleConfig"
+	ModuleConfigResource   = "moduleconfigs"
+	ModuleConfigGroup      = "deckhouse.io"
+	ModuleConfigVersion    = "v1alpha1"
+	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
 )
 
 // +genclient
@@ -68,9 +68,9 @@ func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
 func (f *moduleConfigKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
-		Group: ModuleConfigGroup,
+		Group:   ModuleConfigGroup,
 		Version: ModuleConfigVersion,
-		Kind: ModuleConfigKind,
+		Kind:    ModuleConfigKind,
 	}
 }
 
