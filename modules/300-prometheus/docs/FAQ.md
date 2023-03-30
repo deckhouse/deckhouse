@@ -134,85 +134,91 @@ To enable secure access to metrics, we strongly recommend using **kube-rbac-prox
 
 ### An example of secure metrics collection from an application located outside a cluster
 
-Requirement: there must be network access from the cluster to kube-rbac-proxy service running on the remote server, and kubernetes api must be available from the remote server.
+Suppose that there is an external server, which is accessible via the Internet and on which the `node-exporter` is running. By default, it listens on port `9100` and is available on all interfaces. It is necessary to provide access control to the `node-exporter` for the secure collection of metrics. Below is an example of such settings.
 
-Suppose that there is an external server which is accessible via the Internet and on which the **node-exporter** is running. By default, it listens on port 9100 and is available on all interfaces. We need to make the access controllable. We start by preparing some objects on the cluster side.
-We need a new **ServiceAccount** with certain permissions for which we will generate a **kubeconfig**:
+Requirements:
+- There must be network access from the cluster to the `kube-rbac-proxy` service running on the *remote server*.
+- Kubernetes API must be available from the *remote server*.
 
-```yaml
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: prometheus-external-endpoint-server-01
-  namespace: d8-service-accounts
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: prometheus-external-endpoint
-rules:
-- apiGroups: ["authentication.k8s.io"]
-  resources:
-  - tokenreviews
-  verbs: ["create"]
-- apiGroups: ["authorization.k8s.io"]
-  resources:
-  - subjectaccessreviews
-  verbs: ["create"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: prometheus-external-endpoint-server-01
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: prometheus-external-endpoint
-subjects:
-- kind: ServiceAccount
-  name: prometheus-external-endpoint-server-01
-  namespace: d8-service-accounts
-```
+Follow these steps:
+1. Create a new **ServiceAccount** with the following permissions:
 
-How to generate **kubeconfig** for a created **ServiceAccount** can be seen [here](https://deckhouse.io/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access).
+   ```yaml
+   ---
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: prometheus-external-endpoint-server-01
+     namespace: d8-service-accounts
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: prometheus-external-endpoint
+   rules:
+   - apiGroups: ["authentication.k8s.io"]
+     resources:
+     - tokenreviews
+     verbs: ["create"]
+   - apiGroups: ["authorization.k8s.io"]
+     resources:
+     - subjectaccessreviews
+     verbs: ["create"]
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRoleBinding
+   metadata:
+     name: prometheus-external-endpoint-server-01
+   roleRef:
+     apiGroup: rbac.authorization.k8s.io
+     kind: ClusterRole
+     name: prometheus-external-endpoint
+   subjects:
+   - kind: ServiceAccount
+     name: prometheus-external-endpoint-server-01
+     namespace: d8-service-accounts
+   ```
 
-Put the resulting **kubeconfig** on the remote machine. Later on we will need to specify **kube-rbac-proxy** path to it.
+2. Generate `kubeconfig` for the created `ServiceAccount` ([example of kubeconfig generation for `ServiceAccount`](https://deckhouse.io/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
 
-Now configure **node-exporter** on the remote server to be accessible only on the local interface and listen to **127.0.0.1:9100**, and run **kube-rbac-proxy**.
+3. Put the `kubeconfig` on the *remote server*. Later on you will need to specify the `kubeconfig` path to the `kube-rbac-proxy` (the example uses the path `${PWD}/.kube/config`).
 
-```bash
-docker run --network host -d -v ${PWD}/.kube/config:/config quay.io/brancz/kube-rbac-proxy:v0.14.0 --secure-listen-address=0.0.0.0:8443 --upstream=http://127.0.0.1:9100 --kubeconfig=/config --logtostderr=true --v=10
-```
+4. Configure `node-exporter` on the *remote server* to be accessible only on the local interface and listen to `127.0.0.1:9100`.
+5. Run `kube-rbac-proxy` on the *remote server*:
 
-Check that port 8443 is accessible from the remote server's external address.
+   ```shell
+   docker run --network host -d -v ${PWD}/.kube/config:/config quay.io/brancz/kube-rbac-proxy:v0.14.0 --secure-listen-address=0.0.0.0:8443 \
+     --upstream=http://127.0.0.1:9100 --kubeconfig=/config --logtostderr=true --v=10
+   ```
 
-Return to the cluster and create **Service** and **Endpoint**, specifying as **<server_ip_address>** the external address of the remote machine:
+6. Check, that port `8443` is accessible from the remote server's external address.
 
-```yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus-external-endpoint-server-01
-  labels:
-    prometheus.deckhouse.io/custom-target: prometheus-external-endpoint-server-01
-spec:
-  ports:
-  - name: https-metrics
-    port: 8443
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: prometheus-external-endpoint-server-01
-subsets:
-  - addresses:
-    - ip: <server_ip_address>
-    ports:
-    - name: https-metrics
-      port: 8443
-```
+7. Create `Service` and `Endpoint`, specifying the external address of the *remote server* as `<server_ip_address>`:
+
+   ```yaml
+   ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: prometheus-external-endpoint-server-01
+     labels:
+       prometheus.deckhouse.io/custom-target: prometheus-external-endpoint-server-01
+   spec:
+     ports:
+     - name: https-metrics
+       port: 8443
+   ---
+   apiVersion: v1
+   kind: Endpoints
+   metadata:
+     name: prometheus-external-endpoint-server-01
+   subsets:
+     - addresses:
+       - ip: <server_ip_address>
+       ports:
+       - name: https-metrics
+         port: 8443
+   ```
 
 ## How do I add Alertmanager?
 
