@@ -23,6 +23,9 @@ import:
   add: /controller
   to: /controller
   before: install
+shell:
+  install:
+    - echo hello
 docker:
   ENTRYPOINT: ["/controller"]
 ---
