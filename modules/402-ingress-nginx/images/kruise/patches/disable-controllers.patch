@@ -187,11 +187,12 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/controller/sidecarset/sidecarset_controller.go b/pkg/controller/sidecarset/sidecarset_controller.go
 --- a/pkg/controller/sidecarset/sidecarset_controller.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/controller/sidecarset/sidecarset_controller.go	(date 1680208342893)
-@@ -58,6 +58,9 @@
++++ b/pkg/controller/sidecarset/sidecarset_controller.go	(date 1680214138840)
+@@ -58,6 +58,10 @@
  // Add creates a new SidecarSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
  // and Start it when the Manager is Started.
  func Add(mgr manager.Manager) error {
++	klog.V(2).Infof("SIDECAR Concurrent reconcicles set: %d", concurrentReconciles)
 +	if concurrentReconciles == 0 {
 +		return nil
 +	}
