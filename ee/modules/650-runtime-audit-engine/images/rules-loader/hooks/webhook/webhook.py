@@ -49,6 +49,7 @@ def validate_falco_rules(uid: str, spec: dict) -> str | None:
         )
     except subprocess.CalledProcessError as exc:
         remove(rule_file_name)
+        print(exc.output)
         return "Spec validation error"
 
     remove(rule_file_name)
