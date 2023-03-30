@@ -44,7 +44,7 @@ type OperationPolicySpec struct {
 		} `json:"requiredResources,omitempty"`
 		DisallowedImageTags []string `json:"disallowedImageTags,omitempty"`
 		RequiredProbes      []string `json:"requiredProbes,omitempty"`
-		RequiredLabels      []struct {
+		RequiredLabels      struct {
 			Labels []struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
