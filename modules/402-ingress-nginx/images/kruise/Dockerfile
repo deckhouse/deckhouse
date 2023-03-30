@@ -16,5 +16,6 @@ RUN git clone --depth 1 --branch v${KRUISE_CONTROLLER_VERSION} https://github.co
 FROM $BASE_ALPINE
 RUN apk add --no-cache ca-certificates bash expat && \
     rm -rf /var/cache/apk/*
+WORKDIR /
 COPY --from=builder /tmp/manager /manager
 ENTRYPOINT ["/manager"]
