@@ -48,8 +48,8 @@ const (
 	registrySecretName = "deckhouse-registry"
 	nodeUserCRDName    = "nodeusers"
 
-	imageTagsFile  = "/var/files/images_tags.json"
-	versionMapFile = "/var/files/version_map.yml"
+	imageDigestsFile = "/var/files/images_digests.json"
+	versionMapFile   = "/var/files/version_map.yml"
 )
 
 type Context interface {
@@ -157,16 +157,16 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 }
 
 func (c *BashibleContext) runFilesParser() {
-	c.parseImagesTagsFile()
+	c.parseimagesDigestsFile()
 	c.parseVersionMapFile()
 
 	go c.runFilesWatcher()
 }
 
-func (c *BashibleContext) parseImagesTagsFile() {
-	hasher := sha256.New()           // writer
-	buf := bytes.NewBuffer(nil)      // writer
-	f, err := os.Open(imageTagsFile) // reader
+func (c *BashibleContext) parseimagesDigestsFile() {
+	hasher := sha256.New()              // writer
+	buf := bytes.NewBuffer(nil)         // writer
+	f, err := os.Open(imageDigestsFile) // reader
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -180,21 +180,21 @@ func (c *BashibleContext) parseImagesTagsFile() {
 	}
 
 	fileHash := fmt.Sprintf("%x", hasher.Sum(nil))
-	if c.isChecksumEqual(imageTagsFile, fileHash) {
+	if c.isChecksumEqual(imageDigestsFile, fileHash) {
 		return
 	}
 
-	var imagesTags map[string]map[string]string
+	var imagesDigests map[string]map[string]string
 
-	err = json.NewDecoder(buf).Decode(&imagesTags)
+	err = json.NewDecoder(buf).Decode(&imagesDigests)
 	if err != nil {
-		klog.Fatalf("images_tags.json unmarshal error: %v", err)
+		klog.Fatalf("images_digests.json unmarshal error: %v", err)
 	}
 
-	c.contextBuilder.SetImagesData(imagesTags)
-	c.saveChecksum(imageTagsFile, fileHash)
+	c.contextBuilder.SetImagesData(imagesDigests)
+	c.saveChecksum(imageDigestsFile, fileHash)
 
-	klog.Info("images_tags.json file has been changed")
+	klog.Info("images_digests.json file has been changed")
 
 	c.update("file: images_tags")
 }
@@ -246,7 +246,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	err = watcher.Add(imageTagsFile)
+	err = watcher.Add(imageDigestsFile)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -263,8 +263,8 @@ func (c *BashibleContext) runFilesWatcher() {
 					klog.Fatal(err)
 				}
 				switch event.Name {
-				case imageTagsFile:
-					go c.parseImagesTagsFile()
+				case imageDigestsFile:
+					go c.parseimagesDigestsFile()
 				case versionMapFile:
 					go c.parseVersionMapFile()
 				}

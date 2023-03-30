@@ -45,7 +45,7 @@ function __main__() {
   echo ""
 
   docker pull "$REPO:$TAG"
-  tags=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_tags.json)
+  tags=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_digests.json)
 
   trivy image --timeout 10m --severity=$SEVERITY "$REPO:$TAG"
 

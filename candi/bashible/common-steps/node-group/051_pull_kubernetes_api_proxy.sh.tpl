@@ -13,7 +13,7 @@
 # limitations under the License.
 
 if docker version >/dev/null 2>/dev/null; then
-  HOME=/ docker pull {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  HOME=/ docker pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 elif crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 fi

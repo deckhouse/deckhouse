@@ -56,7 +56,7 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 
 func versionsDiscovery(input *go_hook.HookInput) error {
 	versionMap := make(map[string]istio_versions.IstioVersionInfo, 0)
-	for img := range input.Values.Get("global.modulesImages.tags.istio").Map() {
+	for img := range input.Values.Get("global.modulesImages.digests.istio").Map() {
 		ver, err := imageToIstioVersion(img)
 		if err != nil {
 			continue

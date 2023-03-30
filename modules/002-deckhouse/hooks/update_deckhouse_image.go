@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	gcr "github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -115,25 +116,25 @@ type deckhousePodInfo struct {
 // while cluster bootstrapping we have the tag for deckhouse image like: alpha, beta, early-access, stable, rock-solid
 // it is set via dhctl, which does not know anything about releases and tags
 // We can use this bootstrap image for applying first release without any requirements (like update windows, canary, etc)
+// We must check even digest or tag, for different cases. In fact, this function checks only if image is from release channel.
 func (dpi deckhousePodInfo) isBootstrapImage() bool {
-	colonIndex := strings.LastIndex(dpi.Image, ":")
-	if colonIndex == -1 {
-		return false
+	isDigest := strings.LastIndex(dpi.Image, "@sha256")
+	if isDigest != -1 {
+		_, err := gcr.NewDigest(dpi.Image)
+		if err != nil {
+			return false
+		}
+	} else {
+		tag, err := gcr.NewTag(dpi.Image)
+		if err != nil {
+			return false
+		}
+		switch strings.ToLower(tag.TagStr()) {
+		case "alpha", "beta", "early-access", "stable", "rock-solid":
+			return true
+		}
 	}
-
-	tag := dpi.Image[colonIndex+1:]
-
-	if tag == "" {
-		return false
-	}
-
-	switch strings.ToLower(tag) {
-	case "alpha", "beta", "early-access", "stable", "rock-solid":
-		return true
-
-	default:
-		return false
-	}
+	return false
 }
 
 const (
@@ -380,12 +381,12 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container, deckhousePod *
 	}
 	imageHash := deckhousePod.ImageID[idSplitIndex+1:]
 
-	imageSplitIndex := strings.LastIndex(deckhousePod.Image, ":")
-	if imageSplitIndex == -1 {
-		return fmt.Errorf("image tag not found: %s", deckhousePod.Image)
+	imageRepoTag, err := gcr.NewTag(deckhousePod.Image)
+	if err != nil {
+		return fmt.Errorf("incorrect image: %s", deckhousePod.Image)
 	}
-	repo := deckhousePod.Image[:imageSplitIndex]
-	tag := deckhousePod.Image[imageSplitIndex+1:]
+	repo := imageRepoTag.Context().Name()
+	tag := imageRepoTag.TagStr()
 
 	dockerCfg := input.Values.Get("global.modulesImages.registry.dockercfg").String()
 

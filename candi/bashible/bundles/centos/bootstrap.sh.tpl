@@ -58,13 +58,13 @@ REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import j
 BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
 {{- /*
 # check if image installed
-# bb-rp-is-installed? package tag
+# bb-rp-is-installed? package digest
 */}}
 bb-rp-is-installed?() {
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
-    local INSTALLED_TAG=""
-    INSTALLED_TAG="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/tag")"
-    if [[ "${INSTALLED_TAG}" == "${2}" ]]; then
+    local INSTALLED_DIGEST=""
+    INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
+    if [[ "${INSTALLED_DIGEST}" == "${2}" ]]; then
       return 0
     fi
   fi
@@ -98,7 +98,7 @@ bb-rp-get-token() {
 }
 {{- /*
 # fetch manifest from registry and get list of digests
-# bb-rp-get-digests tag
+# bb-rp-get-digests digest
 */}}
 bb-rp-get-digests() {
   local TOKEN=""
@@ -119,31 +119,31 @@ bb-rp-fetch-digest() {
 }
 {{- /*
 # download package digests, unpack them and run install script
-# bb-rp-install package:tag
+# bb-rp-install package:digest
 */}}
 bb-rp-install() {
   shopt -u failglob
 
-  for PACKAGE_WITH_TAG in "$@"; do
+  for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
-    local TAG=""
-    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_TAG}")"
-    TAG="$(awk -F ":" '{print $2}' <<< "${PACKAGE_WITH_TAG}")"
+    local DIGEST=""
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    if bb-rp-is-installed? "${PACKAGE}" "${TAG}"; then
+    if bb-rp-is-installed? "${PACKAGE}" "${DIGEST}"; then
       continue
     fi
 
     local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${TAG}")"
+    DIGESTS="$(bb-rp-get-digests "${DIGEST}")"
 
     local TMPDIR=""
     TMPDIR="$(mktemp -d)"
 
-    for DIGEST in ${DIGESTS}; do
+    for TMPDIGEST in ${DIGESTS}; do
       local TMPFILE=""
       TMPFILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${DIGEST}" "${TMPFILE}"
+      bb-rp-fetch-digest "${TMPDIGEST}" "${TMPFILE}"
       tar -xf "${TMPFILE}" -C "${TMPDIR}"
       rm -f "${TMPFILE}"
     done
@@ -154,7 +154,7 @@ bb-rp-install() {
     popd >/dev/null
 
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
-    echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/tag"
+    echo "${DIGEST}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/digest"
     cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     rm -rf "${TMPDIR}"
   done

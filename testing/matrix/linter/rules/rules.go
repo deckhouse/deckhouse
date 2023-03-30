@@ -18,6 +18,7 @@ package rules
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -107,7 +108,7 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(containerNameDuplicates(object, containers))
 	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	l.ErrorsList.Add(containerImageTagCheck(object, containers))
+	l.ErrorsList.Add(containerImageDigestCheck(object, containers))
 	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
@@ -184,35 +185,28 @@ func shouldSkipModuleContainer(module string, container string) bool {
 	return false
 }
 
-func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+func containerImageDigestCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
 	for _, c := range containers {
 		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
 			continue
 		}
 
-		t, err := name.NewTag(c.Image)
+		re := regexp.MustCompile(`(?P<repository>.+)(@|:)imageHash[-a-z0-9A-Z]+$`)
+		match := re.FindStringSubmatch(c.Image)
+		repo, err := name.NewRepository(match[re.SubexpIndex("repository")])
 		if err != nil {
-			return errors.NewLintRuleError(
-				"CONTAINER003",
-				object.Identity()+"; container = "+c.Name,
-				nil,
-				"Can't parse an image for container: %v", err,
-			)
-		}
-		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
-		tag := t.TagStr()
-		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"All images must be deployed from the same default registry - "+defaultRegistry,
+				"Cannot parse repository from image: "+c.Image,
 			)
 		}
-		if !strings.HasPrefix(tag, "imageHash-") {
-			return errors.NewLintRuleError("CONTAINER004",
+
+		if repo.Name() != defaultRegistry {
+			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag should start from `imageHash-`",
+				"All images must be deployed from the same default registry: "+defaultRegistry+" current:"+repo.RepositoryStr(),
 			)
 		}
 	}

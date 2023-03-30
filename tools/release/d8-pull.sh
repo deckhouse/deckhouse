@@ -177,13 +177,13 @@ check_requirements
 
 echo "Saving Deckhouse $EDITION $RELEASE."
 REGISTRY_PATH="$REGISTRY/$EDITION"
-IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_tags.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
+IMAGES=$(docker run --pull=always -ti --rm "$REGISTRY_PATH:$RELEASE" cat /deckhouse/modules/images_digests.json | jq '. | to_entries | .[].value | to_entries | .[].value' -r | sort -rn | uniq)
 trap pull_image_clean_up ERR SIGINT SIGTERM SIGHUP SIGQUIT
 #saving Deckhouse image
 pull_image "$RELEASE"
 #saving Deckhouse install image
 pull_image "$RELEASE" "install"
-#saving uniq images from images_tags.json
+#saving uniq images from images_digests.json
 l=$(echo "$IMAGES" | wc -l)
 count=1
 for i in $IMAGES; do

@@ -37,7 +37,7 @@ type ContextBuilder struct {
 	registryData     registry
 	clusterInputData inputData
 	versionMap       map[string]interface{}
-	imagesTags       map[string]map[string]string // module: { image_name: tag }
+	imagesDigests    map[string]map[string]string // module: { image_name: tag }
 
 	// debug function injection
 	emitStepsOutput func(string, string, map[string]string)
@@ -87,7 +87,7 @@ func (cb *ContextBuilder) SetRegistryData(rd registry) {
 }
 
 func (cb *ContextBuilder) SetImagesData(data map[string]map[string]string) {
-	cb.imagesTags = data
+	cb.imagesDigests = data
 }
 
 func (cb *ContextBuilder) SetVersionMapData(data map[string]interface{}) {
@@ -131,7 +131,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	bb := BashibleContextData{
 		bashibleContexts: make(map[string]interface{}),
 		VersionMap:       cb.versionMap,
-		Images:           cb.imagesTags,
+		Images:           cb.imagesDigests,
 		Registry:         cb.registryData,
 		Proxy:            cb.clusterInputData.Proxy,
 	}
@@ -151,7 +151,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 		},
 		Registry: cb.registryData,
-		Images:   cb.imagesTags,
+		Images:   cb.imagesDigests,
 		Proxy:    cb.clusterInputData.Proxy,
 	}
 
@@ -210,7 +210,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		NodeGroup:         ng,
 		RunType:           "Normal",
 
-		Images:   cb.imagesTags,
+		Images:   cb.imagesDigests,
 		Registry: &cb.registryData,
 		Proxy:    cb.clusterInputData.Proxy,
 	}

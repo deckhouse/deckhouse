@@ -47,12 +47,12 @@ type MetaConfig struct {
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
 	VersionMap map[string]interface{} `json:"-"`
-	Images     ImagesTags             `json:"-"`
+	Images     imagesDigests          `json:"-"`
 	Registry   RegistryData           `json:"-"`
 	UUID       string                 `json:"clusterUUID,omitempty"`
 }
 
-type ImagesTags map[string]map[string]interface{}
+type imagesDigests map[string]map[string]interface{}
 
 type RegistryData struct {
 	Address   string `json:"address"`
@@ -585,20 +585,20 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesTags(filename string) error {
-	var imagesTags ImagesTags
+func (m *MetaConfig) LoadimagesDigests(filename string) error {
+	var imagesDigests imagesDigests
 
-	imagesTagsJSONFile, err := os.ReadFile(filename)
+	imagesDigestsJSONFile, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("%s file load: %v", filename, err)
 	}
 
-	err = yaml.Unmarshal(imagesTagsJSONFile, &imagesTags)
+	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
 		return fmt.Errorf("%s file unmarshal: %v", filename, err)
 	}
 
-	m.Images = imagesTags
+	m.Images = imagesDigests
 
 	return nil
 }
@@ -643,7 +643,7 @@ func getDNSAddress(serviceCIDR string) string {
 	return clusterDNS
 }
 
-func (i *ImagesTags) ConvertToMap() map[string]interface{} {
+func (i *imagesDigests) ConvertToMap() map[string]interface{} {
 	res := make(map[string]interface{})
 	for k, v := range *i {
 		res[k] = v

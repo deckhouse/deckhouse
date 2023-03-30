@@ -40,7 +40,7 @@ pilotV11: "old-pilot-img"
 pilotV1x11: "old-pilot-img"
 pilotVx11x11x11x11: "old-pilot-img"
 `
-			f.ValuesSetFromYaml("global.modulesImages.tags.istio", []byte(values))
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})

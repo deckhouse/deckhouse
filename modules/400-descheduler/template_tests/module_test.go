@@ -37,9 +37,9 @@ const globalValues = `
   modulesImages:
     registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
-    tags:
+    digests:
       descheduler:
-        descheduler: tagstring
+        descheduler: digeststring
   discovery:
     kubernetesVersion: 1.16.15
     d8SpecificNodeCountByRole:

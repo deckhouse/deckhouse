@@ -66,7 +66,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- end }}
   {{- /* For centos bootstrap script jq package tag is needed */ -}}
   {{- $images := dict }}
-  {{- $images := set $images "registrypackages" (dict "jq16" $context.Values.global.modulesImages.tags.registrypackages.jq16) }}
+  {{- $images := set $images "registrypackages" (dict "jq16" $context.Values.global.modulesImages.digests.registrypackages.jq16) }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "images" $images }}
 cat > /var/lib/bashible/bootstrap.sh <<"END"
 {{ if $adopt }}
