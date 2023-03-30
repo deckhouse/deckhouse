@@ -88,20 +88,27 @@ func renewCertificate(componentName, f string) error {
 	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
 		var remove bool
 		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", lastAppliedConfigurationChecksum, configurationChecksum)
-		equal, err := certificateSubjectAndSansIsEqual(componentName, path)
-		if err != nil {
+		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
 		}
-		if ! equal {
-			log.Infof("certificate %s subject or sans has been changed", path)
-			remove = true
-		}
+
+		tmpPath := filepath.Join("/tmp", configurationChecksum)
+		oldCert, err := loadCert(path)
 		if err != nil {
 			return err
 		}
 
-		expiresSoon, err := certificateExpiresSoon(path, 30*24*time.Hour)
-		if expiresSoon {
+		tmpCert, err := loadCert(filepath.Join(tmpPath, path))
+		if err != nil {
+			return err
+		}
+
+		if !certificateSubjectAndSansIsEqual(oldCert, tmpCert) {
+			log.Infof("certificate %s subject or sans has been changed", path)
+			remove = true
+		}
+
+		if certificateExpiresSoon(oldCert, 30*24*time.Hour) {
 			log.Infof("certificate %s is expiring in less than 30 days", path)
 			remove = true
 		}
@@ -136,31 +143,20 @@ func renewCertificate(componentName, f string) error {
 	return nil
 }
 
-func certificateSubjectAndSansIsEqual(componentName, path string) (bool, error) {
-	// Generate tmp certificate and compare
-	tmpPath := filepath.Join("/tmp", configurationChecksum)
-	c := exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
-	out, err := c.CombinedOutput()
-	if err != nil {
-		return false, err
-	}
-	log.Infof("%s", out)
+func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
 
-	oldCert, err := loadCert(path)
-	if err != nil {
-		return false, err
+	aCertSans := a.DNSNames
+	for _, ip := range a.IPAddresses {
+		aCertSans = append(aCertSans, ip.String())
 	}
 
-	tmpCert, err := loadCert(filepath.Join(tmpPath, path))
-	if err != nil {
-		return false, err
+	bCertSans := b.DNSNames
+	for _, ip := range b.IPAddresses {
+		bCertSans = append(bCertSans, ip.String())
 	}
 
-	return reflect.DeepEqual(oldCert.Subject, tmpCert.Subject) &&
-		reflect.DeepEqual(oldCert.DNSNames, tmpCert.DNSNames) &&
-		reflect.DeepEqual(oldCert.EmailAddresses, tmpCert.EmailAddresses) &&
-		reflect.DeepEqual(oldCert.IPAddresses, tmpCert.IPAddresses) &&
-		reflect.DeepEqual(oldCert.URIs, tmpCert.URIs), nil
+	return reflect.DeepEqual(a.Subject, b.Subject) &&
+		stringSlicesEqual(aCertSans, bCertSans)
 }
 
 func fillTmpDirWithPKIData() error {
@@ -199,10 +195,19 @@ func loadCert(path string) (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-func certificateExpiresSoon(path string, durationLeft time.Duration) (bool, error) {
-	c, err := loadCert(path)
-	if err != nil {
-		return false, err
+func certificateExpiresSoon(c *x509.Certificate, durationLeft time.Duration) bool {
+	return time.Until(c.NotAfter) < durationLeft
+}
+
+func prepareCerts(componentName string, isTemp bool) error {
+	c := &exec.Cmd{}
+	if isTemp {
+		tmpPath := filepath.Join("/tmp", configurationChecksum)
+		c = exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
+	} else {
+		c = exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml")
 	}
-	return time.Until(c.NotAfter) < durationLeft, nil
+	out, err := c.CombinedOutput()
+	log.Infof("%s", out)
+	return err
 }

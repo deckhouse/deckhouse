@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -262,4 +263,19 @@ func removeOrphanFiles() error {
 
 func kubeadm() string {
 	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", kubernetesVersion)
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	sort.Strings(a)
+	sort.Strings(b)
+	
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

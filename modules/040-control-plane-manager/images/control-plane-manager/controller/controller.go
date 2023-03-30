@@ -201,6 +201,11 @@ func main() {
 	if err := renewCertificates(); err != nil {
 		log.Fatal(err)
 	}
+
+	if err := renewKubeconfigs(); err != nil {
+		log.Fatal(err)
+	}
+
 	// pause loop
 	<-quit
 }
