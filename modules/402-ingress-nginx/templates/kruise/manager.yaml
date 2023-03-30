@@ -75,7 +75,7 @@ spec:
             - --leader-election-namespace=d8-ingress-nginx
             - --namespace=d8-ingress-nginx
             - --v=2
-            - --feature-gates=ResourcesDeletionProtection=true
+            - --feature-gates=ResourcesDeletionProtection=true,PodWebhook=false
             - --sync-period=0
             - --advancedcronjob-workers=0
             - --broadcastjob-workers=0
