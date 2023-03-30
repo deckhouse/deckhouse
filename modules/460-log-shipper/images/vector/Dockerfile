@@ -1,5 +1,6 @@
 ARG BASE_UBUNTU
 ARG BASE_RUST
+ARG BASE_GOLANG_19_ALPINE
 
 ### 1: Build vector
 FROM $BASE_RUST as build-vector
@@ -39,7 +40,6 @@ RUN cargo build \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/dynamic-linking,rdkafka?/gssapi-vendored,vrl-cli" \
     && strip target/release/vector
 
-ARG BASE_GOLANG_19_ALPINE
 FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src/
 COPY main.go go.mod go.sum /src/
