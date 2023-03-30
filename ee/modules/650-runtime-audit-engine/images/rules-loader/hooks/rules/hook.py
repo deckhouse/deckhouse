@@ -9,6 +9,8 @@ from yaml import dump
 from lib.convert import convert_spec
 
 _FALCO_RULES_DIR = '/etc/falco/rules.d'
+
+
 def main(ctx: hook.Context):
     filenames = set()
 
