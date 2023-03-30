@@ -1,8 +1,8 @@
 ARG BASE_SHELL_OPERATOR
 ARG BASE_UBUNTU
-FROM ${BASE_SHELL_OPERATOR} as shell-operator
+FROM $BASE_SHELL_OPERATOR as shell-operator
 
-FROM ${BASE_UBUNTU}
+FROM $BASE_UBUNTU
 COPY --from=shell-operator /shell-operator /shell-operator
 COPY requirements.txt requirements.txt
 RUN \
