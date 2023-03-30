@@ -38,11 +38,11 @@ stream {
   proxy_protocol on;
 
   upstream http {
-    server controller-${CONTROLLER_NAME}-failover:80 max_fails=0;
+    server controller-{{ .controllerName }} -failover:80 max_fails=0;
   }
 
   upstream https {
-    server controller-${CONTROLLER_NAME}-failover:443 max_fails=0;
+    server controller-{{ .controllerName }}-failover:443 max_fails=0;
   }
 
   server {

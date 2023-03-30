@@ -9,6 +9,6 @@ RUN mkdir -p /src/kube-state-metrics && \
 WORKDIR /src/kube-state-metrics
 RUN make build-local
 
-FROM $BASE_ALPINE
+FROM scratch
 COPY --from=artifact /src/kube-state-metrics/kube-state-metrics /bin/kube-state-metrics
 ENTRYPOINT ["/bin/kube-state-metrics"]
