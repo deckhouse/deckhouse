@@ -21,8 +21,8 @@ spec:
       labels:
         extended-monitoring.deckhouse.io/enabled: "true"
       includeNames:
-      - "prod-.*"
-      - "infra-.*"
+      - "^prod"
+      - "^infra"
       excludeNames:
       - "infra-test"
 ```
