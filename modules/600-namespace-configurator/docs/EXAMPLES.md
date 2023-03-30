@@ -21,8 +21,8 @@ spec:
       labels:
         foo: bar
       includeNames:
-      - "prod-.*"
-      - "infra-.*"
+      - "^prod"
+      - "^infra"
       excludeNames:
       - "infra-test"
 ```
