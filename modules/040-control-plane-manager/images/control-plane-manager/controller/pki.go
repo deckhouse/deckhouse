@@ -87,7 +87,7 @@ func renewCertificate(componentName, f string) error {
 
 	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
 		var remove bool
-		log.Info("configuration has changed since last certificate generation, verifying certificate")
+		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", lastAppliedConfigurationChecksum, configurationChecksum)
 		changed, err := certificateSubjectAndSansIsChanged(componentName, path)
 		if err != nil {
 			return err
@@ -204,5 +204,5 @@ func certificateExpiresSoon(path string, durationLeft time.Duration) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	return time.Until(c.NotAfter) > durationLeft, nil
+	return time.Until(c.NotAfter) < durationLeft, nil
 }
