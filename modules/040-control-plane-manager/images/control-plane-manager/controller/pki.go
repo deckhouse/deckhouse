@@ -88,11 +88,11 @@ func renewCertificate(componentName, f string) error {
 	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
 		var remove bool
 		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", lastAppliedConfigurationChecksum, configurationChecksum)
-		changed, err := certificateSubjectAndSansIsChanged(componentName, path)
+		equal, err := certificateSubjectAndSansIsEqual(componentName, path)
 		if err != nil {
 			return err
 		}
-		if changed {
+		if ! equal {
 			log.Infof("certificate %s subject or sans has been changed", path)
 			remove = true
 		}
@@ -100,8 +100,8 @@ func renewCertificate(componentName, f string) error {
 			return err
 		}
 
-		expires, err := certificateExpiresSoon(path, 30*24*time.Hour)
-		if expires {
+		expiresSoon, err := certificateExpiresSoon(path, 30*24*time.Hour)
+		if expiresSoon {
 			log.Infof("certificate %s is expiring in less than 30 days", path)
 			remove = true
 		}
@@ -136,7 +136,7 @@ func renewCertificate(componentName, f string) error {
 	return nil
 }
 
-func certificateSubjectAndSansIsChanged(componentName, path string) (bool, error) {
+func certificateSubjectAndSansIsEqual(componentName, path string) (bool, error) {
 	// Generate tmp certificate and compare
 	tmpPath := filepath.Join("/tmp", configurationChecksum)
 	c := exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)

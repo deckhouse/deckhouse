@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/otiai10/copy"
@@ -207,7 +208,7 @@ func calculateConfigurationChecksum() error {
 func getLastAppliedConfigurationChecksum() error {
 	var srcBytes []byte
 	srcBytes, err := os.ReadFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"))
-	lastAppliedConfigurationChecksum = string(srcBytes)
+	lastAppliedConfigurationChecksum = strings.Trim(string(srcBytes), "\n")
 	return err
 }
 
