@@ -26,7 +26,7 @@ import (
 
 func installExtraFiles() error {
 	dstDir := filepath.Join(deckhousePath, "extra-files")
-	log.Info("install extra files to %s", dstDir)
+	log.Infof("install extra files to %s", dstDir)
 
 	if err := removeDirectory(dstDir); err != nil {
 		return err
