@@ -236,6 +236,24 @@ func removeFile(src string) error {
 	return os.Remove(src)
 }
 
+func removeDirectory(dir string) error {
+	walkFunc := func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return nil
+		}
+		if info.IsDir() {
+			return nil
+		}
+		return removeFile(path)
+	}
+
+	err := filepath.Walk(dir, walkFunc)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(dir)
+}
+
 func removeOrphanFiles() error {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
 	log.Infof("remove orphan files from dir %s", srcDir)
@@ -268,7 +286,7 @@ func kubeadm() string {
 func stringSlicesEqual(a, b []string) bool {
 	sort.Strings(a)
 	sort.Strings(b)
-	
+
 	if len(a) != len(b) {
 		return false
 	}

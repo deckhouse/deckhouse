@@ -190,6 +190,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// certificates config phase
 	if err := installBasePKIfiles(); err != nil {
 		log.Fatal(err)
 	}
@@ -202,11 +203,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// kubeconfig config phase
 	if err := renewKubeconfigs(); err != nil {
 		log.Fatal(err)
 	}
 
 	if err := updateRootKubeconfig(); err != nil {
+		log.Fatal(err)
+	}
+
+	// converge phase
+	if err := installExtraFiles(); err != nil {
 		log.Fatal(err)
 	}
 
