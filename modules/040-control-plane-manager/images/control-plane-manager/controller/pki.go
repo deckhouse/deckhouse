@@ -193,13 +193,11 @@ func certificateExpiresSoon(c *x509.Certificate, durationLeft time.Duration) boo
 }
 
 func prepareCerts(componentName string, isTemp bool) error {
-	c := &exec.Cmd{}
+	args := []string{"init", "phase", "certs", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
-		tmpPath := filepath.Join("/tmp", configurationChecksum)
-		c = exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
-	} else {
-		c = exec.Command(kubeadm(), "init", "phase", "certs", componentName, "--config", deckhousePath+"/kubeadm/config.yaml")
+		args = append(args, "--rootfs", filepath.Join("/tmp", configurationChecksum))
 	}
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	log.Infof("%s", out)
 	return err

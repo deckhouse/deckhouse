@@ -140,7 +140,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	}
 
 	if err := backupFile(dst); err != nil {
-		log.Error(err)
+		log.Errorf("Backup failed, %s", err)
 	}
 
 	log.Infof("install file %s to destination %s", src, dst)

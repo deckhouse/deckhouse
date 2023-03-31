@@ -217,6 +217,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := convergeComponents(); err != nil {
+		log.Fatal(err)
+	}
+
 	// pause loop
 	<-quit
 }

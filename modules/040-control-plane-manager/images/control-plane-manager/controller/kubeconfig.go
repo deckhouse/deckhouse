@@ -94,13 +94,11 @@ func renewKubeconfig(componentName string) error {
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
-	c := &exec.Cmd{}
+	args := []string{"init", "phase", "kubeconfig", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
-		tmpPath := filepath.Join("/tmp", configurationChecksum)
-		c = exec.Command(kubeadm(), "init", "phase", "kubeconfig", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
-	} else {
-		c = exec.Command(kubeadm(), "init", "phase", "kubeconfig", componentName, "--config", deckhousePath+"/kubeadm/config.yaml")
+		args = append(args, "--rootfs", filepath.Join("/tmp", configurationChecksum))
 	}
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	log.Infof("%s", out)
 	return err
