@@ -132,13 +132,13 @@ spec:
 
 To enable secure access to metrics, we strongly recommend using **kube-rbac-proxy**.
 
-### An example of secure metrics collection from an application located outside a cluster
+### An example of collecting metrics securely from an application outside a cluster
 
-Suppose that there is an external server, which is accessible via the Internet and on which the `node-exporter` is running. By default, it listens on port `9100` and is available on all interfaces. It is necessary to provide access control to the `node-exporter` for the secure collection of metrics. Below is an example of such settings.
+Suppose there is a server exposed to the Internet on which the `node-exporter` is running. By default, the `node-exporter` listens on port `9100` and is available on all interfaces. One needs to ensure access control to the `node-exporter` so that metrics can be collected securely. Below is an example of how you can set this up.
 
 Requirements:
 - There must be network access from the cluster to the `kube-rbac-proxy` service running on the *remote server*.
-- Kubernetes API must be available from the *remote server*.
+- The *remote server* must have access to the Kubernetes API server.
 
 Follow these steps:
 1. Create a new **ServiceAccount** with the following permissions:
@@ -179,11 +179,11 @@ Follow these steps:
      namespace: d8-service-accounts
    ```
 
-2. Generate `kubeconfig` for the created `ServiceAccount` ([example of kubeconfig generation for `ServiceAccount`](https://deckhouse.io/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
+2. Generate a `kubeconfig` file for the created `ServiceAccount` ([refer to the example on how to generate `kubeconfig` for `ServiceAccount`](https://deckhouse.io/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
 
-3. Put the `kubeconfig` on the *remote server*. Later on you will need to specify the `kubeconfig` path to the `kube-rbac-proxy` (the example uses the path `${PWD}/.kube/config`).
+3. Copy the `kubeconfig` file to the *remote server*. You will also have to specify the `kubeconfig` path in the `kube-rbac-proxy` settings (our example uses `${PWD}/.kube/config`).
 
-4. Configure `node-exporter` on the *remote server* to be accessible only on the local interface and listen to `127.0.0.1:9100`.
+4. Configure `node-exporter` on the *remote server* to be accessible only on the local interface (i.e., listening on `127.0.0.1:9100`).
 5. Run `kube-rbac-proxy` on the *remote server*:
 
    ```shell
@@ -191,7 +191,7 @@ Follow these steps:
      --upstream=http://127.0.0.1:9100 --kubeconfig=/config --logtostderr=true --v=10
    ```
 
-6. Check, that port `8443` is accessible from the remote server's external address.
+6. Check that port `8443` is accessible at the remote server's external address.
 
 7. Create `Service` and `Endpoint`, specifying the external address of the *remote server* as `<server_ip_address>`:
 
