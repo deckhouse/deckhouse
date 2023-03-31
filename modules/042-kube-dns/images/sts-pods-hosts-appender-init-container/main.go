@@ -32,14 +32,9 @@ func main() {
 		clusterDomainAliases = os.Getenv("CLUSTER_DOMAIN_ALIASES")
 	)
 
-	fd, err := os.Open(hostsFilePath)
+	fd, err := os.OpenFile(hostsFilePath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	err = fd.Truncate(0)
-	if err != nil {
-		log.Fatalf("failed to truncate %q: %s", fd.Name(), err)
 	}
 
 	_, err = fd.WriteString(fmt.Sprintf(baseHosts, podIP, podHostname, podSubdomain, podNamespace, clusterDomain, podHostname))

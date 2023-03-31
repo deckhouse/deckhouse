@@ -122,35 +122,35 @@ func generateMetrics() error {
 		_ = fd.Close()
 	}(fd)
 
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="hard"} %d`, kubeletRootDir, evictionHardNodeFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="hard"} %d\n`, kubeletRootDir, evictionHardNodeFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="hard"} %d`, kubeletRootDir, evictionHardNodeFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="hard"} %d\n`, kubeletRootDir, evictionHardNodeFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="hard"} %d`, runtimeRootDir, evictionHardImageFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="hard"} %d\n`, runtimeRootDir, evictionHardImageFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="hard"} %d`, runtimeRootDir, evictionHardImagesFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="hard"} %d\n`, runtimeRootDir, evictionHardImagesFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="soft"} %d`, kubeletRootDir, evictionSoftNodeFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="soft"} %d\n`, kubeletRootDir, evictionSoftNodeFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="soft"} %d`, kubeletRootDir, evictionSoftNodeFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="soft"} %d\n`, kubeletRootDir, evictionSoftNodeFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="soft"} %d`, runtimeRootDir, evictionSoftImageFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="soft"} %d\n`, runtimeRootDir, evictionSoftImageFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="soft"} %d`, runtimeRootDir, evictionSoftImagesFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="soft"} %d\n`, runtimeRootDir, evictionSoftImagesFsInodesAvailable)
 	if err != nil {
 		return err
 	}
