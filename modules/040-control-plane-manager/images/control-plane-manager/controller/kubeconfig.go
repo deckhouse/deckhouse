@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,8 +66,8 @@ func renewKubeconfig(componentName string) error {
 		if err != nil {
 			return err
 		}
-
-		cert, err := x509.ParseCertificate(certData)
+		block, _ := pem.Decode(certData)
+		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return err
 		}

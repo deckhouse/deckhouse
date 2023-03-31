@@ -17,8 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"crypto/x509"
 	"encoding/base64"
-	"fmt"
+	"encoding/pem"
 	"testing"
 )
 
@@ -27,9 +28,14 @@ func TestLoadKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	certData, err := base64.StdEncoding.DecodeString(k.Users[0].User.ClientCertificateData)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%s", certData)
+	block, _ := pem.Decode(certData)
+	_, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
