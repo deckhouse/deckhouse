@@ -103,7 +103,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -120,7 +120,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -190,7 +190,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -207,7 +207,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -265,7 +265,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -282,7 +282,7 @@ metadata:
 spec:
   nodeName: ""
   containers:
-    - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+    - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
       name: smoke-mini
   affinity:
     nodeAffinity:
