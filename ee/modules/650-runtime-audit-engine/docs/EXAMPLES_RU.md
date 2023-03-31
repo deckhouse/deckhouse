@@ -36,6 +36,10 @@ metadata:
 spec:
   rules:
   - macro:
+      name: container
+      condition: (container.id != host)
+
+  - macro:
       name: inbound
       condition: >
         (((evt.type in (accept,listen) and evt.dir=<)) or
@@ -51,7 +55,7 @@ spec:
 
   - macro:
       name: app_nginx
-      condition: container.name contains "nginx" and container.image contains "nginx"
+      condition: container and container.image contains "nginx"
 
   - rule:
       name: Unauthorized process opened an outbound connection (nginx)
