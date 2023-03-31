@@ -70,11 +70,10 @@ func convergeComponents() error {
 }
 
 func convergeComponent(componentName string) error {
-	checksumPatch := filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml")
 	log.Infof("converge component %s", componentName)
 
 	//remove checksum patch, if it was left from previous run
-	_ = os.Remove(checksumPatch)
+	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
@@ -99,11 +98,12 @@ func convergeComponent(componentName string) error {
 	}
 
 	if recreateConfig {
+		log.Infof("generate new kubeconfig for %s", componentName)
 		if err := prepareConverge(componentName, false); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
