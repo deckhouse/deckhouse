@@ -19,7 +19,7 @@ fe00::2		ip6-allrouters
 %s	%s.%s.%s.svc.%s	%s
 `
 
-	hostsEntry = `"%s	%s.%s.%s.svc.%s"`
+	hostsEntry = `%s	%s.%s.%s.svc.%s`
 )
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	for _, alias := range strings.Fields(clusterDomainAliases) {
-		_, err := fd.WriteString(fmt.Sprintf(hostsEntry, podIP, podHostname, podSubdomain, podNamespace, alias))
+		_, err := fd.WriteString(fmt.Sprintf(hostsEntry+"\n", podIP, podHostname, podSubdomain, podNamespace, alias))
 		if err != nil {
 			log.Fatal(err)
 		}
