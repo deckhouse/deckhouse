@@ -12,6 +12,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -36,16 +37,22 @@ func handleNodeDrain(clientset *kubernetes.Clientset, reg *informerRegistry, gvr
 		if err != nil {
 			klog.Errorf("error getting node %q: %v", name, err)
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting node"})
+			_ = json.NewEncoder(w).Encode(errBody("error getting node"))
 			return
 		}
 		if !exists {
 			w.WriteHeader(http.StatusNotFound)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+			_ = json.NewEncoder(w).Encode(errBody("not found"))
 			return
 		}
 
-		node := nodeGeneric.(*v1.Node)
+		unstr := nodeGeneric.(*unstructured.Unstructured)
+		var node v1.Node
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.Object, &node); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(errBody(err.Error()))
+			return
+		}
 
 		var sb strings.Builder
 		helper := &drain.Helper{
@@ -60,16 +67,16 @@ func handleNodeDrain(clientset *kubernetes.Clientset, reg *informerRegistry, gvr
 			ErrOut:  &sb,
 			Ctx:     r.Context(),
 		}
-		if err := drain.RunCordonOrUncordon(helper, node, true); err != nil {
+		if err := drain.RunCordonOrUncordon(helper, &node, true); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			klog.ErrorS(err, "failed cordoning node", "name", name, "error", sb.String())
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("failed cordoning node: %v", err)})
+			_ = json.NewEncoder(w).Encode(errBody(fmt.Sprintf("failed cordoning node: %v", err)))
 			return
 		}
 		if err := drain.RunNodeDrain(helper, name); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			klog.ErrorS(err, "failed draining node", "name", name, "error", sb.String())
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("failed draining node: %v", err)})
+			_ = json.NewEncoder(w).Encode(errBody(fmt.Sprintf("failed draining node: %v", err)))
 			return
 		}
 
@@ -100,11 +107,11 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 			klog.Errorf("error getting NodeGroup %q: %v", ngName, err)
 			if apierrors.IsNotFound(err) {
 				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				_ = json.NewEncoder(w).Encode(errBody(err.Error()))
 				return
 			}
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting NodeGroup"})
+			_ = json.NewEncoder(w).Encode(errBody("error getting NodeGroup"))
 			return
 		}
 		ng := ngObj.(*unstructured.Unstructured)
@@ -117,7 +124,7 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 				klog.Errorf("reading spec.nodeType in NodeGroup %q: no such field", ngName)
 			}
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "error getting NodeGroup"}) // generic error for client
+			_ = json.NewEncoder(w).Encode(errBody("error getting NodeGroup")) // generic error for client
 			return
 		}
 
@@ -137,11 +144,11 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 			klog.Errorf("error getting secret %q: %v", secretName, err)
 			if apierrors.IsNotFound(err) {
 				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				_ = json.NewEncoder(w).Encode(errBody(err.Error()))
 				return
 			}
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("error getting secret %s/%s", namespace, secretName)})
+			_ = json.NewEncoder(w).Encode(errBody(fmt.Sprintf("error getting secret %s/%s", namespace, secretName)))
 			return
 		}
 
@@ -160,4 +167,8 @@ func handleNodeGroupScripts(clientset *kubernetes.Clientset, reg *informerRegist
 			"bootstrap.sh": `base64 -d <<<'` + bootstrapScript + `' | bash`,
 		})
 	}
+}
+
+func errBody(errMessage string) map[string]string {
+	return map[string]string{"error": errMessage}
 }
