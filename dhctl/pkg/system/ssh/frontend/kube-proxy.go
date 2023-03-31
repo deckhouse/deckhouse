@@ -16,6 +16,7 @@ package frontend
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"time"
 
@@ -48,33 +49,45 @@ func NewKubeProxy(sess *session.Session) *KubeProxy {
 }
 
 func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
+	startID := rand.Int()
+
+	log.DebugF("Kube-proxy start id=[%d]; port:%d\n", startID, useLocalPort)
+
 	success := false
 	defer func() {
 		k.stop = false
 		if !success {
+			log.DebugF("[%d] Kube-proxy was not started. Try to clear all\n", startID)
 			k.Stop()
 		}
+		log.DebugF("[%d] Kube-proxy starting was finished\n", startID)
 	}()
 
 	proxyCommandErrorCh := make(chan error, 1)
-	proxy, port, err := k.runKubeProxy(proxyCommandErrorCh)
+	proxy, port, err := k.runKubeProxy(proxyCommandErrorCh, startID)
 	if err != nil {
+		log.DebugF("[%d] Got error from runKubeProxy func: %v\n", startID, err)
 		return "", err
 	}
+
+	log.DebugF("[%d] Proxy was started successfully\n", startID)
 
 	k.proxy = proxy
 	k.port = port
 
 	tunnelErrorCh := make(chan error)
-	tun, localPort, lastError := k.upTunnel(port, useLocalPort, tunnelErrorCh)
+	tun, localPort, lastError := k.upTunnel(port, useLocalPort, tunnelErrorCh, startID)
 	if lastError != nil {
+		log.DebugF("[%d] Got error from upTunnel func: %v\n", startID, err)
 		return "", fmt.Errorf("tunnel up error: max retries reached, last error: %v", lastError)
 	}
 
 	k.tunnel = tun
 	k.localPort = localPort
 
-	go k.healthMonitor(proxyCommandErrorCh, tunnelErrorCh)
+	log.DebugF("[%d] Got error from upTunnel func: %v\n", startID, err)
+
+	go k.healthMonitor(proxyCommandErrorCh, tunnelErrorCh, startID)
 
 	success = true
 
@@ -125,26 +138,29 @@ func (k *KubeProxy) tryToRestartFully() {
 		// need warn for human
 		log.WarnF("Proxy was not started %v\n", err)
 		k.Session.ChoiceNewHost()
-		log.DebugF("New host choice %v\n", k.Session.Host())
+		log.DebugF("New host selected %v\n", k.Session.Host())
 	}
 }
 
-func (k *KubeProxy) proxyCMD() *Command {
+func (k *KubeProxy) proxyCMD(startID int) *Command {
 	command := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+
+	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
+
 	cmd := NewCommand(k.Session, command).Sudo()
 	cmd.Executor = cmd.Executor.CaptureStderr(nil).CaptureStdout(nil)
 	return cmd
 }
 
-func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error) {
-	defer log.DebugF("Kubeproxy health monitor stopped\n")
-	log.DebugF("Kubeproxy health monitor started\n")
+func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, startID int) {
+	defer log.DebugF("[%d] Kubeproxy health monitor stopped\n", startID)
+	log.DebugF("[%d] Kubeproxy health monitor started\n", startID)
 
 	for {
-		log.DebugF("Kubeproxy Monitor step\n")
+		log.DebugF("[%d] Kubeproxy Monitor step\n", startID)
 		select {
 		case err := <-proxyErrorCh:
-			log.DebugF("Proxy failed %v\n", err)
+			log.DebugF("[%d] Proxy failed with error %v\n", startID, err)
 			// if proxy crushed, we need to restart kube-proxy fully
 			// with proxy and tunnel (tunnel depends on proxy)
 			k.tryToRestartFully()
@@ -153,25 +169,32 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error) {
 			return
 
 		case err := <-tunnelErrorCh:
-			log.DebugF("Tunnel failed %v\n Try to up tunnel\n", err)
+			log.DebugF("[%d] Tunnel failed %v. Stopping previous tunnel\n", startID, err)
 			// we need fully stop tunnel because
 			k.tunnel.Stop()
-			k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh)
+
+			log.DebugF("[%d] Tunnel stopped before restart. Starting new tunnel...\n", startID)
+
+			k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh, startID)
 			if err != nil {
+				log.DebugF("[%d] Tunnel was not up: %v. Try to restart fully\n", startID, err)
 				k.tryToRestartFully()
 				return
 			}
 
-			log.DebugF("Tunnel re up successfully\n")
+			log.DebugF("[%d] Tunnel re up successfully\n")
 		}
 	}
 }
 
-func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelErrorCh chan error) (tun *Tunnel, localPort int, err error) {
+func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelErrorCh chan error, startID int) (tun *Tunnel, localPort int, err error) {
+	log.DebugF("[%d] Starting up tunnel with proxy port %s and local port %d\n", startID, kubeProxyPort, useLocalPort)
+
 	rewriteLocalPort := false
 	localPort = useLocalPort
 
 	if useLocalPort < 1 {
+		log.DebugF("[%d] Incorrect local port %d use default %d\n", startID, useLocalPort, DefaultLocalAPIPort)
 		localPort = DefaultLocalAPIPort
 		rewriteLocalPort = true
 	}
@@ -180,6 +203,8 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 	retries := 0
 	var lastError error
 	for {
+		log.DebugF("[%d] Start %d iteration for up tunnel\n", startID, retries)
+
 		if k.proxy.WaitError() != nil {
 			lastError = fmt.Errorf("proxy was failed while restart tunnel")
 			break
@@ -187,18 +212,22 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 
 		// try to start tunnel from localPort to proxy port
 		tunnelAddress := fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
-		log.DebugF("Try up tunnel on %v\n", tunnelAddress)
+		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)
 		tun = NewTunnel(k.Session, "L", tunnelAddress)
 		err := tun.Up()
 		if err != nil {
+			log.DebugF("[%d] Start tunnel was failed. Cleaning...\n", startID)
 			tun.Stop()
 			lastError = fmt.Errorf("tunnel '%s': %v", tunnelAddress, err)
+			log.DebugF("[%d] Start tunnel was failed. Error: %v\n", startID, lastError)
 			if rewriteLocalPort {
 				localPort++
+				log.DebugF("[%d] New local port %d\n", startID, localPort)
 			}
 
 			retries++
 			if retries >= maxRetries {
+				log.DebugF("[%d] Last iteration finished\n", startID)
 				tun = nil
 				break
 			}
@@ -209,17 +238,19 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 		}
 	}
 
-	dbgMsg := "Tunnel up\n"
+	dbgMsg := fmt.Sprintf("Tunnel up on local port %d", localPort)
 	if lastError != nil {
-		dbgMsg = fmt.Sprintf("Tunnel was not up: %v\n", lastError)
+		dbgMsg = fmt.Sprintf("Tunnel was not up: %v", lastError)
 	}
-	log.DebugF(dbgMsg)
+
+	log.DebugF("[%d] %s", startID, dbgMsg)
 
 	return tun, localPort, lastError
 }
 
-func (k *KubeProxy) runKubeProxy(waitCh chan error) (proxy *Command, port string, err error) {
-	proxy = k.proxyCMD()
+func (k *KubeProxy) runKubeProxy(waitCh chan error, startID int) (proxy *Command, port string, err error) {
+	log.DebugF("[%d] Begin starting proxy\n", startID)
+	proxy = k.proxyCMD(startID)
 
 	port = ""
 	portReady := make(chan struct{}, 1)
@@ -236,19 +267,26 @@ func (k *KubeProxy) runKubeProxy(waitCh chan error) (proxy *Command, port string
 
 	onStart := make(chan struct{}, 1)
 	proxy.OnCommandStart(func() {
+		log.DebugF("[%d] Command started\n", startID)
 		onStart <- struct{}{}
 	})
 
 	proxy.WithWaitHandler(func(err error) {
+		log.DebugF("[%d] Wait error: %v\n", startID, err)
 		waitCh <- err
 	})
 
+	log.DebugF("[%d] Start proxy command\n", startID)
 	err = proxy.Start()
 	if err != nil {
+		log.DebugF("[%d] Start proxy command error: %v\n", startID, err)
 		return nil, "", fmt.Errorf("start kubectl proxy: %v", err)
 	}
 
+	log.DebugF("[%d] Proxy command was started\n", startID)
+
 	returnWaitErr := func(err error) error {
+		log.DebugF("[%d] Proxy command waiting error: %v\n", startID, err)
 		template := `Proxy exited suddenly:
 %s%sStatus: %v`
 		return fmt.Errorf(template, string(proxy.StdoutBytes()), string(proxy.StderrBytes()), err)
@@ -270,13 +308,15 @@ func (k *KubeProxy) runKubeProxy(waitCh chan error) (proxy *Command, port string
 	case e := <-waitCh:
 		return nil, "", returnWaitErr(e)
 	case <-t.C:
+		log.DebugF("[%d] Starting proxy command timeout\n", startID)
 		return nil, "", fmt.Errorf("timeout waiting for api proxy port")
 	case <-portReady:
 		if port == "" {
+			log.DebugF("[%d] Starting proxy command: empty port\n", startID)
 			return nil, "", fmt.Errorf("got empty port from kubectl proxy")
 		}
 	}
 
-	log.DebugLn("Proxy process started\n")
+	log.DebugLn("[%d] Proxy process started with port: $s\n", startID, port)
 	return proxy, port, nil
 }
