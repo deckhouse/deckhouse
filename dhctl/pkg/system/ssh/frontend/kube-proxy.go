@@ -85,8 +85,6 @@ func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
 	k.tunnel = tun
 	k.localPort = localPort
 
-	log.DebugF("[%d] Got error from upTunnel func: %v\n", startID, err)
-
 	go k.healthMonitor(proxyCommandErrorCh, tunnelErrorCh, startID)
 
 	success = true
@@ -243,7 +241,7 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 		dbgMsg = fmt.Sprintf("Tunnel was not up: %v", lastError)
 	}
 
-	log.DebugF("[%d] %s", startID, dbgMsg)
+	log.DebugF("[%d] %s\n", startID, dbgMsg)
 
 	return tun, localPort, lastError
 }
@@ -317,6 +315,6 @@ func (k *KubeProxy) runKubeProxy(waitCh chan error, startID int) (proxy *Command
 		}
 	}
 
-	log.DebugLn("[%d] Proxy process started with port: $s\n", startID, port)
+	log.DebugF("[%d] Proxy process started with port: %s\n", startID, port)
 	return proxy, port, nil
 }
