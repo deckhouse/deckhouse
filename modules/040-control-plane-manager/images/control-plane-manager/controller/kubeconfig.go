@@ -63,7 +63,7 @@ func renewKubeconfig(componentName string) error {
 		}
 
 		var certData []byte
-		fmt.Println("%v",  currentKubeconfig)
+		fmt.Printf("%+v", currentKubeconfig.Users)
 		if _, err := base64.StdEncoding.Decode(certData, []byte(currentKubeconfig.Users[0].User.ClientCertificateData)); err != nil {
 			return err
 		}

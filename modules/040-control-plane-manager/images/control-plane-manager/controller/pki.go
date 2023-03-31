@@ -93,7 +93,7 @@ func renewCertificate(componentName, f string) error {
 		}
 
 		tmpPath := filepath.Join("/tmp", configurationChecksum)
-		oldCert, err := loadCert(path)
+		currentCert, err := loadCert(path)
 		if err != nil {
 			return err
 		}
@@ -103,12 +103,12 @@ func renewCertificate(componentName, f string) error {
 			return err
 		}
 
-		if !certificateSubjectAndSansIsEqual(oldCert, tmpCert) {
+		if !certificateSubjectAndSansIsEqual(currentCert, tmpCert) {
 			log.Infof("certificate %s subject or sans has been changed", path)
 			remove = true
 		}
 
-		if certificateExpiresSoon(oldCert, 30*24*time.Hour) {
+		if certificateExpiresSoon(currentCert, 30*24*time.Hour) {
 			log.Infof("certificate %s is expiring in less than 30 days", path)
 			remove = true
 		}
