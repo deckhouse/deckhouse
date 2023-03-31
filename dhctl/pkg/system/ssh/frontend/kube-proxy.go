@@ -106,11 +106,13 @@ func (k *KubeProxy) Stop(startID int) {
 		log.DebugF("[%d] Stop proxy command\n", startID)
 		k.proxy.Stop()
 		log.DebugF("[%d] Proxy command stopped\n", startID)
+		k.proxy = nil
 	}
 	if k.tunnel != nil {
 		log.DebugF("[%d] Stop tunnel\n", startID)
 		k.tunnel.Stop()
 		log.DebugF("[%d] Tunnel stopped\n", startID)
+		k.tunnel = nil
 	}
 	k.stop = true
 }
