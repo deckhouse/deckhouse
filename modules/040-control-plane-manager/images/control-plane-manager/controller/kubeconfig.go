@@ -30,7 +30,7 @@ import (
 )
 
 func renewKubeconfigs() error {
-	for _, v := range []string{"admin", "controller-manager", "kube-scheduler"} {
+	for _, v := range []string{"admin", "controller-manager", "scheduler"} {
 		if err := renewKubeconfig(v); err != nil {
 			return err
 		}
@@ -95,6 +95,7 @@ func renewKubeconfig(componentName string) error {
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
 	c := &exec.Cmd{}
+	kubeadm_cmd = "$kubeadm_binary init phase kubeconfig $1 --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml"
 	if isTemp {
 		tmpPath := filepath.Join("/tmp", configurationChecksum)
 		c = exec.Command(kubeadm(), "init", "phase", "kubeconfig", componentName, "--config", deckhousePath+"/kubeadm/config.yaml", "--rootfs", tmpPath)
