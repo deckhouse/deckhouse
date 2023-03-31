@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,9 +61,8 @@ func renewKubeconfig(componentName string) error {
 			remove = true
 		}
 
-		var certData []byte
-		fmt.Printf("%+v", currentKubeconfig.Users)
-		if _, err := base64.StdEncoding.Decode(certData, []byte(currentKubeconfig.Users[0].User.ClientCertificateData)); err != nil {
+		certData, err := base64.StdEncoding.DecodeString(currentKubeconfig.Users[0].User.ClientCertificateData)
+		if err != nil {
 			return err
 		}
 

@@ -115,7 +115,7 @@ func renewCertificate(componentName, f string) error {
 
 		keyPath := filepath.Join(kubernetesConfigPath, "pki", f+".key")
 		if _, err := os.Stat(keyPath); err != nil {
-			log.Infof("certificate %s exists, but no appropriate key found")
+			log.Infof("certificate %s exists, but no appropriate key %s is found", path, keyPath)
 			remove = true
 		}
 
