@@ -133,8 +133,8 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 		const sleepTimeout = 5
 
 		// need warn for human
-		log.WarnF("Proxy was not restarted: %v. Sleep %d seconds before next attempt.\n", startID, err, sleepTimeout)
-		time.Sleep(sleepTimeout)
+		log.WarnF("Proxy was not restarted: %v. Sleep %d seconds before next attempt.\n", err, sleepTimeout)
+		time.Sleep(sleepTimeout * time.Second)
 
 		k.Session.ChoiceNewHost()
 		log.DebugF("[%d] New host selected %v\n", startID, k.Session.Host())
