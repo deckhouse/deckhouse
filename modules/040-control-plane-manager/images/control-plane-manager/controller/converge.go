@@ -99,9 +99,9 @@ func convergeComponent(componentName string) error {
 
 	if recreateConfig {
 		log.Infof("generate new kubeconfig for %s", componentName)
-		if err := prepareConverge(componentName, false); err != nil {
-			return err
-		}
+//		if err := prepareConverge(componentName, false); err != nil {
+//			return err
+//		}
 	}
 
 	return nil
