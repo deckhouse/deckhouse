@@ -58,7 +58,7 @@ func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
 		k.stop = false
 		if !success {
 			log.DebugF("[%d] Kube-proxy was not started. Try to clear all\n", startID)
-			k.Stop()
+			k.Stop(startID)
 		}
 		log.DebugF("[%d] Kube-proxy starting was finished\n", startID)
 	}()
@@ -92,51 +92,46 @@ func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
 	return fmt.Sprintf("%d", k.localPort), nil
 }
 
-func (k *KubeProxy) Stop() {
+func (k *KubeProxy) Stop(startID int) {
 	if k == nil {
+		log.DebugF("[%d] Stop kube-proxy: kube proxy object is nil. Skip.\n", startID)
 		return
 	}
-	if k.proxy == nil {
-		return
-	}
+
 	if k.stop {
+		log.DebugF("[%d] Stop kube-proxy: kube proxy already stopped. Skip.\n", startID)
 		return
 	}
 	if k.proxy != nil {
-		log.DebugF("Stop proxy command\n")
+		log.DebugF("[%d] Stop proxy command\n", startID)
 		k.proxy.Stop()
-		log.DebugF("Proxy command stopped\n")
+		log.DebugF("[%d] Proxy command stopped\n", startID)
 	}
 	if k.tunnel != nil {
-		log.DebugF("Stop tunnel\n")
+		log.DebugF("[%d] Stop tunnel\n", startID)
 		k.tunnel.Stop()
-		log.DebugF("Tunnel stopped\n")
+		log.DebugF("[%d] Tunnel stopped\n", startID)
 	}
 	k.stop = true
 }
 
-func (k *KubeProxy) Restart() error {
-	k.Stop()
-	_, err := k.Start(k.localPort)
-	if err == nil {
-		k.stop = false
-	}
-
-	return err
-}
-
-func (k *KubeProxy) tryToRestartFully() {
-	log.DebugF("Try restart kubeproxy fully\n")
+func (k *KubeProxy) tryToRestartFully(startID int) {
+	log.DebugF("[%d] Try restart kubeproxy fully\n", startID)
 	for {
-		err := k.Restart()
+		k.Stop(startID)
+
+		_, err := k.Start(k.localPort)
+
 		if err == nil {
+			k.stop = false
+			log.DebugF("[%d] Proxy was restarted successfully\n", startID)
 			return
 		}
 
 		// need warn for human
-		log.WarnF("Proxy was not started %v\n", err)
+		log.WarnF("[%d] Proxy was not restarted %v\n", startID, err)
 		k.Session.ChoiceNewHost()
-		log.DebugF("New host selected %v\n", k.Session.Host())
+		log.DebugF("[%d] New host selected %v\n", startID, k.Session.Host())
 	}
 }
 
@@ -161,7 +156,7 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, startI
 			log.DebugF("[%d] Proxy failed with error %v\n", startID, err)
 			// if proxy crushed, we need to restart kube-proxy fully
 			// with proxy and tunnel (tunnel depends on proxy)
-			k.tryToRestartFully()
+			k.tryToRestartFully(startID)
 			// if we restart proxy fully
 			// this monitor must be finished because new monitor was started
 			return
@@ -176,7 +171,7 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error, startI
 			k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh, startID)
 			if err != nil {
 				log.DebugF("[%d] Tunnel was not up: %v. Try to restart fully\n", startID, err)
-				k.tryToRestartFully()
+				k.tryToRestartFully(startID)
 				return
 			}
 
@@ -230,6 +225,7 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 				break
 			}
 		} else {
+			log.DebugF("[%d] Tunnel was started. Starting health monitor\n", startID)
 			go tun.HealthMonitor(tunnelErrorCh)
 			lastError = nil
 			break
@@ -285,8 +281,8 @@ func (k *KubeProxy) runKubeProxy(waitCh chan error, startID int) (proxy *Command
 
 	returnWaitErr := func(err error) error {
 		log.DebugF("[%d] Proxy command waiting error: %v\n", startID, err)
-		template := `Proxy exited suddenly:
-%s%sStatus: %v`
+		template := `Proxy exited suddenly: %s%s
+Status: %v`
 		return fmt.Errorf(template, string(proxy.StdoutBytes()), string(proxy.StderrBytes()), err)
 	}
 
