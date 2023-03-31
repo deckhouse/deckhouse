@@ -114,7 +114,7 @@ func generateMetrics() error {
 		log.Fatal(err)
 	}
 
-	fd, err := os.OpenFile("/host/var/run/node-exporter-textfile/kubelet-eviction.prom", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	fd, err := os.OpenFile("/var/run/node-exporter-textfile/kubelet-eviction.prom", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}
