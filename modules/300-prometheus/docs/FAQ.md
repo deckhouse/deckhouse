@@ -141,7 +141,7 @@ Requirements:
 - The *remote server* must have access to the Kubernetes API server.
 
 Follow these steps:
-1. Create a new **ServiceAccount** with the following permissions:
+1. Create a new `ServiceAccount` with the following permissions:
 
    ```yaml
    ---
