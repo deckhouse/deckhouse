@@ -25,7 +25,7 @@ spec:
       - d8-runtime-audit-engine
   labelsFilter:
   - operator: Regex
-    values: ["\{.*"] # to collect only JSON logs
+    values: ["\\{.*"] # to collect only JSON logs
     field: "message"
   type: KubernetesPods
 ```
