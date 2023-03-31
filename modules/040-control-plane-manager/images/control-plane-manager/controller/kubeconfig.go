@@ -116,3 +116,24 @@ func loadKubeconfig(path string) (*KubeConfigValue, error) {
 	err = yaml.Unmarshal(r, res)
 	return res, err
 }
+
+func updateRootKubeconfig() error {
+	path := "/root/.kube/config"
+	originalPath := filepath.Join(kubernetesConfigPath, "admin.conf")
+	log.Infof("update root user kubeconfig (%s)", path)
+	if _, err := os.Stat(path); err == nil {
+		p, err := filepath.EvalSymlinks(path)
+		if p == originalPath && err == nil {
+			return nil
+		}
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		return err
+	}
+
+	return os.Symlink(originalPath, path)
+}

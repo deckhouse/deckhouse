@@ -206,6 +206,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := updateRootKubeconfig(); err != nil {
+		log.Fatal(err)
+	}
+
 	// pause loop
 	<-quit
 }
