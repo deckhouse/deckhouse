@@ -1,7 +1,15 @@
 ARG BASE_ALPINE
-FROM $BASE_ALPINE
-ADD "https://storage.googleapis.com/kubernetes-release/release/v1.21.14/bin/linux/amd64/kubectl" /bin/
-ADD "https://github.com/flant/kube-resource-unit-converter/releases/download/0.1/kube-resource-unit-converter" /bin/
-ADD loop /bin/
-RUN apk add --no-cache bash grep coreutils curl bc jq && chmod +x /bin/kubectl /bin/kube-resource-unit-converter
-ENTRYPOINT ["/bin/loop"]
+ARG BASE_GOLANG_19_ALPINE
+
+
+FROM $BASE_GOLANG_19_ALPINE as artifact
+
+WORKDIR /src/
+COPY main.go go.mod go.sum /src/
+RUN apk add --no-cache git && \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o loop main.go
+
+FROM scratch
+
+COPY --from=artifact /src/loop /
+ENTRYPOINT ["/loop"]
