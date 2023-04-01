@@ -30,42 +30,42 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func installBasePKIfiles(config *Config) error {
+func installBasePKIfiles() error {
 	log.Info("phase: install base pki files")
 	if err := os.MkdirAll(filepath.Join(kubernetesPkiPath, "etcd"), 0755); err != nil {
 		return err
 	}
 
 	for _, f := range []string{"ca.crt", "front-proxy-ca.crt"} {
-		if err := installFileIfChanged(config, filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0644); err != nil {
 			return err
 		}
 	}
 
 	for _, f := range []string{"ca.key", "sa.pub", "sa.key", "front-proxy-ca.key"} {
-		if err := installFileIfChanged(config, filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
+		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
 			return err
 		}
 	}
 
 	for _, f := range []string{"ca.key", "sa.pub", "sa.key", "front-proxy-ca.key"} {
-		if err := installFileIfChanged(config, filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
+		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
 			return err
 		}
 	}
 
-	if err := installFileIfChanged(config, filepath.Join(pkiPath, "etcd-ca.crt"), filepath.Join(kubernetesPkiPath, "etcd", "ca.crt"), 0644); err != nil {
+	if err := installFileIfChanged(filepath.Join(pkiPath, "etcd-ca.crt"), filepath.Join(kubernetesPkiPath, "etcd", "ca.crt"), 0644); err != nil {
 		return err
 	}
 
-	if err := installFileIfChanged(config, filepath.Join(pkiPath, "etcd-ca.key"), filepath.Join(kubernetesPkiPath, "etcd", "ca.key"), 0600); err != nil {
+	if err := installFileIfChanged(filepath.Join(pkiPath, "etcd-ca.key"), filepath.Join(kubernetesPkiPath, "etcd", "ca.key"), 0600); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func renewCertificates(config *Config) error {
+func renewCertificates() error {
 	log.Info("phase: renew certificates")
 	components := make(map[string]string, 7)
 	components["apiserver"] = "apiserver"
@@ -76,21 +76,21 @@ func renewCertificates(config *Config) error {
 	components["etcd-peer"] = "etcd/peer"
 	components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
 	for k, v := range components {
-		if err := renewCertificate(config, k, v); err != nil {
+		if err := renewCertificate(k, v); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func renewCertificate(config *Config, componentName, f string) error {
+func renewCertificate(componentName, f string) error {
 	path := filepath.Join(kubernetesPkiPath, f+".crt")
 	log.Infof("generate or renew %s certificate %s", componentName, path)
 
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
 		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
-		if err := prepareCerts(config, componentName, true); err != nil {
+		if err := prepareCerts(componentName, true); err != nil {
 			return err
 		}
 
@@ -121,10 +121,10 @@ func renewCertificate(config *Config, componentName, f string) error {
 		}
 
 		if remove {
-			if err := removeFile(config, path); err != nil {
+			if err := removeFile(path); err != nil {
 				log.Warn(err)
 			}
-			if err := removeFile(config, keyPath); err != nil {
+			if err := removeFile(keyPath); err != nil {
 				log.Warn(err)
 			}
 		}
@@ -134,7 +134,7 @@ func renewCertificate(config *Config, componentName, f string) error {
 		return nil
 	}
 	// regenerate certificate
-	return prepareCerts(config, componentName, false)
+	return prepareCerts(componentName, false)
 }
 
 func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
@@ -153,7 +153,7 @@ func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
 		stringSlicesEqual(aCertSans, bCertSans)
 }
 
-func fillTmpDirWithPKIData(config *Config) error {
+func fillTmpDirWithPKIData() error {
 	log.Infof("phase: fill tmp dir %s with pki data", config.TmpPath)
 
 	if err := os.RemoveAll(config.TmpPath); err != nil {
@@ -193,12 +193,12 @@ func certificateExpiresSoon(c *x509.Certificate, durationLeft time.Duration) boo
 	return time.Until(c.NotAfter) < durationLeft
 }
 
-func prepareCerts(config *Config, componentName string, isTemp bool) error {
+func prepareCerts(componentName string, isTemp bool) error {
 	args := []string{"init", "phase", "certs", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(config), args...)
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)

@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func annotateNode(config *Config) error {
+func annotateNode() error {
 	log.Infof("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation)
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
@@ -44,7 +44,7 @@ func annotateNode(config *Config) error {
 	return err
 }
 
-func waitNodeApproval(config *Config) error {
+func waitNodeApproval() error {
 	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
 
 	for i := 0; i < maxRetries; i++ {

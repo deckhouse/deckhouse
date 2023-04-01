@@ -30,23 +30,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func renewKubeconfigs(config *Config) error {
+func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
 	for _, v := range []string{"admin", "controller-manager", "scheduler"} {
-		if err := renewKubeconfig(config, v); err != nil {
+		if err := renewKubeconfig(v); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func renewKubeconfig(config *Config, componentName string) error {
+func renewKubeconfig(componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
 	log.Infof("generate or renew %s kubeconfig", path)
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
 		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
-		if err := prepareKubeconfig(config, componentName, true); err != nil {
+		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
 		}
 
@@ -80,7 +80,7 @@ func renewKubeconfig(config *Config, componentName string) error {
 		}
 
 		if remove {
-			if err := removeFile(config, path); err != nil {
+			if err := removeFile(path); err != nil {
 				log.Error(err)
 			}
 		}
@@ -92,15 +92,15 @@ func renewKubeconfig(config *Config, componentName string) error {
 
 	// regenerate kubeconfig
 	log.Infof("generate new kubeconfig %s", path)
-	return prepareKubeconfig(config, componentName, false)
+	return prepareKubeconfig(componentName, false)
 }
 
-func prepareKubeconfig(config *Config, componentName string, isTemp bool) error {
+func prepareKubeconfig(componentName string, isTemp bool) error {
 	args := []string{"init", "phase", "kubeconfig", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(config), args...)
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)

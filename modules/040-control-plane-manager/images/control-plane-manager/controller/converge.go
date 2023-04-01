@@ -30,11 +30,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func installExtraFiles(config *Config) error {
+func installExtraFiles() error {
 	dstDir := filepath.Join(deckhousePath, "extra-files")
 	log.Infof("phase: install extra files to %s", dstDir)
 
-	if err := removeDirectory(config, dstDir); err != nil {
+	if err := removeDirectory(dstDir); err != nil {
 		return err
 	}
 
@@ -55,34 +55,34 @@ func installExtraFiles(config *Config) error {
 			continue
 		}
 
-		if err := installFileIfChanged(config, filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0644); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func convergeComponents(config *Config) error {
+func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
 	for _, v := range []string{"kube-apiserver", "kube-controller-manager", "kube-scheduler", "etcd"} {
-		if err := convergeComponent(config, v); err != nil {
+		if err := convergeComponent(v); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func convergeComponent(config *Config, componentName string) error {
+func convergeComponent(componentName string) error {
 	log.Infof("converge component %s", componentName)
 
 	//remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
-	if err := prepareConverge(config, componentName, true); err != nil {
+	if err := prepareConverge(componentName, true); err != nil {
 		return err
 	}
 
-	checksum, err := calculateChecksum(config, componentName)
+	checksum, err := calculateChecksum(componentName)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func convergeComponent(config *Config, componentName string) error {
 
 	if recreateConfig {
 		log.Infof("generate new manifest for %s", componentName)
-		if err := backupFile(config, filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
+		if err := backupFile(filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
 			return err
 		}
 
@@ -112,11 +112,11 @@ func convergeComponent(config *Config, componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
-			if err := etcdJoinConverge(config); err != nil {
+			if err := etcdJoinConverge(); err != nil {
 				return err
 			}
 		} else {
-			if err := prepareConverge(config, componentName, false); err != nil {
+			if err := prepareConverge(componentName, false); err != nil {
 				return err
 			}
 		}
@@ -127,10 +127,10 @@ func convergeComponent(config *Config, componentName string) error {
 		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return waitPoidIsReady(config, componentName)
+	return waitPoidIsReady(componentName)
 }
 
-func prepareConverge(config *Config, componentName string, isTemp bool) error {
+func prepareConverge(componentName string, isTemp bool) error {
 	args := []string{"init", "phase"}
 	if componentName == "etcd" {
 		args = append(args, "etcd", "local", "--config", deckhousePath+"/kubeadm/config.yaml")
@@ -140,7 +140,7 @@ func prepareConverge(config *Config, componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(config), args...)
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)
@@ -148,7 +148,7 @@ func prepareConverge(config *Config, componentName string, isTemp bool) error {
 	return err
 }
 
-func calculateChecksum(config *Config, componentName string) (string, error) {
+func calculateChecksum(componentName string) (string, error) {
 	manifest, err := os.ReadFile(filepath.Join(config.TmpPath, manifestsPath, componentName+".yaml"))
 	if err != nil {
 		return "", err
@@ -225,9 +225,9 @@ metadata:
 	return os.WriteFile(patchFile, []byte(content), 0644)
 }
 
-func etcdJoinConverge(config *Config) error {
+func etcdJoinConverge() error {
 	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
-	c := exec.Command(kubeadm(config), args...)
+	c := exec.Command(kubeadm(), args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		log.Infof("%s", s)
@@ -235,7 +235,7 @@ func etcdJoinConverge(config *Config) error {
 	return err
 }
 
-func waitPoidIsReady(config *Config, componentName string) error {
+func waitPoidIsReady(componentName string) error {
 	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
 	time.Sleep(1 * time.Minute)
 	return nil

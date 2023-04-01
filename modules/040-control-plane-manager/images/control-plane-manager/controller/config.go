@@ -59,6 +59,17 @@ type Config struct {
 	TmpPath                          string
 }
 
+var config *Config
+
+func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+	c, err := NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	config = c
+}
+
 func NewConfig() (*Config, error) {
 	config := &Config{}
 	if err := config.readEnvs(); err != nil {

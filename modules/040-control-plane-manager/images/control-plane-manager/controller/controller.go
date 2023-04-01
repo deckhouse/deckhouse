@@ -21,30 +21,24 @@ import (
 )
 
 func main() {
-	log.SetFormatter(&log.JSONFormatter{})
 
-	config, err := NewConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := removeOrphanFiles(config); err != nil {
+	if err := removeOrphanFiles(); err != nil {
 		log.Warn(err)
 	}
 
-	if err := annotateNode(config); err != nil {
+	if err := annotateNode(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := waitNodeApproval(config); err != nil {
+	if err := waitNodeApproval(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := waitImageHolderContainers(config); err != nil {
+	if err := waitImageHolderContainers(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := checkEtcdManifest(config); err != nil {
+	if err := checkEtcdManifest(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -52,23 +46,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := installKubeadmConfig(config); err != nil {
+	if err := installKubeadmConfig(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := installBasePKIfiles(config); err != nil {
+	if err := installBasePKIfiles(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := fillTmpDirWithPKIData(config); err != nil {
+	if err := fillTmpDirWithPKIData(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := renewCertificates(config); err != nil {
+	if err := renewCertificates(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := renewKubeconfigs(config); err != nil {
+	if err := renewKubeconfigs(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -76,11 +70,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := installExtraFiles(config); err != nil {
+	if err := installExtraFiles(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := convergeComponents(config); err != nil {
+	if err := convergeComponents(); err != nil {
 		log.Fatal(err)
 	}
 

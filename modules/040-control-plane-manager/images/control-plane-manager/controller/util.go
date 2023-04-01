@@ -33,7 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func installFileIfChanged(config *Config, src, dst string, perm os.FileMode) error {
+func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
 	src, err := filepath.EvalSymlinks(src)
@@ -55,7 +55,7 @@ func installFileIfChanged(config *Config, src, dst string, perm os.FileMode) err
 		return nil
 	}
 
-	if err := backupFile(config, dst); err != nil {
+	if err := backupFile(dst); err != nil {
 		log.Warnf("Backup failed, %s", err)
 	}
 
@@ -67,7 +67,7 @@ func installFileIfChanged(config *Config, src, dst string, perm os.FileMode) err
 	return os.Chown(dst, 0, 0)
 }
 
-func backupFile(config *Config, src string) error {
+func backupFile(src string) error {
 	log.Infof("backup %s file", src)
 
 	if _, err := os.Stat(src); err != nil {
@@ -82,15 +82,15 @@ func backupFile(config *Config, src string) error {
 	return copy.Copy(src, backupDir+src)
 }
 
-func removeFile(config *Config, src string) error {
+func removeFile(src string) error {
 	log.Infof("remove %s file", src)
-	if err := backupFile(config, src); err != nil {
+	if err := backupFile(src); err != nil {
 		return err
 	}
 	return os.Remove(src)
 }
 
-func removeDirectory(config *Config, dir string) error {
+func removeDirectory(dir string) error {
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
 		if d == nil {
 			return nil
@@ -98,7 +98,7 @@ func removeDirectory(config *Config, dir string) error {
 		if d.IsDir() {
 			return nil
 		}
-		return removeFile(config, path)
+		return removeFile(path)
 	}
 
 	err := filepath.WalkDir(dir, walkDirFunc)
@@ -108,7 +108,7 @@ func removeDirectory(config *Config, dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func removeOrphanFiles(config *Config) error {
+func removeOrphanFiles() error {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
 	log.Infof("phase: remove orphan files from dir %s", srcDir)
 
@@ -127,14 +127,14 @@ func removeOrphanFiles(config *Config) error {
 		case "kube-scheduler.yaml":
 			return nil
 		default:
-			return removeFile(config, path)
+			return removeFile(path)
 		}
 	}
 
 	return filepath.WalkDir(srcDir, walkDirFunc)
 }
 
-func kubeadm(config *Config) string {
+func kubeadm() string {
 	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", config.KubernetesVersion)
 }
 
@@ -153,7 +153,7 @@ func stringSlicesEqual(a, b []string) bool {
 	return true
 }
 
-func waitImageHolderContainers(config *Config) error {
+func waitImageHolderContainers() error {
 	for {
 		log.Info("phase: waiting for all image-holder containers will be ready")
 		pod, err := config.K8sClient.CoreV1().Pods(namespace).Get(context.TODO(), config.MyPodName, metav1.GetOptions{})
@@ -178,7 +178,7 @@ func waitImageHolderContainers(config *Config) error {
 	}
 }
 
-func checkEtcdManifest(config *Config) error {
+func checkEtcdManifest() error {
 	etcdManifestPath := filepath.Join(manifestsPath, "etcd.yaml")
 	log.Infof("phase: check etcd manifest %s", etcdManifestPath)
 
@@ -243,17 +243,17 @@ func checkKubeletConfig() error {
 		"to access apiserver via kube-api-proxy (through https://127.0.0.1:6445), probably node is not managed by node-manager", kubeletPath)
 }
 
-func installKubeadmConfig(config *Config) error {
+func installKubeadmConfig() error {
 	log.Info("phase: install kubeadm configuration")
 	if err := os.MkdirAll(filepath.Join(deckhousePath, "kubeadm", "patches"), 0755); err != nil {
 		return err
 	}
 
-	if err := installFileIfChanged(config, filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(deckhousePath, "kubeadm", "config.yaml"), 0644); err != nil {
+	if err := installFileIfChanged(filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(deckhousePath, "kubeadm", "config.yaml"), 0644); err != nil {
 		return err
 	}
 	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
-		if err := installFileIfChanged(config, filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(deckhousePath, "kubeadm", "patches", component+".yaml"), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(deckhousePath, "kubeadm", "patches", component+".yaml"), 0644); err != nil {
 			return err
 		}
 	}
