@@ -301,6 +301,12 @@ function converge_component() {
   if [[ ! -f $manifest ]] || ! grep "$checksum" "$manifest" > /dev/null ; then
     echo " * Generating new manifest"
 
+
+
+
+
+
+
     cat > "$checksum_patch" <<END
 apiVersion: v1
 kind: Pod

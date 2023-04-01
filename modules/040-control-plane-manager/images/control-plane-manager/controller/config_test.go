@@ -22,13 +22,14 @@ import (
 )
 
 func TestCalculateConfigurationChecksum(t *testing.T) {
-	os.Setenv("TESTS_CONFIG_PATH", "testdata/config")
-	err := calculateConfigurationChecksum()
+	os.Setenv("D8_TESTS", "yes")
+	config := &Config{}
+
+	err := config.calculateConfigurationChecksum()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if configurationChecksum == "" {
+	if config.ConfigurationChecksum == "" {
 		t.Fatal("calculated configuration checksum is not calculated")
 	}
 }

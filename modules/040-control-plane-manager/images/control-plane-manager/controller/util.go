@@ -18,106 +18,22 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"context"
 	"fmt"
-	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
-	"strings"
+	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	waitingApprovalAnnotation          = `control-plane-manager.deckhouse.io/waiting-for-approval`
-	approvedAnnotation                 = `control-plane-manager.deckhouse.io/approved`
-	maxRetries                         = 42
-	namespace                          = `kube-system`
-	minimalKubernetesVersionConstraint = `>= 1.22`
-	maximalKubernetesVersionConstraint = `< 1.27`
-	kubernetesConfigPath               = `/etc/kubernetes`
-	manifestsPath                      = kubernetesConfigPath + `/manifests`
-	deckhousePath                      = kubernetesConfigPath + `/deckhouse`
-	configPath                         = `/config`
-	pkiPath                            = `/pki`
-)
-
-var (
-	myPodName                        string
-	kubernetesVersion                string
-	nodeName                         string
-	myIP                             string
-	k8sClient                        *kubernetes.Clientset
-	quit                             = make(chan struct{})
-	configurationChecksum            string
-	lastAppliedConfigurationChecksum string
-)
-
-func readEnvs() error {
-	myPodName = os.Getenv("MY_POD_NAME")
-	if myPodName == "" {
-		return errors.New("MY_POD_NAME env should be set")
-	}
-
-	myIP = os.Getenv("MY_IP")
-	if myIP == "" {
-		return errors.New("MY_IP env should be set")
-	}
-
-	kubernetesVersion = os.Getenv("KUBERNETES_VERSION")
-	if kubernetesVersion == "" {
-		return errors.New("KUBERNETES_VERSION env should be set")
-	}
-
-	// get hostname
-	h, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-	if h == "" {
-		return errors.New("node name should be set")
-	}
-	nodeName = h
-	return nil
-}
-
-func newClient() error {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
-	k8sClient, err = kubernetes.NewForConfig(config)
-	return err
-}
-
-func checkKubernetesVersion() error {
-	log.Infof("check desired kubernetes version %s", kubernetesVersion)
-	minimalConstraint, err := semver.NewConstraint(minimalKubernetesVersionConstraint)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	maximalConstraint, err := semver.NewConstraint(maximalKubernetesVersionConstraint)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	v := semver.MustParse(kubernetesVersion)
-	if minimalConstraint.Check(v) && maximalConstraint.Check(v) {
-		return nil
-	}
-	return errors.Errorf("kubernetes version %s is not allowed", kubernetesVersion)
-}
-
-func installFileIfChanged(src, dst string, perm os.FileMode) error {
+func installFileIfChanged(config *Config, src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
 	src, err := filepath.EvalSymlinks(src)
@@ -139,7 +55,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return nil
 	}
 
-	if err := backupFile(dst); err != nil {
+	if err := backupFile(config, dst); err != nil {
 		log.Errorf("Backup failed, %s", err)
 	}
 
@@ -151,76 +67,14 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	return os.Chown(dst, 0, 0)
 }
 
-func calculateConfigurationChecksum() error {
-	h := sha256.New()
-	f, err := os.Open(os.Args[0])
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(h, f); err != nil {
-		return err
-	}
-
-	// For tests
-	configDir := configPath
-	if env := os.Getenv("TESTS_CONFIG_PATH"); env != "" {
-		configDir = env
-	}
-
-	dirEntries, err := os.ReadDir(configDir)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range dirEntries {
-		if entry.IsDir() {
-			continue
-		}
-		path, err := filepath.EvalSymlinks(filepath.Join(configDir, entry.Name()))
-		if err != nil {
-			return err
-		}
-
-		fileInfo, err := os.Stat(path)
-		if err != nil {
-			return err
-		}
-
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if _, err := io.Copy(h, f); err != nil {
-			return err
-		}
-	}
-	configurationChecksum = fmt.Sprintf("%x", h.Sum(nil))
-	return nil
-}
-
-func getLastAppliedConfigurationChecksum() error {
-	var srcBytes []byte
-	srcBytes, err := os.ReadFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"))
-	lastAppliedConfigurationChecksum = strings.Trim(string(srcBytes), "\n")
-	return err
-}
-
-func backupFile(src string) error {
+func backupFile(config *Config, src string) error {
 	log.Infof("backup %s file", src)
 
 	if _, err := os.Stat(src); err != nil {
 		return err
 	}
 
-	backupDir := filepath.Join(deckhousePath, "backup", configurationChecksum)
+	backupDir := filepath.Join(deckhousePath, "backup", config.ConfigurationChecksum)
 
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return err
@@ -228,15 +82,15 @@ func backupFile(src string) error {
 	return copy.Copy(src, backupDir+src)
 }
 
-func removeFile(src string) error {
+func removeFile(config *Config, src string) error {
 	log.Infof("remove %s file", src)
-	if err := backupFile(src); err != nil {
+	if err := backupFile(config, src); err != nil {
 		return err
 	}
 	return os.Remove(src)
 }
 
-func removeDirectory(dir string) error {
+func removeDirectory(config *Config, dir string) error {
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -244,7 +98,7 @@ func removeDirectory(dir string) error {
 		if info.IsDir() {
 			return nil
 		}
-		return removeFile(path)
+		return removeFile(config, path)
 	}
 
 	err := filepath.Walk(dir, walkFunc)
@@ -254,12 +108,12 @@ func removeDirectory(dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func removeOrphanFiles() error {
+func removeOrphanFiles(config *Config) error {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
-	log.Infof("remove orphan files from dir %s", srcDir)
+	log.Infof("phase: remove orphan files from dir %s", srcDir)
 
-	walkFunc := func(path string, info os.FileInfo, _ error) error {
-		if info == nil || info.IsDir() {
+	walkDirFunc := func(path string, d fs.DirEntry, _ error) error {
+		if d == nil || d.IsDir() {
 			return nil
 		}
 
@@ -273,14 +127,15 @@ func removeOrphanFiles() error {
 		case "kube-scheduler.yaml":
 			return nil
 		default:
-			return removeFile(path)
+			return removeFile(config, path)
 		}
 	}
-	return filepath.Walk(srcDir, walkFunc)
+
+	return filepath.WalkDir(srcDir, walkDirFunc)
 }
 
-func kubeadm() string {
-	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", kubernetesVersion)
+func kubeadm(config *Config) string {
+	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", config.KubernetesVersion)
 }
 
 func stringSlicesEqual(a, b []string) bool {
@@ -296,4 +151,111 @@ func stringSlicesEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func waitImageHolderContainers(config *Config) error {
+	for {
+		log.Info("phase: waiting for all image-holder containers will be ready")
+		pod, err := config.K8sClient.CoreV1().Pods(namespace).Get(context.TODO(), config.MyPodName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		isReady := true
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == "control-plane-manager" {
+				continue
+			}
+			if !container.Ready {
+				isReady = false
+				break
+			}
+		}
+
+		if isReady {
+			return nil
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func checkEtcdManifest(config *Config) error {
+	etcdManifestPath := filepath.Join(manifestsPath, "etcd.yaml")
+	log.Infof("phase: check etcd manifest %s", etcdManifestPath)
+
+	if _, err := os.Stat(etcdManifestPath); err != nil {
+		log.Warnf("etcd manifest %s absent", etcdManifestPath)
+		return nil
+	}
+
+	content, err := os.ReadFile(etcdManifestPath)
+	if err != nil {
+		return err
+	}
+	re := regexp.MustCompile(`--advertise-client-urls=https://(.+):2379`)
+	res := re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find --advertise-client-urls submatch in etcd manifest")
+	}
+	if string(res[1]) != config.MyIP {
+		return errors.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", res[1], config.MyIP)
+	}
+
+	re = regexp.MustCompile(`--name=(.+)`)
+	res = re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find --name submatch in etcd manifest")
+	}
+	if string(res[1]) != config.NodeName {
+		return errors.Errorf("etcd is not supposed to change its name from %s to %s, please verify node's hostname", res[1], config.NodeName)
+	}
+
+	re = regexp.MustCompile(`--data-dir=(.+)`)
+	res = re.FindSubmatch(content)
+	if len(res) < 2 {
+		return errors.New("cannot find --data-dir submatch in etcd manifest")
+	}
+	if string(res[1]) != "/var/lib/etcd" {
+		return errors.Errorf("etcd is not supposed to change data-dir from %s to /var/lib/etcd, please verify current --data-dir", res[1])
+	}
+
+	return nil
+}
+
+func checkKubeletConfig() error {
+	kubeletPath := filepath.Join(kubernetesConfigPath, "kubelet.conf")
+	log.Infof("phase: check kubelet config %s", kubeletPath)
+
+	if _, err := os.Stat(kubeletPath); err != nil {
+		// kubelet manifest does not exist, may be first run
+		return errors.Errorf("kubelet config does not exist in %s", kubeletPath)
+	}
+
+	content, err := os.ReadFile(kubeletPath)
+	if err != nil {
+		return err
+	}
+	re := regexp.MustCompile(`server: https://127.0.0.1:6445`)
+	if re.Match(content) {
+		return nil
+	}
+
+	return errors.Errorf("cannot find server: https://127.0.0.1:6445 in kubelet config %s, kubelet should be configured "+
+		"to access apiserver via kube-api-proxy (through https://127.0.0.1:6445), probably node is not managed by node-manager", kubeletPath)
+}
+
+func installKubeadmConfig(config *Config) error {
+	log.Info("phase: install kubeadm configuration")
+	if err := os.MkdirAll(filepath.Join(deckhousePath, "kubeadm", "patches"), 0755); err != nil {
+		return err
+	}
+
+	if err := installFileIfChanged(config, filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(deckhousePath, "kubeadm", "config.yaml"), 0644); err != nil {
+		return err
+	}
+	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+		if err := installFileIfChanged(config, filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(deckhousePath, "kubeadm", "patches", component+".yaml"), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }

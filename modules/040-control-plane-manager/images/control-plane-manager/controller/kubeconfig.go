@@ -23,28 +23,30 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
-func renewKubeconfigs() error {
+func renewKubeconfigs(config *Config) error {
+	log.Info("phase: renew kubeconfigs")
 	for _, v := range []string{"admin", "controller-manager", "scheduler"} {
-		if err := renewKubeconfig(v); err != nil {
+		if err := renewKubeconfig(config, v); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func renewKubeconfig(componentName string) error {
+func renewKubeconfig(config *Config, componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
 	log.Infof("generate or renew %s kubeconfig", path)
-	if _, err := os.Stat(path); err == nil && configurationChecksum != lastAppliedConfigurationChecksum {
+	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
-		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", lastAppliedConfigurationChecksum, configurationChecksum)
-		if err := prepareKubeconfig(componentName, true); err != nil {
+		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
+		if err := prepareKubeconfig(config, componentName, true); err != nil {
 			return err
 		}
 
@@ -52,7 +54,7 @@ func renewKubeconfig(componentName string) error {
 		if err != nil {
 			return err
 		}
-		tmpKubeconfig, err := loadKubeconfig(filepath.Join("/tmp", configurationChecksum, path))
+		tmpKubeconfig, err := loadKubeconfig(filepath.Join(config.TmpPath, path))
 		if err != nil {
 			return err
 		}
@@ -78,7 +80,7 @@ func renewKubeconfig(componentName string) error {
 		}
 
 		if remove {
-			if err := removeFile(path); err != nil {
+			if err := removeFile(config, path); err != nil {
 				log.Error(err)
 			}
 		}
@@ -90,17 +92,19 @@ func renewKubeconfig(componentName string) error {
 
 	// regenerate kubeconfig
 	log.Infof("generate new kubeconfig %s", path)
-	return prepareKubeconfig(componentName, false)
+	return prepareKubeconfig(config, componentName, false)
 }
 
-func prepareKubeconfig(componentName string, isTemp bool) error {
+func prepareKubeconfig(config *Config, componentName string, isTemp bool) error {
 	args := []string{"init", "phase", "kubeconfig", componentName, "--config", deckhousePath + "/kubeadm/config.yaml"}
 	if isTemp {
-		args = append(args, "--rootfs", filepath.Join("/tmp", configurationChecksum))
+		args = append(args, "--rootfs", config.TmpPath)
 	}
-	c := exec.Command(kubeadm(), args...)
+	c := exec.Command(kubeadm(config), args...)
 	out, err := c.CombinedOutput()
-	log.Infof("%s", out)
+	for _, s := range strings.Split(string(out), "\n") {
+		log.Infof("%s", s)
+	}
 	return err
 }
 
