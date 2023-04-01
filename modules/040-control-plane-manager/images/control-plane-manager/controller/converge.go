@@ -32,7 +32,7 @@ import (
 
 func installExtraFiles(config *Config) error {
 	dstDir := filepath.Join(deckhousePath, "extra-files")
-	log.Infof("install extra files to %s", dstDir)
+	log.Infof("phase: install extra files to %s", dstDir)
 
 	if err := removeDirectory(config, dstDir); err != nil {
 		return err

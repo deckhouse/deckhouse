@@ -56,7 +56,7 @@ func installFileIfChanged(config *Config, src, dst string, perm os.FileMode) err
 	}
 
 	if err := backupFile(config, dst); err != nil {
-		log.Errorf("Backup failed, %s", err)
+		log.Warnf("Backup failed, %s", err)
 	}
 
 	log.Infof("install file %s to destination %s", src, dst)
@@ -91,17 +91,17 @@ func removeFile(config *Config, src string) error {
 }
 
 func removeDirectory(config *Config, dir string) error {
-	walkFunc := func(path string, info os.FileInfo, err error) error {
-		if info == nil {
+	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
+		if d == nil {
 			return nil
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 		return removeFile(config, path)
 	}
 
-	err := filepath.Walk(dir, walkFunc)
+	err := filepath.WalkDir(dir, walkDirFunc)
 	if err != nil {
 		return err
 	}
