@@ -74,6 +74,7 @@ func NewConfig() (*Config, error) {
 		return config, err
 	}
 	config.Quit = make(chan struct{})
+	config.TmpPath = filepath.Join("/tmp", config.ConfigurationChecksum)
 	return config, nil
 }
 
@@ -106,7 +107,6 @@ func (c *Config) readEnvs() error {
 		return errors.New("node name should be set")
 	}
 	c.NodeName = h
-	c.TmpPath = filepath.Join("/tmp", c.ConfigurationChecksum)
 	return nil
 }
 
