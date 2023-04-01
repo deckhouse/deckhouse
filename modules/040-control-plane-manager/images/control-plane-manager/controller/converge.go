@@ -200,7 +200,7 @@ func calculateSha256(content []byte) (string, error) {
 	if _, err := h.Write(content); err != nil {
 		return "", err
 	}
-	return string(h.Sum(nil)), nil
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func manifestChecksumIsEqual(componentName, checksum string) (bool, error) {
