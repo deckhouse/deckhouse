@@ -18,12 +18,14 @@ package main
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -86,9 +88,7 @@ func convergeComponent(config *Config, componentName string) error {
 	}
 
 	recreateConfig := false
-	if _, err := os.Stat(filepath.Join(manifestsPath, manifestsPath, componentName+".yaml")); err != nil {
-		recreateConfig = true
-	} else {
+	if _, err := os.Stat(filepath.Join(manifestsPath, componentName+".yaml")); err == nil {
 		equal, err := manifestChecksumIsEqual(componentName, checksum)
 		if err != nil {
 			return err
@@ -96,16 +96,38 @@ func convergeComponent(config *Config, componentName string) error {
 		if !equal {
 			recreateConfig = true
 		}
+	} else {
+		recreateConfig = true
 	}
 
 	if recreateConfig {
-		log.Infof("generate new kubeconfig for %s", componentName)
-		//		if err := prepareConverge(componentName, false); err != nil {
-		//			return err
-		//		}
+		log.Infof("generate new manifest for %s", componentName)
+		if err := backupFile(config, filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
+			return err
+		}
+
+		if err := generateChecksumPatch(componentName, checksum); err != nil {
+			return err
+		}
+
+		_, err := os.Stat("/var/lib/etcd/member")
+		if componentName == "etcd" && err != nil {
+			if err := etcdJoinConverge(config); err != nil {
+				return err
+			}
+		} else {
+			if err := prepareConverge(config, componentName, false); err != nil {
+				return err
+			}
+		}
+
+		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
+
+	} else {
+		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return nil
+	return waitPoidIsReady(config, componentName)
 }
 
 func prepareConverge(config *Config, componentName string, isTemp bool) error {
@@ -182,9 +204,39 @@ func calculateSha256(content []byte) (string, error) {
 }
 
 func manifestChecksumIsEqual(componentName, checksum string) (bool, error) {
-	content, err := os.ReadFile(filepath.Join(manifestsPath, manifestsPath, componentName+".yaml"))
+	content, err := os.ReadFile(filepath.Join(manifestsPath, componentName+".yaml"))
 	if err != nil {
 		return false, err
 	}
 	return strings.Index(string(content), checksum) != -1, nil
+}
+
+func generateChecksumPatch(componentName string, checksum string) error {
+	const patch = `apiVersion: v1
+kind: Pod
+metadata:
+  name: %s
+  namespace: kube-system
+  annotations:
+    control-plane-manager.deckhouse.io/checksum: "%s"`
+	log.Infof("write checksum patch for component %s", componentName)
+	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml")
+	content := fmt.Sprintf(patch, componentName, checksum)
+	return os.WriteFile(patchFile, []byte(content), 0644)
+}
+
+func etcdJoinConverge(config *Config) error {
+	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	c := exec.Command(kubeadm(config), args...)
+	out, err := c.CombinedOutput()
+	for _, s := range strings.Split(string(out), "\n") {
+		log.Infof("%s", s)
+	}
+	return err
+}
+
+func waitPoidIsReady(config *Config, componentName string) error {
+	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
+	time.Sleep(1 * time.Minute)
+	return nil
 }
