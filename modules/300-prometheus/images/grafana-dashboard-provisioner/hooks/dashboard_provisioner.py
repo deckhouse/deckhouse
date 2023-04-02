@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import json
-import os, shutil, time
+import os, time
 from shell_operator import hook
 from slugify import slugify
 
@@ -76,20 +76,19 @@ def main(ctx: hook.Context):
             with open(file_path, "w") as f:
                 json.dump(definition, f)
 
-    cleanup_folder(root_path, ts)
+    remove_outdated_files(root_path, ts)
 
     with open("/tmp/ready", "w") as f:
         f.write("ok")
 
 
 # cleanup outdated files that were not touched (mtime < currenttime)
-def cleanup_folder(folder, ts):
+def remove_outdated_files(folder, ts):
     for root, _, files in os.walk(folder):
         for file_name in files:
             file_location = os.path.join(root, file_name)
             if os.stat(file_location).st_mtime < ts:
                 try:
-                    print('Removing file: %s' % file_location)
                     os.unlink(file_location)
                 except Exception as e:
                     print('WARN: Failed to delete %s. Reason: %s' % (file_location, e))
