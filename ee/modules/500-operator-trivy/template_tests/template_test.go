@@ -45,7 +45,7 @@ discovery:
   clusterDomain: cluster.local
 `
 
-var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", func() {
+var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificate", func() {
 	f := SetupHelmConfig(``)
 
 	Context("Default", func() {
