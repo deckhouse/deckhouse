@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"os"
@@ -28,6 +29,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func installExtraFiles() error {
@@ -127,7 +130,7 @@ func convergeComponent(componentName string) error {
 		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
-	return waitPoidIsReady(componentName)
+	return waitPoidIsReady(componentName, checksum)
 }
 
 func prepareConverge(componentName string, isTemp bool) error {
@@ -235,8 +238,41 @@ func etcdJoinConverge() error {
 	return err
 }
 
-func waitPoidIsReady(componentName string) error {
+func waitPoidIsReady(componentName string, checksum string) error {
+	tries := 0
 	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
-	time.Sleep(1 * time.Minute)
-	return nil
+	for {
+		tries++
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		podName := fmt.Sprintf("%s-%s", componentName, config.NodeName)
+		pod, err := config.K8sClient.CoreV1().Pods("kube-system").Get(ctx, podName, metav1.GetOptions{})
+		cancel()
+		if err != nil {
+			log.Warn(err)
+		}
+		if podChecksum := pod.Annotations["control-plane-manager.deckhouse.io/checksum"]; podChecksum != checksum {
+			log.Warnf("kubernetes pod %s checksum %s does not match expected checksum %s", podName, podChecksum, checksum)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		var podIsReady bool
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+				podIsReady = true
+				break
+			}
+		}
+		if !podIsReady {
+			log.Warnf("kubernetes pod %s has matching checksum %s but is not ready", podName, checksum)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if tries > 240 {
+			return fmt.Errorf("timeout waiting for pod %s to become ready with expected checksum %s", podName, checksum)
+		}
+
+		log.Infof("kubernetes pod %s has matching checksum %s and is ready", podName, checksum)
+		return nil
+	}
 }
