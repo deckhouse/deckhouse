@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import json
-import os, shutil
+import os, shutil, time
 from shell_operator import hook
 from slugify import slugify
 
@@ -26,6 +26,7 @@ def main(ctx: hook.Context):
     known_uids = set()
     malformed_dashboards = []
     dashboard_dict = {}
+    ts = time.time()
 
     for i in ctx.snapshots.get("dashboard_resources", []):
         dashboard = i["filterResult"]
@@ -61,8 +62,6 @@ def main(ctx: hook.Context):
     if len(malformed_dashboards) > 0:
         print(f'WARN: Skipping malformed dashboards: {", ".join(malformed_dashboards)}')
 
-    cleanup_folder(root_path)
-
     for folder, files in dashboard_dict.items():
         if folder == "General":
             # General folder can't be provisioned, see the link for more details
@@ -77,20 +76,23 @@ def main(ctx: hook.Context):
             with open(file_path, "w") as f:
                 json.dump(definition, f)
 
+    cleanup_folder(root_path, ts)
+
     with open("/tmp/ready", "w") as f:
         f.write("ok")
 
 
-def cleanup_folder(folder):
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('WARN: Failed to delete %s. Reason: %s' % (file_path, e))
+# cleanup outdated files that were not touched (mtime < currenttime)
+def cleanup_folder(folder, ts):
+    for root, _, files in os.walk(folder):
+        for file_name in files:
+            file_location = os.path.join(root, file_name)
+            if os.stat(file_location).st_mtime < ts:
+                try:
+                    print('Removing file: %s' % file_location)
+                    os.unlink(file_location)
+                except Exception as e:
+                    print('WARN: Failed to delete %s. Reason: %s' % (file_location, e))
 
 
 if __name__ == "__main__":
