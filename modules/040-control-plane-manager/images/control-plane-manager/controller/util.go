@@ -267,7 +267,7 @@ func removeOldBackups() error {
 	if err != nil {
 		return err
 	}
-	fi := make([]fs.FileInfo, len(files))
+	fi := make([]fs.FileInfo, 0, len(files))
 	for _, f := range files {
 		info, err := f.Info()
 		if err != nil {
