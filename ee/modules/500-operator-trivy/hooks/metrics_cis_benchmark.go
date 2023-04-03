@@ -23,6 +23,11 @@ const (
 	metricName      = "deckhouse_trivy_cis_benchmark"
 )
 
+type filteredComplianceReport struct {
+	SummaryControls  []v1alpha1.ControlCheckSummary
+	DetailedControls []*v1alpha1.ControlCheckResult
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/operator-trivy/cis_benchmark",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -50,7 +55,15 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 	if err != nil {
 		return nil, err
 	}
-	return compReport.Status.SummaryReport, nil
+
+	filteredResult := filteredComplianceReport{}
+	switch {
+	case compReport.Status.DetailReport != nil:
+		filteredResult.DetailedControls = compReport.Status.DetailReport.Results
+	case compReport.Status.SummaryReport != nil:
+		filteredResult.SummaryControls = compReport.Status.SummaryReport.SummaryControls
+	}
+	return filteredResult, nil
 }
 
 func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
@@ -62,28 +75,61 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	cisReport, ok := snap[0].(*v1alpha1.SummaryReport)
+	compReport, ok := snap[0].(filteredComplianceReport)
 	if !ok {
-		return errors.New("can't use snapshot as SummaryReport")
+		return errors.New("can't use snapshot as complianceReportTypes")
 	}
 
-	if cisReport == nil {
+	switch {
+	case compReport.DetailedControls != nil:
+		generateDetailedMetrics(input.MetricsCollector, compReport.DetailedControls)
+	case compReport.SummaryControls != nil:
+		generateSummaryMetrics(input.MetricsCollector, compReport.SummaryControls)
+	default:
 		input.LogEntry.Errorln("CIS benchmark didn't run")
-		return nil
-	}
-
-	for _, controlCheck := range cisReport.SummaryControls {
-		var totalFail float64
-		if controlCheck.TotalFail != nil {
-			totalFail = float64(*controlCheck.TotalFail)
-		}
-
-		input.MetricsCollector.Set(
-			metricName,
-			totalFail,
-			map[string]string{"id": controlCheck.ID, "name": controlCheck.Name, "severity": controlCheck.Severity},
-			metrics.WithGroup(metricGroupName),
-		)
 	}
 	return nil
+}
+
+func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryChecks []v1alpha1.ControlCheckSummary) {
+	for _, controlCheck := range summaryChecks {
+		var (
+			totalFails float64
+		)
+
+		if controlCheck.TotalFail != nil && *controlCheck.TotalFail != 0 {
+			totalFails = float64(*controlCheck.TotalFail)
+		}
+
+		generateComplianceMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
+	}
+}
+
+func generateDetailedMetrics(metricsCollector go_hook.MetricsCollector, detailedChecks []*v1alpha1.ControlCheckResult) {
+	for _, controlCheck := range detailedChecks {
+		if controlCheck == nil {
+			continue
+		}
+		totalFails := countTotalFailsFromDetailedChecks(controlCheck.Checks)
+		generateComplianceMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
+	}
+}
+
+func countTotalFailsFromDetailedChecks(checks []v1alpha1.ComplianceCheck) float64 {
+	var totalFails float64
+	for _, check := range checks {
+		if !check.Success {
+			totalFails += 1
+		}
+	}
+	return totalFails
+}
+
+func generateComplianceMetric(metricsCollector go_hook.MetricsCollector, totalFails float64, id, name, severity string) {
+	metricsCollector.Set(
+		metricName,
+		totalFails,
+		map[string]string{"id": id, "name": name, "severity": severity},
+		metrics.WithGroup(metricGroupName),
+	)
 }
