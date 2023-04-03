@@ -1,13 +1,58 @@
 diff --git a/pkg/configauditreport/controller/nodecollector.go b/pkg/configauditreport/controller/nodecollector.go
-index 432d301..5843080 100644
+index 432d301..c6630d9 100644
 --- a/pkg/configauditreport/controller/nodecollector.go
 +++ b/pkg/configauditreport/controller/nodecollector.go
+@@ -97,7 +97,7 @@ func (r *NodeCollectorJobController) processCompleteScanJob(ctx context.Context,
+ 		if errors.IsNotFound(err) {
+ 			log.V(1).Info("Ignore processing node info collector job for node that must have been deleted")
+ 			log.V(1).Info("Deleting complete node info collector job")
+-			return r.deleteJob(ctx, job)
++			return nil
+ 		}
+ 		return fmt.Errorf("getting node from cache: %w", err)
+ 	}
 @@ -110,7 +110,7 @@ func (r *NodeCollectorJobController) processCompleteScanJob(ctx context.Context,
  	if hasReport {
  		log.V(1).Info("node info collector already exist")
  		log.V(1).Info("Deleting complete scan job")
 -		return r.deleteJob(ctx, job)
-+		return nil //r.deleteJob(ctx, job)
++		return nil
  	}
  
  	logsStream, err := r.LogsReader.GetLogsByJobAndContainerName(ctx, job, j.NodeCollectorName)
+@@ -121,7 +121,7 @@ func (r *NodeCollectorJobController) processCompleteScanJob(ctx context.Context,
+ 		}
+ 		if kube.IsPodControlledByJobNotFound(err) {
+ 			log.V(1).Info("Pod must have been deleted")
+-			return r.deleteJob(ctx, job)
++			return nil
+ 		}
+ 		return fmt.Errorf("getting logs: %w", err)
+ 	}
+@@ -169,7 +169,7 @@ func (r *NodeCollectorJobController) processCompleteScanJob(ctx context.Context,
+ 		return err
+ 	}
+ 	log.V(1).Info("Deleting complete scan job", "owner", job)
+-	return r.deleteJob(ctx, job)
++	return nil
+ }
+ 
+ func (r *NodeCollectorJobController) processFailedScanJob(ctx context.Context, scanJob *batchv1.Job) error {
+@@ -183,7 +183,7 @@ func (r *NodeCollectorJobController) processFailedScanJob(ctx context.Context, s
+ 		}
+ 		if kube.IsPodControlledByJobNotFound(err) {
+ 			log.V(1).Info("Pod must have been deleted")
+-			return r.deleteJob(ctx, scanJob)
++			return nil
+ 		}
+ 		return err
+ 	}
+@@ -194,7 +194,7 @@ func (r *NodeCollectorJobController) processFailedScanJob(ctx context.Context, s
+ 		log.Error(nil, "Scan job container", "container", container, "status.reason", status.Reason, "status.message", status.Message)
+ 	}
+ 	log.V(1).Info("Deleting failed scan job")
+-	return r.deleteJob(ctx, scanJob)
++	return nil
+ }
+ 
+ func (r *NodeCollectorJobController) deleteJob(ctx context.Context, job *batchv1.Job) error {
