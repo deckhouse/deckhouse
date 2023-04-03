@@ -18,9 +18,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -58,5 +58,5 @@ func waitNodeApproval() error {
 		}
 		time.Sleep(10 * time.Second)
 	}
-	return errors.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
+	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }

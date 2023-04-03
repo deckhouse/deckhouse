@@ -22,6 +22,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func runFunc(f func() error, isFatal bool) {
+	err := f
+	if err != nil {
+		if isFatal {
+			log.Fatal(err)
+		}
+		log.Warn(err)
+	}
+}
+
 func main() {
 
 	if err := removeOrphanFiles(); err != nil {
@@ -93,5 +103,5 @@ func main() {
 	}
 
 	// pause loop
-	<-config.Quit
+	<-config.SigCh
 }

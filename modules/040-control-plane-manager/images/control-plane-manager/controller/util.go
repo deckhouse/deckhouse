@@ -23,14 +23,15 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/otiai10/copy"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
@@ -191,31 +192,58 @@ func checkEtcdManifest() error {
 	if err != nil {
 		return err
 	}
-	re := regexp.MustCompile(`--advertise-client-urls=https://(.+):2379`)
-	res := re.FindSubmatch(content)
-	if len(res) < 2 {
-		return errors.New("cannot find --advertise-client-urls submatch in etcd manifest")
-	}
-	if string(res[1]) != config.MyIP {
-		return errors.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", res[1], config.MyIP)
+
+	var pod v1.Pod
+
+	if err := yaml.Unmarshal(content, pod); err != nil {
+		return err
 	}
 
-	re = regexp.MustCompile(`--name=(.+)`)
-	res = re.FindSubmatch(content)
-	if len(res) < 2 {
-		return errors.New("cannot find --name submatch in etcd manifest")
-	}
-	if string(res[1]) != config.NodeName {
-		return errors.Errorf("etcd is not supposed to change its name from %s to %s, please verify node's hostname", res[1], config.NodeName)
+	found := false
+	for _, arg := range pod.Spec.Containers[0].Command {
+		if !strings.HasPrefix(arg, "--advertise-client-urls=https://") {
+			continue
+		}
+		if ip := strings.TrimSuffix(strings.TrimPrefix(arg, "--advertise-client-urls=https://"), ":2379"); ip != config.MyIP {
+			return fmt.Errorf("etcd is not supposed to change advertise address from %s to %s, please verify node's InternalIP", ip, config.MyIP)
+		}
+		found = true
+		break
 	}
 
-	re = regexp.MustCompile(`--data-dir=(.+)`)
-	res = re.FindSubmatch(content)
-	if len(res) < 2 {
-		return errors.New("cannot find --data-dir submatch in etcd manifest")
+	if !found {
+		return fmt.Errorf("cannot find --advertise-client-urls submatch in etcd manifest %s", etcdManifestPath)
 	}
-	if string(res[1]) != "/var/lib/etcd" {
-		return errors.Errorf("etcd is not supposed to change data-dir from %s to /var/lib/etcd, please verify current --data-dir", res[1])
+
+	found = false
+	for _, arg := range pod.Spec.Containers[0].Command {
+		if !strings.HasPrefix(arg, "--name=") {
+			continue
+		}
+		if name := strings.TrimPrefix(arg, "--name="); name != config.NodeName {
+			return fmt.Errorf("etcd is not supposed to change its name from %s to %s, please verify node's hostname", name, config.NodeName)
+		}
+		found = true
+		break
+	}
+
+	if !found {
+		return fmt.Errorf("cannot find --name submatch in etcd manifest %s", etcdManifestPath)
+	}
+
+	found = false
+	for _, arg := range pod.Spec.Containers[0].Command {
+		if !strings.HasPrefix(arg, "--data-dir=") {
+			continue
+		}
+		if name := strings.TrimPrefix(arg, "--data-dir="); name != "/var/lib/etcd" {
+			return fmt.Errorf("etcd is not supposed to change data-dir from %s to /var/lib/etcd, please verify current --data-dir", name)
+		}
+		found = true
+		break
+	}
+	if !found {
+		return fmt.Errorf("cannot find --data-dir submatch in etcd manifest %s", etcdManifestPath)
 	}
 
 	return nil
@@ -227,19 +255,25 @@ func checkKubeletConfig() error {
 
 	if _, err := os.Stat(kubeletPath); err != nil {
 		// kubelet manifest does not exist, may be first run
-		return errors.Errorf("kubelet config does not exist in %s", kubeletPath)
+		return fmt.Errorf("kubelet config does not exist in %s", kubeletPath)
 	}
 
 	content, err := os.ReadFile(kubeletPath)
 	if err != nil {
 		return err
 	}
-	re := regexp.MustCompile(`server: https://127.0.0.1:6445`)
-	if re.Match(content) {
+
+	res := &KubeConfigValue{}
+	err = yaml.Unmarshal(content, res)
+	if err != nil {
+		return err
+	}
+
+	if res.Clusters[0].Cluster.Server == "https://127.0.0.1:6445" {
 		return nil
 	}
 
-	return errors.Errorf("cannot find server: https://127.0.0.1:6445 in kubelet config %s, kubelet should be configured "+
+	return fmt.Errorf("cannot find server: https://127.0.0.1:6445 in kubelet config %s, kubelet should be configured "+
 		"to access apiserver via kube-api-proxy (through https://127.0.0.1:6445), probably node is not managed by node-manager", kubeletPath)
 }
 
@@ -261,7 +295,7 @@ func installKubeadmConfig() error {
 }
 
 func removeOldBackups() error {
-	backupPath := filepath.Join(deckhousePath, "backup", config.ConfigurationChecksum)
+	backupPath := filepath.Join(deckhousePath, "backup")
 	log.Info("remove backups older than 5")
 	entries, err := os.ReadDir(backupPath)
 	if err != nil {

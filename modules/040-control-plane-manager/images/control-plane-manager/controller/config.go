@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -53,7 +55,7 @@ type Config struct {
 	NodeName                         string
 	MyIP                             string
 	K8sClient                        *kubernetes.Clientset
-	Quit                             chan struct{}
+	SigCh                            chan os.Signal
 	ConfigurationChecksum            string
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
@@ -87,8 +89,8 @@ func NewConfig() (*Config, error) {
 	if err := config.getLastAppliedConfigurationChecksum(); err != nil {
 		return config, err
 	}
-	config.Quit = make(chan struct{})
-	config.TmpPath = filepath.Join("/tmp", config.ConfigurationChecksum)
+	config.SigCh = make(chan os.Signal, 1)
+	signal.Notify(config.SigCh, syscall.SIGTERM, syscall.SIGINT)
 	return config, nil
 }
 
@@ -131,12 +133,8 @@ func (c *Config) newClient() error {
 		return err
 	}
 
-	k8sClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-	c.K8sClient = k8sClient
-	return nil
+	c.K8sClient, err = kubernetes.NewForConfig(config)
+	return err
 }
 
 func checkKubernetesVersion(kubernetesVersion string) error {
@@ -155,7 +153,7 @@ func checkKubernetesVersion(kubernetesVersion string) error {
 	if minimalConstraint.Check(v) && maximalConstraint.Check(v) {
 		return nil
 	}
-	return errors.Errorf("kubernetes version %s is not allowed", kubernetesVersion)
+	return fmt.Errorf("kubernetes version %s is not allowed", kubernetesVersion)
 }
 
 func (c *Config) calculateConfigurationChecksum() error {
