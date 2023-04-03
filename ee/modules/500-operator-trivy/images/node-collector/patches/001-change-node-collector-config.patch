@@ -1,5 +1,5 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..354e2b4 100644
+index b8acb37..42a2a80 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
 @@ -36,9 +36,9 @@ collectors:
@@ -46,11 +46,10 @@ index b8acb37..354e2b4 100644
 -      }' | grep \.key$)
 +    audit: echo 600
    - key: kubeletServiceFilePermissions
--    title: Kubelet service file permissions
-+    title: Kubelet service file permissions (ignore because of kubeadm)
+     title: Kubelet service file permissions
      nodeType: worker
 -    audit: stat -c %a /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-+    audit: echo 600
++    audit: stat -c %a /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
    - key: kubeletServiceFileOwnership
      title: Kubelet service file ownership
      nodeType: worker
@@ -59,7 +58,21 @@ index b8acb37..354e2b4 100644
    - key: kubeconfigFileExistsPermissions
      title: Kubeconfig file exists ensure permissions
      nodeType: worker
-@@ -154,13 +150,11 @@ collectors:
+@@ -122,11 +118,9 @@ collectors:
+     nodeType: worker
+     audit: stat -c %U:%G /etc/kubernetes/kubelet.conf
+   - key: certificateAuthoritiesFilePermissions
+-    title: Client certificate authorities file permissions
++    title: Client certificate authorities file permissions (ignore because of kubeadm)
+     nodeType: worker
+-    audit: stat -c %a $(ps -ef | grep kubelet |grep 'client-ca-file' | grep -o
+-      'client-ca-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1') 2>
+-      /dev/null
++    audit: echo 600
+   - key: certificateAuthoritiesFileOwnership
+     title: Client certificate authorities file ownership
+     nodeType: worker
+@@ -154,13 +148,11 @@ collectors:
    - key: kubeletClientCaFileArgumentSet
      title: kubelet --client-ca-file argument is set
      nodeType: worker
@@ -75,7 +88,7 @@ index b8acb37..354e2b4 100644
    - key: kubeletStreamingConnectionIdleTimeoutArgumentSet
      title: kubelet --streaming-connection-idle-timeout argument is set
      nodeType: worker
-@@ -170,9 +164,7 @@ collectors:
+@@ -170,9 +162,7 @@ collectors:
    - key: kubeletProtectKernelDefaultsArgumentSet
      title: kubelet --protect-kernel-defaults argument is set
      nodeType: worker
@@ -86,9 +99,13 @@ index b8acb37..354e2b4 100644
    - key: kubeletMakeIptablesUtilChainsArgumentSet
      title: kubelet --make-iptables-util-chains argument is set
      nodeType: worker
-@@ -200,22 +192,17 @@ collectors:
-     audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
-       --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
+@@ -197,25 +187,19 @@ collectors:
+   - key: kubeletTlsPrivateKeyFileArgumentSet
+     title: kubelet --tls-private-key-file argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
+-      --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o ' --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
    - key: kubeletRotateCertificatesArgumentSet
 -    title: kubelet --rotate-certificates argument is set
 +    title: kubelet --rotate-certificates argument is set (THIS IS DONE BY BASHIBLE)
