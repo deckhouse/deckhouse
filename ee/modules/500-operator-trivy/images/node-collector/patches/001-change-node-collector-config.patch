@@ -1,5 +1,5 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..42a2a80 100644
+index b8acb37..35b1aeb 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
 @@ -36,9 +36,9 @@ collectors:
@@ -99,13 +99,21 @@ index b8acb37..42a2a80 100644
    - key: kubeletMakeIptablesUtilChainsArgumentSet
      title: kubelet --make-iptables-util-chains argument is set
      nodeType: worker
-@@ -197,25 +187,19 @@ collectors:
+@@ -192,30 +182,25 @@ collectors:
+   - key: kubeletTlsCertFileTlsArgumentSet
+     title: kubelet --tls-cert-file argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --tls-cert-file' | grep -o '
+-      --tls-cert-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "ps -ef | grep kubelet |grep ' --tls-cert-file' | grep -o '
++      --tls-cert-file=[^\"]\\S*' | awk -F '=' '{print $2}' |awk 'FNR <= 1'"
    - key: kubeletTlsPrivateKeyFileArgumentSet
      title: kubelet --tls-private-key-file argument is set
      nodeType: worker
 -    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
 -      --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
-+    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o ' --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
++      --tls-private-key-file=[^\"]\\S*' | awk -F '=' '{print $2}' |awk 'FNR <= 1'"
    - key: kubeletRotateCertificatesArgumentSet
 -    title: kubelet --rotate-certificates argument is set
 +    title: kubelet --rotate-certificates argument is set (THIS IS DONE BY BASHIBLE)
