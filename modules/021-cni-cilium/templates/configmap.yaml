@@ -75,7 +75,13 @@ data:
   kube-proxy-replacement: "strict"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
+  # remove this condition when virtCilium will be updated to v1.12
+  {{- if has "virtualization" .Values.global.enabledModules }}
+  enable-host-reachable-services: "true"
+  {{- else }}
   bpf-lb-sock: "true"
+  {{- end }}
+
   bpf-lb-sock-hostns-only: "true"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
