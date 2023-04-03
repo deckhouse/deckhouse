@@ -207,7 +207,12 @@ func (c *Config) calculateConfigurationChecksum() error {
 
 func (c *Config) getLastAppliedConfigurationChecksum() error {
 	var srcBytes []byte
-	srcBytes, err := os.ReadFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"))
+	path := filepath.Join(deckhousePath, "last_applied_configuration_checksum")
+	// it is normal if last applied configuration checksum file is absent on the first run
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+	srcBytes, err := os.ReadFile(path)
 	c.LastAppliedConfigurationChecksum = strings.Trim(string(srcBytes), "\n")
 	return err
 }
