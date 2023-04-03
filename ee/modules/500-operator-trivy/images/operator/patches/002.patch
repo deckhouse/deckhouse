@@ -1,0 +1,13 @@
+diff --git a/pkg/configauditreport/controller/nodecollector.go b/pkg/configauditreport/controller/nodecollector.go
+index 432d301..5843080 100644
+--- a/pkg/configauditreport/controller/nodecollector.go
++++ b/pkg/configauditreport/controller/nodecollector.go
+@@ -110,7 +110,7 @@ func (r *NodeCollectorJobController) processCompleteScanJob(ctx context.Context,
+ 	if hasReport {
+ 		log.V(1).Info("node info collector already exist")
+ 		log.V(1).Info("Deleting complete scan job")
+-		return r.deleteJob(ctx, job)
++		return nil //r.deleteJob(ctx, job)
+ 	}
+ 
+ 	logsStream, err := r.LogsReader.GetLogsByJobAndContainerName(ctx, job, j.NodeCollectorName)
