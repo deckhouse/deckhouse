@@ -258,3 +258,5 @@ allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriod: ${shutdownGracePeriod}
 shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 EOF
+
+chmod 600 /var/lib/kubelet/config.yaml
