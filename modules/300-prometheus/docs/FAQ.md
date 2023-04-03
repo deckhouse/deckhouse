@@ -132,6 +132,146 @@ spec:
 
 To enable secure access to metrics, we strongly recommend using **kube-rbac-proxy**.
 
+### An example of collecting metrics securely from an application inside a cluster
+
+To configure application metrics protection using `kube-rbac-proxy` and then build metrics from it using Prometheus tools, perform the following steps:
+
+1. Create a new `ServiceAccount` with the following permissions:
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: rbac-proxy-test
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: rbac-proxy-test
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: d8:rbac-proxy
+  subjects:
+  - kind: ServiceAccount
+    name: rbac-proxy-test
+    namespace: default
+  ```
+
+  >**Note:** use the built-in deckhouse `ClusterRole` - `d8:rbac-proxy`.
+
+2. Create a configuration for `kube-rbac-proxy`:
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: rbac-proxy-config-test
+    namespace: rbac-proxy-test
+  data:
+    config-file.yaml: |+
+      authorization:
+        resourceAttributes:
+          namespace: default
+          apiVersion: v1
+          resource: services
+          subresource: proxy
+          name: rbac-proxy-test
+  ```
+
+  >**Note:** more information on attributes can be found [here] (https://kubernetes.io/docs/reference/access-authn-authz/authorization)
+
+3. Create `Service` and `Deployment` for your application, where `kube-rbac-proxy` takes the position of a sidecar container:
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: rbac-proxy-test
+    labels:
+      prometheus.deckhouse.io/custom-target: rbac-proxy-test
+  spec:
+    ports:
+    - name: https-metrics
+      port: 8443
+      targetPort: https-metrics
+    selector:
+      app: rbac-proxy-test
+  ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: rbac-proxy-test
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: rbac-proxy-test
+    template:
+      metadata:
+        labels:
+          app: rbac-proxy-test
+      spec:
+        securityContext:
+          runAsUser: 65532
+        serviceAccountName: rbac-proxy-test
+        containers:
+        - name: kube-rbac-proxy
+          image: quay.io/brancz/kube-rbac-proxy:v0.14.0
+          args:
+          - "--secure-listen-address=0.0.0.0:8443"
+          - "--upstream=http://127.0.0.1:8081/"
+          - "--config-file=/kube-rbac-proxy/config-file.yaml"
+          - "--logtostderr=true"
+          - "--v=10"
+          ports:
+          - containerPort: 8443
+            name: https-metrics
+          volumeMounts:
+          - name: config
+            mountPath: /kube-rbac-proxy
+        - name: prometheus-example-app
+          image: quay.io/brancz/prometheus-example-app:v0.1.0
+          args:
+          - "--bind=127.0.0.1:8081"
+        volumes:
+        - name: config
+          configMap:
+            name: rbac-proxy-config-test
+  ```
+
+4. Assign the necessary rights to the resource to Prometheus:
+
+  ```yaml
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: rbac-proxy-test-client
+  rules:
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    verbs: ["get"]
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: rbac-proxy-test-client
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: rbac-proxy-test-client
+  subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: d8-monitoring
+  ```
+
+After step 4, your application's metrics should appear in Prometheus.
+
 ### An example of collecting metrics securely from an application outside a cluster
 
 Suppose there is a server exposed to the Internet on which the `node-exporter` is running. By default, the `node-exporter` listens on port `9100` and is available on all interfaces. One needs to ensure access control to the `node-exporter` so that metrics can be collected securely. Below is an example of how you can set this up.
