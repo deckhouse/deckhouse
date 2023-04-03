@@ -29,6 +29,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -68,12 +69,20 @@ func renewKubeconfig(componentName string) error {
 			remove = true
 		}
 
+		if currentKubeconfig.Users[0].User.ClientCertificateData == "" {
+			return fmt.Errorf("client-certificate-data field of kubeconfig %s is empty", path)
+		}
+
 		certData, err := base64.StdEncoding.DecodeString(currentKubeconfig.Users[0].User.ClientCertificateData)
-		fmt.Printf("%s", certData)
 		if err != nil {
 			return err
 		}
+
 		block, _ := pem.Decode(certData)
+		if len(block.Bytes) == 0 {
+			return fmt.Errorf("cannot pem decode client-rtificate-data field of kubeconfig %s", path)
+		}
+
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return err
@@ -120,7 +129,7 @@ func loadKubeconfig(path string) (*KubeConfigValue, error) {
 		return res, err
 	}
 
-	err = yaml.Unmarshal(r, res)
+	err = yamlv3.Unmarshal(r, res)
 	return res, err
 }
 

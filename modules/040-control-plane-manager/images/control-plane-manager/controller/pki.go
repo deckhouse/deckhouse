@@ -131,6 +131,7 @@ func renewCertificate(componentName, f string) error {
 	}
 
 	if _, err := os.Stat(path); err == nil {
+		log.Infof("%s certificate is up to date", path)
 		return nil
 	}
 	// regenerate certificate
