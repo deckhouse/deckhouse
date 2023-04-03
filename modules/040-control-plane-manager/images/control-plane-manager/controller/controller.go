@@ -22,17 +22,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func runFunc(f func() error, isFatal bool) {
-	err := f
-	if err != nil {
-		if isFatal {
-			log.Fatal(err)
-		}
-		log.Warn(err)
-	}
-}
-
 func main() {
+
+	log.SetFormatter(&log.JSONFormatter{})
+
+	var err error
+	config, err = NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := removeOrphanFiles(); err != nil {
 		log.Warn(err)

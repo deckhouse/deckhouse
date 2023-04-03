@@ -66,15 +66,6 @@ var (
 	controlPlaneManagerIsReady bool
 )
 
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	c, err := NewConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-	config = c
-}
-
 func NewConfig() (*Config, error) {
 	config := &Config{}
 	if err := config.readEnvs(); err != nil {
@@ -222,4 +213,8 @@ func (c *Config) getLastAppliedConfigurationChecksum() error {
 
 func (c *Config) writeLastAppliedConfigurationChecksum() error {
 	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0644)
+}
+
+func kubeadm() string {
+	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", config.KubernetesVersion)
 }

@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"os"
 	"testing"
 )
 
@@ -35,6 +36,18 @@ func TestLoadKubeconfig(t *testing.T) {
 	}
 	block, _ := pem.Decode(certData)
 	_, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCheckEtcdManifest(t *testing.T) {
+	os.Setenv("D8_TESTS", "yes")
+	config = &Config{
+		NodeName: "dev-master-0",
+		MyIP:     "192.168.199.39",
+	}
+	err := checkEtcdManifest()
 	if err != nil {
 		t.Fatal(err)
 	}
