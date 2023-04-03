@@ -243,7 +243,7 @@ func waitPoidIsReady(componentName string, checksum string) error {
 	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
 	for {
 		tries++
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		podName := fmt.Sprintf("%s-%s", componentName, config.NodeName)
 		pod, err := config.K8sClient.CoreV1().Pods("kube-system").Get(ctx, podName, metav1.GetOptions{})
 		cancel()

@@ -263,26 +263,27 @@ func installKubeadmConfig() error {
 func removeOldBackups() error {
 	backupPath := filepath.Join(deckhousePath, "backup", config.ConfigurationChecksum)
 	log.Info("remove backups older than 5")
-	files, err := os.ReadDir(backupPath)
+	entries, err := os.ReadDir(backupPath)
 	if err != nil {
 		return err
 	}
-	fi := make([]fs.FileInfo, 0, len(files))
-	for _, f := range files {
-		info, err := f.Info()
+	files := make([]fs.FileInfo, 0, len(entries))
+	for _, e := range entries {
+		info, err := e.Info()
 		if err != nil {
 			return err
 		}
-		fi = append(fi, info)
+		files = append(files, info)
 	}
-	sort.Slice(fi, func(i, j int) bool {
-		return fi[i].ModTime().Before(fi[j].ModTime())
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().After(files[j].ModTime())
 	})
 
-	if len(fi) <= 5 {
+	if len(files) <= 5 {
 		return nil
 	}
 	for _, f := range files[5:] {
+		log.Infof("removing old backup dir %s", f.Name())
 		if err := os.RemoveAll(filepath.Join(backupPath, f.Name())); err != nil {
 			return err
 		}
