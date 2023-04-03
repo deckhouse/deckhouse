@@ -1,16 +1,10 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..9cb7897 100644
+index b8acb37..354e2b4 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
-@@ -32,13 +32,13 @@ collectors:
+@@ -36,9 +36,9 @@ collectors:
      nodeType: master
-     audit: stat -c %a /etc/kubernetes/manifests/etcd.yaml
-   - key: kubeEtcdSpecFileOwnership
--    title: Etcd pod specification file ownership
-+    title: Etcd pod specification file ownership (need some research to properly set ownership, now ignore)
-     nodeType: master
--    audit: stat -c %U:%G /etc/kubernetes/manifests/etcd.yaml
-+    audit: echo etcd:etcd
+     audit: stat -c %U:%G /etc/kubernetes/manifests/etcd.yaml
    - key: containerNetworkInterfaceFilePermissions
 -    title: Container Network Interface file permissions
 +    title: Container Network Interface file permissions (ignore because of cillium)
@@ -19,6 +13,18 @@ index b8acb37..9cb7897 100644
 +    audit: echo 600
    - key: containerNetworkInterfaceFileOwnership
      title: Container Network Interface file ownership
+     nodeType: master
+@@ -48,9 +48,9 @@ collectors:
+     nodeType: master
+     audit: stat -c %a /var/lib/etcd
+   - key: etcdDataDirectoryOwnership
+-    title: Etcd data directory Ownership
++    title: Etcd data directory Ownership (need some research to properly set ownership, now ignore)
+     nodeType: master
+-    audit: stat -c %U:%G /var/lib/etcd
++    audit: echo etcd:etcd
+   - key: adminConfFilePermissions
+     title: admin.conf file permissions
      nodeType: master
 @@ -82,25 +82,21 @@ collectors:
        '/:$/&&f{s=$0;f=0}/:$/&&!f{sub(/:$/,"");s=$0;f=1;next}NF&&f{print s"/"$0
