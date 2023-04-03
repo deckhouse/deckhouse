@@ -20,7 +20,7 @@ spec:
         service: backend
     spec:
       imagePullSecrets:
-        - name: registrysecret
+        - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: backend

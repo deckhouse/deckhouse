@@ -17,7 +17,7 @@
 
 name: Build and test for release branches
 
-# On every push to relese branches.
+# On every push to release branches.
 on:
   push:
     branches:
@@ -61,14 +61,14 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
 
   main_web_build:
     name: Main web build
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
   tests:
     name: Tests
@@ -105,6 +105,7 @@ jobs:
 
   web_links_test:
     name: Web links test
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -131,7 +132,8 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
