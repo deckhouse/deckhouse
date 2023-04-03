@@ -24,7 +24,7 @@ data:
   {{- $imageStringSlice := include "helm_lib_module_image" (list . "trivy") | split "@" }}
   {{- $imageRepository := $imageStringSlice._0 }}
   trivy.repository: {{ $imageStringSlice._0 }}
-  trivy.digest: {{ $imageStringSlice._1 }}
+  trivy.tag: {{ $imageStringSlice._1 }}
   trivy.additionalVulnerabilityReportFields: ""
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   trivy.slow: "true"
