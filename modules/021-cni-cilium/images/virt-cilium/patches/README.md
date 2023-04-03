@@ -19,9 +19,3 @@ Upstream <https://github.com/cilium/cilium/pull/24100>
 Set correct MTU value for veth interfaces
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
-
-## 004-fib.patch
-
-Perform routing lookup for custom tables
-
-Upstream <https://github.com/cilium/cilium/pull/24271>

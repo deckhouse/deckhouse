@@ -1,15 +1,16 @@
 # syntax=docker/dockerfile:1.2
 
-# https://github.com/cilium/cilium/blob/v1.11.14/images/runtime/Dockerfile#L7-L12
-ARG GOLANG_IMAGE=docker.io/library/golang:1.17.13@sha256:87262e4a4c7db56158a80a18fefdc4fee5accc41b59cde821e691d05541bbb18
-ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:4a45212e9518f35983a976eead0de5eecc555a2f047134e9dd2cfc589076a00d
+# https://github.com/cilium/cilium/blob/v1.12.8/images/runtime/Dockerfile#L7-L12
+ARG TESTER_IMAGE=quay.io/cilium/image-tester:c37f768323abfba87c90cd9c82d37136183457bc@sha256:4c9d640b6379eb4964b8590acc95ca2dfaa71df70f4467fb7d8ac076acf6a8e1
+ARG GOLANG_IMAGE=docker.io/library/golang:1.18.10@sha256:50c889275d26f816b5314fc99f55425fa76b18fcaf16af255f5d57f09e1f48da
+ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:9fa30fcef427e5e88c76bc41ad37b7cc573e1d79cecb23035e413c4be6e476ab
 
-ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:0147a23fdada32bd51b4f313c645bcb5fbe188d6@sha256:24fd3ad32471d0e45844c856c38f1b2d4ac8bd0a2d4edf64cffaaa3fd0b21202
-ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:7a5420acb4a0fa276a549eb4674515eadb2821d7@sha256:3e204885a1b9ec2a5b593584608664721ef0bd221d3920c091c2e77eb259090c
-ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:824df0c341c724f4b12cc48762f80aa3d698b589@sha256:0af5e059b2a43c6383a3daa293182b50cb88f7761f543dacf43c1c3f8f79030c
+ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
+ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:78448c1a37ff2b790d5e25c3d8b8ec3e96e6405f@sha256:99a9453a921a8de99899ef82e0822f0c03f65d97005c064e231c06247ad8597d
+ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:3570d58349efb2d6b0342369a836998c93afd291@sha256:1abcd7a5d2117190ab2690a163ee9cd135bc9e4cf8a4df662a8f993044c79342
 
-# https://github.com/cilium/cilium/blob/v1.11.14/images/cilium/Dockerfile#L6
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:a453bffcfd267482d51a71cd3b9a969c5dcfb596@sha256:57067753e56813d481da260cd2b592e1368f35fdff51a1259f0bb0818fd7dc49
+# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L6
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:4b33680817b91739f671f747df01b7878aece385@sha256:870e3f356e716a7b5957a2a5974d206442f85b78cb4f65aa3320c5bed27d27d5
 ARG CILIUM_RUNTIME_IMAGE=cilium-runtime
 
 FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
@@ -33,7 +34,8 @@ FROM ${UBUNTU_IMAGE} as rootfs
 
 # Update ubuntu packages to the most recent versions
 RUN apt-get update && \
-    apt-get upgrade -y
+    apt-get upgrade -y && \
+    apt-get install -y jq
 
 WORKDIR /go/src/github.com/cilium/cilium/images/runtime
 
@@ -58,26 +60,26 @@ COPY --from=rootfs / /
 
 # cilium-envoy from github.com/cilium/proxy
 #
-# https://github.com/cilium/cilium/blob/v1.11.14/images/cilium/Dockerfile#L11
-FROM quay.io/cilium/cilium-envoy:d59b7f950565d4ccad5c9e30f725740271b7f1c2@sha256:a9c20ee37fe8b280606b096f34f074fed02a347381ded71f1853a214a324a9ef as cilium-envoy
+# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L11
+FROM quay.io/cilium/cilium-envoy:04413917ff99e4f6ab51d1c6eb424d4a055f4462@sha256:af076f80818bc8d894f2f4f3104d5f4288112a67be5fb6e1b9a9c78370c7c9c8 as cilium-envoy
 
 #
 # Cilium builder image with tools and source code
 #
 FROM ${CILIUM_BUILDER_IMAGE} as cilium_builder
 RUN apt-get update && apt-get install patch curl -y
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.14.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.8.tar.gz | tar xvz -C /tmp/cilium-repo
 
 #
 # Hubble CLI
 #
 FROM cilium_builder as hubble
-RUN bash /tmp/cilium-repo/cilium-1.11.14/images/cilium/download-hubble.sh
+RUN bash /tmp/cilium-repo/cilium-1.12.8/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
 FROM cilium_builder as builder
 
-WORKDIR /tmp/cilium-repo/cilium-1.11.14
+WORKDIR /tmp/cilium-repo/cilium-1.12.8
 
 # Apply patches
 COPY ./patches /patches

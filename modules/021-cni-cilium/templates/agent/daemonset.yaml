@@ -122,10 +122,6 @@ spec:
           hostPort: 9092
           protocol: TCP
         securityContext:
-          # Remove this condition when virtCilium is ready to work in unprivileged mode
-          {{- if has "virtualization" .Values.global.enabledModules }}
-          privileged: true
-          {{- else }}
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -159,14 +155,7 @@ spec:
               - DAC_OVERRIDE
             drop:
               - ALL
-          {{- end }}
         volumeMounts:
-        # Remove this condition when virtCilium is ready to work in unprivileged mode
-        {{- if has "virtualization" .Values.global.enabledModules }}
-        - name: bpf-maps
-          mountPath: /sys/fs/bpf
-          mountPropagation: Bidirectional
-        {{- else }}
         - mountPath: /sys/fs/bpf
           mountPropagation: HostToContainer
           name: bpf-maps
@@ -174,7 +163,6 @@ spec:
           name: host-proc-sys-net
         - mountPath: /host/proc/sys/kernel
           name: host-proc-sys-kernel
-        {{- end }}
         - name: cilium-cgroup
           mountPath: "/run/cilium/cgroupv2"
         - name: cilium-run
@@ -261,10 +249,6 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
-          # Remove this condition when virtCilium is ready to work in unprivileged mode
-          {{- if has "virtualization" .Values.global.enabledModules }}
-          privileged: true
-          {{- else }}
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -278,7 +262,6 @@ spec:
               # Used for nsenter
               - SYS_CHROOT
               - SYS_PTRACE
-          {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -304,10 +287,6 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
-          # Remove this condition when virtCilium is ready to work in unprivileged mode
-          {{- if has "virtualization" .Values.global.enabledModules }}
-          privileged: true
-          {{- else }}
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -335,7 +314,6 @@ spec:
               #- BPF
             drop:
               - ALL
-          {{- end }}
         volumeMounts:
         - name: bpf-maps
           mountPath: /sys/fs/bpf
@@ -351,8 +329,6 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
-      # Remove this condition when virtCilium is ready to work in unprivileged mode
-      {{- if not (has "virtualization" .Values.global.enabledModules) }}
       - name: host-proc-sys-net
         hostPath:
           type: Directory
@@ -361,7 +337,6 @@ spec:
         hostPath:
           type: Directory
           path: /proc/sys/kernel
-      {{- end }}
       - name: cilium-run
         hostPath:
           path: "/var/run/cilium"

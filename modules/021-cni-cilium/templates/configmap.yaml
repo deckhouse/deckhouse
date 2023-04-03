@@ -129,8 +129,4 @@ data:
   # we've found no use for status field of CNP and CCNP
   disable-cnp-status-updates: "true"
 
-
-  # Remove this condition when virtCilium is ready to work in unprivileged mode
-{{- if not (has "virtualization" .Values.global.enabledModules) }}
   procfs: "/host/proc"
-{{- end }}
