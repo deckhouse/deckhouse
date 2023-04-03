@@ -1,5 +1,5 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..35b1aeb 100644
+index b8acb37..228e857 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
 @@ -36,9 +36,9 @@ collectors:
@@ -99,7 +99,7 @@ index b8acb37..35b1aeb 100644
    - key: kubeletMakeIptablesUtilChainsArgumentSet
      title: kubelet --make-iptables-util-chains argument is set
      nodeType: worker
-@@ -192,30 +182,25 @@ collectors:
+@@ -192,32 +182,28 @@ collectors:
    - key: kubeletTlsCertFileTlsArgumentSet
      title: kubelet --tls-cert-file argument is set
      nodeType: worker
@@ -140,3 +140,8 @@ index b8acb37..35b1aeb 100644
    - key: kubeletOnlyUseStrongCryptographic
      title: Kubelet only makes use of Strong Cryptographic
      nodeType: worker
+-    audit: ps -ef | grep kubelet |grep 'TLSCipherSuites' | grep -o
+-      'TLSCipherSuites=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'tlsCipherSuites: [^\"]\\S*' |
++      awk -F ': ' '{print $2}' | tr -d '\"' | tr -d '[' | tr -d ']' |awk 'FNR <= 1'"
++
