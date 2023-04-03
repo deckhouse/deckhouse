@@ -80,6 +80,7 @@ func NewConfig() (*Config, error) {
 	if err := config.getLastAppliedConfigurationChecksum(); err != nil {
 		return config, err
 	}
+	config.TmpPath = filepath.Join("/tmp", config.ConfigurationChecksum)
 	config.SigCh = make(chan os.Signal, 1)
 	signal.Notify(config.SigCh, syscall.SIGTERM, syscall.SIGINT)
 	return config, nil

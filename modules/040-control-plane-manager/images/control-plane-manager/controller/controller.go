@@ -32,6 +32,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//	http.HandleFunc("/healthz", healthz)
+	//	http.HandleFunc("/readyz", readyz)
+	//	if err := http.ListenAndServe(":8000", nil); err != nil {
+	//		log.Fatal(err)
+	//	}
+
 	if err := removeOrphanFiles(); err != nil {
 		log.Warn(err)
 	}
