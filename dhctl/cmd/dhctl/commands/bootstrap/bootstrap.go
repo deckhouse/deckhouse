@@ -146,6 +146,8 @@ func setBastionHostFromCloudProvider(host string, sshClient *ssh.Client) {
 }
 
 func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig) error {
+	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+
 	if resourcesToCreate == nil {
 		return nil
 	}
