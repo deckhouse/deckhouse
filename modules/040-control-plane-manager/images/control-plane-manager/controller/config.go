@@ -59,7 +59,10 @@ type Config struct {
 	TmpPath                          string
 }
 
-var config *Config
+var (
+	config                     *Config
+	controlPlaneManagerIsReady bool
+)
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -217,4 +220,8 @@ func (c *Config) getLastAppliedConfigurationChecksum() error {
 	srcBytes, err := os.ReadFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"))
 	c.LastAppliedConfigurationChecksum = strings.Trim(string(srcBytes), "\n")
 	return err
+}
+
+func (c *Config) writeLastAppliedConfigurationChecksum() error {
+	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0644)
 }

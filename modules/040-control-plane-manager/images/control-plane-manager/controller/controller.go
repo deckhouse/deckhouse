@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -76,6 +78,18 @@ func main() {
 
 	if err := convergeComponents(); err != nil {
 		log.Fatal(err)
+	}
+
+	if err := config.writeLastAppliedConfigurationChecksum(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.RemoveAll(config.TmpPath); err != nil {
+		log.Warn(err)
+	}
+
+	if err := removeOldBackups(); err != nil {
+		log.Warn(err)
 	}
 
 	// pause loop
