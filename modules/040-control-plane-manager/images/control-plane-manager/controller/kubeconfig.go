@@ -69,6 +69,7 @@ func renewKubeconfig(componentName string) error {
 		}
 
 		certData, err := base64.StdEncoding.DecodeString(currentKubeconfig.Users[0].User.ClientCertificateData)
+		fmt.Printf("%s", certData)
 		if err != nil {
 			return err
 		}
