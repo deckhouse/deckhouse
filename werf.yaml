@@ -540,9 +540,9 @@ import:
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
   after: setup
 {{- end }}
-- image: images-tags
-  add: /images_tags.json
-  to: /deckhouse/candi/images_tags.json
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/candi/images_digests.json
   after: setup
 - artifact: version-map-artifact
   add: /version_map_{{ $.Env }}.yml
@@ -580,8 +580,14 @@ shell:
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
 
 ---
-artifact: release-channel-version-artifact
+image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE }}
+dependencies:
+  - image: dev
+    before: setup
+    imports:
+      - type: ImageDigest
+        targetEnv: deckhouseImageDigest
 shell:
   beforeInstall:
     - apk add --no-cache curl
@@ -590,7 +596,7 @@ shell:
   install:
     - |
       version="{{ env "CI_COMMIT_REF_NAME" }}"
-      yq w /deckhouse/release.yaml version $version | yq r - -j > version.json
+      yq w /deckhouse/release.yaml version $version digest $deckhouseImageDigest | yq r - -j > version.json
       # changelog exists only for tags, we have to skip it for branches
       {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
       {{ if $changelog }}
@@ -607,7 +613,7 @@ git:
 image: release-channel-version
 from: {{ .Images.BASE_SCRATCH }}
 import:
-  - artifact: release-channel-version-artifact
+  - image: release-channel-version-prebuild
     add: /
     to: /
     after: install
@@ -650,7 +656,7 @@ args:
 {{- end }}
 
 {{- $Root := . }}
-{{- $ModulesImagesIDList := list }}
+{{- $ModulesImagesDigestList := list }}
 
 # Collect EE and FE images if desired
 {{ $ModulesImagesBuildFiles := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}" }}
@@ -688,22 +694,23 @@ args:
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
     {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
     {{- if $ImageManifest.image }}
-      {{- $ModulesImagesIDList = append $ModulesImagesIDList $ImageManifest.image }}
+      {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
     {{- end }}
   {{- end }}
 {{- end }}
 ---
-image: images-tags
+image: images-digests
 from: {{ .Images.BASE_ALPINE }}
+fromCacheVersion: "2023-03-02.0"
 dependencies:
-{{- range $ImageID := $ModulesImagesIDList }}
-  {{- $ModuleNameCamel := $ImageID | splitList "/" | first | camelcase | untitle }}
-  {{- $ImageNameCamel  := $ImageID | splitList "/" | last  | camelcase | untitle }}
-  - image: {{ $ImageID }}
+{{- range $imageDigest := $ModulesImagesDigestList }}
+  {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
+  {{- $ImageDigestCamel  := $imageDigest | splitList "/" | last  | camelcase | untitle }}
+  - image: {{ $imageDigest }}
     before: setup
     imports:
-    - type: ImageTag
-      targetEnv: MODULES_IMAGES_TAGS_{{ $ModuleNameCamel }}_{{ $ImageNameCamel }}
+    - type: ImageDigest
+      targetEnv: MODULE_IMAGE_DIGEST_{{ $ModuleNameCamel }}_{{ $ImageDigestCamel }}
 {{- end }}
 import:
 - artifact: jq
@@ -713,40 +720,48 @@ import:
 shell:
   setup:
   - |
-    env | grep MODULES_IMAGES_TAGS | jq -Rn '
+    touch digests_full.lst
+    # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
+    for line in `env | grep MODULE_IMAGE_DIGEST_`
+    do
+      digestKey=`echo $line | cut -f 4- -d '_' | cut -f 1 -d '='`
+      imageDigest=`echo $line | cut -f 4- -d '_' | cut -f 2 -d '='`
+      echo $digestKey'='$imageDigest >> digests_full.lst
+    done
+    cat digests_full.lst | jq -Rn '
       reduce inputs as $i (
         {};
         . * (
-          $i | ltrimstr("MODULES_IMAGES_TAGS_") | sub("=";"_") |
-          split("_") as [$moduleName, $imageName, $tag] |
-          {($moduleName): {($imageName): $tag}}
+          $i | sub("=";"_") |
+          split("_") as [$moduleName, $imageName, $digest] |
+          {($moduleName): {($imageName): $digest}}
         )
       )
-    ' > /images_tags.json
+    ' > /images_digests.json
 
 ---
 image: dev
 fromImage: dev-prebuild
 import:
-- image: images-tags
-  add: /images_tags.json
-  to: /deckhouse/modules/images_tags.json
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
   after: setup
-- image: images-tags
-  add: /images_tags.json
-  to: /deckhouse/modules/040-node-manager/images_tags.json
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
 ---
 image: tests
 fromImage: tests-prebuild
 import:
-- image: images-tags
-  add: /images_tags.json
-  to: /deckhouse/modules/images_tags.json
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
   after: setup
-- image: images-tags
-  add: /images_tags.json
-  to: /deckhouse/modules/040-node-manager/images_tags.json
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
 ---
 artifact: version-map-artifact

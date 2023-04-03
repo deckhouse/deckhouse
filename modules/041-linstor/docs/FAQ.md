@@ -49,6 +49,25 @@ Depending on the task, choose one of the following:
 - DRBD + LVM — faster (x2) and more reliable (LVM is simpler);
 - DRBD + LVMThin — support for snapshots and the possibility of overcommitment.
 
+## How to get information about the space usage?
+
+There are two options:
+
+- Using Grafana dashboard: navigate **Dashboards --> Storage --> LINSTOR/DRBD**  
+  In the upper right corner you'll find information about the space used in the cluster.
+
+  > **Attention!** This information shows *raw* space usage in the cluster.
+  > Thus if you create a volume with two replicas, then these values should be divided by two to get a representation of how many such volumes can be placed in your cluster.
+
+- Using LINSTOR command line:
+
+  ```shell
+  kubectl exec -n d8-linstor deploy/linstor-controller -- linstor storage-pool list
+  ```
+
+  > **Attention!** This information shows *raw* space usage for each node in the cluster.
+  > Thus if you create a volume with two replicas, then these two replicas must completely fit on two nodes in your cluster.
+
 ## Changing the default StorageClass
 
 List the StorageClasses in your cluster:

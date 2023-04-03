@@ -238,10 +238,73 @@ Example of pushing images:
 
 This case is only valid if you don't have release channel images in your air-gapped registry.
 
-* If you want to bootstrap a cluster, you have to use the exact tag of a Docker image to install the Deckhouse Platform.
-For example, if you want to install release v1.32.13, you have to use image `your.private.registry.com/deckhouse/install:v1.32.13`. And you have to use `devBranch: v1.32.13` instead of `releaseChannel: XXX` in `config.yml`.
-* If you already have a cluster up and running, you have to remove `releaseChannel` setting from the `deckhouse` module configuration and set the appropriate `image` parameter for `d8-system/deckhouse` Deployment. Further updates have to be done by a manual update of the `image` parameter of the `d8-system/deckhouse` Deployment.
-For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.32.13` for release v1.32.13.
+* If you want to install Deckhouse with automatic updates disabled:
+  * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.44.3`, if you want to install release `v1.44.3`.
+  * Set the corresponding version number in the [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) parameter of the `InitConfiguration` resource.
+  * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
+* If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+
+## Using a proxy server
+
+### Setting up a proxy server
+
+* Prepare the VM for setting up the proxy. The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
+* Install Squid on the server (here and further examples for Ubuntu):
+
+  ```shell
+  apt-get install squid
+  ```
+
+* Create a config file:
+
+  ```shell
+  cat <<EOF > /etc/squid/squid.conf
+  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
+  auth_param basic realm proxy
+  acl authenticated proxy_auth REQUIRED
+  http_access allow authenticated
+  
+  # Choose the port you want. Below we set it to default 3128.
+  http_port 3128
+  ```
+
+* Create a user for proxy-server authentication:
+
+  Example for the user `test` with the password `test` (be sure to change):
+  
+  ```shell
+  echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
+  ```
+
+* Start squid and enable the system to start it up automatically:
+
+  ```shell
+  systemctl restart squid
+  systemctl enable squid
+  ```
+
+### Configuring proxy usage in Deckhouse
+
+Use the [proxy](installing/configuration.html#clusterconfiguration-proxy) parameter of the `ClusterConfiguration` resource to configure proxy usage.
+
+An example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: OpenStack
+  prefix: main
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.23"
+cri: "Containerd"
+clusterDomain: "cluster.local"
+proxy:
+  httpProxy: "http://user:password@proxy.company.my:3128"
+  httpsProxy: "https://user:password@proxy.company.my:8443"
+```
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 

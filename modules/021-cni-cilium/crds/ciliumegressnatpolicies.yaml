@@ -18,6 +18,8 @@ spec:
     kind: CiliumEgressNATPolicy
     listKind: CiliumEgressNATPolicyList
     plural: ciliumegressnatpolicies
+    shortNames:
+    - cenp
     singular: ciliumegressnatpolicy
   scope: Cluster
   versions:

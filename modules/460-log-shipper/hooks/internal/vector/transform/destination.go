@@ -41,7 +41,11 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	}
 
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
-		transforms = append(transforms, ThrottleTransform(dest.Spec.RateLimit))
+		transform, err := ThrottleTransform(dest.Spec.RateLimit)
+		if err != nil {
+			return nil, err
+		}
+		transforms = append(transforms, transform)
 	}
 
 	switch dest.Spec.Type {

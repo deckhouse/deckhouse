@@ -31,7 +31,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco-driver-loader` — контейнер для запуска; собирает eBPF-программу и сохраняет ее в общую папку для дальнейшего использования системой Falco.
-2. `falco` — собирает события, обогащает их метаданными и сохраняет.
+2. `falco` — собирает события, обогащает их метаданными и отправляет их в stdout.
 3. `rules-loader` — собирает custom resourcе'ы ([FalcoAuditRules](cr.html#falcoauditrules)) из Kubernetes и сохраняет их в общую папку.
 4. `falcosidekick` — экспортирует события как метрики, по которым потом можно настроить алерты.
 5. `kube-rbac-proxy` — защищает endpoint метрик `falcosidekick` (запрещает неавторизованный доступ).

@@ -47,12 +47,8 @@ anchors_disabled: true
         </li>
       </ul>
       <div class="product-intro__actions button-group">
-        {% unless site.mode == "local" %}
-        <a href="/gs/" class="button button_alt">Быстрый старт</a>
-        {% endunless %}
+        <a href="" data-open-modal="request_demo" class="button button_alt">Запросить демо</a>
         <a href="/documentation/v1/" class="button button_default">Документация</a>
-        <a href="https://github.com/deckhouse/deckhouse" target="_blank" class="button button_default">GitHub</a>
-        <a href="https://deckhouse.ru/substitution.html" class="button button_default">Импортозамещение</a>
       </div>
     </div>
   </div>
@@ -104,6 +100,9 @@ anchors_disabled: true
     </a>
     <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="business">
       Руководителям бизнеса
+    </a>
+    <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="security">
+      Специалистам ИБ
     </a>
   </div>
 
@@ -176,6 +175,26 @@ anchors_disabled: true
       <li>
           Получите <a href="https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&amp;grouping=category&amp;selected=flant-deckhouse" target="_blank">сертифицированную в CNCF</a> платформу, основанную на upstream-базе Kubernetes и Open Source-ядре,
         избежав vendor lock-in.
+      </li>
+    </ul>
+  </div>
+
+  <div class="features-tabs__item" data-features-tabs-content="security">
+    <ul class="features-tabs__item-list">
+      <li>
+        <strong>Безопасная конфигурация</strong> кластера Kubernetes “из коробки”: минимальные привилегии компонентов, преднастроенная ролевая модель, сквозная идентификация объектов в системе аудита, интеграция с внешними службами каталогов.
+      </li>
+      <li>
+        Соответствие <strong>лучшим практикам</strong>: регулярные проверки инфраструктуры по <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">CIS Benchmark</a>, сканирование образов на уязвимости.
+      </li>
+      <li>
+        <strong>Сетевая безопасность</strong>: централизованное управление сетевыми политиками, контроль за всеми входящими и исходящими соединениями, визуализация сетевых взаимодействий.
+      </li>
+      <li>
+        Контроль над <strong>запускаемыми приложениями</strong>: встроенная реализация <a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank">Pod Security Standards</a>, готовый набор рекомендуемых политик с возможностью расширения.
+      </li>
+      <li>
+        <strong>Аудит</strong> и регистрация событий безопасности: готовый набор правил для определения событий безопасности с возможностью расширения, гибкая фильтрация событий, отправляемых в SIEM-систему, уведомление сотрудников ИБ об инцидентах безопасности.
       </li>
     </ul>
   </div>

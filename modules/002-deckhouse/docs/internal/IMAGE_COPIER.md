@@ -15,7 +15,7 @@ We have created a script to re-push the images and a corresponding hook to simpl
 You'll need to create `images-copier-config` Secret  in the `d8-system` Namespace
 that contains credentials to the target registry and the resulting address (with a TAG) of the `deckhouse` Deployment image.
 
-The hook adds the current Deckhouse credentials and a list of all module images `/deckhouse/modules/images_tags.json` to the Secret.
+The hook adds the current Deckhouse credentials and a list of all module images `/deckhouse/modules/images_digests.json` to the Secret.
 
 This list gets generated at build time and inserted into the Deckhouse image.
 The hook starts a Job for the image copier script and mounts the Secret into a Pod container.

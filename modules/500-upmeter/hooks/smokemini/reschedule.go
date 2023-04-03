@@ -209,9 +209,9 @@ func parseBoolSnapshot(rs []go_hook.FilterResult) []bool {
 func getSmokeMiniImage(values *go_hook.PatchableValues) string {
 	var (
 		registry = values.Get("global.modulesImages.registry.base").String()
-		tag      = values.Get("global.modulesImages.tags.upmeter.smokeMini").String()
+		digest   = values.Get("global.modulesImages.digests.upmeter.smokeMini").String()
 	)
-	return registry + ":" + tag
+	return registry + "@" + digest
 }
 
 func getSmokeMiniStorageClass(values *go_hook.PatchableValues, storageClassSnap []go_hook.FilterResult) string {

@@ -137,5 +137,6 @@ spec:
 		Entry("File to Kafka with client certificate authentication", "file-to-kafka-tls"),
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
+		Entry("Throttle Transform with filter", "throttle-with-filter"),
 	)
 })

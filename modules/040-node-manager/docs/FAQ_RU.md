@@ -82,6 +82,8 @@ search: добавить ноду в кластер, добавить узел �
          when: bootstrapped.stat.exists == False
        - name: Run bootstrap.sh
          shell: "{{ bootstrap_secret.json.data['bootstrap.sh'] | b64decode }}"
+         args:
+           executable: /bin/bash
          ignore_errors: yes
          when: bootstrapped.stat.exists == False
        - name: wait

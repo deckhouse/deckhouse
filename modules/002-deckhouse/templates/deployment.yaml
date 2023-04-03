@@ -90,6 +90,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
       initContainers:
         - name: init-external-modules
           image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
@@ -104,6 +105,7 @@ spec:
           volumeMounts:
             - mountPath: /deckhouse/external-modules
               name: external-modules
+{{- end }}
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
@@ -156,10 +158,15 @@ spec:
               value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
             - name: MODULES_DIR
               value: "/deckhouse/modules:/deckhouse/external-modules/modules"
             - name: EXTERNAL_MODULES_DIR
               value: "/deckhouse/external-modules/"
+{{- else }}
+            - name: MODULES_DIR
+              value: "/deckhouse/modules"
+{{- end }}
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
@@ -190,8 +197,10 @@ spec:
             name: tmp
           - mountPath: /.kube
             name: kube
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
           - mountPath: /deckhouse/external-modules
             name: external-modules
+{{- end }}
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -206,7 +215,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
+{{- if (.Values.global.enabledModules | has "external-module-manager") }}
       - name: external-modules
         hostPath:
           path: /var/lib/deckhouse/external-modules
           type: DirectoryOrCreate
+{{- end}}

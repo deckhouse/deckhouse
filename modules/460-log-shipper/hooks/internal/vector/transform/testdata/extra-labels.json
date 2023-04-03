@@ -2,7 +2,7 @@
 	{
 		"drop_on_abort": false,
 		"inputs": [],
-		"source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.\"pay-load\"[0].a) { .aaa=.parsed_data.\"pay-load\"[0].a } \n .aba=\"bbb\" \n if exists(.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world) { .aca=.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world } \n if exists(.parsed_data.\"pay.lo\".test) { .adc=.parsed_data.\"pay.lo\".test } \n if exists(.parsed_data.test.\"pay.lo\") { .add=.parsed_data.test.\"pay.lo\" } \n if exists(.parsed_data.\"pay.lo\"[3].\"te.st\") { .bdc=.parsed_data.\"pay.lo\"[3].\"te.st\" }",
+		"source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.\"pay-load\"[0].a) { .aaa=.parsed_data.\"pay-load\"[0].a } \n .aba=\"bbb\" \n if exists(.parsed_data.\"pay-load\"[0].\"te.st\") { .abd=.parsed_data.\"pay-load\"[0].\"te.st\" } \n if exists(.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world) { .aca=.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world } \n if exists(.parsed_data.\"pay.lo\".test) { .adc=.parsed_data.\"pay.lo\".test } \n if exists(.parsed_data.test.\"pay.lo\") { .add=.parsed_data.test.\"pay.lo\" } \n if exists(.parsed_data.\"pay.lo\"[0].\"te-st\") { .bda=.parsed_data.\"pay.lo\"[0].\"te-st\" } \n if exists(.parsed_data.\"pay.lo\"[3].\"te.st\") { .bdc=.parsed_data.\"pay.lo\"[3].\"te.st\" } \n if exists(.parsed_data) { .dba=.parsed_data }",
 		"type": "remap"
 	}
 ]

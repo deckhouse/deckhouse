@@ -293,6 +293,8 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /etc/nginx/ssl/
           name: secret-nginx-auth-tls
+        - mountPath: /tmp/nginx/
+          name: tmp-nginx
         - mountPath: /etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
@@ -352,6 +354,8 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
+      - name: tmp-nginx
+        emptyDir: {}
       - name: client-body-temp-path
         emptyDir: {}
       - name: fastcgi-temp-path

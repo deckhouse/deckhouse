@@ -248,7 +248,7 @@ bin/trdl: bin
 	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
 	chmod +x bin/trdl
 
-bin/werf: bin bin/trdl ## Install werf for images-tags generator.
+bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
 	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
 	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf

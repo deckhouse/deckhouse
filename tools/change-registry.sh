@@ -20,6 +20,7 @@ REGISTRY_SCHEME=""
 REGISTRY_ADDRESS=""
 REGISTRY_PATH=""
 REGISTRY_CAFILE=""
+DECKHOUSE_EXTERNAL_MODULES_IMAGE_TAG=""
 
 function usage() {
   printf "
@@ -87,6 +88,11 @@ function parse_args() {
   REGISTRY_SCHEME="$(sed "s/:\/\///" <<< "$REGISTRY_SCHEME")"
   DECKHOUSE_TAG="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.containers[] | select(.name=="deckhouse") | .image | split(":")[-1]' -r)"
 
+  tmp_init_external_modules_container_tag="$(kubectl -n d8-system get deploy deckhouse -o json | jq '.spec.template.spec.initContainers[] | select(.name=="init-external-modules") | .image | split(":")[-1]' -r 2>/dev/null)"
+  if [[ "$tmp_external_modules_tag" != "" ]]; then
+    DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG="${tmp_init_external_modules_container_tag}"
+  fi
+
   if [[ "$REGISTRY_PATH" == "" ]]; then
     >&2 echo "Cannot parse path from registry url: $REGISTRY_URL. Registry url must have at least slash at the end. (for example, https://registry.example.com/ instead of https://registry.example.com)"
     exit 1
@@ -113,20 +119,30 @@ function parse_args() {
     exit 1
   fi
 
+
+  curl_image_by_tag "$DECKHOUSE_TAG"
+  if [[ "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG" != "" ]]; then
+    curl_image_by_tag "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG"
+  fi
+}
+
+function curl_image_by_tag() {
+  tag="$1"
+
   TOKEN="$(bb-rp-get-token)"
   if [[ "$TOKEN" == "" ]]; then
     >&2 echo "Cannot get Bearer token from registry $REGISTRY_URL"
     exit 1
   fi
 
-  URI="${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${DECKHOUSE_TAG}"
+  URI="${REGISTRY_SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${tag}"
   curl --retry 3 -fsSLq -o /dev/null \
        -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
        -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
        -H "Authorization: Bearer $TOKEN" "$URI" 2>/dev/null
   RESULT=$?
   if [[ $RESULT -ne 0 ]]; then
-    >&2 echo "Cannot find image ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${DECKHOUSE_TAG}."
+    >&2 echo "Cannot find image ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${tag}."
     exit 1
   fi
 }
@@ -149,12 +165,28 @@ EOF
 parse_args "$@"
 
 DOCKERCONFIGJSON="$(create_dockerconfigjson | base64 -w0)"
-REGISTRY_ADDRESS="$(echo -n $REGISTRY_ADDRESS | base64 -w0)"
-REGISTRY_PATH="$(echo -n $REGISTRY_PATH | base64 -w0)"
-REGISTRY_SCHEME="$(echo -n $REGISTRY_SCHEME | base64 -w0)"
+REGISTRY_ADDRESS_B64="$(echo -n $REGISTRY_ADDRESS | base64 -w0)"
+REGISTRY_PATH_B64="$(echo -n $REGISTRY_PATH | base64 -w0)"
+REGISTRY_SCHEME_B64="$(echo -n $REGISTRY_SCHEME | base64 -w0)"
 
-kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS}\", \"path\": \"${REGISTRY_PATH}\", \"scheme\": \"${REGISTRY_SCHEME}\"}}"
+kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\".dockerconfigjson\": \"${DOCKERCONFIGJSON}\", \"address\": \"${REGISTRY_ADDRESS_B64}\", \"path\": \"${REGISTRY_PATH_B64}\", \"scheme\": \"${REGISTRY_SCHEME_B64}\"}}"
 if  [[ "$REGISTRY_CAFILE" != "" ]]; then
-  REGISTRY_CA="$(base64 -w0 < ${REGISTRY_CAFILE})"
-  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CA}\"}}"
+  REGISTRY_CA_B64="$(base64 -w0 < ${REGISTRY_CAFILE})"
+  kubectl -n d8-system patch secret deckhouse-registry -p="{\"data\":{\"ca\": \"${REGISTRY_CA_B64}\"}}"
+fi
+
+if [[ "$DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG" != "" ]]; then
+  temp_patch_file=$(mktemp /tmp/patch.XXXXXX.yaml)
+  cat <<EOF | tee "${temp_patch_file}"
+---
+op: replace
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: init-external-modules
+          image: ${REGISTRY_ADDRESS}${REGISTRY_PATH}:${DECKHOUSE_INIT_EXTERNAL_MODULES_CONTAINER_TAG}
+EOF
+  kubectl patch -n d8-system deploy deckhouse --patch-file "${temp_patch_file}"
+  rm "${temp_patch_file}"
 fi

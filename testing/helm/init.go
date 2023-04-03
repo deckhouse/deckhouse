@@ -136,7 +136,7 @@ func GetModulesImages() map[string]interface{} {
 			"CA":        "CACACA",
 			"scheme":    "https",
 		},
-		"tags": library.DefaultImagesTags,
+		"digests": library.DefaultImagesDigests,
 	}
 }
 

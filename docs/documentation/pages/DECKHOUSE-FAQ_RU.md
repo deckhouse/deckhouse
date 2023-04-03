@@ -28,8 +28,7 @@ kubectl get mc global -o yaml
 
 ## Как установить желаемый канал обновлений?
 
-Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить
-(установить) параметр `releaseChannel`.
+Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля `deckhouse` изменить (установить) параметр `releaseChannel`.
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
 
@@ -242,10 +241,74 @@ chmod 700 d8-push.sh
 
 Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
 
-* Если вы хотите создать кластер, то вы должны использовать точный тег образа Deckhouse, чтобы установить Deckhouse Platform.
-Например, если вы хотите установить релиз v1.32.13, то вы должны использовать образ `your.private.registry.com/deckhouse/install:v1.32.13`. Также вы должны указать `devBranch: v1.32.13` вместо `releaseChannel: XXX` в `config.yml`.
-* Если у вас уже есть рабочий кластер, то вы должны удалить `releaseChannel` из конфигурации модуля `deckhouse` и указать выбранный образ Deckhouse в поле `image` в Deployment `d8-system/deckhouse`. Дальнейшее обновление необходимо производить также изменяя образ вручную.
-Например, для релиза v1.32.13 следует указывать в поле `image` значение `your.private.registry.com/deckhouse:v1.32.13`.
+* Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
+  * Используйте тэг образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, то используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
+  * Укажите соответствующий номер версии в параметре [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) в ресурсе `InitConfiguration`.
+  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе `InitConfiguration`.
+* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), то удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+
+## Использование proxy-сервера
+
+### Настройка proxy-сервера
+
+Пример шагов по настройке proxy-сервера на базе Squid:
+* Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
+* Установите Squid (здесь и далее примеры для Ubuntu):
+
+  ```shell
+  apt-get install squid
+  ```
+
+* Создайте файл конфигурации Squid:
+
+  ```shell
+  cat <<EOF > /etc/squid/squid.conf
+  auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
+  auth_param basic realm proxy
+  acl authenticated proxy_auth REQUIRED
+  http_access allow authenticated
+  
+  # Choose the port you want. Below we set it to default 3128.
+  http_port 3128
+  ```
+
+* Создайте пользователя и пароль для аутентификации на proxy-сервере:
+
+  Пример для пользователя `test` с паролем `test` (обязательно измените):
+
+  ```shell
+  echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
+  ```
+
+* Запустите Squid и включите его автоматический запуск при загрузке сервера:
+
+  ```shell
+  systemctl restart squid
+  systemctl enable squid
+  ```
+
+### Настройка Deckhouse на использование proxy
+
+Для настройки работы через proxy-сервер используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: OpenStack
+  prefix: main
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.23"
+cri: "Containerd"
+clusterDomain: "cluster.local"
+proxy:
+  httpProxy: "http://user:password@proxy.company.my:3128"
+  httpsProxy: "https://user:password@proxy.company.my:8443"
+```
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 

@@ -193,6 +193,11 @@
       "healthcheck": {
         "enabled": false
       },
+      "buffer": {
+        "max_size": 270532608,
+        "type": "disk",
+        "when_full": "block"
+      },
       "endpoint": "http://192.168.1.1:9200",
       "encoding": {
         "timestamp_format": "rfc3339"
@@ -219,12 +224,7 @@
         "index": "logs-%F"
       },
       "mode": "bulk",
-      "suppress_type_name": true,
-      "buffer": {
-        "type": "disk",
-        "max_bytes": 270532608,
-        "when_full": "block"
-      }
+      "suppress_type_name": true
     },
     "destination/cluster/test-logstash-dest": {
       "type": "socket",
@@ -233,6 +233,11 @@
       ],
       "healthcheck": {
         "enabled": false
+      },
+      "buffer": {
+        "max_size": 536870912,
+        "type": "disk",
+        "when_full": "drop_newest"
       },
       "address": "192.168.199.252:9009",
       "encoding": {
@@ -250,11 +255,6 @@
       },
       "keepalive": {
         "time_secs": 7200
-      },
-      "buffer": {
-        "type": "disk",
-        "max_bytes": 536870912,
-        "when_full": "drop_newest"
       }
     },
     "destination/cluster/test-loki-dest": {
@@ -264,6 +264,11 @@
       ],
       "healthcheck": {
         "enabled": false
+      },
+      "buffer": {
+        "type": "memory",
+        "max_events": 4096,
+        "when_full": "drop_newest"
       },
       "encoding": {
         "only_fields": [
@@ -291,12 +296,7 @@
         "stream": "{{ stream }}"
       },
       "remove_label_fields": true,
-      "out_of_order_action": "rewrite_timestamp",
-      "buffer": {
-        "type": "memory",
-        "max_events": 4096,
-        "when_full": "drop_newest"
-      }
+      "out_of_order_action": "rewrite_timestamp"
     }
   }
 }

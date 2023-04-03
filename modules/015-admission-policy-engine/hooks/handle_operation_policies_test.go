@@ -62,6 +62,12 @@ spec:
         - memory
     disallowedImageTags:
       - latest
+    requiredLabels:
+      labels:
+      - allowedRegex: ^P\d{4}$
+        key: product-id
+      watchKinds:
+      - /Namespace
     requiredProbes:
       - livenessProbe
       - readinessProbe

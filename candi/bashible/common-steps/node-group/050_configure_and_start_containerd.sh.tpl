@@ -34,7 +34,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
   {{- if .images }}
     {{- if .images.common.pause }}
-      {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
+      {{- $sandbox_image = printf "%s%s@%s" .registry.address .registry.path .images.common.pause }}
     {{- end }}
   {{- end }}
 

@@ -84,6 +84,7 @@ data:
                 AES256-SHA:AES128-SHA:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"
   {{- end }}
   server-tokens: "false"
+  global-auth-always-set-cookie: "true"
 
   # IMPORTANT!!! There is a substantial nuance in ingress-nginx behavior:
   #   * It ignores proxy-real-ip-cidr config param, unless c is set to true;

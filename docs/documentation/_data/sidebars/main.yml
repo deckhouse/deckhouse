@@ -978,6 +978,7 @@ entries:
               - title: FAQ
                 url: /modules/101-cert-manager/faq.html
           - title: operator-trivy
+            d8Revision: ee
             folders:
               - title:
                   en: Description
@@ -1011,20 +1012,8 @@ entries:
                   url: /modules/031-ceph-csi/configuration.html
                 - title: Custom Resources
                   url: /modules/031-ceph-csi/cr.html
-            - title: snapshot-controller
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/045-snapshot-controller/
-                - title:
-                    en: Usage
-                    ru: Примеры
-                  url: /modules/045-snapshot-controller/usage.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/045-snapshot-controller/configuration.html
+            - title: FAQ
+              url: /modules/031-ceph-csi/faq.html
         - title: linstor
           featureStatus: experimental
           folders:
@@ -1072,6 +1061,20 @@ entries:
                   url: /modules/031-local-path-provisioner/cr.html
             - title: FAQ
               url: /modules/031-local-path-provisioner/faq.html
+        - title: snapshot-controller
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/045-snapshot-controller/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/045-snapshot-controller/usage.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/045-snapshot-controller/configuration.html
     - title:
         en: Little things
         ru: Приятные мелочи

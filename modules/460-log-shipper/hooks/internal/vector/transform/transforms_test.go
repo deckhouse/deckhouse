@@ -24,6 +24,7 @@ import (
 	"github.com/clarketm/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
@@ -105,6 +106,9 @@ func TestTransformSnippet(t *testing.T) {
 			"add": `{{ test.pay\.lo }}`,
 			"adc": `{{ pay\.lo.test }}`,
 			"bdc": `{{ pay\.lo[3].te\.st }}`,
+			"bda": `{{ pay\.lo[0].te-st }}`,
+			"abd": `{{ pay-load[0].te\.st }}`,
+			"dba": `{{ parsed_data }}`,
 		}
 
 		transforms = append(transforms, ExtraFieldTransform(extraLabels))
@@ -122,7 +126,9 @@ func TestTransformSnippet(t *testing.T) {
 	})
 
 	t.Run("Test multiline None", func(t *testing.T) {
-		multilineTransforms := CreateMultiLineTransforms(v1alpha1.MultiLineParserNone)
+		multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserNone, v1alpha1.MultilineParserCustom{})
+		assert.NoError(t, err)
+
 		transforms := make([]apis.LogTransform, 0)
 		transforms = append(transforms, multilineTransforms...)
 
@@ -140,7 +146,8 @@ func TestTransformSnippet(t *testing.T) {
 	t.Run("Test multiline General", func(t *testing.T) {
 		transforms := make([]apis.LogTransform, 0)
 
-		multilineTransforms := CreateMultiLineTransforms(v1alpha1.MultiLineParserGeneral)
+		multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserGeneral, v1alpha1.MultilineParserCustom{})
+		assert.NoError(t, err)
 
 		transforms = append(transforms, multilineTransforms...)
 
@@ -154,5 +161,48 @@ func TestTransformSnippet(t *testing.T) {
 		require.NoError(t, err)
 
 		compareMock(t, data, "multiline.json")
+	})
+
+	t.Run("Test multiline custom", func(t *testing.T) {
+		transforms := make([]apis.LogTransform, 0)
+
+		customConfigs := []v1alpha1.MultilineParserCustom{
+			{
+				EndsWhen: &v1alpha1.ParserRegex{
+					NotRegex: pointer.String("^endsWhenRegexEnd"),
+				},
+			},
+			{
+				StartsWhen: &v1alpha1.ParserRegex{
+					NotRegex: pointer.String("^startsWhenRegexEnd"),
+				},
+			},
+			{
+				EndsWhen: &v1alpha1.ParserRegex{
+					Regex: pointer.String("^endsWhenRegex"),
+				},
+			},
+			{
+				EndsWhen: &v1alpha1.ParserRegex{
+					NotRegex: pointer.String("^startsWhenRegex"),
+				},
+			},
+		}
+		for _, cfg := range customConfigs {
+			multilineTransforms, err := CreateMultiLineTransforms(v1alpha1.MultiLineParserCustom, cfg)
+			assert.NoError(t, err)
+			transforms = append(transforms, multilineTransforms...)
+		}
+
+		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		require.NoError(t, err)
+
+		assert.Len(t, tr, 4)
+		assert.Len(t, tr[0].GetInputs(), 0)
+
+		data, err := json.MarshalIndent(tr, "", "\t")
+		require.NoError(t, err)
+
+		compareMock(t, data, "multiline-custom.json")
 	})
 }

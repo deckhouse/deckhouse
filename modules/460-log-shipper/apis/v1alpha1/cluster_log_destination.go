@@ -80,7 +80,9 @@ type LokiAuthSpec struct {
 
 // RateLimitSpec is throttle-transform configuration.
 type RateLimitSpec struct {
-	LinesPerMinute *int32 `json:"linesPerMinute,omitempty"`
+	LinesPerMinute *int32   `json:"linesPerMinute,omitempty"`
+	KeyField       string   `json:"keyField,omitempty"`
+	Excludes       []Filter `json:"excludes,omitempty"`
 }
 
 type ElasticsearchAuthSpec struct {

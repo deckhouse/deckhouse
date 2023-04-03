@@ -56,10 +56,10 @@ func CleanUpAfterSourceTransform() *DynamicTransform {
 type LogSourceConfig struct {
 	SourceType string
 
-	MultilineType v1alpha1.MultiLineParserType
-
-	LabelFilter []v1alpha1.Filter
-	LogFilter   []v1alpha1.Filter
+	MultilineType         v1alpha1.MultiLineParserType
+	MultilineCustomConfig v1alpha1.MultilineParserCustom
+	LabelFilter           []v1alpha1.Filter
+	LogFilter             []v1alpha1.Filter
 }
 
 func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTransform, error) {
@@ -71,7 +71,12 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 
 	transforms = append(transforms, CleanUpAfterSourceTransform())
 
-	transforms = append(transforms, CreateMultiLineTransforms(cfg.MultilineType)...)
+	multilineTransforms, err := CreateMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error rendering multi line transforms: %v", err)
+	}
+
+	transforms = append(transforms, multilineTransforms...)
 
 	labelFilterTransforms, err := CreateLabelFilterTransforms(cfg.LabelFilter)
 	if err != nil {

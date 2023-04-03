@@ -17,13 +17,14 @@ limitations under the License.
 package hooks
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	gcr "github.com/google/go-containerregistry/pkg/name"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -62,10 +63,10 @@ func lockHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	valuesTag := input.Values.Get("global.modulesImages.tags.nodeManager.bashibleApiserver").String()
+	valuesDigest := input.Values.Get("global.modulesImages.digests.nodeManager.bashibleApiserver").String()
 
 	deployment := snap[0].(bashibleDeployment)
-	if deployment.ImageTag != valuesTag {
+	if deployment.ImageDigestOrTag != valuesDigest {
 		annotationsPatch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]string{
@@ -105,27 +106,37 @@ func deploymentFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, err
 	}
 
-	var deploymentImageTag string
+	// This is because in current image can be either tag, either digest
+	var deploymentImageDigestOrTag string
 
 	for _, cont := range dep.Spec.Template.Spec.Containers {
 		if cont.Name == bashibleName {
-			imageSplitIndex := strings.LastIndex(cont.Image, ":")
-			if imageSplitIndex == -1 {
-				return nil, errors.New("image tag not found")
+			isDigest := strings.LastIndex(cont.Image, "@sha256")
+			if isDigest != -1 {
+				tmpDigest, err := gcr.NewDigest(cont.Image)
+				if err != nil {
+					return nil, fmt.Errorf("incorrect image with digest %s in bashible apiserver", cont.Image)
+				}
+				deploymentImageDigestOrTag = tmpDigest.DigestStr()
+			} else {
+				tmpTag, err := gcr.NewTag(cont.Image)
+				if err != nil {
+					return nil, fmt.Errorf("incorrect image with tag %s in bashible apiserver", cont.Image)
+				}
+				deploymentImageDigestOrTag = tmpTag.TagStr()
 			}
-			deploymentImageTag = cont.Image[imageSplitIndex+1:]
 		}
 	}
 
 	return bashibleDeployment{
-		ImageTag:        deploymentImageTag,
-		DesiredReplicas: dep.Status.Replicas,
-		UpdatedReplicas: dep.Status.UpdatedReplicas,
+		ImageDigestOrTag: deploymentImageDigestOrTag,
+		DesiredReplicas:  dep.Status.Replicas,
+		UpdatedReplicas:  dep.Status.UpdatedReplicas,
 	}, nil
 }
 
 type bashibleDeployment struct {
-	ImageTag        string
-	DesiredReplicas int32
-	UpdatedReplicas int32
+	ImageDigestOrTag string
+	DesiredReplicas  int32
+	UpdatedReplicas  int32
 }

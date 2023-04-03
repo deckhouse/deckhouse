@@ -152,12 +152,12 @@ spec:
   csiControllerServiceAccountName: csi
   csiNodeServiceAccountName: default
   {{- with .Values.global.modulesImages }}
-  csiAttacherImage: "{{ .registry.base }}:{{ index .tags.common (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
-  csiLivenessProbeImage: "{{ .registry.base }}:{{ index .tags.common (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
-  csiNodeDriverRegistrarImage: "{{ .registry.base }}:{{ index .tags.common (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
-  csiProvisionerImage: "{{ .registry.base }}:{{ index .tags.common (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
-  csiResizerImage: "{{ .registry.base }}:{{ index .tags.common (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
-  csiSnapshotterImage: "{{ .registry.base }}:{{ index .tags.common (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiAttacherImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+  csiLivenessProbeImage: {{ include "helm_lib_module_common_image" (list $ (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+  csiNodeDriverRegistrarImage: {{ include "helm_lib_module_common_image" (list $ (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+  csiProvisionerImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+  csiResizerImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+  csiSnapshotterImage: {{ include "helm_lib_module_common_image" (list $ (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
   {{- end }}
   linstorHttpsClientSecret: linstor-client-https-cert
   priorityClassName: ""

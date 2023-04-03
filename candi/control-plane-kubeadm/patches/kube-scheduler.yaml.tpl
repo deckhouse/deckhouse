@@ -19,7 +19,7 @@ metadata:
 spec:
   containers:
     - name: kube-scheduler
-      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
+      image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
     {{- end }}
   {{- end }}
 {{- end }}

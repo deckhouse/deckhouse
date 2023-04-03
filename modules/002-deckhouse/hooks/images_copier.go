@@ -195,7 +195,7 @@ func createJob(input *go_hook.HookInput, annotations map[string]string) {
 	const secretVolumeMountName = "config"
 
 	repo := input.Values.Get("global.modulesImages.registry.base").String()
-	copierTag := input.Values.Get("global.modulesImages.tags.deckhouse.imagesCopier").String()
+	copierTag := input.Values.Get("global.modulesImages.digests.deckhouse.imagesCopier").String()
 
 	podSpec := v1core.PodSpec{
 		ImagePullSecrets: []v1core.LocalObjectReference{
@@ -276,7 +276,7 @@ func addD8ConfigToSecret(input *go_hook.HookInput) error {
 		return err
 	}
 
-	imagesJSON := input.Values.Get("global.modulesImages.tags").Raw
+	imagesJSON := input.Values.Get("global.modulesImages.digests").Raw
 
 	apply := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var conf v1core.Secret

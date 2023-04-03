@@ -172,7 +172,21 @@ EOF
     return 0
   fi
 
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  # Only update operation checks
+  operationType="$(context::jq -r '.review.request.operation')"
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    # Forbid changing nodeType
+    newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
+    oldNodeType="$(context::jq -r '.review.request.oldObject.spec.nodeType')"
+    if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.nodeType field is immutable"}
+EOF
+        return 0
+    fi
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
 }
