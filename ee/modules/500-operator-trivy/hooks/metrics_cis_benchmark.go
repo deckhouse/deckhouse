@@ -119,7 +119,7 @@ func countTotalFailsFromDetailedChecks(checks []v1alpha1.ComplianceCheck) float6
 	var totalFails float64
 	for _, check := range checks {
 		if !check.Success {
-			totalFails += 1
+			totalFails++
 		}
 	}
 	return totalFails
