@@ -195,5 +195,8 @@ EXPOSE 3366/tcp 3367/tcp
 RUN curl -Lfo /usr/bin/piraeus-entry.sh ${PIRAEUS_GITREPO}/raw/${PIRAEUS_COMMIT_REF}/dockerfiles/piraeus-server/entry.sh \
  && chmod +x /usr/bin/piraeus-entry.sh
 
+# Add liveness probe script
+COPY liveness.sh /liveness.sh
+
 CMD ["startSatellite"]
 ENTRYPOINT ["/usr/bin/k8s-await-election", "/usr/bin/piraeus-entry.sh"]
