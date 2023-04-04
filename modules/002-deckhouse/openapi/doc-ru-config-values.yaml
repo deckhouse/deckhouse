@@ -101,13 +101,28 @@ properties:
 
               Если не указано — авторизация не используется.
             properties:
-              username:
-                description: Имя пользователя для авторизации на webhook.
-              password:
-                description: Пароль для авторизации на webhook.
-              token:
-                description: Токен для авторизации на webhook.
+              basic:
+                type: object
+                description: Basic-аутентфикация на webhook.
+                properties:
+                  username:
+                    type: string
+                    description: |
+                      Имя пользователя для авторизации на webhook.
 
+                      Имя и пароль пользователя будут в заголовке `Authorization` в формате `Basic <base64(username:password)>`.
+                  password:
+                    type: string
+                    description: |
+                      Пароль для авторизации на webhook.
+
+                      Имя и пароль пользователя будут в заголовке `Authorization` в формате `Basic <base64(username:password)>`.
+              bearerToken:
+                type: string
+                description: |
+                    Токен для авторизации на webhook.
+
+                    Токен будет в заголовке `Authorization` в формате `Bearer <token>`.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
