@@ -1,5 +1,5 @@
 diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
-index a9fcaa8..9389373 100644
+index a9fcaa8..24c4009 100644
 --- a/pkg/configauditreport/controller/helper.go
 +++ b/pkg/configauditreport/controller/helper.go
 @@ -2,7 +2,9 @@ package controller
@@ -12,19 +12,19 @@ index a9fcaa8..9389373 100644
  	"strings"
  
  	"github.com/aquasecurity/defsec/pkg/scan"
-@@ -59,6 +61,15 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
- 			if strings.HasPrefix(id, "N/A") {
+@@ -60,6 +62,15 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
  				continue
  			}
-+			fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
-+			r, _ := json.Marshal(resource)
-+			fmt.Fprint(os.Stdout, r)
-+
-+			for _, in := range inputs {
-+				fmt.Fprint(os.Stdout, "\n\n")
-+				fmt.Fprint(os.Stdout, in)
-+			}
-+			fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
  			if k8sCoreComponent(resource) {
++				fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
++				r, _ := json.Marshal(resource)
++				fmt.Fprint(os.Stdout, string(r))
++
++				for _, in := range inputs {
++					fmt.Fprint(os.Stdout, "\n\n")
++					fmt.Fprint(os.Stdout, string(in))
++				}
++				fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
  				infraChecks = append(infraChecks, getCheck(result, id))
  			}
+ 			continue
