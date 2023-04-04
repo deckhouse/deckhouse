@@ -124,6 +124,7 @@ updateEpoch: "1680009541"
 		bc.NodeGroup["cloudInstances"].(map[string]interface{})["maxSurgePerZone"] = 1
 		bc.NodeGroup["cloudInstances"].(map[string]interface{})["maxUnavailablePerZone"] = 1
 		bc.NodeGroup["cloudInstances"].(map[string]interface{})["minPerZone"] = 1
+		bc.NodeGroup["cloudInstances"].(map[string]interface{})["zones"] = []string{"aaaaaa"}
 
 		newHash := hash(t, &bc)
 

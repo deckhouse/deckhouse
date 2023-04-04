@@ -455,6 +455,7 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 			delete(cloudInstances, "maxSurgePerZone")
 			delete(cloudInstances, "maxUnavailablePerZone")
 			delete(cloudInstances, "minPerZone")
+			delete(cloudInstances, "zones")
 		}
 	}
 
