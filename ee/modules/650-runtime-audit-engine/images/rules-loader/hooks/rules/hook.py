@@ -4,8 +4,9 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 from os import remove, walk
-from shell_operator import hook
 from yaml import dump
+from deckhouse import hook
+
 from lib.convert import convert_spec
 
 _FALCO_RULES_DIR = '/etc/falco/rules.d'
