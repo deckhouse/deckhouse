@@ -1,3 +1,31 @@
+diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
+index a9fcaa8..78c255f 100644
+--- a/pkg/configauditreport/controller/helper.go
++++ b/pkg/configauditreport/controller/helper.go
+@@ -2,6 +2,7 @@ package controller
+ 
+ import (
+ 	"context"
++	"encoding/json"
+ 	"fmt"
+ 	"strings"
+ 
+@@ -60,6 +61,15 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
+ 				continue
+ 			}
+ 			if k8sCoreComponent(resource) {
++				fmt.Print("\n\n\n\n\n\n\n\n\n\n\n")
++				r, _ := json.Marshal(resource)
++				fmt.Println(r)
++
++				for _, in := range inputs {
++					fmt.Print("\n\n")
++					fmt.Println(in)
++				}
++				fmt.Print("\n\n\n\n\n\n\n\n\n\n\n")
+ 				infraChecks = append(infraChecks, getCheck(result, id))
+ 			}
+ 			continue
 diff --git a/pkg/vulnerabilityreport/controller/scanjob.go b/pkg/vulnerabilityreport/controller/scanjob.go
 index 3726c3a..72f92e4 100644
 --- a/pkg/vulnerabilityreport/controller/scanjob.go
