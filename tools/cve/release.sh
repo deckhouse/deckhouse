@@ -45,11 +45,11 @@ function __main__() {
   echo ""
 
   docker pull "$REPO:$TAG"
-  tags=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_digests.json)
+  digests=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_digests.json)
 
   trivy image --timeout 10m --severity=$SEVERITY "$REPO:$TAG"
 
-  for module in $(jq -rc 'to_entries[]' <<< "$tags"); do
+  for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     echo "=============================================="
     echo "🛰 Module: $(jq -rc '.key' <<< "$module")"
 
@@ -58,7 +58,7 @@ function __main__() {
       echo "👾 Image: $(jq -rc '.key' <<< "$image")"
       echo ""
 
-      trivy image --timeout 10m --severity=$SEVERITY "$REPO:$(jq -rc '.value' <<< "$image")"
+      trivy image --timeout 10m --severity=$SEVERITY "$REPO@$(jq -rc '.value' <<< "$image")"
     done
   done
 }
