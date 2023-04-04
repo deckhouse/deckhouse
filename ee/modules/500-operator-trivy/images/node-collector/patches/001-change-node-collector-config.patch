@@ -1,5 +1,5 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..5050542 100644
+index b8acb37..e31861e 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
 @@ -36,9 +36,9 @@ collectors:
@@ -72,7 +72,21 @@ index b8acb37..5050542 100644
    - key: certificateAuthoritiesFileOwnership
      title: Client certificate authorities file ownership
      nodeType: worker
-@@ -154,13 +148,13 @@ collectors:
+@@ -144,23 +138,23 @@ collectors:
+   - key: kubeletAnonymousAuthArgumentSet
+     title: kubelet --anonymous-auth argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --anonymous-auth' | grep -o '
+-      --anonymous-auth=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit:  "cat /var/lib/kubelet/config.yaml | grep -A1 '  anonymous:' |
++      grep -o '  enabled: [^\"]\\S*' | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletAuthorizationModeArgumentSet
+     title: kubelet --authorization-mode argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --authorization-mode' | grep -o '
+-      --authorization-mode=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -A4 authorization |
++      grep -o '  mode: [^\"]\\S*' | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
    - key: kubeletClientCaFileArgumentSet
      title: kubelet --client-ca-file argument is set
      nodeType: worker
