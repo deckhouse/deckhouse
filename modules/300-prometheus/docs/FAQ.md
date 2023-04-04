@@ -134,7 +134,7 @@ To enable secure access to metrics, we strongly recommend using **kube-rbac-prox
 
 ### An example of collecting metrics securely from an application inside a cluster
 
-To configure application metrics protection using `kube-rbac-proxy` and then build metrics from it using Prometheus tools, perform the following steps:
+Do the following to set up application metrics protection via the `kube-rbac-proxy` with the subsequent metrics scraping using Prometheus tools:
 
 1. Create a new `ServiceAccount` with the following permissions:
 
@@ -161,7 +161,7 @@ To configure application metrics protection using `kube-rbac-proxy` and then bui
 
    > The example uses the `d8:rbac-proxy` built-in Deckhouse `ClusterRole`.
 
-2. Create a configuration for `kube-rbac-proxy`:
+2. Create a configuration for the `kube-rbac-proxy`:
 
    ```yaml
    ---
@@ -183,7 +183,7 @@ To configure application metrics protection using `kube-rbac-proxy` and then bui
 
    > Get more information on authorization attributes in the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/authorization).
 
-3. Create `Service` and `Deployment` for your application, where `kube-rbac-proxy` takes the position of a sidecar container:
+3. Create `Service` and `Deployment` for your application with the `kube-rbac-proxy` as a sidecar container:
 
    ```yaml
    ---
@@ -243,7 +243,7 @@ To configure application metrics protection using `kube-rbac-proxy` and then bui
              name: rbac-proxy-config-test
    ```
 
-4. Assign the necessary rights to the resource to Prometheus:
+4. Add the necessary resource permissions to Prometheus:
 
    ```yaml
    ---
@@ -270,7 +270,7 @@ To configure application metrics protection using `kube-rbac-proxy` and then bui
      namespace: d8-monitoring
    ```
 
-After step 4, your application's metrics should appear in Prometheus.
+After step 4, your application's metrics should become available in Prometheus.
 
 ### An example of collecting metrics securely from an application outside a cluster
 
