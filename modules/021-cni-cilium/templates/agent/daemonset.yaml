@@ -33,6 +33,7 @@ spec:
         container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
         container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
+        container.apparmor.security.beta.kubernetes.io/install-cni-binaries: "unconfined"
       labels:
         app: agent
         module: cni-cilium
@@ -230,7 +231,11 @@ spec:
       initContainers:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
+        {{- if has "virtualization" .Values.global.enabledModules }}
+        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
+        {{- else }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        {{- end }}
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -266,7 +271,11 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: clean-cilium-state
+        {{- if has "virtualization" .Values.global.enabledModules }}
+        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
+        {{- else }}
         image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        {{- end }}
         command:
         - /init-container.sh
         env:
@@ -325,6 +334,29 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
+      - name: install-cni-binaries
+        {{- if has "virtualization" .Values.global.enabledModules }}
+        image: {{ include "helm_lib_module_image" (list . "virtCilium") }}
+        {{- else }}
+        image: {{ include "helm_lib_module_image" (list . "cilium") }}
+        {{- end }}
+        command:
+          - "/install-plugin.sh"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        securityContext:
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
+          capabilities:
+            drop:
+              - ALL
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+          - name: cni-path
+            mountPath: /host/opt/cni/bin
       restartPolicy: Always
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1

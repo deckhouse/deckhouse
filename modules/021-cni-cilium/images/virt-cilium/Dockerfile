@@ -94,6 +94,7 @@ RUN make PKG_BUILD=1 \
 
 RUN cp -t /tmp/install images/cilium/init-container.sh \
      plugins/cilium-cni/cni-install.sh \
+     plugins/cilium-cni/install-plugin.sh \
      plugins/cilium-cni/cni-uninstall.sh
 
 #
