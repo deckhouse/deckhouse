@@ -5,9 +5,7 @@
 
 import unittest
 
-from hook import convert_spec
-
-
+from convert import convert_spec
 class TestConvertSpec(unittest.TestCase):
     def test_success_rule(self):
         res = convert_spec({

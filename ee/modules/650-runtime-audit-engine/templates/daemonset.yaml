@@ -179,6 +179,14 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "rulesLoader") }}
         env:
+        - name: SHELL_OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
+          value: d8-runtime-audit-engine.deckhouse.io
+        - name: VALIDATING_WEBHOOK_SERVICE_NAME
+          value: {{ .Chart.Name }}-webhook
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
         resources:
@@ -188,6 +196,8 @@ spec:
             {{- include "falco_rules_loader" . | nindent 12 }}
 {{- end }}
         volumeMounts:
+        - mountPath: /validating-certs
+          name: webhook-tls
         - name: rules-data
           mountPath: /etc/falco/rules.d
         - name: tmp
