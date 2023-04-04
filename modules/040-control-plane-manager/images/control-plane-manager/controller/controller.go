@@ -42,7 +42,7 @@ func main() {
 		close(config.ExitChannel)
 	}()
 
-	server := &http.Server{
+	server = &http.Server{
 		Addr: "127.0.0.1:8095",
 	}
 	http.HandleFunc("/healthz", healthzHandler)
@@ -53,78 +53,46 @@ func main() {
 		if err == nil || err == http.ErrServerClosed {
 			return
 		}
-		log.Fatal(err)
+		log.Error(err)
 	}()
 
-	if err := removeOrphanFiles(); err != nil {
-		log.Warn(err)
-	}
+	removeOrphanFiles()
 
-	if err := annotateNode(); err != nil {
-		log.Fatal(err)
-	}
+	runPhase(annotateNode())
+	runPhase(waitNodeApproval())
+	runPhase(waitImageHolderContainers())
+	runPhase(checkEtcdManifest())
+	runPhase(checkKubeletConfig())
+	runPhase(installKubeadmConfig())
+	runPhase(installBasePKIfiles())
+	runPhase(fillTmpDirWithPKIData())
+	runPhase(renewCertificates())
+	runPhase(renewKubeconfigs())
+	runPhase(updateRootKubeconfig())
+	runPhase(installExtraFiles())
+	runPhase(convergeComponents())
+	runPhase(config.writeLastAppliedConfigurationChecksum())
 
-	if err := waitNodeApproval(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := waitImageHolderContainers(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := checkEtcdManifest(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := checkKubeletConfig(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := installKubeadmConfig(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := installBasePKIfiles(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := fillTmpDirWithPKIData(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := renewCertificates(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := renewKubeconfigs(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := updateRootKubeconfig(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := installExtraFiles(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := convergeComponents(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := config.writeLastAppliedConfigurationChecksum(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := cleanup(); err != nil {
-		log.Warn(err)
-	}
+	cleanup()
 
 	controlPlaneManagerIsReady = true
 	// pause loop
 	<-config.ExitChannel
 
+	httpServerClose()
+}
+
+func httpServerClose() {
 	if err := server.Close(); err != nil {
 		log.Fatalf("HTTP close error: %v", err)
 	}
+}
+func runPhase(err error) {
+	if err == nil {
+		return
+	}
+	log.Error(err)
+	cleanup()
+	httpServerClose()
+	os.Exit(1)
 }

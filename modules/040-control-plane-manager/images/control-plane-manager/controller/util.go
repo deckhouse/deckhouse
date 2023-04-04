@@ -102,7 +102,7 @@ func removeDirectory(dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func removeOrphanFiles() error {
+func removeOrphanFiles() {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
 	log.Infof("phase: remove orphan files from dir %s", srcDir)
 
@@ -125,7 +125,9 @@ func removeOrphanFiles() error {
 		}
 	}
 
-	return filepath.WalkDir(srcDir, walkDirFunc)
+	if err := filepath.WalkDir(srcDir, walkDirFunc); err != nil {
+		log.Warn(err)
+	}
 }
 
 func stringSlicesEqual(a, b []string) bool {
@@ -174,13 +176,12 @@ func removeOldBackups() error {
 	return nil
 }
 
-func cleanup() error {
+func cleanup() {
 	if err := os.RemoveAll(config.TmpPath); err != nil {
-		return err
+		log.Warn(err)
 	}
 
 	if err := removeOldBackups(); err != nil {
-		return err
+		log.Warn(err)
 	}
-	return nil
 }

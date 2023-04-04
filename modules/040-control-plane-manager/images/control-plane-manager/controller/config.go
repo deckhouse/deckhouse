@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,6 +62,7 @@ type Config struct {
 var (
 	config                     *Config
 	controlPlaneManagerIsReady bool
+	server                     *http.Server
 )
 
 func NewConfig() (*Config, error) {
