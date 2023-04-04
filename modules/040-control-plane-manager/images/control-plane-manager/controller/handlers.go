@@ -25,6 +25,7 @@ func healthzHandler(w http.ResponseWriter, _ *http.Request) {
 func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 	if controlPlaneManagerIsReady {
 		w.WriteHeader(http.StatusOK)
+		return
 	}
 	w.WriteHeader(http.StatusInternalServerError)
 }
