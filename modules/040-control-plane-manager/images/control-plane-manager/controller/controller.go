@@ -18,6 +18,8 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,8 +34,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//	http.HandleFunc("/healthz", healthz)
-	//	http.HandleFunc("/readyz", readyz)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		config.ExitChannel <- true
+	}()
+
+//	http.HandleFunc("/healthz", healthz)
+//	http.HandleFunc("/readyz", readyz)
+//	go func() {
+
+//	}()
 	//	if err := http.ListenAndServe(":8000", nil); err != nil {
 	//		log.Fatal(err)
 	//	}
@@ -107,5 +119,5 @@ func main() {
 	}
 
 	// pause loop
-	<-config.SigCh
+	<-config.ExitChannel
 }

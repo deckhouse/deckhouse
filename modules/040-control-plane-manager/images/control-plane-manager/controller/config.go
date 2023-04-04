@@ -21,15 +21,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -55,7 +52,7 @@ type Config struct {
 	NodeName                         string
 	MyIP                             string
 	K8sClient                        *kubernetes.Clientset
-	SigCh                            chan os.Signal
+	ExitChannel                      chan bool
 	ConfigurationChecksum            string
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
@@ -81,8 +78,7 @@ func NewConfig() (*Config, error) {
 		return config, err
 	}
 	config.TmpPath = filepath.Join("/tmp", config.ConfigurationChecksum)
-	config.SigCh = make(chan os.Signal, 1)
-	signal.Notify(config.SigCh, syscall.SIGTERM, syscall.SIGINT)
+	config.ExitChannel = make(chan bool, 1)
 	return config, nil
 }
 
