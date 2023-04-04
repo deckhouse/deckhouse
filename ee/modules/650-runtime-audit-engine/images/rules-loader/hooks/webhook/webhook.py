@@ -3,8 +3,8 @@
 # Copyright 2023 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
+import subprocess
 from os import remove
-from subprocess import check_output
 
 from deckhouse import hook
 from yaml import dump
@@ -16,7 +16,7 @@ def main(ctx: hook.Context):
         request = ctx.binding_context["review"]["request"]
         validate(request)
         ctx.output.validations.allow()
-    except CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
         print(e.output)
         ctx.output.validations.deny("Spec validation error")
     except Exception as e:
