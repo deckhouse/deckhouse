@@ -1291,6 +1291,53 @@ status:
 				})
 			})
 
+			Context("Nodes have 'update.node.deckhouse.io/disruption-required' and 'update.node.deckhouse.io/disruption-approved' annotations both", func() {
+				const nodes = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-ng1-aaa
+  creationTimestamp: 2023-03-03T16:47:52Z
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    node.deckhouse.io/configuration-checksum: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-ng1-bbb
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/disruption-approved: ""
+    node.deckhouse.io/configuration-checksum: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+`
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						cloudNG1+machineDeploy+machines+stateCloudProviderSecret+configurationChecksums+nodes, 2))
+					f.RunHook()
+				})
+
+				It("Sets to False", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeWaitingForDisruptiveApproval, ngv1.ConditionFalse, nowTime, "")
+				})
+
+				It("Sets Updating to True", func() {
+					assertCondition(f, ngv1.NodeGroupConditionTypeUpdating, ngv1.ConditionTrue, nowTime, "")
+				})
+			})
+
 			Context("Current status is True, nodes have not update.node.deckhouse.io/disruption-required annotation", func() {
 				const cloudWithCondition = `
 ---
