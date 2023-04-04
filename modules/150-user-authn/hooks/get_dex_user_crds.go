@@ -78,7 +78,7 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		if ok {
 			duration, ok := ttl.(string)
 			if !ok {
-				return nil, fmt.Errorf("cnnot conever ttl to time duration")
+				return nil, fmt.Errorf("ttl should be a string with time duration")
 			}
 
 			parsedDuration, err := time.ParseDuration(duration)
