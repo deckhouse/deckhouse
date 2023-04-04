@@ -1,0 +1,15 @@
+# Copyright 2023 Flant JSC
+# This is a config for dashboard_provisioner.py hook.
+configVersion: v1
+kubernetes:
+  - name: dashboard_resources
+    apiVersion: deckhouse.io/v1
+    kind: GrafanaDashboardDefinition
+    includeSnapshotsFrom:
+    - dashboard_resources
+    jqFilter: |
+      {
+          "name": .metadata.name,
+          "folder": .spec.folder,
+          "definition": .spec.definition
+      }
