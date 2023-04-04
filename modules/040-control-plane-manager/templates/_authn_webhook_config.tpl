@@ -5,7 +5,7 @@ clusters:
   - name: user-authn-webhook
     cluster:
   {{- if .webhookCA }}
-      certificate-authority-data: {{ .webhookCA }}
+      certificate-authority-data: {{ .webhookCA | b64enc }}
   {{- end }}
       server: {{ required ".webhookURL" .webhookURL | quote }}
 current-context: authn-webhook
