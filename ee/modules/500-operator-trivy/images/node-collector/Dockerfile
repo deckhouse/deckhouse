@@ -3,7 +3,7 @@ ARG BASE_GOLANG_19_ALPINE
 
 FROM $BASE_GOLANG_19_ALPINE AS build
 WORKDIR /src
-RUN apt update && apt install patch
+RUN apk add --update --no-cache patch
 RUN wget https://github.com/aquasecurity/k8s-node-collector/archive/refs/tags/v0.0.5.tar.gz -O - | tar -xz --strip-components=1
 
 COPY patches/001-change-node-collector-config.patch /src
