@@ -217,7 +217,7 @@ class AnnotatedNode(Annotated):
 
 class AnnotatedCronJob(Annotated):
     kind = "CronJob"
-    api = kubernetes.client.BatchV1beta1Api()
+    api = kubernetes.client.BatchV1Api()
 
     @classmethod
     def list(cls, namespace, **kwargs):
