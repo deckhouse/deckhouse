@@ -43,7 +43,7 @@ func main() {
 	}()
 
 	server := &http.Server{
-		Addr: ":8000",
+		Addr: "127.0.0.1:8095",
 	}
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
