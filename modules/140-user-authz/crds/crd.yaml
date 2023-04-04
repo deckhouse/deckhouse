@@ -145,7 +145,7 @@ spec:
                       kind:
                         type: string
                         description: 'Kind of the role.'
-                        enum: [ClusterRole, Role]
+                        enum: [ClusterRole]
                         example: 'ClusterRole'
                       name:
                         type: string
