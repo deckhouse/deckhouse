@@ -1,60 +1,30 @@
 diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
-index a9fcaa8..78c255f 100644
+index a9fcaa8..9389373 100644
 --- a/pkg/configauditreport/controller/helper.go
 +++ b/pkg/configauditreport/controller/helper.go
-@@ -2,6 +2,7 @@ package controller
+@@ -2,7 +2,9 @@ package controller
  
  import (
  	"context"
 +	"encoding/json"
  	"fmt"
++	"os"
  	"strings"
  
-@@ -60,6 +61,15 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
+ 	"github.com/aquasecurity/defsec/pkg/scan"
+@@ -59,6 +61,15 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
+ 			if strings.HasPrefix(id, "N/A") {
  				continue
  			}
- 			if k8sCoreComponent(resource) {
-+				fmt.Print("\n\n\n\n\n\n\n\n\n\n\n")
-+				r, _ := json.Marshal(resource)
-+				fmt.Println(r)
++			fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
++			r, _ := json.Marshal(resource)
++			fmt.Fprint(os.Stdout, r)
 +
-+				for _, in := range inputs {
-+					fmt.Print("\n\n")
-+					fmt.Println(in)
-+				}
-+				fmt.Print("\n\n\n\n\n\n\n\n\n\n\n")
++			for _, in := range inputs {
++				fmt.Fprint(os.Stdout, "\n\n")
++				fmt.Fprint(os.Stdout, in)
++			}
++			fmt.Fprint(os.Stdout, "\n\n\n\n\n\n\n\n\n\n\n")
+ 			if k8sCoreComponent(resource) {
  				infraChecks = append(infraChecks, getCheck(result, id))
  			}
- 			continue
-diff --git a/pkg/vulnerabilityreport/controller/scanjob.go b/pkg/vulnerabilityreport/controller/scanjob.go
-index 3726c3a..72f92e4 100644
---- a/pkg/vulnerabilityreport/controller/scanjob.go
-+++ b/pkg/vulnerabilityreport/controller/scanjob.go
-@@ -15,7 +15,6 @@ import (
- 	"go.uber.org/multierr"
- 	batchv1 "k8s.io/api/batch/v1"
- 	k8sapierror "k8s.io/apimachinery/pkg/api/errors"
--	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
- 	ctrl "sigs.k8s.io/controller-runtime"
- 	"sigs.k8s.io/controller-runtime/pkg/builder"
- 	"sigs.k8s.io/controller-runtime/pkg/client"
-@@ -264,12 +263,12 @@ func (r *ScanJobController) processFailedScanJob(ctx context.Context, scanJob *b
- }
- 
- func (r *ScanJobController) deleteJob(ctx context.Context, job *batchv1.Job) error {
--	err := r.Client.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationBackground))
--	if err != nil {
--		if k8sapierror.IsNotFound(err) {
--			return nil
--		}
--		return fmt.Errorf("deleting job: %w", err)
--	}
-+	// err := r.Client.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationBackground))
-+	// if err != nil {
-+	// 	if k8sapierror.IsNotFound(err) {
-+	// 		return nil
-+	// 	}
-+	// 	return fmt.Errorf("deleting job: %w", err)
-+	// }
- 	return nil
- }
