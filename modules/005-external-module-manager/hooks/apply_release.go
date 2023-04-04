@@ -236,6 +236,7 @@ type releasePredictor struct {
 	skippedPatchesIndexes []int
 }
 
+// nolint: revive
 func NewReleasePredictor(releases []enqueueRelease) *releasePredictor {
 	return &releasePredictor{
 		ts:       time.Now().UTC(),

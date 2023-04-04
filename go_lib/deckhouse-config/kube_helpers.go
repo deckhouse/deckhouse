@@ -18,11 +18,15 @@ package deckhouse_config
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 
 	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -98,4 +102,55 @@ func GetAllConfigs(kubeClient k8s.Client) ([]*d8cfg_v1alpha1.ModuleConfig, error
 	}
 
 	return objs, nil
+}
+
+// SetModuleConfigEnabledFlag updates spec.enabled flag or creates a new ModuleConfig with spec.enabled flag.
+func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool) error {
+	// This should not happen, but check it anyway.
+	if kubeClient == nil {
+		return fmt.Errorf("kubernetes client is not initialized")
+	}
+
+	gvr := d8cfg_v1alpha1.GroupVersionResource()
+	unstructuredObj, err := kubeClient.Dynamic().Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil && !k8errors.IsNotFound(err) {
+		return fmt.Errorf("get ModuleConfig/%s: %w", name, err)
+	}
+
+	if unstructuredObj != nil {
+		err := unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled")
+		if err != nil {
+			return fmt.Errorf("change spec.enabled to %v in ModuleConfig/%s: %w", enabled, name, err)
+		}
+		_, err = kubeClient.Dynamic().Resource(gvr).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("update ModuleConfig/%s: %w", name, err)
+		}
+		return nil
+	}
+
+	// Create new ModuleConfig if absent.
+	newCfg := &d8cfg_v1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       d8cfg_v1alpha1.ModuleConfigKind,
+			APIVersion: d8cfg_v1alpha1.ModuleConfigAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: d8cfg_v1alpha1.ModuleConfigSpec{
+			Enabled: pointer.Bool(enabled),
+		},
+	}
+
+	obj, err := sdk.ToUnstructured(newCfg)
+	if err != nil {
+		return fmt.Errorf("converting ModuleConfig/%s to unstructured: %w", name, err)
+	}
+
+	_, err = kubeClient.Dynamic().Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("create ModuleConfig/%s: %w", name, err)
+	}
+	return nil
 }

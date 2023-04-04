@@ -132,6 +132,9 @@ func main() {
 	sh_debug.DefineDebugCommands(kpApp)
 	ad_app.DefineDebugCommands(kpApp)
 
+	// Add more commands to the "module" command.
+	debug.DefineModuleConfigDebugCommands(kpApp)
+
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp)
 
