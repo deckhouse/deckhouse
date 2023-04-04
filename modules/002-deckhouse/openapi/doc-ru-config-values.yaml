@@ -103,7 +103,7 @@ properties:
             properties:
               basic:
                 type: object
-                description: Basic-аутентфикация на webhook.
+                description: Basic-аутентификация на webhook.
                 properties:
                   username:
                     type: string
