@@ -49,7 +49,7 @@ func (g *DeckhouseDestroyer) StopProxy() {
 		return
 	}
 
-	g.kubeCl.KubeProxy.Stop()
+	g.kubeCl.KubeProxy.Stop(0)
 	g.kubeCl = nil
 }
 
