@@ -55,10 +55,10 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{/*- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 */}}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
       - name: "operator"
-        {{/*- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 */}}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
@@ -69,11 +69,11 @@ spec:
           - name: OPERATOR_EXCLUDE_NAMESPACES
             value: ""
           - name: OPERATOR_TARGET_WORKLOADS
-            value: "Pod,ReplicaSet,ReplicationController,StatefulSet,DaemonSet,CronJob,Job"
+            value: "pod,replicaset,replicationcontroller,statefulset,daemonset,cronjob,job"
           - name: OPERATOR_SERVICE_ACCOUNT
             value: "operator-trivy"
           - name: OPERATOR_LOG_DEV_MODE
-            value: "true"
+            value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
             value: "5m"
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT

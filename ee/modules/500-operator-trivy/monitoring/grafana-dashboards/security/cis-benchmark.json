@@ -55,7 +55,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "All Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -137,7 +137,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "All Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -224,7 +224,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "Total Number of All Automated Checks Run",
+      "description": "Total Number of All Checks Run",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -304,7 +304,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "CRITICAL severity Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -386,7 +386,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "HIGH severity Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -429,7 +429,7 @@
         "x": 6,
         "y": 10
       },
-      "id": 16,
+      "id": 20,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -460,7 +460,7 @@
           "refId": "A"
         }
       ],
-      "title": "High severity Checks Passed",
+      "title": "HIGH severity Checks Passed",
       "type": "gauge"
     },
     {
@@ -468,7 +468,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "MEDIUM severity Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -511,7 +511,7 @@
         "x": 12,
         "y": 10
       },
-      "id": 18,
+      "id": 21,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -550,7 +550,7 @@
         "type": "prometheus",
         "uid": "$datasource"
       },
-      "description": "All Automated Checks Passed",
+      "description": "LOW severity Checks Passed",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -593,7 +593,7 @@
         "x": 18,
         "y": 10
       },
-      "id": 19,
+      "id": 22,
       "links": [],
       "maxDataPoints": 100,
       "options": {
@@ -729,7 +729,7 @@
         "h": 18,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 15
       },
       "id": 2,
       "links": [],
