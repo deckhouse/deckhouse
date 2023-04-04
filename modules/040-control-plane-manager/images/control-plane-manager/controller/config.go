@@ -52,7 +52,7 @@ type Config struct {
 	NodeName                         string
 	MyIP                             string
 	K8sClient                        *kubernetes.Clientset
-	ExitChannel                      chan bool
+	ExitChannel                      chan struct{}
 	ConfigurationChecksum            string
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
@@ -78,7 +78,7 @@ func NewConfig() (*Config, error) {
 		return config, err
 	}
 	config.TmpPath = filepath.Join("/tmp", config.ConfigurationChecksum)
-	config.ExitChannel = make(chan bool, 1)
+	config.ExitChannel = make(chan struct{}, 1)
 	return config, nil
 }
 
@@ -218,5 +218,5 @@ func (c *Config) writeLastAppliedConfigurationChecksum() error {
 }
 
 func kubeadm() string {
-	return fmt.Sprintf("/usr/local/bin/kubeadm-%s", config.KubernetesVersion)
+	return fmt.Sprintf("/kubeadm-%s", config.KubernetesVersion)
 }

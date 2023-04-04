@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -38,17 +39,22 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		config.ExitChannel <- true
+		close(config.ExitChannel)
 	}()
 
-//	http.HandleFunc("/healthz", healthz)
-//	http.HandleFunc("/readyz", readyz)
-//	go func() {
+	server := &http.Server{
+		Addr: ":8000",
+	}
+	http.HandleFunc("/healthz", healthzHandler)
+	http.HandleFunc("/readyz", readyzHandler)
 
-//	}()
-	//	if err := http.ListenAndServe(":8000", nil); err != nil {
-	//		log.Fatal(err)
-	//	}
+	go func() {
+		err := server.ListenAndServe()
+		if err == nil || err == http.ErrServerClosed {
+			return
+		}
+		log.Fatal(err)
+	}()
 
 	if err := removeOrphanFiles(); err != nil {
 		log.Warn(err)
@@ -110,14 +116,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := os.RemoveAll(config.TmpPath); err != nil {
+	if err := cleanup(); err != nil {
 		log.Warn(err)
 	}
 
-	if err := removeOldBackups(); err != nil {
-		log.Warn(err)
-	}
-
+	controlPlaneManagerIsReady = true
 	// pause loop
 	<-config.ExitChannel
+
+	if err := server.Close(); err != nil {
+		log.Fatalf("HTTP close error: %v", err)
+	}
 }

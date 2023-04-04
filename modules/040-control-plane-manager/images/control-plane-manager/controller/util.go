@@ -173,3 +173,14 @@ func removeOldBackups() error {
 	}
 	return nil
 }
+
+func cleanup() error {
+	if err := os.RemoveAll(config.TmpPath); err != nil {
+		return err
+	}
+
+	if err := removeOldBackups(); err != nil {
+		return err
+	}
+	return nil
+}

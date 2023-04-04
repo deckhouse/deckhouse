@@ -3,21 +3,13 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /usr/local/bin
-  to: /usr/local/bin
+  to: /
   includePaths:
   - kubeadm-{{ $version }}
-  before: install
-- artifact: {{ $.ModuleName }}/etcd-artifact
-  add: /usr/local/bin/etcdctl
-  to: /usr/local/bin/etcdctl
   before: install
 - artifact: {{ $.ModuleName }}/controller-artifact
   add: /controller

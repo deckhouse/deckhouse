@@ -18,11 +18,11 @@ package main
 
 import "net/http"
 
-func healthz(w http.ResponseWriter, _ *http.Request) {
+func healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func readyz(w http.ResponseWriter, _ *http.Request) {
+func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 	if controlPlaneManagerIsReady {
 		w.WriteHeader(http.StatusOK)
 	}
