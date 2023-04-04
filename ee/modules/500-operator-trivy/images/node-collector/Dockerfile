@@ -1,7 +1,7 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_19_BULLSEYE
+ARG BASE_GOLANG_19_ALPINE
 
-FROM $BASE_GOLANG_19_BULLSEYE AS build
+FROM $BASE_GOLANG_19_ALPINE AS build
 WORKDIR /src
 RUN apt update && apt install patch
 RUN wget https://github.com/aquasecurity/k8s-node-collector/archive/refs/tags/v0.0.5.tar.gz -O - | tar -xz --strip-components=1
