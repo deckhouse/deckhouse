@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -172,6 +173,7 @@ func getApiProxyAddress() (string, error) {
 		return "", err
 	}
 	inClusterConfig.Host = "https://" + apiProxyAddress
+	inClusterConfig.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{}
 
 	restClient, err := rest.UnversionedRESTClientFor(inClusterConfig)
 	if err != nil {
