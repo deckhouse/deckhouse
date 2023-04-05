@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -55,8 +56,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Settings: &go_hook.HookConfigSettings{
-
-	}
+		ExecutionMinInterval: 30 * time.Second,
+	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "draining_schedule",

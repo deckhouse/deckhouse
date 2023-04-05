@@ -347,7 +347,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			patch = map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/draining": "",
+						"update.node.deckhouse.io/draining": "bashible",
 					},
 				},
 			}
@@ -515,7 +515,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if _, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
+	if v, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok && v == "bashible" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -529,7 +529,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if _, ok := node.Annotations["update.node.deckhouse.io/drained"]; ok {
+	if v, ok := node.Annotations["update.node.deckhouse.io/drained"]; ok && v == "bashible" {
 		isDrained = true
 	}
 
