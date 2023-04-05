@@ -286,22 +286,28 @@ spec:
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                 buffer:
-                  properities:
+                  description: Параметры буфера.
+                  properties:
                     type:
                       type: string
-                      description: Тип буффера для использования.
+                      description: Тип буфера для использования.
                     disk:
-                      properities:
+                      description:
+                        Параметры буфера на диске.
+                      properties:
                         maxSize:
                           description: |
-                            Максимальный размер буффера н диске.
-                            Должен быть не меньше ~256 мегабайт (268435488 байтов).
+                            Максимальный размер буфера на диске.
+                            Должен быть не меньше ~256МБ (268435488 байт).
 
-                            Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: E, P, T, G, M, k, Ei, Pi, Ti, Gi, Mi, Ki.
-                            Подробнее об указании ресурсов: [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/), [единицы ресурсов памяти](https://kubernetes.io/docs/ концепции/конфигурация/управление-ресурсами-контейнерами/#значение-из-памяти)
+                            Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+
+                            Подробнее об указании ресурсов:
+                            - [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
+                            - [единицы ресурсов памяти](https://kubernetes.io/docs/ концепции/конфигурация/управление-ресурсами-контейнерами/#значение-из-памяти)
                     memory:
-                      properities:
+                      properties:
                         maxEvents:
-                          description: Максимальное количество событий в буффере.
+                          description: Максимальное количество событий в буфере.
                     whenFull:
                       description: Поведение при заполнении буфера.

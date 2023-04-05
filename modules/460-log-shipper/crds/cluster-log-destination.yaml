@@ -648,21 +648,26 @@ spec:
                         - memory
                         - type
                         - whenFull
-                  properities:
+                  description: Buffer parameters.
+                  properties:
                     type:
                       type: string
                       description: The type of buffer to use.
                       enum: ["Disk", "Memory"]
                     disk:
                       type: object
-                      properities:
+                      description: Disk buffer parameters.
+                      properties:
                         maxSize:
                           description: |
                             The maximum size of the buffer on disk.
-                            Must be at least ~256 megabytes (268435488 bytes).
+                            Must be at least ~256MB (268435488 bytes).
 
-                            You can express size as a plain integer or as a fixed-point number using one of these quantity suffixes: E, P, T, G, M, k, Ei, Pi, Ti, Gi, Mi, Ki.
-                            More about resource quantity: [kubernetes quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/), [memory resource units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
+                            You can express size as a plain integer or as a fixed-point number using one of these quantity suffixes: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+
+                            More about resource quantity:
+                            - [kubernetes quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
+                            - [memory resource units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
                           x-doc-examples: ["512Mi", 268435488]
                           anyOf:
                             - type: integer
@@ -671,7 +676,7 @@ spec:
                           x-kubernetes-int-or-string: true
                     memory:
                       type: object
-                      properities:
+                      properties:
                         maxEvents:
                           description: The maximum number of events allowed in the buffer.
                           type: number
