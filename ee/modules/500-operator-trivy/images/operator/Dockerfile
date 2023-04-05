@@ -4,7 +4,7 @@ ARG BASE_GOLANG_19_ALPINE
 FROM $BASE_GOLANG_19_ALPINE AS build
 WORKDIR /src
 RUN apk add --update --no-cache patch
-RUN wget https://github.com/aquasecurity/trivy-operator/archive/refs/tags/v0.12.1.tar.gz -O - | tar -xz --strip-components=1 && \
+RUN wget https://github.com/aquasecurity/trivy-operator/archive/refs/tags/v0.13.0.tar.gz -O - | tar -xz --strip-components=1 && \
     go mod vendor
 
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
