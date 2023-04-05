@@ -1,4 +1,12 @@
-{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" | join "," }}
+{{/*
+RotateKubeletServerCertificate default is true, but CIS wants it to be explicitly enabled:
+https://github.com/kubernetes/kubernetes/blob/release-1.23/pkg/features/kube_features.go#L872
+https://github.com/kubernetes/kubernetes/blob/release-1.24/pkg/features/kube_features.go#L899
+https://github.com/kubernetes/kubernetes/blob/release-1.25/pkg/features/kube_features.go#L1093
+https://github.com/kubernetes/kubernetes/blob/release-1.26/pkg/features/kube_features.go#L1118
+*/}}
+
+{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
 {{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
 {{- end }}
