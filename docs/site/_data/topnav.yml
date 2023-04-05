@@ -70,6 +70,8 @@ topnav:
         items:
           - title: Партнеры
             url: /how_to_buy.html#our-partners
+          - title: Партнёрская программа
+            url: /partners_program_ru.html
           - title: Импортозамещение
             url: /substitution.html
           - title: Безопасность Deckhouse
@@ -82,6 +84,7 @@ topnav:
             url: /license.html
           - title: Правила лицензирования
             url: /license_rules.html
+
           - title: Блог
             external_url: 'https://blog.deckhouse.io/'
           - title: Вакансии

@@ -67,6 +67,8 @@ columns:
     items:
       - title: Партнеры
         url: '/how_to_buy.html#our-partners'
+      - title: Партнёрская программа
+        url: /partners_program_ru.html
       - title: Импортозамещение
         url: '/substitution.html'
       - title: Безопасность Deckhouse
