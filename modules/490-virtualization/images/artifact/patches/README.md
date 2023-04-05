@@ -41,3 +41,9 @@ There is a problem when all nodes in cluster have taints, KubeVirt can't run vir
 The provided fix will always run the job in same place where virt-operator runs
 
 - https://github.com/kubevirt/kubevirt/pull/9360
+
+#### `008-fix-admissionreview.patch`
+
+Fixes admission review for creating pods
+
+- https://github.com/kubevirt/kubevirt/pull/9579
