@@ -1,0 +1,44 @@
+diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
+index a9fcaa89..0249b86e 100644
+--- a/pkg/configauditreport/controller/helper.go
++++ b/pkg/configauditreport/controller/helper.go
+@@ -50,7 +50,9 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
+ 		}
+ 
+ 		id := policies.GetResultID(result)
+-
++		if skipCheck(id, resource) {
++			continue
++		}
+ 		// record only misconfig failed checks
+ 		if cd.ReportRecordFailedChecksOnly() && result.Status() == scan.StatusPassed {
+ 			continue
+@@ -106,3 +108,28 @@ func hasInfraReport(ctx context.Context, node *corev1.Node, infraReadWriter infr
+ 	}
+ 	return report != nil, nil
+ }
++
++func skipCheck(id string, resource client.Object) bool {
++	switch id {
++	// This is deprecated parameter: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#securitycontextdeny
++	// and it breaks functionality in deckhouse
++	case "KCV0013", "AVD-KCV-0013":
++		return true
++	// TODO remove after Docker support is dropped
++	// https://github.com/deckhouse/deckhouse/pull/3426
++	case "KSV104", "AVD-KSV-0104":
++		return true
++	// Kubernetes service in default namespace is ok
++	case "KSV110", "AVD-KSV-0110":
++		// https://github.com/aquasecurity/trivy-operator/blob/v0.12.1/pkg/infraassessment/builder.go#L67
++		kind := resource.GetObjectKind().GroupVersionKind().Kind
++		name := resource.GetName()
++		reportName := fmt.Sprintf("%s-%s", strings.ToLower(kind), name)
++		// https://github.com/aquasecurity/trivy-operator/blob/main/pkg/compliance/io.go#L144
++		targetName := fmt.Sprintf("%s/%s", resource.GetNamespace(), reportName)
++		if targetName == "default/service-kubernetes" {
++			return true
++		}
++	}
++	return false
++}

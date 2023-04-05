@@ -8,13 +8,14 @@ RUN wget https://github.com/aquasecurity/trivy-operator/archive/refs/tags/v0.12.
     go mod vendor
 
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
-RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch
+COPY patches/002-skip-some-checks.patch /src
+COPY patches/003-fix-defsec-lib-for-cis-compability.patch /src
+COPY patches/004-fix-defsec-lib-for-deckhouse-setup.patch /src
 
-COPY patches/002-fix-defseq-lib-for-cis-compability.patch /src
-RUN patch -p1 < 002-fix-defseq-lib-for-cis-compability.patch
-
-COPY patches/003-fix-defseq-lib-for-deckhouse-setup.patch /src
-RUN patch -p1 < 003-fix-defseq-lib-for-deckhouse-setup.patch
+RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
+    patch -p1 < 002-skip-some-checks.patch && \
+    patch -p1 < 002-fix-defsec-lib-for-cis-compability.patch && \
+    patch -p1 < 004-fix-defsec-lib-for-deckhouse-setup.patch
 
 RUN CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
