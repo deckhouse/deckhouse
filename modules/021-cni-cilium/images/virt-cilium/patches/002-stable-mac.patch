@@ -1,5 +1,5 @@
 diff --git a/api/v1/models/daemon_configuration_status.go b/api/v1/models/daemon_configuration_status.go
-index f8308ad372..0b69c362cc 100644
+index 615a372342..25fde9f403 100644
 --- a/api/v1/models/daemon_configuration_status.go
 +++ b/api/v1/models/daemon_configuration_status.go
 @@ -37,6 +37,12 @@ type DaemonConfigurationStatus struct {
@@ -16,10 +16,10 @@ index f8308ad372..0b69c362cc 100644
  	Immutable ConfigurationMap `json:"immutable,omitempty"`
  
 diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
-index b7f2e070b6..f23639a1e1 100644
+index d46a970488..bb63933a74 100644
 --- a/api/v1/openapi.yaml
 +++ b/api/v1/openapi.yaml
-@@ -2219,6 +2219,12 @@ definitions:
+@@ -2256,6 +2256,12 @@ definitions:
        routeMTU:
          description: MTU for network facing routes
          type: integer
@@ -31,12 +31,12 @@ index b7f2e070b6..f23639a1e1 100644
 +        type: string
        datapathMode:
          "$ref": "#/definitions/DatapathMode"
-       ipvlanConfiguration:
+       ipam-mode:
 diff --git a/api/v1/server/embedded_spec.go b/api/v1/server/embedded_spec.go
-index e40a35c83c..6ad61b4389 100644
+index d269cc3c74..02076710e5 100644
 --- a/api/v1/server/embedded_spec.go
 +++ b/api/v1/server/embedded_spec.go
-@@ -1945,6 +1945,14 @@ func init() {
+@@ -1994,6 +1994,14 @@ func init() {
            "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
            "type": "boolean"
          },
@@ -51,7 +51,7 @@ index e40a35c83c..6ad61b4389 100644
          "immutable": {
            "description": "Immutable configuration (read-only)",
            "$ref": "#/definitions/ConfigurationMap"
-@@ -6407,6 +6415,14 @@ func init() {
+@@ -6551,6 +6559,14 @@ func init() {
            "description": "Configured compatibility mode for --egress-multi-home-ip-rule-compat",
            "type": "boolean"
          },
@@ -67,10 +67,10 @@ index e40a35c83c..6ad61b4389 100644
            "description": "Immutable configuration (read-only)",
            "$ref": "#/definitions/ConfigurationMap"
 diff --git a/daemon/cmd/config.go b/daemon/cmd/config.go
-index f10a493a0b..be6977d328 100644
+index a2a332d605..bb8d75ca21 100644
 --- a/daemon/cmd/config.go
 +++ b/daemon/cmd/config.go
-@@ -199,6 +199,8 @@ func (h *getConfig) Handle(params GetConfigParams) middleware.Responder {
+@@ -200,6 +200,8 @@ func (h *getConfig) Handle(params GetConfigParams) middleware.Responder {
  			IPV6: option.Config.EnableIPv6Masquerade,
  		},
  		EgressMultiHomeIPRuleCompat: option.Config.EgressMultiHomeIPRuleCompat,
@@ -80,10 +80,10 @@ index f10a493a0b..be6977d328 100644
  
  	cfg := &models.DaemonConfiguration{
 diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
-index 7b3e13f44b..f53ee552ea 100644
+index 5eebe26fed..f809d49a80 100644
 --- a/pkg/datapath/connector/veth.go
 +++ b/pkg/datapath/connector/veth.go
-@@ -62,11 +62,19 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu int, ep *models.Endpoin
+@@ -61,11 +61,19 @@ func SetupVethWithNames(lxcIfName, tmpIfName string, mtu int, ep *models.Endpoin
  	// explicitly setting MAC addrs for both veth ends. This sets
  	// addr_assign_type for NET_ADDR_SET which prevents systemd from changing
  	// the addrs.
@@ -106,12 +106,12 @@ index 7b3e13f44b..f53ee552ea 100644
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
  	}
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index c7f8a69bb6..8ef03de38a 100644
+index df797c44e9..9eb7172e17 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
-@@ -307,6 +307,12 @@ const (
- 	// interface names shared by all endpoints
- 	EndpointInterfaceNamePrefix = "lxc+"
+@@ -320,6 +320,12 @@ const (
+ 	// LoopbackIPv4 is the default address for service loopback
+ 	LoopbackIPv4 = "169.254.42.1"
  
 +	// EndpointInterfaceHostMAC is set to empty to enable auto generation (default mode)
 +	EndpointInterfaceHostMAC = ""
@@ -123,10 +123,10 @@ index c7f8a69bb6..8ef03de38a 100644
  	// option.ForceLocalPolicyEvalAtSource. It is enabled by default to
  	// provide backwards compatibility, it can be disabled via an option
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index a1548650b9..c34f6d6529 100644
+index 7c0eaa8932..a0686e5f6c 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -766,6 +766,12 @@ const (
+@@ -791,6 +791,12 @@ const (
  	// names shared by all endpoints
  	EndpointInterfaceNamePrefix = "endpoint-interface-name-prefix"
  
@@ -139,9 +139,9 @@ index a1548650b9..c34f6d6529 100644
  	// ForceLocalPolicyEvalAtSource forces a policy decision at the source
  	// endpoint for all local communication
  	ForceLocalPolicyEvalAtSource = "force-local-policy-eval-at-source"
-@@ -1732,6 +1738,12 @@ type DaemonConfig struct {
- 	// names shared by all endpoints
- 	EndpointInterfaceNamePrefix string
+@@ -1815,6 +1821,12 @@ type DaemonConfig struct {
+ 	// LocalRouterIPv6 is the link-local IPv6 address used for Cilium's router device
+ 	LocalRouterIPv6 string
  
 +	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
 +	EndpointInterfaceHostMAC string
@@ -152,34 +152,34 @@ index a1548650b9..c34f6d6529 100644
  	// ForceLocalPolicyEvalAtSource forces a policy decision at the source
  	// endpoint for all local communication
  	ForceLocalPolicyEvalAtSource bool
-@@ -2153,6 +2165,8 @@ var (
+@@ -2287,6 +2299,8 @@ var (
+ 		LogOpt:                       make(map[string]string),
  		SelectiveRegeneration:        defaults.SelectiveRegeneration,
  		LoopbackIPv4:                 defaults.LoopbackIPv4,
- 		EndpointInterfaceNamePrefix:  defaults.EndpointInterfaceNamePrefix,
 +		EndpointInterfaceHostMAC:     defaults.EndpointInterfaceHostMAC,
 +		EndpointInterfaceMAC:         defaults.EndpointInterfaceMAC,
  		ForceLocalPolicyEvalAtSource: defaults.ForceLocalPolicyEvalAtSource,
  		EnableEndpointRoutes:         defaults.EnableEndpointRoutes,
  		AnnotateK8sNode:              defaults.AnnotateK8sNode,
-@@ -2606,6 +2620,8 @@ func (c *DaemonConfig) Populate() {
+@@ -2808,6 +2822,8 @@ func (c *DaemonConfig) Populate() {
+ 	c.EnableWireguard = viper.GetBool(EnableWireguard)
  	c.EnableWireguardUserspaceFallback = viper.GetBool(EnableWireguardUserspaceFallback)
  	c.EnableWellKnownIdentities = viper.GetBool(EnableWellKnownIdentities)
- 	c.EndpointInterfaceNamePrefix = viper.GetString(EndpointInterfaceNamePrefix)
 +	c.EndpointInterfaceHostMAC = viper.GetString(EndpointInterfaceHostMAC)
 +	c.EndpointInterfaceMAC = viper.GetString(EndpointInterfaceMAC)
  	c.EnableXDPPrefilter = viper.GetBool(EnableXDPPrefilter)
- 	c.DevicePreFilter = viper.GetString(PrefilterDevice)
  	c.DisableCiliumEndpointCRD = viper.GetBool(DisableCiliumEndpointCRDName)
+ 	c.EgressMasqueradeInterfaces = viper.GetString(EgressMasqueradeInterfaces)
 diff --git a/plugins/cilium-cni/cilium-cni.go b/plugins/cilium-cni/cilium-cni.go
-index 0bbde3be7b..327ca55e4b 100644
+index 5eca17daeb..678dd02b92 100644
 --- a/plugins/cilium-cni/cilium-cni.go
 +++ b/plugins/cilium-cni/cilium-cni.go
-@@ -402,6 +402,8 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
- 		Addressing:   &models.AddressPair{},
- 		K8sPodName:   string(cniArgs.K8S_POD_NAME),
- 		K8sNamespace: string(cniArgs.K8S_POD_NAMESPACE),
-+		Mac:          conf.EndpointInterfaceMAC,
-+		HostMac:      conf.EndpointInterfaceHostMAC,
+@@ -481,6 +481,8 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
+ 		K8sPodName:            string(cniArgs.K8S_POD_NAME),
+ 		K8sNamespace:          string(cniArgs.K8S_POD_NAMESPACE),
+ 		DatapathConfiguration: &models.EndpointDatapathConfiguration{},
++		Mac:                   conf.EndpointInterfaceMAC,
++		HostMac:               conf.EndpointInterfaceHostMAC,
  	}
  
- 	switch conf.DatapathMode {
+ 	if conf.IpamMode == ipamOption.IPAMDelegatedPlugin {

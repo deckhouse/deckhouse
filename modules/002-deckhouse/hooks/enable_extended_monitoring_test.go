@@ -31,8 +31,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kube-system
-  annotations:
-    extended-monitoring.flant.com/enabled: ""
 `
 		d8SystemNS = `
 ---
@@ -40,8 +38,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-system
-  annotations:
-    extended-monitoring.flant.com/enabled: ""
 `
 	)
 
@@ -53,22 +49,18 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Label should be present on both namespaces", func() {
+		It("Annotation should be present on both namespaces", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			label := f.KubernetesGlobalResource("Namespace", "d8-system").
-				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
-			Expect(label.Exists()).To(BeTrue())
-			Expect(label.String()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("Namespace", "d8-system").
-				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			annotation := f.KubernetesGlobalResource("Namespace", "d8-system").
+				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`)
+			Expect(annotation.Exists()).To(BeTrue())
+			Expect(annotation.String()).To(Equal(""))
 
-			label = f.KubernetesGlobalResource("Namespace", "kube-system").
-				Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`)
-			Expect(label.Exists()).To(BeTrue())
-			Expect(label.String()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("Namespace", "kube-system").
-				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
+			annotation = f.KubernetesGlobalResource("Namespace", "kube-system").
+				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`)
+			Expect(annotation.Exists()).To(BeTrue())
+			Expect(annotation.String()).To(Equal(""))
 		})
 	})
 })
