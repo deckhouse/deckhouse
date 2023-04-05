@@ -1,6 +1,6 @@
 # Patches
 
-## Disable controllers
+### Disable controllers
 By default kruise controller enables all embeded controllers and watching for all CRDs
 We don't have any CRDs except `AdvancedDaemonSet`
 Every CRD watch has 15 seconds timeout, so kruise-controller takes a lot of time to start and become ready.
