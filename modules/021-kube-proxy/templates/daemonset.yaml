@@ -46,8 +46,6 @@ spec:
     metadata:
       labels:
         k8s-app: kube-proxy
-      annotations:
-        checksum/config: {{ include "ConfigMapData" . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -62,6 +60,10 @@ spec:
         env:
         - name: CLOUD_PROVIDER
           value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
+        - name: POD_SUBNET
+          value: {{ .Values.global.discovery.podSubnet | quote }}
+        - name: CONTROL_PLANE_ADDRESS
+          value: {{ .Values.kubeProxy.internal.clusterMasterAddresses | required "clusterMasterAddresses not discovered" | first | quote }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config

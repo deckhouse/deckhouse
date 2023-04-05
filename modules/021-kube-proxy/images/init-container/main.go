@@ -56,7 +56,7 @@ func main() {
 			{
 				Name: "default",
 				Cluster: configv1.Cluster{
-					Server:               controlPlaneAddress,
+					Server:               "https://" + controlPlaneAddress,
 					CertificateAuthority: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 				},
 			},
