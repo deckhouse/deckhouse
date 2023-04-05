@@ -30,7 +30,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::", func() {
+var _ = FDescribe("Modules :: nodeManager :: hooks :: update_approval_draining ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
@@ -58,21 +58,37 @@ metadata:
     node.deckhouse.io/group: "master"
   annotations:
     update.node.deckhouse.io/draining: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker-2
+  labels:
+    node.deckhouse.io/group: "master"
+  annotations:
+    update.node.deckhouse.io/draining: "user"
 `)
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			testMoveNodesToStaticClient(f)
 			f.RunHook()
 		})
 
 		It("Must be drained", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			node := f.KubernetesGlobalResource("Node", "wor-ker")
-			Expect(node.Field("metadata.annotations.\"update.node.deckhouse.io/drained\"").String()).To(BeEmpty())
-			Expect(node.Field("metadata.annotations.\"update.node.deckhouse.io/draining\"").Exists()).To(BeFalse())
-			Expect(node.Field("metadata.spec.unschedulable").Exists()).To(BeFalse())
+			Expect(node.Field("metadata.annotations.update\\.node\\.deckhouse\\.io/drained").String()).To(Equal("bashible"))
+			Expect(node.Field("metadata.annotations.update\\.node\\.deckhouse\\.io/draining").Exists()).To(BeFalse())
+			k8sClient := f.BindingContextController.FakeCluster().Client
+			node1Core, _ := k8sClient.CoreV1().Nodes().Get(context.Background(), "wor-ker", v1.GetOptions{})
+			Expect(node1Core.Spec.Unschedulable).To(BeTrue())
+
+			node2 := f.KubernetesGlobalResource("Node", "wor-ker-2")
+			Expect(node2.Field("metadata.annotations.update\\.node\\.deckhouse\\.io/drained").String()).To(Equal("user"))
+			Expect(node2.Field("metadata.annotations.update\\.node\\.deckhouse\\.io/draining").Exists()).To(BeFalse())
 		})
 	})
 
-	Context("draining_nodes", func() {
+	FContext("draining_nodes", func() {
 		var initialState = `
 ---
 apiVersion: deckhouse.io/v1
@@ -115,16 +131,7 @@ data:
 					BeforeEach(func() {
 						f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable))
 						f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-						k8sClient := f.BindingContextController.FakeCluster().Client
-						// BindingContexts work with Dynamic client but drainHelper works with CoreV1 from kubernetes.Interface client
-						// copy nodes to the static client for appropriate testing
-						nodesList, _ := k8sClient.Dynamic().Resource(schema.GroupVersionResource{Resource: "nodes", Version: "v1"}).List(context.Background(), v1.ListOptions{})
-						for _, obj := range nodesList.Items {
-							var n corev1.Node
-							_ = sdk.FromUnstructured(&obj, &n)
-							_ = k8sClient.CoreV1().Nodes().Delete(context.Background(), n.Name, v1.DeleteOptions{})
-							_, _ = k8sClient.CoreV1().Nodes().Create(context.Background(), &n, v1.CreateOptions{})
-						}
+						testMoveNodesToStaticClient(f)
 						f.RunHook()
 					})
 
@@ -134,6 +141,7 @@ data:
 							if draining {
 								By(fmt.Sprintf("%s must have /drained", nodeName), func() {
 									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
+									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).String()).To(Equal("bashible"))
 								})
 
 								By(fmt.Sprintf("%s must not have /draining", nodeName), func() {
@@ -161,3 +169,17 @@ data:
 		}
 	})
 })
+
+// BindingContexts work with Dynamic client but drainHelper works with CoreV1 from kubernetes.Interface client
+// copy nodes to the static client for appropriate testing
+func testMoveNodesToStaticClient(f *HookExecutionConfig) {
+	k8sClient := f.BindingContextController.FakeCluster().Client
+
+	nodesList, _ := k8sClient.Dynamic().Resource(schema.GroupVersionResource{Resource: "nodes", Version: "v1"}).List(context.Background(), v1.ListOptions{})
+	for _, obj := range nodesList.Items {
+		var n corev1.Node
+		_ = sdk.FromUnstructured(&obj, &n)
+		_ = k8sClient.CoreV1().Nodes().Delete(context.Background(), n.Name, v1.DeleteOptions{})
+		_, _ = k8sClient.CoreV1().Nodes().Create(context.Background(), &n, v1.CreateOptions{})
+	}
+}
