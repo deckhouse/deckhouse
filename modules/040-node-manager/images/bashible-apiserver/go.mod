@@ -11,6 +11,7 @@ require (
 	github.com/flant/kube-client v0.0.6
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-openapi/spec v0.20.2
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.17.0
 	github.com/pkg/errors v0.9.1
