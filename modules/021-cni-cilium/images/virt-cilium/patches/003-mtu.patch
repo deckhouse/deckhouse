@@ -1,9 +1,9 @@
 diff --git a/plugins/cilium-cni/cilium-cni.go b/plugins/cilium-cni/cilium-cni.go
-index 0bbde3be7b..b327bc16f1 100644
+index 5eca17daeb..acdd6722be 100644
 --- a/plugins/cilium-cni/cilium-cni.go
 +++ b/plugins/cilium-cni/cilium-cni.go
-@@ -411,7 +411,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
- 			peer      *netlink.Link
+@@ -495,7 +495,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
+ 			peer      netlink.Link
  			tmpIfName string
  		)
 -		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.DeviceMTU), ep)
