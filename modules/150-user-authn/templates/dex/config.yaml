@@ -14,6 +14,9 @@
   frontend:
     issuer: "Kubernetes Dex"
     logoUrl: "https://kubernetes.io/images/favicon.png"
+    extra:
+      # TODO(nabokihms): make it configurable
+      lang: en
   expiry:
     authRequests: "10m"
     signingKeys: "6h"

@@ -22,7 +22,7 @@ RUN mkdir -p /etc/dex
 RUN chown -R 1001:1001 /etc/dex
 
 COPY --from=artifact /dex/dex /usr/local/bin/
-COPY --from=artifact /dex/web /web
+COPY web /web
 
 USER 1001:1001
 
