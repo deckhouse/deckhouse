@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -14,16 +15,16 @@ import (
 
 var (
 	chainName            = "ingress-failover"
-	jumpRule             = "-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j ingress-failover"
-	socketExistsRule     = "-m socket --nowildcard -m mark ! --mark 3 -j RETURN"
-	markHttpRule         = "-p tcp --dport 80 -j CONNMARK --set-mark 3"
-	markHttpsRule        = "-p tcp --dport 443 -j CONNMARK --set-mark 3"
-	saveMarkRule         = "-j CONNMARK --save-mark"
-	restoreHttpMarkRule  = "-p tcp --dport 80 -j CONNMARK --restore-mark"
-	restoreHttpsMarkRule = "-p tcp --dport 443 -j CONNMARK --restore-mark"
-	dnatHttpRule         = "-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81"
-	dnatHttpsRule        = "-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444"
-	inputAcceptRule      = "-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT"
+	jumpRule             = strings.Fields("-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j ingress-failover")
+	socketExistsRule     = strings.Fields("-m socket --nowildcard -m mark ! --mark 3 -j RETURN")
+	markHttpRule         = strings.Fields("-p tcp --dport 80 -j CONNMARK --set-mark 3")
+	markHttpsRule        = strings.Fields("-p tcp --dport 443 -j CONNMARK --set-mark 3")
+	saveMarkRule         = strings.Fields("-j CONNMARK --save-mark")
+	restoreHttpMarkRule  = strings.Fields("-p tcp --dport 80 -j CONNMARK --restore-mark")
+	restoreHttpsMarkRule = strings.Fields("-p tcp --dport 443 -j CONNMARK --restore-mark")
+	dnatHttpRule         = strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81")
+	dnatHttpsRule        = strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444")
+	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
 )
@@ -40,7 +41,7 @@ func main() {
 	}
 
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
-	err = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule)
+	err = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,27 +66,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 1, socketExistsRule)
+	err = iptablesMgr.Insert("nat", chainName, 1, socketExistsRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 2, markHttpRule)
+	err = iptablesMgr.Insert("nat", chainName, 2, markHttpRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 3, markHttpsRule)
+	err = iptablesMgr.Insert("nat", chainName, 3, markHttpsRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 4, saveMarkRule)
+	err = iptablesMgr.Insert("nat", chainName, 4, saveMarkRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 5, dnatHttpRule)
+	err = iptablesMgr.Insert("nat", chainName, 5, dnatHttpRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = iptablesMgr.Insert("nat", chainName, 6, dnatHttpsRule)
+	err = iptablesMgr.Insert("nat", chainName, 6, dnatHttpsRule...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,16 +126,16 @@ func loop(iptablesMgr *iptables.IPTables) error {
 		return insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
 	}
 
-	return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule)
+	return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
 }
 
-func insertUnique(iptablesMgr *iptables.IPTables, table, chain, rule string, pos int) error {
-	ok, err := iptablesMgr.Exists(table, chain, rule)
+func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {
+	ok, err := iptablesMgr.Exists(table, chain, rule...)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		err := iptablesMgr.Insert(table, chain, pos, rule)
+		err := iptablesMgr.Insert(table, chain, pos, rule...)
 		if err != nil {
 			return err
 		}

@@ -22,7 +22,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = insertUnique(iptablesMgr, "filter", "INPUT", "-m conntrack --ctstate INVALID -j DROP", 1)
+	err = insertUnique(iptablesMgr, "filter", "INPUT", strings.Fields("-m conntrack --ctstate INVALID -j DROP"), 1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,13 +91,13 @@ func getInternalAndExternalIPs(nodeName string) (internalIPs []string, externalI
 	return
 }
 
-func insertUnique(iptablesMgr *iptables.IPTables, table, chain, rule string, pos int) error {
-	ok, err := iptablesMgr.Exists(table, chain, rule)
+func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {
+	ok, err := iptablesMgr.Exists(table, chain, rule...)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		err := iptablesMgr.Insert(table, chain, pos, rule)
+		err := iptablesMgr.Insert(table, chain, pos, rule...)
 		if err != nil {
 			return err
 		}
