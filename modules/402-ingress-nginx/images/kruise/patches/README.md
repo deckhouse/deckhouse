@@ -1,4 +1,4 @@
-# Patches
+## Patches
 
 ### Disable controllers
 By default kruise controller enables all embeded controllers and watching for all CRDs
