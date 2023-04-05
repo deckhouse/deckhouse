@@ -3,51 +3,52 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: Объект Descheduler — это описание одного экземпляра descheduler
+          description: Объект Descheduler — это описание одного экземпляра descheduler.
           properties:
             spec:
-              description: Spec описывает поведение экземпляра descheduler
+              description: Описывает поведение экземпляра descheduler.
               properties:
                 deploymentTemplate:
-                  description: Описание шаблона Deployment'а descheduler
+                  description: Описание шаблона Deployment'а descheduler.
                 deschedulerPolicy:
-                  description: globalParameters и strategies идентичны официальной документации https://github.com/kubernetes-sigs/descheduler#policy-and-strategies
+                  description: |
+                    `globalParameters` и `strategies` идентичны [официальной документации](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
                   properties:
                     globalParameters:
-                      description: Параметры, применяемые ко всем политика
+                      description: Параметры, применяемые ко всем политикам.
                       properties:
                         evictFailedBarePods:
-                          description: EvictFailedBarePods разрешает эвиктить поды без ownerReferences или в состоянии Failed
+                          description: Разрешает эвиктить (evict) Поды без `ownerReferences` или в состоянии `Failed`.
                         evictLocalStoragePods:
-                          description: EvictLocalStoragePods разрешает эвиктить поды, использующие local storage
+                          description: Разрешает эвиктить (evict) Поды, использующие локальное хранилище (local storage).
                         evictSystemCriticalPods:
-                          description: EvictSystemCriticalPods разрешает эвиктить поды с любым priority (даже системные)
+                          description: Разрешает эвиктить (evict) Поды с любым `priority` (даже системные).
                         ignorePvcPods:
-                          description: IgnorePVCPods при включении запрещает эвиктить поды с PVC
+                          description: При включении запрещает эвиктить (evict) Поды с PVC.
                         maxNoOfPodsToEvictPerNamespace:
-                          description: MaxNoOfPodsToEvictPerNamespace ограничивает максимальное количество подов для одновременного эвикта, разделённое по Namespace'ам
+                          description: Ограничивает максимальное количество Подов для одновременного эвикта (evict), разделённое по пространствам имен (Namespace).
                         maxNoOfPodsToEvictPerNode:
-                          description: MaxNoOfPodsToEvictPerNode ограничивает максимальное количество подов для одновременного эвикта, разделённое по Node'ам
+                          description: Ограничивает максимальное количество Подов для одновременного эвикта (evict), разделённое по узлам.
                     strategies:
-                      description: Список стратегий с их параметрами
+                      description: Список стратегий с их параметрами.
                       properties:
                         highNodeUtilization:
                           description: >
-                            Эта стратегия находит перегруженные ноды и эвиктит с них поды в надежде, что эти поды
-                            будут отправлены на менее загруженные ноды.
+                            Эта стратегия находит перегруженные узлы и эвиктит (evict) с них Поды, в надежде что эти Поды
+                            будут отправлены на менее загруженные узлы.
                           properties:
                             nodeFilter: &node-filter
-                              description: Ограничивает список нод, к которым применится эта стратегия.
+                              description: Ограничивает список узлов, к которым применится эта стратегия.
                             priorityFilter: &priority-filter
-                              description: Только поды с priority будут учитываться в этой стратегии
+                              description: Только Поды с `priority` будут учитываться в этой стратегии.
                             namespaceFilter: &namespace-filter
-                              description: Ограничивает список Namespaces, к которым применяется данная стратегия.
+                              description: Ограничивает список пространств имен (Namespace), к которым применяется данная стратегия.
                             nodeFit: &node-fit
-                              description: Если включена, то перед эвиктом пода descheduler будет проверить, "поместится" ли он на другую ноду
+                              description: Если включена, то перед эвиктом (evict) Пода descheduler будет проверять — "поместится" ли он на другой узел.
                         lowNodeUtilization:
                           description: >
-                            Эта стратегия находит недогруженные ноды и эвиктит с них поды в надежде, что эти поды
-                            будут отправлены на другие ноды, чтобы уплотнить загрузку нод.
+                            Эта стратегия находит недогруженные узлы и эвиктит (evict) с них Поды, в надежде что эти Поды
+                            будут отправлены на другие узлы, чтобы уплотнить загрузку узлов.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
@@ -55,50 +56,50 @@ spec:
                             nodeFit: *node-fit
                         removeDuplicates:
                           description: >
-                            Эта стратегия эвиктит поды, принадлежащие одному контроллеру
-                            (ReplicaSet (RS), ReplicationController (RC), StatefulSet), но находяющиеся на одной ноде.
+                            Эта стратегия эвиктит (evict) Поды принадлежащие одному контроллеру
+                            (ReplicaSet (RS), ReplicationController (RC), StatefulSet), но находящиеся на одном узле.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removeFailedPods:
-                          description: Эта стратегия эвиктит поды в состоянии Failed.
+                          description: Эта стратегия эвиктит (evict) Поды в состоянии Failed.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removePodsHavingTooManyRestarts:
-                          description: Эта стратегия эвиктит поды, у которых слишком много рестартов.
+                          description: Эта стратегия эвиктит (evict) Поды, у которых слишком много рестартов.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removePodsViolatingInterPodAntiAffinity:
-                          description: Эта стратегия эвиктит поды, нарушающие interpod anti-affinity.
+                          description: Эта стратегия эвиктит (evict) Поды, нарушающие interpod anti-affinity.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removePodsViolatingNodeAffinity:
-                          description: Эта стратегия эвиктит поды, нарушающие node affinity.
+                          description: Эта стратегия эвиктит (evict) Поды, нарушающие node affinity.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removePodsViolatingNodeTaints:
-                          description: Эта стратегия эвиктит поды, нарушающие NoSchedule taints.
+                          description: Эта стратегия эвиктит (evict) Поды, нарушающие NoSchedule taints.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
                             namespaceFilter: *namespace-filter
                             nodeFit: *node-fit
                         removePodsViolatingTopologySpreadConstraint:
-                          description: Эта стратегия эвиктит поды, нарушающие topology spread constraints.
+                          description: Эта стратегия эвиктит (evict) Поды, нарушающие topology spread constraints.
                           properties:
                             nodeFilter: *node-filter
                             priorityFilter: *priority-filter
