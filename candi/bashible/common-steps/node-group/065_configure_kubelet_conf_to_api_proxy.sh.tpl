@@ -47,6 +47,6 @@ current-context: d8-context
 preferences: {}
 EOF
 
-# CIS compliance purposes
+# CIS becnhmark purposes
 chmod 600 /etc/kubernetes/kubelet.conf
 {{- end }}

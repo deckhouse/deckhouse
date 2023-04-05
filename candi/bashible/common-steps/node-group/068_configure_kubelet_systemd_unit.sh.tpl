@@ -95,4 +95,5 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
     --v=2
 EOF
 
+# CIS becnhmark purposes
 chmod 600 /etc/systemd/system/kubelet.service.d/10-deckhouse.conf

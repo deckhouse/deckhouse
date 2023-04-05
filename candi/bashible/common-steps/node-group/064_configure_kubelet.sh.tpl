@@ -217,7 +217,7 @@ tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_
 serverTLSBootstrap: true
 {{- end }}
 {{/*
-RotateKubeletServerCertificate default is true, but CIS wants it to be explicitly enabled
+RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
@@ -264,5 +264,5 @@ shutdownGracePeriod: ${shutdownGracePeriod}
 shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 EOF
 
-# CIS compliance purposes
+# CIS becnhmark purposes
 chmod 600 /var/lib/kubelet/config.yaml

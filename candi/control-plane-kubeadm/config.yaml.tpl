@@ -1,5 +1,5 @@
 {{/*
-RotateKubeletServerCertificate default is true, but CIS wants it to be explicitly enabled
+RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "EndpointSliceTerminatingCondition=true" "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
