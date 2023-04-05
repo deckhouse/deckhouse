@@ -1,5 +1,5 @@
 diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
-index b8acb37..e31861e 100644
+index b8acb37..52e81b6 100644
 --- a/pkg/collector/config/node-info-1.0.yaml
 +++ b/pkg/collector/config/node-info-1.0.yaml
 @@ -36,9 +36,9 @@ collectors:
@@ -116,46 +116,44 @@ index b8acb37..e31861e 100644
    - key: kubeletMakeIptablesUtilChainsArgumentSet
      title: kubelet --make-iptables-util-chains argument is set
      nodeType: worker
-@@ -190,34 +183,28 @@ collectors:
+@@ -190,34 +183,26 @@ collectors:
      audit: ps -ef | grep kubelet |grep ' --event-qps' | grep -o '
        --event-qps=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
    - key: kubeletTlsCertFileTlsArgumentSet
 -    title: kubelet --tls-cert-file argument is set
-+    title: kubelet --tls-cert-file argument is set (THIS IS DONE BY BASHIBLE)
++    title: kubelet --tls-cert-file argument is set (THIS IS DONE BY BASHIBLE in certs-dir)
      nodeType: worker
 -    audit: ps -ef | grep kubelet |grep ' --tls-cert-file' | grep -o '
 -      --tls-cert-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
 +    audit: echo proper.crt
    - key: kubeletTlsPrivateKeyFileArgumentSet
 -    title: kubelet --tls-private-key-file argument is set
-+    title: kubelet --tls-private-key-file argument is set (THIS IS DONE BY BASHIBLE)
++    title: kubelet --tls-private-key-file argument is set (THIS IS DONE BY BASHIBLE in certs-dir)
      nodeType: worker
 -    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
 -      --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
 +    audit: echo proper.key
    - key: kubeletRotateCertificatesArgumentSet
--    title: kubelet --rotate-certificates argument is set
-+    title: kubelet --rotate-certificates argument is set (THIS IS DONE BY BASHIBLE)
+     title: kubelet --rotate-certificates argument is set
      nodeType: worker
 -    audit: ps -ef | grep kubelet |grep ' --rotate-certificates' | grep -o '
 -      --rotate-certificates=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
-+    audit: echo true
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'rotateCertificates: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
    - key: kubeletRotateKubeletServerCertificateArgumentSet
--    title: kubelet RotateKubeletServerCertificate argument is set
-+    title: kubelet RotateKubeletServerCertificate argument is set (THIS IS DONE BY BASHIBLE)
+     title: kubelet RotateKubeletServerCertificate argument is set
      nodeType: worker
 -    audit: ps -ef | grep kubelet |grep 'RotateKubeletServerCertificate' | grep -o
 -      'RotateKubeletServerCertificate=[^"]\S*' | awk -F "=" '{print $2}' |awk
 -      'FNR <= 1'
-+    audit: echo true
-   - key: kubeletRotateKubeletServerCertificateArgumentSet
+-  - key: kubeletRotateKubeletServerCertificateArgumentSet
 -    title: kubelet RotateKubeletServerCertificate argument is set
-+    title: kubelet RotateKubeletServerCertificate argument is set (THIS IS DONE BY BASHIBLE)
-     nodeType: worker
+-    nodeType: worker
 -    audit: ps -ef | grep kubelet |grep 'RotateKubeletServerCertificate' | grep -o
 -      'RotateKubeletServerCertificate=[^"]\S*' | awk -F "=" '{print $2}' |awk
 -      'FNR <= 1'
-+    audit: echo true
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o '  RotateKubeletServerCertificate: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
    - key: kubeletOnlyUseStrongCryptographic
      title: Kubelet only makes use of Strong Cryptographic
      nodeType: worker
