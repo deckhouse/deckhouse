@@ -218,6 +218,7 @@ serverTLSBootstrap: true
 {{- end }}
 featureGates:
   ExpandCSIVolumes: true
+  RotateKubeletServerCertificate: true
 {{- if semverCompare "<1.23" .kubernetesVersion }}
   EphemeralContainers: true
 {{- end }}
