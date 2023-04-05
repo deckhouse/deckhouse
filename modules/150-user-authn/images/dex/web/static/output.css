@@ -420,14 +420,16 @@ video {
 }
 
 html {
-  min-height: 100vh;
+  display: flex;
+  min-height: 100%;
   min-width: 800px;
+  flex-direction: column;
   --tw-text-opacity: 1;
   color: rgb(30 41 59 / var(--tw-text-opacity));
 }
 
 body {
-  min-height: 100vh;
+  flex-grow: 1;
   --tw-bg-opacity: 1;
   background-color: rgb(11 53 118 / var(--tw-bg-opacity));
 }
@@ -531,8 +533,8 @@ body {
   top: 0px;
   left: 0px;
   z-index: -20;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100%;
+  min-width: 100%;
   -o-object-fit: cover;
      object-fit: cover;
   opacity: 0;
@@ -546,8 +548,8 @@ body {
   top: 0px;
   left: 0px;
   z-index: -10;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100%;
+  min-width: 100%;
   background-color: rgb(0 100 255 / var(--tw-bg-opacity));
   --tw-bg-opacity: 0.75;
 }

@@ -4,19 +4,19 @@
 
 @layer base {
   html {
-    @apply min-h-[100vh] min-w-[800px] text-slate-800;
+    @apply min-h-[100%] flex flex-col min-w-[800px] text-slate-800;
   }
   body {
-    @apply min-h-[100vh] bg-[#0b3576];
+    @apply grow bg-[#0b3576];
   }
 }
 
 @layer components {
   .bg-video {
-    @apply object-cover w-[100vw] h-[100vh] fixed top-0 left-0 -z-20 opacity-0 transition-opacity duration-500;
+    @apply object-cover min-w-[100%] min-h-[100%] fixed top-0 left-0 -z-20 opacity-0 transition-opacity duration-500;
   }
   .bg-video-overlay {
-    @apply bg-[#0064ff] bg-opacity-75 w-[100vw] h-[100vh] fixed top-0 left-0 -z-10;
+    @apply bg-[#0064ff] bg-opacity-75 min-w-[100%] min-h-[100%] fixed top-0 left-0 -z-10;
   }
   body.loaded .bg-video {
     @apply opacity-100;
