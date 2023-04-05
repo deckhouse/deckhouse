@@ -12,8 +12,11 @@
   telemetry:
     http: 127.0.0.1:5558
   frontend:
-    issuer: "Kubernetes Dex"
-    logoUrl: "https://kubernetes.io/images/favicon.png"
+    issuer: "Deckhouse"
+    dir: /web
+    extra:
+      # TODO(nabokihms): make it configurable
+      lang: en
   expiry:
     authRequests: "10m"
     signingKeys: "6h"

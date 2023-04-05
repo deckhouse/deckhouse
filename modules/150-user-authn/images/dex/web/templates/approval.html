@@ -1,0 +1,76 @@
+{{ template "header.html" . }}
+
+<div class="content">
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      Grant Access
+      {{ else }}
+      Запрос доступа
+      {{ end }}
+  </h2>
+
+  <div class="card">
+    {{ if .Scopes }}
+    <div class="card-title">
+        {{ if eq (extra "lang") "en" }}
+        {{ .Client }} would like to:
+        {{ else }}
+        {{ .Client }} получит доступ к:
+        {{ end }}
+    </div>
+    <ul class="list-checked">
+      {{ range $scope := .Scopes }}
+      <li>
+        {{ template "_check_icon.html" . }}
+        <span>
+          {{ $scope }}
+        </span>
+      </li>
+      {{ end }}
+    </ul>
+    {{ else }}
+      <div class="card-title">
+          {{ if eq (extra "lang") "en" }}
+          {{ .Client }} has not requested any personal information:
+          {{ else }}
+          {{ .Client }} не запрашивает доступа к персональной информации
+          {{ end }}
+      </div>
+    {{ end }}
+  </div>
+
+  <div class="grid">
+    <div>
+      <form method="post">
+        <input type="hidden" name="req" value="{{ .AuthReqID }}"/>
+        <input type="hidden" name="approval" value="approve">
+        <button type="submit" class="btn btn-primary">
+            {{ if eq (extra "lang") "en" }}
+            Grant Access
+            {{ else }}
+            Выдать доступ
+            {{ end }}
+          <img src="{{ url $.ReqPath "static/img/next-icon.svg" }}" />
+        </button>
+      </form>
+    </div>
+    <div>
+      <form method="post">
+        <input type="hidden" name="req" value="{{ .AuthReqID }}"/>
+        <input type="hidden" name="approval" value="rejected">
+        <button type="submit" class="btn btn-primary-outline">
+          <img src="{{ url $.ReqPath "static/img/prev-icon.svg" }}" />
+            {{ if eq (extra "lang") "en" }}
+            Cancel
+            {{ else }}
+            Отменить
+            {{ end }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+{{ template "footer.html" . }}
+
