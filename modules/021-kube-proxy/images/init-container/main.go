@@ -45,7 +45,7 @@ func main() {
 		controlPlaneAddress = apiProxyAddress
 	}
 
-	nodePortBindInternalIP, err := getNodePortBindInternalIP()
+	nodePortBindInternalIP, err := getNodePortBindInternalIP(controlPlaneAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -124,11 +124,12 @@ func main() {
 	}
 }
 
-func getNodePortBindInternalIP() (string, error) {
+func getNodePortBindInternalIP(apiAddress string) (string, error) {
 	inClusterConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return "", err
 	}
+	inClusterConfig.Host = "https://" + apiAddress
 
 	clientSet, err := kubernetes.NewForConfig(inClusterConfig)
 	if err != nil {
