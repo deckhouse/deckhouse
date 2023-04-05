@@ -648,14 +648,14 @@ spec:
                         - memory
                         - type
                         - whenFull
-                  properities:
+                  properties:
                     type:
                       type: string
                       description: The type of buffer to use.
                       enum: ["Disk", "Memory"]
                     disk:
                       type: object
-                      properities:
+                      properties:
                         maxSize:
                           description: |
                             The maximum size of the buffer on disk.
@@ -671,7 +671,7 @@ spec:
                           x-kubernetes-int-or-string: true
                     memory:
                       type: object
-                      properities:
+                      properties:
                         maxEvents:
                           description: The maximum number of events allowed in the buffer.
                           type: number

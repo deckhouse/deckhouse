@@ -286,12 +286,12 @@ spec:
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                 buffer:
-                  properities:
+                  properties:
                     type:
                       type: string
                       description: Тип буффера для использования.
                     disk:
-                      properities:
+                      properties:
                         maxSize:
                           description: |
                             Максимальный размер буффера н диске.
@@ -300,7 +300,7 @@ spec:
                             Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: E, P, T, G, M, k, Ei, Pi, Ti, Gi, Mi, Ki.
                             Подробнее об указании ресурсов: [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/), [единицы ресурсов памяти](https://kubernetes.io/docs/ концепции/конфигурация/управление-ресурсами-контейнерами/#значение-из-памяти)
                     memory:
-                      properities:
+                      properties:
                         maxEvents:
                           description: Максимальное количество событий в буффере.
                     whenFull:
