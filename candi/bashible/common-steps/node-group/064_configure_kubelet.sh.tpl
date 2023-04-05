@@ -264,4 +264,5 @@ shutdownGracePeriod: ${shutdownGracePeriod}
 shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 EOF
 
+# CIS compliance purposes
 chmod 600 /var/lib/kubelet/config.yaml
