@@ -279,24 +279,24 @@ spec:
                           properties:
                             notRegex:
                               type: string
-                              description: Regex string, which treats as match only strings that DOESN'T match regex.
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
                             regex:
                               type: string
-                              description: Regex string, which treats as match only strings that match regex.
+                              description: Regex string, which treats as match only strings that match the regex.
                         endsWhen:
                           type: object
                           description: |
-                            It's a condition to distinguish the last log line of multiline log.
+                            It's a condition to distinguish the last log line of the multiline log.
                           oneOf:
                             - required: [regex]
                             - required: [notRegex]
                           properties:
                             notRegex:
                               type: string
-                              description: Regex string, which treats as match only strings that DOESN'T match regex.
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
                             regex:
                               type: string
-                              description: Regex string, which treats as match only strings that match regex.
+                              description: Regex string, which treats as match only strings that match the regex.
                 clusterDestinationRefs:
                   type: array
                   description: Array of `ClusterLogDestination` CustomResource names which this source will output with.
