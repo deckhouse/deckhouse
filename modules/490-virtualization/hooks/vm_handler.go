@@ -258,6 +258,10 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 
 	// attach boot disk
 	if d8vm.Spec.BootDisk != nil {
+		bus := d8vm.Spec.BootDisk.Bus
+		if bus == "" {
+			bus = virtv1.DiskBusVirtio
+		}
 		bootVirtualMachineDiskName := d8vm.Spec.BootDisk.Name
 		if bootVirtualMachineDiskName == "" {
 			bootVirtualMachineDiskName = d8vm.Name + "-boot"
@@ -266,7 +270,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 			Name: "boot",
 			DiskDevice: virtv1.DiskDevice{
 				Disk: &virtv1.DiskTarget{
-					Bus: "virtio",
+					Bus: bus,
 				},
 			},
 		})
@@ -298,9 +302,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 		vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, virtv1.Disk{
 			Name: "cloudinit",
 			DiskDevice: virtv1.DiskDevice{
-				Disk: &virtv1.DiskTarget{
-					Bus: "virtio",
-				},
+				Disk: &virtv1.DiskTarget{},
 			},
 		})
 		vm.Spec.Template.Spec.Volumes = append(vm.Spec.Template.Spec.Volumes, virtv1.Volume{
@@ -315,11 +317,15 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine, ipAdd
 	if d8vm.Spec.DiskAttachments != nil {
 		for i, disk := range *d8vm.Spec.DiskAttachments {
 			diskName := "disk-" + strconv.Itoa(i+1)
+			bus := disk.Bus
+			if bus == "" {
+				bus = virtv1.DiskBusVirtio
+			}
 			vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, virtv1.Disk{
 				Name: diskName,
 				DiskDevice: virtv1.DiskDevice{
 					Disk: &virtv1.DiskTarget{
-						Bus: disk.Bus,
+						Bus: bus,
 					},
 				},
 			})
