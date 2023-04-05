@@ -23,11 +23,8 @@ rules:
 - apiGroups: [""]
   resources:
   - serviceaccounts
-  - namespaces
   verbs:
   - get
-  - list
-  - watch
 - apiGroups:
   - extensions
   - apps
