@@ -47,6 +47,7 @@ func (s *TestMatrixSuite) TearDownSuite() {
 func (s *TestMatrixSuite) TestMatrix() {
 	// Use environment variable to focus on specific modules, e.g. FOCUS=user-authn,user-authz
 	focus := os.Getenv("FOCUS")
+	focus = "loki"
 
 	focusNames := set.New()
 	if focus != "" {

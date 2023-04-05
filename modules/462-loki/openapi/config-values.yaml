@@ -4,27 +4,44 @@ properties:
     oneOf:
       - type: string
       - type: boolean
-        enum: [false]
-    x-examples: [false, "default"]
-    description: |
+        enum:
+          - false
+    x-examples:
+      - false
+      - default
+    description: >
       The name of the StorageClass to use.
 
-      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, either the [global StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing Loki PVC is used. If there is
+      no PVC yet, either the [global
+      StorageClass](../../deckhouse-configure-global.html#parameters-storageclass)
+      or `global.discovery.defaultStorageClass` is used, and if those are
+      undefined, the emptyDir volume is used to store the data.
 
-      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
+      `storageClass: false` — forces the `emptyDir` usage. You will need to
+      delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** Setting a value other than the current one (in the existing PVC) will cause the Loki volume to be re-provisioned and the data to be lost.
+      **CAUTION!** Setting a value other than the current one (in the existing
+      PVC) will cause the Loki volume to be re-provisioned and the data to be
+      lost.
   diskSizeGigabytes:
     type: integer
-    description: |
-      Disk size for log storage or PVC size when specifying the [storageClass](#parameters-storageclass) parameters.
+    description: >
+      Disk size for log storage or PVC size when specifying the
+      [storageClass](#parameters-storageclass) parameters.
 
-      You should manually specify the required disk size for storing logs for the period defined by the `retentionPeriodHours` parameter.
+      You should manually specify the required disk size for storing logs for
+      the period defined by the `retentionPeriodHours` parameter.
+
       Loki cannot automatically delete old data when the disk is full.
 
-      The [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects) module automatically monitors the percentage of used disk space.
+      The
+      [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects)
+      module automatically monitors the percentage of used disk space.
 
-      **CAUTION!** If the Loki data disk becomes full, the application will stop working. You must find the right balance between `retentionPeriodHours` and `diskSizeGigabytes` values.
+      **CAUTION!** If the Loki data disk becomes full, the application will stop
+      working. You must find the right balance between `retentionPeriodHours`
+      and `diskSizeGigabytes` values.
     x-doc-default: 2
     default: 2
   retentionPeriodHours:
@@ -45,16 +62,18 @@ properties:
     type: object
     additionalProperties:
       type: string
-    description: |
+    description: >
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined
+      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
-    description: |
+    description: >
       The same as the Pods' `spec.tolerations` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined
+      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -69,135 +88,156 @@ properties:
           format: int64
         value:
           type: string
-  resourcesRequests:
-    required: ["mode"]
-    type: object
+  resourcesManagement:
     description: |
-      The max amounts of CPU and memory resources the Pod can request when being scheduled on a node.
-
-      If the [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) module is disabled, then these values become the default ones.
+      Loki resources management options.
     default: {}
     x-examples:
-    - mode: VPA
-      vpa:
-        mode: Auto
-        cpu:
-          min: "50m"
-          max: 2
-        memory:
-          min: "256Mi"
-          max: "2Gi"
-    - mode: VPA
-      vpa:
-        mode: Initial
-        cpu:
-          min: 1
-          max: 3000m
-        memory:
-          min: 1024
-          max: 4096
-    - mode: Static
-      static:
-        cpu: "55m"
-        memory: "256Ki"
-    oneOf:
-      - properties:
-          mode:
-            enum: ["VPA"]
-          vpa: {}
-      - properties:
-          mode:
-            enum: ["Static"]
-          static: {}
+      - mode: VPA
+        vpa:
+          mode: Auto
+          cpu:
+            min: 50m
+            max: 2
+            limitRatio: 1.5
+          memory:
+            min: 256Mi
+            max: 2Gi
+            limitRatio: 1.5
+      - mode: Static
+        static:
+          requests:
+            cpu: 55m
+            memory: 256Mi
+          limits:
+            cpu: 2
+            memory: 2Gi
     properties:
       mode:
         type: string
-        description: |
-          The mode for managing resource requests.
-        enum: ["VPA", "Static"]
-        default: "VPA"
+        description: >
+          The mode for managing resource requests. Classical `Static`
+          requests/limit or `VPA`.
+        enum:
+          - VPA
+          - Static
+        default: VPA
       vpa:
         type: object
+        default: {}
         description: |
           Parameters of the VPA mode.
-        required:
-          - mode
-          - cpu
-          - memory
-        default: {}
         properties:
           mode:
             type: string
             description: |
               The VPA usage mode.
-            enum: ["Initial", "Auto"]
-            default: "Initial"
+            enum:
+              - Initial
+              - Auto
+            default: Auto
           cpu:
             type: object
+            default: {}
             description: |
               CPU-related parameters.
-            default: {}
             properties:
               max:
+                description: |
+                  Maximum allowed CPU requests.
+                default: 2
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+m?$"
+                    pattern: '^[0-9]+m?$'
                   - type: number
-                description: |
-                  The max amount of CPU requests the VPA can set.
-                default: "500m"
               min:
+                description: |
+                  Minimum allowed CPU requests.
+                default: 50m
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+m?$"
+                    pattern: '^[0-9]+m?$'
                   - type: number
-                description: |
-                  The min amount of CPU requests the VPA can set.
-                default: "50m"
+              limitRatio:
+                type: number
+                examples:
+                  - 1.5
+                description: >
+                  The coefficient to calculate cpu limits. It is optionally used
+                  to calculate initial limits for Pod. VPA for its part keeps
+                  the initial limits/requests ratio during further resource
+                  tunings.
           memory:
             type: object
+            default: {}
             description: |
               The amount of memory requested.
-            default: {}
             properties:
               max:
+                description: |
+                  Maximum allowed memory requests.
+                default: 2Gi
                 oneOf:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                description: |
-                  The max amount of memory requests the VPA can set.
-                default: "2048Mi"
               min:
+                description: |
+                  Minimum allowed memory requests.
+                default: 256Mi
                 oneOf:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                description: |
-                  The min amount of memory requests the VPA can set.
-                default: "64Mi"
+              limitRatio:
+                type: number
+                examples:
+                  - 1.5
+                description: >
+                  The coefficient to calculate memory limits. It is optionally
+                  used to calculate initial limits for Pod. VPA for its part
+                  keeps the initial limits/requests ratio during further
+                  resource tunings.
       static:
         type: object
         description: |
-          Static mode settings.
-        required:
-          - cpu
-          - memory
-        default: {}
+          Static resource management settings.
         properties:
-          cpu:
-            oneOf:
-              - type: string
-                pattern: "^[0-9]+m?$"
-              - type: number
+          requests:
+            type: object
             description: |
-              CPU requests.
-            default: "50m"
-          memory:
-            oneOf:
-              - type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-              - type: number
+              Requests configuration.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+                description: |
+                  CPU requests.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Memory requests.
+          limits:
+            type: object
             description: |
-              Memory requests.
-            default: "64Mi"
+              Limits configuration.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+                description: |
+                  CPU limits.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Memory limits.
