@@ -56,30 +56,15 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       initContainers:
-      - name: api-proxy-check
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "initContainer") }}
-        command: ["/api-proxy-check.sh"]
-        volumeMounts:
-        - mountPath: /var/lib/kube-proxy
-          name: config
-        - mountPath: /var/lib/kube-proxy-cm
-          name: kube-proxy-cm
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: nodeport-bind-address
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "initContainer") }}
-        command: ["/nodeport-bind-address.sh"]
         env:
         - name: CLOUD_PROVIDER
           value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config
-        - mountPath: /var/lib/kube-proxy-cm
-          name: kube-proxy-cm
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -152,9 +137,6 @@ spec:
       volumes:
       - name: config
         emptyDir: {}
-      - name: kube-proxy-cm
-        configMap:
-          name: d8-kube-proxy
       - name: xtables-lock
         hostPath:
           path: /run/xtables.lock
