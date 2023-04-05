@@ -50,7 +50,7 @@ func main() {
 		log.Fatalf("Both InternalIPs and ExternalIPs are empty for Node %q", hostname)
 	}
 
-	var flannelArgs []string
+	flannelArgs := os.Args[1:]
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
 	}
