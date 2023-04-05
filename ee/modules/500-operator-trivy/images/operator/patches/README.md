@@ -6,7 +6,7 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 
 ## 002-skip-some-checks.patch
 
-Skip some defseq checks due to their absurdity.
+Skip some defseq checks for proper reports result.
 
 ## 003-fix-defsec-lib-for-cis-compability.patch
 
