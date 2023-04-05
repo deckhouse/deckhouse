@@ -14,7 +14,7 @@ COPY patches/004-fix-defsec-lib-for-deckhouse-setup.patch /src
 
 RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
-    patch -p1 < 002-fix-defsec-lib-for-cis-compability.patch && \
+    patch -p1 < 003-fix-defsec-lib-for-cis-compability.patch && \
     patch -p1 < 004-fix-defsec-lib-for-deckhouse-setup.patch
 
 RUN CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
