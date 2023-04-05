@@ -210,7 +210,7 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     exit 0
