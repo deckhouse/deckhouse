@@ -50,6 +50,15 @@ func main() {
 		log.Fatalf("Both InternalIPs and ExternalIPs are empty for Node %q", hostname)
 	}
 
+	cniConfBytes, err := os.ReadFile("/etc/kube-flannel/cni-conf.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = os.WriteFile("/etc/cni/net.d/10-flannel.conflist", cniConfBytes, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	flannelArgs := os.Args[1:]
 	for _, ip := range allIPs {
 		flannelArgs = append(flannelArgs, "-iface", ip)
