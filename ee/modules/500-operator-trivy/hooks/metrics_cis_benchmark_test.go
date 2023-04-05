@@ -50,7 +50,7 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: metrics for cis benchmar
 		})
 	})
 
-	Context(":: cluster_compliance_report_not_ready", func() {
+	Context(":: cis_report_not_ready", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(testGetNotReadyClippedCisBecnmark()))
 			f.RunHook()
@@ -60,24 +60,41 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: metrics for cis benchmar
 		})
 	})
 
-	Context(":: cluster_compliance_report_ready", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testGetReadyClippedCisBecnmark()))
-			f.RunHook()
-		})
+	type cisMetricsTestCase struct {
+		name       string
+		testCase   string
+		totalFails []float64
+	}
 
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
+	cisReports := []cisMetricsTestCase{
+		{name: ":: summary_cis_report_ready", testCase: testGetReadyClippedSummaryCisBecnmark(), totalFails: []float64{0, 0, 10}},
+		{name: ":: detailed_cis_report_ready", testCase: testGetReadyClippedDetailedCisBecnmark(), totalFails: []float64{1, 1, 0}},
+	}
 
-		It("Sets metric proper values", func() {
-			metrics := f.MetricsCollector.CollectedMetrics()
-			metricName := "deckhouse_trivy_cis_benchmark"
-			assertMetric(metrics, metricName, "1.1.1", 0, testGetLabelsMap("1.1.1", "Ensure that the API server pod specification file permissions are set to 600 or more restrictive", "HIGH"))
-			assertMetric(metrics, metricName, "1.1.2", 0, testGetLabelsMap("1.1.2", "Ensure that the API server pod specification file ownership is set to root:root", "MEDIUM"))
-			assertMetric(metrics, metricName, "1.1.3", 10, testGetLabelsMap("1.1.3", "Ensure that the controller manager pod specification file permissions are set to 600 or more restrictive", "LOW"))
+	testGenerateMetrics := func(tc cisMetricsTestCase) {
+		Context(tc.name, func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(tc.testCase))
+				f.RunHook()
+			})
+
+			It("Hook must execute successfully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Sets metric proper values", func() {
+				metrics := f.MetricsCollector.CollectedMetrics()
+				metricName := "deckhouse_trivy_cis_benchmark"
+				assertMetric(metrics, metricName, "1.1.1", tc.totalFails[0], testGetLabelsMap("1.1.1", "Ensure that the API server pod specification file permissions are set to 600 or more restrictive", "HIGH"))
+				assertMetric(metrics, metricName, "1.1.2", tc.totalFails[1], testGetLabelsMap("1.1.2", "Ensure that the API server pod specification file ownership is set to root:root", "MEDIUM"))
+				assertMetric(metrics, metricName, "1.1.3", tc.totalFails[2], testGetLabelsMap("1.1.3", "Ensure that the controller manager pod specification file permissions are set to 600 or more restrictive", "LOW"))
+			})
 		})
-	})
+	}
+
+	for _, tc := range cisReports {
+		testGenerateMetrics(tc)
+	}
 })
 
 func testGetNotReadyClippedCisBecnmark() string {
@@ -135,7 +152,7 @@ spec:
         severity: LOW`
 }
 
-func testGetReadyClippedCisBecnmark() string {
+func testGetReadyClippedSummaryCisBecnmark() string {
 	return testGetNotReadyClippedCisBecnmark() + `
 status:
   summary:
@@ -143,20 +160,65 @@ status:
     passCount: 2
   summaryReport:
     controlCheck:
-    - id: 1.1.1
-      name: Ensure that the API server pod specification file permissions are set
-        to 600 or more restrictive
-      severity: HIGH
-      totalFail: 0
-    - id: 1.1.2
-      name: Ensure that the API server pod specification file ownership is set to
-        root:root
-      severity: MEDIUM
-    - id: 1.1.3
-      name: Ensure that the controller manager pod specification file permissions
-        are set to 600 or more restrictive
-      severity: LOW
-      totalFail: 10`
+      - id: 1.1.1
+        name: Ensure that the API server pod specification file permissions are set
+          to 600 or more restrictive
+        severity: HIGH
+        totalFail: 0
+      - id: 1.1.2
+        name: Ensure that the API server pod specification file ownership is set to
+          root:root
+        severity: MEDIUM
+      - id: 1.1.3
+        name: Ensure that the controller manager pod specification file permissions
+          are set to 600 or more restrictive
+        severity: LOW
+        totalFail: 10`
+}
+func testGetReadyClippedDetailedCisBecnmark() string {
+	return testGetNotReadyClippedCisBecnmark() + `
+status:
+  summary:
+    failCount: 1
+    passCount: 2
+  detailReport:
+    description: CIS Kubernetes Benchmarks
+    id: cis
+    relatedVersion:
+    - https://www.cisecurity.org/benchmark/kubernetes
+    results:
+      - checks:
+          - checkID: 'test'
+            severity: 'severity'
+            success: false
+        description: Ensure that the API server pod specification file has permissions
+          of 600 or more restrictive
+        id: 1.1.1
+        name: Ensure that the API server pod specification file permissions are set to
+          600 or more restrictive
+        severity: HIGH
+      - checks:
+          - checkID: 'test'
+            severity: 'severity'
+            success: false
+        description: Ensure that the API server pod specification file ownership is set
+          to root:root
+        id: 1.1.2
+        name: Ensure that the API server pod specification file ownership is set to root:root
+        severity: MEDIUM
+      - checks:
+          - checkID: 'test'
+            severity: 'severity'
+            success: true
+          - checkID: 'test'
+            severity: 'severity'
+            success: true
+        description: Ensure that the controller manager pod specification file has permissions
+          of 600 or more restrictive
+        id: 1.1.3
+        name: Ensure that the controller manager pod specification file permissions are
+          set to 600 or more restrictive
+        severity: LOW`
 }
 
 func testGetLabelsMap(id, name, severity string) map[string]string {

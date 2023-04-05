@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	metricGroupName = "deckhouse_cluster_compliance_cis"
-	metricName      = "deckhouse_trivy_cis_benchmark"
+	metricGroupName   = "deckhouse_cluster_compliance_cis"
+	metricName        = "deckhouse_trivy_cis_benchmark"
+	cisBenchmarkQueue = "cis_benchmark_reports"
 )
 
 type filteredComplianceReport struct {
@@ -32,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/operator-trivy/cis_benchmark",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cluster_compliance_reports",
+			Name:       cisBenchmarkQueue,
 			ApiVersion: "aquasecurity.github.io/v1alpha1",
 			Kind:       "ClusterComplianceReport",
 			LabelSelector: &v1.LabelSelector{
@@ -69,15 +70,15 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupName)
 
-	snap := input.Snapshots["cluster_compliance_reports"]
-	if len(snap) < 1 {
-		input.LogEntry.Errorln("No CIS benchmarks found")
+	snap := input.Snapshots[cisBenchmarkQueue]
+	if len(snap) == 0 {
+		input.LogEntry.Errorln("No CIS benchmark found")
 		return nil
 	}
 
 	compReport, ok := snap[0].(filteredComplianceReport)
 	if !ok {
-		return errors.New("can't use snapshot as complianceReportTypes")
+		return errors.New("can't use snapshot as filteredComplianceReport")
 	}
 
 	switch {
@@ -101,7 +102,7 @@ func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryCh
 			totalFails = float64(*controlCheck.TotalFail)
 		}
 
-		generateComplianceMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
+		generateCisBenchmarkMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
 	}
 }
 
@@ -111,7 +112,7 @@ func generateDetailedMetrics(metricsCollector go_hook.MetricsCollector, detailed
 			continue
 		}
 		totalFails := countTotalFailsFromDetailedChecks(controlCheck.Checks)
-		generateComplianceMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
+		generateCisBenchmarkMetric(metricsCollector, totalFails, controlCheck.ID, controlCheck.Name, controlCheck.Severity)
 	}
 }
 
@@ -125,7 +126,7 @@ func countTotalFailsFromDetailedChecks(checks []v1alpha1.ComplianceCheck) float6
 	return totalFails
 }
 
-func generateComplianceMetric(metricsCollector go_hook.MetricsCollector, totalFails float64, id, name, severity string) {
+func generateCisBenchmarkMetric(metricsCollector go_hook.MetricsCollector, totalFails float64, id, name, severity string) {
 	metricsCollector.Set(
 		metricName,
 		totalFails,
