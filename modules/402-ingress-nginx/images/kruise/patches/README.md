@@ -7,5 +7,5 @@ Every CRD watch has 15 seconds timeout, so kruise-controller takes a lot of time
 We can check the number of workers (concurrent reconciles) and if we have 0 workers defined - disable the controller
 
 
-## Disable jobs
+### Disable jobs
 Remove CRD check of `BroadcastJob` and `ImagePullJob`. We don't need them for DaemonSet workflow. We don't install that CRDs.
