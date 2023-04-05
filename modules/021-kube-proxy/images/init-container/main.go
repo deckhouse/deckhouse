@@ -31,7 +31,7 @@ func main() {
 	if !ok {
 		log.Fatal("POD_SUBNET env not provided")
 	}
-	controlPlaneAddress, ok := os.LookupEnv("CONTROL_PLANE_ADDRESS not provided")
+	controlPlaneAddress, ok := os.LookupEnv("CONTROL_PLANE_ADDRESS")
 	if !ok {
 		log.Fatal("CONTROL_PLANE_ADDRESS not provided")
 	}
