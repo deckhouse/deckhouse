@@ -72,6 +72,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/462-loki/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/490-virtualization/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/491-containerized-data-importer/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/491-containerized-data-importer/hooks/https"

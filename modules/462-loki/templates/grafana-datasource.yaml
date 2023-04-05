@@ -1,0 +1,16 @@
+{{- if (.Values.global.enabledModules | has "prometheus-crd") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: loki
+  access: proxy
+  url: "http://loki.d8-monitoring:3100"
+  basicAuth: false
+  jsonData:
+    timeInterval: 30s
+    maxLines: 5000
+{{- end }}

@@ -1,0 +1,88 @@
+type: object
+properties:
+  storageClass:
+    description: |
+      Имя storageClass'а, который использовать.
+
+      Если не указано — используется StorageClass существующей PVC Loki, а если PVC пока нет — используется или  [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
+
+      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть Pod придется руками
+
+      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Loki будет перезаказан, а все данные удалены.
+  diskSizeGigabytes:
+    description: |
+      Размер диска для хранения логов или размер PVC при указании параметра [storageClass](#parameters-storageclass).
+
+      Вы должны самостоятельно указать необходимый размер диска для хранения логов за период, указанный в параметре `retentionPeriodHours`.
+      Loki не может удалять старые данные автоматически при заполнении диска.
+
+      Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects)
+
+      **ОСТОРОЖНО!**  Если диск с данными Loki переполнится, то приложение перестанет работать. Вам следует выбрать необходимый баланс между значениями параметров `retentionPeriodHours` и `diskSizeGigabytes`.
+  retentionPeriodHours:
+    description: |
+      Сколько часов логи будут храниться прежде чем будут удалены.
+  storeSystemLogs:
+    type: boolean
+    default: true
+    x-doc-default: 'true'
+    description: |
+      Сохранять логи из пространства имен `d8-*` в loki.
+
+      Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  resourcesRequests:
+    description: |
+      Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла.
+
+      Если модуль [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) выключен, то максимальные значения становятся значениями по умолчанию.
+    properties:
+      mode:
+        description: |
+          Режим управления реквестами ресурсов.
+      vpa:
+        description: |
+          Настройки режима управления VPA.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки для CPU.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU.
+          memory:
+            description: |
+              Значение для запроса memory.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса memory.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса memory.
+      static:
+        description: |
+          Настройки статического режима управления.
+        properties:
+          cpu:
+            description: |
+              Значение для запроса CPU.
+          memory:
+            description: |
+              Значение для запроса memory.
