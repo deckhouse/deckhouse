@@ -103,6 +103,7 @@ spec:
       maxSurge: 0
     {{- end }}
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+{{/*  Extra functionality by kruise-controller  https://openkruise.io/docs/user-manuals/advanceddaemonset#lifecycle-hook*/}}
   lifecycle:
     preDelete:
       labelsHandler:

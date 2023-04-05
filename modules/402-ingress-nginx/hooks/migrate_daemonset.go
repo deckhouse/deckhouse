@@ -73,7 +73,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "IngressNginxController",
 			ExecuteHookOnSynchronization: pointer.Bool(false),
 			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   inletFilter,
+			FilterFunc:                   inletHostWithFailoverFilter,
 		},
 	},
 }, migrateDaemonSet)
@@ -82,7 +82,7 @@ func applyDaemonSetNameFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return obj.GetName(), nil
 }
 
-func inletFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func inletHostWithFailoverFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
@@ -97,6 +97,8 @@ func inletFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, fmt.Errorf("cannot get inlet for ingress controller %s: %v", name, err)
 	}
 
+	// we have to add label "ingress.deckhouse.io/block-deleting": "true" only for HostWithFailover pods
+	// other inlets will work out of the box
 	if inlet != "HostWithFailover" {
 		return nil, nil
 	}
