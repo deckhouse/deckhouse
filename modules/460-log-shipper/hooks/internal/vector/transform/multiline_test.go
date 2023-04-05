@@ -17,7 +17,6 @@ limitations under the License.
 package transform
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,7 +57,7 @@ func Test_processMultilineRegex(t *testing.T) {
 			wantErr:     "regex or notRegex should be provided",
 		},
 		{
-			name: "regex::and::notRegex::not::nil",
+			name: "not::nil::regex::and::notRegex",
 			parserRegex: &v1alpha1.ParserRegex{
 				Regex:    pointer.String("^regex"),
 				NotRegex: pointer.String("^notRegex"),
@@ -74,8 +73,68 @@ func Test_processMultilineRegex(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			fmt.Printf("%q\n", *got)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_processCustomMultiLIneTransform(t *testing.T) {
+	tests := []struct {
+		name                  string
+		multilineCustomConfig v1alpha1.MultilineParserCustom
+		expected              map[string]interface{}
+		wantErr               string
+	}{
+		{
+			name:                  "nil::startsWhen::and::endsWhen",
+			multilineCustomConfig: v1alpha1.MultilineParserCustom{},
+			wantErr:               "no values provided in multilineParser.custom",
+		},
+		{
+			name: "not::nil::startsWhen::and::endsWhen",
+			multilineCustomConfig: v1alpha1.MultilineParserCustom{
+				StartsWhen: &v1alpha1.ParserRegex{
+					Regex: pointer.String("startsWhen"),
+				},
+				EndsWhen: &v1alpha1.ParserRegex{
+					NotRegex: pointer.String("endsWhen"),
+				},
+			},
+			wantErr: "provide one of endsWhen or startsWhen in multilineParser.custom",
+		},
+		{
+			name: "not::nil::startsWhen",
+			multilineCustomConfig: v1alpha1.MultilineParserCustom{
+				StartsWhen: &v1alpha1.ParserRegex{
+					Regex: pointer.String("startsWhen"),
+				},
+			},
+			expected: map[string]interface{}{
+				"starts_when": "matched, err = match(.message, r'startsWhen');\nif err != null {\n    false;\n} else {\n    matched;\n}",
+			},
+		},
+		{
+			name: "not::nil::endsWhen",
+			multilineCustomConfig: v1alpha1.MultilineParserCustom{
+				EndsWhen: &v1alpha1.ParserRegex{
+					NotRegex: pointer.String("endsWhen"),
+				},
+			},
+			expected: map[string]interface{}{
+				"ends_when": "matched, err = match(.message, r'endsWhen');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := make(map[string]interface{})
+			err := processCustomMultiLIneTransform(tt.multilineCustomConfig, result)
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

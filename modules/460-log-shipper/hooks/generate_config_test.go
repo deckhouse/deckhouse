@@ -128,6 +128,8 @@ spec:
 		Entry("Multinamespace source with one destination", "one-dest"),
 		Entry("Namespaced source", "namespaced-source"),
 		Entry("Namespaced with multiline", "multiline"),
+		Entry("Namespaced with multiline custom parser", "multiline-custom-pods"),
+		Entry("Multiline custom parser", "multiline-custom"),
 		Entry("Simple pair with datastream", "pair-datastream"),
 		Entry("Simple pair for ES 5.X", "es-5x"),
 		Entry("Throttle Transform", "throttle"),

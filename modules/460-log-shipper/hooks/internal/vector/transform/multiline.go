@@ -70,20 +70,27 @@ func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType, multi
 }
 
 func processCustomMultiLIneTransform(multilineCustomConfig v1alpha1.MultilineParserCustom, argMap map[string]interface{}) error {
-	if multilineCustomConfig.EndsWhen != nil {
+	if multilineCustomConfig.StartsWhen != nil && multilineCustomConfig.EndsWhen != nil {
+		return fmt.Errorf("provide one of endsWhen or startsWhen in multilineParser.custom")
+	}
+
+	switch {
+	case multilineCustomConfig.EndsWhen != nil:
 		endsWhenRule, err := processMultilineRegex(multilineCustomConfig.EndsWhen)
 		if err != nil {
 			return err
 		}
-		argMap[endsWhen] = endsWhenRule
-	}
-	if multilineCustomConfig.StartsWhen != nil {
-		endsWhenRule, err := processMultilineRegex(multilineCustomConfig.StartsWhen)
+		argMap[endsWhen] = *endsWhenRule
+	case multilineCustomConfig.StartsWhen != nil:
+		startsWhenRule, err := processMultilineRegex(multilineCustomConfig.StartsWhen)
 		if err != nil {
 			return err
 		}
-		argMap[startsWhen] = *endsWhenRule
+		argMap[startsWhen] = *startsWhenRule
+	default:
+		return fmt.Errorf("no values provided in multilineParser.custom")
 	}
+
 	return nil
 }
 

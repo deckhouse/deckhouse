@@ -332,7 +332,7 @@ spec:
                             minItems: 1
                 multilineParser:
                   type: object
-                  description: Multiline parser for different patterns
+                  description: Multiline parser for different patterns.
                   required:
                     - type
                   oneOf:
@@ -375,11 +375,13 @@ spec:
                     custom:
                       type: object
                       description: Multiline parser custom regex rules.
+                      oneOf:
+                        - required: [startsWhen]
+                        - required: [endsWhen]
                       properties:
                         startsWhen:
                           type: object
-                          description: |
-                            It's a condition to distinguish the first log line of multiline log.
+                          description: It's a condition to distinguish the first log line of multiline log.
                           oneOf:
                             - required: [regex]
                             - required: [notRegex]
@@ -392,8 +394,7 @@ spec:
                               description: Regex string, which treats as match only strings that match regex.
                         endsWhen:
                           type: object
-                          description: |
-                            It's a condition to distinguish the last log line of multiline log.
+                          description: It's a condition to distinguish the last log line of multiline log.
                           oneOf:
                             - required: [regex]
                             - required: [notRegex]
