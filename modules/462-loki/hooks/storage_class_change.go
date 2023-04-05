@@ -22,7 +22,7 @@ import (
 
 var _ = storage_class_change.RegisterHook(storage_class_change.Args{
 	ModuleName:         "loki",
-	Namespace:          "d8-loki",
+	Namespace:          "d8-monitoring",
 	LabelSelectorKey:   "app",
 	LabelSelectorValue: "loki",
 	ObjectKind:         "StatefulSet",

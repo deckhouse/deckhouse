@@ -33,7 +33,6 @@ import (
 var dontExcludeNamespaces = []string{
 	"d8-monitoring",
 	"d8-upmeter",
-	"d8-loki",
 	"default",
 }
 
