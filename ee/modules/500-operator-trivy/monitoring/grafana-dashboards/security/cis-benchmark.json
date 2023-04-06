@@ -756,7 +756,7 @@
             "type": "prometheus",
             "uid": "P0D6E4079E36703EB"
           },
-          "expr": "deckhouse_trivy_cis_benchmark{job=\"deckhouse\"}",
+          "expr": "deckhouse_trivy_cis_benchmark{job=\"deckhouse\"} != 0",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -765,21 +765,8 @@
           "refId": "A"
         }
       ],
-      "title": "CIS Benchmarking Results",
+      "title": "CIS Benchmarking Fails",
       "transformations": [
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "Passed",
-            "mode": "reduceRow",
-            "reduce": {
-              "include": [
-                "Value"
-              ],
-              "reducer": "allIsZero"
-            }
-          }
-        },
         {
           "id": "calculateField",
           "options": {
@@ -798,11 +785,9 @@
           "options": {
             "include": {
               "names": [
-                "Time",
                 "id",
                 "name",
                 "severity",
-                "Passed",
                 "Total fails"
               ]
             }
@@ -840,7 +825,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {
