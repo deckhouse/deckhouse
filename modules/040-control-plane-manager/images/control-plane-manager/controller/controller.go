@@ -56,6 +56,8 @@ func main() {
 		log.Error(err)
 	}()
 
+	defer httpServerClose()
+
 	removeOrphanFiles()
 
 	runPhase(annotateNode())
@@ -78,8 +80,6 @@ func main() {
 	controlPlaneManagerIsReady = true
 	// pause loop
 	<-config.ExitChannel
-
-	httpServerClose()
 }
 
 func httpServerClose() {
