@@ -8,16 +8,21 @@ anchors_disabled: true
 ---
 
 <section class="intro">
-  <div class="intro__content container">
-    <h1 class="intro__title text_lead text_alt">
-      Deckhouse Security
-    </h1>
-    <div class="intro__row">
-      <div>
-        <p class="text text_big">
-          We use proven Open Source tools and best DevSecOps practices to increase the security of the cluster and the applications deployed in it. The platform implements advanced authentication and authorization mechanisms, secure interaction of components, encryption, auditing and other crucial functionality.
-        </p>
+  <div class="intro__content container" style="display:flex;">
+    <div class="intro__content" style="width: 60%;">
+      <h1 class="intro__title text_lead text_alt">
+        Deckhouse Security
+      </h1>
+      <div class="intro__row">
+        <div style="width: 70%;">
+          <p class="text text_big">
+            We use proven Open Source tools and best DevSecOps practices to increase the security of the cluster and the applications deployed in it. The platform implements advanced authentication and authorization mechanisms, secure component interaction, encryption, auditing, and other crucial functionality.
+          </p>
+        </div>
       </div>
+    </div>
+    <div class="intro__pic" style="align-self: flex-end; width: 40%;">
+      <img src="/images/security-intro.svg" alt="" style="display:block; margin: 0 auto;">
     </div>
   </div>
   <div class="block__content block__columns block__columns_top container">
@@ -26,11 +31,9 @@ anchors_disabled: true
         CIS Benchmarks
       </h2>
       <p class="text text_big">
-        Deckhouse meets
-        <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">CIS Kubernetes Benchmark recommendations</a>*.
-        Security measures are implemented both at the component level and at the platform level.
-        For example, you can restrict network access to the necessary interfaces only, prohibit anonymous access,
-        use certificates, set permissions for files and directories.
+        Deckhouse meets <a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank">CIS Kubernetes Benchmark recommendations</a>*.
+        Security measures are implemented both at the component and platform level. For example, you can restrict network access to only the necessary interfaces, prohibit anonymous access, use certificates, set permissions for files and directories.
+        Automatic tests are run in all Deckhouse clusters to ensure compliance with CIS Benchmarks. Reports with the results are then listed in the Grafana dashboard.
       </p>
       <p class="text text_small">
         * CIS Kubernetes Benchmark is a set of guidelines for creating a reliable security environment for Kubernetes-based software.
@@ -41,9 +44,7 @@ anchors_disabled: true
         SELinux
       </h2>
       <p class="text text_big">
-        <a href="https://github.com/SELinuxProject" target="_blank">Security-Enhanced Linux (SELinux)</a>*
-        is a standard for securing Linux distributions.
-        You can forcefully activate the SELinux mode in distributions that are used with Deckhouse.
+        <a href="https://github.com/SELinuxProject" target="_blank">Security-Enhanced Linux (SELinux)</a>* is a standard for securing Linux distributions. You can forcefully activate the SELinux mode in distributions that are used with Deckhouse.
       </p>
       <p class="text text_small">
         * SELinux defines access policies for applications, processes and files.
@@ -55,8 +56,9 @@ anchors_disabled: true
       PCI SSC
     </h2>
     <p class="text text_big">
-      Deckhouse complies with most of the <a href="https://www.pcisecuritystandards.org/" target="_blank">PCI Security Standards Council</a> (PCI SSC)* recommendations. The platform is well protected against threats common to payment systems that use container technology. We used the <a href="https://docs-prv.pcisecuritystandards.org/Guidance%20Document/Containers%20and%20Container%20Orchestration%20Tools/Guidance-for-Containers-and-Container-Ochestration-Tools-v1_0.pdf" target="_blank">Container and Container Orchestration Tools Guide</a> to assess Deckhouse's security. <a href="#" data-open-modal="get_a_report">Learn more</a>.
+      Deckhouse meets most of the <a href="https://www.pcisecuritystandards.org/" target="_blank">PCI Security Standards Council</a> (PCI SSC)* recommendations. The platform is well protected against threats common to payment systems that use container technology. We use the <a href="https://docs-prv.pcisecuritystandards.org/Guidance%20Document/Containers%20and%20Container%20Orchestration%20Tools/Guidance-for-Containers-and-Container-Ochestration-Tools-v1_0.pdf" target="_blank">Container and Container Orchestration Tools Guide</a> to assess Deckhouse's security.
     </p>
+    <p><a href="#" class="button button_alt" data-open-modal="get_a_report">Download the report</a></p>
     <p class="text text_small">
       * PCI SSC is a global forum that helps develop, apply, and improve security standards to protect payment systems.
     </p>
@@ -64,203 +66,96 @@ anchors_disabled: true
 </section>
 
 <section class="features">
-  <div class="container">
-    <h2 class="features__title text_lead text_alt">
-      Tools
-    </h2>
-    <p class="text text_big">
-      Deckhouse provides a set of solutions for secure authentication, authorization, network policy management, ordering TLS certificates, and more.
-    </p>
-  </div>
-
   <div class="features__item features__item_even">
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Federated Authentication Provider
+          Tools and best practices
         </h2>
       </div>
       <ul class="features__item-list">
+        <li style="width: 100%">Deckhouse provides sophisticated security out-of-the-box.</li>
         <li>
-          Deckhouse provides a pre-installed federated authentication provider based on Dex (Identity Provider, IdP).
+          A <a href="https://deckhouse.io/documentation/latest/modules/150-user-authn/" target="_blank">federated authentication</a> provider with the ability to connect any external directory service. Manage an up-to-date user directory using the tools you're accustomed to.
         </li>
         <li>
-          It is integrated with Kubernetes and all service components.
+          Role-based end-to-end <a href="https://deckhouse.io/documentation/latest/modules/140-user-authz/" target="_blank">authorization</a> that extends the standard RBAC capabilities. Flexible centralized access management. Seven predefined roles as well as the option to create new ones.
         </li>
         <li>
-          It can be integrated with the application if it supports OIDC.
+          Advanced Cilium-based <a href="https://deckhouse.io/documentation/latest/modules/021-cni-cilium/" target="_blank">network policies</a>
         </li>
         <li>
-          The oauth2-proxy operator facilitates convenient interaction with the Ingress controller.
+          Kubernetes <a href="https://deckhouse.io/documentation/latest/modules/040-control-plane-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B8%D1%82%D1%8C-%D0%B4%D0%BE%D0%BF%D0%BE%D0%BB%D0%BD%D0%B8%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8-%D0%B0%D1%83%D0%B4%D0%B8%D1%82%D0%B0" target="_blank">event auditing</a> to keep track of cluster operations and analyze errors.
         </li>
         <li>
-          You can create users directly in the cluster or connect users of external authentication systems: GitHub, GitLab, OIDC, LDAP.
+          <a href="https://deckhouse.io/documentation/latest/modules/015-admission-policy-engine/" target="_blank">Security policies</a> based on <a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank">Pod Security Standards</a> with three predefined restriction levels and the <a href="https://deckhouse.io/documentation/latest/modules/015-admission-policy-engine/faq.html#%D0%BA%D0%B0%D0%BA-%D1%80%D0%B0%D1%81%D1%88%D0%B8%D1%80%D0%B8%D1%82%D1%8C-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8-pod-security-standards" target="_blank">option to extend</a> them.
+        </li>
+        <li>
+          A recommended set of <a href="https://deckhouse.io/documentation/latest/modules/015-admission-policy-engine/#%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%BD%D1%8B%D0%B5-%D0%BF%D0%BE%D0%BB%D0%B8%D1%82%D0%B8%D0%BA%D0%B8" target="_blank">operating policies</a> and best practices for running your applications with an option to extend them.
+        </li>
+        <li>
+          A module for <a href="https://deckhouse.io/documentation/latest/modules/650-runtime-audit-engine/" target="_blank">searching security threats</a> with a set of built-in rules and the option to extend them.
+        </li>
+        <li>
+          Centralized <a href="https://deckhouse.io/documentation/latest/modules/101-cert-manager/" target="_blank">management of TLS certificates</a>: validity monitoring, issuing and reissuing, as well as issuing self-signed certificates.
+        </li>
+        <li>
+          <a href="https://deckhouse.io/documentation/latest/modules/500-operator-trivy/" target="_blank">Scanning of container images for vulnerabilities</a> on a daily basis and providing a report.
         </li>
       </ul>
     </div>
   </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Authorization<br>
-          <small>simplified RBAC</small>
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Deckhouse provides a simplified and more user-friendly version of RBAC in Kubernetes. It has seven ready-made roles that are suitable for any use-cases. This reduces the chance of error and makes it easier to configure authorization policies.
-        </li>
-        <li>
-          If necessary, you can increase the number of roles using the standard Kubernetes RBAC tools.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="features__item features__item_even">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          And more
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          The network policy management module. A simple and reliable system with rules that are independent of the type of installation and the CNI used.
-        </li>
-        <li>
-          Kubernetes event auditing to account for cluster operations and error analysis.
-        </li>
-        <li>
-          The cert-manager module. This module can order third-party TLS certificates and issue self-signed ones. It keeps certificates up to date and automatically reissues them.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Coming soon
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Multitenancy
-        </li>
-        <li>
-          Integration with HashiCorp Vault
-        </li>
-        <li>
-          Integration with OpenPolicyAgent
-        </li>
-      </ul>
-    </div>
-  </div>
-
 </section>
 
 <section class="features">
-  <div class="container">
-    <h2 class="features__title text_lead text_alt">
-      Building components
-    </h2>
-  </div>
-
-  <div class="features__item features__item_even">
+  <div class="features__item features__item_odd">
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Guidelines
+          Building components
         </h2>
       </div>
       <ul class="features__item-list">
         <li>
-          Docker images for all platform components can only be downloaded from the Deckhouse repository.
+          Docker images for all platform components can only be pulled from the Deckhouse repository.
         </li>
         <li>
           Only the necessary binaries from the original image files created by the software authors are used.
         </li>
         <li>
-          All dependencies related to the original images as well as the digest of the image are strictly pre-defined. The resulting image is built based on our base image.
+          All dependencies related to the original images as well as the SHA digest of the image are strictly pre-defined. The resulting image is built based on the base image made specifically for Deckhouse.
         </li>
         <li>
-          In the vast majority of cases, we use the Alpine (the most secure Linux distribution) to build the base image.
+          In the vast majority of cases, we use Alpine (the most secure Linux distribution) to build the base image.
         </li>
         <li>
-          Updates of the basic images are performed seamlessly. Kubernetes gets updated automatically according to the regulations.
+          Deckhouse and Kubernetes components are updated on a regular basis.
+        </li>
+        <li>
+          We carefully select our software. We only use solutions that have been proven to be reliable based on our own experience and that of the Open Source community.
+        </li>
+        <li>
+          Most of the checks are performed automatically by linters. Among other things, these checks ensure that the Dockerfile configuration is correct and prohibit the use of third-party images.
+        </li>
+        <li>
+          The CI builds are scanned for CVEs every day; the scan report is sent to the developers. All the Sn level (and more critical) vulnerabilities are addressed within 3 hours, while those of Sn-Sk levels are dealt with within 24 hours.
         </li>
       </ul>
     </div>
-  </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          How it works
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          We carefully choose the software. We use only the solutions that have proven to be reliable based on our own and the Open Source community experience.
-        </li>
-        <li>
-          Most checks are performed in an automated manner using linters. For example, they make sure that the Dockerfile configuration is correct and prohibit the use of third-party images.
-        </li>
-        <li>
-          We constantly monitor new CVEs for all the software used. All the Sn level (and more severe) vulnerabilities are handled within three hours, while Sn-Sk level vulnerabilities are handled within 24 hours.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-</section>
-
-<section class="block container">
-  <div class="block__content">
-    <h2 class="text text_h1">
-      An example of Dockerfile for the kube-dns module*
-    </h2>
-<div markdown="1" class="docs">
-
-```docker
-# Based on https://github.com/coredns/coredns/blob/master/Dockerfile
-ARG BASE_ALPINE
-FROM coredns/coredns:1.6.9@sha256:40ee1b708e20e3a6b8e04ccd8b6b3dd8fd25343eab27c37154946f232649ae21 as artifact
-
-FROM $BASE_ALPINE
-COPY --from=artifact /coredns /coredns
-ENTRYPOINT [ "/coredns" ]
-```
-
-</div>
-<p class="text">
-  * The module installs CoreDNS components for managing DNS in the Kubernetes cluster.
-</p>
   </div>
 </section>
 
 <section class="features">
-  <div class="container">
-    <h2 class="features__title text_h1">
-      Configuring components and their interaction
-    </h2>
-  </div>
-
   <div class="features__item features__item_even">
     <div class="features__item-content container">
       <div class="features__item-header">
         <h2 class="features__item-title text_h1">
-          Guidelines
+          Configuring components and their interaction
         </h2>
       </div>
       <ul class="features__item-list">
         <li>
-          Each component runs with a minimal set of privileges in Kubernetes that is sufficient for its operation ("minimum RBAC").
+          Each component runs with a minimal set of privileges in Kubernetes that is sufficient for its operation (the ""minimum RBAC"" policy).
         </li>
         <li>
           Components never have root privileges. Exceptions are explicitly defined in the permission list.
@@ -272,26 +167,10 @@ ENTRYPOINT [ "/coredns" ]
           Local ports of all Deckhouse components are secured with TLS encryption and authentication.
         </li>
         <li>
-          Additional authentication and authorization requests to the Kubernetes API are cached and do not affect performance.
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="features__item features__item_odd">
-    <div class="features__item-content container">
-      <div class="features__item-header">
-        <h2 class="features__item-title text_h1">
-          Authorization<br>
-          <small>simplified RBAC</small>
-        </h2>
-      </div>
-      <ul class="features__item-list">
-        <li>
-          Linters check that RBAC rights are defined in a specific file of each Deckhouse module explicitly and unambiguously. This provides a single point of control.
+          Linters check that RBAC rights are explicitly and unambiguously defined in a specific file of each Deckhouse module. This ensures a single point of control.
         </li>
         <li>
-          Service Account, role, rolebinding, etc., names are strictly regulated, thus protecting against human error.
+          The naming scheme for Service Accounts, roles, rolebindings, etc. is enforced, whoch protects against human errors.
         </li>
         <li>
           Authentication between cluster components is carried out in two ways: via TLS or bearer tokens. Authorization is performed via Kubernetes mechanisms (SubjectAccessReview).
@@ -303,11 +182,11 @@ ENTRYPOINT [ "/coredns" ]
 
 <section class="block container">
   <div class="block__content">
+    <h2 class="text text_h1">
+      Roadmap
+    </h2>
     <p class="text text_big">
-      <strong>Example:</strong> suppose you use Prometheus for monitoring the cluster. It collects data from all components. Each component has a port for connecting the monitoring service. Prometheus uses an individual SSL certificate to connect to this port.
-    </p>
-    <p class="text text_big">
-      Upon receiving a request from Prometheus, the component authenticates it by checking if the Prometheus certificate is signed by the Kubernetes Certificate Authority. Then it performs authorization by requesting SubjectAccessReview. This mechanism ensures that only Prometheus can connect to the monitoring ports.
+      We are continuously working to improve Deckhouse security. Please refer to the <a href="https://github.com/orgs/deckhouse/projects/6/views/1?filterQuery=area%2Fsecurity" target="_blank">roadmap</a> to see when new features will be added and existing ones will be enhanced.
     </p>
   </div>
 </section>
