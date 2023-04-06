@@ -1,0 +1,15 @@
+diff --git a/bpf/lib/policy.h b/bpf/lib/policy.h
+index cfabcbc318..47d0f4473a 100644
+--- a/bpf/lib/policy.h
++++ b/bpf/lib/policy.h
+@@ -322,10 +322,6 @@ policy_can_egress(struct __ctx_buff *ctx, __u32 src_id, __u32 dst_id,
+ {
+        int ret;
+
+-#ifdef HAVE_ENCAP
+-       if (src_id != HOST_ID && is_encap(dport, proto))
+-               return DROP_ENCAP_PROHIBITED;
+-#endif
+        ret = __policy_can_access(&POLICY_MAP, ctx, src_id, dst_id, dport,
+                                  proto, CT_EGRESS, false, match_type, ext_err, proxy_port);
+        if (ret >= 0)
