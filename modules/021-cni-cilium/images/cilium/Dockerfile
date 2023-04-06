@@ -79,6 +79,8 @@ FROM cilium_builder as builder
 
 WORKDIR /tmp/cilium-repo/cilium-1.11.14
 
+RUN sed -i '279,282d' /tmp/cilium-repo/cilium-1.11.14/bpf/lib/policy.h
+
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
 
