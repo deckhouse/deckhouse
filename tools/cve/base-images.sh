@@ -75,8 +75,8 @@ function __main__() {
     echo "👾 Image: $image"
     echo ""
 
-    REGISTRY=$REGISTRY IMAGE=$image IGNORE=none trivyGetCVEListForImage > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
-    TITLE=$(echo "$image" | cut -d@ -f1) REGISTRY=$REGISTRY IMAGE=$image IGNORE=none trivyGetHTMLReportPartForImage >> out/base-images.html
+    trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
+    trivyGetHTMLReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.html
   done
 
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore

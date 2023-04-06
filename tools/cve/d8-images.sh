@@ -28,8 +28,8 @@ source tools/cve/trivy-wrapper.sh
 # $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
 # $HTML - prepare *.tar.gz report artifact (path to generated artifact expected)
 
-if [ -z "$REPO" ]; then
-  REPO="registry.deckhouse.io/deckhouse/ce"
+if [ -z "$IMAGE" ]; then
+  IMAGE="registry.deckhouse.io/deckhouse/ce"
 fi
 
 if [ -z "$TAG" ]; then
@@ -41,35 +41,34 @@ if [ -z "$SEVERITY" ]; then
 fi
 
 function __main__() {
-  echo "Deckhouse image to check: $REPO:$TAG"
+  echo "Deckhouse image to check: REGISTRY:$TAG"
   echo "Severity: $SEVERITY"
   echo "----------------------------------------------"
   echo ""
 
-  docker pull "$REPO:$TAG"
-  digests=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_digests.json)
+  docker pull "$IMAGE:$TAG"
+  digests=$(docker run --rm "$IMAGE:$TAG" cat /deckhouse/modules/images_digests.json)
 
   HTML_TEMP=$(mktemp -d)
-  IMAGE_REPORT_NAME="deckhouse::$(echo "$REPO:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
+  IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/
   htmlReportHeader > out/d8-images.html
-  TITLE=$IMAGE_REPORT_NAME IMAGE=$REPO TAG=$TAG IGNORE=out/.trivyignore SEVERITY=$SEVERITY trivyGetHTMLReportPartForImage >> out/d8-images.html
+  trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
 
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
     echo "=============================================="
     echo "🛰 Module: $MODULE_NAME"
 
-    for image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
-      IMAGE_NAME=$(jq -rc '.key' <<< "$image")
+    for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
+      IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
       echo "----------------------------------------------"
       echo "👾 Image: $IMAGE_NAME"
       echo ""
 
-      IMAGE_HASH="$(jq -rc '.value' <<<"$image")"
-      IMAGE="$REPO@$IMAGE_HASH"
+      IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
-      TITLE=$IMAGE_REPORT_NAME IMAGE=$IMAGE IGNORE=.trivyignore SEVERITY=$SEVERITY TAG='' trivyGetHTMLReportPartForImage >> out/d8-images.html
+      trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
     done
   done
 

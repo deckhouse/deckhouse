@@ -34,6 +34,47 @@ shopt -s failglob
 # $IGNORE - path to Trivy ignore file.
 
 function prepareImageArgs() {
+  unset LABEL REGISTRY IMAGE TAG SEVERITY IGNORE
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    -l | --label)
+      LABEL="$2"
+      shift
+      shift
+      ;;
+    -r | --regisry)
+      REGISTRY="$2"
+      shift
+      shift
+      ;;
+    -i | --image)
+      IMAGE="$2"
+      shift
+      shift
+      ;;
+    -t | --tag)
+      TAG="$2"
+      shift
+      shift
+      ;;
+    -s | --severity)
+      SEVERITY="$2"
+      shift
+      shift
+      ;;
+    --ignore)
+      IGNORE="$2"
+      shift
+      shift
+      ;;
+    *)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    esac
+  done
+
   if [ -z "$IMAGE" ]; then
     exit 1
   fi
@@ -46,35 +87,31 @@ function prepareImageArgs() {
     IMAGE_ARGS="$IMAGE_ARGS:$TAG"
   fi
 
-  if [ -z "$TITLE" ]; then
-    TITLE="$IMAGE_ARGS"
+  if [ -z "$LABEL" ]; then
+    LABEL="$IMAGE_ARGS"
   fi
 
   if [ -z "$SEVERITY" ]; then
     SEVERITY="CRITICAL,HIGH"
   fi
-
-  if [ -z "$IGNORE" ]; then
-    IGNORE=".trivyignore"
-  fi
 }
 
-function trivyGetCVEListForImage() {
-  prepareImageArgs
+function trivyGetCVEListForImage() (
+  prepareImageArgs "$@"
   bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
-}
+)
 
-function htmlReportHeader() {
+function htmlReportHeader() (
   cat tools/cve/html/header.tpl
-}
+)
 
-function trivyGetHTMLReportPartForImage() {
-  prepareImageArgs
-  echo -n "    <h1>$TITLE</h1>"
+function trivyGetHTMLReportPartForImage() (
+  prepareImageArgs "$@"
+  echo -n "    <h1>$LABEL</h1>"
   bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format template --template "@tools/cve/html/body-part.tpl" --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
-}
+)
 
-function htmlReportFooter() {
+function htmlReportFooter() (
   cat tools/cve/html/footer.tpl
-}
+)
