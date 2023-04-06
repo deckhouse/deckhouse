@@ -63,5 +63,5 @@ mount:
     to: /go/pkg
 shell:
   install:
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go types.go converge.go config.go handlers.go
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
     - chmod +x /controller

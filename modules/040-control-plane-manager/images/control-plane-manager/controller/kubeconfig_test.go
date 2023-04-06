@@ -18,27 +18,31 @@ package main
 
 import (
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"os"
 	"testing"
 )
 
-func TestLoadKubeconfig(t *testing.T) {
+func TestLoadAndParseKubeconfig(t *testing.T) {
 	k, err := loadKubeconfig("testdata/kubeconfig.conf")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	certData, err := base64.StdEncoding.DecodeString(k.Users[0].User.ClientCertificateData)
-	if err != nil {
-		t.Fatal(err)
+	if len(k.AuthInfos[0].AuthInfo.ClientCertificateData) == 0 {
+		t.Fatal("client certificate data is empty")
 	}
-	block, _ := pem.Decode(certData)
+
+	block, _ := pem.Decode(k.AuthInfos[0].AuthInfo.ClientCertificateData)
+	if len(block.Bytes) == 0 {
+		t.Fatal("cannot pem decode block")
+	}
+
 	_, err = x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 }
 
 func TestCheckEtcdManifest(t *testing.T) {

@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -29,9 +28,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -69,13 +68,9 @@ func renewKubeconfig(componentName string) error {
 			remove = true
 		}
 
-		if currentKubeconfig.Users[0].User.ClientCertificateData == "" {
+		certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
+		if len(certData) == 0 {
 			return fmt.Errorf("client-certificate-data field of kubeconfig %s is empty", path)
-		}
-
-		certData, err := base64.StdEncoding.DecodeString(currentKubeconfig.Users[0].User.ClientCertificateData)
-		if err != nil {
-			return err
 		}
 
 		block, _ := pem.Decode(certData)
@@ -122,14 +117,14 @@ func prepareKubeconfig(componentName string, isTemp bool) error {
 	return err
 }
 
-func loadKubeconfig(path string) (*KubeConfigValue, error) {
-	res := &KubeConfigValue{}
+func loadKubeconfig(path string) (*configv1.Config, error) {
+	res := &configv1.Config{}
 	r, err := os.ReadFile(path)
 	if err != nil {
 		return res, err
 	}
 
-	err = yamlv3.Unmarshal(r, res)
+	err = yaml.Unmarshal(r, res)
 	return res, err
 }
 
