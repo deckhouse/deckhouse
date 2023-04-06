@@ -25,3 +25,7 @@ Upstream issue <https://github.com/cilium/cilium/issues/23711>
 Perform routing lookup for custom tables
 
 Upstream <https://github.com/cilium/cilium/pull/24271>
+
+## 005-disable-block.patch
+
+Disable CVE-2019-13119 protection for some virtualization corner changes  
