@@ -1,5 +1,5 @@
 diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
-index a9fcaa89..1aeb61e1 100644
+index a9fcaa89..06fb835e 100644
 --- a/pkg/configauditreport/controller/helper.go
 +++ b/pkg/configauditreport/controller/helper.go
 @@ -3,6 +3,7 @@ package controller
@@ -90,6 +90,6 @@ index a9fcaa89..1aeb61e1 100644
 +	kind := resource.GetObjectKind().GroupVersionKind().Kind
 +	name := resource.GetName()
 +	reportName := fmt.Sprintf("%s-%s", strings.ToLower(kind), name)
-+	// https://github.com/aquasecurity/trivy-operator/blob/main/pkg/compliance/io.go#L144
++	// https://github.com/aquasecurity/trivy-operator/blob/v0.12.1/pkg/compliance/io.go#L144
 +	return fmt.Sprintf("%s/%s", resource.GetNamespace(), reportName)
 +}
