@@ -1725,6 +1725,8 @@ spec:
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
+                      deprecated: true
+                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |
