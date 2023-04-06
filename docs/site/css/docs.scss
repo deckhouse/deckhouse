@@ -312,6 +312,12 @@
 .layout-sidebar__content {
     width: calc(1000px - 260px - 40px);
     flex: 1;
+
+    @media screen and (max-width: 1000px) {
+        background: #fff;
+        z-index: 1;
+        padding-left: 30px;
+    }
 }
 
 .layout-sidebar .layout-sidebar__content .docs {
