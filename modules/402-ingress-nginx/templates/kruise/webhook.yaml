@@ -1,3 +1,4 @@
+{{/* OpenKruise does not allow configuring of custom certificates and controls them internally */}}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration

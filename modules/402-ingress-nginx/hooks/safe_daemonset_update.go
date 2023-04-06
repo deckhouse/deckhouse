@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -89,7 +90,7 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 		return nil
 	}
 
-	controllerMap := make(map[string]struct{}, len(failovers))
+	controllers := set.New()
 
 	proxyMap := make(map[string]daemonSet, len(proxys))
 	for _, pc := range proxys {
@@ -118,14 +119,13 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		controllerMap[ds.ControllerName] = struct{}{}
+		controllers.Add(ds.ControllerName)
 	}
 
 	for _, sn := range controllerPods {
 		podForDelete := sn.(ingressControllerPod)
 
-		_, ok := controllerMap[podForDelete.ControllerName]
-		if !ok {
+		if !controllers.Has(podForDelete.ControllerName) {
 			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
 			continue
 		}
