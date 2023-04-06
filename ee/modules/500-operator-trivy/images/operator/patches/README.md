@@ -10,7 +10,7 @@ Skip some defseq checks for proper reports result for deckhouse installation.
 
 ## 003-fix-defsec-lib-for-cis-compability.patch
 
-Fixing defseq rules for CIS benchmark for `--client-ca-file` and `--etcd-cafile` apiserver arguments. Waiting for slack reply for upstream patch.
+Fixing defseq rules for CIS benchmark for `--client-ca-file` and `--etcd-cafile` apiserver arguments.
 
 PR: https://github.com/aquasecurity/defsec/pull/1268
 
