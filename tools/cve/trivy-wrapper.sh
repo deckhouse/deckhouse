@@ -24,14 +24,14 @@ shopt -s failglob
 ##
 # Usage:
 #   source trivy-wrapper.sh
-#   OPTION=<value> <function>
+#   <function> [<optional arguments>...] (-i|--image) <image to scan>
 #
-# $TITLE - Title for html report. Optional.
-# $REGISTRY - repository to pull image from. Optional, should not contain schema and trailing slash.
-# $IMAGE - tested image name. Mandatory.
-# $TAG - tested tag name. Optional.
-# $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL).
-# $IGNORE - path to Trivy ignore file.
+# Optional arguments are:
+#   [(-l|--label) <HTML report label>]
+#   [(-r|--registry) <repository to pull image from>]
+#   [(-t|--tag) <image tag name>]
+#   [--severity <comma-separated severity list>]
+#   [--ignore <Trivy ignore file>]
 
 function prepareImageArgs() {
   unset LABEL REGISTRY IMAGE TAG SEVERITY IGNORE

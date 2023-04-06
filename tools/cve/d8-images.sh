@@ -19,14 +19,13 @@ shopt -s failglob
 
 source tools/cve/trivy-wrapper.sh
 
-# This script makes full CVE scan for a Deckhouse release.
+# This script generates full CVE scan report for a Deckhouse release in `out/` directory in HTML format.
 #
 # Usage: OPTION=<value> release.sh
 #
-# $REPO - Deckhouse images repo
-# $TAG - Deckhouse image tag (by default: the latest tag)
+# $IMAGE - Deckhouse image (by default: registry.deckhouse.io/deckhouse/ce)
+# $TAG - Deckhouse image tag (by default: the latest tag in git)
 # $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
-# $HTML - prepare *.tar.gz report artifact (path to generated artifact expected)
 
 if [ -z "$IMAGE" ]; then
   IMAGE="registry.deckhouse.io/deckhouse/ce"
@@ -41,7 +40,7 @@ if [ -z "$SEVERITY" ]; then
 fi
 
 function __main__() {
-  echo "Deckhouse image to check: REGISTRY:$TAG"
+  echo "Deckhouse image to check: $IMAGE:$TAG"
   echo "Severity: $SEVERITY"
   echo "----------------------------------------------"
   echo ""

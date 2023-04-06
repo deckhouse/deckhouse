@@ -19,9 +19,9 @@ shopt -s failglob
 
 source tools/cve/trivy-wrapper.sh
 
-# This script generates the report that contains all known CVEs for base images.
-# Base images are used to deploy binaries.
-# Thus, every CVE found by this script will be present in the full release report multiple times.
+# This script generates full base image CVE scan report
+# for a checked image_versions.yml in `out/` directory in HTML format.
+# Also, this script generates `out/.trivyignore` file to exclude found CVEs from `d8-images.sh` scan.
 #
 # Usage: OPTION=<value> base-images.sh
 #
