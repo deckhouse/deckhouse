@@ -12,5 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# CIS becnhmark purposes
+chmod 600 /etc/kubernetes/pki/**/*.{crt,key}
+
 rm -rf /var/lib/bashible/kubeadm
 bb-rp-remove kubeadm

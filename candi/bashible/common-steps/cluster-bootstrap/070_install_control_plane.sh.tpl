@@ -19,10 +19,6 @@ kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
-
-# CIS becnhmark purposes
-chmod 600 /etc/kubernetes/pki/**/*.{crt,key}
-
 # This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
 # with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
 if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
