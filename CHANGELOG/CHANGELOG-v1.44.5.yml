@@ -1,0 +1,14 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix `requiredLabels` OperationPolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4265
+      impact: '`requiredLabel` unmarshalling leads to an error.'
+deckhouse:
+  fixes:
+    - summary: Fixed translation in authentication settings of update notification webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4293
+dhctl:
+  fixes:
+    - summary: Fix `kube-proxy` does not restart.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4291
+

@@ -30,6 +30,8 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix `requiredLabels` OperationPolicy. [#4265](https://github.com/deckhouse/deckhouse/pull/4265)
+    `requiredLabel` unmarshalling leads to an error.
  - **[admission-policy-engine]** Refactor `admission-policy-engine` monitoring rules. [#3901](https://github.com/deckhouse/deckhouse/pull/3901)
  - **[candi]** Reorder swap disabling steps. [#3772](https://github.com/deckhouse/deckhouse/pull/3772)
  - **[cloud-provider-gcp]** Update `kube-proxy` configuration to set listen address to `0.0.0.0/0` when using GCP cloud provider. [#3914](https://github.com/deckhouse/deckhouse/pull/3914)
@@ -42,6 +44,7 @@
  - **[deckhouse-config]** Remove `nodeSelector` for `deckhouse-config-webhook`. [#4192](https://github.com/deckhouse/deckhouse/pull/4192)
  - **[deckhouse-config]** Temporarily set the `Recreate` strategy for `deckhouse-config-webhook` Deployment. [#4191](https://github.com/deckhouse/deckhouse/pull/4191)
  - **[deckhouse-config]** Place the `deckhouse-config-webhook` on the same node as Deckhouse. [#4014](https://github.com/deckhouse/deckhouse/pull/4014)
+ - **[dhctl]** Fix `kube-proxy` does not restart. [#4291](https://github.com/deckhouse/deckhouse/pull/4291)
  - **[go_lib]** Remove the `go_lib/hooks/delete_not_matching_certificate_secret/hook.go` hook. [#3777](https://github.com/deckhouse/deckhouse/pull/3777)
  - **[ingress-nginx]** Improve rollout hook to avoid concurrent controller pod deletion [#3915](https://github.com/deckhouse/deckhouse/pull/3915)
  - **[ingress-nginx]** Fix `HostWithFailover` inlet to work with cilium CNI. [#3834](https://github.com/deckhouse/deckhouse/pull/3834)
