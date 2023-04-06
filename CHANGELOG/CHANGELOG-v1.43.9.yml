@@ -1,0 +1,5 @@
+cni-cilium:
+  fixes:
+    - summary: Preserve default tunnel port `8472` for virtualization workloads (direct routing mode).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3937
+
