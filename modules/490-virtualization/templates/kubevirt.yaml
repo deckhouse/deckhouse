@@ -12,9 +12,9 @@ metadata:
 spec:
   certificateRotateStrategy: {}
   configuration:
-    useEmulation: true
     evictionStrategy: LiveMigrate
     developerConfiguration:
+      useEmulation: true
       featureGates:
       - Macvtap
       - HotplugVolumes
