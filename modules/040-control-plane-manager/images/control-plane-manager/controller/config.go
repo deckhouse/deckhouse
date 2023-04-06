@@ -85,18 +85,17 @@ func NewConfig() (*Config, error) {
 }
 
 func (c *Config) readEnvs() error {
-	c.MyPodName = os.Getenv("MY_POD_NAME")
-	if c.MyPodName == "" {
+	var ok bool
+	if c.MyPodName, ok = os.LookupEnv("MY_POD_NAME"); !ok {
 		return errors.New("MY_POD_NAME env should be set")
 	}
 
-	c.MyIP = os.Getenv("MY_IP")
-	if c.MyIP == "" {
+	c.MyIP, ok = os.LookupEnv("MY_IP")
+	if 	c.MyIP, ok = os.LookupEnv("MY_IP"); !ok {
 		return errors.New("MY_IP env should be set")
 	}
 
-	c.KubernetesVersion = os.Getenv("KUBERNETES_VERSION")
-	if c.KubernetesVersion == "" {
+	if c.KubernetesVersion, ok = os.LookupEnv("KUBERNETES_VERSION"); !ok {
 		return errors.New("KUBERNETES_VERSION env should be set")
 	}
 
