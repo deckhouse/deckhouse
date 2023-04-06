@@ -1726,7 +1726,6 @@ spec:
                         This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
                       deprecated: true
-                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |
