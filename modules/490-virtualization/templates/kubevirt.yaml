@@ -12,6 +12,7 @@ metadata:
 spec:
   certificateRotateStrategy: {}
   configuration:
+    useEmulation: true
     evictionStrategy: LiveMigrate
     developerConfiguration:
       featureGates:
