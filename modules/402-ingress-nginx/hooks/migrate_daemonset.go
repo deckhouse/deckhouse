@@ -135,7 +135,7 @@ func migrateDaemonSet(input *go_hook.HookInput) (err error) {
 }
 
 var (
-	blockDeleteLabel = map[string]interface{}{
+	blockDeletingLabel = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				"ingress.deckhouse.io/block-deleting": "true",
