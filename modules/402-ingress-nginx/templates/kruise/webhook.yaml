@@ -9,7 +9,6 @@ metadata:
     template: ""
 webhooks:
   - clientConfig:
-      caBundle: Cg==
       service:
         name: kruise-webhook-service
         namespace: d8-ingress-nginx
@@ -31,7 +30,6 @@ webhooks:
         resources:
           - daemonsets
   - clientConfig:
-      caBundle: Cg==
       service:
         name: kruise-webhook-service
         namespace: d8-ingress-nginx
@@ -66,7 +64,6 @@ metadata:
     template: ""
 webhooks:
   - clientConfig:
-      caBundle: Cg==
       service:
         name: kruise-webhook-service
         namespace: d8-ingress-nginx
