@@ -244,6 +244,9 @@ func parseFilterFuncDeclaration(fn *ast.FuncDecl) string {
 
 					// called with new(Struct)
 				case *ast.CallExpr:
+					if len(rhs0.Args) == 0 {
+						return ""
+					}
 					ident, ok := rhs0.Args[0].(*ast.Ident)
 					if !ok {
 						return ""

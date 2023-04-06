@@ -17,9 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
-	"strconv"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,12 +26,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
@@ -41,39 +37,40 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "controller",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			Name:                         "for_delete",
+			ApiVersion:                   "v1",
+			Kind:                         "Pod",
+			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(true),
 			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"ingress-nginx-safe-update": "",
-					"app":                       "controller",
+					"lifecycle.apps.kruise.io/state": "PreparingDelete",
+				},
+			},
+			FilterFunc: applyIngressPodFilter,
+		},
+		{
+			Name:                         "proxy_ads",
+			ApiVersion:                   "apps.kruise.io/v1alpha1",
+			Kind:                         "DaemonSet",
+			NamespaceSelector:            internal.NsSelector(),
+			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "proxy-failover",
 				},
 			},
 			FilterFunc: applyDaemonSetFilter,
 		},
 		{
-			Name:                         "proxy",
-			ApiVersion:                   "apps/v1",
+			Name:                         "failover_ads",
+			ApiVersion:                   "apps.kruise.io/v1alpha1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NamespaceSelector:            internal.NsSelector(),
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"ingress-nginx-safe-update": "",
-					"app":                       "proxy-failover",
-				},
-			},
-			FilterFunc: applyDaemonSetFilter,
-		},
-		{
-			Name:                         "failover",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "DaemonSet",
+			ExecuteHookOnEvents:          pointer.Bool(true),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
-			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-failover": "",
@@ -83,217 +80,112 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyDaemonSetFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(safeControllerUpdate))
+}, safeControllerUpdate)
 
-type IngressFilterResult struct {
-	Name     string                 `json:"name"`
-	Checksum string                 `json:"checksum"`
-	Status   appsv1.DaemonSetStatus `json:"status"`
+func safeControllerUpdate(input *go_hook.HookInput) (err error) {
+	proxys := input.Snapshots["proxy_ads"]
+	failovers := input.Snapshots["failover_ads"]
+	controllerPods := input.Snapshots["for_delete"]
+	if len(controllerPods) == 0 {
+		return nil
+	}
+
+	controllers := set.New()
+
+	proxyMap := make(map[string]daemonSet, len(proxys))
+	for _, pc := range proxys {
+		ds := pc.(daemonSet)
+		proxyMap[ds.ControllerName] = ds
+	}
+
+	for _, fc := range failovers {
+		ds := fc.(daemonSet)
+
+		proxy, ok := proxyMap[ds.ControllerName]
+		if !ok {
+			input.LogEntry.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			continue
+		}
+
+		if proxy.Checksum != ds.Checksum {
+			continue
+		}
+
+		if proxy.DesiredCount != proxy.UpdatedCount || proxy.DesiredCount != proxy.CurrentReadyCount {
+			continue
+		}
+
+		if ds.DesiredCount != ds.UpdatedCount || ds.DesiredCount != ds.CurrentReadyCount {
+			continue
+		}
+
+		controllers.Add(ds.ControllerName)
+	}
+
+	for _, sn := range controllerPods {
+		podForDelete := sn.(ingressControllerPod)
+
+		if !controllers.Has(podForDelete.ControllerName) {
+			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			continue
+		}
+
+		// proxy and failover pods are ready
+		metadata := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					"ingress.deckhouse.io/block-deleting": nil,
+				},
+			},
+		}
+		input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+	}
+
+	return nil
+}
+
+type ingressControllerPod struct {
+	Name           string
+	Node           string
+	ControllerName string
+}
+
+type daemonSet struct {
+	ControllerName    string
+	Checksum          string
+	DesiredCount      int32
+	CurrentReadyCount int32
+	UpdatedCount      int32
 }
 
 func applyDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ds := &appsv1.DaemonSet{}
+	var ds appsv1.DaemonSet
 
-	err := sdk.FromUnstructured(obj, ds)
+	err := sdk.FromUnstructured(obj, &ds)
+	if err != nil {
+		return nil, err
+	}
+
+	return daemonSet{
+		ControllerName:    strings.TrimSuffix(ds.Labels["name"], "-failover"),
+		Checksum:          ds.Annotations["ingress-nginx-controller.deckhouse.io/checksum"],
+		DesiredCount:      ds.Status.DesiredNumberScheduled,
+		CurrentReadyCount: ds.Status.NumberAvailable,
+		UpdatedCount:      ds.Status.UpdatedNumberScheduled,
+	}, nil
+}
+
+func applyIngressPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var pod v1.Pod
+
+	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	return IngressFilterResult{
-		Name:     ds.Labels["name"],
-		Checksum: ds.Annotations["ingress-nginx-controller.deckhouse.io/checksum"],
-		Status:   ds.Status,
+	return ingressControllerPod{
+		Name:           pod.Name,
+		Node:           pod.Spec.NodeName,
+		ControllerName: pod.Labels["name"],
 	}, nil
-}
-
-func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (err error) {
-	controllers := input.Snapshots["controller"]
-	proxys := input.Snapshots["proxy"]
-	failovers := input.Snapshots["failover"]
-
-	for _, c := range controllers {
-		controller := c.(IngressFilterResult)
-
-		var failoverReady bool
-		for _, f := range failovers {
-			failover := f.(IngressFilterResult)
-			if (controller.Name+"-failover" == failover.Name) && (controller.Checksum == failover.Checksum) {
-				// NumberAvailable respects minReady seconds in contrast to NumberReady
-				if (failover.Status.NumberAvailable == failover.Status.CurrentNumberScheduled) &&
-					(failover.Status.UpdatedNumberScheduled >= failover.Status.DesiredNumberScheduled) {
-					failoverReady = true
-					input.LogEntry.Infof("Failover daemonset %q is ready: available: %d, currentScheduled: %d, updatedScheduled: %d, desiredScheduler: %d", failover.Name, failover.Status.NumberAvailable, failover.Status.CurrentNumberScheduled, failover.Status.UpdatedNumberScheduled, failover.Status.DesiredNumberScheduled)
-					break
-				}
-			}
-		}
-
-		if !failoverReady {
-			input.LogEntry.Infof("Failover is not yet ready, skipping controller %s", controller.Name)
-			continue
-		}
-
-		var (
-			controllerNeedUpdate bool
-			controllerReady      bool
-			proxyNeedUpdate      bool
-			proxyReady           bool
-		)
-
-		if controller.Status.UpdatedNumberScheduled < controller.Status.DesiredNumberScheduled {
-			controllerNeedUpdate = true
-		}
-
-		if controller.Status.NumberAvailable == controller.Status.CurrentNumberScheduled {
-			controllerReady = true
-		}
-
-		for _, p := range proxys {
-			proxy := p.(IngressFilterResult)
-			if (controller.Name == proxy.Name) && (controller.Checksum == proxy.Checksum) {
-				if proxy.Status.NumberAvailable == proxy.Status.CurrentNumberScheduled {
-					proxyReady = true
-				}
-				if proxy.Status.UpdatedNumberScheduled < proxy.Status.DesiredNumberScheduled {
-					proxyNeedUpdate = true
-				}
-				break
-			}
-		}
-
-		if proxyReady && controllerReady {
-			if controllerNeedUpdate {
-				err = daemonSetDeletePodInDs(input, "d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc)
-				if err != nil {
-					return err
-				}
-			} else if proxyNeedUpdate {
-				err = daemonSetDeletePodInDs(input, "d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		err = daemonSetDeleteCrashLoopBackPods(input, "d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc)
-		if err != nil {
-			return err
-		}
-
-		err = daemonSetDeleteCrashLoopBackPods(input, "d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func podIsReady(pod v1.Pod) bool {
-	var conditionReady bool
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
-			conditionReady = true
-			break
-		}
-	}
-
-	if conditionReady && pod.DeletionTimestamp == nil {
-		return true
-	}
-
-	return false
-}
-
-func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
-	k8, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	podList, err := getDaemonSetPodList(k8, dsName)
-	if err != nil {
-		return err
-	}
-
-	if len(podList.Items) == 0 {
-		return nil
-	}
-
-	// podList should be always sorted by apiserver/etcd
-	for _, pod := range podList.Items {
-		// if at least one pod is not ready or has Terminating state - abort mission to avoid parallel pod deletion
-		if !podIsReady(pod) {
-			input.LogEntry.Infof("Pod %q for ds %q is not ready. Skipping other pod deleting", pod.Name, dsName)
-			return nil
-		}
-	}
-
-	podNameToKill := podList.Items[0].Name
-	podGenerationToKill := podList.Items[0].Labels["pod-template-generation"]
-
-	input.LogEntry.Infof("Deleting controller pod %s of generation %s", podNameToKill, podGenerationToKill)
-
-	err = k8.CoreV1().Pods(namespace).Delete(context.TODO(), podNameToKill, metav1.DeleteOptions{})
-	if err != nil {
-		input.LogEntry.Error(err)
-	}
-
-	return nil
-}
-
-func daemonSetDeleteCrashLoopBackPods(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
-	k8, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	podList, err := getDaemonSetPodList(k8, dsName)
-	if err != nil {
-		return err
-	}
-
-	if len(podList.Items) == 0 {
-		return nil
-	}
-
-	var podsToKill []string
-	for _, pod := range podList.Items {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if (containerStatus.State.Waiting != nil && containerStatus.State.Waiting.Reason == "CrashLoopBackOff") ||
-				(containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason == "Error") {
-				podsToKill = append(podsToKill, pod.Name)
-			}
-		}
-	}
-
-	for _, podName := range podsToKill {
-		err = k8.CoreV1().Pods(namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
-		if err != nil {
-			input.LogEntry.Error(err)
-		}
-	}
-
-	return nil
-}
-
-func getDaemonSetPodList(client k8s.Client, dsName string) (*v1.PodList, error) {
-	daemonset, err := client.AppsV1().DaemonSets(internal.Namespace).Get(context.TODO(), dsName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	generation := daemonset.Generation
-
-	selector, err := metav1.LabelSelectorAsSelector(daemonset.Spec.Selector)
-	if err != nil {
-		return nil, err
-	}
-	podTemplateGenerationReq, err := labels.NewRequirement("pod-template-generation", selection.NotEquals, []string{strconv.FormatInt(generation, 10)})
-	if err != nil {
-		return nil, err
-	}
-	selector = selector.Add(*podTemplateGenerationReq)
-
-	return client.CoreV1().Pods(internal.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.String()})
 }

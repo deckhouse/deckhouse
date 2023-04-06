@@ -69,7 +69,7 @@ spec:
     {{- end }}
 {{- end }}
 ---
-apiVersion: apps/v1
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   name: controller-{{ $name }}
@@ -78,8 +78,6 @@ metadata:
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if $failover }}
     ingress-nginx-failover: ""
-    {{- else }}
-    ingress-nginx-safe-update: ""
     {{- end }}
   {{- end }}
   annotations:
@@ -90,17 +88,12 @@ spec:
   revisionHistoryLimit: 3
   {{- if $loadBalancer }}
   minReadySeconds: 30
+  {{- else }}
+{{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't)*/}}
+{{/*  We want to add some small delay for Bare-metal clusters to avoid immediately pod rollout and give some time for traffic to be handled */}}
+  minReadySeconds: 10
   {{- end }}
   updateStrategy:
-  {{- if eq $crd.spec.inlet "HostWithFailover" }}
-    {{- if not $failover }}
-    type: OnDelete
-    {{- else }}
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-    {{- end}}
-  {{- else }}
     type: RollingUpdate
     {{- if $loadBalancer }}
     rollingUpdate:
@@ -111,6 +104,12 @@ spec:
       maxUnavailable: 1
       maxSurge: 0
     {{- end }}
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+{{/*  Extra functionality by kruise-controller  https://openkruise.io/docs/user-manuals/advanceddaemonset#lifecycle-hook*/}}
+  lifecycle:
+    preDelete:
+      labelsHandler:
+        ingress.deckhouse.io/block-deleting: "true"
   {{- end }}
   selector:
     matchLabels:
@@ -119,6 +118,9 @@ spec:
   template:
     metadata:
       labels:
+      {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+        ingress.deckhouse.io/block-deleting: "true"
+      {{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         sidecar.istio.io/inject: "true"
       {{- end }}

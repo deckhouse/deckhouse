@@ -32,17 +32,20 @@ spec:
       app: proxy-failover
       name: {{ $crd.name }}
 ---
-apiVersion: apps/v1
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   name: proxy-{{ $crd.name }}-failover
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name "ingress-nginx-safe-update" "" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name)) | nindent 2 }}
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   updateStrategy:
-    type: OnDelete
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app: proxy-failover
