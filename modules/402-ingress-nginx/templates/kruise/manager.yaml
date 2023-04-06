@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: kruise-controller-manager
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -49,7 +49,7 @@ metadata:
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list . (dict "app" "kruise" "control-plane" "controller-manager")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       control-plane: controller-manager
@@ -129,7 +129,6 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "manager_resources" . | nindent 14 }}
             limits:
-              cpu: 300m
               memory: 512Mi
           {{- end }}
       hostNetwork: false
