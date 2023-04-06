@@ -127,7 +127,7 @@ func migrateDaemonSet(input *go_hook.HookInput) (err error) {
 				continue
 			}
 
-			input.PatchCollector.MergePatch(blockDeleteLabel, "v1", "Pod", internal.Namespace, pod.Name)
+			input.PatchCollector.MergePatch(blockDeletingLabel, "v1", "Pod", internal.Namespace, pod.Name)
 		}
 	}
 
