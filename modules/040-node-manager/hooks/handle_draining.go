@@ -39,9 +39,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "nodes_for_draining",
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			WaitForSynchronization:       pointer.Bool(true),
+			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -57,12 +57,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Settings: &go_hook.HookConfigSettings{
 		ExecutionMinInterval: 30 * time.Second,
-	},
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "draining_schedule",
-			Crontab: "* * * * *",
-		},
 	},
 }, dependency.WithExternalDependencies(handleDraining))
 

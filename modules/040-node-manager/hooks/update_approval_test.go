@@ -1530,7 +1530,7 @@ metadata:
 
 		if drained {
 			state += `
-    update.node.deckhouse.io/drained: ""
+    update.node.deckhouse.io/drained: "bashible"
 `
 		}
 		state += `
