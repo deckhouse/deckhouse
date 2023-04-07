@@ -38,7 +38,7 @@ stream {
   proxy_protocol on;
 
   upstream http {
-    server controller-${CONTROLLER_NAME} -failover:80 max_fails=0;
+    server controller-${CONTROLLER_NAME}-failover:80 max_fails=0;
   }
 
   upstream https {
