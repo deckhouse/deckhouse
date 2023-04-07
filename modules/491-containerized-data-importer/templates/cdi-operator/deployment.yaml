@@ -78,7 +78,7 @@ spec:
         - name: DEPLOY_CLUSTER_RESOURCES
           value: "true"
         - name: OPERATOR_VERSION
-          value: {{ include "cdi_images" . | sha256sum | trunc 7 }}
+          value: {{ include "cdi_images" . | sha256sum | trunc 7 | quote }}
         - name: VERBOSITY
           value: "1"
         - name: PULL_POLICY

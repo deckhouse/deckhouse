@@ -19,20 +19,9 @@ spec:
       - HotplugVolumes
       - GPU
       - ExpandDisks
+      - Root
   customizeComponents:
     patches:
-    - resourceType: Deployment
-      resourceName: virt-api
-      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
-      type: strategic
-    - resourceType: Deployment
-      resourceName: virt-controller
-      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
-      type: strategic
-    - resourceType: DaemonSet
-      resourceName: virt-handler
-      patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
-      type: strategic
     - resourceType: Deployment
       resourceName: virt-api
       patch: '[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{{ $nodeSelectorMaster }}}]'
@@ -68,6 +57,8 @@ spec:
       type: json
     {{- end }}
   imagePullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: deckhouse-registry
   infra:
     replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   workloadUpdateStrategy: {}

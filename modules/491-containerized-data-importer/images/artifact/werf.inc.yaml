@@ -1,6 +1,6 @@
 # Source https://github.com/kubevirt/containerized-data-importer/blob/main/hack/build/config.sh#L31
 {{- $builderImage := "quay.io/kubevirt/kubevirt-cdi-bazel-builder:2211280239-6a64c6eb" }}
-{{- $version := "1.55.2" }}
+{{- $version := "1.56.0" }}
 
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $builderImage }}

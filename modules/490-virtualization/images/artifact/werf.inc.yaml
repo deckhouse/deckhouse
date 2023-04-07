@@ -1,6 +1,6 @@
 # Source https://github.com/kubevirt/kubevirt/blob/main/hack/dockerized#L15
-{{- $builderImage := "quay.io/kubevirt/builder:2209141252-da37250e4" }}
-{{- $version := "0.58.1" }}
+{{- $builderImage := "quay.io/kubevirt/builder:2212180911-8818abcfa" }}
+{{- $version := "0.59.0" }}
 
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $builderImage }}
