@@ -18,7 +18,6 @@ COPY --from=base /opt/bin/mk-docker-opts.sh /opt/bin/
 COPY --from=artifact /src/entrypoint /
 
 COPY iptables-wrapper-installer.sh /
-RUN apk add --no-cache curl jq
 RUN apk add --no-cache iproute2 net-tools ca-certificates iptables ip6tables conntrack-tools strongswan && update-ca-certificates
 RUN apk add wireguard-tools --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community
 RUN /iptables-wrapper-installer.sh --no-sanity-check

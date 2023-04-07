@@ -1,3 +1,4 @@
+ARG BASE_SCRATCH
 ARG BASE_GOLANG_19_ALPINE
 FROM $BASE_GOLANG_19_ALPINE as artifact
 
@@ -6,7 +7,7 @@ COPY main.go go.mod go.sum /src/
 RUN apk add --no-cache git && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o init main.go
 
-FROM scratch
+FROM $BASE_SCRATCH
 
 COPY --from=artifact /src/init /
 ENTRYPOINT [ "/init" ]

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -113,12 +112,13 @@ func shouldReload(tempConfigDir string) (bool, error) {
 	templatedSampleConfigPath := filepath.Join(tempConfigDir, "vector.json")
 	dynamicConfigPath := filepath.Join(dynamicConfigDir, "vector.json")
 
-	sampleConfigContents, err := os.ReadFile(sampleConfig)
+	sampleConfigContentsBytes, err := os.ReadFile(sampleConfig)
 	if err != nil {
 		return false, err
 	}
-	sampleConfigContents = bytes.ReplaceAll(sampleConfigContents, []byte("$VECTOR_SELF_POD_NAME"), []byte(os.Getenv("VECTOR_SELF_POD_NAME")))
-	err = os.WriteFile(templatedSampleConfigPath, sampleConfigContents, 0666)
+
+	sampleConfigContents := os.ExpandEnv(string(sampleConfigContentsBytes))
+	err = os.WriteFile(templatedSampleConfigPath, []byte(sampleConfigContents), 0666)
 	if err != nil {
 		return false, err
 	}

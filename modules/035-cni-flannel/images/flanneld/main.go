@@ -17,6 +17,11 @@ import (
 )
 
 func main() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
@@ -33,12 +38,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	
 	var allIPs []string
 	internalIPs, externalIPs, err := getInternalAndExternalIPs(hostname)
 	if err != nil {

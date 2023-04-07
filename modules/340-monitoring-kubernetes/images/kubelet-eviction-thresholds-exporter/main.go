@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -122,35 +122,35 @@ func generateMetrics() error {
 		_ = fd.Close()
 	}(fd)
 
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="hard"} %d\n`, kubeletRootDir, evictionHardNodeFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="hard"} %d\n`, kubeletRootDir, evictionHardNodeFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="hard"} %d\n`, runtimeRootDir, evictionHardImageFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImageFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="hard"} %d\n`, runtimeRootDir, evictionHardImagesFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImagesFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_bytes{mountpoint="%s", type="soft"} %d\n`, kubeletRootDir, evictionSoftNodeFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_nodefs_inodes{mountpoint="%s", type="soft"} %d\n`, kubeletRootDir, evictionSoftNodeFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsInodesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_bytes{mountpoint="%s", type="soft"} %d\n`, runtimeRootDir, evictionSoftImageFsBytesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImageFsBytesAvailable)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(fd, `kubelet_eviction_imagefs_inodes{mountpoint="%s", type="soft"} %d\n`, runtimeRootDir, evictionSoftImagesFsInodesAvailable)
+	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImagesFsInodesAvailable)
 	if err != nil {
 		return err
 	}
@@ -158,57 +158,37 @@ func generateMetrics() error {
 	return nil
 }
 
-func extractPercent(realResource uint64, signal string, evictionMap map[string]string) (int, error) {
+func extractPercent(realResource uint64, signal string, evictionMap map[string]string) (string, error) {
 	if evictionMap == nil {
-		return 0, nil
+		return "", nil
 	}
 
 	evictionSignalValue, ok := evictionMap[signal]
 	if !ok {
-		return 0, nil
+		return "", nil
 	}
 
 	return parseThresholdStatement(realResource, evictionSignalValue)
 }
 
-func parseThresholdStatement(realResource uint64, val string) (int, error) {
+func parseThresholdStatement(realResource uint64, val string) (string, error) {
 	if strings.HasSuffix(val, "%") {
-		// ignore 0% and 100%
-		if val == "0%" || val == "100%" {
-			return 0, nil
-		}
-		percentage, err := parsePercentage(val)
-		if err != nil {
-			return 0, err
-		}
-		if percentage < 0 {
-			return 0, fmt.Errorf("eviction percentage threshold must be >= 0%%: %s", val)
-		}
-		// percentage is a float and should not be greater than 1 (100%)
-		if percentage > 1 {
-			return 0, fmt.Errorf("eviction percentage threshold must be <= 100%%: %s", val)
-		}
-		return int(percentage), nil
+		return strings.TrimSuffix(val, "%"), nil
 	}
 
 	quantity, err := resource.ParseQuantity(val)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	if quantity.Sign() < 0 || quantity.IsZero() {
-		return 0, fmt.Errorf("eviction threshold must be positive: %s", &quantity)
+		return "", fmt.Errorf("eviction threshold must be positive: %s", &quantity)
 	}
 
-	decQuantity, _ := quantity.AsInt64()
-	return int((realResource - uint64(decQuantity)) / uint64(decQuantity) * 100), nil
-}
+	intQuantity, _ := quantity.AsInt64()
 
-func parsePercentage(input string) (float32, error) {
-	value, err := strconv.ParseFloat(strings.TrimRight(input, "%"), 32)
-	if err != nil {
-		return 0, err
-	}
-	return float32(value) / 100, nil
+	ret, _ := new(big.Rat).Quo(new(big.Rat).SetInt64(intQuantity), new(big.Rat).SetUint64(realResource)).Float64()
+
+	return fmt.Sprintf("%.2f", ret*100), nil
 }
 
 func getBytesAndInodeStatsFromPath(path string) (bytesAvail uint64, inodeAvail uint64, err error) {

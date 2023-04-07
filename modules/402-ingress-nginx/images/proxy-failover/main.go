@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"text/template"
 
 	"golang.org/x/sys/unix"
 )
@@ -14,26 +13,16 @@ func main() {
 		log.Fatal("CONTROLLER_NAME env is empty")
 	}
 
-	nginxConfTemplate, err := os.ReadFile("/etc/nginx/nginx.conf.tpl")
+	nginxConfTemplateBytes, err := os.ReadFile("/etc/nginx/nginx.conf.tpl")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	t := template.Must(template.New("nginxTemplate").Parse(string(nginxConfTemplate)))
+	nginxConfTemplate := os.ExpandEnv(string(nginxConfTemplateBytes))
 
-	fd, err := os.Create("/etc/nginx/nginx.conf")
+	err = os.WriteFile("/etc/nginx/nginx.conf", []byte(nginxConfTemplate), 0666)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	err = t.Execute(fd, map[string]string{"controllerName": controllerName})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = fd.Close()
-	if err != nil {
-		log.Fatalf("Failed to close file: %s", err)
 	}
 
 	err = unix.Exec(os.Args[0], os.Args[1:], os.Environ())
