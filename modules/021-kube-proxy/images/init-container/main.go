@@ -34,7 +34,7 @@ func main() {
 	}
 	controlPlaneAddress, ok := os.LookupEnv("CONTROL_PLANE_ADDRESS")
 	if !ok {
-		log.Fatal("CONTROL_PLANE_ADDRESS not provided")
+		log.Fatal("CONTROL_PLANE_ADDRESS env not provided")
 	}
 
 	apiProxyAddress, err := getApiProxyAddress()
