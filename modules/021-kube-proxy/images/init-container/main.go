@@ -52,7 +52,7 @@ func main() {
 
 	kubeConfig := &configv1.Config{
 		Kind:       "Config",
-		APIVersion: "v1",
+		APIVersion: configv1.SchemeGroupVersion.String(),
 		Clusters: []configv1.NamedCluster{
 			{
 				Name: "default",
@@ -86,7 +86,7 @@ func main() {
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KubeProxyConfiguration",
-			APIVersion: "kubeproxy.config.k8s.io/v1alpha1",
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		},
 		FeatureGates: map[string]bool{
 			"EndpointSliceTerminatingCondition": true,

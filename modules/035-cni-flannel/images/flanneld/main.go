@@ -38,7 +38,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	
+
 	var allIPs []string
 	internalIPs, externalIPs, err := getInternalAndExternalIPs(hostname)
 	if err != nil {
