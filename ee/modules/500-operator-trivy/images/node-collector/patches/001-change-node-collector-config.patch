@@ -7,7 +7,7 @@ index b8acb37..8da8241 100644
      audit: stat -c %U:%G /etc/kubernetes/manifests/etcd.yaml
    - key: containerNetworkInterfaceFilePermissions
 -    title: Container Network Interface file permissions
-+    title: Container Network Interface file permissions (ignore because of cillium)
++    title: Container Network Interface file permissions (ignore because of cilium)
      nodeType: master
 -    audit: stat -c %a /*/cni/*
 +    audit: echo 600
