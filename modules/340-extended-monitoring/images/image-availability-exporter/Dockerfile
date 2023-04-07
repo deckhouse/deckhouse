@@ -1,8 +1,8 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_17_ALPINE
+ARG BASE_GOLANG_19_ALPINE
 
 # Based on https://github.com/deckhouse/k8s-image-availability-exporter/blob/master/Dockerfile
-FROM $BASE_GOLANG_17_ALPINE as artifact
+FROM $BASE_GOLANG_19_ALPINE as artifact
 WORKDIR /src
 ENV GOARCH=amd64
 RUN wget https://github.com/deckhouse/k8s-image-availability-exporter/tarball/v0.5.0 -O - | tar -xz --strip-components=1 && \
