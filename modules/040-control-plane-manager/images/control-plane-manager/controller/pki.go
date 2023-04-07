@@ -85,6 +85,7 @@ func renewCertificates() error {
 
 func renewCertificate(componentName, f string) error {
 	path := filepath.Join(kubernetesPkiPath, f+".crt")
+	keyPath := filepath.Join(kubernetesPkiPath, f+".key")
 	log.Infof("generate or renew %s certificate %s", componentName, path)
 
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
@@ -114,7 +115,6 @@ func renewCertificate(componentName, f string) error {
 			remove = true
 		}
 
-		keyPath := filepath.Join(kubernetesPkiPath, f+".key")
 		if _, err := os.Stat(keyPath); err != nil {
 			log.Infof("certificate %s exists, but no appropriate key %s is found", path, keyPath)
 			remove = true
@@ -135,7 +135,13 @@ func renewCertificate(componentName, f string) error {
 		return nil
 	}
 	// regenerate certificate
-	return prepareCerts(componentName, false)
+	if err := prepareCerts(componentName, false); err != nil {
+		return err
+	}
+	if err := os.Chmod(path, 0600); err !=nil {
+		return err
+	}
+	return os.Chmod(keyPath, 0600)
 }
 
 func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
