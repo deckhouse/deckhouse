@@ -114,11 +114,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0666)
+	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0666)
+	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
