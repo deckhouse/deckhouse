@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = unix.Exec(os.Args[0], os.Args[1:], os.Environ())
+	err = unix.Exec(os.Args[1], os.Args[2:], os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}

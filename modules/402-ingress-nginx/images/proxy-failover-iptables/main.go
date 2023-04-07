@@ -41,10 +41,9 @@ func main() {
 	}
 
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
-	err = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
-	if err != nil {
-		log.Fatal(err)
-	}
+	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
+	// do nothing on error, since ingress-failover chain may not exist yet
+
 	// check 81/444 ports accepted
 	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
 	if err != nil {
