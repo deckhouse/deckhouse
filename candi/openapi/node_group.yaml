@@ -1723,8 +1723,9 @@ spec:
                     manageKernel:
                       type: boolean
                       description: |
-                        Enable kernel maintenance from bashible.
+                        This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
+                      deprecated: true
                 disruptions:
                   type: object
                   description: |
