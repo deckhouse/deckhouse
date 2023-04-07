@@ -288,7 +288,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"nodeManager": map[string]interface{}{
 		"bashibleApiserver":        "imageHash-nodeManager-bashibleApiserver",
 		"clusterAutoscaler":        "imageHash-nodeManager-clusterAutoscaler",
-		"earlyOom":                 "imageHash-nodeManager-earlyOom",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
 	"openvpn": map[string]interface{}{
