@@ -70,7 +70,7 @@ def prometheus_query(query: str, addtitional_mock_data: Any = None, mock_data_fi
     return response.get("data", {}).get("result", [0])
 
 
-def prometheus_query_value(query: str, addtitional_mock_data: Any = None, mock_data_file: str | None = None) -> int:
+def prometheus_query_value(query: str, addtitional_mock_data: Any = None, mock_data_file: str | None = None) -> float:
     """query prometheus from query and get only value result"""
 
     query_result = prometheus_query(
@@ -79,8 +79,8 @@ def prometheus_query_value(query: str, addtitional_mock_data: Any = None, mock_d
         mock_data_file=mock_data_file,
     )
     if len(query_result) > 0:
-        return query_result[0].get("value", [0, 0])[1]
-    return 0
+        return float(query_result[0].get("value", [0, 0])[1])
+    return 0.0
 
 
 def make_get_request(

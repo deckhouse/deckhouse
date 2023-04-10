@@ -47,7 +47,6 @@ class Controller:
 
 
 def main(ctx: hook.Context):
-    print(json.dumps(ctx.snapshots, indent=2))
     # Generate list of Controllers from snapshots
     controllers = process_controllers(snapshots=ctx.snapshots)
 

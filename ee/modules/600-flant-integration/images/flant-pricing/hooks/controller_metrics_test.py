@@ -22,7 +22,7 @@ def _generate_mock_prom_server() -> List[Dict[str, Any]]:
         httpretty.register_uri(uri=d["uri"], body=d["data"], method="GET", match_querystring=True)
 
         metric_data = d["addtitional_data"]
-        metric_value = json.loads(d["data"])["data"]["result"][0]["value"][1]
+        metric_value = float(json.loads(d["data"])["data"]["result"][0]["value"][1])
         expected_metrics.append(dict(**metric_data, set=metric_value))
     return expected_metrics
 
