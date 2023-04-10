@@ -36,7 +36,7 @@ var (
 )
 
 type KubeletConfig struct {
-	KubeletConfiguration v1beta1.KubeletConfiguration `json:"kubeletConfiguration"`
+	KubeletConfiguration v1beta1.KubeletConfiguration `json:"kubeletconfig"`
 }
 
 func main() {
@@ -81,39 +81,6 @@ func generateMetrics() error {
 	softEvictionMap := kubeletConfig.KubeletConfiguration.EvictionSoft
 	hardEvictionMap := kubeletConfig.KubeletConfiguration.EvictionHard
 
-	evictionHardNodeFsBytesAvailable, err := extractPercent(nodeFsBytesAvail, nodeFsBytesAvailableEvictionSignal, hardEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionHardNodeFsInodesAvailable, err := extractPercent(nodeFsInodesAvail, nodeFsInodesFreeEvictionSignal, hardEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionHardImageFsBytesAvailable, err := extractPercent(imageFsBytesAvail, imageFsBytesAvailableEvictionSignal, hardEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionHardImagesFsInodesAvailable, err := extractPercent(imageFsInodesAvail, imageFsInodesFreeEvictionSignal, hardEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionSoftNodeFsBytesAvailable, err := extractPercent(nodeFsBytesAvail, nodeFsBytesAvailableEvictionSignal, softEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionSoftNodeFsInodesAvailable, err := extractPercent(nodeFsInodesAvail, nodeFsInodesFreeEvictionSignal, softEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionSoftImageFsBytesAvailable, err := extractPercent(imageFsBytesAvail, imageFsBytesAvailableEvictionSignal, softEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-	evictionSoftImagesFsInodesAvailable, err := extractPercent(imageFsInodesAvail, imageFsInodesFreeEvictionSignal, softEvictionMap)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	fd, err := os.OpenFile("/var/run/node-exporter-textfile/kubelet-eviction.prom", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
@@ -122,37 +89,85 @@ func generateMetrics() error {
 		_ = fd.Close()
 	}(fd)
 
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsBytesAvailable)
+	evictionHardNodeFsBytesAvailable, err := extractPercent(nodeFsBytesAvail, nodeFsBytesAvailableEvictionSignal, hardEvictionMap)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsInodesAvailable)
-	if err != nil {
-		return err
+	if len(evictionHardNodeFsBytesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsBytesAvailable)
+		if err != nil {
+			return err
+		}
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImageFsBytesAvailable)
+	evictionHardNodeFsInodesAvailable, err := extractPercent(nodeFsInodesAvail, nodeFsInodesFreeEvictionSignal, hardEvictionMap)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImagesFsInodesAvailable)
-	if err != nil {
-		return err
+	if len(evictionHardNodeFsInodesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", kubeletRootDir, evictionHardNodeFsInodesAvailable)
+		if err != nil {
+			return err
+		}
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsBytesAvailable)
+	evictionHardImageFsBytesAvailable, err := extractPercent(imageFsBytesAvail, imageFsBytesAvailableEvictionSignal, hardEvictionMap)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsInodesAvailable)
-	if err != nil {
-		return err
+	if len(evictionHardImageFsBytesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImageFsBytesAvailable)
+		if err != nil {
+			return err
+		}
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImageFsBytesAvailable)
+	evictionHardImagesFsInodesAvailable, err := extractPercent(imageFsInodesAvail, imageFsInodesFreeEvictionSignal, hardEvictionMap)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImagesFsInodesAvailable)
+	if len(evictionHardImagesFsInodesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"hard\"} %s\n", runtimeRootDir, evictionHardImagesFsInodesAvailable)
+		if err != nil {
+			return err
+		}
+	}
+	evictionSoftNodeFsBytesAvailable, err := extractPercent(nodeFsBytesAvail, nodeFsBytesAvailableEvictionSignal, softEvictionMap)
 	if err != nil {
-		return err
+		log.Fatal(err)
+	}
+	if len(evictionSoftNodeFsBytesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsBytesAvailable)
+		if err != nil {
+			return err
+		}
+	}
+	evictionSoftNodeFsInodesAvailable, err := extractPercent(nodeFsInodesAvail, nodeFsInodesFreeEvictionSignal, softEvictionMap)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(evictionSoftNodeFsInodesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_nodefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", kubeletRootDir, evictionSoftNodeFsInodesAvailable)
+		if err != nil {
+			return err
+		}
+	}
+	evictionSoftImageFsBytesAvailable, err := extractPercent(imageFsBytesAvail, imageFsBytesAvailableEvictionSignal, softEvictionMap)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(evictionSoftImageFsBytesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_bytes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImageFsBytesAvailable)
+		if err != nil {
+			return err
+		}
+	}
+	evictionSoftImagesFsInodesAvailable, err := extractPercent(imageFsInodesAvail, imageFsInodesFreeEvictionSignal, softEvictionMap)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(evictionSoftImagesFsInodesAvailable) != 0 {
+		_, err = fmt.Fprintf(fd, "kubelet_eviction_imagefs_inodes{mountpoint=\"%s\", type=\"soft\"} %s\n", runtimeRootDir, evictionSoftImagesFsInodesAvailable)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

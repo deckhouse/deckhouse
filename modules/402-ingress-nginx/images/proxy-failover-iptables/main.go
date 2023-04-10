@@ -153,6 +153,7 @@ func addLinkAndAddress() error {
 		if err != nil {
 			return err
 		}
+		return addLinkAndAddress()
 	} else if err != nil {
 		return err
 	}

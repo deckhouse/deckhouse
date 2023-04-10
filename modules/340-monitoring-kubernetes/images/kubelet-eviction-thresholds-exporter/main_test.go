@@ -1,6 +1,50 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+const kubeletConfigJSON = `
+{
+  "kubeletconfig": {
+    "evictionHard": {
+      "imagefs.available": "5%",
+      "imagefs.inodesFree": "5%",
+      "memory.available": "1%",
+      "nodefs.available": "5%",
+      "nodefs.inodesFree": "5%"
+    },
+    "evictionSoft": {
+      "imagefs.available": "10%",
+      "imagefs.inodesFree": "10%",
+      "memory.available": "2%",
+      "nodefs.available": "10%",
+      "nodefs.inodesFree": "10%"
+    },
+    "evictionSoftGracePeriod": {
+      "imagefs.available": "1m30s",
+      "imagefs.inodesFree": "1m30s",
+      "memory.available": "1m30s",
+      "nodefs.available": "1m30s",
+      "nodefs.inodesFree": "1m30s"
+    }
+  }
+}
+`
+
+func Test_KubeletConfig(t *testing.T) {
+	var kubeletConfig *KubeletConfig
+
+	err := json.Unmarshal([]byte(kubeletConfigJSON), &kubeletConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(kubeletConfig.KubeletConfiguration.EvictionHard) == 0 || len(kubeletConfig.KubeletConfiguration.EvictionSoft) == 0 {
+		t.Fatal("EvictionSoft and EvictionHard are empty")
+	}
+}
 
 func Test_extractPercent(t *testing.T) {
 	_ = map[string]string{
