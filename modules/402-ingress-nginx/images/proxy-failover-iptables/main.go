@@ -61,9 +61,13 @@ func main() {
 	}
 
 	// fill ingress-failover chain
-	err = iptablesMgr.NewChain("nat", chainName)
-	if err != nil {
+	if exists, err := iptablesMgr.ChainExists("nat", chainName); err != nil {
 		log.Fatal(err)
+	} else if !exists {
+		err = iptablesMgr.NewChain("nat", chainName)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	err = iptablesMgr.Insert("nat", chainName, 1, socketExistsRule...)
 	if err != nil {
