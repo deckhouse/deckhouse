@@ -8,9 +8,10 @@ metadata:
   name: {{ $cr.name }}-{{ $sc.namePostfix }}
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    migration-secret-name-changed: ""
+    migration-volume-binding-mode-changed: ""
 {{ include "helm_lib_module_labels" (list $ (dict "app" $.Chart.Name)) | indent 2 }}
 provisioner: rbd.csi.ceph.com
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   clusterID: {{ $cr.spec.clusterID }}
   pool: {{ $sc.pool }}
