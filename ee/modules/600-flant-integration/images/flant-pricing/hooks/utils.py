@@ -16,7 +16,7 @@ disable_warnings()
 
 BACKOFF_LIMIT = 3
 
-PROMETHEUS_URL = "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query"
+PROMETHEUS_URL = "https://prometheus.d8-monitoring:9090/api/v1/query"
 REQUEST_ARGS = {}
 with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
     SERVICE_ACCOUNT_TOKEN = f.read()

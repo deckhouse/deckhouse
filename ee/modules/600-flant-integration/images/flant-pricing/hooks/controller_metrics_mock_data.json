@@ -1,7 +1,7 @@
 [
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-user-authn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-user-authn%22%2Ccontroller_name%3D%22dex%22%2Ccontroller_type%3D%22Deployment%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119779.947,\"0.01137323086793855\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-user-authn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-user-authn%22%2Ccontroller_name%3D%22dex%22%2Ccontroller_type%3D%22Deployment%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120801.255,\"0.010996735284434015\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( rate(container_cpu_usage_seconds_total{namespace=\"d8-user-authn\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-user-authn\",controller_name=\"dex\",controller_type=\"Deployment\"} * 0 )\n)\n"
         },
@@ -16,8 +16,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-user-authn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-user-authn%22%2Ccontroller_name%3D%22dex%22%2Ccontroller_type%3D%22Deployment%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119780.176,\"46139801.6\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-user-authn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-user-authn%22%2Ccontroller_name%3D%22dex%22%2Ccontroller_type%3D%22Deployment%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120801.485,\"47354675.2\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"d8-user-authn\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-user-authn\",controller_name=\"dex\",controller_type=\"Deployment\"} * 0 )\n)\n"
         },
@@ -32,8 +32,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-ingress-nginx%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-ingress-nginx%22%2Ccontroller_name%3D%22controller-nginx%22%2Ccontroller_type%3D%22DaemonSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119780.439,\"0.17174536114091912\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-ingress-nginx%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-ingress-nginx%22%2Ccontroller_name%3D%22controller-nginx%22%2Ccontroller_type%3D%22DaemonSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120801.773,\"0.17108484116227252\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( rate(container_cpu_usage_seconds_total{namespace=\"d8-ingress-nginx\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-ingress-nginx\",controller_name=\"controller-nginx\",controller_type=\"DaemonSet\"} * 0 )\n)\n"
         },
@@ -48,8 +48,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-ingress-nginx%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-ingress-nginx%22%2Ccontroller_name%3D%22controller-nginx%22%2Ccontroller_type%3D%22DaemonSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119780.731,\"1471379046.3999999\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-ingress-nginx%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-ingress-nginx%22%2Ccontroller_name%3D%22controller-nginx%22%2Ccontroller_type%3D%22DaemonSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120802.03,\"1471085772.8000002\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"d8-ingress-nginx\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-ingress-nginx\",controller_name=\"controller-nginx\",controller_type=\"DaemonSet\"} * 0 )\n)\n"
         },
@@ -64,8 +64,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-monitoring%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-monitoring%22%2Ccontroller_name%3D%22prometheus-main%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119780.977,\"0.357066785963505\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-monitoring%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-monitoring%22%2Ccontroller_name%3D%22prometheus-main%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120802.343,\"0.3434916582900005\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( rate(container_cpu_usage_seconds_total{namespace=\"d8-monitoring\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-monitoring\",controller_name=\"prometheus-main\",controller_type=\"StatefulSet\"} * 0 )\n)\n"
         },
@@ -80,8 +80,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-monitoring%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-monitoring%22%2Ccontroller_name%3D%22prometheus-main%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119781.239,\"1592185241.6\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-monitoring%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-monitoring%22%2Ccontroller_name%3D%22prometheus-main%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120802.591,\"1573671731.1999998\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"d8-monitoring\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-monitoring\",controller_name=\"prometheus-main\",controller_type=\"StatefulSet\"} * 0 )\n)\n"
         },
@@ -96,8 +96,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-openvpn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-openvpn%22%2Ccontroller_name%3D%22openvpn%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119781.479,\"0.0015255364612246545\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+rate%28container_cpu_usage_seconds_total%7Bnamespace%3D%22d8-openvpn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-openvpn%22%2Ccontroller_name%3D%22openvpn%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120802.845,\"0.00122229249268061\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( rate(container_cpu_usage_seconds_total{namespace=\"d8-openvpn\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-openvpn\",controller_name=\"openvpn\",controller_type=\"StatefulSet\"} * 0 )\n)\n"
         },
@@ -112,8 +112,8 @@
         }
     },
     {
-        "uri": "https://prometheus.d8-monitoring.svc.cluster.local:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-openvpn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-openvpn%22%2Ccontroller_name%3D%22openvpn%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
-        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681119781.734,\"23571251.2\"]}]}}",
+        "uri": "https://prometheus.d8-monitoring:9090/api/v1/query?query=%0Asum+%28%0A++++%28+avg_over_time%28container_memory_working_set_bytes%3Awithout_kmem%7Bnamespace%3D%22d8-openvpn%22%7D%5B5m%5D%29+%29%0A++++%2B+on%28pod%29+group_left%28controller_name%2C+controller_type%29%0A++++%28+kube_controller_pod%7Bnamespace%3D%22d8-openvpn%22%2Ccontroller_name%3D%22openvpn%22%2Ccontroller_type%3D%22StatefulSet%22%7D+%2A+0+%29%0A%29%0A",
+        "data": "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[{\"metric\":{},\"value\":[1681120803.091,\"23434444.8\"]}]}}",
         "query": {
             "query": "\nsum (\n    ( avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"d8-openvpn\"}[5m]) )\n    + on(pod) group_left(controller_name, controller_type)\n    ( kube_controller_pod{namespace=\"d8-openvpn\",controller_name=\"openvpn\",controller_type=\"StatefulSet\"} * 0 )\n)\n"
         },
