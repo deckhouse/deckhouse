@@ -84,7 +84,9 @@ properties:
       mode:
         type: string
         description: |
-          The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+          The mode for managing resource requests.
+          - `Static` — classical requests/limit.
+          - `VPA` — managing using VPA.
         enum: ['VPA', 'Static']
         default: 'VPA'
       vpa:
@@ -125,7 +127,9 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The coefficient to calculate cpu limits.
+
+                  It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
           memory:
             type: object
             default: {}
@@ -152,7 +156,9 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The coefficient to calculate memory limits.
+
+                  It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
       static:
         type: object
         description: |
