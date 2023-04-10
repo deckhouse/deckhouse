@@ -26,8 +26,8 @@ PROMETHEUS_INTERVAL = "5m"
 
 
 PROMETHEUS_METRIC_GROUP = "group_d8_controller_metrics"
-PROMETHEUS_CPU_METRIC_NAME = "deckhouse_controller_average_cpu_usage_seconds"
-PROMETHEUS_MEMORY_METRIC_NAME = "deckhouse_controller_average_memory_working_set_bytes:without_kmem"
+PROMETHEUS_CPU_METRIC_NAME = "deckhouse_telemetry_controller_average_cpu_usage_seconds"
+PROMETHEUS_MEMORY_METRIC_NAME = "deckhouse_telemetry_controller_average_memory_working_set_bytes:without_kmem"
 
 MOCK_DATA_FILE = None
 if check_for_generate_mock():
@@ -47,6 +47,7 @@ class Controller:
 
 
 def main(ctx: hook.Context):
+    print(json.dumps(ctx.snapshots, indent=2))
     # Generate list of Controllers from snapshots
     controllers = process_controllers(snapshots=ctx.snapshots)
 
