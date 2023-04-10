@@ -180,6 +180,23 @@ diff --git a/pkg/controller/imagepulljob/imagepulljob_controller.go b/pkg/contro
  	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) {
  		return nil
  	}
+Index: pkg/controller/ephemeraljob/ephemeraljob_controller.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/controller/ephemeraljob/ephemeraljob_controller.go b/pkg/controller/ephemeraljob/ephemeraljob_controller.go
+--- a/pkg/controller/ephemeraljob/ephemeraljob_controller.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
++++ b/pkg/controller/ephemeraljob/ephemeraljob_controller.go	(date 1681129421099)
+@@ -55,6 +55,8 @@
+ // Add creates a new ImagePullJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	return nil
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
 Index: pkg/controller/sidecarset/sidecarset_controller.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -277,8 +294,22 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
 --- a/pkg/controller/daemonset/daemonset_controller.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/controller/daemonset/daemonset_controller.go	(date 1680208342953)
-@@ -130,6 +130,9 @@
++++ b/pkg/controller/daemonset/daemonset_controller.go	(date 1681129541126)
+@@ -66,13 +66,10 @@
+ 	kruiseclientset "github.com/openkruise/kruise/pkg/client/clientset/versioned"
+ 	"github.com/openkruise/kruise/pkg/client/clientset/versioned/scheme"
+ 	kruiseappslisters "github.com/openkruise/kruise/pkg/client/listers/apps/v1alpha1"
+-	"github.com/openkruise/kruise/pkg/features"
+ 	kruiseutil "github.com/openkruise/kruise/pkg/util"
+ 	utilclient "github.com/openkruise/kruise/pkg/util/client"
+ 	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
+ 	kruiseExpectations "github.com/openkruise/kruise/pkg/util/expectations"
+-	utilfeature "github.com/openkruise/kruise/pkg/util/feature"
+-	imagejobutilfunc "github.com/openkruise/kruise/pkg/util/imagejob/utilfunction"
+ 	"github.com/openkruise/kruise/pkg/util/inplaceupdate"
+ 	"github.com/openkruise/kruise/pkg/util/lifecycle"
+ 	"github.com/openkruise/kruise/pkg/util/ratelimiter"
+@@ -130,14 +127,13 @@
  // Add creates a new DaemonSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
  // and Start it when the Manager is Started.
  func Add(mgr manager.Manager) error {
@@ -288,6 +319,27 @@ diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/d
  	if !utildiscovery.DiscoverGVK(controllerKind) {
  		return nil
  	}
+-	if !utildiscovery.DiscoverGVK(appsv1alpha1.SchemeGroupVersion.WithKind("ImagePullJob")) ||
+-		!utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) ||
+-		!utilfeature.DefaultFeatureGate.Enabled(features.PreDownloadImageForDaemonSetUpdate) {
+-		isPreDownloadDisabled = true
+-	}
++
+ 	r, err := newReconciler(mgr)
+ 	if err != nil {
+ 		return err
+@@ -420,11 +416,6 @@
+ 			if err := dsc.createImagePullJobsForInPlaceUpdate(ds, old, cur); err != nil {
+ 				klog.Errorf("Failed to create ImagePullJobs for %s: %v", request, err)
+ 			}
+-		} else {
+-			// delete ImagePullJobs if revisions have been consistent
+-			if err := imagejobutilfunc.DeleteJobsForWorkload(dsc.Client, ds); err != nil {
+-				klog.Errorf("Failed to delete imagepulljobs for %s: %v", request, err)
+-			}
+ 		}
+ 	}
+
 Index: pkg/controller/cloneset/cloneset_controller.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
