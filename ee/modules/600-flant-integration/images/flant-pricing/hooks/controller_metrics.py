@@ -48,13 +48,13 @@ class Controller:
 
 def main(ctx: hook.Context):
     # Generate list of Controllers from snapshots
-    controllers = process_controllers(ctx.snapshots)
+    controllers = process_controllers(snapshots=ctx.snapshots)
 
     # Generate metrics from Controllers list
-    metrics = generate_metrics(controllers)
+    metrics = generate_metrics(controllers=controllers)
 
     # Export metrics
-    ctx.metrics.expire(PROMETHEUS_METRIC_GROUP)
+    ctx.metrics.expire(group=PROMETHEUS_METRIC_GROUP)
     for metric in metrics:
         ctx.metrics.collect(metric)
 
@@ -92,7 +92,7 @@ def controller_metric_labels(ctrl: Controller):
 def process_controllers(snapshots: Dict[str, List[Dict[str, Any]]]) -> List[Controller]:
     '''Generate list of Controllers from binding context snapshots'''
 
-    return [parse_controller(sn) for queue_snapshot in snapshots.values() for sn in queue_snapshot]
+    return [parse_controller(controller_snapshot=sn) for queue_snapshot in snapshots.values() for sn in queue_snapshot]
 
 
 def parse_controller(controller_snapshot: Dict[str, Any]) -> Controller:
@@ -117,8 +117,16 @@ def parse_controller(controller_snapshot: Dict[str, Any]) -> Controller:
         cpu_mock_data = dict(**mock_data, name=PROMETHEUS_CPU_METRIC_NAME)
         mem_mock_data = dict(**mock_data, name=PROMETHEUS_MEMORY_METRIC_NAME)
 
-    controller.cpu = get_cpu_prometheus(controller, mock_data=cpu_mock_data, mock_data_file=MOCK_DATA_FILE)
-    controller.memory = get_memory_prometheus(controller, mock_data=mem_mock_data, mock_data_file=MOCK_DATA_FILE)
+    controller.cpu = get_cpu_prometheus(
+        controller=controller,
+        mock_data=cpu_mock_data,
+        mock_data_file=MOCK_DATA_FILE,
+    )
+    controller.memory = get_memory_prometheus(
+        controller=controller,
+        mock_data=mem_mock_data,
+        mock_data_file=MOCK_DATA_FILE,
+    )
     return controller
 
 

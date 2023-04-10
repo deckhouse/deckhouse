@@ -56,7 +56,6 @@ spec:
         app: pricing
       annotations:
         checksum/config: {{ include "grafana_agent_config" . | sha256sum }}
-        checksum/cert: {{ include (print $.Template.BasePath "/pricing/prometheus-api-client-tls.yaml") . | sha256sum}}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
