@@ -27,20 +27,20 @@ This module is responsible for providing a network between multiple nodes in a c
    You can remove the option once all `CiliumClusterwideNetworkPolicy` objects are applied and you've verified their effect in the Hubble UI.
 2. Make sure to deploy the following rule, otherwise control-plane will fail for up to 1 minute on `cilium-agent` restart. This happens due to [conntrack table reset](https://github.com/cilium/cilium/issues/19367). Referencing `kube-apiserver` entity helps us to "circumvent" the bug.
 
-    ```yaml
-    apiVersion: "cilium.io/v2"
-    kind: CiliumClusterwideNetworkPolicy
-    metadata:
-      name: "allow-control-plane-connectivity"
-    spec:
-      ingress:
-      - fromEntities:
-        - kube-apiserver
-      nodeSelector:
-        matchLabels:
-          node-role.kubernetes.io/control-plane: ""
-    ```
+   ```yaml
+   apiVersion: "cilium.io/v2"
+   kind: CiliumClusterwideNetworkPolicy
+   metadata:
+     name: "allow-control-plane-connectivity"
+   spec:
+     ingress:
+     - fromEntities:
+       - kube-apiserver
+     nodeSelector:
+       matchLabels:
+         node-role.kubernetes.io/control-plane: ""
+   ```
 
 ## A note about Cilium work mode change
 
-If you change the Cilium operating mode (parameter `tunnelMode`) from `Disabled` to `VXLAN` or vice versa, you must restart all nodes, otherwise there may be problems with the availability of Pods.
+If you change the Cilium operating mode (the [tunnelMode](configuration.html#parameters-tunnelmode) parameter) from `Disabled` to `VXLAN` or vice versa, you must restart all nodes, otherwise there may be problems with the availability of Pods.
