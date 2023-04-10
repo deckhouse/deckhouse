@@ -180,6 +180,23 @@ diff --git a/pkg/controller/imagepulljob/imagepulljob_controller.go b/pkg/contro
  	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) {
  		return nil
  	}
+Index: pkg/controller/ephemeraljob/ephemeraljob_controller.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/controller/ephemeraljob/ephemeraljob_controller.go b/pkg/controller/ephemeraljob/ephemeraljob_controller.go
+--- a/pkg/controller/ephemeraljob/ephemeraljob_controller.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
++++ b/pkg/controller/ephemeraljob/ephemeraljob_controller.go	(date 1681129421099)
+@@ -55,6 +55,8 @@
+ // Add creates a new ImagePullJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	return nil
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
 Index: pkg/controller/sidecarset/sidecarset_controller.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
