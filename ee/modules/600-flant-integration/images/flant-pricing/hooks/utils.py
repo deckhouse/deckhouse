@@ -18,13 +18,18 @@ BACKOFF_LIMIT = 3
 
 PROMETHEUS_URL = "https://prometheus.d8-monitoring:9090/api/v1/query"
 REQUEST_ARGS = {}
-with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
-    SERVICE_ACCOUNT_TOKEN = f.read()
 
 
 def check_for_generate_mock() -> bool:
     """Check if mock data should be generated"""
     return os.getenv("SHELL_OPERATOR_GET_DATA_FOR_MOCKS") == "yes" and "pytest" in sys.modules
+
+
+try:
+    with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
+        SERVICE_ACCOUNT_TOKEN = f.read()
+except FileNotFoundError:
+    SERVICE_ACCOUNT_TOKEN = os.getenv("SERVICE_ACCOUNT_TOKEN")
 
 
 def prometheus_metric_builder(metric_name: str, labels: Dict[str, str] = None):

@@ -3,41 +3,66 @@
 #
 # This is a config for controller_metrics.py hook.
 
-.config: &config
-  group: main
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    {
-      "controller_name": .metadata.name,
-      "controller_namespace": .metadata.namespace,
-      "controller_kind": .kind,
-      "controller_module": .metadata.labels.module,
-    }
-  labelSelector:
-    matchLabels:
-      heritage: "deckhouse"
-
 configVersion: v1
 kubernetes:
   - name: deploy
     queue: /controller_metrics_deploy
     apiVersion: apps/v1
     kind: Deployment
-    <<: *config
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "controller_name": .metadata.name,
+        "controller_namespace": .metadata.namespace,
+        "controller_kind": .kind,
+        "controller_module": .metadata.labels.module,
+      }
+    labelSelector:
+      matchLabels:
+        heritage: "deckhouse"
   - name: ds
     queue: /controller_metrics_ds
     apiVersion: apps/v1
     kind: DaemonSet
-    <<: *config
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "controller_name": .metadata.name,
+        "controller_namespace": .metadata.namespace,
+        "controller_kind": .kind,
+        "controller_module": .metadata.labels.module,
+      }
+    labelSelector:
+      matchLabels:
+        heritage: "deckhouse"
   - name: sts
     queue: /controller_metrics_sts
     apiVersion: apps/v1
     kind: StatefulSet
-    <<: *config
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "controller_name": .metadata.name,
+        "controller_namespace": .metadata.namespace,
+        "controller_kind": .kind,
+        "controller_module": .metadata.labels.module,
+      }
+    labelSelector:
+      matchLabels:
+        heritage: "deckhouse"
 
 schedule:
   - name: "d8_controllers_schedule"
+    # NOTE: If you are changing crontab frequency - please change a time duration
+    # "PROMETHEUS_INTERVAL" variable in controller_metrics.py file.
     crontab: "*/5 * * * *"
     group: "main"
