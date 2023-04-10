@@ -51,8 +51,8 @@ spec:
     maxRevisionHistoryLimit: 3
     imagePullPolicy: Always
     priorityClassNames:
-    - production-high
-    - production-low
+      - production-high
+      - production-low
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
   match:
@@ -75,21 +75,21 @@ The module also allows you to use the Gatekeeper's Custom Resources to easily mo
 Example:
 
 ```yaml
-ApiVersion: mutations.gatekeeper.sh/v1
+apiVersion: mutations.gatekeeper.sh/v1
 kind: AssignMetadata
 metadata:
-name: demo-annotation-owner
+  name: demo-annotation-owner
 spec:
-match:
-scope: Namespaced
-namespaces: ["default"]
-kinds:
-- apiGroups: [""]
-kinds: ["Pod"]
-location: "metadata.annotations.foo"
-parameters:
-assignment:
-value: "bar"
+  match:
+    scope: Namespaced
+    namespaces: ["default"]
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  location: "metadata.annotations.foo"
+  parameters:
+    assign:
+      value: "bar"
 ```
 
 You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.
