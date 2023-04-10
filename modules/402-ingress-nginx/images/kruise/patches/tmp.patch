@@ -1,0 +1,18 @@
+Subject: [PATCH] Add ability to disable controllers
+---
+Index: pkg/util/discovery/discovery.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/util/discovery/discovery.go b/pkg/util/discovery/discovery.go
+--- a/pkg/util/discovery/discovery.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
++++ b/pkg/util/discovery/discovery.go	(date 1681126357454)
+@@ -70,6 +70,7 @@
+ 	if err != nil {
+ 		if err == errKindNotFound {
+ 			klog.Warningf("Not found kind %s in group version %s, waiting time %s", gvk.Kind, gvk.GroupVersion().String(), time.Since(startTime))
++			panic(err)
+ 			return false
+ 		}
+
