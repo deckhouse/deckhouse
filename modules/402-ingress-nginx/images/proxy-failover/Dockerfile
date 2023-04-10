@@ -13,4 +13,3 @@ COPY rootfs /
 COPY --from=artifact /src/entrypoint /
 
 ENTRYPOINT ["/entrypoint"]
-CMD ["/usr/sbin/nginx", "-g", "daemon off;"]

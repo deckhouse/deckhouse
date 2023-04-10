@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = unix.Exec(os.Args[1], os.Args[2:], os.Environ())
+	err = unix.Exec("/usr/sbin/nginx", []string{"-g", "daemon off;"}, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
