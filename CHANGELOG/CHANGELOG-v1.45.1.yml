@@ -1,0 +1,11 @@
+cloud-provider-gcp:
+  fixes:
+    - summary: >-
+        Disabled Node IPAM in GCP CCM that conflicted with kube-controller-manager's IPAM
+        controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4110
+extended-monitoring:
+  fixes:
+    - summary: Fix RBAC rules for `image-availability-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4346
+

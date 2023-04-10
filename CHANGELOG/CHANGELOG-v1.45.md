@@ -65,9 +65,11 @@
     `requiredLabel` unmarshalling leads to an error.
  - **[candi]** Upgrade AWS terraform provider to `4.50.0`. [#4256](https://github.com/deckhouse/deckhouse/pull/4256)
  - **[candi]** Remove the `node-role.kubernetes.io/master` taint from the first control-plane node during bootstrap. [#4159](https://github.com/deckhouse/deckhouse/pull/4159)
+ - **[cloud-provider-gcp]** Disabled Node IPAM in GCP CCM that conflicted with kube-controller-manager's IPAM controller. [#4110](https://github.com/deckhouse/deckhouse/pull/4110)
  - **[cloud-provider-yandex]** Set `network_acceleration_type` to software accelerated, update netfilter parameters for new Yandex nat instances. [#4196](https://github.com/deckhouse/deckhouse/pull/4196)
  - **[deckhouse]** Hours and minutes can be used simultaneously for the `minimalNotificationTime` field in ModuleConfig CR. [#4200](https://github.com/deckhouse/deckhouse/pull/4200)
  - **[dhctl]** Fix `kube-proxy` does not restart. [#4274](https://github.com/deckhouse/deckhouse/pull/4274)
+ - **[extended-monitoring]** Fix RBAC rules for `image-availability-exporter`. [#4346](https://github.com/deckhouse/deckhouse/pull/4346)
  - **[extended-monitoring]** Fix `image-availability-exporter` for Kubernetes 1.25+. [#4331](https://github.com/deckhouse/deckhouse/pull/4331)
  - **[global-hooks]** Deploy PDB as a normal helm resource, not a helm hook. [#4016](https://github.com/deckhouse/deckhouse/pull/4016)
  - **[istio]** Add registry secret for `d8-ingress-istio` namespace. [#4244](https://github.com/deckhouse/deckhouse/pull/4244)
