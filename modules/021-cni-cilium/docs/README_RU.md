@@ -27,20 +27,20 @@ title: "Модуль cni-cilium"
    Вы можете удалить опцию после применения всех `CiliumClusterwideNetworkPolicy` объектов и проверке корректности их работы в Hubble UI.
 2. Убедитесь, что вы применили следующее правило. В противном случае control plane может некорректно работать до одной минуты во время перезагрузи `cilium-agent` Pod'ов. Это происходит из-за [сброса conntrack таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет "обойти" баг.
 
-    ```yaml
-    apiVersion: "cilium.io/v2"
-    kind: CiliumClusterwideNetworkPolicy
-    metadata:
-      name: "allow-control-plane-connectivity"
-    spec:
-      ingress:
-      - fromEntities:
-        - kube-apiserver
-      nodeSelector:
-        matchLabels:
-          node-role.kubernetes.io/control-plane: ""
-    ```
+   ```yaml
+   apiVersion: "cilium.io/v2"
+   kind: CiliumClusterwideNetworkPolicy
+   metadata:
+     name: "allow-control-plane-connectivity"
+   spec:
+     ingress:
+     - fromEntities:
+       - kube-apiserver
+     nodeSelector:
+       matchLabels:
+         node-role.kubernetes.io/control-plane: ""
+   ```
 
 ## Заметка о смене режима работы Cilium
 
-При смене режима работы Cilium (параметр `tunnelMode`) c `Disabled` на `VXLAN` или обратно, необходимо перезагрузить все узлы, иначе возможны проблемы с доступностью Pod'ов.
+При смене режима работы Cilium (параметр [tunnelMode](configuration.html#parameters-tunnelmode)) c `Disabled` на `VXLAN` или обратно, необходимо перезагрузить все узлы, иначе возможны проблемы с доступностью Pod'ов.

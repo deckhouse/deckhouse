@@ -33,6 +33,10 @@ properties:
       Настройки управления ресурсами cilium agent.
     properties:
       mode:
+        description: |
+          Режим управления.
+          - `Static` — классический, через requests/limit.
+          - `VPA` — через VPA.
       vpa:
         description: |
           Параметры для режима VPA.
@@ -41,30 +45,38 @@ properties:
             description: |
               Режим работы VPA.
           cpu:
-            min:
-              description: |
-                Минимально допустимый requests для cpu.
-            max:
-              description: |
-                Максимально допустимый requests для cpu.
-            limitRatio:
-              description: |
-                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+            description: |
+              Параметры для CPU.
+            properties:
+              min:
+                description: |
+                  Минимально допустимый requests для CPU.
+              max:
+                description: |
+                  Максимально допустимый requests для CPU.
+              limitRatio:
+                description: |
+                  Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
           memory:
-            min:
-              description: |
-                Минимально допустимый requests для memory.
-            max:
-              description: |
-                Максимально допустимый requests для memory.
-            limitRatio:
-              description: |
-                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+            description: |
+              Параметры для памяти (memory).
+            properties:
+              min:
+                description: |
+                  Минимально допустимый requests для memory.
+              max:
+                description: |
+                  Максимально допустимый requests для memory.
+              limitRatio:
+                description: |
+                  Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
       static:
         description: |
           Настройки управления ресурсами в статическом режиме.
         properties:
           requests:
+            description: |
+              Настройки реквестов (requests).
             properties:
               cpu:
                 description: |
@@ -73,6 +85,8 @@ properties:
                 description: |
                   Реквесты памяти.
           limits:
+            description: |
+              Настройки лимитов (limits).
             properties:
               cpu:
                 description: |

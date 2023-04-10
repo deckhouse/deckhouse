@@ -84,7 +84,9 @@ properties:
       mode:
         type: string
         description: |
-          The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+          The mode for managing resource requests.
+          - `Static` — classical requests/limit.
+          - `VPA` — managing using VPA.
         enum: ['VPA', 'Static']
         default: 'VPA'
       vpa:
