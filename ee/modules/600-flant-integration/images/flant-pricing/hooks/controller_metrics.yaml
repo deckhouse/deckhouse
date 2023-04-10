@@ -38,7 +38,6 @@ kubernetes:
     <<: *config
 
 schedule:
-  - name: "every minute"
-    crontab: "* * * * *"
-    allowFailure: true|false
-    group: "pods"
+  - name: "d8_controllers_schedule"
+    crontab: "*/5 * * * *"
+    group: "main"
