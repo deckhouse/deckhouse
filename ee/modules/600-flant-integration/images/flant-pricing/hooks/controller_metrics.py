@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-
-# Copyright 2023
-# Flant JSC Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+#
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # This hook is responsible for generating metrics for d8 controllers resource consumption.
 

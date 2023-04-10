@@ -2,6 +2,7 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 #
 # This is a config for controller_metrics.py hook.
+
 .config: &config
   group: main
   executeHookOnEvent: []
