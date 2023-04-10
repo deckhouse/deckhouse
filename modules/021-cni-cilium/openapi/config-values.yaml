@@ -127,7 +127,9 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The coefficient to calculate cpu limits.
+
+                  It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
           memory:
             type: object
             default: {}
@@ -154,7 +156,9 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The coefficient to calculate memory limits.
+
+                  It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
       static:
         type: object
         description: |
