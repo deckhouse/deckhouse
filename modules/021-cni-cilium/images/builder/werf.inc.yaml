@@ -1,7 +1,7 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
 from: quay.io/cilium/cilium-llvm:3408daa17f6490a464dfc746961e28ae31964c66@sha256:ff13a1a9f973d102c6ac907d2bc38a524c8e1d26c6c1b16ed809a98925206a79
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
@@ -48,3 +48,9 @@ shell:
   install:
   - bash install-protoc.sh
   - bash install-protoplugins.sh
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates
