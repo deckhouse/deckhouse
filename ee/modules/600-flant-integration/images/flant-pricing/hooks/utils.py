@@ -113,7 +113,6 @@ def make_get_request(
             data={
                 "uri": f"{url}?{urlencode(params)}",
                 "data": response.data.decode(),
-                "query": params,
                 "addtitional_data": addtitional_mock_data,
             },
         )
