@@ -1,5 +1,2 @@
-black==22.10.0
-pylint==2.15.7
-pytest==7.2.0
-requests==2.28.1
 shell-operator==0.0.8
+requests==2.28.1
