@@ -1,0 +1,68 @@
+diff --git a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file.rego b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file.rego
+index 9b9f2f52..cb0b158a 100644
+--- a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file.rego
++++ b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file.rego
+@@ -22,7 +22,7 @@ import data.lib.kubernetes
+ check_flag[container] {
+ 	container := kubernetes.containers[_]
+ 	kubernetes.is_apiserver(container)
+-	kubernetes.command_has_flag(container.command, "--client-ca-file")
++	not kubernetes.command_has_flag(container.command, "--client-ca-file")
+ }
+ 
+ deny[res] {
+diff --git a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file_test.rego b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file_test.rego
+index c54b7be2..1090f3e5 100644
+--- a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file_test.rego
++++ b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/client_ca_file_test.rego
+@@ -18,8 +18,7 @@ test_client_ca_file_is_set {
+ 		}]},
+ 	}
+ 
+-	count(r) == 1
+-	r[_].msg == "Ensure that the --client-ca-file argument is set as appropriate"
++	count(r) == 0
+ }
+ 
+ test_client_ca_file_is_not_set {
+@@ -41,4 +40,5 @@ test_client_ca_file_is_not_set {
+ 	}
+ 
+ 	count(r) == 0
++	r[_].msg == "Ensure that the --client-ca-file argument is set as appropriate"
+ }
+diff --git a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile.rego b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile.rego
+index 97f9af4f..bea415f7 100644
+--- a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile.rego
++++ b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile.rego
+@@ -22,7 +22,7 @@ import data.lib.kubernetes
+ check_flag[container] {
+ 	container := kubernetes.containers[_]
+ 	kubernetes.is_apiserver(container)
+-	kubernetes.command_has_flag(container.command, "--etcd-cafile")
++	not kubernetes.command_has_flag(container.command, "--etcd-cafile")
+ }
+ 
+ deny[res] {
+diff --git a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile_test.rego b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile_test.rego
+index c0c64b0e..8e9df561 100644
+--- a/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile_test.rego
++++ b/vendor/github.com/aquasecurity/defsec/rules/kubernetes/policies/cisbenchmarks/apiserver/etcd_cafile_test.rego
+@@ -18,8 +18,7 @@ test_etcd_cafile_is_set {
+ 		}]},
+ 	}
+ 
+-	count(r) == 1
+-	r[_].msg == "Ensure that the --etcd-cafile argument is set as appropriate"
++	count(r) == 0
+ }
+ 
+ test_etcd_cafile_is_not_set {
+@@ -40,5 +39,6 @@ test_etcd_cafile_is_not_set {
+ 		}]},
+ 	}
+ 
+-	count(r) == 0
++	count(r) == 1
++	r[_].msg == "Ensure that the --etcd-cafile argument is set as appropriate"
+ }

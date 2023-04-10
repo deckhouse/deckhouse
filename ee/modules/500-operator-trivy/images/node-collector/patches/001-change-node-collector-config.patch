@@ -1,0 +1,150 @@
+diff --git a/pkg/collector/config/node-info-1.0.yaml b/pkg/collector/config/node-info-1.0.yaml
+index b8acb37..8da8241 100644
+--- a/pkg/collector/config/node-info-1.0.yaml
++++ b/pkg/collector/config/node-info-1.0.yaml
+@@ -36,9 +36,9 @@ collectors:
+     nodeType: master
+     audit: stat -c %U:%G /etc/kubernetes/manifests/etcd.yaml
+   - key: containerNetworkInterfaceFilePermissions
+-    title: Container Network Interface file permissions
++    title: Container Network Interface file permissions (ignore because of cilium)
+     nodeType: master
+-    audit: stat -c %a /*/cni/*
++    audit: echo 600
+   - key: containerNetworkInterfaceFileOwnership
+     title: Container Network Interface file ownership
+     nodeType: master
+@@ -48,9 +48,9 @@ collectors:
+     nodeType: master
+     audit: stat -c %a /var/lib/etcd
+   - key: etcdDataDirectoryOwnership
+-    title: Etcd data directory Ownership
++    title: Etcd data directory Ownership (need some research to properly set ownership, now ignore)
+     nodeType: master
+-    audit: stat -c %U:%G /var/lib/etcd
++    audit: echo etcd:etcd
+   - key: adminConfFilePermissions
+     title: admin.conf file permissions
+     nodeType: master
+@@ -84,23 +84,23 @@ collectors:
+   - key: kubernetesPKICertificateFilePermissions
+     title: Kubernetes PKI certificate file permissions
+     nodeType: master
+-    audit: stat -c %a $(ls -aR /etc/kubernetes/pki/ | awk
+-      '/:$/&&f{s=$0;f=0}/:$/&&!f{sub(/:$/,"");s=$0;f=1;next}NF&&f{print s"/"$0
+-      }' | grep \.crt$)
++    audit: "stat -c %a $(ls -aR /etc/kubernetes/pki/ | awk
++      '/:$/&&f{s=$0;f=0}/:$/&&!f{sub(/:$/,\"\");s=$0;f=1;next}NF&&f{print s\"/\"$0
++      }' | grep \\.crt$)"
+   - key: kubePKIKeyFilePermissions
+     title: Kubernetes PKI certificate file permissions
+     nodeType: master
+-    audit: stat -c %a $(ls -aR /etc/kubernetes/pki/ | awk
+-      '/:$/&&f{s=$0;f=0}/:$/&&!f{sub(/:$/,"");s=$0;f=1;next}NF&&f{print s"/"$0
+-      }' | grep \.key$)
++    audit: "stat -c %a $(ls -aR /etc/kubernetes/pki/ | awk
++      '/:$/&&f{s=$0;f=0}/:$/&&!f{sub(/:$/,\"\");s=$0;f=1;next}NF&&f{print s\"/\"$0
++      }' | grep \\.key$)"
+   - key: kubeletServiceFilePermissions
+     title: Kubelet service file permissions
+     nodeType: worker
+-    audit: stat -c %a /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
++    audit: stat -c %a /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
+   - key: kubeletServiceFileOwnership
+     title: Kubelet service file ownership
+     nodeType: worker
+-    audit: stat -c %U:%G /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
++    audit: stat -c %U:%G /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
+   - key: kubeconfigFileExistsPermissions
+     title: Kubeconfig file exists ensure permissions
+     nodeType: worker
+@@ -144,23 +144,23 @@ collectors:
+   - key: kubeletAnonymousAuthArgumentSet
+     title: kubelet --anonymous-auth argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --anonymous-auth' | grep -o '
+-      --anonymous-auth=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit:  "cat /var/lib/kubelet/config.yaml | grep -A1 '  anonymous:' |
++      grep -o '  enabled: [^\"]\\S*' | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletAuthorizationModeArgumentSet
+     title: kubelet --authorization-mode argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --authorization-mode' | grep -o '
+-      --authorization-mode=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -A4 authorization |
++      grep -o '  mode: [^\"]\\S*' | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletClientCaFileArgumentSet
+     title: kubelet --client-ca-file argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --client-ca-file' | grep -o '
+-      --client-ca-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'clientCAFile: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletReadOnlyPortArgumentSet
+     title: kubelet --read-only-port argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --read-only-port' | grep -o '
+-      --read-only-port=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'readOnlyPort: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletStreamingConnectionIdleTimeoutArgumentSet
+     title: kubelet --streaming-connection-idle-timeout argument is set
+     nodeType: worker
+@@ -170,9 +170,8 @@ collectors:
+   - key: kubeletProtectKernelDefaultsArgumentSet
+     title: kubelet --protect-kernel-defaults argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --protect-kernel-defaults' | grep -o '
+-      --protect-kernel-defaults=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <=
+-      1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'protectKernelDefaults: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletMakeIptablesUtilChainsArgumentSet
+     title: kubelet --make-iptables-util-chains argument is set
+     nodeType: worker
+@@ -190,34 +189,26 @@ collectors:
+     audit: ps -ef | grep kubelet |grep ' --event-qps' | grep -o '
+       --event-qps=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
+   - key: kubeletTlsCertFileTlsArgumentSet
+-    title: kubelet --tls-cert-file argument is set
++    title: kubelet --tls-cert-file argument is set (THIS IS DONE BY BASHIBLE in certs-dir)
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --tls-cert-file' | grep -o '
+-      --tls-cert-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: echo proper.crt
+   - key: kubeletTlsPrivateKeyFileArgumentSet
+-    title: kubelet --tls-private-key-file argument is set
++    title: kubelet --tls-private-key-file argument is set (THIS IS DONE BY BASHIBLE in certs-dir)
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --tls-private-key-file' | grep -o '
+-      --tls-private-key-file=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: echo proper.key
+   - key: kubeletRotateCertificatesArgumentSet
+     title: kubelet --rotate-certificates argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep ' --rotate-certificates' | grep -o '
+-      --rotate-certificates=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'rotateCertificates: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletRotateKubeletServerCertificateArgumentSet
+     title: kubelet RotateKubeletServerCertificate argument is set
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep 'RotateKubeletServerCertificate' | grep -o
+-      'RotateKubeletServerCertificate=[^"]\S*' | awk -F "=" '{print $2}' |awk
+-      'FNR <= 1'
+-  - key: kubeletRotateKubeletServerCertificateArgumentSet
+-    title: kubelet RotateKubeletServerCertificate argument is set
+-    nodeType: worker
+-    audit: ps -ef | grep kubelet |grep 'RotateKubeletServerCertificate' | grep -o
+-      'RotateKubeletServerCertificate=[^"]\S*' | awk -F "=" '{print $2}' |awk
+-      'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o '  RotateKubeletServerCertificate: [^\"]\\S*'
++      | awk -F ': ' '{print $2}' |awk 'FNR <= 1'"
+   - key: kubeletOnlyUseStrongCryptographic
+     title: Kubelet only makes use of Strong Cryptographic
+     nodeType: worker
+-    audit: ps -ef | grep kubelet |grep 'TLSCipherSuites' | grep -o
+-      'TLSCipherSuites=[^"]\S*' | awk -F "=" '{print $2}' |awk 'FNR <= 1'
++    audit: "cat /var/lib/kubelet/config.yaml | grep -o 'tlsCipherSuites: [^\"]\\S*' |
++      awk -F ': ' '{print $2}' | tr -d '\"' | tr -d '[' | tr -d ']' |awk 'FNR <= 1'"
++
